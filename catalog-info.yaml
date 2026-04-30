@@ -12,6 +12,7 @@ metadata:
     github.com/project-slug: Deloitte-Australia/tt-librechat #i.e. Deloitte-Australia/ct-backstage 
   businessOwner: ""
   billCode: GAS04665-01-01-01-1000
+  productId: 85f0eaf5c3640f545545a7dc7a0131bd
 spec:
   type: website
   owner: 'user:'
