@@ -1,0 +1,97 @@
+imageRegistry: 'dttaitsprd.azurecr.io'
+branch: ''
+
+serviceAccount:
+  name: sa-ct-repository-template
+
+ingress:
+  className: cilium
+  host: 'ct-repository-template.ctk.au.deloitte.com'
+  annotations:
+    ingress.cilium.io/loadbalancer-mode: "shared"
+    ingress.cilium.io/force-https: "true"
+    kubernetes.io/ingress.class: cilium
+  tls:
+    - secretName: ctk-au-deloitte-com
+      secretStoreName: external-secret-store
+      hosts:
+        - 'ct-repository-template.ctk.au.deloitte.com'
+
+pods:
+  frontend:
+    replicas: 1
+    containers:
+      frontend:
+        # livenessProbe:
+        #   httpGet:
+        #     path: /
+        #     port: 3000
+        #   initialDelaySeconds: 60
+        #   periodSeconds: 10
+        #   timeoutSeconds: 30
+        # readinessProbe:
+        #   httpGet:
+        #     path: /
+        #     port: 3000
+        #   initialDelaySeconds: 60
+        #   periodSeconds: 10
+        #   timeoutSeconds: 30
+        image:
+          repository: 'ct-repository-templates/frontend'
+          pullPolicy: Always
+          tag: 'main'
+        containerSecurityContext:
+          runAsUser: 3000
+          runAsGroup: 3000
+          allowPrivilegeEscalation: false
+        service:
+          enabled: true
+          type: ClusterIP
+          port: 80
+          targetPort: 3000
+        ingress:
+          enabled: true
+          paths:
+            - path: /
+              pathType: Prefix
+  
+  api:
+    replicas: 1
+    containers:
+      api:
+        # livenessProbe:
+        #   httpGet:
+        #     path: /health
+        #     port: 8080
+        #   initialDelaySeconds: 60
+        #   periodSeconds: 10
+        #   timeoutSeconds: 30
+        # readinessProbe:
+        #   httpGet:
+        #     path: /health
+        #     port: 8080
+        #   initialDelaySeconds: 60
+        #   periodSeconds: 10
+        #   timeoutSeconds: 30
+        image:
+          repository: 'ct-repository-template/api'
+          pullPolicy: Always
+          tag: 'main'
+        containerSecurityContext:
+          runAsUser: 8080
+          runAsGroup: 8080
+          allowPrivilegeEscalation: false
+        # env:
+        #   example_env_name: 'example_env_value'
+        # secrets:
+        #   example_env_name: example_secret_key_name
+        service:
+          enabled: true
+          type: ClusterIP
+          port: 80
+          targetPort: 8080
+        ingress:
+          enabled: true
+          paths:
+            - path: /api
+              pathType: Prefix

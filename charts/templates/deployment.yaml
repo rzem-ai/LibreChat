@@ -1,0 +1,70 @@
+{{- range $pod, $podConfig := .Values.pods }}
+{{- with $ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "helm.fullname" . }}-{{ $pod }}
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+    component: {{ $pod }}
+spec:
+  replicas: {{ $podConfig.replicas }}
+  selector:
+    matchLabels:
+      {{- include "helm.selectorLabels" . | nindent 6 }}
+      component: {{ $pod }}
+  template:
+    metadata:
+      labels:
+        {{- include "helm.labels" . | nindent 8 }}
+        azure.workload.identity/use: "true"
+        app: workload
+        component: {{ $pod }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      containers:
+        {{- range $container, $config := $podConfig.containers }}
+        - name: {{ $.Chart.Name }}-{{ $container }}
+          {{- with $config.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ $.Values.imageRegistry }}/{{ $config.image.repository }}:{{ $config.image.tag }}"
+          imagePullPolicy: {{ $config.image.pullPolicy }}
+          {{- if $config.command }}
+          command:
+            {{- toYaml $config.command | nindent 12 }}
+          {{- end }}
+          {{- if $config.service.enabled }}
+          ports:
+            - name: http-{{ $container }}
+              containerPort: {{ $config.service.targetPort }}
+          {{- end }}
+          {{- with $config.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $config.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $config.env }}
+          env:
+            {{- range $name, $value := . }}
+            - name: {{ $name | quote }}
+              value: {{ $value | quote }}
+            {{- end }}
+          {{- end }}
+          {{- with $config.secrets }}
+          envFrom:
+            - secretRef:
+                name: {{ include "helm.fullname" $ }}-app-store-secrets-{{ $container }}
+          {{- end }}
+          {{- with $config.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- end }}
+{{- end }}
+---
+{{- end }}

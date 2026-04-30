@@ -1,0 +1,30 @@
+version: 2
+
+updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    target-branch: "develop"
+  
+  # # React.js (JavaScript/Node.js)
+  # - package-ecosystem: "npm"
+  #   directory: "/src/frontend"
+  #   schedule:
+  #     interval: "weekly"
+  #   target-branch: "develop"
+
+  # # .NET
+  # - package-ecosystem: "nuget"
+  #   directory: "/src/api"
+  #   schedule:
+  #     interval: "weekly"
+  #   target-branch: "develop"
+
+  # # Python Flask API
+  # - package-ecosystem: "pip"
+  #   directory: "/src/api"
+  #   schedule:
+  #     interval: "weekly"
+  #   target-branch: "develop"

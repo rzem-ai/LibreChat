@@ -1,0 +1,31 @@
+imageRegistry: 'dttaitsdev.azurecr.io'
+branch: 'uat'
+serviceAccount:
+  name: sa-ct-repository-template-uat
+ingress:
+  className: cilium
+  host: 'ct-repository-template-uat.ctk.au.deloitte.com'
+  annotations:
+    ingress.cilium.io/loadbalancer-mode: "shared"
+    ingress.cilium.io/force-https: "true"
+    kubernetes.io/ingress.class: cilium
+  tls:
+    - secretName: ctk-au-deloitte-com
+      secretStoreName: external-secret-store
+      hosts:
+        - 'ct-repository-template-uat.ctk.au.deloitte.com'
+pods:
+  frontend:
+    replicas: 1
+    containers:
+      frontend:
+        image:
+          tag: 'main'
+  api:
+    replicas: 1
+    containers:
+      api:
+        image:
+          tag: 'main'
+        # env:
+        #   example_env_name: 'example_env_value'

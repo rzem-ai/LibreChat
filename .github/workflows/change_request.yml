@@ -1,0 +1,17 @@
+name: 'SNOW: Change Request'
+
+on:
+  pull_request:
+    branches:
+      - 'main'
+    types:
+      - closed
+    paths:
+      - src/**
+
+jobs:
+  ServiceNow:
+    uses: Deloitte-Australia/ct-devops-resources/.github/workflows/change_request.yml@main
+    secrets: inherit
+    with:
+      buildWorkflowPath: '.github/workflows/build-and-promote.yml' # Please provide the correct path to the build workflow file

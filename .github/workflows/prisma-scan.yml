@@ -1,0 +1,16 @@
+name: Prisma Scan
+
+on:
+  workflow_dispatch:
+
+# Limit to one concurrent workflow run per workflow and per branch at a time
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  cancel-in-progress: true
+
+jobs:
+  Prisma:
+    uses: Deloitte-Australia/ct-devops-resources/.github/workflows/prisma-scan.yml@main
+    secrets: inherit
+    with:
+      useRepoRootAsContext: false # Set to true to build the Docker images from the root repository otherwise it will build from the location where the identified Dockerfile is located

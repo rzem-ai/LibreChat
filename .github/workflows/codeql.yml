@@ -1,0 +1,39 @@
+name: CodeQL
+
+on:
+  pull_request:
+  push:
+    branches:
+      - 'main'
+      - 'uat'
+      - 'develop'
+  workflow_dispatch:
+
+# Limit to one concurrent workflow run per workflow and per branch at a time
+concurrency:
+  group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
+  cancel-in-progress: true
+
+jobs:
+  CodeQL:
+    uses: Deloitte-Australia/ct-devops-resources/.github/workflows/codeql.yml@main
+    secrets: inherit
+    # with:
+    #   customBuildScript: |
+    #     # (OPTIONAL) Custom build step script with language-specific logic. Please keep in mind that the workflow builds your project code by default, and variable 'matrix_language' is initialised in the template workflow.
+    #     # 'matrix.language' can be c-cpp, c, cpp, csharp, go, java-kotlin, java, kotlin, javascript-typescript, javascript, typescript, python, ruby, or swift
+    #     # For more info on CodeQL language identifiers, please visit https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/customizing-your-advanced-setup-for-code-scanning
+    #     
+    #     # Example custom build script for javascript/typescript and python
+    #     if [[ "${matrix_language}" == "javascript" || "${matrix_language}" == "typescript" || "${matrix_language}" == "javascript-typescript" ]]; then
+    #       echo "Running JavaScript/TypeScript build"
+    #       npm install
+    #       npm run build
+    #     elif [[ "${matrix_language}" == "python" ]]; then
+    #       echo "Running Python build"
+    #       pip install -r requirements.txt
+    #       python setup.py build
+    #     else
+    #       echo "No custom build steps defined for language '${matrix_language}'. Continuing to autobuild."
+    #       exit 1 # Exit with a non-zero status to trigger autobuild
+    #     fi

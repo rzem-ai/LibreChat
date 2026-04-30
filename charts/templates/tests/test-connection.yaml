@@ -1,0 +1,22 @@
+{{- range $pod, $podConfig := .Values.pods }}
+{{- with $ -}}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "helm.fullname" . }}-test-connection-{{ $pod }}"
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    {{- range $container, $config := $podConfig.containers }}
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "helm.fullname" $ }}:{{ $config.service.port }}']
+    {{- end }}
+  restartPolicy: Never
+{{- end }}
+---
+{{- end }}

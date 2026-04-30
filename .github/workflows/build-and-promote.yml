@@ -1,0 +1,237 @@
+# Build and Push to ITS DEV ACR to develop branch, and promote the image from ITS DEV ACR to ITS PROD ACR to main branch
+name: "CI: Image Build (DEV) and Promotion (PROD)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      helmValuesFile:
+        description: '(Environment) Helm values file to target'
+        type: choice
+        required: true
+        default: 'values-dev.yaml'
+        options:
+          - values-dev.yaml # image tag 'develop'
+          - values-uat.yaml # image tag 'uat'
+          - values-prd.yaml # image tag 'main'
+      actionType:
+        description: 'Action type'
+        type: choice
+        required: true
+        default: 'Build & push'
+        options:
+          - 'Build & push'
+          - 'Promote'
+          - 'Build, push & promote'
+      incrementType:
+        description: '(Semver - Git only) Increment type'
+        type: choice
+        required: true
+        default: none
+        options:
+          - none
+          - patch
+          - minor
+          - major
+  pull_request:
+    branches:
+    - main
+    - uat
+    - develop
+  push:
+    branches:
+      - main
+      - uat
+      - develop
+    paths:
+      - src/**
+
+# Limit to one concurrent workflow run per workflow, event, and ref
+concurrency:
+  group: '${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}'
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  actions: read
+  contents: write
+  pull-requests: write
+  security-events: write
+  issues: read
+
+jobs:
+  SemVer:
+    if: > 
+      (( github.event_name == 'pull_request' || github.event_name == 'pull_request_target' ) && github.event.pull_request.base.ref == 'main') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.incrementType != 'none')
+    uses: Deloitte-Australia/ct-devops-resources/.github/workflows/generate-semver.yml@V2
+    secrets: inherit
+    with:
+      targetBranch: ${{ github.event.pull_request.base.ref }}
+      incrementType: ${{ github.event.inputs.incrementType }}
+  
+  Setup:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.pull_request.base.ref != 'main' }}
+    outputs:
+      ENCRYPTED_GITHUB_TOKEN: ${{ steps.OutputToken.outputs.ENCRYPTED_GITHUB_TOKEN }}
+      ENCRYPTION_KEY: ${{ steps.OutputToken.outputs.ENCRYPTION_KEY }}
+      IV: ${{ steps.OutputToken.outputs.IV }}
+    steps:
+      - name: Output token
+        id: OutputToken
+        run: |
+          # GitHub does not accept secrets in the workflow output, so we need to encrypt them first
+          # echo "GITHUB_TOKEN=${{ steps.AppToken.outputs.token }}" >> $GITHUB_OUTPUT
+
+          # Generate a 32-byte encryption key and a 16-byte IV
+          ENCRYPTION_KEY=$(openssl rand -hex 32)
+          IV=$(openssl rand -hex 16)
+
+          echo "ENCRYPTION_KEY=$ENCRYPTION_KEY" >> $GITHUB_OUTPUT
+          echo "IV=$IV" >> $GITHUB_OUTPUT
+
+          # Encrypt the GitHub token using the generated key and IV
+          ENCRYPTED_GITHUB_TOKEN=$(echo -n "${{ secrets.ORG_ACTIONS_PACKAGES_PAT }}" | openssl enc -aes-256-cbc -base64 -K $ENCRYPTION_KEY -iv $IV -pbkdf2)
+          echo "ENCRYPTED_GITHUB_TOKEN=$ENCRYPTED_GITHUB_TOKEN" >> $GITHUB_OUTPUT
+  
+  CI:
+    needs: [Setup]
+    if: ${{ github.event.pull_request.base.ref != 'main' }}
+    strategy:
+      fail-fast: false  # True: cancel all in-progress and queued jobs in the matrix if any job in the matrix fails. False: continue running all jobs even if one fails
+      matrix:
+        include:
+        #####################################################################################
+        # Please adjust the below matrix if you are deploying more/less Docker images
+        # Every image will have the below attributes:
+        # imageNameAlias - Pushing to ITS DEV ACR will give the full image name 'dttaitsdev.azurecr.io/<repositoryName>/${{ matrix.imageNameAlias }}:develop-latest'
+        # buildContext - Specify where Docker should build your image in the pipeline, irrespective of the Dockerfile location. E.g. '.' will build from the repository root directory. For more details, visit https://docs.docker.com/build/concepts/context/
+        # dockerFilePath - The path where the Dockerfile is located relative to the repository root directory
+        # buildArgs - Optional. Specify any build arguments that you want to pass to the Docker build command
+        # customBuildSetupScript - Optional. Specify any custom build setup script that you want to run before building the Docker image
+        # unitTestScript - Optional. Specify any unit test script that you want to run before building the Docker image and running customBuildSetupScript
+        # yamlKeyPath - Optional. Specify the key path in the Helm values file where the image block will be updated. E.g. '.image' (sub-attributes '.image.repository' and '.image.tag' need to exist). Otherwise, by default, it will search for the key path under '.pods.$pod.containers.$container.image'
+          - imageNameAlias: frontend
+            buildContext: src/frontend
+            dockerFilePath: src/frontend/Dockerfile
+            customBuildSetupScript: |
+              # Context: GitHub Actions does not take secrets in a strategy matrix, hence the secret will be encrypted as an output in the Setup job and referenced in this step
+              # The below script will decrypt the GitHub token and create a .npmrc file in the src/frontend directory for NPM Packages authentication (e.g. GEL library)
+
+              # Decrypt the GitHub token using the provided encryption key and IV
+              ENCRYPTED_GITHUB_TOKEN="${{ needs.Setup.outputs.ENCRYPTED_GITHUB_TOKEN }}"
+              GITHUB_TOKEN=$(echo $ENCRYPTED_GITHUB_TOKEN | openssl enc -aes-256-cbc -d -base64 -K ${{ needs.Setup.outputs.ENCRYPTION_KEY }} -iv ${{ needs.Setup.outputs.IV }} -pbkdf2)
+
+              # Create or overwrite the .npmrc file in the src/frontend directory
+              echo "@deloitte-default:registry=https://npm.pkg.github.com/Deloitte-Default" > src/frontend/.npmrc
+              echo "//npm.pkg.github.com/:_authToken=$GITHUB_TOKEN" >> src/frontend/.npmrc
+              echo ".npmrc file created successfully in src/frontend."
+            # buildArgs: |
+            #   ARG1=Hello World!
+            #   ARG2=development
+            # unitTestScript: |
+            #   echo "Running unit tests"
+          - imageNameAlias: api
+            buildContext: src/api
+            dockerFilePath: src/api/Dockerfile
+            # buildArgs: |
+            #   ARG1=Hello World!
+            #   ARG2=development
+            # customBuildSetupScript: |
+            #   echo "Hello World!"
+            # unitTestScript: |
+            #   echo "Running unit tests"
+        #####################################################################################
+    uses: Deloitte-Australia/ct-devops-resources/.github/workflows/build-and-promote.yml@V2
+    secrets: inherit
+    with:
+      imageNameSuffix: ${{ matrix.imageNameAlias }}
+      dockerfilePath: ${{ matrix.dockerFilePath }}
+      buildContext: ${{ matrix.buildContext }}
+      targetBranch: ${{ ( github.event_name == 'pull_request' || github.event_name == 'pull_request_target' ) && github.head_ref || github.ref_name }} # If the event is a pull request, use the base branch of the pull request. Otherwise, use the current branch
+      buildArgs: ${{ matrix.buildArgs }}
+      customBuildSetupScript: ${{ matrix.customBuildSetupScript }}
+      skipPromotionOnFail: true
+      parentHelmValuesFile: 'values.yaml'
+      helmFolderPath: 'charts'
+      actionType: ${{ github.event.inputs.actionType }}
+      yamlKeyPath: ${{ matrix.yamlKeyPath }}
+
+  UpdateValues:
+    needs: [Setup, CI]
+    if: ${{ github.event_name != 'pull_request' && github.event_name != 'pull_request_target' }}
+    uses: Deloitte-Australia/ct-devops-resources/.github/workflows/update-helm.yml@V2
+    secrets: inherit
+    with:
+      helmFolderPath: 'charts'
+      helmValuesFile: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.helmValuesFile || '' }}
+      targetBranch: ${{ github.ref_name }} 
+  
+  PostPRComment:
+    if: ${{ always() && ( github.event_name == 'pull_request' || github.event_name == 'pull_request_target' ) }}
+    needs: [CI]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine Outcome
+        id: outcome
+        run: |
+          # Keep track of the GitHub Summary path as env var
+          echo "SUMMARY_PATH=$(echo $GITHUB_STEP_SUMMARY)" >> $GITHUB_ENV
+          
+          if [[ "${{ needs.CI.result }}" == "success" || "${{ needs.CI.result }}" == "skipped" ]]; then
+            echo "## Build Pipeline Results ✅" >> $GITHUB_STEP_SUMMARY
+            echo "The CI pipeline has successfully completed for \`${{ github.event.pull_request.head.ref }}\`." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## Build Pipeline Results ❌" >> $GITHUB_STEP_SUMMARY
+            echo "The CI pipeline has failed for \`${{ github.event.pull_request.head.ref }}\`." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please check the actions logs for more details and resolve the issues." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Post or Update Comment
+        uses: actions/github-script@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Find list of comments from Pull Request
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            // Find comment with title in the content
+            const comment = comments.find(comment => {
+              return comment.user.type === 'Bot' && comment.body.includes('## Build Pipeline Results')
+            });
+
+            // Read the summary file
+            const fs = require('fs');
+            const summaryFile = fs.readFileSync('${{ env.SUMMARY_PATH }}', 'utf8');
+
+            // Construct repository URL
+            const repoUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}`;
+
+            // Format content to be shown in PR comment
+            let summaryContent = `${summaryFile}
+
+            Run [\`#${context.runNumber}\`](${repoUrl}/actions/runs/${context.runId}), committed by @${{ github.actor }} on commit ${repoUrl}/commit/${context.payload.pull_request.head.sha}`;
+
+            // Post Pull Request comment by updating or creating a new comment
+            if (comment) {
+              // Update comment
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: comment.id,
+                body: summaryContent
+              })
+            } else {
+              // Create comment
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: summaryContent
+              })
+            }

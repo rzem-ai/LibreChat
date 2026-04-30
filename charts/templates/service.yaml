@@ -1,0 +1,25 @@
+{{- range $pod, $podConfig := .Values.pods }}
+{{- range $container, $config := $podConfig.containers }}
+{{- if $config.service.enabled -}}
+{{- with $ -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "helm.fullname" . }}-{{ $container }}
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+spec:
+  type: {{ $config.service.type }}
+  ports:
+    - port: {{ $config.service.port }}
+      targetPort: {{ $config.service.targetPort }}
+      protocol: TCP
+      name: http-{{ $container }}
+  selector:
+    {{ include "helm.selectorLabels" . | nindent 4 }}
+    component: {{ $pod }}
+{{- end }}
+---
+{{- end }}
+{{- end }}
+{{- end }}

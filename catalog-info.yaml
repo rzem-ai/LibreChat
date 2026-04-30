@@ -1,0 +1,20 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ${appName}
+  description: ${description}
+  ci: AU:ClearTrack
+  branchingStrategy: gitflow
+  links:
+    - title: Website
+      url: ${appUrl}
+  annotations:
+    github.com/project-slug: ${repoName} #i.e. Deloitte-Australia/ct-backstage 
+spec:
+  type: website
+  owner: ${repoOwner}
+  lifecycle: experimental
+  businessUnit: ${businessUnit}
+  businessLead: ${businessLead}
+  assetLead: ${assetLead}
+  assetDev: ${assetDev}
