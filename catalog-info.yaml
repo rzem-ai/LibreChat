@@ -1,20 +1,22 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: ${appName}
-  description: ${description}
-  ci: AU:ClearTrack
+  name: librechat
+  description: LibreChat is an open-source multi-LLM chat platform (forked from danny-avila/LibreChat), customised for Deloitte MyAssist with Deloitte GEL branding and LLM Gateway integration.
+  ci: AU:MyAssist
   branchingStrategy: gitflow
   links:
     - title: Website
-      url: ${appUrl}
+      url: https://librechat.ctk.au.deloitte.com
   annotations:
-    github.com/project-slug: ${repoName} #i.e. Deloitte-Australia/ct-backstage 
+    github.com/project-slug: Deloitte-Australia/tt-librechat #i.e. Deloitte-Australia/ct-backstage 
+  businessOwner: ""
+  billCode: GAS04665-01-01-01-1000
 spec:
   type: website
-  owner: ${repoOwner}
+  owner: 'user:'
   lifecycle: experimental
-  businessUnit: ${businessUnit}
-  businessLead: ${businessLead}
-  assetLead: ${assetLead}
-  assetDev: ${assetDev}
+  businessUnit: tt
+  businessLead: AU_CTK_TT_BULeads
+  assetLead: MyAssist Core Dev Team
+  assetDev: MyAssist Core Dev Team

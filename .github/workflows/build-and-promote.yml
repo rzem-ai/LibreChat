@@ -1,6 +1,5 @@
 # Build and Push to ITS DEV ACR to develop branch, and promote the image from ITS DEV ACR to ITS PROD ACR to main branch
 name: "CI: Image Build (DEV) and Promotion (PROD)"
-
 on:
   workflow_dispatch:
     inputs:
@@ -34,9 +33,9 @@ on:
           - major
   pull_request:
     branches:
-    - main
-    - uat
-    - develop
+      - main
+      - uat
+      - develop
   push:
     branches:
       - main
@@ -44,12 +43,10 @@ on:
       - develop
     paths:
       - src/**
-
 # Limit to one concurrent workflow run per workflow, event, and ref
 concurrency:
   group: '${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}'
   cancel-in-progress: true
-
 permissions:
   id-token: write
   actions: read
@@ -57,18 +54,16 @@ permissions:
   pull-requests: write
   security-events: write
   issues: read
-
 jobs:
   SemVer:
-    if: > 
-      (( github.event_name == 'pull_request' || github.event_name == 'pull_request_target' ) && github.event.pull_request.base.ref == 'main') ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.incrementType != 'none')
+    if: >
+      (( github.event_name == 'pull_request' || github.event_name == 'pull_request_target' ) && github.event.pull_request.base.ref == 'main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.incrementType != 'none')
+
     uses: Deloitte-Australia/ct-devops-resources/.github/workflows/generate-semver.yml@V2
     secrets: inherit
     with:
       targetBranch: ${{ github.event.pull_request.base.ref }}
       incrementType: ${{ github.event.inputs.incrementType }}
-  
   Setup:
     runs-on: ubuntu-latest
     if: ${{ github.event.pull_request.base.ref != 'main' }}
@@ -93,24 +88,23 @@ jobs:
           # Encrypt the GitHub token using the generated key and IV
           ENCRYPTED_GITHUB_TOKEN=$(echo -n "${{ secrets.ORG_ACTIONS_PACKAGES_PAT }}" | openssl enc -aes-256-cbc -base64 -K $ENCRYPTION_KEY -iv $IV -pbkdf2)
           echo "ENCRYPTED_GITHUB_TOKEN=$ENCRYPTED_GITHUB_TOKEN" >> $GITHUB_OUTPUT
-  
   CI:
     needs: [Setup]
     if: ${{ github.event.pull_request.base.ref != 'main' }}
     strategy:
-      fail-fast: false  # True: cancel all in-progress and queued jobs in the matrix if any job in the matrix fails. False: continue running all jobs even if one fails
+      fail-fast: false # True: cancel all in-progress and queued jobs in the matrix if any job in the matrix fails. False: continue running all jobs even if one fails
       matrix:
         include:
-        #####################################################################################
-        # Please adjust the below matrix if you are deploying more/less Docker images
-        # Every image will have the below attributes:
-        # imageNameAlias - Pushing to ITS DEV ACR will give the full image name 'dttaitsdev.azurecr.io/<repositoryName>/${{ matrix.imageNameAlias }}:develop-latest'
-        # buildContext - Specify where Docker should build your image in the pipeline, irrespective of the Dockerfile location. E.g. '.' will build from the repository root directory. For more details, visit https://docs.docker.com/build/concepts/context/
-        # dockerFilePath - The path where the Dockerfile is located relative to the repository root directory
-        # buildArgs - Optional. Specify any build arguments that you want to pass to the Docker build command
-        # customBuildSetupScript - Optional. Specify any custom build setup script that you want to run before building the Docker image
-        # unitTestScript - Optional. Specify any unit test script that you want to run before building the Docker image and running customBuildSetupScript
-        # yamlKeyPath - Optional. Specify the key path in the Helm values file where the image block will be updated. E.g. '.image' (sub-attributes '.image.repository' and '.image.tag' need to exist). Otherwise, by default, it will search for the key path under '.pods.$pod.containers.$container.image'
+          #####################################################################################
+          # Please adjust the below matrix if you are deploying more/less Docker images
+          # Every image will have the below attributes:
+          # imageNameAlias - Pushing to ITS DEV ACR will give the full image name 'dttaitsdev.azurecr.io/<repositoryName>/${{ matrix.imageNameAlias }}:develop-latest'
+          # buildContext - Specify where Docker should build your image in the pipeline, irrespective of the Dockerfile location. E.g. '.' will build from the repository root directory. For more details, visit https://docs.docker.com/build/concepts/context/
+          # dockerFilePath - The path where the Dockerfile is located relative to the repository root directory
+          # buildArgs - Optional. Specify any build arguments that you want to pass to the Docker build command
+          # customBuildSetupScript - Optional. Specify any custom build setup script that you want to run before building the Docker image
+          # unitTestScript - Optional. Specify any unit test script that you want to run before building the Docker image and running customBuildSetupScript
+          # yamlKeyPath - Optional. Specify the key path in the Helm values file where the image block will be updated. E.g. '.image' (sub-attributes '.image.repository' and '.image.tag' need to exist). Otherwise, by default, it will search for the key path under '.pods.$pod.containers.$container.image'
           - imageNameAlias: frontend
             buildContext: src/frontend
             dockerFilePath: src/frontend/Dockerfile
@@ -151,12 +145,11 @@ jobs:
       targetBranch: ${{ ( github.event_name == 'pull_request' || github.event_name == 'pull_request_target' ) && github.head_ref || github.ref_name }} # If the event is a pull request, use the base branch of the pull request. Otherwise, use the current branch
       buildArgs: ${{ matrix.buildArgs }}
       customBuildSetupScript: ${{ matrix.customBuildSetupScript }}
-      skipPromotionOnFail: true
+      skipPromotionOnFail: false
       parentHelmValuesFile: 'values.yaml'
       helmFolderPath: 'charts'
       actionType: ${{ github.event.inputs.actionType }}
       yamlKeyPath: ${{ matrix.yamlKeyPath }}
-
   UpdateValues:
     needs: [Setup, CI]
     if: ${{ github.event_name != 'pull_request' && github.event_name != 'pull_request_target' }}
@@ -165,8 +158,7 @@ jobs:
     with:
       helmFolderPath: 'charts'
       helmValuesFile: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.helmValuesFile || '' }}
-      targetBranch: ${{ github.ref_name }} 
-  
+      targetBranch: ${{ github.ref_name }}
   PostPRComment:
     if: ${{ always() && ( github.event_name == 'pull_request' || github.event_name == 'pull_request_target' ) }}
     needs: [CI]
@@ -177,7 +169,7 @@ jobs:
         run: |
           # Keep track of the GitHub Summary path as env var
           echo "SUMMARY_PATH=$(echo $GITHUB_STEP_SUMMARY)" >> $GITHUB_ENV
-          
+
           if [[ "${{ needs.CI.result }}" == "success" || "${{ needs.CI.result }}" == "skipped" ]]; then
             echo "## Build Pipeline Results ✅" >> $GITHUB_STEP_SUMMARY
             echo "The CI pipeline has successfully completed for \`${{ github.event.pull_request.head.ref }}\`." >> $GITHUB_STEP_SUMMARY
@@ -187,7 +179,6 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "Please check the actions logs for more details and resolve the issues." >> $GITHUB_STEP_SUMMARY
           fi
-
       - name: Post or Update Comment
         uses: actions/github-script@main
         with:
@@ -199,7 +190,7 @@ jobs:
               repo: context.repo.repo,
               issue_number: context.issue.number,
             });
-            
+
             // Find comment with title in the content
             const comment = comments.find(comment => {
               return comment.user.type === 'Bot' && comment.body.includes('## Build Pipeline Results')

@@ -1,10 +1,10 @@
 imageRegistry: 'dttaitsdev.azurecr.io'
 branch: 'uat'
 serviceAccount:
-  name: sa-ct-repository-template-uat
+  name: sa-librechat-uat
 ingress:
   className: cilium
-  host: 'ct-repository-template-uat.ctk.au.deloitte.com'
+  host: 'librechat-uat.ctk.au.deloitte.com'
   annotations:
     ingress.cilium.io/loadbalancer-mode: "shared"
     ingress.cilium.io/force-https: "true"
@@ -13,19 +13,19 @@ ingress:
     - secretName: ctk-au-deloitte-com
       secretStoreName: external-secret-store
       hosts:
-        - 'ct-repository-template-uat.ctk.au.deloitte.com'
+        - 'librechat-uat.ctk.au.deloitte.com'
 pods:
   frontend:
     replicas: 1
     containers:
       frontend:
         image:
-          tag: 'main'
+          tag: 'develop'
   api:
     replicas: 1
     containers:
       api:
         image:
-          tag: 'main'
-        # env:
-        #   example_env_name: 'example_env_value'
+          tag: 'develop'
+          # env:
+          #   example_env_name: 'example_env_value'

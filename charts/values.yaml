@@ -2,11 +2,10 @@ imageRegistry: 'dttaitsprd.azurecr.io'
 branch: ''
 
 serviceAccount:
-  name: sa-ct-repository-template
-
+  name: sa-librechat-prd
 ingress:
   className: cilium
-  host: 'ct-repository-template.ctk.au.deloitte.com'
+  host: 'librechat.ctk.au.deloitte.com'
   annotations:
     ingress.cilium.io/loadbalancer-mode: "shared"
     ingress.cilium.io/force-https: "true"
@@ -15,8 +14,7 @@ ingress:
     - secretName: ctk-au-deloitte-com
       secretStoreName: external-secret-store
       hosts:
-        - 'ct-repository-template.ctk.au.deloitte.com'
-
+        - 'librechat.ctk.au.deloitte.com'
 pods:
   frontend:
     replicas: 1
@@ -37,7 +35,7 @@ pods:
         #   periodSeconds: 10
         #   timeoutSeconds: 30
         image:
-          repository: 'ct-repository-templates/frontend'
+          repository: 'tt-librechat/frontend'
           pullPolicy: Always
           tag: 'main'
         containerSecurityContext:
@@ -54,7 +52,6 @@ pods:
           paths:
             - path: /
               pathType: Prefix
-  
   api:
     replicas: 1
     containers:
@@ -74,7 +71,7 @@ pods:
         #   periodSeconds: 10
         #   timeoutSeconds: 30
         image:
-          repository: 'ct-repository-template/api'
+          repository: 'tt-librechat/api'
           pullPolicy: Always
           tag: 'main'
         containerSecurityContext:
