@@ -1,7 +1,9 @@
 imageRegistry: 'dttaitsdev.azurecr.io'
 branch: 'develop'
+
 serviceAccount:
   name: sa-librechat-dev
+
 ingress:
   className: cilium
   host: 'librechat-dev.ctk.au.deloitte.com'
@@ -14,18 +16,13 @@ ingress:
       secretStoreName: external-secret-store
       hosts:
         - 'librechat-dev.ctk.au.deloitte.com'
+
 pods:
-  frontend:
+  librechat:
     replicas: 1
     containers:
-      frontend:
+      librechat:
         image:
           tag: 'develop'
-  api:
-    replicas: 1
-    containers:
-      api:
-        image:
-          tag: 'develop'
-          # env:
-          #   example_env_name: 'example_env_value'
+        env:
+          NODE_ENV: 'development'
