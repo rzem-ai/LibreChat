@@ -21,3 +21,6 @@ spec:
   businessLead: AU_CTK_TT_BULeads
   assetLead: MyAssist Core Dev Team
   assetDev: MyAssist Core Dev Team
+  environment:
+    dev:
+      infra-deploy/pr-status: pending
