@@ -23,4 +23,4 @@ spec:
   assetDev: MyAssist Core Dev Team
   environment:
     dev:
-      infra-deploy/pr-status: pending
+      infra-deploy/pr-status: approved
