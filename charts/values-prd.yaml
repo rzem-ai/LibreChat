@@ -1,7 +1,9 @@
 imageRegistry: 'dttaitsprd.azurecr.io'
 branch: 'main'
+
 serviceAccount:
   name: sa-librechat-prd
+
 ingress:
   className: cilium
   host: 'librechat.ctk.au.deloitte.com'
@@ -14,18 +16,18 @@ ingress:
       secretStoreName: external-secret-store
       hosts:
         - 'librechat.ctk.au.deloitte.com'
+
 pods:
-  frontend:
-    replicas: 1
+  librechat:
+    replicas: 2
     containers:
-      frontend:
+      librechat:
         image:
           tag: 'main'
-  api:
-    replicas: 1
-    containers:
-      api:
-        image:
-          tag: 'main'
-          # env:
-          #   example_env_name: 'example_env_value'
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
