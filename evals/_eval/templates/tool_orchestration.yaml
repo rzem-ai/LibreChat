@@ -1,0 +1,74 @@
+# Template: Tool-Orchestrated Workflow Execution
+#
+# Use this template for skills that primarily orchestrate tool calls:
+#   - Process map generators, database diagram tools, PowerPoint generators
+#   - Spreadsheet operations, code execution workflows
+#
+# Copy this file to: evals/<Skill Name>/eval_cases.yaml
+# Then customise the cases below.
+
+adapter: _eval.adapters.agno_adapter.AgnoAdapter
+invoke_method: invoke_text
+
+cases:
+
+  case_1:
+    name: "TODO: Describe this test case"
+    category: "Tool-Orchestrated Workflow Execution"
+    source_material: "documents/TODO_sample_input.md"
+    user_query: >-
+      TODO: Write the user prompt that triggers this skill.
+    expected_output: >-
+      TODO: Describe the expected output.
+    expected_tools:
+      - name: get_skill_instructions
+        input_parameters:
+          skill_name: "TODO: skill-name"
+      # Add other expected tool calls:
+      # - name: run_python_code
+      #   input_parameters: {}
+
+    # --- Gating metrics ---
+    metrics:
+      - tool_correctness
+      - task_completion
+
+    thresholds:
+      task_completion: 0.7
+
+    # --- Diagnostic metrics ---
+    # Note: step_efficiency is not yet implemented — add when available
+    diagnostic_metrics:
+      - answer_relevancy
+
+    diagnostic_thresholds:
+      answer_relevancy: 0.5
+
+    # --- Leading question probes ---
+    leading_questions:
+      - name: "Correct Skill Selection"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Did the agent select the correct skill(s) without user disambiguation?
+
+      - name: "Parameter Correctness"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Were the tool input parameters populated correctly from context
+          (e.g., skill_name, task type)?
+
+      - name: "Minimal Tool Calls"
+        question: >-
+          Was the number of tool calls minimised — i.e., no redundant or
+          retry calls?
+
+      - name: "Dependency Order"
+        question: >-
+          If the task required chaining skills, were they invoked in the
+          correct dependency order?
+
+      - name: "No Irrelevant Tools"
+        question: >-
+          Did the agent avoid invoking tools that were irrelevant to the prompt?

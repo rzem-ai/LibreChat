@@ -102,6 +102,7 @@ config.local.ts
 junit.xml
 **/.venv/
 **/venv/
+**/.results/
 
 # docker override file
 docker-compose.override.yaml
@@ -178,3 +179,11 @@ claude-flow
 hive-mind-prompt-*.txt
 CLAUDE.md
 .gsd
+
+# Python bytecode
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.deepeval*

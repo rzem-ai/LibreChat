@@ -1,0 +1,24 @@
+[project]
+name = "librechat-evals"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "deepeval>=3.9.6",
+    "pyyaml",
+    "python-dotenv",
+    "rich",
+    "python-docx",
+    "openai",
+    "langfuse>=4.5.1",
+]
+
+[project.scripts]
+eval-run = "_eval.run_eval:main"
+eval-summary = "_eval.summarise_results:main"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["evals"]

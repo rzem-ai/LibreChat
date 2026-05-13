@@ -1,0 +1,75 @@
+# Template: Governance / Control / Compliance
+#
+# Use this template for skills that review, audit, or enforce compliance:
+#   - NDA reviewers, SOW reviewers, document quality checks
+#   - RFP compliance, audit response generators
+#
+# Copy this file to: evals/<Skill Name>/eval_cases.yaml
+# Then customise the cases below.
+
+adapter: _eval.adapters.agno_adapter.AgnoAdapter
+invoke_method: invoke_text
+
+cases:
+
+  case_1:
+    name: "TODO: Describe this test case"
+    category: "Governance / Control / Compliance"
+    source_material: "documents/TODO_sample_input.md"
+    user_query: >-
+      TODO: Write the user prompt that triggers this skill.
+    expected_output: >-
+      TODO: Describe the expected output.
+    expected_tools:
+      - name: get_skill_instructions
+        input_parameters:
+          skill_name: "TODO: skill-name"
+
+    # --- Gating metrics ---
+    metrics:
+      - task_completion
+      - instruction_adherence
+      - policy_compliance
+
+    thresholds:
+      task_completion: 0.7
+      instruction_adherence: 0.7
+      policy_compliance: 1.0
+
+    # --- Diagnostic metrics ---
+    diagnostic_metrics:
+      - answer_relevancy
+      - bias
+      - toxicity
+
+    diagnostic_thresholds:
+      answer_relevancy: 0.5
+      bias: 0.5
+      toxicity: 0.5
+
+    # --- Leading question probes ---
+    leading_questions:
+      - name: "Clause-Linked Violations"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Are all flagged violations tied to specific clauses, rules, or criteria?
+
+      - name: "Confirmed vs Potential"
+        question: >-
+          Does the agent distinguish between confirmed violations and potential risks?
+
+      - name: "Actionable Specificity"
+        question: >-
+          Are findings expressed with sufficient specificity to be actionable?
+
+      - name: "No False Assurance"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Does the agent avoid false assurance (e.g., stating 'no issues found'
+          without evidence of thorough review)?
+
+      - name: "Severity Prioritisation"
+        question: >-
+          Are compliance gaps prioritised by severity or risk level?

@@ -1,0 +1,214 @@
+# Meeting Summariser — Evaluation Cases
+# Category: Content Generation & Transformation
+
+adapter: _eval.adapters.librechat_adapter.LibreChatAdapter
+invoke_method: invoke_text
+num_runs: 3
+
+cases:
+
+  case_1:
+    name: "Standard meeting transcript → structured summary"
+    category: "Content Generation & Transformation"
+    invoke_method: invoke_sequential
+    source_material: "documents/sample_meeting_transcript.md"
+    chatbot_role: "A meeting summarisation analyst"
+    expected_output: >-
+      A structured meeting summary containing: Overview paragraph, Participants
+      list, numbered Discussion Items, Decisions table, and Action Items with
+      owner and due date columns.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "meeting-summariser"
+
+    turns:
+      - content: >-
+          Please summarise this meeting transcript in detail. Include overview,
+          participants, discussion items, decisions, and action items with
+          owners and due dates.
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Skill tool called"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "meeting-summariser"
+          - type: contains_any
+            name: "Has discussion items"
+            phrases: ["discussion item", "discussion items", "key discussion"]
+          - type: contains_any
+            name: "Has action items"
+            phrases: ["action item", "action items", "follow-up"]
+
+    metrics:
+      - hallucination
+      - task_completion
+      - role_consistency
+
+    thresholds:
+      hallucination: 0.5
+      task_completion: 0.7
+      role_consistency: 0.7
+
+    diagnostic_metrics:
+      - tool_correctness
+      - faithfulness
+      - answer_relevancy
+
+    diagnostic_thresholds:
+      tool_correctness: 0.5
+      faithfulness: 0.5
+      answer_relevancy: 0.5
+
+    conversational_metrics:
+      - conversation_completeness
+
+    conversational_thresholds:
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "Structural Template"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Does the summary follow the standard meeting-minutes structure:
+          Overview, Participants, Discussion Items, Decisions, Action Items?
+
+      - name: "Action Item Completeness"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Does each action item include an owner name and a due date?
+
+      - name: "Participant Attribution"
+        question: >-
+          Are discussion points attributed to the correct participant?
+
+      - name: "No Invented Content"
+        question: >-
+          Is the summary free from claims not present in the transcript?
+
+      - name: "Conciseness"
+        question: >-
+          Is the summary concise — not merely copy-pasting from the transcript?
+
+  case_2:
+    name: "Short informal meeting notes → 4-step skill workflow"
+    category: "Content Generation & Transformation"
+    invoke_method: invoke_sequential
+    source_material: "documents/short_meeting_notes.md"
+    chatbot_role: "A meeting summarisation analyst"
+    expected_output: >-
+      A complete 4-step workflow: skill invocation, structured summary with
+      discussion and action items, an insight answer grounded in the notes,
+      and a formatted message for sharing.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "meeting-summariser"
+
+    turns:
+      # Step 1+2: Provide notes, expect agent to ask for detail level
+      - content: >-
+          Summarise these meeting notes into a formal meeting record.
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Skill tool called"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "meeting-summariser"
+          - type: leading_question
+            name: "Asks for detail level"
+            question: >-
+              Does the response ask the user to choose between a Brief
+              and Detailed summary level?
+
+      # Step 2: User selects detail level, expect structured summary
+      - content: "Brief"
+        turn_assertions:
+          - type: leading_question
+            name: "Has structured summary"
+            question: >-
+              Does the response contain a structured meeting summary with
+              distinct sections for discussion items and action items?
+          - type: leading_question
+            name: "Mentions budget topic"
+            question: >-
+              Does the summary reference cloud infrastructure costs,
+              budget overruns, or the data lake?
+          - type: leading_question
+            name: "Prompts next step"
+            question: >-
+              Does the response prompt the user to continue — either by
+              asking if they have questions about the meeting or by
+              offering to prepare a message for sharing?
+
+      # Step 3: User asks a question, expect grounded answer
+      - content: "How much could the archive migration save?"
+        turn_assertions:
+          - type: leading_question
+            name: "Answers with savings figure"
+            question: >-
+              Does the response mention a savings figure of approximately
+              $8,000 per month or $8k/month from the archive migration?
+
+      # Step 4: User provides sharing preferences, expect formatted message
+      - content: >-
+          Quick Teams Message, up to 100 words, Professional and Concise,
+          addressed to the finance team.
+        turn_assertions:
+          - type: leading_question
+            name: "Addresses finance team"
+            question: >-
+              Is the message addressed to or written for the finance team?
+          - type: leading_question
+            name: "Mentions key decision"
+            question: >-
+              Does the message reference the archive migration decision
+              or the change request?
+
+    metrics:
+      - hallucination
+      - task_completion
+      - role_consistency
+
+    thresholds:
+      hallucination: 0.5
+      task_completion: 0.7
+      role_consistency: 0.7
+
+    diagnostic_metrics:
+      - tool_correctness
+      - faithfulness
+
+    diagnostic_thresholds:
+      faithfulness: 0.5
+
+    conversational_metrics:
+      - conversation_completeness
+
+    conversational_thresholds:
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "Workflow Compliance"
+        question: >-
+          Did the agent follow a sequential workflow: first asking for
+          detail level, then producing a summary, then offering insights,
+          then preparing a shareable message?
+
+      - name: "Formalisation"
+        question: >-
+          Has the informal language been converted to professional register?
+
+      - name: "Key Decisions Captured"
+        question: >-
+          Are all key decisions from the notes captured in the summary?
+
+      - name: "No Invented Content"
+        question: >-
+          Is all content grounded in the original meeting notes?

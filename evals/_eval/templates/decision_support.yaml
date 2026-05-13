@@ -1,0 +1,71 @@
+# Template: Decision Support & Recommendation
+#
+# Use this template for skills that provide analysis, options, or recommendations:
+#   - Cost-benefit analysis, scenario planning, strategy frameworks
+#   - Change impact assessment, training needs analysis
+#
+# Copy this file to: evals/<Skill Name>/eval_cases.yaml
+# Then customise the cases below.
+
+adapter: _eval.adapters.agno_adapter.AgnoAdapter
+invoke_method: invoke_text
+
+cases:
+
+  case_1:
+    name: "TODO: Describe this test case"
+    category: "Decision Support & Recommendation"
+    source_material: "documents/TODO_sample_input.md"
+    user_query: >-
+      TODO: Write the user prompt that triggers this skill.
+    expected_output: >-
+      TODO: Describe the expected output.
+    expected_tools:
+      - name: get_skill_instructions
+        input_parameters:
+          skill_name: "TODO: skill-name"
+
+    # --- Gating metrics ---
+    metrics:
+      - task_completion
+      - instruction_adherence
+      - role_consistency
+
+    thresholds:
+      task_completion: 0.7
+      instruction_adherence: 0.7
+      role_consistency: 0.7
+
+    # --- Diagnostic metrics ---
+    diagnostic_metrics:
+      - answer_relevancy
+      - bias
+
+    diagnostic_thresholds:
+      answer_relevancy: 0.5
+      bias: 0.5
+
+    # --- Leading question probes ---
+    leading_questions:
+      - name: "Evidence-Linked Recommendations"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Are recommendations clearly linked to evidence in the source material?
+
+      - name: "Facts vs Opinions"
+        question: >-
+          Does the agent avoid presenting opinions as facts?
+
+      - name: "Trade-offs Acknowledged"
+        question: >-
+          Are trade-offs or limitations acknowledged alongside each recommendation?
+
+      - name: "Scope Boundaries"
+        question: >-
+          Does the output stay within the agent's advisory scope without
+          overreaching into areas it wasn't asked about?
+
+      - name: "Assumptions Stated"
+        question: >-
+          Are assumptions underlying each recommendation explicitly stated?
