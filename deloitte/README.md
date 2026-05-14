@@ -1,0 +1,243 @@
+# LibreChat – Local Setup (MyAssist 2.0)
+
+This repository contains the local development setup for **LibreChat**, configured to work with Deloitte’s **ClearTrack LLM Gateway** and internal model endpoints. This setup is intended to support development and experimentation for **MyAssist 2.0**.
+
+---
+
+## What this setup gives you
+
+- A **local LibreChat instance** running via Docker
+- Support for **Azure OpenAI (AU & US)**, **VertexAI**, and **Anthropic via gateway proxy**
+- Integration with **ClearTrack MCP Gateway**
+- Local theming via **Deloitte GEL assets**
+- A structure that can later be deployed to **ClearTrack** (dev / stage / prod)
+
+---
+
+## Prerequisites
+
+Before you start, make sure you have:
+
+- Docker & Docker Compose
+- Git
+- A Deloitte-issued machine
+- Access to the **Deloitte Entra ID** tenant
+- Ability to toggle **VPN on/off** (both states are required during setup)
+
+---
+
+## Repository
+
+Clone the Deloitte LibreChat repository:
+
+```zsh
+git clone https://github.com/Deloitte-Australia/tt-librechat.git
+cd tt-librechat
+```
+
+---
+
+## Required files
+
+You will need the following files in the repo root:
+
+- `.env`
+- `librechat.yaml`
+- `docker-compose.override.yml`
+- `nginx-gateway-proxy.conf`
+- `deloitte/assets/` (unzipped Deloitte GEL assets)
+
+These were shared during the setup session.
+
+---
+
+## Caddyfile
+
+This allows us to login via Azure Auth locally
+
+1. Copy the example file:
+
+```zsh
+cp Caddyfile.deloitte.example Caddyfile
+```
+
+2. Get your machine hostname:
+
+```zsh
+hostname
+```
+
+3. Update `Caddyfile` line 8 so it uses your host with `.local` (for example `AU-ABC123123.local {`).
+4. Share that hostname with Ally Fulton (so it can be added as an accepted redirect URL on App Reg)
+5. This custom domain enables Deloitte auth locally (instead of `localhost`).
+
+## Environment configuration (.env)
+
+Start by copying the example file:
+
+```zsh
+cp .env.example .env
+```
+
+### Make changes 
+
+Update the existing keys below in `.env` (edit the existing entries, do not add duplicate keys):
+
+Tip: ask your AI coding assistant to update these existing keys in place.
+
+1. `ENDPOINTS=anthropic,custom,agents`
+
+2. `ANTHROPIC_REVERSE_PROXY=http://gateway-proxy:8080/anthropic`
+
+3. `APP_TITLE=MyAssist 2.0`
+
+4. `DOMAIN_CLIENT=https://<yourhostname>.local` (for example `https://AU-Y6JXTHK33D.local`)
+
+5. `DOMAIN_SERVER=https://<yourhostname>.local` (for example `https://AU-Y6JXTHK33D.local`)
+
+6. `ALLOW_SOCIAL_LOGIN=true`
+
+7. `OPENID_CLIENT_ID=<update with the provided value from another team member>`
+
+8. `OPENID_CLIENT_SECRET=<update with the provided secret from another team member>`
+
+9. `OPENID_ISSUER=<update with the provided issuer URL from another team member>`
+
+10. `OPENID_SESSION_SECRET=<update with the provided secret from another team member>`
+
+11. `OPENID_SCOPE="openid profile email"`
+
+12. `OPENID_CALLBACK_URL=/oauth/openid/callback`
+
+13. `OPENID_REQUIRED_ROLE=`
+
+14. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
+
+15. `OPENID_BUTTON_LABEL="Login with SSO"`
+
+16. `OPENID_IMAGE_URL=/assets/favicon.svg`
+
+17. `ALLOW_EMAIL_LOGIN=false`
+
+18. `ALLOW_REGISTRATION=false`
+
+19. `ALLOW_SOCIAL_REGISTRATION=false`
+
+20. Comment out `OPENAI_API_KEY=`  
+
+21. Comment out `ASSISTANTS_API_KEY=`
+
+22. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
+
+#### How to obtain the JWT token
+⚠️ As of May 2026, tokens expire after ~8 hours. If models suddenly stop working, reissue the token.
+1. Navigate to [here](https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/oauth2/v2.0/authorize?client_id=498ce9fd-195b-40c5-82f1-8fc4a6d00d88&response_type=id_token&redirect_uri=https%3A%2F%2Fjwt.ms&scope=openid%20profile%20email%20https%3A%2F%2Fgraph.microsoft.com%2FUser.Read&response_mode=fragment&state=random_state&nonce=random_nonce)
+2. Copy the whole value to LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION inside quotation marks
+---
+
+## librechat.yaml
+
+The `librechat.yaml` configures:
+
+- Custom Azure AU / US endpoints
+- VertexAI models
+- Anthropic models via the gateway proxy
+- Default visible models in the UI
+- ClearTrack MCP integration
+
+Ensure your config includes:
+
+- `x-id-token` header populated from `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION`
+- Correct base URLs for AU / US OpenAI and VertexAI
+- MCP gateway pointing to `https://mcp-gateway-uat.ctk.au.deloitte.com/mcp`
+
+---
+
+## Docker override (docker-compose.override.yml)
+
+Key points in the override:
+
+- Deloitte-specific local development customisations are applied via the override
+- Deloitte assets copied into the frontend on startup
+- TLS verification disabled for local development
+
+---
+
+## Running the app
+
+### Start services
+
+```zsh
+docker compose up -d
+```
+
+If things behave oddly, try a clean restart:
+
+```zsh
+docker compose down
+docker compose up -d
+```
+
+### Access the app
+
+Open your configured `DOMAIN_CLIENT` URL in **Safari** or via LocalHost in Chrome.
+
+---
+
+## VPN gotcha (very important)
+
+You **must swap VPN state** during setup:
+
+- Pull Docker images → ❌ VPN Off  
+- Running models via gateway → ✅ VPN On  
+
+If models fail with gateway or MCP errors, this is almost always the cause.
+
+---
+
+## Common fixes
+
+### Docker image pull hangs or fails
+
+`unset https_proxy`  
+`unset http_proxy`
+
+Manual pulls if needed:
+
+`docker pull mongo:8.0.21`  
+`docker pull registry.librechat.ai/danny-avila/librechat-dev:latest`
+
+### MongoDB version error
+
+If you see `featureCompatibilityVersion` errors:
+
+`docker rmi mongo:8.0.20`
+
+### No model responses
+
+- Refresh the browser
+- Start a new chat
+- Check token expiry
+- Confirm VPN is **on**
+
+---
+
+## Notes on deployment
+
+- The intent is to later host this via **ClearTrack**
+- ClearTrack provides shared dev / stage / prod URLs
+- A lightweight fork approach is preferred:
+  - Track latest LibreChat releases
+  - Keep Deloitte changes minimal and config-only
+
+---
+
+## Next steps
+
+- Validate capacity and sizing in ClearTrack
+- Finalise repo structure and pipelines
+- Confirm which models are formally supported
+
+---
+
+Happy tinkering 🚀
