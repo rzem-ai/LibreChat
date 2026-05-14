@@ -61,14 +61,16 @@ pods:
           HOST: '0.0.0.0'
           PORT: '3080'
           NODE_ENV: 'production'
-        # Secrets mapped from Azure Key Vault via External Secrets
-        # secrets:
-        #   MONGO_URI: librechat-mongo-uri
-        #   OPENAI_API_KEY: librechat-openai-key
-        #   JWT_SECRET: librechat-jwt-secret
-        #   JWT_REFRESH_SECRET: librechat-jwt-refresh-secret
-        #   CREDS_KEY: librechat-creds-key
-        #   CREDS_IV: librechat-creds-iv
+          ALLOW_EMAIL_LOGIN: 'false'
+          ALLOW_REGISTRATION: 'false'
+          ALLOW_SOCIAL_LOGIN: 'true'
+          ALLOW_SOCIAL_REGISTRATION: 'false'
+          OPENID_SCOPE: 'openid profile email'
+          OPENID_CALLBACK_URL: '/oauth/openid/callback'
+          OPENID_REQUIRED_ROLE_TOKEN_KIND: 'id'
+          OPENID_USE_END_SESSION_ENDPOINT: 'true'
+          OPENID_BUTTON_LABEL: 'Login with SSO'
+          OPENID_IMAGE_URL: '/assets/favicon.svg'
         service:
           enabled: true
           type: ClusterIP
