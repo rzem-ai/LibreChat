@@ -200,9 +200,9 @@ Deloitte App Reg is used to manage the Azure Entra authentication for this app.
 For LOCAL development, we need to add each user's hostname to the Redirect URIs list in the "Authentication" tab of the App Registration. This is required because Deloitte's Azure Entra does not allow `localhost` in Redirect URIs, so we use a custom domain (e.g. `AU-ABC123123.local`) for local development instead.
 
 ### App Reg Details Per Environment
-DEV (Inc. LOCAL): [AU CTK_TT_Librechat NONPROD](https://appreg.iam.deloitteresources.com/AppProperties/2075976d-5147-47b2-89d2-4ad060d19f85)
-UAT: TBC
-PROD: TBC
+**DEV (Inc. LOCAL):** [AU CTK_TT_Librechat NONPROD](https://appreg.iam.deloitteresources.com/AppProperties/2075976d-5147-47b2-89d2-4ad060d19f85)
+**UAT:** TBC
+**PROD:** TBC
 
 ---
 
