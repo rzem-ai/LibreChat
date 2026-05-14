@@ -27,6 +27,10 @@ pods:
     replicas: 1
     containers:
       librechat:
+        command:
+          - /bin/sh
+          - -c
+          - export LLM_GATEWAY_X_SA_TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" && exec npm run backend
         livenessProbe:
           httpGet:
             path: /api/health
