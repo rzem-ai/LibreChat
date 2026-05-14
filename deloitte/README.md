@@ -100,7 +100,6 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 17. `ALLOW_EMAIL_LOGIN=false`
 18. `ALLOW_REGISTRATION=false`
 19. `ALLOW_SOCIAL_REGISTRATION=false`
-20. `ALLOW_SOCIAL_LOGIN=true` to show the SSO login option
 20. Comment out `OPENAI_API_KEY=`
 21. Comment out `ASSISTANTS_API_KEY=`
 22. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
