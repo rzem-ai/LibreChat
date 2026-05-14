@@ -84,8 +84,8 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 1. `ENDPOINTS=anthropic,custom,agents`
 2. `ANTHROPIC_REVERSE_PROXY=http://gateway-proxy:8080/anthropic`
 3. `APP_TITLE=MyAssist 2.0`
-4. `DOMAIN_CLIENT=https://<yourhostname>.local` (for example `https://AU-Y6JXTHK33D.local`)
-5. `DOMAIN_SERVER=https://<yourhostname>.local` (for example `https://AU-Y6JXTHK33D.local`)
+4. `DOMAIN_CLIENT=https://<yourhostname>.local` (for example `https://AU-ABC123123.local`)
+5. `DOMAIN_SERVER=https://<yourhostname>.local` (for example `https://AU-ABC123123.local`)
 6. `ALLOW_SOCIAL_LOGIN=true`
 7. `OPENID_CLIENT_ID=<update with the provided value from another team member>`
 8. `OPENID_CLIENT_SECRET=<update with the provided secret from another team member>`
@@ -193,11 +193,16 @@ If you see `featureCompatibilityVersion` errors:
 
 ---
 
-## Next steps
+## Deloitte App Reg
 
-- Validate capacity and sizing in ClearTrack
-- Finalise repo structure and pipelines
-- Confirm which models are formally supported
+Deloitte App Reg is used to manage the Azure Entra authentication for this app. 
+
+For LOCAL development, we need to add each user's hostname to the Redirect URIs list in the "Authentication" tab of the App Registration. This is required because Deloitte's Azure Entra does not allow `localhost` in Redirect URIs, so we use a custom domain (e.g. `AU-ABC123123.local`) for local development instead.
+
+### App Reg Details Per Environment
+DEV (Inc. LOCAL): [AU CTK_TT_Librechat NONPROD](https://appreg.iam.deloitteresources.com/AppProperties/2075976d-5147-47b2-89d2-4ad060d19f85)
+UAT: TBC
+PROD: TBC
 
 ---
 
