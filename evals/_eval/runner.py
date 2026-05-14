@@ -33,7 +33,7 @@ from .metrics import (
     build_conversational_metrics,
     evaluate_turn_assertions,
 )
-from .langfuse_reporter import push_scores_to_langfuse, _langfuse_enabled
+from .langfuse_reporter import push_scores_to_langfuse, _langfuse_enabled, link_trace_to_dataset
 
 
 # ---------------------------------------------------------------------------
@@ -762,6 +762,7 @@ def run_eval(
     metrics_override: Optional[str] = None,
     num_runs: Optional[int] = None,
     push_langfuse: bool = False,
+    run_name: Optional[str] = None,
 ) -> None:
     """Load a case, run the agent NUM_RUNS times, evaluate, then average results.
 
@@ -771,6 +772,7 @@ def run_eval(
         metrics_override: Comma-separated gating metric keys to override YAML.
         num_runs: Number of evaluation runs (defaults to NUM_RUNS constant or YAML).
         push_langfuse: If True, push metric scores to Langfuse after evaluation.
+        run_name: Shared Langfuse dataset run name for grouping cases in one experiment.
     """
     os.environ["DO_NOT_TRACK"] = "1"
     run_start = time.time()
@@ -911,7 +913,7 @@ def run_eval(
         if not user_query and is_sequential:
             yaml_turns = case.get("turns", [])
             user_query = yaml_turns[0]["content"] if yaml_turns else ""
-        push_scores_to_langfuse(
+        trace_id = push_scores_to_langfuse(
             case_key=case_key,
             case_name=case.get("name", case_key),
             user_query=user_query,
@@ -926,6 +928,8 @@ def run_eval(
             turn_results=all_runs[-1].get("turn_results") if is_sequential else None,
             conversational_results=agg.get("conversational_results"),
         )
+        if trace_id:
+            link_trace_to_dataset(config_path, case_key, trace_id, run_name=run_name)
 
     # Raise if gating failed
     if not agg["gating_passed"]:

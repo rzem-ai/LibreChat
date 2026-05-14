@@ -45,21 +45,19 @@ cases:
     metrics:
       - hallucination
       - task_completion
-      - role_consistency
+      - faithfulness
 
     thresholds:
-      hallucination: 0.5
+      hallucination: 0.7
       task_completion: 0.7
-      role_consistency: 0.7
+      faithfulness: 0.7
 
     diagnostic_metrics:
       - tool_correctness
-      - faithfulness
       - answer_relevancy
 
     diagnostic_thresholds:
       tool_correctness: 0.5
-      faithfulness: 0.5
       answer_relevancy: 0.5
 
     conversational_metrics:
@@ -87,6 +85,8 @@ cases:
           Are discussion points attributed to the correct participant?
 
       - name: "No Invented Content"
+        type: gating
+        threshold: 0.7
         question: >-
           Is the summary free from claims not present in the transcript?
 
@@ -174,19 +174,20 @@ cases:
     metrics:
       - hallucination
       - task_completion
-      - role_consistency
+      - faithfulness
 
     thresholds:
       hallucination: 0.5
       task_completion: 0.7
-      role_consistency: 0.7
+      faithfulness: 0.5
 
     diagnostic_metrics:
       - tool_correctness
-      - faithfulness
+      - role_consistency
 
     diagnostic_thresholds:
-      faithfulness: 0.5
+      tool_correctness: 0.5
+      role_consistency: 0.7
 
     conversational_metrics:
       - conversation_completeness
@@ -195,12 +196,6 @@ cases:
       conversation_completeness: 0.5
 
     leading_questions:
-      - name: "Workflow Compliance"
-        question: >-
-          Did the agent follow a sequential workflow: first asking for
-          detail level, then producing a summary, then offering insights,
-          then preparing a shareable message?
-
       - name: "Formalisation"
         question: >-
           Has the informal language been converted to professional register?

@@ -10,6 +10,7 @@ Usage:
 
 import argparse
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -20,6 +21,7 @@ if str(_EVAL_DIR.parent) not in sys.path:
     sys.path.insert(0, str(_EVAL_DIR.parent))
 
 from _eval.runner import run_eval
+from _eval.langfuse_reporter import sync_dataset_to_langfuse
 
 
 def main():
@@ -55,12 +57,30 @@ def main():
         "--langfuse", action="store_true", default=False,
         help="Push metric scores to Langfuse after evaluation.",
     )
+    parser.add_argument(
+        "--sync-dataset", action="store_true", default=False,
+        help="Sync eval cases to a Langfuse Dataset (benchmark) and exit.",
+    )
+    parser.add_argument(
+        "--run-name", default=None,
+        help="Custom name for the Langfuse dataset run (e.g. 'baseline', 'v2-prompt'). Defaults to eval-YYYYMMDD-HHMMSS.",
+    )
     args = parser.parse_args()
 
     config_path = Path(args.config).resolve()
     if not config_path.exists():
         print(f"ERROR: Config file not found: {config_path}", file=sys.stderr)
         sys.exit(1)
+
+    if args.sync_dataset:
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+        sync_dataset_to_langfuse(config_path, config)
+        return
+
+    # Generate a shared run name for this invocation so all cases
+    # are grouped under one experiment in Langfuse Datasets.
+    run_name = args.run_name or f"eval-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
 
     if not args.case:
         # Default to --all when no --case is specified
@@ -76,6 +96,7 @@ def main():
                     metrics_override=args.metrics,
                     num_runs=args.num_runs,
                     push_langfuse=args.langfuse,
+                    run_name=run_name,
                 )
             except Exception as exc:
                 print(f"[FAIL] {key}: {exc}")
@@ -90,6 +111,7 @@ def main():
             metrics_override=args.metrics,
             num_runs=args.num_runs,
             push_langfuse=args.langfuse,
+            run_name=run_name,
         )
 
 

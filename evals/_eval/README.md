@@ -30,15 +30,17 @@ uv run eval-summary --config "evals/<Skill Name>/eval_cases.yaml"
 ```
 _eval/
 ├── __init__.py              # Package marker, re-exports run_eval
-├── run_eval.py              # CLI entry point (--config, --case, --num-runs, --metrics)
+├── run_eval.py              # CLI entry point (--config, --case, --num-runs, --metrics, --langfuse)
 ├── runner.py                # Core engine: load → invoke → measure → aggregate → save
 ├── metrics.py               # All metric definitions, EvaluatorModel, registries
+├── langfuse_reporter.py     # Langfuse integration: scores, datasets, experiments
 ├── conftest.py              # pytest integration (pytest_addoption, pytest_generate_tests)
 ├── summarise_results.py     # Rich-formatted result viewer (--config, --latest, --file)
 ├── adapters/
 │   ├── __init__.py          # Exports AgentAdapter, AgentResponse
 │   ├── base.py              # Abstract AgentAdapter ABC + dataclasses
-│   └── agno_adapter.py      # Agno framework implementation
+│   ├── agno_adapter.py      # Agno framework implementation
+│   └── librechat_adapter.py # LibreChat OpenAI-compatible API adapter
 ├── templates/               # Category YAML templates (starting points)
 │   ├── content_generation.yaml
 │   ├── knowledge_retrieval.yaml
@@ -100,26 +102,81 @@ Use the **eval-scaffolder** skill to generate this automatically:
 | `bias` | Diagnostic | Detects biased language |
 | `toxicity` | Diagnostic | Detects harmful content |
 
+### Conversational Metrics (session-level, for multi-turn)
+
+| Key | Description |
+|-----|-------------|
+| `conversation_completeness` | Whether all user requests were addressed across turns |
+| `conversational_role_consistency` | Maintained persona across the conversation |
+| `conversational_instruction_adherence` | Followed instructions throughout the session |
+
 ---
 
 ## CLI Reference
 
 ### `eval-run`
 
-```
-uv run eval-run --config <path>              # Run all cases (default)
-uv run eval-run --config <path> --case case_1
-uv run eval-run --config <path> --num-runs 5
-uv run eval-run --config <path> --metrics hallucination,task_completion
+```bash
+uv run eval-run --config <path>                          # Run all cases (default)
+uv run eval-run --config <path> --case case_1            # Run specific case
+uv run eval-run --config <path> --num-runs 5             # Override run count
+uv run eval-run --config <path> --metrics hallucination,task_completion  # Override gating metrics
+uv run eval-run --config <path> --langfuse               # Push scores to Langfuse
+uv run eval-run --config <path> --langfuse --run-name "baseline"  # Named experiment
+uv run eval-run --config <path> --sync-dataset           # Upload cases to Langfuse Dataset
 ```
 
 ### `eval-summary`
 
-```
+```bash
 uv run eval-summary --config <path>              # Show all cases (default)
 uv run eval-summary --config <path> --latest     # Show only last run
 uv run eval-summary --file <path/to/case_1.json> # Show specific file
 ```
+
+---
+
+## Langfuse Integration
+
+The framework integrates with [Langfuse](https://langfuse.com) for observability and benchmarking.
+
+### Pushing Scores
+
+Add `--langfuse` to any eval run to push results as Langfuse traces with attached scores:
+
+```bash
+uv run eval-run --config "evals/Meeting Summariser/eval_cases.yaml" --langfuse --num-runs 2
+```
+
+Each eval creates a trace with:
+- **Tags**: `skill-eval`, `PASS`/`FAIL`, skill name
+- **Scores**: All gating, diagnostic, probe, and conversational metrics
+- **Child spans**: Per-turn generations (for multi-turn evals)
+
+### Datasets & Experiments
+
+Langfuse Datasets provide a benchmarking layer on top of traces:
+
+```bash
+# 1. Sync your eval_cases.yaml to a Langfuse Dataset (one-time setup, idempotent)
+uv run eval-run --config "evals/Meeting Summariser/eval_cases.yaml" --sync-dataset
+
+# 2. Run evals — traces are automatically linked to dataset items
+uv run eval-run --config "..." --langfuse --run-name "baseline"
+
+# 3. Make changes, run again with a new name
+uv run eval-run --config "..." --langfuse --run-name "v2-improved-prompt"
+```
+
+In Langfuse: **Datasets** → `evals/Meeting Summariser` → **Runs** tab shows experiments side by side with aggregate scores.
+
+### Environment Variables
+
+| Variable | Purpose |
+|----------|---------|
+| `EVAL_LANGFUSE_BASE_URL` | Langfuse instance URL (default: `http://localhost:3000`) |
+| `LANGFUSE_BASE_URL` | Fallback if above not set |
+| `EVAL_PUSH_LANGFUSE=1` | Enable Langfuse globally (alternative to `--langfuse` flag) |
 
 ---
 
@@ -131,12 +188,95 @@ To support a different agent framework, implement `AgentAdapter` from `_eval/ada
 from _eval.adapters.base import AgentAdapter, AgentResponse, ToolCallRecord
 
 class MyAdapter(AgentAdapter):
-    def invoke_text(self, query, context): ...
-    def invoke_file(self, query, file_paths): ...
-    def invoke_multi_turn(self, turns): ...
+    def invoke_text(self, query, context) -> AgentResponse: ...
+    def invoke_file(self, query, file_paths) -> AgentResponse: ...
+    def invoke_multi_turn(self, turns) -> AgentResponse: ...
+    def invoke_sequential(self, turns, source_text=None) -> List[AgentResponse]: ...
 ```
 
 Then set `adapter: _eval.adapters.my_adapter.MyAdapter` in your YAML.
+
+### Available Adapters
+
+| Adapter | Path | Description |
+|---------|------|-------------|
+| `AgnoAdapter` | `_eval.adapters.agno_adapter.AgnoAdapter` | Direct Agno framework calls with Azure OpenAI |
+| `LibreChatAdapter` | `_eval.adapters.librechat_adapter.LibreChatAdapter` | LibreChat OpenAI-compatible API (`/api/agents/v1/chat/completions`) |
+
+The LibreChat adapter requires these env vars: `LIBRECHAT_BASE_URL`, `LIBRECHAT_API_KEY`, `LIBRECHAT_AGENT_ID`.
+
+---
+
+## eval_cases.yaml Schema
+
+```yaml
+# Top-level config
+adapter: _eval.adapters.librechat_adapter.LibreChatAdapter  # Required
+invoke_method: invoke_text          # Global default (invoke_text | invoke_file | invoke_sequential)
+num_runs: 3                         # Global default runs (overridable per-case or CLI)
+
+cases:
+  case_1:
+    name: "Human-readable case description"
+    category: "Content Generation & Transformation"
+    invoke_method: invoke_sequential  # Per-case override
+    source_material: "documents/sample.md"  # Relative to config directory
+    chatbot_role: "A meeting summarisation analyst"
+    expected_output: "Description of desired output..."
+
+    expected_tools:                  # Tools the agent should call
+      - name: skill
+        input_parameters:
+          skillName: "meeting-summariser"
+
+    turns:                          # Multi-turn conversation (for invoke_sequential)
+      - content: "Summarise this meeting transcript."
+        attach_source: true         # Attach source_material to this turn
+        turn_assertions:            # Per-turn checks
+          - type: expected_tools    # Deterministic: expected_tools, contains_any, not_contains
+            name: "Skill tool called"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "meeting-summariser"
+          - type: contains_any
+            name: "Has action items"
+            phrases: ["action item", "action items", "follow-up"]
+          - type: leading_question  # LLM-judged per-turn assertion
+            name: "Asks for detail level"
+            question: "Does the response ask the user to choose a detail level?"
+
+    # Gating metrics — must pass or the case fails
+    metrics:
+      - hallucination
+      - task_completion
+      - faithfulness
+    thresholds:
+      hallucination: 0.7
+      task_completion: 0.7
+
+    # Diagnostic metrics — reported but never block
+    diagnostic_metrics:
+      - tool_correctness
+      - answer_relevancy
+    diagnostic_thresholds:
+      tool_correctness: 0.5
+
+    # Conversational metrics — session-level (invoke_sequential only)
+    conversational_metrics:
+      - conversation_completeness
+    conversational_thresholds:
+      conversation_completeness: 0.5
+
+    # Leading question probes — LLM-judged quality checks
+    leading_questions:
+      - name: "Structural Template"
+        type: gating              # gating = blocks, diagnostic = non-blocking (default)
+        threshold: 0.7            # Override default 0.5
+        question: "Does the summary follow a standard meeting-minutes structure?"
+      - name: "Conciseness"
+        question: "Is the summary concise?"  # Defaults to diagnostic
+```
 
 ---
 
