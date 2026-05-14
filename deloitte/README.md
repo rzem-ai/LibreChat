@@ -86,48 +86,30 @@ Update the existing keys below in `.env` (edit the existing entries, do not add 
 Tip: ask your AI coding assistant to update these existing keys in place.
 
 1. `ENDPOINTS=anthropic,custom,agents`
-
 2. `ANTHROPIC_REVERSE_PROXY=http://gateway-proxy:8080/anthropic`
-
 3. `APP_TITLE=MyAssist 2.0`
-
-4. `DOMAIN_CLIENT=https://<yourhostname>.local` (for example `https://AU-Y6JXTHK33D.local`)
-
-5. `DOMAIN_SERVER=https://<yourhostname>.local` (for example `https://AU-Y6JXTHK33D.local`)
-
+4. `DOMAIN_CLIENT=https://<yourhostname>.local` (for example `https://AU-ABC123123.local`)
+5. `DOMAIN_SERVER=https://<yourhostname>.local` (for example `https://AU-ABC123123.local`)
 6. `ALLOW_SOCIAL_LOGIN=true`
-
 7. `OPENID_CLIENT_ID=<update with the provided value from another team member>`
-
 8. `OPENID_CLIENT_SECRET=<update with the provided secret from another team member>`
-
 9. `OPENID_ISSUER=<update with the provided issuer URL from another team member>`
-
 10. `OPENID_SESSION_SECRET=<update with the provided secret from another team member>`
-
 11. `OPENID_SCOPE="openid profile email"`
-
 12. `OPENID_CALLBACK_URL=/oauth/openid/callback`
-
 13. `OPENID_REQUIRED_ROLE=`
-
 14. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
-
 15. `OPENID_BUTTON_LABEL="Login with SSO"`
-
 16. `OPENID_IMAGE_URL=/assets/favicon.svg`
-
 17. `ALLOW_EMAIL_LOGIN=false`
-
 18. `ALLOW_REGISTRATION=false`
-
 19. `ALLOW_SOCIAL_REGISTRATION=false`
-
-20. Comment out `OPENAI_API_KEY=`  
-
+20. Comment out `OPENAI_API_KEY=`
 21. Comment out `ASSISTANTS_API_KEY=`
-
-22. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
+22. BASE_URL_AZURE_AU=https://au-openai-exp.ctk.au.deloitte.com/openai/v1
+23. BASE_URL_AZURE_US=https://us-openai-exp.ctk.au.deloitte.com/openai/v1
+24. BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com
+25. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
 
 #### How to obtain the JWT token
 ⚠️ As of May 2026, tokens expire after ~8 hours. If models suddenly stop working, reissue the token.
