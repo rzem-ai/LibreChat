@@ -103,6 +103,7 @@ config.local.ts
 junit.xml
 **/.venv/
 **/venv/
+secrets.json
 
 # docker override file
 # docker-compose.override.yaml

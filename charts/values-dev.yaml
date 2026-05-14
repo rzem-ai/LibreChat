@@ -26,3 +26,21 @@ pods:
           tag: 'develop'
         env:
           NODE_ENV: 'development'
+          DOMAIN_CLIENT: 'https://librechat-dev.ctk.au.deloitte.com'
+          DOMAIN_SERVER: 'https://librechat-dev.ctk.au.deloitte.com'
+          ALLOW_SOCIAL_LOGIN: 'true'
+          OPENID_SCOPE: 'openid profile email'
+          OPENID_CALLBACK_URL: '/oauth/openid/callback'
+          OPENID_REQUIRED_ROLE_TOKEN_KIND: 'id'
+          OPENID_USE_END_SESSION_ENDPOINT: 'true'
+          KEY_VAULT_NAME: 'kv-int-librechat-dev'
+        secrets: # See docs: https://github.com/Deloitte-Australia/dep-infrastructure/wiki/Azure-Key-Vault-Secret-Management-using-Azure-CLI
+          MONGO_URI: mdb-librechat-database-dev
+          JWT_SECRET: librechat-jwt-secret-dev
+          JWT_REFRESH_SECRET: librechat-jwt-refresh-secret-dev
+          CREDS_KEY: librechat-creds-key-dev
+          CREDS_IV: librechat-creds-iv-dev
+          OPENID_CLIENT_SECRET: librechat-openid-client-secret-dev
+          OPENID_SESSION_SECRET: librechat-openid-session-secret-dev
+          OPENID_CLIENT_ID: librechat-openid-client-id-dev
+          OPENID_ISSUER: librechat-openid-issuer-dev
