@@ -61,14 +61,6 @@ pods:
           HOST: '0.0.0.0'
           PORT: '3080'
           NODE_ENV: 'production'
-        # Secrets mapped from Azure Key Vault via External Secrets
-        # secrets:
-        #   MONGO_URI: librechat-mongo-uri
-        #   OPENAI_API_KEY: librechat-openai-key
-        #   JWT_SECRET: librechat-jwt-secret
-        #   JWT_REFRESH_SECRET: librechat-jwt-refresh-secret
-        #   CREDS_KEY: librechat-creds-key
-        #   CREDS_IV: librechat-creds-iv
         service:
           enabled: true
           type: ClusterIP

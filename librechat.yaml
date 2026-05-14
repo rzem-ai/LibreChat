@@ -32,7 +32,7 @@ endpoints:
     # --- Azure AU (aus-east) ---
     - name: "Azure AU"
       apiKey: "dummy"
-      baseURL: "https://au-openai-exp.ctk.au.deloitte.com/openai/v1"
+      baseURL: "${BASE_URL_AZURE_AU}"
       models:
         default:
           - "gpt-4o-mini"
@@ -52,7 +52,7 @@ endpoints:
     # --- Azure US (eastus) ---
     - name: "Azure US"
       apiKey: "dummy"
-      baseURL: "https://us-openai-exp.ctk.au.deloitte.com/openai/v1"
+      baseURL: "${BASE_URL_AZURE_US}"
       models:
         default:
           - "gpt-41"
@@ -74,7 +74,7 @@ endpoints:
     # OpenAI-compatible endpoint, model names use google/ prefix
     - name: "VertexAI"
       apiKey: "dummy"
-      baseURL: "https://us-vertexai-exp.ctk.au.deloitte.com"
+      baseURL: "${BASE_URL_VERTEXAI}"
       models:
         default:
           - "google/gemini-2.5-flash"
