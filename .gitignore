@@ -76,6 +76,7 @@ bower_components/
 librechat.yml
 
 # Environment
+Caddyfile
 .npmrc
 .env*
 my.secrets
