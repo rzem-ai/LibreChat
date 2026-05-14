@@ -43,9 +43,6 @@ You will need the following files in the repo root:
 
 - `.env`
 - `librechat.yaml`
-- `docker-compose.override.yml`
-- `nginx-gateway-proxy.conf`
-- `deloitte/assets/` (unzipped Deloitte GEL assets)
 
 These were shared during the setup session.
 
@@ -67,9 +64,8 @@ cp Caddyfile.deloitte.example Caddyfile
 hostname
 ```
 
-3. Update `Caddyfile` line 8 so it uses your host with `.local` (for example `AU-ABC123123.local {`).
-4. Share that hostname with Ally Fulton (so it can be added as an accepted redirect URL on App Reg)
-5. This custom domain enables Deloitte auth locally (instead of `localhost`).
+3. Update `Caddyfile` to replace YOURHOSTNAME so it uses your host from step 2 above plus `.local` (for example `AU-ABC123123.local {`).
+4. Share that hostname with Ally Fulton (so it can be added as an accepted redirect URL on App Reg). This custom domain enables Deloitte auth locally (instead of `localhost`), as localhost cannot be used for Deloitte App Reg redirect URLs.
 
 ## Environment configuration (.env)
 
@@ -81,52 +77,31 @@ cp .env.example .env
 
 ### Make changes 
 
-Update the existing keys below in `.env` (edit the existing entries, do not add duplicate keys):
+Update the existing keys below in `.env` (edit the existing entries, do not add new keys unless they don't exist yet):
 
-Tip: ask your AI coding assistant to update these existing keys in place.
+Tip: ask your AI coding assistant to create (for new) or update (for existing) .env values.
 
 1. `ENDPOINTS=anthropic,custom,agents`
-
 2. `ANTHROPIC_REVERSE_PROXY=http://gateway-proxy:8080/anthropic`
-
 3. `APP_TITLE=MyAssist 2.0`
-
 4. `DOMAIN_CLIENT=https://<yourhostname>.local` (for example `https://AU-Y6JXTHK33D.local`)
-
 5. `DOMAIN_SERVER=https://<yourhostname>.local` (for example `https://AU-Y6JXTHK33D.local`)
-
 6. `ALLOW_SOCIAL_LOGIN=true`
-
 7. `OPENID_CLIENT_ID=<update with the provided value from another team member>`
-
 8. `OPENID_CLIENT_SECRET=<update with the provided secret from another team member>`
-
 9. `OPENID_ISSUER=<update with the provided issuer URL from another team member>`
-
 10. `OPENID_SESSION_SECRET=<update with the provided secret from another team member>`
-
 11. `OPENID_SCOPE="openid profile email"`
-
 12. `OPENID_CALLBACK_URL=/oauth/openid/callback`
-
 13. `OPENID_REQUIRED_ROLE=`
-
 14. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
-
 15. `OPENID_BUTTON_LABEL="Login with SSO"`
-
 16. `OPENID_IMAGE_URL=/assets/favicon.svg`
-
 17. `ALLOW_EMAIL_LOGIN=false`
-
 18. `ALLOW_REGISTRATION=false`
-
 19. `ALLOW_SOCIAL_REGISTRATION=false`
-
-20. Comment out `OPENAI_API_KEY=`  
-
+20. Comment out `OPENAI_API_KEY=`
 21. Comment out `ASSISTANTS_API_KEY=`
-
 22. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
 
 #### How to obtain the JWT token
@@ -144,22 +119,7 @@ The `librechat.yaml` configures:
 - Anthropic models via the gateway proxy
 - Default visible models in the UI
 - ClearTrack MCP integration
-
-Ensure your config includes:
-
-- `x-id-token` header populated from `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION`
-- Correct base URLs for AU / US OpenAI and VertexAI
-- MCP gateway pointing to `https://mcp-gateway-uat.ctk.au.deloitte.com/mcp`
-
----
-
-## Docker override (docker-compose.override.yml)
-
-Key points in the override:
-
-- Deloitte-specific local development customisations are applied via the override
-- Deloitte assets copied into the frontend on startup
-- TLS verification disabled for local development
+- And more!
 
 ---
 
