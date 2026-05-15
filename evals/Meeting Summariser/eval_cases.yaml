@@ -52,14 +52,6 @@ cases:
       task_completion: 0.7
       faithfulness: 0.7
 
-    diagnostic_metrics:
-      - tool_correctness
-      - answer_relevancy
-
-    diagnostic_thresholds:
-      tool_correctness: 0.5
-      answer_relevancy: 0.5
-
     conversational_metrics:
       - conversation_completeness
 
@@ -180,14 +172,6 @@ cases:
       hallucination: 0.5
       task_completion: 0.7
       faithfulness: 0.5
-
-    diagnostic_metrics:
-      - tool_correctness
-      - role_consistency
-
-    diagnostic_thresholds:
-      tool_correctness: 0.5
-      role_consistency: 0.7
 
     conversational_metrics:
       - conversation_completeness

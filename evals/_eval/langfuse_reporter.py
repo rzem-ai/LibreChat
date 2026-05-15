@@ -63,12 +63,6 @@ def _collect_score_configs(
     for name, *_ in gating_results:
         configs.append({"name": _sanitize_name(name), **numeric, "description": f"Gating: {name}"})
 
-    for name, *_ in diagnostic_results:
-        configs.append({"name": _sanitize_name(name), **numeric, "description": f"Diagnostic: {name}"})
-
-    for name, *_ in probe_results:
-        configs.append({"name": _sanitize_name(name), **numeric, "description": f"Probe: {name}"})
-
     if conversational_results:
         for name, *_ in conversational_results:
             configs.append({"name": _sanitize_name(name), **numeric, "description": f"Conversational: {name}"})
@@ -139,6 +133,7 @@ def push_scores_to_langfuse(
     conversation_history: Optional[List[dict]] = None,
     turn_results: Optional[List[dict]] = None,
     conversational_results: Optional[list] = None,
+    failure_reasons: Optional[Dict[str, List[str]]] = None,
 ) -> Optional[str]:
     """Create a Langfuse trace for this eval run and attach metric scores.
 
@@ -193,7 +188,7 @@ def push_scores_to_langfuse(
                 timestamp=now,
                 body=TraceBody(
                     id=trace_id,
-                    name=f"eval/{case_key}",
+                    name=f"{skill_name}/{case_key}",
                     input=user_query,
                     output=agent_output,
                     tags=tags,
@@ -216,46 +211,38 @@ def push_scores_to_langfuse(
             comment=f"Overall gating verdict | runs={num_runs}",
         )
 
+        reasons_map = failure_reasons or {}
+
         for name, avg, threshold, success, _scores in gating_results:
             if avg is not None:
+                comment = f"gating | threshold={threshold}, passed={success}, runs={num_runs}"
+                reasons = reasons_map.get(name)
+                if reasons and not success:
+                    for i, reason in enumerate(reasons, 1):
+                        comment += f"\n\n[Run {i}] {reason}"
                 langfuse.create_score(
                     trace_id=trace_id,
                     name=_sanitize_name(name),
                     value=avg,
                     data_type="NUMERIC",
-                    comment=f"gating | threshold={threshold}, passed={success}, runs={num_runs}",
-                )
-
-        for name, avg, threshold, success, _scores in diagnostic_results:
-            if avg is not None:
-                langfuse.create_score(
-                    trace_id=trace_id,
-                    name=_sanitize_name(name),
-                    value=avg,
-                    data_type="NUMERIC",
-                    comment=f"diagnostic | threshold={threshold}, passed={success}, runs={num_runs}",
-                )
-
-        for name, avg, _scores in probe_results:
-            if avg is not None:
-                langfuse.create_score(
-                    trace_id=trace_id,
-                    name=_sanitize_name(name),
-                    value=avg,
-                    data_type="NUMERIC",
-                    comment=f"leading question probe | runs={num_runs}",
+                    comment=comment,
                 )
 
         # Conversational metrics (session-level)
         if conversational_results:
             for name, avg, threshold, success, _scores in conversational_results:
                 if avg is not None:
+                    comment = f"conversational | threshold={threshold}, passed={success}, runs={num_runs}"
+                    reasons = reasons_map.get(name)
+                    if reasons and not success:
+                        for i, reason in enumerate(reasons, 1):
+                            comment += f"\n\n[Run {i}] {reason}"
                     langfuse.create_score(
                         trace_id=trace_id,
                         name=_sanitize_name(name),
                         value=avg,
                         data_type="NUMERIC",
-                        comment=f"conversational | threshold={threshold}, passed={success}, runs={num_runs}",
+                        comment=comment,
                     )
 
         # Per-turn child spans
@@ -317,6 +304,15 @@ def _get_langfuse_client():
     host = _resolve_langfuse_host()
     os.environ["LANGFUSE_BASE_URL"] = host
     return Langfuse(host=host)
+
+
+# Namespace UUID for deterministic dataset item IDs
+_DATASET_ITEM_NAMESPACE = uuid.UUID("a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d")
+
+
+def _deterministic_item_id(dataset_name: str, case_key: str) -> str:
+    """Generate a stable UUID5 for a dataset item based on dataset + case key."""
+    return str(uuid.uuid5(_DATASET_ITEM_NAMESPACE, f"{dataset_name}/{case_key}"))
 
 
 def sync_dataset_to_langfuse(config_path, config: dict) -> None:
@@ -381,8 +377,10 @@ def sync_dataset_to_langfuse(config_path, config: dict) -> None:
         }
 
         try:
+            item_id = _deterministic_item_id(dataset_name, case_key)
             langfuse.create_dataset_item(
                 dataset_name=dataset_name,
+                id=item_id,
                 input=input_data,
                 expected_output=expected_output,
                 metadata={
@@ -418,25 +416,15 @@ def link_trace_to_dataset(
 
     try:
         langfuse = _get_langfuse_client()
-        dataset = langfuse.get_dataset(dataset_name)
     except Exception as exc:
         print(f"[LANGFUSE] Could not fetch dataset '{dataset_name}': {exc}")
         return
 
     try:
-        target_item = None
-        for item in dataset.items:
-            if item.metadata and item.metadata.get("case_key") == case_key:
-                target_item = item
-                break
-
-        if not target_item:
-            print(f"[LANGFUSE] No dataset item found for {case_key} — run --sync-dataset first.")
-            return
-
+        item_id = _deterministic_item_id(dataset_name, case_key)
         langfuse.api.dataset_run_items.create(
             run_name=run_name,
-            dataset_item_id=target_item.id,
+            dataset_item_id=item_id,
             trace_id=trace_id,
         )
         langfuse.flush()

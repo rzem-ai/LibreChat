@@ -133,18 +133,13 @@ Use this template as your structural starting point. Do **not** copy it verbatim
 
 ### 4b. Worked Example
 
-Read the closest worked example for tone, structure, and level of detail:
+Read the worked example for tone, structure, and level of detail:
 
 | Category | Worked Example |
 |---|---|
-| Content Generation | `evals/Meeting Summariser/eval_cases.yaml` |
-| Knowledge Retrieval | `evals/Research Assistant/eval_cases.yaml` |
-| Data Classification | `evals/Contract Analyser/eval_cases.yaml` |
-| Decision Support | `evals/Contract Analyser/eval_cases.yaml` |
-| Tool Orchestration | `evals/Meeting Summariser/eval_cases.yaml` |
-| Governance / Compliance | `evals/Audit RFP Response Generator/eval_cases.yaml` |
+| All categories | `evals/Meeting Summariser/eval_cases.yaml` |
 
-Study how the worked example translates skill requirements into user queries, expected outputs, and tailored leading questions.
+This example demonstrates both single-turn (`invoke_text`) and multi-turn (`invoke_sequential`) patterns with `turns`, `turn_assertions`, `conversational_metrics`, and `leading_questions`. Study how it translates skill requirements into user queries, expected outputs, and tailored leading questions.
 
 ---
 
@@ -154,26 +149,28 @@ Produce a complete `eval_cases.yaml`. Use the category's recommended metrics as 
 
 ### Rules for case design:
 
-1. **Create exactly 2 cases** — one straightforward, one harder variant (multi-document, edge case, or complex prompt).
-2. **user_query** must be a realistic prompt a Deloitte consultant would actually type.
+1. **Create exactly 2 cases** — case_1 is single-turn (`invoke_text` with `user_query`), case_2 is multi-turn (`invoke_sequential` with `turns` and `turn_assertions`).
+2. **user_query** (for `invoke_text`) or **turns** (for `invoke_sequential`) must contain realistic prompts a Deloitte consultant would actually type.
 3. **expected_output** must describe the structure and content expected, not exact text.
-4. **expected_tools** must always include `get_skill_instructions` with the skill's `name:` value.
-5. **source_files** or **source_material** must reference files in `documents/` relative to the YAML.
-6. **invoke_method** — use `invoke_file` if documents are provided, `invoke_text` if context is inline.
+4. **expected_tools** must include the skill tool call with the skill's name (e.g. `{name: skill, input_parameters: {skillName: "skill-name"}}`).
+5. **source_material** must reference a file in `documents/` relative to the YAML.
+6. **invoke_method** — use `invoke_text` for single-turn, `invoke_sequential` for multi-turn conversations.
 7. **leading_questions** — write 3–5 per case. At least 1 must be `type: gating`. Questions should probe the skill's specific output requirements, not generic quality.
 8. **num_runs** — default to 3.
-9. **metrics** — select from: `hallucination`, `task_completion`, `tool_correctness`, `role_consistency`, `instruction_adherence`, `policy_compliance`, `answer_relevancy`, `summarization`, `faithfulness`, `contextual_recall`, `bias`, `toxicity`.
+9. **metrics** — select from: `hallucination`, `task_completion`, `faithfulness`, `answer_relevancy`, `summarization`, `contextual_recall`, `bias`, `toxicity`.
+10. **For `invoke_sequential` cases** — use `turns` with `turn_assertions` (types: `expected_tools`, `contains_any`, `not_contains`, `leading_question`). Add `conversational_metrics` and `conversational_thresholds`.
+11. **chatbot_role** — describe the agent's persona for the test case.
 
 ### Category → Recommended Metrics:
 
-| Category | Gating | Diagnostic |
+| Category | Metrics | Conversational |
 |---|---|---|
-| Content Generation | hallucination, task_completion, tool_correctness, role_consistency, policy_compliance | answer_relevancy, summarization, faithfulness |
-| Knowledge Retrieval | faithfulness, answer_relevancy, tool_correctness | contextual_recall, task_completion |
-| Data Classification | task_completion, policy_compliance | answer_relevancy, faithfulness |
-| Decision Support | task_completion, instruction_adherence, role_consistency | answer_relevancy, bias |
-| Tool Orchestration | tool_correctness, task_completion | answer_relevancy |
-| Governance / Compliance | task_completion, instruction_adherence, policy_compliance | answer_relevancy, bias, toxicity |
+| Content Generation | hallucination, task_completion, faithfulness | conversation_completeness |
+| Knowledge Retrieval | faithfulness, task_completion, hallucination | conversation_completeness |
+| Data Classification | task_completion, faithfulness | — |
+| Decision Support | task_completion, faithfulness, hallucination | conversation_completeness |
+| Tool Orchestration | task_completion, faithfulness | conversation_completeness |
+| Governance / Compliance | task_completion, faithfulness, hallucination | — |
 
 ### YAML structure:
 
@@ -181,26 +178,26 @@ Produce a complete `eval_cases.yaml`. Use the category's recommended metrics as 
 # <Skill Name> — Evaluation Cases
 # Category: <Category Name>
 
-adapter: _eval.adapters.agno_adapter.AgnoAdapter
-invoke_method: <default invoke method>
+adapter: _eval.adapters.librechat_adapter.LibreChatAdapter
+invoke_method: invoke_text  # or invoke_sequential for multi-turn
 num_runs: 3
 
 cases:
 
+  # --- Single-turn case ---
   case_1:
     name: "<descriptive name>"
     category: "<Category Name>"
-    invoke_method: <invoke_text|invoke_file>
-    source_files:
-      - "documents/<filename>.md"
+    source_material: "documents/<filename>.md"
+    chatbot_role: "<agent persona description>"
     user_query: >-
       <realistic user prompt>
     expected_output: >-
       <description of expected output>
     expected_tools:
-      - name: get_skill_instructions
+      - name: skill
         input_parameters:
-          skill_name: "<skill-name>"
+          skillName: "<skill-name>"
 
     metrics:
       - <metric_1>
@@ -209,12 +206,6 @@ cases:
     thresholds:
       <metric_1>: <value>
       <metric_2>: <value>
-
-    diagnostic_metrics:
-      - <metric>
-
-    diagnostic_thresholds:
-      <metric>: <value>
 
     leading_questions:
       - name: "<Probe Name>"
@@ -225,17 +216,72 @@ cases:
 
       - name: "<Probe Name>"
         question: >-
-          <diagnostic question>
+          <non-blocking probe question>
 
+  # --- Multi-turn case ---
   case_2:
-    # ... (harder variant)
+    name: "<descriptive name — harder variant>"
+    category: "<Category Name>"
+    invoke_method: invoke_sequential
+    source_material: "documents/<filename>.md"
+    chatbot_role: "<agent persona description>"
+    expected_output: >-
+      <description of expected multi-turn output>
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "<skill-name>"
+
+    turns:
+      - content: >-
+          <first user message>
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "<assertion name>"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "<skill-name>"
+          - type: contains_any
+            name: "<assertion name>"
+            phrases: ["<phrase1>", "<phrase2>"]
+
+      - content: >-
+          <follow-up user message>
+        turn_assertions:
+          - type: leading_question
+            name: "<assertion name>"
+            question: >-
+              <LLM-judged question about this turn's response>
+
+    metrics:
+      - <metric_1>
+      - <metric_2>
+
+    thresholds:
+      <metric_1>: <value>
+      <metric_2>: <value>
+
+    conversational_metrics:
+      - conversation_completeness
+
+    conversational_thresholds:
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "<Probe Name>"
+        type: gating
+        threshold: 0.7
+        question: >-
+          <specific question about output quality>
 ```
 
 ---
 
 ## Step 6 — Generate Sample Test Documents
 
-For each `source_files` entry referenced in the YAML, create a realistic sample document in `documents/`.
+For each `source_material` entry referenced in the YAML, create a realistic sample document in `documents/`.
 
 ### Document rules:
 
@@ -276,7 +322,7 @@ After writing, print a summary:
 Immediately run the evaluation against the scaffolding you just created:
 
 ```bash
-uv run eval-run --config "evals/<Skill Name>/eval_cases.yaml"
+uv run eval-run --config "evals/<Skill Name>/eval_cases.yaml" --langfuse --run-name "scaffold-baseline"
 ```
 
 Once complete, display the results:
@@ -286,3 +332,9 @@ uv run eval-summary --config "evals/<Skill Name>/eval_cases.yaml"
 ```
 
 Do not ask for confirmation — run both commands automatically after Step 7 completes.
+
+Optional: sync cases to Langfuse Datasets for experiment tracking:
+
+```bash
+uv run eval-run --config "evals/<Skill Name>/eval_cases.yaml" --sync-dataset
+```

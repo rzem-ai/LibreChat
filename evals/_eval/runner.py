@@ -16,7 +16,7 @@ import os
 import time
 from collections import defaultdict
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import yaml
 from deepeval.test_case import LLMTestCase, ToolCall
@@ -913,6 +913,17 @@ def run_eval(
         if not user_query and is_sequential:
             yaml_turns = case.get("turns", [])
             user_query = yaml_turns[0]["content"] if yaml_turns else ""
+
+        # Collect failure reasons from all runs for failed metrics
+        failure_reasons: Dict[str, List[str]] = {}
+        for run in all_runs:
+            for name, _score, _thresh, success, reason in run.get("gating", []):
+                if not success and reason and reason != "N/A":
+                    failure_reasons.setdefault(name, []).append(reason)
+            for name, _score, _thresh, success, reason in run.get("conversational", []):
+                if not success and reason and reason != "N/A":
+                    failure_reasons.setdefault(name, []).append(reason)
+
         trace_id = push_scores_to_langfuse(
             case_key=case_key,
             case_name=case.get("name", case_key),
@@ -927,6 +938,7 @@ def run_eval(
             conversation_history=all_runs[-1].get("conversation_history") if is_sequential else None,
             turn_results=all_runs[-1].get("turn_results") if is_sequential else None,
             conversational_results=agg.get("conversational_results"),
+            failure_reasons=failure_reasons,
         )
         if trace_id:
             link_trace_to_dataset(config_path, case_key, trace_id, run_name=run_name)

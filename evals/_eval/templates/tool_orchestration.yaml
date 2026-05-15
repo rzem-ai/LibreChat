@@ -6,45 +6,67 @@
 #
 # Copy this file to: evals/<Skill Name>/eval_cases.yaml
 # Then customise the cases below.
+#
+# Run with:
+#   uv run eval-run --config "evals/<Skill Name>/eval_cases.yaml" --case case_1
 
-adapter: _eval.adapters.agno_adapter.AgnoAdapter
-invoke_method: invoke_text
+adapter: _eval.adapters.librechat_adapter.LibreChatAdapter
+invoke_method: invoke_sequential  # tool workflows are usually multi-turn
+num_runs: 3
 
 cases:
 
   case_1:
     name: "TODO: Describe this test case"
     category: "Tool-Orchestrated Workflow Execution"
+    invoke_method: invoke_sequential
     source_material: "documents/TODO_sample_input.md"
-    user_query: >-
-      TODO: Write the user prompt that triggers this skill.
+    chatbot_role: "TODO: Describe the agent's role"
     expected_output: >-
       TODO: Describe the expected output.
     expected_tools:
-      - name: get_skill_instructions
+      - name: skill
         input_parameters:
-          skill_name: "TODO: skill-name"
-      # Add other expected tool calls:
-      # - name: run_python_code
-      #   input_parameters: {}
+          skillName: "TODO: skill-name"
 
-    # --- Gating metrics ---
+    turns:
+      - content: >-
+          TODO: Initial user request triggering the workflow.
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Correct skill invoked"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "TODO: skill-name"
+          - type: leading_question
+            name: "TODO: Verify initial response"
+            question: >-
+              TODO: Does the response indicate the workflow has started?
+
+      - content: >-
+          TODO: User provides additional input or confirmation.
+        turn_assertions:
+          - type: leading_question
+            name: "TODO: Verify output artefact"
+            question: >-
+              TODO: Does the response contain the expected artefact or result?
+
     metrics:
-      - tool_correctness
       - task_completion
+      - faithfulness
 
     thresholds:
       task_completion: 0.7
+      faithfulness: 0.7
 
-    # --- Diagnostic metrics ---
-    # Note: step_efficiency is not yet implemented — add when available
-    diagnostic_metrics:
-      - answer_relevancy
+    conversational_metrics:
+      - conversation_completeness
 
-    diagnostic_thresholds:
-      answer_relevancy: 0.5
+    conversational_thresholds:
+      conversation_completeness: 0.5
 
-    # --- Leading question probes ---
     leading_questions:
       - name: "Correct Skill Selection"
         type: gating
