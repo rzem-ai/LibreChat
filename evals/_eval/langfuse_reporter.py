@@ -369,12 +369,7 @@ def sync_dataset_to_langfuse(config_path, config: dict) -> None:
                 "source_material": case.get("source_material"),
             }
 
-        expected_output = {
-            "expected_output": case.get("expected_output", ""),
-            "expected_tools": case.get("expected_tools", []),
-            "thresholds": case.get("thresholds", {}),
-            "leading_questions": [lq.get("name") for lq in case.get("leading_questions", [])],
-        }
+        expected_output = case.get("expected_output", "")
 
         try:
             item_id = _deterministic_item_id(dataset_name, case_key)
@@ -388,6 +383,10 @@ def sync_dataset_to_langfuse(config_path, config: dict) -> None:
                     "case_name": case.get("name", case_key),
                     "invoke_method": invoke_method,
                     "category": case.get("category", ""),
+                    "turns": len(turns),
+                    "expected_tools": case.get("expected_tools", []),
+                    "thresholds": case.get("thresholds", {}),
+                    "leading_questions": [lq.get("name") for lq in case.get("leading_questions", [])],
                 },
             )
             synced += 1

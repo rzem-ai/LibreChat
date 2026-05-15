@@ -149,7 +149,7 @@ Produce a complete `eval_cases.yaml`. Use the category's recommended metrics as 
 
 ### Rules for case design:
 
-1. **Create exactly 2 cases** — case_1 is single-turn (`invoke_text` with `user_query`), case_2 is multi-turn (`invoke_sequential` with `turns` and `turn_assertions`).
+1. **Create exactly 8 cases across 4 documents** — 2 cases per document. Each document should have one single-turn case (`invoke_text` with `user_query`) and one multi-turn case (`invoke_sequential` with `turns` and `turn_assertions`). Vary the complexity and focus across cases.
 2. **user_query** (for `invoke_text`) or **turns** (for `invoke_sequential`) must contain realistic prompts a Deloitte consultant would actually type.
 3. **expected_output** must describe the structure and content expected, not exact text.
 4. **expected_tools** must include the skill tool call with the skill's name (e.g. `{name: skill, input_parameters: {skillName: "skill-name"}}`).
@@ -281,14 +281,14 @@ cases:
 
 ## Step 6 — Generate Sample Test Documents
 
-For each `source_material` entry referenced in the YAML, create a realistic sample document in `documents/`.
+Create exactly **4 documents** in `documents/`. Each document is referenced by 2 cases in the YAML.
 
 ### Document rules:
 
 1. **Domain-appropriate** — use realistic but fictional data matching the skill's domain.
 2. **Sufficient complexity** — 200–500 words minimum.
 3. **Contains testable elements** — include details the leading questions will probe for.
-4. **Case 2 documents** — if it's a comparison case, create a second version with deliberate differences.
+4. **Variety** — documents should vary in format, length, and complexity (e.g. formal transcript, informal notes, detailed report, short bullet points).
 5. **Markdown format** — use `.md` with proper headings.
 6. **No real client data** — all content must be fictional.
 
@@ -303,7 +303,9 @@ evals/<Skill Name>/
 ├── eval_cases.yaml
 └── documents/
     ├── <document_1>.md
-    └── <document_2>.md   (if needed)
+    ├── <document_2>.md
+    ├── <document_3>.md
+    └── <document_4>.md
 ```
 
 After writing, print a summary:
@@ -311,8 +313,8 @@ After writing, print a summary:
 ```
 ✓ Eval scaffolding created for: <skill-name>
   Category: <category>
-  Cases: 2
-  Documents: <N>
+  Cases: 8
+  Documents: 4
 ```
 
 ---
