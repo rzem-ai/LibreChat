@@ -319,24 +319,32 @@ After writing, print a summary:
 
 ---
 
-## Step 8 — Run the Eval
+## Step 8 — Sync Dataset and Run the Eval
 
-Immediately run the evaluation against the scaffolding you just created:
+After writing the files, run the following three commands in order. Do not ask
+for confirmation — execute all three automatically after Step 7 completes.
+
+### 8a. Sync cases to Langfuse Dataset
+
+```bash
+uv run eval-run --config "evals/<Skill Name>/eval_cases.yaml" --sync-dataset
+```
+
+This uploads all eval cases to a Langfuse Dataset for experiment tracking and
+curation. Each case becomes a dataset item with input, expected output, and
+metadata.
+
+### 8b. Run the baseline eval
 
 ```bash
 uv run eval-run --config "evals/<Skill Name>/eval_cases.yaml" --langfuse --run-name "scaffold-baseline"
 ```
 
-Once complete, display the results:
+This runs all cases (3 runs each), pushes traces and scores to Langfuse, and
+writes results to `.results/`.
+
+### 8c. Display the summary
 
 ```bash
 uv run eval-summary --config "evals/<Skill Name>/eval_cases.yaml"
-```
-
-Do not ask for confirmation — run both commands automatically after Step 7 completes.
-
-Optional: sync cases to Langfuse Datasets for experiment tracking:
-
-```bash
-uv run eval-run --config "evals/<Skill Name>/eval_cases.yaml" --sync-dataset
 ```
