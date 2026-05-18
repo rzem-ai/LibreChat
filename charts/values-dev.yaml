@@ -36,7 +36,7 @@ pods:
           OPENID_REQUIRED_ROLE: ''
           KEY_VAULT_NAME: 'kv-int-librechat-dev'
         secrets: # See docs: https://github.com/Deloitte-Australia/dep-infrastructure/wiki/Azure-Key-Vault-Secret-Management-using-Azure-CLI
-          MONGO_URI: mdb-librechat-database-dev
+          MONGO_URI: librechat-dev-mdb-connection-string
           JWT_SECRET: librechat-jwt-secret-dev
           JWT_REFRESH_SECRET: librechat-jwt-refresh-secret-dev
           CREDS_KEY: librechat-creds-key-dev
