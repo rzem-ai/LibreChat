@@ -25,9 +25,9 @@ pods:
         image:
           tag: 'develop'
         env:
-          BASE_URL_AZURE_AU: 'azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
-          BASE_URL_AZURE_US: 'azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
-          BASE_URL_VERTEXAI: 'vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
+          BASE_URL_AZURE_AU: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
+          BASE_URL_AZURE_US: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
+          BASE_URL_VERTEXAI: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
           NODE_ENV: 'development'
           DOMAIN_CLIENT: 'https://librechat-dev.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://librechat-dev.ctk.au.deloitte.com'
