@@ -14,19 +14,9 @@ This repository contains the local development setup for **LibreChat**, configur
 
 ---
 
-## Prerequisites
+# Set Up 
 
-Before you start, make sure you have:
-
-- Docker & Docker Compose
-- Git
-- A Deloitte-issued machine
-- Access to the **Deloitte Entra ID** tenant
-- Ability to toggle **VPN on/off** (both states are required during setup)
-
----
-
-## Repository
+## 1. Clone Repository
 
 Clone the Deloitte LibreChat repository:
 
@@ -35,27 +25,11 @@ git clone https://github.com/Deloitte-Australia/tt-librechat.git
 cd tt-librechat
 ```
 
----
+## 2. Set up Caddyfile
 
-## Required files
+This allows us to login via Azure Auth locally. 
 
-You will need the following files in the repo root:
-
-- `.env`
-- `librechat.yaml`
-- `docker-compose.override.yml`
-- `nginx-gateway-proxy.conf`
-- `deloitte/assets/` (unzipped Deloitte GEL assets)
-
-These were shared during the setup session.
-
----
-
-## Caddyfile
-
-This allows us to login via Azure Auth locally
-
-1. Copy the example file:
+1. Copy the example Deloitte Caddyfile:
 
 ```zsh
 cp Caddyfile.deloitte.example Caddyfile
@@ -67,11 +41,22 @@ cp Caddyfile.deloitte.example Caddyfile
 hostname
 ```
 
-3. Update `Caddyfile` line 8 so it uses your host with `.local` (for example `AU-ABC123123.local {`).
-4. Share that hostname with Ally Fulton (so it can be added as an accepted redirect URL on App Reg)
-5. This custom domain enables Deloitte auth locally (instead of `localhost`).
+3. Update `Caddyfile` to replace YOURHOSTNAME so it uses your host from step 2 above plus `.local` (for example `AU-ABC123123.local {`).
+4. Share that hostname with Ally Fulton (so it can be added as an accepted redirect URL on App Reg). This custom domain enables Deloitte auth locally (instead of `localhost`), as localhost cannot be used for Deloitte App Reg redirect URLs.
+5. To check your hostname is accessible on your machine, run `ping yourhostname.local` (e.g. `ping AU-ABC123123.local`). If you get "unknown hostname", continue to *If you cannot ping your hostname*. If your ping returns responses (even timeout responses), continue to *3. Environment configuration*.
 
-## Environment configuration (.env)
+### If you cannot ping your hostname
+1. Enable privileges on your machine
+2. Run `sudo nano /etc/hosts`
+3. Use the down arrow to navigate to bottom of hostfile
+4. Type: `127.0.0.1 yourhostname.local` (e.g. `127.0.0.1 AU-ABC123123.local`) to add your hostname to the hostfile
+5. 'Ctrl-O' to writeout/save
+6. 'Enter' to continue
+7. 'Ctrl-X' to close
+8. Try `ping yourhostname.local` again
+
+
+## 3. Environment configuration (.env)
 
 Start by copying the example file:
 
@@ -81,9 +66,9 @@ cp .env.example .env
 
 ### Make changes 
 
-Update the existing keys below in `.env` (edit the existing entries, do not add duplicate keys):
+Update the existing keys below in `.env` (edit the existing entries, do not add new keys unless they don't exist yet):
 
-Tip: ask your AI coding assistant to update these existing keys in place.
+Tip: ask your AI coding assistant to create (for new) or update (for existing) .env values.
 
 1. `ENDPOINTS=anthropic,custom,agents`
 2. `ANTHROPIC_REVERSE_PROXY=http://gateway-proxy:8080/anthropic`
@@ -115,6 +100,7 @@ Tip: ask your AI coding assistant to update these existing keys in place.
 ⚠️ As of May 2026, tokens expire after ~8 hours. If models suddenly stop working, reissue the token.
 1. Navigate to [here](https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/oauth2/v2.0/authorize?client_id=498ce9fd-195b-40c5-82f1-8fc4a6d00d88&response_type=id_token&redirect_uri=https%3A%2F%2Fjwt.ms&scope=openid%20profile%20email%20https%3A%2F%2Fgraph.microsoft.com%2FUser.Read&response_mode=fragment&state=random_state&nonce=random_nonce)
 2. Copy the whole value to LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION inside quotation marks
+
 ---
 
 ## librechat.yaml
@@ -126,28 +112,11 @@ The `librechat.yaml` configures:
 - Anthropic models via the gateway proxy
 - Default visible models in the UI
 - ClearTrack MCP integration
+- And more!
 
-Ensure your config includes:
+# Running the app
 
-- `x-id-token` header populated from `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION`
-- Correct base URLs for AU / US OpenAI and VertexAI
-- MCP gateway pointing to `https://mcp-gateway-uat.ctk.au.deloitte.com/mcp`
-
----
-
-## Docker override (docker-compose.override.yml)
-
-Key points in the override:
-
-- Deloitte-specific local development customisations are applied via the override
-- Deloitte assets copied into the frontend on startup
-- TLS verification disabled for local development
-
----
-
-## Running the app
-
-### Start services
+## Start services
 
 ```zsh
 docker compose up -d
@@ -160,15 +129,15 @@ docker compose down
 docker compose up -d
 ```
 
-### Access the app
+## Access the app
 
 Open your configured `DOMAIN_CLIENT` URL in **Safari** or via LocalHost in Chrome.
 
 ---
 
-## VPN gotcha (very important)
+## VPN gotcha
 
-You **must swap VPN state** during setup:
+You may need to **swap VPN state** during setup:
 
 - Pull Docker images → ❌ VPN Off  
 - Running models via gateway → ✅ VPN On  
@@ -214,11 +183,16 @@ If you see `featureCompatibilityVersion` errors:
 
 ---
 
-## Next steps
+## Deloitte App Reg
 
-- Validate capacity and sizing in ClearTrack
-- Finalise repo structure and pipelines
-- Confirm which models are formally supported
+Deloitte App Reg is used to manage the Azure Entra authentication for this app. 
+
+For LOCAL development, we need to add each user's hostname to the Redirect URIs list in the "Authentication" tab of the App Registration. This is required because Deloitte's Azure Entra does not allow `localhost` in Redirect URIs, so we use a custom domain (e.g. `AU-ABC123123.local`) for local development instead.
+
+### App Reg Details Per Environment
+**DEV (Inc. LOCAL):** [AU CTK_TT_Librechat NONPROD](https://appreg.iam.deloitteresources.com/AppProperties/2075976d-5147-47b2-89d2-4ad060d19f85)
+**UAT:** TBC
+**PROD:** TBC
 
 ---
 
