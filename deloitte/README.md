@@ -14,19 +14,9 @@ This repository contains the local development setup for **LibreChat**, configur
 
 ---
 
-## Prerequisites
+# Set Up 
 
-Before you start, make sure you have:
-
-- Docker & Docker Compose
-- Git
-- A Deloitte-issued machine
-- Access to the **Deloitte Entra ID** tenant
-- Ability to toggle **VPN on/off** (both states are required during setup)
-
----
-
-## Repository
+## 1. Clone Repository
 
 Clone the Deloitte LibreChat repository:
 
@@ -35,24 +25,11 @@ git clone https://github.com/Deloitte-Australia/tt-librechat.git
 cd tt-librechat
 ```
 
----
-
-## Required files
-
-You will need the following files in the repo root:
-
-- `.env`
-- `librechat.yaml`
-
-These were shared during the setup session.
-
----
-
-## Caddyfile
+## 2. Set up Caddyfile
 
 This allows us to login via Azure Auth locally. 
 
-1. Copy the example file:
+1. Copy the example Deloitte Caddyfile:
 
 ```zsh
 cp Caddyfile.deloitte.example Caddyfile
@@ -66,7 +43,7 @@ hostname
 
 3. Update `Caddyfile` to replace YOURHOSTNAME so it uses your host from step 2 above plus `.local` (for example `AU-ABC123123.local {`).
 4. Share that hostname with Ally Fulton (so it can be added as an accepted redirect URL on App Reg). This custom domain enables Deloitte auth locally (instead of `localhost`), as localhost cannot be used for Deloitte App Reg redirect URLs.
-5. To check your hostname is accessible on your machine, run `ping yourhostname.local` (e.g. `ping AU-ABC123123.local`). If you get "unknown hostname", continue to *If you cannot ping your hostname*. If your ping returns responses (even timeout responses), continue to *Environment configuration*.
+5. To check your hostname is accessible on your machine, run `ping yourhostname.local` (e.g. `ping AU-ABC123123.local`). If you get "unknown hostname", continue to *If you cannot ping your hostname*. If your ping returns responses (even timeout responses), continue to *3. Environment configuration*.
 
 ### If you cannot ping your hostname
 1. Enable privileges on your machine
@@ -79,7 +56,7 @@ hostname
 8. Try `ping yourhostname.local` again
 
 
-## Environment configuration (.env)
+## 3. Environment configuration (.env)
 
 Start by copying the example file:
 
@@ -134,11 +111,9 @@ The `librechat.yaml` configures:
 - ClearTrack MCP integration
 - And more!
 
----
+# Running the app
 
-## Running the app
-
-### Start services
+## Start services
 
 ```zsh
 docker compose up -d
@@ -151,15 +126,15 @@ docker compose down
 docker compose up -d
 ```
 
-### Access the app
+## Access the app
 
 Open your configured `DOMAIN_CLIENT` URL in **Safari** or via LocalHost in Chrome.
 
 ---
 
-## VPN gotcha (very important)
+## VPN gotcha
 
-You **must swap VPN state** during setup:
+You may need to **swap VPN state** during setup:
 
 - Pull Docker images → ❌ VPN Off  
 - Running models via gateway → ✅ VPN On  
