@@ -50,7 +50,7 @@ These were shared during the setup session.
 
 ## Caddyfile
 
-This allows us to login via Azure Auth locally
+This allows us to login via Azure Auth locally. 
 
 1. Copy the example file:
 
@@ -66,6 +66,18 @@ hostname
 
 3. Update `Caddyfile` to replace YOURHOSTNAME so it uses your host from step 2 above plus `.local` (for example `AU-ABC123123.local {`).
 4. Share that hostname with Ally Fulton (so it can be added as an accepted redirect URL on App Reg). This custom domain enables Deloitte auth locally (instead of `localhost`), as localhost cannot be used for Deloitte App Reg redirect URLs.
+5. To check your hostname is accessible on your machine, run `ping yourhostname.local` (e.g. `ping AU-ABC123123.local`). If you get "unknown hostname", continue to *If you cannot ping your hostname*. If your ping returns responses (even timeout responses), continue to *Environment configuration*.
+
+### If you cannot ping your hostname
+1. Enable privileges on your machine
+2. Run `sudo nano /etc/hosts`
+3. Use the down arrow to navigate to bottom of hostfile
+4. Type: `127.0.0.1 yourhostname.local` (e.g. `127.0.0.1 AU-ABC123123.local`) to add your hostname to the hostfile
+5. 'Ctrl-O' to writeout/save
+6. 'Enter' to continue
+7. 'Ctrl-X' to close
+8. Try `ping yourhostname.local` again
+
 
 ## Environment configuration (.env)
 
