@@ -47,7 +47,7 @@ endpoints:
       dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
       headers:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
-        s-sa-token: "${LLM_GATEWAY_X_SA_TOKEN}"
+        x-sa-token: "${LLM_GATEWAY_X_SA_TOKEN}"
         Content-Type: "application/json"
 
     # --- Azure US (eastus) ---
