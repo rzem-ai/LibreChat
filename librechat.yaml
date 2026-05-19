@@ -32,7 +32,7 @@ endpoints:
     # --- Azure AU (aus-east) ---
     - name: "Azure AU"
       apiKey: "dummy"
-      baseURL: "https://au-openai-exp.ctk.au.deloitte.com/openai/v1"
+      baseURL: "${BASE_URL_AZURE_AU}"
       models:
         default:
           - "gpt-4o-mini"
@@ -47,12 +47,13 @@ endpoints:
       dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
       headers:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
+        x-sa-token: "${LLM_GATEWAY_X_SA_TOKEN}"
         Content-Type: "application/json"
 
     # --- Azure US (eastus) ---
     - name: "Azure US"
       apiKey: "dummy"
-      baseURL: "https://us-openai-exp.ctk.au.deloitte.com/openai/v1"
+      baseURL: "${BASE_URL_AZURE_US}"
       models:
         default:
           - "gpt-41"
@@ -68,13 +69,14 @@ endpoints:
       dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
       headers:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
+        x-sa-token: "${LLM_GATEWAY_X_SA_TOKEN}"
         Content-Type: "application/json"
 
     # --- VertexAI / Google (us-central1) ---
     # OpenAI-compatible endpoint, model names use google/ prefix
     - name: "VertexAI"
       apiKey: "dummy"
-      baseURL: "https://us-vertexai-exp.ctk.au.deloitte.com"
+      baseURL: "${BASE_URL_VERTEXAI}"
       models:
         default:
           - "google/gemini-2.5-flash"
@@ -86,6 +88,7 @@ endpoints:
       dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
       headers:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
+        x-sa-token: "${LLM_GATEWAY_X_SA_TOKEN}"
         Content-Type: "application/json"
 
 mcpServers: # https://www.librechat.ai/docs/features/mcp

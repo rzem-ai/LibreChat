@@ -91,7 +91,10 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 19. `ALLOW_SOCIAL_REGISTRATION=false`
 20. Comment out `OPENAI_API_KEY=`
 21. Comment out `ASSISTANTS_API_KEY=`
-22. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
+22. BASE_URL_AZURE_AU=https://au-openai-exp.ctk.au.deloitte.com/openai/v1
+23. BASE_URL_AZURE_US=https://us-openai-exp.ctk.au.deloitte.com/openai/v1
+24. BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com
+25. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
 
 #### How to obtain the JWT token
 ⚠️ As of May 2026, tokens expire after ~8 hours. If models suddenly stop working, reissue the token.
