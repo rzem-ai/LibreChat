@@ -1,6 +1,6 @@
 const axios = require('axios');
+const { tool } = require('@langchain/core/tools');
 const { logger } = require('@librechat/data-schemas');
-const { tool } = require('@librechat/agents/langchain/tools');
 const { generateShortLivedToken } = require('@librechat/api');
 const { Tools, EToolResources } = require('librechat-data-provider');
 const { filterFilesByAgentAccess } = require('~/server/services/Files/permissions');
@@ -155,14 +155,16 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
         ];
       }
 
-      const formattedString = formattedResults
+      const resultEntries = formattedResults
         .map(
           (result, index) =>
             `File: ${result.filename}${
-              fileCitations ? `\nAnchor: \\ue202turn0file${index} (${result.filename})` : ''
+              fileCitations ? `\nAnchor: \\ue202turn0file${index}` : ''
             }\nRelevance: ${(1.0 - result.distance).toFixed(4)}\nContent: ${result.content}\n`,
         )
         .join('\n---\n');
+
+      const formattedString = resultEntries;
 
       const sources = formattedResults.map((result) => ({
         type: 'file',
@@ -179,20 +181,7 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
     {
       name: Tools.file_search,
       responseFormat: 'content_and_artifact',
-      description: `Performs semantic search across attached "${Tools.file_search}" documents using natural language queries. This tool analyzes the content of uploaded files to find relevant information, quotes, and passages that best match your query. Use this to extract specific information or find relevant sections within the available documents.${
-        fileCitations
-          ? `
-
-**CITE FILE SEARCH RESULTS:**
-Use the EXACT anchor markers shown below (copy them verbatim) immediately after statements derived from file content. Reference the filename in your text:
-- File citation: "The document.pdf states that... \\ue202turn0file0"  
-- Page reference: "According to report.docx... \\ue202turn0file1"
-- Multi-file: "Multiple sources confirm... \\ue200\\ue202turn0file0\\ue202turn0file1\\ue201"
-
-**CRITICAL:** Output these escape sequences EXACTLY as shown (e.g., \\ue202turn0file0). Do NOT substitute with other characters like † or similar symbols.
-**ALWAYS mention the filename in your text before the citation marker. NEVER use markdown links or footnotes.**`
-          : ''
-      }`,
+      description: `Performs semantic search across attached "${Tools.file_search}" documents using natural language queries. This tool analyzes the content of uploaded files to find relevant information, quotes, and passages that best match your query. Use this to extract specific information or find relevant sections within the available documents.`,
       schema: fileSearchJsonSchema,
     },
   );
