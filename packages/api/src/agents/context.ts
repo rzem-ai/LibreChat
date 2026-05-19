@@ -6,6 +6,9 @@ import type { Logger } from 'winston';
 import type { ParsedServerConfig } from '~/mcp/types';
 import type { MCPManager } from '~/mcp/MCPManager';
 
+const GLOBAL_AGENT_INSTRUCTIONS =
+  'You have access to uploaded documents via the file_search tool. You MUST call file_search before answering any question — no exceptions. Never answer from memory when documents are available.\n\nCRITICAL CITATION REQUIREMENT: After calling file_search, you MUST cite every piece of information using the exact anchor markers from the tool results. Each result contains an anchor line like "Anchor: \\ue202turn0file0 (filename.pdf)". You MUST output these escape sequences VERBATIM immediately after each statement derived from that result. Do NOT substitute with †, footnotes, or markdown links. Always mention the source filename before the anchor. Example: "According to document.pdf, the term means X \\ue202turn0file0." Never omit citations.';
+
 /**
  * Agent type with optional tools array that can contain DynamicStructuredTool or string.
  * For context operations, we only require id and instructions, other Agent fields are optional.
@@ -153,8 +156,8 @@ export async function applyContextToAgent({
   logger?: Logger;
   configServers?: Record<string, ParsedServerConfig>;
 }): Promise<void> {
-  const baseInstructions = agent.instructions || '';
-  const additionalInstructions = agent.additional_instructions || '';
+  const baseInstructions = [GLOBAL_AGENT_INSTRUCTIONS, agent.instructions].filter(Boolean).join('\n\n');
+  const additionalInstructions = [agent.additional_instructions, GLOBAL_AGENT_INSTRUCTIONS].filter(Boolean).join('\n\n');
 
   try {
     const mcpServers = ephemeralAgent?.mcp?.length ? ephemeralAgent.mcp : extractMCPServers(agent);
