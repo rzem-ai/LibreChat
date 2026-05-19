@@ -10,6 +10,11 @@ dependencies = [
     "python-docx",
     "openai",
     "langfuse>=4.5.1",
+    "plotly",
+    "pandas",
+    "ipykernel",
+    "kaleido",
+    "nbformat>=5.10.4",
 ]
 
 [project.scripts]
