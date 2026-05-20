@@ -22,6 +22,13 @@ pods:
     replicas: 1
     containers:
       librechat:
+        command:
+          - /bin/sh
+          - -c
+          - >-
+            cp -a /app/deloitte/assets/. /app/client/dist/assets/ &&
+            export LLM_GATEWAY_X_SA_TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" &&
+            exec npm run backend
         image:
           tag: 'develop'
         env:
@@ -29,6 +36,7 @@ pods:
           BASE_URL_AZURE_US: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
           BASE_URL_VERTEXAI: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
           NODE_ENV: 'development'
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
           DOMAIN_CLIENT: 'https://librechat-dev.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://librechat-dev.ctk.au.deloitte.com'
           OPENID_CLIENT_ID: '2075976d-5147-47b2-89d2-4ad060d19f85' # Confirmed not sensitive
@@ -43,3 +51,4 @@ pods:
           CREDS_IV: librechat-creds-iv-dev
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-dev
           OPENID_SESSION_SECRET: librechat-openid-session-secret-dev
+          # TTS_API_KEY: librechat-tts-api-key-dev # TODO: Create TTS_API_Key
