@@ -22,6 +22,10 @@ spec:
         component: {{ $pod }}
     spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
+      volumes:
+        - name: librechat-config
+          configMap:
+            name: {{ include "helm.fullname" . }}-config
       containers:
         {{- range $container, $config := $podConfig.containers }}
         - name: {{ $.Chart.Name }}-{{ $container }}
@@ -62,8 +66,13 @@ spec:
           {{- end }}
           {{- with $config.resources }}
           resources:
-            {{- toYaml . | nindent 12 }}
+            {{- toYaml .  nindent 12 }}
           {{- end }}
+          volumeMounts:
+            - name: librechat-config
+              mountPath: /app/librechat.yaml
+              subPath: librechat.yaml
+              readOnly: true
         {{- end }}
 {{- end }}
 ---
