@@ -51,4 +51,4 @@ pods:
           CREDS_IV: librechat-creds-iv-dev
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-dev
           OPENID_SESSION_SECRET: librechat-openid-session-secret-dev
-          TTS_API_KEY: librechat-tts-api-key-dev
+          # TTS_API_KEY: librechat-tts-api-key-dev # TODO: Create TTS_API_Key

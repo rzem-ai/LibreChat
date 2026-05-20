@@ -113,11 +113,11 @@ speech: # https://www.librechat.ai/docs/configuration/librechat_yaml/object_stru
     #   automaticPlayback: false
     #   playbackRate: 1.0
     #   cacheTTS: true
-  tts:
-    elevenlabs:
-      apiKey: '${TTS_API_KEY}'
-      model: 'eleven_multilingual_v2'
-      voices:
-        - '5GZaeOOG7yqLdoTRsaa6'  # Rachel
-        - 'DTLT09E2cxHF0DqjKVbc'  # Paul
-        - 'aGkVQvWUZi16EH8aZJvT'  # Steve
+#  tts:
+#    elevenlabs:
+#      apiKey: '${TTS_API_KEY}'
+#      model: 'eleven_multilingual_v2'
+#      voices:
+#        - '5GZaeOOG7yqLdoTRsaa6'  # Rachel
+#        - 'DTLT09E2cxHF0DqjKVbc'  # Paul
+#        - 'aGkVQvWUZi16EH8aZJvT'  # Steve
