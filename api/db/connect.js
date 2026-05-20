@@ -4,10 +4,15 @@ const { logger } = require('@librechat/data-schemas');
 
 const mongoose = require('mongoose');
 const MONGO_URI = process.env.MONGO_URI;
+const MONGO_DB_NAME = process.env.MONGO_DB;
 
 if (!MONGO_URI) {
   throw new Error('Please define the MONGO_URI environment variable');
 }
+if (!MONGO_DB_NAME) {
+  throw new Error('Please define the MONGO_DB environment variable with your database name');
+}
+
 /** The maximum number of connections in the connection pool. */
 const maxPoolSize = parseInt(process.env.MONGO_MAX_POOL_SIZE) || undefined;
 /** The minimum number of connections in the connection pool. */
@@ -60,6 +65,7 @@ async function connectDb() {
       ...(waitQueueTimeoutMS ? { waitQueueTimeoutMS } : {}),
       ...(autoIndex != undefined ? { autoIndex } : {}),
       ...(autoCreate != undefined ? { autoCreate } : {}),
+      ...(process.env.MONGO_DB ? { dbName: MONGO_DB_NAME } : {}),
       // useNewUrlParser: true,
       // useUnifiedTopology: true,
       // bufferMaxEntries: 0,
