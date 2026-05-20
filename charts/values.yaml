@@ -33,14 +33,14 @@ pods:
           - export LLM_GATEWAY_X_SA_TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" && exec npm run backend
         livenessProbe:
           httpGet:
-            path: /api/health
+            path: /health
             port: 3080
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
-            path: /api/health
+            path: /health
             port: 3080
           initialDelaySeconds: 15
           periodSeconds: 10
