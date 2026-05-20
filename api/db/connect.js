@@ -14,11 +14,20 @@ if (!MONGO_DB_NAME) {
 }
 
 // Warn if URI path already contains a database
-const url = new URL(MONGO_URI);
-if (url.pathname && url.pathname !== '/') {
-  logger.warn(
-    `[connectDb] MONGO_URI contains database path "${url.pathname.slice(1)}" but MONGO_DB="${MONGO_DB_NAME}" is set. Using MONGO_DB.`
-  );
+if (MONGO_DB_NAME) {
+  try {
+    const url = new URL(MONGO_URI);
+    if (url.pathname && url.pathname !== '/') {
+      logger.warn(
+        `[connectDb] MONGO_URI contains database path "${url.pathname.slice(1)}" but MONGO_DB="${MONGO_DB_NAME}" is set. Using MONGO_DB.`
+      );
+    }
+  } catch (error) {
+    logger.warn(
+      '[connectDb] Unable to parse MONGO_URI with URL; skipping database path warning check.',
+      error,
+    );
+  }
 }
 
 /** The maximum number of connections in the connection pool. */
