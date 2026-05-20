@@ -5,6 +5,6 @@ metadata:
   labels:
     {{- include "helm.labels" . | nindent 4 }}
 data:
-  librechat.yaml: |
-    {{- .Files.Get "config/librechat.yaml" | nindent 4 }}
+  librechat.yaml: |-
+{{ .Files.Get "config/librechat.yaml" | nindent 4 }}
 
