@@ -4,10 +4,32 @@ const { logger } = require('@librechat/data-schemas');
 
 const mongoose = require('mongoose');
 const MONGO_URI = process.env.MONGO_URI;
+const MONGO_DB_NAME = process.env.MONGO_DB;
 
 if (!MONGO_URI) {
   throw new Error('Please define the MONGO_URI environment variable');
 }
+if (!MONGO_DB_NAME) {
+  logger.warn('[connectDb] MONGO_DB is not defined; will use database from MONGO_URI path or default to "test"');
+}
+
+// Warn if URI path already contains a database
+if (MONGO_DB_NAME) {
+  try {
+    const url = new URL(MONGO_URI);
+    if (url.pathname && url.pathname !== '/') {
+      logger.warn(
+        `[connectDb] MONGO_URI contains database path "${url.pathname.slice(1)}" but MONGO_DB="${MONGO_DB_NAME}" is set. Using MONGO_DB.`
+      );
+    }
+  } catch (error) {
+    logger.warn(
+      '[connectDb] Unable to parse MONGO_URI with URL; skipping database path warning check.',
+      error,
+    );
+  }
+}
+
 /** The maximum number of connections in the connection pool. */
 const maxPoolSize = parseInt(process.env.MONGO_MAX_POOL_SIZE) || undefined;
 /** The minimum number of connections in the connection pool. */
@@ -60,6 +82,7 @@ async function connectDb() {
       ...(waitQueueTimeoutMS ? { waitQueueTimeoutMS } : {}),
       ...(autoIndex != undefined ? { autoIndex } : {}),
       ...(autoCreate != undefined ? { autoCreate } : {}),
+      ...(MONGO_DB_NAME ? { dbName: MONGO_DB_NAME } : {}),
       // useNewUrlParser: true,
       // useUnifiedTopology: true,
       // bufferMaxEntries: 0,
