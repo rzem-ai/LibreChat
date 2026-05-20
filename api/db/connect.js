@@ -10,7 +10,7 @@ if (!MONGO_URI) {
   throw new Error('Please define the MONGO_URI environment variable');
 }
 if (!MONGO_DB_NAME) {
-  throw new Error('Please define the MONGO_DB environment variable with your database name');
+  logger.warn('[connectDb] MONGO_DB is not defined; will use database from MONGO_URI path or default to "test"');
 }
 
 // Warn if URI path already contains a database
@@ -73,7 +73,7 @@ async function connectDb() {
       ...(waitQueueTimeoutMS ? { waitQueueTimeoutMS } : {}),
       ...(autoIndex != undefined ? { autoIndex } : {}),
       ...(autoCreate != undefined ? { autoCreate } : {}),
-      ...(process.env.MONGO_DB ? { dbName: MONGO_DB_NAME } : {}),
+      ...(MONGO_DB_NAME ? { dbName: MONGO_DB_NAME } : {}),
       // useNewUrlParser: true,
       // useUnifiedTopology: true,
       // bufferMaxEntries: 0,
