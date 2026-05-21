@@ -157,20 +157,22 @@ Produce a complete `eval_cases.yaml`. Use the category's recommended metrics as 
 6. **invoke_method** — use `invoke_text` for single-turn, `invoke_sequential` for multi-turn conversations.
 7. **leading_questions** — write 3–5 per case. At least 1 must be `type: gating`. Questions should probe the skill's specific output requirements, not generic quality.
 8. **num_runs** — default to 3.
-9. **metrics** — select from: `hallucination`, `task_completion`, `faithfulness`, `answer_relevancy`, `summarization`, `contextual_recall`, `bias`, `toxicity`.
-10. **For `invoke_sequential` cases** — use `turns` with `turn_assertions` (types: `expected_tools`, `contains_any`, `not_contains`, `leading_question`). Add `conversational_metrics` and `conversational_thresholds`.
+9. **metrics** — select from: `hallucination`, `task_completion`, `faithfulness`, `answer_relevancy`, `summarization`, `contextual_recall`, `bias`, `toxicity`, `conversation_completeness`, `conversational_role_consistency`, `conversational_instruction_adherence`. Conversational metrics (prefixed `conversation*`) require a `ConversationalTestCase` and only work with `invoke_sequential` cases. **Do NOT use `task_completion` for multi-turn (`invoke_sequential`) cases** — it only evaluates the final turn's response against the overall expected output. Use `conversation_completeness` in the `metrics:` list instead.
+10. **For `invoke_sequential` cases** — use `turns` with `turn_assertions` (types: `expected_tools`, `contains_any`, `not_contains`, `leading_question`). Include `conversation_completeness` in the regular `metrics:` list as a gating metric to assess overall task fulfilment across all turns.
 11. **chatbot_role** — describe the agent's persona for the test case.
 
 ### Category → Recommended Metrics:
 
-| Category | Metrics | Conversational |
+| Category | Single-turn Metrics | Multi-turn Metrics |
 |---|---|---|
-| Content Generation | hallucination, task_completion, faithfulness | conversation_completeness |
-| Knowledge Retrieval | faithfulness, task_completion, hallucination | conversation_completeness |
-| Data Classification | task_completion, faithfulness | — |
-| Decision Support | task_completion, faithfulness, hallucination | conversation_completeness |
-| Tool Orchestration | task_completion, faithfulness | conversation_completeness |
-| Governance / Compliance | task_completion, faithfulness, hallucination | — |
+| Content Generation | hallucination, task_completion, faithfulness | hallucination, faithfulness, conversation_completeness |
+| Knowledge Retrieval | faithfulness, task_completion, hallucination | faithfulness, hallucination, conversation_completeness |
+| Data Classification | task_completion, faithfulness | faithfulness, conversation_completeness |
+| Decision Support | task_completion, faithfulness, hallucination | faithfulness, hallucination, conversation_completeness |
+| Tool Orchestration | task_completion, faithfulness | faithfulness, conversation_completeness |
+| Governance / Compliance | task_completion, faithfulness, hallucination | faithfulness, hallucination, conversation_completeness |
+
+> **Note:** `task_completion` only evaluates the final turn's output. For multi-turn cases, `conversation_completeness` evaluates the entire dialogue and is the correct replacement. All metrics in `metrics:` are gating; use `diagnostic_metrics:` for non-blocking.
 
 ### YAML structure:
 
@@ -210,7 +212,7 @@ cases:
     leading_questions:
       - name: "<Probe Name>"
         type: gating
-        threshold: 0.7
+        threshold: 0.5
         question: >-
           <specific question about output quality>
 
@@ -256,23 +258,19 @@ cases:
               <LLM-judged question about this turn's response>
 
     metrics:
-      - <metric_1>
-      - <metric_2>
-
-    thresholds:
-      <metric_1>: <value>
-      <metric_2>: <value>
-
-    conversational_metrics:
+      - faithfulness
+      - hallucination
       - conversation_completeness
 
-    conversational_thresholds:
+    thresholds:
+      faithfulness: 0.5
+      hallucination: 0.5
       conversation_completeness: 0.5
 
     leading_questions:
       - name: "<Probe Name>"
         type: gating
-        threshold: 0.7
+        threshold: 0.5
         question: >-
           <specific question about output quality>
 ```
@@ -337,7 +335,7 @@ metadata.
 ### 8b. Run the baseline eval
 
 ```bash
-uv run eval-run --config "evals/<Skill Name>/eval_cases.yaml" --langfuse --run-name "scaffold-baseline"
+uv run eval-run --config "evals/<Skill Name>/eval_cases.yaml" --langfuse --run-name "1_scaffold_baseline"
 ```
 
 This runs all cases (3 runs each), pushes traces and scores to Langfuse, and

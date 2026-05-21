@@ -109,11 +109,15 @@ The scaffolder produces **8 cases across 4 documents** (2 cases per document —
 
 ### Conversational Metrics (session-level, for multi-turn)
 
+These metrics evaluate the entire conversation rather than a single turn. They are placed in the regular `metrics:` (gating) or `diagnostic_metrics:` (non-blocking) lists — no separate key needed. They only work with `invoke_sequential` cases.
+
 | Key | Description |
 |-----|-------------|
 | `conversation_completeness` | Whether all user requests were addressed across turns |
 | `conversational_role_consistency` | Maintained persona across the conversation |
 | `conversational_instruction_adherence` | Followed instructions throughout the session |
+
+> **Note:** Do not use `task_completion` for multi-turn cases — it only evaluates the final turn's output. Use `conversation_completeness` instead.
 
 ---
 
@@ -252,13 +256,16 @@ cases:
             question: "Does the response ask the user to choose a detail level?"
 
     # Gating metrics — must pass or the case fails
+    # Conversational metrics (conversation_completeness, etc.) go here too
     metrics:
       - hallucination
       - task_completion
       - faithfulness
+      - conversation_completeness  # session-level, invoke_sequential only
     thresholds:
       hallucination: 0.7
       task_completion: 0.7
+      conversation_completeness: 0.5
 
     # Diagnostic metrics — reported but never block
     diagnostic_metrics:
@@ -266,12 +273,6 @@ cases:
       - answer_relevancy
     diagnostic_thresholds:
       tool_correctness: 0.5
-
-    # Conversational metrics — session-level (invoke_sequential only)
-    conversational_metrics:
-      - conversation_completeness
-    conversational_thresholds:
-      conversation_completeness: 0.5
 
     # Leading question probes — LLM-judged quality checks
     leading_questions:

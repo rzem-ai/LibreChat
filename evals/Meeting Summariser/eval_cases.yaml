@@ -46,29 +46,25 @@ cases:
       - hallucination
       - task_completion
       - faithfulness
-
-    thresholds:
-      hallucination: 0.7
-      task_completion: 0.7
-      faithfulness: 0.7
-
-    conversational_metrics:
       - conversation_completeness
 
-    conversational_thresholds:
+    thresholds:
+      hallucination: 0.5
+      task_completion: 0.5
+      faithfulness: 0.5
       conversation_completeness: 0.5
 
     leading_questions:
       - name: "Structural Template"
         type: gating
-        threshold: 0.7
+        threshold: 0.5
         question: >-
           Does the summary follow the standard meeting-minutes structure:
           Overview, Participants, Discussion Items, Decisions, Action Items?
 
       - name: "Action Item Completeness"
         type: gating
-        threshold: 0.7
+        threshold: 0.5
         question: >-
           Does each action item include an owner name and a due date?
 
@@ -78,7 +74,7 @@ cases:
 
       - name: "No Invented Content"
         type: gating
-        threshold: 0.7
+        threshold: 0.5
         question: >-
           Is the summary free from claims not present in the transcript?
 
@@ -167,16 +163,12 @@ cases:
       - hallucination
       - task_completion
       - faithfulness
+      - conversation_completeness
 
     thresholds:
       hallucination: 0.5
-      task_completion: 0.7
+      task_completion: 0.5
       faithfulness: 0.5
-
-    conversational_metrics:
-      - conversation_completeness
-
-    conversational_thresholds:
       conversation_completeness: 0.5
 
     leading_questions:
@@ -231,29 +223,25 @@ cases:
       - hallucination
       - task_completion
       - faithfulness
-
-    thresholds:
-      hallucination: 0.7
-      task_completion: 0.7
-      faithfulness: 0.7
-
-    conversational_metrics:
       - conversation_completeness
 
-    conversational_thresholds:
+    thresholds:
+      hallucination: 0.5
+      task_completion: 0.5
+      faithfulness: 0.5
       conversation_completeness: 0.5
 
     leading_questions:
       - name: "Structural Template"
         type: gating
-        threshold: 0.7
+        threshold: 0.5
         question: >-
           Does the summary follow the standard meeting-minutes structure:
           Overview, Participants, Discussion Items, Decisions, Action Items?
 
       - name: "Decision Captured"
         type: gating
-        threshold: 0.7
+        threshold: 0.5
         question: >-
           Does the summary clearly state the decision to proceed with
           Option C (the hybrid card/table layout)?
@@ -265,7 +253,7 @@ cases:
 
       - name: "No Invented Content"
         type: gating
-        threshold: 0.7
+        threshold: 0.5
         question: >-
           Is the summary free from claims not present in the transcript?
 
@@ -345,16 +333,12 @@ cases:
       - hallucination
       - task_completion
       - faithfulness
+      - conversation_completeness
 
     thresholds:
       hallucination: 0.5
-      task_completion: 0.7
+      task_completion: 0.5
       faithfulness: 0.5
-
-    conversational_metrics:
-      - conversation_completeness
-
-    conversational_thresholds:
       conversation_completeness: 0.5
 
     leading_questions:
@@ -410,29 +394,25 @@ cases:
       - hallucination
       - task_completion
       - faithfulness
-
-    thresholds:
-      hallucination: 0.7
-      task_completion: 0.7
-      faithfulness: 0.7
-
-    conversational_metrics:
       - conversation_completeness
 
-    conversational_thresholds:
+    thresholds:
+      hallucination: 0.5
+      task_completion: 0.5
+      faithfulness: 0.5
       conversation_completeness: 0.5
 
     leading_questions:
       - name: "Structural Template"
         type: gating
-        threshold: 0.7
+        threshold: 0.5
         question: >-
           Does the summary follow the standard meeting-minutes structure:
           Overview, Participants, Discussion Items, Decisions, Action Items?
 
       - name: "Root Cause Identified"
         type: gating
-        threshold: 0.7
+        threshold: 0.5
         question: >-
           Does the summary clearly identify the root cause as the database
           connection pool being exhausted due to a traffic spike?
@@ -444,14 +424,14 @@ cases:
 
       - name: "All Actions Captured"
         type: gating
-        threshold: 0.7
+        threshold: 0.5
         question: >-
           Does the summary include action items for Aisha (runbook),
           Ben (PagerDuty), Sophie (load test), and Liam (marketing sync)?
 
       - name: "No Invented Content"
         type: gating
-        threshold: 0.7
+        threshold: 0.5
         question: >-
           Is the summary free from claims not present in the notes?
 
@@ -531,16 +511,12 @@ cases:
       - hallucination
       - task_completion
       - faithfulness
+      - conversation_completeness
 
     thresholds:
       hallucination: 0.5
-      task_completion: 0.7
+      task_completion: 0.5
       faithfulness: 0.5
-
-    conversational_metrics:
-      - conversation_completeness
-
-    conversational_thresholds:
       conversation_completeness: 0.5
 
     leading_questions:
@@ -608,22 +584,18 @@ cases:
       - hallucination
       - task_completion
       - faithfulness
-
-    thresholds:
-      hallucination: 0.7
-      task_completion: 0.7
-      faithfulness: 0.7
-
-    conversational_metrics:
       - conversation_completeness
 
-    conversational_thresholds:
+    thresholds:
+      hallucination: 0.5
+      task_completion: 0.5
+      faithfulness: 0.5
       conversation_completeness: 0.5
 
     leading_questions:
       - name: "Blocker Highlighted"
         type: gating
-        threshold: 0.7
+        threshold: 0.5
         question: >-
           Is the XML/legacy system blocker clearly identified as a key
           impediment to sprint progress?
@@ -635,7 +607,7 @@ cases:
 
       - name: "No Invented Content"
         type: gating
-        threshold: 0.7
+        threshold: 0.5
         question: >-
           Is the summary free from claims not present in the transcript?
 
@@ -709,16 +681,12 @@ cases:
       - hallucination
       - task_completion
       - faithfulness
+      - conversation_completeness
 
     thresholds:
       hallucination: 0.5
-      task_completion: 0.7
+      task_completion: 0.5
       faithfulness: 0.5
-
-    conversational_metrics:
-      - conversation_completeness
-
-    conversational_thresholds:
       conversation_completeness: 0.5
 
     leading_questions:

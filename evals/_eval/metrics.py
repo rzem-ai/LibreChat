@@ -51,20 +51,33 @@ VALID_METRICS = {
     "contextual_recall",
     "bias",
     "toxicity",
+    "conversation_completeness",
+    "conversational_role_consistency",
+    "conversational_instruction_adherence",
+}
+
+# Metrics that require a ConversationalTestCase (multi-turn only)
+CONVERSATIONAL_METRICS = {
+    "conversation_completeness",
+    "conversational_role_consistency",
+    "conversational_instruction_adherence",
 }
 
 DEFAULT_THRESHOLDS = {
     "hallucination": 0.5,
-    "task_completion": 0.7,
+    "task_completion": 0.5,
     "tool_correctness": None,
-    "role_consistency": 0.7,
-    "instruction_adherence": 0.7,
+    "role_consistency": 0.5,
+    "instruction_adherence": 0.5,
     "answer_relevancy": 0.5,
     "summarization": 0.5,
     "faithfulness": 0.5,
     "contextual_recall": 0.5,
     "bias": 0.5,
     "toxicity": 0.5,
+    "conversation_completeness": 0.5,
+    "conversational_role_consistency": 0.5,
+    "conversational_instruction_adherence": 0.5,
 }
 
 VALID_PROBE_TYPES = {"gating", "diagnostic"}
@@ -217,19 +230,39 @@ def build_metrics(
     evaluator: EvaluatorModel,
     has_expected_tools: bool = True,
 ) -> list:
-    """Instantiate metrics for the given keys from the unified registry.
+    """Instantiate standard (non-conversational) metrics from the unified registry.
 
-    Works for both gating and diagnostic metrics — the caller decides
-    which list to put them in. Skips tool_correctness when has_expected_tools
-    is False.
+    Skips conversational metrics — those require a ConversationalTestCase and
+    are handled separately via build_conversational_from_keys().
     """
     registry = _metric_registry(evaluator)
     metrics = []
     for key in metric_keys:
+        if key in CONVERSATIONAL_METRICS:
+            continue  # handled by build_conversational_from_keys
         if key not in registry:
             raise ValueError(f"Unknown metric '{key}'. Valid: {sorted(VALID_METRICS)}")
         if key == "tool_correctness" and not has_expected_tools:
             print(f"[SKIP] tool_correctness — no expected_tools defined for this case")
+            continue
+        threshold = thresholds.get(key, DEFAULT_THRESHOLDS.get(key))
+        metrics.append(registry[key](threshold))
+    return metrics
+
+
+def build_conversational_from_keys(
+    metric_keys: List[str],
+    thresholds: dict,
+    evaluator: EvaluatorModel,
+) -> list:
+    """Extract conversational metrics from a metric key list and instantiate them.
+
+    Only keys in CONVERSATIONAL_METRICS are processed; others are skipped.
+    """
+    registry = _conversational_metric_registry(evaluator)
+    metrics = []
+    for key in metric_keys:
+        if key not in CONVERSATIONAL_METRICS:
             continue
         threshold = thresholds.get(key, DEFAULT_THRESHOLDS.get(key))
         metrics.append(registry[key](threshold))

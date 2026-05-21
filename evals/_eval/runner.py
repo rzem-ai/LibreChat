@@ -28,7 +28,9 @@ from .metrics import (
     EvaluatorModel,
     DEFAULT_THRESHOLDS,
     VALID_METRICS,
+    CONVERSATIONAL_METRICS,
     build_metrics,
+    build_conversational_from_keys,
     build_leading_question_probes,
     build_conversational_metrics,
     evaluate_turn_assertions,
@@ -374,16 +376,26 @@ def _run_single_sequential(
         turns=conv_turns,
     )
 
-    # --- Conversational metrics ---
+    # --- Conversational metrics (from metrics/diagnostic_metrics + legacy conversational_metrics) ---
     conversational_results = []
+
+    # Build conversational metrics that appear in gating keys
+    gating_conv_metrics = build_conversational_from_keys(selected_gating, thresholds, evaluator)
+    # Build conversational metrics that appear in diagnostic keys
+    diagnostic_conv_metrics = build_conversational_from_keys(selected_diagnostic, thresholds, evaluator)
+    # Legacy: conversational_metrics YAML key (backward compat, treated as gating)
     if conversational_metric_keys:
-        conv_metrics = build_conversational_metrics(
+        legacy_conv_metrics = build_conversational_metrics(
             conversational_metric_keys, conversational_thresholds, evaluator,
         )
-        for metric in conv_metrics:
+        gating_conv_metrics.extend(legacy_conv_metrics)
+
+    def _measure_conv(metrics_list):
+        results = []
+        for metric in metrics_list:
             try:
                 metric.measure(conv_test_case)
-                conversational_results.append((
+                results.append((
                     getattr(metric, "name", metric.__name__),
                     metric.score,
                     metric.threshold,
@@ -393,10 +405,15 @@ def _run_single_sequential(
             except Exception as exc:
                 metric_name = getattr(metric, "name", metric.__name__)
                 print(f"  [ERROR] {metric_name}: {exc}")
-                conversational_results.append((
+                results.append((
                     metric_name, None, getattr(metric, "threshold", None),
                     False, f"ERROR: {exc}",
                 ))
+        return results
+
+    gating_conv_results = _measure_conv(gating_conv_metrics)
+    diagnostic_conv_results = _measure_conv(diagnostic_conv_metrics)
+    conversational_results = gating_conv_results + diagnostic_conv_results
 
     # --- Standard gating/diagnostic on final output ---
     final_response = responses[-1] if responses else AgentResponse(content="")
@@ -438,6 +455,8 @@ def _run_single_sequential(
     )
 
     gating_results = _measure_metrics(gating_metrics, test_case, summarization_test_case)
+    # Merge conversational gating metrics into gating results
+    gating_results.extend(gating_conv_results)
 
     for probe, _ in gating_probes:
         try:
@@ -453,6 +472,8 @@ def _run_single_sequential(
             ))
 
     diagnostic_results = _measure_metrics(diagnostic_metrics, test_case, summarization_test_case)
+    # Merge conversational diagnostic metrics into diagnostic results
+    diagnostic_results.extend(diagnostic_conv_results)
 
     probe_results = []
     for probe, _ in diagnostic_probes:

@@ -1,0 +1,673 @@
+# Contract Analyser — Evaluation Cases
+# Category: Data Classification & Extraction
+
+adapter: _eval.adapters.librechat_adapter.LibreChatAdapter
+invoke_method: invoke_text
+num_runs: 3
+
+cases:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Document 1: SOW — IT Infrastructure Modernisation
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  case_1:
+    name: "SOW full obligation extraction — IT consulting"
+    category: "Data Classification & Extraction"
+    source_material: "documents/sow_it_consulting.md"
+    chatbot_role: "A legal professional specialising in contract review for SoW and MSA documents"
+    user_query: >-
+      Please analyse this Statement of Work and extract all obligations.
+      I need the Delay Process, Change Process, Invoice Process,
+      Subcontracting Limitations, and the full Obligation Tracker.
+    expected_output: >-
+      Five structured sections each beginning with '---': (1) Delay Process as
+      numbered steps citing Clauses 4.1–4.3 covering notification within 5 Business
+      Days, assessment within 10 Business Days, remediation plan within 15 Business
+      Days, and termination after 40 Business Days; (2) Change Process as numbered
+      steps citing Clauses 2.3(a)–(f) covering written Change Request, acknowledgement
+      within 2 Business Days, response within 10 Business Days, signed Change Order,
+      and escalation after 20 Business Days; (3) Invoice Process citing Clauses
+      3.2–3.3 with requirements table and Mermaid flowchart showing monthly invoicing
+      by 5th Business Day, payment within 30 days, dispute within 14 days, and late
+      interest; (4) Subcontracting Limitations citing Clauses 5.1–5.2 covering prior
+      written consent, 20 Business Days notice, deed of confidentiality, and revocation
+      with 10 Business Days notice; (5) Obligation Tracker as a Markdown table with
+      all time-bound obligations from the contract.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "contract-analyser"
+
+    metrics:
+      - task_completion
+      - faithfulness
+
+    thresholds:
+      task_completion: 0.5
+      faithfulness: 0.5
+
+    leading_questions:
+      - name: "Five Sections Present"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Does the output contain all five required sections: Delay Process,
+          Change Process, Invoice Process, Subcontracting Limitations, and
+          Obligation Tracker?
+
+      - name: "Section Separators"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Does each section begin with a '---' separator as required by
+          the skill format?
+
+      - name: "Clause Citations"
+        question: >-
+          Are specific clause numbers cited for each obligation, step,
+          or requirement extracted?
+
+      - name: "Mermaid Flowchart"
+        question: >-
+          Does the Invoice Process section include a Mermaid flowchart
+          that accurately represents the invoicing process with clause
+          references?
+
+      - name: "Obligation Tracker Format"
+        question: >-
+          Is the Obligation Tracker presented as a Markdown table with
+          columns: ID, Document Name, Responsible Party, Category,
+          Reference, Obligations, and Trigger?
+
+  case_2:
+    name: "SOW multi-turn — extraction then insights question"
+    category: "Data Classification & Extraction"
+    invoke_method: invoke_sequential
+    source_material: "documents/sow_it_consulting.md"
+    chatbot_role: "A legal professional specialising in contract review for SoW and MSA documents"
+    expected_output: >-
+      First turn: full obligation extraction with all five sections.
+      Second turn: a summary table highlighting key timeframes and notice
+      requirements. Third turn: a specific insight answering the question
+      about termination rights with clause references.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "contract-analyser"
+
+    turns:
+      - content: >-
+          Analyse this SOW and extract all obligations — Delay Process,
+          Change Process, Invoice Process, Subcontracting Limitations,
+          and Obligation Tracker.
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Skill tool called"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "contract-analyser"
+          - type: contains_any
+            name: "Has delay process"
+            phrases: ["Delay Process", "delay notification", "Clause 4"]
+          - type: contains_any
+            name: "Has obligation tracker"
+            phrases: ["Obligation Tracker", "| ID |", "| Reference |"]
+
+      - content: >-
+          Now summarise the key issues and identify all timeframes or
+          notices required by either party.
+        turn_assertions:
+          - type: leading_question
+            name: "Summary tables present"
+            question: >-
+              Does the response contain separate Markdown tables for each
+              section (Delay, Change, Invoice, Subcontracting) summarising
+              timeframes and notice requirements?
+          - type: contains_any
+            name: "Mentions specific timeframes"
+            phrases: ["Business Days", "calendar days", "30 calendar days"]
+
+      - content: >-
+          Under what circumstances can the Client terminate this SOW, and
+          what notice periods apply?
+        turn_assertions:
+          - type: leading_question
+            name: "Termination grounds cited"
+            question: >-
+              Does the response identify both termination for convenience
+              (60 calendar days' notice) and termination for cause (20
+              Business Days to remedy), citing Clauses 8.1 and 8.2?
+          - type: leading_question
+            name: "Delay-based termination"
+            question: >-
+              Does the response mention the right to terminate after 40
+              Business Days of unresolved delay under Clause 4.3?
+
+    metrics:
+      - faithfulness
+      - conversation_completeness
+
+    thresholds:
+      faithfulness: 0.5
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "Multi-Step Compliance"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Does the conversation successfully complete all three steps:
+          extraction, summary, and targeted insight?
+
+      - name: "Grounded in Contract"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Are all responses grounded in the uploaded contract without
+          invented obligations or clauses?
+
+      - name: "Professional Tone"
+        question: >-
+          Is the language precise and professionally framed throughout
+          all turns, as expected of a legal professional?
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Document 2: MSA — Cloud Platform Services
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  case_3:
+    name: "MSA full obligation extraction — cloud services"
+    category: "Data Classification & Extraction"
+    source_material: "documents/msa_cloud_services.md"
+    chatbot_role: "A legal professional specialising in contract review for SoW and MSA documents"
+    user_query: >-
+      Review this Master Services Agreement and extract all obligations.
+      Provide the Delay Process, Change Process, Invoice Process,
+      Subcontracting Limitations, and Obligation Tracker.
+    expected_output: >-
+      Five structured sections each beginning with '---': (1) Delay Process
+      citing Clauses 4.1–4.3 with notification within 3 Business Days,
+      response within 5 Business Days, corrective actions within 10 Business
+      Days, and Force Majeure provisions; (2) Change Process (Variations)
+      citing Clause 5.1–5.2 with acknowledgement within 3 Business Days,
+      response within 15 Business Days, written execution requirement, and
+      emergency variation within 24 hours; (3) Invoice Process citing Clauses
+      3.2–3.3 with invoicing on 1st Business Day in advance, payment within
+      21 calendar days, dispute within 7 Business Days, and interest at 1.5%
+      per month plus Mermaid flowchart; (4) Subcontracting Limitations citing
+      Clauses 6.1–6.4 covering CIO approval, 30 Business Days notice, tripartite
+      deed, and removal with 15/30 Business Days notice; (5) Obligation Tracker
+      table with all time-bound obligations.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "contract-analyser"
+
+    metrics:
+      - task_completion
+      - faithfulness
+
+    thresholds:
+      task_completion: 0.5
+      faithfulness: 0.5
+
+    leading_questions:
+      - name: "Emergency Variation Captured"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Does the Change Process section identify the emergency variation
+          provision (Clause 5.2) requiring implementation within 24 hours
+          and retrospective Variation Request within 5 Business Days?
+
+      - name: "Subcontractor Removal Process"
+        question: >-
+          Does the Subcontracting section capture the Customer's right to
+          require removal with 15 Business Days' notice and the Supplier's
+          obligation to transition within 30 Business Days?
+
+      - name: "Force Majeure Included"
+        question: >-
+          Does the Delay Process include the Force Majeure clause with
+          notification within 2 Business Days and termination right after
+          60 calendar days?
+
+      - name: "Invoice Flowchart Accuracy"
+        question: >-
+          Does the Mermaid flowchart accurately represent invoicing in
+          advance on the 1st Business Day, with clause references and
+          no invented steps?
+
+  case_4:
+    name: "MSA multi-turn — extraction, summary, and SLA question"
+    category: "Data Classification & Extraction"
+    invoke_method: invoke_sequential
+    source_material: "documents/msa_cloud_services.md"
+    chatbot_role: "A legal professional specialising in contract review for SoW and MSA documents"
+    expected_output: >-
+      First turn: full obligation extraction. Second turn: summary tables
+      per section highlighting timeframes. Third turn: insight about service
+      level failure consequences citing specific clauses.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "contract-analyser"
+
+    turns:
+      - content: >-
+          Analyse this MSA and extract all obligations — Delay Process,
+          Change Process, Invoice Process, Subcontracting Limitations,
+          and Obligation Tracker.
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Skill tool called"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "contract-analyser"
+          - type: contains_any
+            name: "Has variation process"
+            phrases: ["Variation", "Change Process", "Clause 5"]
+          - type: contains_any
+            name: "Has subcontracting"
+            phrases: ["Subcontracting", "subcontract", "Clause 6"]
+
+      - content: >-
+          Summarise the key issues and identify timeframes and notice
+          requirements for each section.
+        turn_assertions:
+          - type: leading_question
+            name: "Tables per section"
+            question: >-
+              Does the response present separate summary tables for Delay,
+              Change, Invoice, and Subcontracting sections?
+          - type: contains_any
+            name: "Key timeframes present"
+            phrases: ["3 Business Days", "15 Business Days", "21 calendar days"]
+
+      - content: >-
+          What happens if the Supplier consistently fails to meet Service
+          Levels? What are the Customer's remedies?
+        turn_assertions:
+          - type: leading_question
+            name: "SLA failure consequences"
+            question: >-
+              Does the response identify that 3 consecutive months of
+              Service Level failure triggers a termination right under
+              Clause 9.2 with 30 Business Days' notice?
+          - type: leading_question
+            name: "Service Level credits"
+            question: >-
+              Does the response mention Service Level credits being applied
+              to invoices as referenced in the invoicing requirements?
+
+    metrics:
+      - faithfulness
+      - conversation_completeness
+
+    thresholds:
+      faithfulness: 0.5
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "Insight Grounded in Contract"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Is the SLA failure insight grounded entirely in the contract
+          text without speculation or invented remedies?
+
+      - name: "Cross-Reference Accuracy"
+        question: >-
+          Does the response accurately cross-reference between Service
+          Level provisions (Clause 2.2) and termination rights (Clause 9.2)?
+
+      - name: "Professional Legal Language"
+        question: >-
+          Does the response use precise legal language appropriate for
+          a contract review professional?
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Document 3: SOW — Data Analytics Platform
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  case_5:
+    name: "SOW invoice and change process extraction — data analytics"
+    category: "Data Classification & Extraction"
+    source_material: "documents/sow_data_analytics.md"
+    chatbot_role: "A legal professional specialising in contract review for SoW and MSA documents"
+    user_query: >-
+      Analyse this Statement of Work and extract all obligations including
+      the Delay Process, Change Process, Invoice Process, Subcontracting
+      Limitations, and Obligation Tracker.
+    expected_output: >-
+      Five structured sections: (1) Delay Process citing Clauses 4.1–4.3
+      with notification within 2 Business Days, Client-caused delay extension
+      plus cost reimbursement, Consultant remediation within 5 Business Days,
+      and termination if delay exceeds 20 Business Days; (2) Change Process
+      citing Clauses 3.1–3.2 with acknowledgement within 3 Business Days,
+      response within 7 Business Days, signed Change Order requirement, and
+      minor adjustment provision; (3) Invoice Process citing Clauses 2.2–2.3
+      with milestone-based invoicing within 5 Business Days of acceptance,
+      payment within 14 Business Days, dispute within 7 Business Days, and
+      1% monthly late penalty plus Mermaid flowchart; (4) Subcontracting
+      citing Clauses 5.1–5.3 with pre-approved subcontractors listed, 15
+      Business Days notice for additional, and response within 10 Business
+      Days; (5) Obligation Tracker with milestone dates and all time-bound
+      obligations.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "contract-analyser"
+
+    metrics:
+      - task_completion
+      - faithfulness
+
+    thresholds:
+      task_completion: 0.5
+      faithfulness: 0.5
+
+    leading_questions:
+      - name: "Pre-Approved Subcontractors"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Does the Subcontracting section identify the two pre-approved
+          subcontractors (Quantix Data Engineering and Vizual Analytics Co)
+          and note that additional subcontractors require separate approval?
+
+      - name: "Milestone-Based Invoicing"
+        question: >-
+          Does the Invoice Process correctly identify that invoicing is
+          milestone-based (within 5 Business Days of acceptance) rather
+          than monthly, with the 20% upfront payment noted?
+
+      - name: "Minor Adjustment Provision"
+        question: >-
+          Does the Change Process capture the minor adjustment provision
+          (Clause 3.2) allowing email agreement for changes under 5
+          Business Days timeline impact?
+
+      - name: "Obligation Tracker Completeness"
+        question: >-
+          Does the Obligation Tracker include the specific milestone
+          dates (D1 through D6) from Clause 1.2 as time-bound
+          obligations?
+
+  case_6:
+    name: "SOW multi-turn — extraction then subcontracting question"
+    category: "Data Classification & Extraction"
+    invoke_method: invoke_sequential
+    source_material: "documents/sow_data_analytics.md"
+    chatbot_role: "A legal professional specialising in contract review for SoW and MSA documents"
+    expected_output: >-
+      First turn: full obligation extraction. Second turn: summary tables
+      with timeframes. Third turn: detailed insight about subcontracting
+      constraints and process.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "contract-analyser"
+
+    turns:
+      - content: >-
+          Extract all obligations from this SOW — Delay Process, Change
+          Process, Invoice Process, Subcontracting Limitations, and
+          Obligation Tracker.
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Skill tool called"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "contract-analyser"
+          - type: contains_any
+            name: "Has invoice process"
+            phrases: ["Invoice Process", "invoice", "Clause 2.2"]
+          - type: contains_any
+            name: "Has change process"
+            phrases: ["Change Process", "Change Request", "Clause 3"]
+
+      - content: >-
+          Generate a summary of key issues with timeframes and notice
+          requirements for each section.
+        turn_assertions:
+          - type: leading_question
+            name: "Timeframes highlighted"
+            question: >-
+              Does the summary clearly highlight the shorter timeframes
+              in this contract (2 Business Days for delay notification,
+              7 Business Days for change response) compared to typical
+              contracts?
+          - type: contains_any
+            name: "Contains tables"
+            phrases: ["|", "Business Days", "calendar days"]
+
+      - content: >-
+          If I want to engage a new data engineering subcontractor not
+          on the pre-approved list, what is the exact process and how
+          long will it take?
+        turn_assertions:
+          - type: leading_question
+            name: "Process steps cited"
+            question: >-
+              Does the response outline the process: submit request 15
+              Business Days before start date, include subcontractor
+              details/scope/qualifications/insurance, Client responds
+              within 10 Business Days, and silence does not constitute
+              consent?
+          - type: leading_question
+            name: "Clause references"
+            question: >-
+              Does the response cite Clause 5.2 specifically and note
+              the distinction from the pre-approved list in Clause 5.1?
+
+    metrics:
+      - faithfulness
+      - conversation_completeness
+
+    thresholds:
+      faithfulness: 0.5
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "Accurate Process Description"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Is the subcontracting approval process described accurately
+          and completely based on the contract terms?
+
+      - name: "No Speculation"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Does the response avoid speculating about outcomes or adding
+          information not present in the contract?
+
+      - name: "Practical Guidance"
+        question: >-
+          Does the response provide practical, actionable guidance
+          about the timeline and requirements?
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Document 4: MSA — Professional Advisory Services
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  case_7:
+    name: "MSA full extraction — professional services with liquidated damages"
+    category: "Data Classification & Extraction"
+    source_material: "documents/msa_professional_services.md"
+    chatbot_role: "A legal professional specialising in contract review for SoW and MSA documents"
+    user_query: >-
+      Review this Master Services Agreement and extract all obligations.
+      I need the complete Delay Process, Change Process, Invoice Process,
+      Subcontracting Limitations, and Obligation Tracker.
+    expected_output: >-
+      Five structured sections: (1) Delay Process citing Clauses 4.1–4.3
+      with early warning obligation, formal notification within 3 Business
+      Days, acknowledgement within 2 Business Days, meeting within 5 Business
+      Days, Variation Order within 10 Business Days, liquidated damages of
+      $5,000/day after 15 Business Days cumulative delay (capped at 10%),
+      and Principal-caused delay provisions; (2) Change Process citing Clauses
+      3.1–3.2 with acknowledgement within 2 Business Days, response within
+      10 Business Days, signed Variation Order, escalation to Governance Board
+      after 20 Business Days, and new SOW acceptance within 10 Business Days;
+      (3) Invoice Process citing Clauses 2.2–2.3 with monthly arrears within
+      10 Business Days of month end, statutory declaration for invoices over
+      $100k, submission via Vendor Portal, payment within 28 calendar days,
+      dispute within 10 Business Days, suspension right after 45 days, and
+      interest at 2.5% above RBA rate plus Mermaid flowchart; (4) Subcontracting
+      citing Clauses 5.1–5.4 with 25 Business Days notice, extensive
+      documentation requirements, approval within 15 Business Days, quarterly
+      register, annual reviews, and removal within 10/20 Business Days;
+      (5) Obligation Tracker with all time-bound obligations.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "contract-analyser"
+
+    metrics:
+      - task_completion
+      - faithfulness
+
+    thresholds:
+      task_completion: 0.5
+      faithfulness: 0.5
+
+    leading_questions:
+      - name: "Liquidated Damages Captured"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Does the Delay Process section accurately identify the liquidated
+          damages provision: AUD $5,000 per Business Day after 15 cumulative
+          days of Advisor-caused delay, capped at 10% of SOW value?
+
+      - name: "Statutory Declaration Requirement"
+        question: >-
+          Does the Invoice Process capture the requirement for a statutory
+          declaration accompanying invoices exceeding AUD $100,000?
+
+      - name: "Suspension Right"
+        question: >-
+          Does the Invoice Process note the Advisor's right to suspend
+          services after 45 calendar days of non-payment (with 10 Business
+          Days' notice)?
+
+      - name: "Subcontractor Register"
+        question: >-
+          Does the Subcontracting section capture the quarterly register
+          maintenance obligation and annual performance review requirement?
+
+      - name: "Governance Board Escalation"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Does the Change Process correctly identify escalation to the
+          Relationship Governance Board after 20 Business Days of
+          failed negotiation?
+
+  case_8:
+    name: "MSA multi-turn — extraction, summary, and penalty question"
+    category: "Data Classification & Extraction"
+    invoke_method: invoke_sequential
+    source_material: "documents/msa_professional_services.md"
+    chatbot_role: "A legal professional specialising in contract review for SoW and MSA documents"
+    expected_output: >-
+      First turn: full obligation extraction with all five sections.
+      Second turn: summary tables highlighting key timeframes and financial
+      consequences. Third turn: detailed insight about the financial
+      exposure from delays and non-compliance.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "contract-analyser"
+
+    turns:
+      - content: >-
+          Analyse this MSA and provide the full obligation extraction —
+          all five sections: Delay Process, Change Process, Invoice
+          Process, Subcontracting Limitations, and Obligation Tracker.
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Skill tool called"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "contract-analyser"
+          - type: contains_any
+            name: "Has liquidated damages"
+            phrases: ["liquidated damages", "$5,000", "5,000 per Business Day"]
+          - type: contains_any
+            name: "Has subcontracting details"
+            phrases: ["25 Business Days", "Procurement Director", "Clause 5"]
+
+      - content: >-
+          Summarise the key issues identified and highlight all
+          timeframes and notice periods required by each party.
+        turn_assertions:
+          - type: leading_question
+            name: "Financial consequences highlighted"
+            question: >-
+              Does the summary highlight the financial consequences
+              including liquidated damages, late payment interest, minimum
+              commitment shortfall fee, and service suspension rights?
+          - type: contains_any
+            name: "Contains structured tables"
+            phrases: ["|", "Timeframe", "Notice", "Business Days"]
+
+      - content: >-
+          What is the Advisor's maximum financial exposure if they
+          cause delays on a $500,000 SOW? Include all penalty
+          mechanisms in the contract.
+        turn_assertions:
+          - type: leading_question
+            name: "Calculates LD cap"
+            question: >-
+              Does the response calculate that the liquidated damages
+              cap is 10% of the SOW value ($50,000 on a $500,000 SOW)
+              and explain the $5,000 per Business Day accrual?
+          - type: leading_question
+            name: "Identifies termination risk"
+            question: >-
+              Does the response note that beyond financial penalties,
+              the Principal can terminate the SOW under Clause 7.2
+              after 15 cumulative Business Days of delay?
+
+    metrics:
+      - faithfulness
+      - conversation_completeness
+
+    thresholds:
+      faithfulness: 0.5
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "Accurate Financial Analysis"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Is the financial exposure calculation accurate and grounded
+          in the specific penalty mechanisms stated in the contract?
+
+      - name: "Complete Risk Picture"
+        question: >-
+          Does the response provide a complete picture of risk including
+          both financial penalties and termination consequences?
+
+      - name: "No Invented Penalties"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Does the response avoid introducing penalty types or mechanisms
+          that do not exist in the contract? Calculating specific amounts
+          from stated formulae (e.g. applying the 10% cap to a SOW value)
+          is acceptable and should not be considered invention.
