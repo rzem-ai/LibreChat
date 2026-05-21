@@ -24,7 +24,7 @@ Request to [join the repo's developer group](https://github.com/orgs/Deloitte-Au
 
 To successfully login via Azure Auth on local or the [online DEV endpoint](https://librechat-dev.ctk.au.deloitte.com/), you need to be added to the DEV user group in Deloitte's Azure Entra. Request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb).
 
-# ⚙️Set Up 
+# ⚙️ Set Up
 
 ## 1. Clone Repository
 
