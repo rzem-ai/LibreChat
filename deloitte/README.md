@@ -14,6 +14,16 @@ This repository contains the local development setup for **LibreChat**, configur
 
 ---
 
+# 🚦 Before You Start
+
+## Join the Repo as a Developer
+
+Request to [join the repo's developer group](https://github.com/orgs/Deloitte-Australia/teams/developers-tt-librechat). This will allow you to create branches and push code.
+
+## Join the DEV User Group
+
+To access the [online DEV endpoint](https://librechat-dev.ctk.au.deloitte.com/), you need to be added to the DEV user group in Deloitte's Azure Entra. Request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb).
+
 # Set Up 
 
 ## 1. Clone Repository
@@ -189,10 +199,16 @@ Deloitte App Reg is used to manage the Azure Entra authentication for this app.
 
 For LOCAL development, we need to add each user's hostname to the Redirect URIs list in the "Authentication" tab of the App Registration. This is required because Deloitte's Azure Entra does not allow `localhost` in Redirect URIs, so we use a custom domain (e.g. `AU-ABC123123.local`) for local development instead.
 
-### App Reg Details Per Environment
+### Details Per Environment
 - **DEV (Inc. LOCAL):** [AU CTK_TT_Librechat NONPROD](https://appreg.iam.deloitteresources.com/AppProperties/2075976d-5147-47b2-89d2-4ad060d19f85)
 - **UAT:** TBC
 - **PROD:** TBC
+
+### Configuration
+- Setup Method: WebAPI/OIDC
+- Authentication Tab: Configured Identifier URI and Redirect URIs
+- Secrets Tab: Generated a client secret, used for env/values.yaml configuration
+- Users and Groups: Currently just linked to the MyAssist DEV user group (AU_App_MyGenAI_Dev, request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb))
 
 ---
 
