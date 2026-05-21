@@ -26,16 +26,14 @@ pods:
           - /bin/sh
           - -c
           - >-
-            mkdir -p /app/client/dist/assets &&
-            if [ -d /app/deloitte/assets ]; then
+            mkdir -p /app/client/dist/assets && if [ -d /app/deloitte/assets ]; then
+
               cp -a /app/deloitte/assets/. /app/client/dist/assets/;
             elif [ -d /app/deloitte-assets ]; then
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
-            fi &&
-            export LLM_GATEWAY_X_SA_TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" &&
-            exec npm run backend
+            fi && export LLM_GATEWAY_X_SA_TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" && exec npm run backend
         image:
-          tag: 'develop'
+          tag: 'develop@sha256:c7f9c0725b083ba100c693ffdb7b39fe1ec6eaff4203fee652ce7c4a55fe6069'
         env:
           # Deployment Settings
           NODE_ENV: 'development'
