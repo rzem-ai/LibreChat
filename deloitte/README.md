@@ -22,9 +22,9 @@ Request to [join the repo's developer group](https://github.com/orgs/Deloitte-Au
 
 ## Join the DEV User Group
 
-To access the [online DEV endpoint](https://librechat-dev.ctk.au.deloitte.com/), you need to be added to the DEV user group in Deloitte's Azure Entra. Request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb).
+To successfully login via Azure Auth on local or the [online DEV endpoint](https://librechat-dev.ctk.au.deloitte.com/), you need to be added to the DEV user group in Deloitte's Azure Entra. Request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb).
 
-# Set Up 
+# ⚙️Set Up 
 
 ## 1. Clone Repository
 
@@ -124,7 +124,7 @@ The `librechat.yaml` configures:
 - ClearTrack MCP integration
 - And more!
 
-# Running the app
+# 🚀Running the app
 
 ## Start services
 
@@ -209,7 +209,3 @@ For LOCAL development, we need to add each user's hostname to the Redirect URIs 
 - Authentication Tab: Configured Identifier URI and Redirect URIs
 - Secrets Tab: Generated a client secret, used for env/values.yaml configuration
 - Users and Groups: Currently just linked to the MyAssist DEV user group (AU_App_MyGenAI_Dev, request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb))
-
----
-
-Happy tinkering 🚀
