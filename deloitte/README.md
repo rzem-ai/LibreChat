@@ -207,5 +207,5 @@ For LOCAL development, we need to add each user's hostname to the Redirect URIs 
 ### Configuration
 - Setup Method: WebAPI/OIDC
 - Authentication Tab: Configured Identifier URI and Redirect URIs
-- Secrets Tab: Generated a client secret, used for env/values.yaml configuration
+- Secrets Tab: Generated a client secret, used for local `.env` configuration and, where applicable, the relevant Helm `values*.yaml` under `charts/`
 - Users and Groups: Currently just linked to the MyAssist DEV user group (AU_App_MyGenAI_Dev, request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb))
