@@ -124,7 +124,7 @@ The `librechat.yaml` configures:
 - ClearTrack MCP integration
 - And more!
 
-# 🚀Running the app
+# 🚀 Running the app
 
 ## Start services
 
