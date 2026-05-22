@@ -1,0 +1,615 @@
+# DPN Resume Entry Drafter — Evaluation Cases
+# Category: Content Generation & Transformation
+
+adapter: _eval.adapters.librechat_adapter.LibreChatAdapter
+invoke_method: invoke_text
+num_runs: 3
+
+cases:
+
+  # ============================================================
+  # Document 1: financial_services_project.md (detailed formal brief)
+  # ============================================================
+
+  case_1:
+    name: "Detailed financial services project → DPN entry"
+    category: "Content Generation & Transformation"
+    source_material: "documents/financial_services_project.md"
+    chatbot_role: "A DPN Resume Entry Drafter that generates concise, third-person professional project summary entries for Deloitte People Network profiles"
+    user_query: >-
+      Please create a DPN resume entry from these project details. I worked
+      on a payments modernisation project for Meridian National Bank.
+    expected_output: >-
+      A DPN resume entry with: bold header line containing client name and
+      project name, bold role line, dates in MM/YY – MM/YY format (03/24 – 11/24),
+      industry on its own line, exactly 4 bullet points each starting with a
+      past tense verb in third person, and a Skills & Technologies Used line
+      with exactly 5 items. No personal pronouns or names anywhere in the body.
+      Australian English spelling throughout.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "dpn-resume-entry-drafter"
+
+    metrics:
+      - hallucination
+      - task_completion
+      - faithfulness
+
+    thresholds:
+      hallucination: 0.5
+      task_completion: 0.5
+      faithfulness: 0.5
+
+    leading_questions:
+      - name: "Third Person Voice"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Looking ONLY at the agent's actual output (not the user's input
+          message), does the resume entry body avoid all first-person pronouns
+          (I, my, me, we, our) and second-person pronouns (you, your)?
+          Important: proper nouns like "myGov" are NOT pronouns. Subject-dropped
+          sentences starting with past-tense verbs (e.g. "Coordinated...",
+          "Managed...") are correct resume-style third person and should score
+          1.0. Score 0.0 only if the actual resume entry text contains
+          prohibited pronouns.
+
+      - name: "Exact Structure"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Does the output follow the exact DPN structure: bold client-project
+          line, bold role line, MM/YY – MM/YY date, industry line, 4 bullet
+          points, then a bold Skills & Technologies Used line?
+
+      - name: "Date Format Correct"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Are the dates formatted as 03/24 – 11/24 (MM/YY – MM/YY format)?
+
+      - name: "Four Bullet Points"
+        question: >-
+          Are there exactly four bullet points, each a single sentence
+          starting with a past tense verb?
+
+      - name: "Five Skills Listed"
+        question: >-
+          Does the Skills & Technologies Used line contain exactly five
+          comma-separated items?
+
+  case_2:
+    name: "Financial services project → multi-turn with refinement"
+    category: "Content Generation & Transformation"
+    invoke_method: invoke_sequential
+    source_material: "documents/financial_services_project.md"
+    chatbot_role: "A DPN Resume Entry Drafter that generates concise, third-person professional project summary entries for Deloitte People Network profiles"
+    expected_output: >-
+      A DPN resume entry in correct format, followed by a revised version
+      after the user requests changes to emphasise the regulatory compliance
+      aspect. Both versions must maintain third-person voice, MM/YY dates,
+      4 bullets, and 5 skills.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "dpn-resume-entry-drafter"
+
+    turns:
+      - content: >-
+          Generate a DPN resume entry from these project details for my
+          payments modernisation work at Meridian National Bank.
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Skill tool called"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "dpn-resume-entry-drafter"
+          - type: contains_any
+            name: "Has bold header"
+            phrases: ["**Meridian National Bank", "Meridian National Bank -", "Payments Modernisation"]
+          - type: contains_any
+            name: "Has date format"
+            phrases: ["03/24", "11/24"]
+
+      - content: >-
+          Can you revise the entry to put more emphasis on the regulatory
+          compliance and risk mitigation aspects? I want the $2.4M saving
+          to be more prominent.
+        turn_assertions:
+          - type: leading_question
+            name: "Emphasises compliance"
+            question: >-
+              Does the revised entry prominently feature regulatory compliance,
+              risk mitigation, or the $2.4M saving in the bullet points?
+          - type: leading_question
+            name: "Maintains structure"
+            question: >-
+              Does the revised entry still maintain the correct DPN structure
+              with exactly 4 bullet points, third-person voice, and 5 skills?
+
+    metrics:
+      - hallucination
+      - faithfulness
+      - conversation_completeness
+
+    thresholds:
+      hallucination: 0.5
+      faithfulness: 0.5
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "Third Person Maintained"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Looking ONLY at the revised resume entry output (not the user's
+          messages), does it avoid all first-person pronouns (I, my, me, we,
+          our) and second-person pronouns (you, your)? Proper nouns like
+          "myGov" are NOT pronouns. Subject-dropped past-tense verb sentences
+          are valid third-person resume style.
+
+      - name: "Regulatory Emphasis Added"
+        question: >-
+          Does the revised version more prominently feature regulatory
+          compliance or the $2.4M saving compared to a generic summary?
+
+      - name: "No Invented Content"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Are all claims in the output traceable to the source material?
+
+  # ============================================================
+  # Document 2: government_project_bullets.md (informal bullets)
+  # ============================================================
+
+  case_3:
+    name: "Government project bullet notes → DPN entry with date conversion"
+    category: "Content Generation & Transformation"
+    source_material: "documents/government_project_bullets.md"
+    chatbot_role: "A DPN Resume Entry Drafter that generates concise, third-person professional project summary entries for Deloitte People Network profiles"
+    user_query: >-
+      Turn these bullet point notes into a proper DPN resume entry for my
+      testing project at the Department of Social Services.
+    expected_output: >-
+      A DPN resume entry with: bold header for DSS - myGov Integration,
+      bold role Test Lead, dates converted from "08-11/2025" to 08/25 – 11/25,
+      industry Government & Public Sector, exactly 4 bullet points in third
+      person past tense, and 5 skills from the provided list. No personal
+      pronouns. Australian English.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "dpn-resume-entry-drafter"
+
+    metrics:
+      - hallucination
+      - task_completion
+      - faithfulness
+
+    thresholds:
+      hallucination: 0.5
+      task_completion: 0.5
+      faithfulness: 0.5
+
+    leading_questions:
+      - name: "Date Conversion"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Has the date "08-11/2025" been correctly converted to
+          08/25 – 11/25 in MM/YY – MM/YY format?
+
+      - name: "Third Person Voice"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Looking ONLY at the agent's actual output (not the user's input
+          message), does the resume entry body avoid all first-person pronouns
+          (I, my, me, we, our) and second-person pronouns (you, your)?
+          Important: proper nouns like "myGov" are NOT pronouns. Subject-dropped
+          sentences starting with past-tense verbs (e.g. "Coordinated...",
+          "Managed...") are correct resume-style third person and should score
+          1.0. Score 0.0 only if the actual resume entry text contains
+          prohibited pronouns.
+
+      - name: "Condensed to Four Bullets"
+        question: >-
+          Have the six source bullet points been condensed into exactly
+          four bullet points, each a single sentence starting with a
+          past tense verb?
+
+      - name: "Five Skills Only"
+        question: >-
+          Does the Skills & Technologies Used line contain exactly five
+          items selected from the longer source list?
+
+      - name: "No Labels in Output"
+        question: >-
+          Is the output free from literal labels like "Client Name",
+          "Project Name", "Key Achievements", "Key Skills"?
+
+  case_4:
+    name: "Government project → multi-turn requesting skill emphasis change"
+    category: "Content Generation & Transformation"
+    invoke_method: invoke_sequential
+    source_material: "documents/government_project_bullets.md"
+    chatbot_role: "A DPN Resume Entry Drafter that generates concise, third-person professional project summary entries for Deloitte People Network profiles"
+    expected_output: >-
+      A DPN resume entry for the DSS testing project, followed by a revised
+      version that swaps the 5 skills to focus on automation and CI/CD rather
+      than manual testing tools. Both versions maintain correct structure.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "dpn-resume-entry-drafter"
+
+    turns:
+      - content: >-
+          Create a DPN resume entry from these notes about my testing project
+          at DSS for the myGov Integration.
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Skill tool called"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "dpn-resume-entry-drafter"
+          - type: contains_any
+            name: "Has correct date"
+            phrases: ["08/25", "11/25"]
+          - type: contains_any
+            name: "Has industry"
+            phrases: ["Government", "Public Sector"]
+
+      - content: >-
+          The skills listed should focus more on my automation work. Can you
+          replace the skills with ones that highlight Selenium, Cucumber, BDD,
+          CI/CD Pipelines, and Jenkins?
+        turn_assertions:
+          - type: contains_any
+            name: "Has automation skills"
+            phrases: ["Selenium", "Cucumber", "BDD", "CI/CD", "Jenkins"]
+          - type: leading_question
+            name: "Still five skills"
+            question: >-
+              Does the revised Skills & Technologies Used line still contain
+              exactly five comma-separated items?
+
+    metrics:
+      - hallucination
+      - faithfulness
+      - conversation_completeness
+
+    thresholds:
+      hallucination: 0.5
+      faithfulness: 0.5
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "Structure Preserved"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Does the revised entry maintain the correct DPN structure with
+          bold header, bold role, MM/YY dates, industry, 4 bullets, and
+          skills line?
+
+      - name: "Skills Updated"
+        question: >-
+          Have the skills been updated to reflect automation-focused
+          technologies as requested?
+
+      - name: "No Invented Content"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Are all skills listed traceable to the source material?
+
+  # ============================================================
+  # Document 3: tech_project_verbose.md (messy dates, verbose)
+  # ============================================================
+
+  case_5:
+    name: "Verbose tech project with ambiguous dates → DPN entry"
+    category: "Content Generation & Transformation"
+    source_material: "documents/tech_project_verbose.md"
+    chatbot_role: "A DPN Resume Entry Drafter that generates concise, third-person professional project summary entries for Deloitte People Network profiles"
+    user_query: >-
+      I need a DPN entry for my cloud migration project at TelstraVox. The
+      details are in the attached document — note that I corrected the dates
+      in there, use January 2023 to September 2024.
+    expected_output: >-
+      A DPN resume entry with: bold header TelstraVox - Enterprise Cloud
+      Landing Zone Build, bold role Cloud Infrastructure Consultant, dates
+      converted to 01/23 – 09/24, industry Technology Media & Telecommunications,
+      exactly 4 bullet points in third person condensed from the 6 source
+      achievements, and exactly 5 skills selected from the long list provided.
+      Australian English throughout. No pronouns or names.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "dpn-resume-entry-drafter"
+
+    metrics:
+      - hallucination
+      - task_completion
+      - faithfulness
+
+    thresholds:
+      hallucination: 0.5
+      task_completion: 0.5
+      faithfulness: 0.5
+
+    leading_questions:
+      - name: "Correct Date Selected"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Are the dates formatted as 01/23 – 09/24, using the corrected
+          dates (January 2023 – September 2024) rather than the initial
+          incorrect dates mentioned in the document?
+
+      - name: "Third Person Voice"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Looking ONLY at the agent's actual output (not the user's input
+          message), does the resume entry body avoid all first-person pronouns
+          (I, my, me, we, our) and second-person pronouns (you, your)?
+          Important: proper nouns like "myGov" are NOT pronouns. Subject-dropped
+          sentences starting with past-tense verbs (e.g. "Coordinated...",
+          "Managed...") are correct resume-style third person and should score
+          1.0. Score 0.0 only if the actual resume entry text contains
+          prohibited pronouns.
+
+      - name: "Condensed Bullets"
+        question: >-
+          Have the six source achievements been condensed into exactly
+          four bullet points, each a single complete sentence?
+
+      - name: "Australian English"
+        question: >-
+          Does the output use Australian English spelling where applicable
+          (e.g. organised, recognised, practised)?
+
+      - name: "Five Skills from Long List"
+        question: >-
+          Does the Skills & Technologies Used line contain exactly five
+          items selected from the provided technology list?
+
+  case_6:
+    name: "Verbose tech project → multi-turn with date clarification"
+    category: "Content Generation & Transformation"
+    invoke_method: invoke_sequential
+    source_material: "documents/tech_project_verbose.md"
+    chatbot_role: "A DPN Resume Entry Drafter that generates concise, third-person professional project summary entries for Deloitte People Network profiles"
+    expected_output: >-
+      A DPN entry for TelstraVox cloud migration with correct dates after
+      handling the confusing date information in the source. The agent should
+      either use the corrected dates or ask for clarification. Final output
+      must have correct DPN structure.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "dpn-resume-entry-drafter"
+
+    turns:
+      - content: >-
+          Draft a DPN resume entry from this document about my cloud
+          infrastructure project. The dates are a bit confusing in the doc
+          but I've corrected them — use Jan 2023 to Sep 2024.
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Skill tool called"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "dpn-resume-entry-drafter"
+          - type: contains_any
+            name: "Has correct date"
+            phrases: ["01/23", "09/24"]
+
+      - content: >-
+          Actually, can you change the role title to "Senior Cloud Engineer"
+          instead? And make sure the bullets focus on the Terraform and IaC
+          work rather than the mentoring.
+        turn_assertions:
+          - type: contains_any
+            name: "Updated role"
+            phrases: ["Senior Cloud Engineer"]
+          - type: leading_question
+            name: "IaC focus in bullets"
+            question: >-
+              Do the bullet points emphasise Terraform, Infrastructure as Code,
+              or pipeline automation rather than mentoring?
+
+    metrics:
+      - hallucination
+      - faithfulness
+      - conversation_completeness
+
+    thresholds:
+      hallucination: 0.5
+      faithfulness: 0.5
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "Role Updated"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Does the revised entry show "Senior Cloud Engineer" as the role
+          rather than "Cloud Infrastructure Consultant"?
+
+      - name: "Structure Maintained"
+        question: >-
+          Does the revised entry still have the correct DPN structure with
+          bold header, bold role, dates, industry, 4 bullets, and 5 skills?
+
+      - name: "No Invented Content"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Are all technical claims traceable to the source material?
+
+  # ============================================================
+  # Document 4: healthcare_minimal.md (short, minimal detail)
+  # ============================================================
+
+  case_7:
+    name: "Minimal healthcare project description → DPN entry"
+    category: "Content Generation & Transformation"
+    source_material: "documents/healthcare_minimal.md"
+    chatbot_role: "A DPN Resume Entry Drafter that generates concise, third-person professional project summary entries for Deloitte People Network profiles"
+    user_query: >-
+      Create a DPN resume entry from this short project description for my
+      work at HealthFirst Australia. It's quite brief but should have enough
+      detail for an entry.
+    expected_output: >-
+      A DPN resume entry with: bold header HealthFirst Australia - Patient
+      Records Digitisation, bold role Project Coordinator, dates as 03/24 – 05/24,
+      industry Health Care & Life Sciences, 4 bullet points in third person
+      past tense derived from the brief description, and exactly 5 skills
+      selected from the 8 provided. No pronouns or names.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "dpn-resume-entry-drafter"
+
+    metrics:
+      - hallucination
+      - task_completion
+      - faithfulness
+
+    thresholds:
+      hallucination: 0.5
+      task_completion: 0.5
+      faithfulness: 0.5
+
+    leading_questions:
+      - name: "Third Person Voice"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Looking ONLY at the agent's actual output (not the user's input
+          message), does the resume entry body avoid all first-person pronouns
+          (I, my, me, we, our) and second-person pronouns (you, your)?
+          Important: proper nouns like "myGov" are NOT pronouns. Subject-dropped
+          sentences starting with past-tense verbs (e.g. "Coordinated...",
+          "Managed...") are correct resume-style third person and should score
+          1.0. Score 0.0 only if the actual resume entry text contains
+          prohibited pronouns.
+
+      - name: "Exact Structure"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Does the output follow the DPN structure: bold client-project,
+          bold role, MM/YY – MM/YY date (03/24 – 05/24), industry, 4 bullets,
+          then bold Skills & Technologies Used with 5 items?
+
+      - name: "No Hallucinated Details"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Are all claims in the bullet points traceable to the source
+          material without inventing additional project details?
+
+      - name: "Past Tense Verbs"
+        question: >-
+          Does each of the four bullet points begin with a past tense
+          action verb (e.g. Coordinated, Managed, Delivered)?
+
+      - name: "Five Skills Selected"
+        question: >-
+          Are exactly five skills listed, selected from the eight
+          provided in the source material?
+
+  case_8:
+    name: "Minimal healthcare project → multi-turn expanding sparse input"
+    category: "Content Generation & Transformation"
+    invoke_method: invoke_sequential
+    source_material: "documents/healthcare_minimal.md"
+    chatbot_role: "A DPN Resume Entry Drafter that generates concise, third-person professional project summary entries for Deloitte People Network profiles"
+    expected_output: >-
+      A DPN entry for HealthFirst Australia generated from the minimal input,
+      followed by a revision after the user provides additional achievement
+      detail. Both versions maintain correct DPN structure and third-person
+      voice.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "dpn-resume-entry-drafter"
+
+    turns:
+      - content: >-
+          Generate a DPN entry from this. It's a short description of my
+          digitisation project at HealthFirst.
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Skill tool called"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "dpn-resume-entry-drafter"
+          - type: contains_any
+            name: "Has client name"
+            phrases: ["HealthFirst", "Patient Records"]
+          - type: contains_any
+            name: "Has date"
+            phrases: ["03/24", "05/24"]
+
+      - content: >-
+          Can you update the second bullet to mention that I trained 45
+          clinic staff on the new digital records system? And change the
+          third bullet to highlight the data quality framework I built
+          that achieved 99.2% accuracy on OCR validation.
+        turn_assertions:
+          - type: leading_question
+            name: "Training detail added"
+            question: >-
+              Does the revised entry mention training clinic staff or
+              the 45 staff figure in one of the bullet points?
+          - type: leading_question
+            name: "Accuracy metric added"
+            question: >-
+              Does the revised entry mention the 99.2% accuracy rate
+              or OCR validation in one of the bullet points?
+
+    metrics:
+      - hallucination
+      - faithfulness
+      - conversation_completeness
+
+    thresholds:
+      hallucination: 0.5
+      faithfulness: 0.5
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "Structure Preserved"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Does the revised entry maintain the correct DPN structure with
+          bold header, bold role, dates, industry, exactly 4 bullets,
+          and exactly 5 skills?
+
+      - name: "Third Person Maintained"
+        type: gating
+        threshold: 0.5
+        question: >-
+          Is the revised entry still entirely in third person with no
+          personal pronouns or names?
+
+      - name: "New Details Incorporated"
+        question: >-
+          Have the user-provided details (45 staff trained, 99.2% accuracy)
+          been incorporated into the revised bullet points?
