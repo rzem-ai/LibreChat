@@ -20,6 +20,18 @@ ingress:
 pods:
   librechat:
     replicas: 1
+    initContainers:
+      llm-gateway-proxy:
+        restartPolicy: Always
+        image:
+          repository: 'tt-librechat/llm-gateway-proxy'
+          pullPolicy: Always
+          tag: 'develop'
+        env:
+          TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_MCP_URL: 'https://mcp-gateway-uat.ctk.au.deloitte.com/mcp'
     containers:
       librechat:
         command:
@@ -31,7 +43,7 @@ pods:
               cp -a /app/deloitte/assets/. /app/client/dist/assets/;
             elif [ -d /app/deloitte-assets ]; then
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
-            fi && export LLM_GATEWAY_X_SA_TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" && exec npm run backend
+            fi && exec npm run backend
         image:
           tag: 'develop@sha256:c7f9c0725b083ba100c693ffdb7b39fe1ec6eaff4203fee652ce7c4a55fe6069'
         env:
@@ -43,9 +55,9 @@ pods:
           MONGO_DB: 'mdb-librechat-database-dev'
           KEY_VAULT_NAME: 'kv-int-librechat-dev'
           # LLM Gateway
-          BASE_URL_AZURE_AU: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
-          BASE_URL_AZURE_US: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
-          BASE_URL_VERTEXAI: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
+          BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
+          BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
+          BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
           # Azure Auth
           OPENID_CLIENT_ID: '2075976d-5147-47b2-89d2-4ad060d19f85' # Non-secret Azure AD application identifier
           OPENID_ISSUER: 'https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/v2.0/' # Non-secret Azure AD issuer URL; client secret is stored separately

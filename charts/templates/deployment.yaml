@@ -26,6 +26,45 @@ spec:
         - name: librechat-config
           configMap:
             name: {{ include "helm.fullname" . }}-config
+      {{- with $podConfig.initContainers }}
+      initContainers:
+        {{- range $container, $config := . }}
+        - name: {{ $.Chart.Name }}-{{ $container }}
+          {{- with $config.restartPolicy }}
+          restartPolicy: {{ . }}
+          {{- end }}
+          {{- with $config.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ $.Values.imageRegistry }}/{{ $config.image.repository }}:{{ $config.image.tag }}"
+          imagePullPolicy: {{ $config.image.pullPolicy }}
+          {{- if $config.command }}
+          command:
+            {{- toYaml $config.command | nindent 12 }}
+          {{- end }}
+          {{- with $config.env }}
+          env:
+            {{- range $name, $value := . }}
+            - name: {{ $name | quote }}
+              value: {{ $value | quote }}
+            {{- end }}
+          {{- end }}
+          {{- with $config.secrets }}
+          envFrom:
+            - secretRef:
+                name: {{ include "helm.fullname" $ }}-app-store-secrets-{{ $container }}
+          {{- end }}
+          {{- with $config.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $config.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
       containers:
         {{- range $container, $config := $podConfig.containers }}
         - name: {{ $.Chart.Name }}-{{ $container }}
