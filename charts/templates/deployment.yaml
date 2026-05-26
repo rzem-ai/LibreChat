@@ -26,6 +26,10 @@ spec:
         - name: librechat-config
           configMap:
             name: {{ include "helm.fullname" . }}-config
+        - name: proxy-cache
+          emptyDir: {}
+        - name: proxy-confd
+          emptyDir: {}
       containers:
         {{- range $container, $config := $podConfig.containers }}
         - name: {{ $.Chart.Name }}-{{ $container }}
@@ -33,13 +37,13 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          image: "{{ $.Values.imageRegistry }}/{{ $config.image.repository }}:{{ $config.image.tag }}"
+          image: "{{ default $.Values.imageRegistry $config.image.registry }}/{{ $config.image.repository }}:{{ $config.image.tag }}"
           imagePullPolicy: {{ $config.image.pullPolicy }}
           {{- if $config.command }}
           command:
             {{- toYaml $config.command | nindent 12 }}
           {{- end }}
-          {{- if $config.service.enabled }}
+          {{- if and $config.service $config.service.enabled }}
           ports:
             - name: http-{{ $container }}
               containerPort: {{ $config.service.targetPort }}
@@ -68,14 +72,18 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- if or (or (not (hasKey $config "mountLibrechatConfig")) $config.mountLibrechatConfig) $config.volumeMounts }}
           volumeMounts:
+            {{- if or (not (hasKey $config "mountLibrechatConfig")) $config.mountLibrechatConfig }}
             - name: librechat-config
               mountPath: /app/librechat.yaml
               subPath: librechat.yaml
               readOnly: true
+            {{- end }}
             {{- with $config.volumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
+          {{- end }}
         {{- end }}
 {{- end }}
 ---

@@ -31,9 +31,10 @@ pods:
               cp -a /app/deloitte/assets/. /app/client/dist/assets/;
             elif [ -d /app/deloitte-assets ]; then
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
-            fi && export LLM_GATEWAY_X_SA_TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" && exec npm run backend
+            fi &&
+            exec npm run backend
         image:
-          tag: 'develop@sha256:c7f9c0725b083ba100c693ffdb7b39fe1ec6eaff4203fee652ce7c4a55fe6069'
+          tag: 'develop'
         env:
           # Deployment Settings
           NODE_ENV: 'development'
@@ -43,9 +44,12 @@ pods:
           MONGO_DB: 'mdb-librechat-database-dev'
           KEY_VAULT_NAME: 'kv-int-librechat-dev'
           # LLM Gateway
-          BASE_URL_AZURE_AU: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
-          BASE_URL_AZURE_US: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
-          BASE_URL_VERTEXAI: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
+          BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
+          BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
+          BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
+          MCP_GATEWAY_URL: 'http://127.0.0.1:8081/mcp'
+          MCP_GATEWAY_DOMAIN: '127.0.0.1'
+          MCP_GATEWAY_DOMAIN_FALLBACK: 'localhost'
           # Azure Auth
           OPENID_CLIENT_ID: '2075976d-5147-47b2-89d2-4ad060d19f85' # Non-secret Azure AD application identifier
           OPENID_ISSUER: 'https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/v2.0/' # Non-secret Azure AD issuer URL; client secret is stored separately
@@ -59,3 +63,52 @@ pods:
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-dev
           OPENID_SESSION_SECRET: librechat-openid-session-secret-dev
           # TTS_API_KEY: librechat-tts-api-key-dev # TODO: Create TTS_API_Key
+      proxy:
+        mountLibrechatConfig: false
+        command:
+          - /bin/sh
+          - /etc/nginx/templates/proxy.sh
+        image:
+          registry: 'docker.io'
+          repository: 'nginx'
+          pullPolicy: Always
+          tag: '1.29-alpine'
+        livenessProbe:
+          httpGet:
+            path: /live
+            port: 8081
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+        containerSecurityContext:
+          runAsUser: 101
+          runAsGroup: 101
+          allowPrivilegeEscalation: false
+        env:
+          TOKEN_FILE_PATH: '/var/run/secrets/kubernetes.io/serviceaccount/token'
+          TOKEN_PROXY_NGINX_PID_PATH: '/tmp/nginx/nginx.pid'
+          TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_MCP_URL: 'https://mcp-gateway-uat.ctk.au.deloitte.com/mcp'
+          TOKEN_PROXY_SYNC_SECONDS: '30'
+        volumeMounts:
+          - name: librechat-config
+            mountPath: /etc/nginx/templates/proxy.conf
+            subPath: proxy.conf
+            readOnly: true
+          - name: librechat-config
+            mountPath: /etc/nginx/templates/proxy.sh
+            subPath: proxy.sh
+            readOnly: true
+          - name: proxy-confd
+            mountPath: /etc/nginx/conf.d
+          - name: proxy-cache
+            mountPath: /tmp/nginx

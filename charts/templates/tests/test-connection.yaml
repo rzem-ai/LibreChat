@@ -1,5 +1,12 @@
 {{- range $pod, $podConfig := .Values.pods }}
 {{- with $ -}}
+{{- $serviceTestCount := dict "count" 0 -}}
+{{- range $container, $config := $podConfig.containers }}
+{{- if and $config.service $config.service.enabled -}}
+{{- $_ := set $serviceTestCount "count" (add1 ($serviceTestCount.count | int)) -}}
+{{- end -}}
+{{- end -}}
+{{- if gt ($serviceTestCount.count | int) 0 }}
 apiVersion: v1
 kind: Pod
 metadata:
@@ -11,12 +18,15 @@ metadata:
 spec:
   containers:
     {{- range $container, $config := $podConfig.containers }}
-    - name: wget
+    {{- if and $config.service $config.service.enabled }}
+    - name: "wget-{{ $container }}"
       image: busybox
       command: ['wget']
-      args: ['{{ include "helm.fullname" $ }}:{{ $config.service.port }}']
+      args: ['{{ include "helm.fullname" $ }}-{{ $container }}:{{ $config.service.port }}']
+    {{- end }}
     {{- end }}
   restartPolicy: Never
+{{- end }}
 {{- end }}
 ---
 {{- end }}

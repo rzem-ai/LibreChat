@@ -101,10 +101,13 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 19. `ALLOW_SOCIAL_REGISTRATION=false`
 20. Comment out `OPENAI_API_KEY=`
 21. Comment out `ASSISTANTS_API_KEY=`
-22. BASE_URL_AZURE_AU=https://au-openai-exp.ctk.au.deloitte.com/openai/v1
-23. BASE_URL_AZURE_US=https://us-openai-exp.ctk.au.deloitte.com/openai/v1
-24. BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com
-25. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
+22. Add `BASE_URL_AZURE_AU=https://au-openai-exp.ctk.au.deloitte.com/openai/v1`
+23. Add `BASE_URL_AZURE_US=https://us-openai-exp.ctk.au.deloitte.com/openai/v1`
+24. Add `BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com`
+25. Add `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
+26. Add `MCP_GATEWAY_URL="https://mcp-gateway-uat.ctk.au.deloitte.com/mcp"`
+27. Add `MCP_GATEWAY_DOMAIN=mcp-gateway-uat.ctk.au.deloitte.com`
+28. Add `MCP_GATEWAY_DOMAIN_FALLBACK=localhost`
 
 #### How to obtain the JWT token
 ⚠️ As of May 2026, tokens expire after ~8 hours. If models suddenly stop working, reissue the token.
@@ -123,6 +126,8 @@ The `librechat.yaml` configures:
 - Default visible models in the UI
 - ClearTrack MCP integration
 - And more!
+
+The `librechat.yaml` in the charts/config/ directory is a symlink. This means it is the same file whether you access it from the root directory or from charts/config/. Any changes you make to the `librechat.yaml` file in either directory will be reflected in both directories. 
 
 # 🚀 Running the app
 

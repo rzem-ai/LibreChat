@@ -1,6 +1,6 @@
 {{- range $pod, $podConfig := .Values.pods }}
 {{- range $container, $config := $podConfig.containers }}
-{{- if $config.ingress.enabled -}}
+{{- if and $config.ingress $config.ingress.enabled $config.service $config.service.enabled -}}
 {{- with $ -}}
 {{- $fullName := include "helm.fullname" . -}}
 {{- if and .Values.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}

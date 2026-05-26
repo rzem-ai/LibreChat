@@ -7,4 +7,8 @@ metadata:
 data:
   librechat.yaml: |-
 {{- .Files.Get "config/librechat.yaml" | nindent 4 }}
+  proxy.conf: |-
+{{- .Files.Get "config/proxy.conf" | nindent 4 }}
+  proxy.sh: |-
+{{- .Files.Get "config/proxy.sh" | nindent 4 }}
 
