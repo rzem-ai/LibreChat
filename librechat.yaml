@@ -47,6 +47,7 @@ endpoints:
       dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
       headers:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
+        x-sa-token: "${LLM_GATEWAY_X_SA_TOKEN}"
         Content-Type: "application/json"
 
     # --- Azure US (eastus) ---
@@ -68,6 +69,7 @@ endpoints:
       dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
       headers:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
+        x-sa-token: "${LLM_GATEWAY_X_SA_TOKEN}"
         Content-Type: "application/json"
 
     # --- VertexAI / Google (us-central1) ---
@@ -86,6 +88,7 @@ endpoints:
       dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
       headers:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
+        x-sa-token: "${LLM_GATEWAY_X_SA_TOKEN}"
         Content-Type: "application/json"
 
 mcpServers: # https://www.librechat.ai/docs/features/mcp
@@ -98,9 +101,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
 
 mcpSettings:
   allowedDomains:
-    - "${MCP_GATEWAY_DOMAIN}"
-    - "${MCP_GATEWAY_DOMAIN_FALLBACK}"
-    - mcp-gateway-uat.ctk.au.deloitte.com
+    - "${MCP_GATEWAY_ALLOWED_DOMAIN}"
 
 speech: # https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/speech
   speechTab:

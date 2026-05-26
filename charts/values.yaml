@@ -30,7 +30,7 @@ pods:
         command:
           - /bin/sh
           - -c
-          - exec npm run backend
+          - export LLM_GATEWAY_X_SA_TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" && exec npm run backend
         livenessProbe:
           httpGet:
             path: /health
@@ -75,12 +75,8 @@ pods:
           OPENID_USE_END_SESSION_ENDPOINT: 'true'
           OPENID_BUTTON_LABEL: 'Login with SSO'
           OPENID_IMAGE_URL: '/assets/favicon.svg'
-          BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
-          BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
-          BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
-          MCP_GATEWAY_URL: 'http://127.0.0.1:8081/mcp'
-          MCP_GATEWAY_DOMAIN: '127.0.0.1'
-          MCP_GATEWAY_DOMAIN_FALLBACK: 'localhost'
+          MCP_GATEWAY_URL: 'https://mcp-gateway-uat.ctk.au.deloitte.com/mcp'
+          MCP_GATEWAY_ALLOWED_DOMAIN: 'mcp-gateway-uat.ctk.au.deloitte.com'
         service:
           enabled: true
           type: ClusterIP
@@ -91,52 +87,3 @@ pods:
           paths:
             - path: /
               pathType: Prefix
-      proxy:
-        mountLibrechatConfig: false
-        command:
-          - /bin/sh
-          - /etc/nginx/templates/proxy.sh
-        image:
-          registry: 'docker.io'
-          repository: 'nginx'
-          pullPolicy: Always
-          tag: '1.29-alpine'
-        livenessProbe:
-          httpGet:
-            path: /live
-            port: 8081
-          initialDelaySeconds: 10
-          periodSeconds: 10
-          timeoutSeconds: 5
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 8081
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          timeoutSeconds: 5
-        containerSecurityContext:
-          runAsUser: 101
-          runAsGroup: 101
-          allowPrivilegeEscalation: false
-        env:
-          TOKEN_FILE_PATH: '/var/run/secrets/kubernetes.io/serviceaccount/token'
-          TOKEN_PROXY_NGINX_PID_PATH: '/tmp/nginx/nginx.pid'
-          TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
-          TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
-          TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
-          TOKEN_PROXY_MCP_URL: 'https://mcp-gateway-uat.ctk.au.deloitte.com/mcp'
-          TOKEN_PROXY_SYNC_SECONDS: '30'
-        volumeMounts:
-          - name: librechat-config
-            mountPath: /etc/nginx/templates/proxy.conf
-            subPath: proxy.conf
-            readOnly: true
-          - name: librechat-config
-            mountPath: /etc/nginx/templates/proxy.sh
-            subPath: proxy.sh
-            readOnly: true
-          - name: proxy-confd
-            mountPath: /etc/nginx/conf.d
-          - name: proxy-cache
-            mountPath: /tmp/nginx

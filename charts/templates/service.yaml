@@ -1,6 +1,6 @@
 {{- range $pod, $podConfig := .Values.pods }}
 {{- range $container, $config := $podConfig.containers }}
-{{- if and $config.service $config.service.enabled -}}
+{{- if $config.service.enabled -}}
 {{- with $ -}}
 apiVersion: v1
 kind: Service

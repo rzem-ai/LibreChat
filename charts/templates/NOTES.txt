@@ -1,7 +1,7 @@
 1. Get the application URL by running these commands:
-{{- range $_, $pod := .Values.pods }}
-{{- range $_, $config := $pod.containers }}
-{{- if and $config.ingress $config.ingress.enabled }}
+{{- range $pod := .Values.pods }}
+{{- range $config := $pod.containers }}
+{{- if $config.ingress.enabled }}
   {{- range $config.ingress.paths }}
   http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $.Values.ingress.host }}{{ .path }}
   {{- end }}
