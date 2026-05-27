@@ -113,9 +113,9 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 
 ---
 
-## librechat.yaml
+## `librechat.yaml` files
 
-The `librechat.yaml` configures:
+LibreChat configuration includes:
 
 - Custom Azure AU / US endpoints
 - VertexAI models
@@ -124,7 +124,19 @@ The `librechat.yaml` configures:
 - ClearTrack MCP integration
 - And more!
 
-The `librechat.yaml` in the charts/config/ directory is a symlink. This means it is the same file whether you access it from the root directory or from charts/config/. Any changes you make to the `librechat.yaml` file in either directory will be reflected in both directories.
+There are now **two** `librechat.yaml` files on purpose:
+
+1. `librechat.yaml` (repo root) - **local development config**
+   - Used by local Docker runs.
+   - Sends `x-id-token` headers for custom endpoints using `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION` from `.env`.
+
+2. `charts/config/librechat.yaml` - **Kubernetes/Helm deploy config**
+   - Packaged into the chart ConfigMap for DEV/UAT/PROD deployments.
+   - Does **not** send `x-id-token` for custom model calls.
+   - In deployed environments, auth is injected by `llm-gateway-proxy` as `x-sa-token` using the pod service account token.
+
+Why this split exists:
+- Local and deployed auth mechanisms are different (`x-id-token` locally vs `x-sa-token` in Kubernetes).
 
 # 🚀 Running the app
 
