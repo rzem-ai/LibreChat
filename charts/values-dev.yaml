@@ -26,7 +26,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'develop'
+          tag: 'develop@sha256:130b2d3ecc8722b92c1c26bef50a89b9c18db983981829b1141508843c82f483'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -44,7 +44,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop'
+          tag: 'develop@sha256:f27c28fdd76747dd274fb2c658cb5f38357374195a57b149136071211b0f3b00'
         env:
           NODE_ENV: 'development'
           NODE_TLS_REJECT_UNAUTHORIZED: '0'
