@@ -21,7 +21,7 @@ if str(_EVAL_DIR.parent) not in sys.path:
     sys.path.insert(0, str(_EVAL_DIR.parent))
 
 from _eval.runner import run_eval
-from _eval.langfuse_reporter import sync_dataset_to_langfuse
+from _eval.langfuse import sync_dataset_to_langfuse
 
 
 def main():
@@ -55,7 +55,7 @@ def main():
     )
     parser.add_argument(
         "--langfuse", action="store_true", default=False,
-        help="Push metric scores to Langfuse after evaluation.",
+        help="Export eval spans to Langfuse via OpenTelemetry after evaluation.",
     )
     parser.add_argument(
         "--sync-dataset", action="store_true", default=False,

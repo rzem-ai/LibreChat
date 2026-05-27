@@ -33,9 +33,15 @@ _eval/
 ├── run_eval.py              # CLI entry point (--config, --case, --num-runs, --metrics, --langfuse)
 ├── runner.py                # Core engine: load → invoke → measure → aggregate → save
 ├── metrics.py               # All metric definitions, EvaluatorModel, registries
-├── langfuse_reporter.py     # Langfuse integration: scores, datasets, experiments
 ├── conftest.py              # pytest integration (pytest_addoption, pytest_generate_tests)
 ├── summarise_results.py     # Rich-formatted result viewer (--config, --latest, --file)
+├── telemetry/               # OpenTelemetry setup + eval span reporting
+│   ├── __init__.py
+│   ├── setup.py             # OTel SDK setup, Langfuse OTLP defaults, span helpers
+│   └── reporter.py          # Eval results → OTel spans/metadata
+├── langfuse/                # Langfuse API helpers for datasets/runs
+│   ├── __init__.py
+│   └── datasets.py          # Dataset sync + trace-to-run linking
 ├── adapters/
 │   ├── __init__.py          # Exports AgentAdapter, AgentResponse
 │   ├── base.py              # Abstract AgentAdapter ABC + dataclasses
@@ -149,18 +155,23 @@ uv run eval-summary --file <path/to/case_1.json> # Show specific file
 
 The framework integrates with [Langfuse](https://langfuse.com) for observability and benchmarking.
 
-### Pushing Scores
+### OpenTelemetry Export
 
-Add `--langfuse` to any eval run to push results as Langfuse traces with attached scores:
+Add `--langfuse` to any eval run to export eval traces to Langfuse through its
+native OpenTelemetry endpoint:
 
 ```bash
 uv run eval-run --config "evals/Meeting Summariser/eval_cases.yaml" --langfuse --num-runs 2
 ```
 
-Each eval creates a trace with:
+Each eval creates an OTel trace with:
 - **Tags**: `skill-eval`, `PASS`/`FAIL`, skill name
-- **Scores**: All gating, diagnostic, probe, and conversational metrics
-- **Child spans**: Per-turn generations (for multi-turn evals)
+- **Trace metadata**: case key, case name, run name, run count, gating verdict
+- **Observation metadata**: gating, diagnostic, probe, conversational, and turn assertion results
+- **Generation spans**: Agent outputs with `gen_ai.*` attributes where available
+
+Eval outcomes are stored as span metadata, not Langfuse score objects, in OTel
+mode. Dataset sync and dataset-run linking still use the Langfuse API.
 
 ### Datasets & Experiments
 
@@ -177,7 +188,9 @@ uv run eval-run --config "..." --langfuse --run-name "baseline"
 uv run eval-run --config "..." --langfuse --run-name "v2-improved-prompt"
 ```
 
-In Langfuse: **Datasets** → `evals/Meeting Summariser` → **Runs** tab shows experiments side by side with aggregate scores.
+In Langfuse: **Datasets** → `evals/Meeting Summariser` → **Runs** links each
+dataset item to its OTel trace. Downstream analysis should read verdicts and
+metric details from trace/observation metadata.
 
 ### Environment Variables
 
@@ -186,6 +199,12 @@ In Langfuse: **Datasets** → `evals/Meeting Summariser` → **Runs** tab shows 
 | `EVAL_LANGFUSE_BASE_URL` | Langfuse instance URL (default: `http://localhost:3000`) |
 | `LANGFUSE_BASE_URL` | Fallback if above not set |
 | `EVAL_PUSH_LANGFUSE=1` | Enable Langfuse globally (alternative to `--langfuse` flag) |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Optional explicit OTLP endpoint (default: `<Langfuse base>/api/public/otel`) |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Optional explicit OTLP headers |
+
+If `OTEL_EXPORTER_OTLP_HEADERS` is not set, the framework builds it from
+`LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` and includes
+`x-langfuse-ingestion-version=4`.
 
 ---
 

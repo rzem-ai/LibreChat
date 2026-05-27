@@ -16,26 +16,26 @@ import os
 import time
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import yaml
 from deepeval.test_case import LLMTestCase, ToolCall
 from deepeval.test_case import ConversationalTestCase, Turn
-from deepeval.metrics import ToolCorrectnessMetric, SummarizationMetric
+from deepeval.metrics import SummarizationMetric
 
-from .adapters.base import AgentAdapter, AgentResponse, ToolCallRecord
+from .adapters.base import AgentAdapter, AgentResponse
 from .metrics import (
     EvaluatorModel,
     DEFAULT_THRESHOLDS,
     VALID_METRICS,
-    CONVERSATIONAL_METRICS,
     build_metrics,
     build_conversational_from_keys,
     build_leading_question_probes,
     build_conversational_metrics,
     evaluate_turn_assertions,
 )
-from .langfuse_reporter import push_scores_to_langfuse, _langfuse_enabled, link_trace_to_dataset
+from .langfuse import link_trace_to_dataset
+from .telemetry import export_otel_trace, telemetry_enabled
 
 
 # ---------------------------------------------------------------------------
@@ -603,6 +603,7 @@ def _print_report(
     gating_results, diagnostic_results, probe_results, gating_passed, num_runs,
     conversational_results=None, turn_assertion_summary=None,
 ):
+    """Print the aggregated eval report to stdout."""
     label = f" (avg of {num_runs} runs)" if num_runs > 1 else ""
 
     # Turn assertions
@@ -792,7 +793,7 @@ def run_eval(
         config_path: Path to the eval_cases.yaml file.
         metrics_override: Comma-separated gating metric keys to override YAML.
         num_runs: Number of evaluation runs (defaults to NUM_RUNS constant or YAML).
-        push_langfuse: If True, push metric scores to Langfuse after evaluation.
+        push_langfuse: If True, export OpenTelemetry spans to Langfuse after evaluation.
         run_name: Shared Langfuse dataset run name for grouping cases in one experiment.
     """
     os.environ["DO_NOT_TRACK"] = "1"
@@ -926,40 +927,19 @@ def run_eval(
         turn_assertion_summary=agg.get("turn_assertion_summary"),
     )
 
-    # --- Push to Langfuse (opt-in) ---
-    if _langfuse_enabled(push_langfuse):
-        last_output = all_runs[-1].get("agent_output", "") if all_runs else ""
-        skill_name = config_path.parent.name
-        user_query = case.get("user_query", "")
-        if not user_query and is_sequential:
-            yaml_turns = case.get("turns", [])
-            user_query = yaml_turns[0]["content"] if yaml_turns else ""
-
-        # Collect failure reasons from all runs for failed metrics
-        failure_reasons: Dict[str, List[str]] = {}
-        for run in all_runs:
-            for name, _score, _thresh, success, reason in run.get("gating", []):
-                if not success and reason and reason != "N/A":
-                    failure_reasons.setdefault(name, []).append(reason)
-            for name, _score, _thresh, success, reason in run.get("conversational", []):
-                if not success and reason and reason != "N/A":
-                    failure_reasons.setdefault(name, []).append(reason)
-
-        trace_id = push_scores_to_langfuse(
+    # --- Export OTel trace to Langfuse (opt-in) ---
+    if telemetry_enabled(push_langfuse):
+        agent_metadata = adapter.get_agent_metadata()
+        trace_id = export_otel_trace(
+            config_path=config_path,
             case_key=case_key,
-            case_name=case.get("name", case_key),
-            user_query=user_query,
-            agent_output=last_output,
-            gating_results=agg["gating_results"],
-            diagnostic_results=agg["diagnostic_results"],
-            probe_results=agg["probe_results"],
-            num_runs=effective_runs,
-            gating_passed=agg["gating_passed"],
-            skill_name=skill_name,
-            conversation_history=all_runs[-1].get("conversation_history") if is_sequential else None,
-            turn_results=all_runs[-1].get("turn_results") if is_sequential else None,
-            conversational_results=agg.get("conversational_results"),
-            failure_reasons=failure_reasons,
+            case=case,
+            all_runs=all_runs,
+            agg=agg,
+            effective_runs=effective_runs,
+            run_name=run_name,
+            is_sequential=is_sequential,
+            agent_metadata=agent_metadata,
         )
         if trace_id:
             link_trace_to_dataset(config_path, case_key, trace_id, run_name=run_name)

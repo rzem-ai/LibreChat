@@ -96,6 +96,30 @@ class LibreChatAdapter(AgentAdapter):
         )
         self._model = _AGENT_ID
 
+    def get_agent_metadata(self) -> dict:
+        """Fetch agent metadata from LibreChat's remote models endpoint."""
+        try:
+            import httpx as _httpx
+            url = f"{_BASE_URL.rstrip('/')}/api/agents/v1/models/{self._model}"
+            resp = _httpx.get(
+                url,
+                headers={"Authorization": f"Bearer {_API_KEY}"},
+                timeout=10,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                return {
+                    "id": data.get("id", self._model),
+                    "name": data.get("name"),
+                    "description": data.get("description"),
+                    "provider": data.get("provider"),
+                    "model": data.get("model"),
+                    "version": data.get("version"),
+                }
+        except Exception:
+            pass
+        return {"id": self._model}
+
     def invoke_text(self, query: str, context: str) -> AgentResponse:
         if context:
             content = f"{query}\n\n---\nSource material:\n{context}"

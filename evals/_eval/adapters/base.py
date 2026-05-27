@@ -111,6 +111,17 @@ class AgentAdapter(ABC):
         """
         ...
 
+    def get_agent_metadata(self) -> dict:
+        """Return metadata about the agent being evaluated.
+
+        Override in subclasses to fetch live agent config from the platform.
+        The returned dict may include keys like:
+            id, name, description, provider, model, version
+
+        Returns an empty dict by default (no metadata available).
+        """
+        return {}
+
     def invoke(self, method: str, **kwargs) -> AgentResponse | List[AgentResponse]:
         """Dispatch to the appropriate invoke method by name.
 
