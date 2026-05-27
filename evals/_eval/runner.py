@@ -227,6 +227,7 @@ def _run_single(
         "diagnostic": diagnostic_results,
         "probes": probe_results,
         "agent_output": agent_response.content,
+        "tools_called": [t.name for t in agent_response.tools_called],
     }
 
 
@@ -501,6 +502,7 @@ def _run_single_sequential(
         ],
         "agent_output": final_response.content,
         "conversation_history": conversation_history,
+        "tools_called": [t.name for resp in responses for t in resp.tools_called],
     }
 
 

@@ -37,13 +37,19 @@ def export_otel_trace(
         user_query=user_query,
     ) as root_span:
         trace_id = otel.trace_id_hex(root_span)
+
+        # Build tags: verdict, skill, agent name, tools used
+        tags = ["skill-eval", "PASS" if agg["gating_passed"] else "FAIL", skill_name]
+        if meta.get("name"):
+            tags.append(meta["name"])
+        tools_used = _collect_tools_used(all_runs)
+        tags.extend(tools_used)
+
         otel.set_attributes(root_span, {
             "langfuse.trace.output": json.dumps(last_output, default=str),
-            "langfuse.trace.tags": json.dumps([
-                "skill-eval", "PASS" if agg["gating_passed"] else "FAIL", skill_name,
-            ]),
+            "langfuse.trace.tags": json.dumps(tags),
             "langfuse.trace.metadata.gating_passed": agg["gating_passed"],
-            "eval.verdict": agg["gating_passed"],
+            "langfuse.trace.metadata.tools_used": json.dumps(tools_used),
             "eval.gating.passed": agg["gating_passed"],
         })
 
@@ -93,6 +99,18 @@ def _user_query_for_case(case: dict, is_sequential: bool) -> str:
         return user_query
     yaml_turns = case.get("turns", [])
     return yaml_turns[0]["content"] if yaml_turns else ""
+
+
+def _collect_tools_used(all_runs: List[dict]) -> List[str]:
+    """Collect deduplicated tool names across all runs, preserving order."""
+    seen = set()
+    tools = []
+    for run in all_runs:
+        for name in run.get("tools_called", []):
+            if name not in seen:
+                seen.add(name)
+                tools.append(name)
+    return tools
 
 
 def _span_name(prefix: str, name: str) -> str:

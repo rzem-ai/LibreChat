@@ -91,9 +91,11 @@ def eval_trace(
     tracer = get_tracer()
     trace_name = f"{skill_name}/{case_key}"
     tags = ["skill-eval", skill_name]
+    environment = os.environ.get("EVAL_LANGFUSE_ENVIRONMENT", "development")
     baggage_values = {
         "langfuse.trace.name": trace_name,
         "langfuse.trace.tags": json.dumps(tags),
+        "langfuse.trace.environment": environment,
         "langfuse.trace.metadata.skill_name": skill_name,
         "langfuse.trace.metadata.case_key": case_key,
         "langfuse.trace.metadata.case_name": case_name,
