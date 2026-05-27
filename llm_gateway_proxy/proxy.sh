@@ -7,8 +7,6 @@ TOKEN_PROXY_OUTPUT_PATH="${TOKEN_PROXY_OUTPUT_PATH:-/etc/nginx/conf.d/default.co
 TOKEN_PROXY_SYNC_SECONDS="${TOKEN_PROXY_SYNC_SECONDS:-30}"
 REQUIRED_ENV_VARS="TOKEN_PROXY_AZURE_AU_URL TOKEN_PROXY_AZURE_US_URL TOKEN_PROXY_VERTEXAI_URL TOKEN_PROXY_MCP_URL"
 
-log() { printf '%s [proxy] %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$*"; }
-
 require_env() {
   env_var="$1"
   env_value="$(printenv "$env_var" || true)"
@@ -23,7 +21,7 @@ require_env() {
 
 read_token() {
   if [ ! -r "$TOKEN_FILE_PATH" ]; then
-    log "WARN  token file not readable: $TOKEN_FILE_PATH — proxied requests will be rejected (503) until a token is available"
+
     printf ''
     return
   fi
@@ -34,13 +32,6 @@ read_token() {
 render_config() {
   export TOKEN_PROXY_TOKEN="$(read_token)"
 
-  token_len="${#TOKEN_PROXY_TOKEN}"
-  if [ "$token_len" -eq 0 ]; then
-    log "WARN  token is empty — rendering config with no token; proxy will reject matching requests with 503 before proxying"
-  else
-    log "INFO  token refreshed (length=${token_len})"
-  fi
-
   envsubst '${TOKEN_PROXY_TOKEN} ${TOKEN_PROXY_AZURE_AU_URL} ${TOKEN_PROXY_AZURE_US_URL} ${TOKEN_PROXY_VERTEXAI_URL} ${TOKEN_PROXY_MCP_URL}' \
     < "$TOKEN_PROXY_TEMPLATE_PATH" \
     > "$TOKEN_PROXY_OUTPUT_PATH"
@@ -50,7 +41,7 @@ for env_var in $REQUIRED_ENV_VARS; do
   require_env "$env_var"
 done
 
-log "INFO  starting proxy (sync_interval=${TOKEN_PROXY_SYNC_SECONDS}s, token_file=${TOKEN_FILE_PATH})"
+
 render_config
 nginx -t
 
@@ -65,17 +56,17 @@ nginx -t
       continue
     fi
 
-    log "INFO  token changed — reloading nginx config"
+
     previous_token="$current_token"
     render_config
 
     if nginx -t; then
       nginx -s reload
-      log "INFO  nginx reloaded successfully"
+
       continue
     fi
 
-    log "ERROR rendered nginx config is invalid; keeping current worker config"
+    echo "Rendered nginx config is invalid; keeping current worker config" >&2
   done
 ) &
 
