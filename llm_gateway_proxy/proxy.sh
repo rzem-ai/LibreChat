@@ -7,6 +7,11 @@ TOKEN_PROXY_OUTPUT_PATH="${TOKEN_PROXY_OUTPUT_PATH:-/etc/nginx/conf.d/default.co
 TOKEN_PROXY_SYNC_SECONDS="${TOKEN_PROXY_SYNC_SECONDS:-30}"
 REQUIRED_ENV_VARS="TOKEN_PROXY_AZURE_AU_URL TOKEN_PROXY_AZURE_US_URL TOKEN_PROXY_VERTEXAI_URL TOKEN_PROXY_MCP_URL"
 
+log() {
+  timestamp="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  printf '%s [llm-gateway-proxy] %s\n' "$timestamp" "$*"
+}
+
 require_env() {
   env_var="$1"
   env_value="$(printenv "$env_var" || true)"
@@ -15,7 +20,7 @@ require_env() {
     return
   fi
 
-  echo "Missing required env var: $env_var" >&2
+  log "Missing required env var: $env_var"
   exit 1
 }
 
@@ -32,18 +37,34 @@ read_token() {
 render_config() {
   export TOKEN_PROXY_TOKEN="$(read_token)"
 
+  if [ -n "$TOKEN_PROXY_TOKEN" ]; then
+    log "Rendering nginx config (service account token detected, length=${#TOKEN_PROXY_TOKEN})."
+  else
+    log "Rendering nginx config (service account token unavailable)."
+  fi
+
   envsubst '${TOKEN_PROXY_TOKEN} ${TOKEN_PROXY_AZURE_AU_URL} ${TOKEN_PROXY_AZURE_US_URL} ${TOKEN_PROXY_VERTEXAI_URL} ${TOKEN_PROXY_MCP_URL}' \
     < "$TOKEN_PROXY_TEMPLATE_PATH" \
     > "$TOKEN_PROXY_OUTPUT_PATH"
+
+  log "Wrote rendered config to $TOKEN_PROXY_OUTPUT_PATH."
 }
 
 for env_var in $REQUIRED_ENV_VARS; do
   require_env "$env_var"
+  log "Validated required env var: $env_var."
 done
 
+log "Starting proxy with sync interval ${TOKEN_PROXY_SYNC_SECONDS}s."
+log "Configured upstreams: AU=$TOKEN_PROXY_AZURE_AU_URL US=$TOKEN_PROXY_AZURE_US_URL VertexAI=$TOKEN_PROXY_VERTEXAI_URL MCP=$TOKEN_PROXY_MCP_URL"
 
 render_config
-nginx -t
+if nginx -t; then
+  log "nginx config test succeeded."
+else
+  log "nginx config test failed."
+  exit 1
+fi
 
 (
   previous_token="$(read_token)"
@@ -56,18 +77,21 @@ nginx -t
       continue
     fi
 
+    log "Service account token change detected; re-rendering nginx config."
 
     previous_token="$current_token"
     render_config
 
     if nginx -t; then
       nginx -s reload
+      log "Reloaded nginx after token update."
 
       continue
     fi
 
-    echo "Rendered nginx config is invalid; keeping current worker config" >&2
+    log "Rendered nginx config is invalid; keeping current worker config."
   done
 ) &
 
+log "Launching nginx in foreground."
 exec nginx -g 'daemon off;'
