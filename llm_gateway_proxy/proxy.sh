@@ -23,7 +23,7 @@ require_env() {
 
 read_token() {
   if [ ! -r "$TOKEN_FILE_PATH" ]; then
-    log "WARN  token file not readable: $TOKEN_FILE_PATH — requests will be forwarded without x-sa-token" >&2
+    log "WARN  token file not readable: $TOKEN_FILE_PATH — proxied requests will be rejected (503) until a token is available"
     printf ''
     return
   fi
@@ -36,7 +36,7 @@ render_config() {
 
   token_len="${#TOKEN_PROXY_TOKEN}"
   if [ "$token_len" -eq 0 ]; then
-    log "WARN  token is empty — rendering config with no token; proxy will reject authenticated routes until a token is available" >&2
+    log "WARN  token is empty — rendering config with no token; proxy will reject matching requests with 503 before proxying"
   else
     log "INFO  token refreshed (length=${token_len})"
   fi
@@ -75,7 +75,7 @@ nginx -t
       continue
     fi
 
-    log "ERROR rendered nginx config is invalid; keeping current worker config" >&2
+    log "ERROR rendered nginx config is invalid; keeping current worker config"
   done
 ) &
 
