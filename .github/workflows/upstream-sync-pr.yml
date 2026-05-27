@@ -131,9 +131,13 @@ jobs:
         env:
           HAS_UPSTREAM_SYNC_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN != '' }}
         run: |
-          # Compare against the integration target, not upstream-sync, so we
-          # catch workflow churn that was queued in a prior unmerged sync.
-          if git diff --name-only origin/${{ env.TARGET_BRANCH }} upstream/${{ env.UPSTREAM_BRANCH }} | grep -q '^\.github/workflows/'; then
+          # Only flag workflow files that upstream itself introduced/modified
+          # since the last common ancestor. A naive diff between target and
+          # upstream would always match fork-only workflow files (like this
+          # one) that exist on target but not on upstream, falsely demanding
+          # the PAT on every run.
+          MERGE_BASE=$(git merge-base origin/${{ env.TARGET_BRANCH }} upstream/${{ env.UPSTREAM_BRANCH }})
+          if git diff --name-only "$MERGE_BASE" upstream/${{ env.UPSTREAM_BRANCH }} | grep -q '^\.github/workflows/'; then
             if [ "$HAS_UPSTREAM_SYNC_TOKEN" != "true" ]; then
               echo "::error::Upstream includes changes under .github/workflows/."
               echo "::error::Set repository secret UPSTREAM_SYNC_TOKEN to a PAT with repo + workflow scopes."
