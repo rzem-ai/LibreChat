@@ -1103,6 +1103,10 @@ class AgentClient extends BaseClient {
         '[api/server/controllers/agents/client.js #sendCompletion] Operation aborted',
         err,
       );
+      // TODO Ally: Revert model and endpoint logging after resolution
+      logger.error(
+        `[api/server/controllers/agents/client.js #sendCompletion] Model: ${this.options.agent.model_parameters.model}, Endpoint: ${this.options.agent.endpoint}`,
+      );
       if (!abortController.signal.aborted) {
         logger.error(
           '[api/server/controllers/agents/client.js #sendCompletion] Unhandled error type',

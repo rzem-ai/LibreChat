@@ -1,0 +1,26 @@
+imageRegistry: 'dttaitsdev.azurecr.io'
+branch: 'uat'
+
+serviceAccount:
+  name: sa-librechat-uat
+
+ingress:
+  className: cilium
+  host: 'librechat-uat.ctk.au.deloitte.com'
+  annotations:
+    ingress.cilium.io/loadbalancer-mode: "shared"
+    ingress.cilium.io/force-https: "true"
+    kubernetes.io/ingress.class: cilium
+  tls:
+    - secretName: ctk-au-deloitte-com
+      secretStoreName: external-secret-store
+      hosts:
+        - 'librechat-uat.ctk.au.deloitte.com'
+
+pods:
+  librechat:
+    replicas: 1
+    containers:
+      librechat:
+        image:
+          tag: 'uat'

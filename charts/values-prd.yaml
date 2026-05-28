@@ -1,0 +1,33 @@
+imageRegistry: 'dttaitsprd.azurecr.io'
+branch: 'main'
+
+serviceAccount:
+  name: sa-librechat-prd
+
+ingress:
+  className: cilium
+  host: 'librechat.ctk.au.deloitte.com'
+  annotations:
+    ingress.cilium.io/loadbalancer-mode: "shared"
+    ingress.cilium.io/force-https: "true"
+    kubernetes.io/ingress.class: cilium
+  tls:
+    - secretName: ctk-au-deloitte-com
+      secretStoreName: external-secret-store
+      hosts:
+        - 'librechat.ctk.au.deloitte.com'
+
+pods:
+  librechat:
+    replicas: 2
+    containers:
+      librechat:
+        image:
+          tag: 'main'
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
