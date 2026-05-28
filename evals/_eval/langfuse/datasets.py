@@ -9,7 +9,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from dotenv import load_dotenv
 
@@ -152,3 +152,32 @@ def link_trace_to_dataset(
         print(f"[LANGFUSE] Linked trace {trace_id} to dataset item '{case_key}' (run: {run_name})")
     except Exception as exc:
         print(f"[LANGFUSE] Error linking trace to dataset: {exc}")
+
+
+def post_scores(
+    trace_id: str,
+    gating_results: List[tuple],
+    gating_passed: bool,
+) -> None:
+    """Post composite eval scores to Langfuse for experiment comparison.
+
+    Posts two scores per trace:
+      - eval_score: mean of all gating metric scores (0.0–1.0)
+      - gating_passed: binary pass/fail (1 or 0)
+    """
+    gating_scores = [score for _, score, _, _, _ in gating_results if score is not None]
+    composite = sum(gating_scores) / len(gating_scores) if gating_scores else 0.0
+
+    try:
+        langfuse = _get_langfuse_client()
+    except Exception as exc:
+        print(f"[LANGFUSE] Could not post scores: {exc}")
+        return
+
+    try:
+        langfuse.create_score(trace_id=trace_id, name="eval_score", value=composite, data_type="NUMERIC")
+        langfuse.create_score(trace_id=trace_id, name="gating_passed", value=int(gating_passed), data_type="NUMERIC")
+        langfuse.flush()
+        print(f"[LANGFUSE] Posted scores: eval_score={composite:.3f}, gating_passed={int(gating_passed)}")
+    except Exception as exc:
+        print(f"[LANGFUSE] Error posting scores: {exc}")

@@ -20,7 +20,7 @@ from deepeval.test_case import LLMTestCase, ToolCall, ConversationalTestCase, Tu
 from deepeval.metrics import SummarizationMetric
 
 from .adapters.base import AgentAdapter, AgentResponse
-from .langfuse import link_trace_to_dataset
+from .langfuse import link_trace_to_dataset, post_scores
 from .loader import build_invoke_kwargs, get_source_text, load_case, load_config
 from .metrics import (
     DEFAULT_THRESHOLDS,
@@ -614,6 +614,7 @@ def run_eval(
     # --- Link trace to Langfuse dataset ---
     if tracing_active and trace_id:
         link_trace_to_dataset(config_path, case_key, trace_id, run_name=run_name)
+        post_scores(trace_id, agg["gating_results"], agg["gating_passed"])
 
     # --- Fallback: post-hoc export for adapters without live instrumentation ---
     if tracing_active and not live_instrumented and trace_id is None:
@@ -631,6 +632,7 @@ def run_eval(
         )
         if fallback_trace_id:
             link_trace_to_dataset(config_path, case_key, fallback_trace_id, run_name=run_name)
+            post_scores(fallback_trace_id, agg["gating_results"], agg["gating_passed"])
 
     # Raise if gating failed
     if not agg["gating_passed"]:

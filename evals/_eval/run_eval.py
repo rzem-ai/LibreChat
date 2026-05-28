@@ -36,7 +36,7 @@ def main():
         ),
     )
     group = parser.add_mutually_exclusive_group(required=False)
-    group.add_argument("--case", help="Case key from eval_cases.yaml (e.g. case_1)")
+    group.add_argument("--case", nargs="+", help="One or more case keys from eval_cases.yaml (e.g. case_1 case_2)")
     group.add_argument(
         "--all", action="store_true", default=False,
         help="Run every case defined in the config YAML sequentially (default if --case is omitted).",
@@ -82,37 +82,31 @@ def main():
     # are grouped under one experiment in Langfuse Datasets.
     run_name = args.run_name or f"eval-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
 
-    if not args.case:
-        # Default to --all when no --case is specified
-        with open(config_path) as f:
-            all_case_keys = list(yaml.safe_load(f).get("cases", {}).keys())
-        errors = []
-        for key in all_case_keys:
-            print(f"\n{'='*60}\nRunning: {key}\n{'='*60}")
-            try:
-                run_eval(
-                    case_key=key,
-                    config_path=config_path,
-                    metrics_override=args.metrics,
-                    num_runs=args.num_runs,
-                    push_langfuse=args.langfuse,
-                    run_name=run_name,
-                )
-            except Exception as exc:
-                print(f"[FAIL] {key}: {exc}")
-                errors.append((key, exc))
-        if errors:
-            failed = ", ".join(k for k, _ in errors)
-            raise SystemExit(f"\n{len(errors)} case(s) failed: {failed}")
+    # Resolve which cases to run
+    if args.case:
+        case_keys = args.case
     else:
-        run_eval(
-            case_key=args.case,
-            config_path=config_path,
-            metrics_override=args.metrics,
-            num_runs=args.num_runs,
-            push_langfuse=args.langfuse,
-            run_name=run_name,
-        )
+        with open(config_path) as f:
+            case_keys = list(yaml.safe_load(f).get("cases", {}).keys())
+
+    errors = []
+    for key in case_keys:
+        print(f"\n{'='*60}\nRunning: {key}\n{'='*60}")
+        try:
+            run_eval(
+                case_key=key,
+                config_path=config_path,
+                metrics_override=args.metrics,
+                num_runs=args.num_runs,
+                push_langfuse=args.langfuse,
+                run_name=run_name,
+            )
+        except Exception as exc:
+            print(f"[FAIL] {key}: {exc}")
+            errors.append((key, exc))
+    if errors:
+        failed = ", ".join(k for k, _ in errors)
+        raise SystemExit(f"\n{len(errors)} case(s) failed: {failed}")
 
 
 # Pytest entry point (used by deepeval test run)
