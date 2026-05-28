@@ -31,7 +31,9 @@ uv run eval-summary --config "evals/<Skill Name>/eval_cases.yaml"
 _eval/
 ├── __init__.py              # Package marker, re-exports run_eval
 ├── run_eval.py              # CLI entry point (--config, --case, --num-runs, --metrics, --langfuse)
-├── runner.py                # Core engine: load → invoke → measure → aggregate → save
+├── loader.py                # YAML config loading, case resolution, source text helpers
+├── runner.py                # Core engine: adapter wiring, execution, metric evaluation, orchestration
+├── results.py               # Aggregation, report printing, JSON persistence
 ├── metrics.py               # All metric definitions, EvaluatorModel, registries
 ├── conftest.py              # pytest integration (pytest_addoption, pytest_generate_tests)
 ├── summarise_results.py     # Rich-formatted result viewer (--config, --latest, --file)
