@@ -44,7 +44,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:f27c28fdd76747dd274fb2c658cb5f38357374195a57b149136071211b0f3b00'
+          tag: 'develop@sha256:c34f715007cfafa8d6f9639d5cdd3c3c3f9ec720f182a68a56b7dedbe8eeb966'
         env:
           NODE_ENV: 'development'
           NODE_TLS_REJECT_UNAUTHORIZED: '0'
