@@ -229,3 +229,10 @@ For LOCAL development, we need to add each user's hostname to the Redirect URIs 
 Security reviews are performed by **PrismaScan** and **Checkmarx**. You'll see high level results within the PR comments.
 
 For more detail, reach out to Ben Kwan and request to be added to the *tt-librechat* project, then see the results at [Checkmarx](https://anz.ast.checkmarx.net/). Note, Checkmarx is buggy in Safari, so use Chrome instead.
+
+# 🔢 Database Connection in VS Code
+
+You can connect to the MongoDB in VS Code, to see dev/uat/prod data. 
+
+## MongoDB
+See instructions [here](https://github.com/Deloitte-Australia/dep-infrastructure/wiki/Connecting-to-MongoDB-Atlas)
