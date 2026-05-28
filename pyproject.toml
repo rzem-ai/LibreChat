@@ -19,6 +19,7 @@ dependencies = [
     "opentelemetry-sdk>=1.41.1",
     "opentelemetry-exporter-otlp-proto-http>=1.41.1",
     "opentelemetry-processor-baggage>=0.63b1",
+    "opentelemetry-instrumentation-openai-v2>=2.0b0",
 ]
 
 [project.scripts]

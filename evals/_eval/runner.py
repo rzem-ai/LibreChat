@@ -33,7 +33,18 @@ from .metrics import (
     evaluate_turn_assertions,
 )
 from .results import aggregate_results, print_report, save_results
-from .telemetry import export_otel_trace, telemetry_enabled
+from .telemetry import (
+    eval_trace,
+    export_otel_trace,
+    flush_tracing,
+    init_tracing,
+    instrument_openai,
+    record_aggregate,
+    record_run_metrics,
+    span as otel_span,
+    telemetry_enabled,
+    trace_id_hex,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -470,47 +481,108 @@ def run_eval(
 
     is_sequential = invoke_method == "invoke_sequential"
 
-    # --- Execute runs ---
+    # --- Telemetry: init early so OpenAI SDK calls get real spans ---
+    tracing_active = telemetry_enabled(push_langfuse)
+    live_instrumented = False
+    if tracing_active:
+        if init_tracing():
+            live_instrumented = instrument_openai()
+
+    # --- Determine user_query for trace metadata ---
+    user_query = case.get("user_query", "")
+    if not user_query and is_sequential:
+        yaml_turns = case.get("turns", [])
+        user_query = yaml_turns[0]["content"] if yaml_turns else ""
+
+    skill_name = config_path.parent.name
+
+    # --- Execute runs (wrapped in trace context when telemetry active) ---
+    from contextlib import nullcontext
+
+    trace_ctx = (
+        eval_trace(
+            skill_name=skill_name,
+            case_key=case_key,
+            case_name=case.get("name", case_key),
+            run_name=run_name,
+            num_runs=effective_runs,
+            user_query=user_query,
+        )
+        if tracing_active
+        else nullcontext(None)
+    )
+
     all_runs: List[dict] = []
-    for i in range(effective_runs):
-        print(f"\n{'='*60}")
-        print(f"[RUN {i + 1}/{effective_runs}] {case_key}")
-        print(f"{'='*60}")
+    trace_id = None
 
-        if is_sequential:
-            run_result = run_single_sequential(
-                case_key=case_key,
-                case=case,
-                adapter=adapter,
-                evaluator=evaluator,
-                selected_gating=selected_gating,
-                selected_diagnostic=selected_diagnostic,
-                thresholds=thresholds,
-                leading_questions=leading_questions,
-                expected_tools=expected_tools,
-                conversational_metric_keys=conversational_metric_keys,
-                conversational_thresholds=conversational_thresholds,
+    with trace_ctx as root_span:
+        if root_span is not None:
+            trace_id = trace_id_hex(root_span)
+
+        for i in range(effective_runs):
+            print(f"\n{'='*60}")
+            print(f"[RUN {i + 1}/{effective_runs}] {case_key}")
+            print(f"{'='*60}")
+
+            attempt_ctx = (
+                otel_span("eval.attempt", {
+                    "eval.run.index": i + 1,
+                    "eval.run.total": effective_runs,
+                    "langfuse.observation.type": "span",
+                    "langfuse.observation.metadata.run_index": i + 1,
+                })
+                if tracing_active
+                else nullcontext(None)
             )
-        else:
-            run_result = run_single(
-                case_key=case_key,
-                case=case,
-                adapter=adapter,
-                invoke_method=invoke_method,
-                evaluator=evaluator,
-                selected_gating=selected_gating,
-                selected_diagnostic=selected_diagnostic,
-                thresholds=thresholds,
-                leading_questions=leading_questions,
-                expected_tools=expected_tools,
-            )
-        all_runs.append(run_result)
 
-        gating_ok = all(s for _, _, _, s, _ in run_result["gating"])
-        print(f"[RUN {i + 1}/{effective_runs}] Gating: {'PASS' if gating_ok else 'FAIL'}")
+            with attempt_ctx:
+                if is_sequential:
+                    run_result = run_single_sequential(
+                        case_key=case_key,
+                        case=case,
+                        adapter=adapter,
+                        evaluator=evaluator,
+                        selected_gating=selected_gating,
+                        selected_diagnostic=selected_diagnostic,
+                        thresholds=thresholds,
+                        leading_questions=leading_questions,
+                        expected_tools=expected_tools,
+                        conversational_metric_keys=conversational_metric_keys,
+                        conversational_thresholds=conversational_thresholds,
+                    )
+                else:
+                    run_result = run_single(
+                        case_key=case_key,
+                        case=case,
+                        adapter=adapter,
+                        invoke_method=invoke_method,
+                        evaluator=evaluator,
+                        selected_gating=selected_gating,
+                        selected_diagnostic=selected_diagnostic,
+                        thresholds=thresholds,
+                        leading_questions=leading_questions,
+                        expected_tools=expected_tools,
+                    )
 
-    # --- Aggregate ---
-    agg = aggregate_results(all_runs)
+                if tracing_active:
+                    record_run_metrics(run_result)
+
+            all_runs.append(run_result)
+            gating_ok = all(s for _, _, _, s, _ in run_result["gating"])
+            print(f"[RUN {i + 1}/{effective_runs}] Gating: {'PASS' if gating_ok else 'FAIL'}")
+
+        # --- Aggregate ---
+        agg = aggregate_results(all_runs)
+
+        if tracing_active and root_span is not None:
+            agent_metadata = adapter.get_agent_metadata()
+            record_aggregate(root_span, agg, all_runs, skill_name, agent_metadata=agent_metadata)
+
+    # --- Flush tracing ---
+    if tracing_active:
+        flush_tracing()
+        if trace_id:
+            print(f"[OTEL] Trace exported with id {trace_id}")
 
     # --- Print report ---
     print_report(
@@ -539,10 +611,14 @@ def run_eval(
         turn_assertion_summary=agg.get("turn_assertion_summary"),
     )
 
-    # --- Export OTel trace to Langfuse (opt-in) ---
-    if telemetry_enabled(push_langfuse):
+    # --- Link trace to Langfuse dataset ---
+    if tracing_active and trace_id:
+        link_trace_to_dataset(config_path, case_key, trace_id, run_name=run_name)
+
+    # --- Fallback: post-hoc export for adapters without live instrumentation ---
+    if tracing_active and not live_instrumented and trace_id is None:
         agent_metadata = adapter.get_agent_metadata()
-        trace_id = export_otel_trace(
+        fallback_trace_id = export_otel_trace(
             config_path=config_path,
             case_key=case_key,
             case=case,
@@ -553,8 +629,8 @@ def run_eval(
             is_sequential=is_sequential,
             agent_metadata=agent_metadata,
         )
-        if trace_id:
-            link_trace_to_dataset(config_path, case_key, trace_id, run_name=run_name)
+        if fallback_trace_id:
+            link_trace_to_dataset(config_path, case_key, fallback_trace_id, run_name=run_name)
 
     # Raise if gating failed
     if not agg["gating_passed"]:
@@ -567,3 +643,5 @@ def run_eval(
         raise AssertionError(
             f"Gating metrics failed (averaged over {effective_runs} runs): {failed_summary}"
         )
+
+

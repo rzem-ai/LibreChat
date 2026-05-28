@@ -55,6 +55,35 @@ def get_tracer():
     return trace.get_tracer(_TRACER_NAME)
 
 
+_OPENAI_INSTRUMENTED = False
+
+
+def instrument_openai() -> bool:
+    """Instrument the OpenAI SDK to emit GenAI semantic convention spans.
+
+    Must be called AFTER init_tracing(). Returns True if instrumentation
+    succeeded; False if the instrumentor package is not installed.
+    """
+    global _OPENAI_INSTRUMENTED
+    if _OPENAI_INSTRUMENTED:
+        return True
+
+    try:
+        from opentelemetry.instrumentation.openai_v2 import OpenAIInstrumentor
+        OpenAIInstrumentor().instrument()
+        _OPENAI_INSTRUMENTED = True
+        return True
+    except ImportError:
+        print(
+            "[OTEL] Warning: opentelemetry-instrumentation-openai-v2 not installed, "
+            "skipping OpenAI SDK instrumentation"
+        )
+        return False
+    except Exception as exc:
+        print(f"[OTEL] Warning: OpenAI instrumentation failed: {exc}")
+        return False
+
+
 def shutdown_tracing() -> None:
     """Flush and shut down the active tracer provider when available."""
     provider = trace.get_tracer_provider()
