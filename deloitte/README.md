@@ -207,7 +207,7 @@ If you see `featureCompatibilityVersion` errors:
 
 ---
 
-## Deloitte App Reg
+# 🟢 Deloitte App Reg
 
 Deloitte App Reg is used to manage the Azure Entra authentication for this app. 
 
@@ -223,3 +223,9 @@ For LOCAL development, we need to add each user's hostname to the Redirect URIs 
 - Authentication Tab: Configured Identifier URI and Redirect URIs
 - Secrets Tab: Generated a client secret, used for local `.env` configuration and, where applicable, the relevant Helm `values*.yaml` under `charts/`
 - Users and Groups: Currently just linked to the MyAssist DEV user group (AU_App_MyGenAI_Dev, request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb))
+
+# 🔐 Security
+
+Security reviews are performed by **PrismaScan** and **Checkmarx**. You'll see high level results within the PR comments.
+
+For more detail, reach out to Ben Kwan and request to be added to the *tt-librechat* project, then see the results at [Checkmarx](https://anz.ast.checkmarx.net/). Note, Checkmarx is buggy in Safari, so use Chrome instead.
