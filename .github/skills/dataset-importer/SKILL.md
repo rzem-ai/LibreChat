@@ -24,10 +24,14 @@ Langfuse.
 
 Ask the user for:
 
-1. **Langfuse dataset name** — e.g. `evals/Meeting Summariser/uat-feedback`
-2. **Config path** — path to the skill's existing `eval_cases.yaml`
+1. **Config path** — path to the skill's existing `eval_cases.yaml`
 
-If the user provides both inline, skip prompting.
+The dataset name is derived automatically: `evals/<skill_directory_name>`
+(e.g., `evals/Meeting Summariser`). This is the same dataset that
+`--sync-dataset` pushes to — new items added by the user via the Langfuse UI
+coexist alongside synced items.
+
+If the user provides the config path inline, skip prompting.
 
 ---
 
@@ -40,131 +44,173 @@ template — every generated case must match this schema exactly.
 
 Extract:
 - Top-level fields: `adapter`, `invoke_method`, `num_runs`
-- Per-case structure: `name`, `category`, `invoke_method`, `source_material`,
-  `chatbot_role`, `expected_output`, `expected_tools`, `turns`,
-  `turn_assertions`, `metrics`, `thresholds`, `conversational_metrics`,
-  `conversational_thresholds`, `leading_questions`
-- **Highest existing case key number** — e.g. if `case_4` is the last key,
-  new cases start at `case_5`
+- Per-case structure: all field names and nesting
+- **Highest existing case key number** — new cases continue from there
 
 ### 2b. List available source documents
 
-List all `.md` files in `<config_dir>/documents/`. These are the only files
-that cases may reference via `source_material`.
+List all `.md` files in `<config_dir>/documents/`. These are the files cases
+may reference via `source_material`.
+
+### 2c. Read REFERENCE.md
+
+Read `REFERENCE.md` (in this skill's directory) for metric selection tables,
+leading question derivation rules, and Format A filtering rules.
 
 ---
 
 ## Step 3 — Fetch Langfuse Dataset Items
 
-Run this Python snippet in a terminal to fetch the dataset items:
+Run this snippet **from the project root** (so `.env` is found by `load_dotenv()`).
+It fetches only new items and writes them to a temp file:
 
 ```python
-import os, json
+import os, json, uuid
 from dotenv import load_dotenv
 from langfuse import Langfuse
 
-load_dotenv()
+load_dotenv()  # Must run from project root where .env lives
 host = os.getenv("EVAL_LANGFUSE_BASE_URL", "http://localhost:3000")
 langfuse = Langfuse(host=host)
-dataset = langfuse.get_dataset(name="<DATASET_NAME>")
+
+SKILL_NAME = "<SKILL_DIR_NAME>"  # e.g. "Meeting Summariser"
+dataset_name = f"evals/{SKILL_NAME}"
+dataset = langfuse.get_dataset(name=dataset_name)
+
+new_items = []
 for item in dataset.items:
-    print(f"--- Item {item.id} ---")
-    print(f"Input: {json.dumps(item.input, indent=2)}")
-    print(f"Expected: {json.dumps(item.expected_output, indent=2)}")
-    if item.metadata:
-        print(f"Metadata: {json.dumps(item.metadata, indent=2)}")
-    print()
+    # Items synced by --sync-dataset have metadata with 'skill' and 'case_name'
+    meta = item.metadata or {}
+    if meta.get("skill") and meta.get("case_name"):
+        continue  # This item was synced FROM eval_cases.yaml — skip it
+    new_items.append(item)
+
+print(f"Found {len(new_items)} new items (out of {len(dataset.items)} total)")
+
+if not new_items:
+    print("Nothing to import. Exiting.")
+else:
+    output = [{"id": item.id, "input": item.input,
+               "expected_output": item.expected_output,
+               "metadata": item.metadata} for item in new_items]
+    with open("/tmp/langfuse_items.json", "w") as f:
+        json.dump(output, f, indent=2)
+    print(f"Saved {len(output)} items to /tmp/langfuse_items.json")
 ```
 
-Replace `<DATASET_NAME>` with the user-provided dataset name.
+Replace `<SKILL_DIR_NAME>` with the skill directory name from the config path.
 
-### 3a. Understand item formats
+**If 0 new items are found:** tell the user there's nothing to import and stop.
 
-Langfuse dataset items may come from different sources:
+**Filtering logic:** Items synced by `--sync-dataset` always have metadata
+containing `skill` and `case_name` fields. Items added manually via the
+Langfuse UI (from traces) have different metadata (e.g., `agentName`,
+`thread_id`). The filter skips synced items and returns only user-added ones.
 
-**From UAT traces** (real user interactions):
-```json
-{
-  "input": {
-    "messages": [
-      {"role": "user", "content": "Summarise this meeting..."},
-      {"role": "assistant", "content": "Here is the summary..."},
-      {"role": "user", "content": "What about the action items?"}
-    ]
-  },
-  "expected_output": "The response should include action items with owners...",
-  "metadata": {"trace_id": "...", "feedback": "missing action item owners"}
-}
-```
+### 3a. Detect item format
 
-**From curated Q&A pairs** (manually created or from eval-synth):
-```json
-{
-  "input": {"query": "Summarise this meeting transcript"},
-  "expected_output": {"summary": "A structured summary with..."}
-}
-```
+| Format | Detection rule | Characteristics |
+|--------|---------------|-----------------|
+| **A** — Traced session | `input` is an array | Multi-turn, `expected_output.messages` has full conversation incl. final response |
+| **B** — UAT trace | `input` is a dict with `messages` key | Multi-turn, has `metadata.feedback` |
+| **C** — Curated Q&A | `input` is a dict with `query` key | Single-turn |
+| **D** — Scored trace | `input` dict with `query` + `metadata.score` | Single-turn, has failure reason |
 
-**From scored traces** (trace + user score):
-```json
-{
-  "input": {
-    "query": "...",
-    "source_material": "documents/sample_meeting_transcript.md"
-  },
-  "expected_output": "...",
-  "metadata": {"score": 0, "reason": "Missed key discussion point about budget"}
-}
-```
-
-Handle all formats — extract the user query, conversation turns, expected
-behaviour, and any failure context from metadata.
+For Format A: use `expected_output.messages` as the **single source of truth**
+for all extraction (it is a superset of `input` — same conversation plus the
+final assistant response). Apply the filtering rules in REFERENCE.md to separate
+real user turns from injected skill instructions, tool_calls, and skill messages.
+The `input` field is only needed for format detection (checking if it's an array).
 
 ---
 
 ## Step 4 — Generate Eval Cases
 
-For each dataset item, generate a complete eval case entry following these rules:
+For each dataset item, generate a complete eval case entry.
 
 ### 4a. Case key naming
 
-Continue the existing numbering sequence. If the highest existing key is
-`case_4`, new cases are `case_5`, `case_6`, etc.
+Continue the existing numbering sequence (e.g., `case_5`, `case_6`...).
 
-### 4b. Determine single-turn vs multi-turn from the data
+### 4b. Source material
 
-- If the item has **multi-turn messages** (multiple user/assistant exchanges) →
-  create a multi-turn case with all the user messages as turns
-- If the item has a **single query** → create a single-turn case
-- If the item has **failure metadata** (e.g. `"feedback": "missing X"`) →
-  add a leading question that specifically probes for the reported failure
-
-### 4c. Source material assignment
-
-- If the item's metadata or input specifies a source document → use that
+- If metadata/input specifies a source document → use it
+- If the first user message embeds inline content (transcript/notes) → extract
+  the document portion and save as a new file in `documents/`. Name it
+  descriptively. Strip the instruction prefix.
 - Otherwise distribute existing source documents evenly across cases
-- Only reference files that exist in `documents/`
 
-### 4d. Required fields per case
+### 4c. Derive case content
+
+**All formats — expected_output field:**
+- For Format A: use `expected_output.messages` as the single source. Find the
+  final `assistant` response (no `tool_calls`) — this is the golden answer.
+  Summarise what it should contain in 1-3 sentences for the YAML field.
+  Never copy the raw messages array.
+- For Formats B/D with failure metadata: explicitly require what was missing.
+- For Format C: use `expected_output` directly.
+
+**All formats — turns:**
+- For Format A: extract real user turns from `expected_output.messages` using
+  the filtering rules. Ignore `input` (it's a subset of expected_output).
+- For other formats: extract from `input.messages` or `input.query`.
+- First turn gets `attach_source: true`
+- Preserve exact user message text as `content`
+
+**All formats — turn_assertions:**
+- Pair each real user turn with the **next** assistant response (no `tool_calls`)
+  in `expected_output.messages` — this is the expected response for that turn
+- First turn: add `expected_tools` assertion for skill invocation
+- Each turn: add `leading_question` assertions derived from the paired
+  assistant response (use derivation table in REFERENCE.md)
+- For Formats B/D with failure metadata: add a gating probe at the relevant
+  turn targeting the specific failure (threshold: 0.8)
+
+**All formats — extract tool info:**
+- Find `skillName` from `tool_calls` in assistant messages within
+  `expected_output.messages` or from existing cases
+- Use for both case-level `expected_tools` and first-turn assertion
+
+### 4d. Select metrics
+
+Use the metric selection table in REFERENCE.md. Do NOT blindly copy from
+existing cases. Always apply base metrics (`task_completion`, `hallucination`).
+Add content-driven metrics only when the corresponding pattern is detected.
+
+Add `conversational_metrics: [conversation_completeness]` when case has 3+ turns.
+
+**Thresholds:** match the thresholds used in the existing eval_cases.yaml for
+consistency (typically 0.5 for all metrics). Only use higher thresholds (0.7+)
+if existing cases already use them or if explicitly warranted by UAT failure
+metadata.
+
+### 4e. Generate leading questions
+
+Use the leading question derivation table in REFERENCE.md. Generate:
+- 1+ gating `leading_question` turn_assertion per turn (from expected response)
+- 1-2 case-level leading questions from the final response
+
+All questions must be yes/no, reference specific content, never generic.
+
+### 4f. Required fields template
 
 Every case MUST include:
 
 ```yaml
-name: "<descriptive name — include failure context if from UAT feedback>"
+name: "<descriptive name>"
 category: "<same as existing cases>"
 invoke_method: invoke_sequential
-source_material: "documents/<existing_file>.md"
+source_material: "documents/<file>.md"
 chatbot_role: "<same as existing cases>"
 expected_output: >-
-  <what a correct response should contain — if UAT feedback says something was
-  missing, explicitly require it here>
+  <1-3 sentence description of correct response>
 expected_tools:
   - name: skill
     input_parameters:
-      skillName: "<skill tool name from existing cases>"
+      skillName: "<skill tool name>"
 turns:
   - content: >-
-      <the user's actual query from the dataset item>
+      <user's actual message>
     attach_source: true
     turn_assertions:
       - type: expected_tools
@@ -173,50 +219,22 @@ turns:
           - name: skill
             input_parameters:
               skillName: "<skill tool name>"
-      - type: contains_any
-        name: "<meaningful assertion name>"
-        phrases: ["<phrase1>", "<phrase2>", "<phrase3>"]
+      - type: leading_question
+        name: "<meaningful name>"
+        question: "<specific question>"
 metrics:
-  - hallucination
   - task_completion
-  - faithfulness
+  - hallucination
 thresholds:
-  hallucination: 0.7
-  task_completion: 0.7
-  faithfulness: 0.7
-conversational_metrics:
-  - conversation_completeness
-conversational_thresholds:
-  conversation_completeness: 0.5
+  task_completion: 0.5
+  hallucination: 0.5
 leading_questions:
   - name: "<probe name>"
     type: gating
-    threshold: 0.7
+    threshold: 0.5
     question: >-
-      <question that verifies a key aspect of the expected output>
+      <question about final output>
 ```
-
-### 4e. Content derivation from UAT feedback
-
-- **User query**: use the actual user message from the trace verbatim (or
-  lightly cleaned). Real queries are more valuable than synthetic rewrites.
-- **Expected output**: if the item has failure metadata (score=0, feedback text),
-  the expected_output should explicitly require what was missing.
-- **Leading questions**: derive at least one gating question from the failure
-  reason. E.g. if feedback says "missed budget overrun topic" → add a leading
-  question: "Does the summary include the budget overrun discussion?"
-- **contains_any phrases**: ground these in the actual source document content —
-  read the referenced document and pick real terms/names/numbers that should
-  appear in a correct response.
-
-### 4f. Multi-turn cases from traces
-
-When the dataset item contains a full conversation:
-- Map each user message to a `turn` entry
-- First turn gets `attach_source: true`
-- Add turn_assertions to each turn based on what a correct response at that
-  stage should contain
-- If the failure happened at a specific turn, add stronger assertions there
 
 ---
 
@@ -224,21 +242,18 @@ When the dataset item contains a full conversation:
 
 ### 5a. Append cases directly
 
-Append the generated cases to the existing `eval_cases.yaml` under the `cases:`
-key. Do NOT create a separate file. The new cases are immediately golden.
+Append generated cases under the `cases:` key. Do NOT create a separate file.
 
 ### 5b. Validate
 
-After appending, verify:
-- All `source_material` paths point to files that exist in `documents/`
-- All cases have the required fields listed in 4d
-- YAML is valid (no syntax errors)
-- Case keys are unique and sequential
-- Leading questions derived from UAT feedback are specific and testable
+- All `source_material` paths point to existing files in `documents/`
+- All required fields present
+- YAML is valid, case keys unique and sequential
+- Leading questions are specific (reference concrete content)
+- Metrics selected per-case (not copied wholesale)
+- Turn_assertions pair with expected assistant responses
 
 ### 5c. Next step for the user
-
-After import, tell the user:
 
 > Cases appended to eval_cases.yaml. Run `--sync-dataset` to push to Langfuse:
 > ```
@@ -249,12 +264,15 @@ After import, tell the user:
 
 ## Constraints
 
-- **Never generate new source documents** — only reference existing files in `documents/`
-- **Match the schema exactly** — use the existing `eval_cases.yaml` as the authoritative template
-- **Preserve real user queries** — use actual user messages from traces, don't rephrase them
-- **Encode failure feedback as assertions** — UAT failures become gating leading questions
-- **Use realistic assertions** — phrases in `contains_any` must be terms that actually appear in the referenced source document
-- **Keep leading questions specific** — they should be answerable with yes/no based on the response content
-- **Preserve the adapter and tool expectations** — copy `adapter`, `expected_tools`, and `skillName` from the existing config
-- **Auto-promote**: all imported items go directly into eval_cases.yaml as golden cases (user has already reviewed in Langfuse)
-- **Sequential numbering**: continue from highest existing case_key number, never reuse or overwrite existing keys
+- **Source document creation** — only when traced session has inline content.
+  Never fabricate source material.
+- **Schema fidelity** — match existing eval_cases.yaml structure exactly
+- **Preserve real queries** — use verbatim user messages, don't rephrase
+- **Failure → assertion** — UAT failures become gating probes (threshold: 0.8)
+- **Metric selection per-case** — use REFERENCE.md table, never blindly copy
+- **Specific leading questions** — derive from response content, never generic
+- **No raw message dumps** — `expected_output` must be human-readable summary
+- **Realistic assertions** — ground in actual source/response content
+- **Preserve tool expectations** — copy `adapter`, `expected_tools`, `skillName`
+- **Auto-promote** — all items go directly to eval_cases.yaml (pre-reviewed)
+- **Sequential numbering** — continue from highest existing key, never reuse
