@@ -2,10 +2,10 @@
 Standalone CLI entry point for the eval framework.
 
 Usage:
-    PYTHONPATH="evals:$PYTHONPATH" python -m _eval.run_eval --config "evals/<Skill>/eval_cases.yaml" --case case_1
-    PYTHONPATH="evals:$PYTHONPATH" python -m _eval.run_eval --config "evals/<Skill>/eval_cases.yaml" --all
-    PYTHONPATH="evals:$PYTHONPATH" python -m _eval.run_eval --config "evals/<Skill>/eval_cases.yaml" --case case_1 --metrics hallucination,task_completion
-    PYTHONPATH="evals:$PYTHONPATH" python -m _eval.run_eval --config "evals/<Skill>/eval_cases.yaml" --all --num-runs 3
+    PYTHONPATH="evals:$PYTHONPATH" python -m _eval.run_eval --config "evals/skills/<Skill>/eval_cases.yaml" --case case_1
+    PYTHONPATH="evals:$PYTHONPATH" python -m _eval.run_eval --config "evals/skills/<Skill>/eval_cases.yaml" --all
+    PYTHONPATH="evals:$PYTHONPATH" python -m _eval.run_eval --config "evals/skills/<Skill>/eval_cases.yaml" --case case_1 --metrics hallucination,task_completion
+    PYTHONPATH="evals:$PYTHONPATH" python -m _eval.run_eval --config "evals/skills/<Skill>/eval_cases.yaml" --all --num-runs 3
 """
 
 import argparse
@@ -30,8 +30,8 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            '  python -m _eval.run_eval --config "evals/Meeting Summariser/eval_cases.yaml" --case case_1\n'
-            '  python -m _eval.run_eval --config "evals/Meeting Summariser/eval_cases.yaml" --all\n'
+            '  python -m _eval.run_eval --config "evals/skills/Meeting Summariser/eval_cases.yaml" --case case_1\n'
+            '  python -m _eval.run_eval --config "evals/skills/Meeting Summariser/eval_cases.yaml" --all\n'
             '  python -m _eval.run_eval --config "..." --case case_1 --metrics hallucination,task_completion\n'
         ),
     )
