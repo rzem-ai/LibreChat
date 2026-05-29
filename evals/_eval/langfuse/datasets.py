@@ -5,6 +5,7 @@ that are still Langfuse API concerns: dataset creation, dataset item sync, and
 linking an exported trace to a dataset run.
 """
 
+import json
 import os
 import uuid
 from datetime import datetime, timezone
@@ -42,15 +43,33 @@ def _deterministic_item_id(dataset_name: str, case_key: str) -> str:
     return str(uuid.uuid5(_DATASET_ITEM_NAMESPACE, f"{dataset_name}/{case_key}"))
 
 
+def _load_dataset_rows(config_path: Path) -> list:
+    """Read dataset.jsonl sibling of config_path and return all rows."""
+    jsonl_path = config_path.parent / "dataset.jsonl"
+    if not jsonl_path.exists():
+        return []
+    rows = []
+    with open(jsonl_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                rows.append(json.loads(line))
+    return rows
+
+
 def sync_dataset_to_langfuse(config_path, config: dict) -> None:
-    """Upload eval cases to a Langfuse Dataset for benchmarking."""
+    """Upload eval cases to a Langfuse Dataset for benchmarking.
+
+    Reads from dataset.jsonl (compiled from eval_cases.yaml) and syncs
+    each row as a dataset item in Langfuse.
+    """
     config_path = Path(config_path)
     skill_name = config_path.parent.name
     dataset_name = f"evals/{skill_name}"
-    cases = config.get("cases", {})
 
-    if not cases:
-        print("[LANGFUSE] No cases found in config — nothing to sync.")
+    rows = _load_dataset_rows(config_path)
+    if not rows:
+        print("[LANGFUSE] No rows found in dataset.jsonl — nothing to sync.")
         return
 
     try:
@@ -74,51 +93,23 @@ def sync_dataset_to_langfuse(config_path, config: dict) -> None:
             return
 
     synced = 0
-    for case_key, case in cases.items():
-        turns = case.get("turns", [])
-        invoke_method = case.get("invoke_method", config.get("invoke_method", "invoke_text"))
-
-        if invoke_method == "invoke_sequential" and turns:
-            input_data = {
-                "turns": [
-                    {"content": turn["content"], "attach_source": turn.get("attach_source", False)}
-                    for turn in turns
-                ],
-                "source_material": case.get("source_material"),
-            }
-        else:
-            user_query = turns[0]["content"] if turns else case.get("user_query", "")
-            input_data = {
-                "query": user_query,
-                "source_material": case.get("source_material"),
-            }
-
+    for row in rows:
+        case_key = row["case_key"]
         try:
             item_id = _deterministic_item_id(dataset_name, case_key)
             langfuse.create_dataset_item(
                 dataset_name=dataset_name,
                 id=item_id,
-                input=input_data,
-                expected_output=case.get("expected_output", ""),
-                metadata={
-                    "case_key": case_key,
-                    "case_name": case.get("name", case_key),
-                    "invoke_method": invoke_method,
-                    "category": case.get("category", ""),
-                    "turns": len(turns),
-                    "expected_tools": case.get("expected_tools", []),
-                    "thresholds": case.get("thresholds", {}),
-                    "leading_questions": [
-                        question.get("name") for question in case.get("leading_questions", [])
-                    ],
-                },
+                input=row["input"],
+                expected_output=row.get("expected_output", ""),
+                metadata=row.get("metadata", {}),
             )
             synced += 1
         except Exception as exc:
             print(f"[LANGFUSE] Error syncing {case_key}: {exc}")
 
     langfuse.flush()
-    print(f"[LANGFUSE] Synced {synced}/{len(cases)} cases to dataset '{dataset_name}'.")
+    print(f"[LANGFUSE] Synced {synced}/{len(rows)} cases to dataset '{dataset_name}'.")
 
 
 def link_trace_to_dataset(
@@ -176,8 +167,8 @@ def post_scores(
 
     try:
         langfuse.create_score(trace_id=trace_id, name="eval_score", value=composite, data_type="NUMERIC")
-        langfuse.create_score(trace_id=trace_id, name="gating_passed", value=int(gating_passed), data_type="NUMERIC")
+        langfuse.create_score(trace_id=trace_id, name="passed", value=gating_passed, data_type="BOOLEAN")
         langfuse.flush()
-        print(f"[LANGFUSE] Posted scores: eval_score={composite:.3f}, gating_passed={int(gating_passed)}")
+        print(f"[LANGFUSE] Posted scores: eval_score={composite:.3f}, passed={gating_passed}")
     except Exception as exc:
         print(f"[LANGFUSE] Error posting scores: {exc}")

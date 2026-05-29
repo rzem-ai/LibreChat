@@ -1,18 +1,22 @@
 ---
 name: dataset-importer
 description: >-
-  Converts curated Q&A pairs from a Langfuse Dataset into full eval_cases.yaml
-  entries. Pulls items from a specified Langfuse dataset, uses the existing
-  eval_cases.yaml as a structural template, and writes eval_cases_synthetic.yaml
-  with properly formatted cases referencing existing source documents.
+  Imports curated Q&A pairs from a Langfuse Dataset directly into
+  eval_cases.yaml as golden test cases. Pulls items from a specified Langfuse
+  dataset, uses the existing eval_cases.yaml as a structural template, and
+  appends fully-formed case entries. Assumes the user has already reviewed and
+  approved the data in Langfuse before invoking this skill.
 ---
 
 # Dataset Importer
 
-You convert Langfuse Dataset items (from UAT feedback, curated traces, or
-synthetic Q&A pairs) into full eval framework test cases. Given a dataset name
-and a target skill's `eval_cases.yaml`, you produce an
-`eval_cases_synthetic.yaml` with complete case entries.
+You import reviewed Langfuse Dataset items (from UAT feedback, curated traces,
+or synthetic Q&A pairs) directly into a skill's `eval_cases.yaml` as golden
+test cases. The user has already reviewed data quality in Langfuse — your job
+is to transform the items into properly-structured YAML cases and append them.
+
+After import, the user runs `--sync-dataset` to push the updated cases to
+Langfuse.
 
 ---
 
@@ -40,6 +44,8 @@ Extract:
   `chatbot_role`, `expected_output`, `expected_tools`, `turns`,
   `turn_assertions`, `metrics`, `thresholds`, `conversational_metrics`,
   `conversational_thresholds`, `leading_questions`
+- **Highest existing case key number** — e.g. if `case_4` is the last key,
+  new cases start at `case_5`
 
 ### 2b. List available source documents
 
@@ -122,7 +128,8 @@ For each dataset item, generate a complete eval case entry following these rules
 
 ### 4a. Case key naming
 
-Use keys `uat_1`, `uat_2`, ..., `uat_N`.
+Continue the existing numbering sequence. If the highest existing key is
+`case_4`, new cases are `case_5`, `case_6`, etc.
 
 ### 4b. Determine single-turn vs multi-turn from the data
 
@@ -213,34 +220,30 @@ When the dataset item contains a full conversation:
 
 ---
 
-## Step 5 — Write Output
+## Step 5 — Append to eval_cases.yaml
 
-### 5a. Compose eval_cases_synthetic.yaml
+### 5a. Append cases directly
 
-Write the file to `<config_dir>/eval_cases_synthetic.yaml` with:
-
-```yaml
-# <Skill Name> — UAT-Derived Evaluation Cases
-# Generated from Langfuse dataset: <dataset_name>
-
-adapter: <same as original>
-invoke_method: <same as original>
-num_runs: 3
-
-cases:
-  uat_1:
-    ...
-  uat_2:
-    ...
-```
+Append the generated cases to the existing `eval_cases.yaml` under the `cases:`
+key. Do NOT create a separate file. The new cases are immediately golden.
 
 ### 5b. Validate
 
-After writing, verify:
+After appending, verify:
 - All `source_material` paths point to files that exist in `documents/`
 - All cases have the required fields listed in 4d
 - YAML is valid (no syntax errors)
+- Case keys are unique and sequential
 - Leading questions derived from UAT feedback are specific and testable
+
+### 5c. Next step for the user
+
+After import, tell the user:
+
+> Cases appended to eval_cases.yaml. Run `--sync-dataset` to push to Langfuse:
+> ```
+> uv run eval-run --sync-dataset --config "<config_path>"
+> ```
 
 ---
 
@@ -253,3 +256,5 @@ After writing, verify:
 - **Use realistic assertions** — phrases in `contains_any` must be terms that actually appear in the referenced source document
 - **Keep leading questions specific** — they should be answerable with yes/no based on the response content
 - **Preserve the adapter and tool expectations** — copy `adapter`, `expected_tools`, and `skillName` from the existing config
+- **Auto-promote**: all imported items go directly into eval_cases.yaml as golden cases (user has already reviewed in Langfuse)
+- **Sequential numbering**: continue from highest existing case_key number, never reuse or overwrite existing keys

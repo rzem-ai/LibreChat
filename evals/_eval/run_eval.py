@@ -21,6 +21,7 @@ if str(_EVAL_DIR.parent) not in sys.path:
     sys.path.insert(0, str(_EVAL_DIR.parent))
 
 from _eval.runner import run_eval
+from _eval.compile import compile_skill
 from _eval.langfuse import sync_dataset_to_langfuse
 
 
@@ -75,6 +76,7 @@ def main():
     if args.sync_dataset:
         with open(config_path) as f:
             config = yaml.safe_load(f)
+        compile_skill(config_path)
         sync_dataset_to_langfuse(config_path, config)
         return
 
