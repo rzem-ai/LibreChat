@@ -32,6 +32,9 @@ sed -i '' \
 echo "Token updated in .env"
 
 cd "$(dirname "$0")"
+echo "Starting any stopped containers..."
+docker compose up -d
+echo "Restarting token-dependent containers..."
 docker compose restart api gateway-proxy
 docker compose up -d --force-recreate rag_api
-echo "Done — containers restarted."
+echo "Done — all containers running."
