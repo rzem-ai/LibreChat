@@ -153,6 +153,17 @@ docker compose down
 docker compose up -d
 ```
 
+## Updating your JWT token
+
+If you want to update your token, run this in your terminal:
+
+```zsh
+./update-token.sh <INCLUDE YOUR TOKEN HERE >
+```
+
+This will also automatically restart your containers when run.
+
+
 ## Access the app
 
 Open your configured `DOMAIN_CLIENT` URL in **Safari** or via LocalHost in Chrome.
