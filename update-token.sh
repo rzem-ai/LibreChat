@@ -1,6 +1,6 @@
 #!/bin/bash
 # Usage: ./update-token.sh <new_jwt_token>
-# Updates LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION and ANTHROPIC_API_KEY in .env,
+# Updates LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION, ANTHROPIC_API_KEY, RAG_OPENAI_API_KEY, and OPENAI_API_KEY in .env,
 # then restarts the affected containers.
 
 set -e
