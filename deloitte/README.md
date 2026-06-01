@@ -114,14 +114,11 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 ## Updating your JWT token
 
 If you want to update your token after it has expired, navigate to
-the above url and get your new token, then run this in your terminal:
+the URL above, get your new token, then run:
 
-```zsh
-./update-token.sh <INCLUDE YOUR TOKEN HERE >
-```
+    ./update-token.sh "<YOUR_TOKEN_HERE>"
 
-This will automatically restart your containers when run. This can also be
-used to restart containers like the docker commands.
+This will automatically restart your containers when run. Note: passing the token as an argument may save it in your shell history; omit the argument to be prompted securely.
 
 ---
 
