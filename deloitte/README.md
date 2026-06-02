@@ -118,8 +118,7 @@ the URL above, get your new token, then run:
 
     ./update-token.sh "<YOUR_TOKEN_HERE>"
 
-This will automatically restart your containers when run. Note: passing the token as an argument may save it in your shell history; omit the argument to be prompted securely.
-
+This updates `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION`, `ANTHROPIC_API_KEY`, `RAG_OPENAI_API_KEY`, and `OPENAI_API_KEY` in `.env`, then restarts the affected containers. Note: passing the token as an argument may save it in your shell history; omit the argument to be prompted securely.
 ---
 
 ## `librechat.yaml` files
