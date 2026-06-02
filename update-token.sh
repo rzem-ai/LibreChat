@@ -5,12 +5,13 @@
 
 set -e
 
-if [ -z "$1" ]; then
-  echo "Usage: $0 <new_jwt_token>"
-  exit 1
+if [ -z "${1:-}" ]; then
+  read -r -s -p "Enter new JWT token: " NEW_TOKEN
+  echo
+else
+  NEW_TOKEN="$1"
 fi
 
-NEW_TOKEN="$1"
 ENV_FILE="$(dirname "$0")/.env"
 
 sed -i '' \
