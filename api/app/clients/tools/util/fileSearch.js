@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { tool } = require('@langchain/core/tools');
+const { tool } = require('@librechat/agents/langchain/tools');
 const { logger } = require('@librechat/data-schemas');
 const { generateShortLivedToken } = require('@librechat/api');
 const { Tools, EToolResources } = require('librechat-data-provider');
