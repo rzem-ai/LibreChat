@@ -111,6 +111,14 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 1. Navigate to [here](https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/oauth2/v2.0/authorize?client_id=498ce9fd-195b-40c5-82f1-8fc4a6d00d88&response_type=id_token&redirect_uri=https%3A%2F%2Fjwt.ms&scope=openid%20profile%20email%20https%3A%2F%2Fgraph.microsoft.com%2FUser.Read&response_mode=fragment&state=random_state&nonce=random_nonce)
 2. Copy the whole value to LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION inside quotation marks
 
+## Updating your JWT token
+
+If you want to update your token after it has expired, navigate to
+the URL above, get your new token, then run:
+
+    ./update-token.sh "<YOUR_TOKEN_HERE>"
+
+This updates `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION`, `ANTHROPIC_API_KEY`, `RAG_OPENAI_API_KEY`, and `OPENAI_API_KEY` in `.env`, then restarts the affected containers. Note: passing the token as an argument may save it in your shell history; run `./update-token.sh` with no arguments to be prompted securely.
 ---
 
 ## `librechat.yaml` files
@@ -152,6 +160,7 @@ If things behave oddly, try a clean restart:
 docker compose down
 docker compose up -d
 ```
+
 
 ## Access the app
 
