@@ -7,7 +7,7 @@ This repository contains the local development setup for **LibreChat**, configur
 ## What this setup gives you
 
 - A **local LibreChat instance** running via Docker
-- Support for **Azure OpenAI (AU & US)**, **VertexAI**, and **Anthropic via gateway proxy**
+- Support for **Azure OpenAI (AU & US)**, **VertexAI (US)**, and **Anthropic via gateway proxy**
 - Integration with **ClearTrack MCP Gateway**
 - Local theming via **Deloitte GEL assets**
 - A structure that can later be deployed to **ClearTrack** (dev / stage / prod)
