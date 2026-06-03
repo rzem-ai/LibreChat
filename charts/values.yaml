@@ -1,0 +1,87 @@
+imageRegistry: 'dttaitsprd.azurecr.io'
+branch: ''
+
+serviceAccount:
+  name: sa-librechat-prd
+
+ingress:
+  className: cilium
+  host: 'librechat.ctk.au.deloitte.com'
+  annotations:
+    ingress.cilium.io/loadbalancer-mode: "shared"
+    ingress.cilium.io/force-https: "true"
+    kubernetes.io/ingress.class: cilium
+  tls:
+    - secretName: ctk-au-deloitte-com
+      secretStoreName: external-secret-store
+      hosts:
+        - 'librechat.ctk.au.deloitte.com'
+
+image:
+  repository: 'tt-librechat/librechat'
+  pullPolicy: Always
+  tag: 'main'
+
+pods:
+  librechat:
+    replicas: 1
+    containers:
+      librechat:
+        command:
+          - /bin/sh
+          - -c
+          - exec npm run backend
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+        image:
+          repository: 'tt-librechat/librechat'
+          pullPolicy: Always
+          tag: 'main'
+        containerSecurityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        # Runtime env vars — non-sensitive values here, secrets via External Secrets
+        env:
+          HOST: '0.0.0.0'
+          PORT: '3080'
+          NODE_ENV: 'production'
+          ALLOW_EMAIL_LOGIN: 'false'
+          ALLOW_REGISTRATION: 'false'
+          ALLOW_SOCIAL_LOGIN: 'true'
+          ALLOW_SOCIAL_REGISTRATION: 'false'
+          OPENID_SCOPE: 'openid profile email'
+          OPENID_CALLBACK_URL: '/oauth/openid/callback'
+          OPENID_REQUIRED_ROLE_TOKEN_KIND: 'id'
+          OPENID_USE_END_SESSION_ENDPOINT: 'true'
+          OPENID_BUTTON_LABEL: 'Login with SSO'
+          OPENID_IMAGE_URL: '/assets/favicon.svg'
+        service:
+          enabled: true
+          type: ClusterIP
+          port: 80
+          targetPort: 3080
+        ingress:
+          enabled: true
+          paths:
+            - path: /
+              pathType: Prefix

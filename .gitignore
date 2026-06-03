@@ -72,6 +72,7 @@ bower_components/
 .flooignore
 
 # Environment
+Caddyfile
 .npmrc
 .env*
 my.secrets
@@ -100,6 +101,11 @@ junit.xml
 **/venv/
 **/.results/
 
+secrets.json
+
+# docker override file
+# docker-compose.override.yaml
+# docker-compose.override.yml
 
 # meilisearch
 meilisearch
