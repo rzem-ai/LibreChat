@@ -70,7 +70,7 @@ endpoints:
 
     # --- VertexAI / Google (us-central1) ---
     # OpenAI-compatible endpoint, model names use google/ prefix
-    - name: "VertexAI"
+    - name: "VertexAI US"
       apiKey: "dummy"
       baseURL: "${BASE_URL_VERTEXAI}"
       models:
@@ -80,7 +80,7 @@ endpoints:
         fetch: false
       titleConvo: true
       titleModel: "google/gemini-2.5-flash"
-      modelDisplayLabel: "VertexAI"
+      modelDisplayLabel: "VertexAI US"
       dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
       headers:
         Content-Type: "application/json"
