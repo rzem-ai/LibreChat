@@ -19,6 +19,12 @@ def compile_skill(config_path: Path) -> Path:
 
     rows = []
     for case_key, case in cases.items():
+        case_no = None
+        if case_key.startswith("case_"):
+            case_no_raw = case_key.removeprefix("case_")
+            if case_no_raw.isdigit():
+                case_no = int(case_no_raw)
+
         turns = case.get("turns", [])
         invoke_method = case.get("invoke_method", config.get("invoke_method", "invoke_text"))
 
@@ -47,6 +53,7 @@ def compile_skill(config_path: Path) -> Path:
                 "category": case.get("category", ""),
                 "invoke_method": invoke_method,
                 "case_name": case.get("name", case_key),
+                "case_no": case_no,
             },
         }
         rows.append(row)

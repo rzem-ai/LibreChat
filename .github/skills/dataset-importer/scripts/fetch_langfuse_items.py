@@ -35,9 +35,13 @@ def build_argument_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = build_argument_parser().parse_args()
 
-    load_dotenv()
-    host = os.getenv("EVAL_LANGFUSE_BASE_URL", "http://localhost:3000")
-    langfuse = Langfuse(host=host)
+    load_dotenv(override=True)
+    host = (os.getenv("EVAL_LANGFUSE_BASE_URL") or os.getenv("LANGFUSE_BASE_URL")).strip()
+    if not host:
+        raise ValueError("Langfuse host is empty. Set EVAL_LANGFUSE_BASE_URL or LANGFUSE_BASE_URL.")
+    os.environ["LANGFUSE_BASE_URL"] = host
+    os.environ["EVAL_LANGFUSE_BASE_URL"] = host
+    langfuse = Langfuse(base_url=host)
 
     dataset_name = f"evals/{args.skill_name}"
     dataset = langfuse.get_dataset(name=dataset_name)
