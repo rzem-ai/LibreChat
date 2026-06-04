@@ -156,7 +156,13 @@ export async function applyContextToAgent({
   logger?: Logger;
   configServers?: Record<string, ParsedServerConfig>;
 }): Promise<void> {
-  const baseInstructions = [GLOBAL_AGENT_INSTRUCTIONS, agent.instructions].filter(Boolean).join('\n\n');
+  const hasFileSearchTool =
+    agent.tools?.some((t) => (typeof t === 'string' ? t === 'file_search' : t?.name === 'file_search')) ||
+    agent.toolDefinitions?.some((t) => t.name === 'file_search');
+
+  const baseInstructions = [hasFileSearchTool ? GLOBAL_AGENT_INSTRUCTIONS : undefined, agent.instructions]
+    .filter(Boolean)
+    .join('\n\n');
   const additionalInstructions = agent.additional_instructions;
 
   try {
