@@ -17,7 +17,7 @@ const INSTRUCTIONS = [
   '',
   'CRITICAL CITATION REQUIREMENT: After calling file_search, you MUST cite every',
   'piece of information using the exact anchor markers from the tool results.',
-  'Each result contains an anchor line like "Anchor: \\ue202turn0file0 (filename.pdf)".',
+  'Each result contains an anchor line like "Anchor: \\ue202turn0file0".',
   'You MUST output these escape sequences VERBATIM immediately after each statement',
   'derived from that result. Do NOT substitute with †, footnotes, or markdown links.',
   'Always mention the source filename before the anchor.',
