@@ -61,41 +61,12 @@ leading question derivation rules, and Format A filtering rules.
 
 ## Step 3 — Fetch Langfuse Dataset Items
 
-Run this snippet **from the project root** (so `.env` is found by `load_dotenv()`).
-It fetches only new items and writes them to a temp file:
+Run [scripts/fetch_langfuse_items.py](scripts/fetch_langfuse_items.py) from the
+project root. It fetches only new items and writes them to a temp file:
 
-```python
-import os, json, uuid
-from dotenv import load_dotenv
-from langfuse import Langfuse
-
-load_dotenv()  # Must run from project root where .env lives
-host = os.getenv("EVAL_LANGFUSE_BASE_URL", "http://localhost:3000")
-langfuse = Langfuse(host=host)
-
-SKILL_NAME = "<SKILL_DIR_NAME>"  # e.g. "Meeting Summariser"
-dataset_name = f"evals/{SKILL_NAME}"
-dataset = langfuse.get_dataset(name=dataset_name)
-
-new_items = []
-for item in dataset.items:
-    # Items synced by --sync-dataset have metadata with 'skill' and 'case_name'
-    meta = item.metadata or {}
-    if meta.get("skill") and meta.get("case_name"):
-        continue  # This item was synced FROM eval_cases.yaml — skip it
-    new_items.append(item)
-
-print(f"Found {len(new_items)} new items (out of {len(dataset.items)} total)")
-
-if not new_items:
-    print("Nothing to import. Exiting.")
-else:
-    output = [{"id": item.id, "input": item.input,
-               "expected_output": item.expected_output,
-               "metadata": item.metadata} for item in new_items]
-    with open("/tmp/langfuse_items.json", "w") as f:
-        json.dump(output, f, indent=2)
-    print(f"Saved {len(output)} items to /tmp/langfuse_items.json")
+```bash
+python .github/skills/dataset-importer/scripts/fetch_langfuse_items.py \
+  --skill-name "<SKILL_DIR_NAME>"
 ```
 
 Replace `<SKILL_DIR_NAME>` with the skill directory name from the config path.
@@ -252,6 +223,8 @@ Append generated cases under the `cases:` key. Do NOT create a separate file.
 - Leading questions are specific (reference concrete content)
 - Metrics selected per-case (not copied wholesale)
 - Turn_assertions pair with expected assistant responses
+- Run `uv run pytest evals/_eval/tests/test_schema.py -v` to confirm the
+  appended YAML still matches the eval schema before syncing to Langfuse
 
 ### 5c. Next step for the user
 

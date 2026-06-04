@@ -74,8 +74,8 @@ def _resolve_judge_config() -> Optional[dict]:
     raw_headers = ep.get("headers", {})
     headers = {k: _expand_vars(v) if isinstance(v, str) else v for k, v in raw_headers.items()}
     return {
-        "base_url": ep["baseURL"],
-        "api_key": ep.get("apiKey", "dummy"),
+        "base_url": _expand_vars(ep["baseURL"]),
+        "api_key": _expand_vars(ep.get("apiKey", "dummy")),
         "model": _JUDGE_MODEL or (models[0] if models else "gpt-4o"),
         "headers": headers,
     }

@@ -5,18 +5,38 @@ from typing import Optional
 
 import yaml
 
+from pydantic import ValidationError
+
+from .schema import EvalCase, EvalCasesFile
+
+
+def _validate_config(data: dict, config_path: Path) -> EvalCasesFile:
+    try:
+        return EvalCasesFile.model_validate(data)
+    except ValidationError as exc:
+        raise ValueError(f"Invalid eval config at {config_path}: {exc}") from exc
+
+
+def _validate_case(data: dict, config_path: Path, case_key: str) -> EvalCase:
+    try:
+        return EvalCase.model_validate(data)
+    except ValidationError as exc:
+        raise ValueError(f"Invalid eval case '{case_key}' in {config_path}: {exc}") from exc
+
 
 def load_case(case_key: str, config_path: Path) -> dict:
     """Load a single case definition from the YAML config and resolve paths."""
-    with open(config_path, "r") as f:
-        config = yaml.safe_load(f)
+    config = load_config(config_path)
 
     cases = config.get("cases", {})
     if case_key not in cases:
         available = ", ".join(sorted(cases.keys()))
         raise ValueError(f"Case '{case_key}' not found in {config_path}. Available: {available}")
 
-    case = dict(cases[case_key])
+    case = _validate_case(dict(cases[case_key]), config_path, case_key).model_dump(
+        exclude_none=True,
+        exclude_defaults=True,
+    )
 
     # Resolve source_material path
     source_rel = case.get("source_material", "").strip()
@@ -36,7 +56,12 @@ def load_case(case_key: str, config_path: Path) -> dict:
 def load_config(config_path: Path) -> dict:
     """Load the full YAML config (top-level keys like adapter, cases, etc.)."""
     with open(config_path, "r") as f:
-        return yaml.safe_load(f)
+        data = yaml.safe_load(f)
+
+    return _validate_config(data, config_path).model_dump(
+        exclude_none=True,
+        exclude_defaults=True,
+    )
 
 
 def build_invoke_kwargs(case: dict, invoke_method: str) -> dict:

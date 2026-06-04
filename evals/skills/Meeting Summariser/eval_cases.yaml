@@ -7,7 +7,7 @@ num_runs: 3
 
 cases:
 
-  case_1:
+  case_1:  
     name: "Standard meeting transcript → structured summary"
     category: "Content Generation & Transformation"
     invoke_method: invoke_sequential
