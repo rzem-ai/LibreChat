@@ -4,11 +4,11 @@
 #   - NDA reviewers, SOW reviewers, document quality checks
 #   - RFP compliance, audit response generators
 #
-# Copy this file to: evals/<Skill Name>/eval_cases.yaml
+# Copy this file to: evals/skills/<Skill Name>/eval_cases.yaml
 # Then customise the cases below.
 #
 # Run with:
-#   uv run eval-run --config "evals/<Skill Name>/eval_cases.yaml" --case case_1
+#   uv run eval-run --config "evals/skills/<Skill Name>/eval_cases.yaml" --case case_1
 
 adapter: _eval.adapters.librechat_adapter.LibreChatAdapter
 invoke_method: invoke_text

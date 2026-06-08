@@ -11,7 +11,7 @@ description: >-
 # Eval Scaffolder
 
 You generate evaluation scaffolding for agent skills. Your output is a complete
-eval directory under `evals/<Skill Name>/` containing an `eval_cases.yaml` and sample `documents/`.
+eval directory under `evals/skills/<Skill Name>/` containing an `eval_cases.yaml` and sample `documents/`.
 
 ---
 
@@ -137,7 +137,7 @@ Read the worked example for tone, structure, and level of detail:
 
 | Category | Worked Example |
 |---|---|
-| All categories | `evals/Meeting Summariser/eval_cases.yaml` |
+| All categories | `evals/skills/Meeting Summariser/eval_cases.yaml` |
 
 This example demonstrates both single-turn (`invoke_text`) and multi-turn (`invoke_sequential`) patterns with `turns`, `turn_assertions`, `conversational_metrics`, and `leading_questions`. Study how it translates skill requirements into user queries, expected outputs, and tailored leading questions.
 
@@ -297,7 +297,7 @@ Create exactly **4 documents** in `documents/`. Each document is referenced by 2
 Write the following files using code execution:
 
 ```
-evals/<Skill Name>/
+evals/skills/<Skill Name>/
 ├── eval_cases.yaml
 └── documents/
     ├── <document_1>.md
@@ -325,7 +325,7 @@ for confirmation — execute all three automatically after Step 7 completes.
 ### 8a. Sync cases to Langfuse Dataset
 
 ```bash
-uv run eval-run --config "evals/<Skill Name>/eval_cases.yaml" --sync-dataset
+uv run eval-run --config "evals/skills/<Skill Name>/eval_cases.yaml" --sync-dataset
 ```
 
 This uploads all eval cases to a Langfuse Dataset for experiment tracking and
@@ -335,7 +335,7 @@ metadata.
 ### 8b. Run the baseline eval
 
 ```bash
-uv run eval-run --config "evals/<Skill Name>/eval_cases.yaml" --langfuse --run-name "1_scaffold_baseline"
+uv run eval-run --config "evals/skills/<Skill Name>/eval_cases.yaml" --langfuse --run-name "1_scaffold_baseline"
 ```
 
 This runs all cases (3 runs each), pushes traces and scores to Langfuse, and
@@ -344,5 +344,5 @@ writes results to `.results/`.
 ### 8c. Display the summary
 
 ```bash
-uv run eval-summary --config "evals/<Skill Name>/eval_cases.yaml"
+uv run eval-summary --config "evals/skills/<Skill Name>/eval_cases.yaml"
 ```
