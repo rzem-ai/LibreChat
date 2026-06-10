@@ -46,6 +46,7 @@ pods:
         image:
           tag: 'develop@sha256:44df013433739184a82cb21937f32929b729bc5dbf3c2f60dc082ce21a7e2581'
         env:
+          ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
           NODE_ENV: 'development'
           NODE_TLS_REJECT_UNAUTHORIZED: '0'
           DOMAIN_CLIENT: 'https://librechat-dev.ctk.au.deloitte.com'
