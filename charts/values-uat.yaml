@@ -24,5 +24,3 @@ pods:
       librechat:
         image:
           tag: 'uat'
-        secrets:
-          ADMIN_PANEL_URL: librechat-admin-panel-url-uat

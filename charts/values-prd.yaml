@@ -24,8 +24,6 @@ pods:
       librechat:
         image:
           tag: 'main'
-        secrets:
-          ADMIN_PANEL_URL: librechat-admin-panel-url-prd
         resources:
           requests:
             memory: "1Gi"
