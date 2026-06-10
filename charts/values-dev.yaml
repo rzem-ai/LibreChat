@@ -65,5 +65,6 @@ pods:
           JWT_REFRESH_SECRET: librechat-jwt-refresh-secret-dev
           CREDS_KEY: librechat-creds-key-dev
           CREDS_IV: librechat-creds-iv-dev
+          ADMIN_PANEL_URL: librechat-admin-panel-url-dev
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-dev
           OPENID_SESSION_SECRET: librechat-openid-session-secret-dev
