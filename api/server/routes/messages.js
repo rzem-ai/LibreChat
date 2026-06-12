@@ -2,7 +2,7 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { logger } = require('@librechat/data-schemas');
 const { ContentTypes } = require('librechat-data-provider');
-const { unescapeLaTeX, countTokens } = require('@librechat/api');
+const { unescapeLaTeX, countTokens, pushFeedbackScore, deleteFeedbackScore } = require('@librechat/api');
 const { findAllArtifacts, replaceArtifactContent } = require('~/server/services/Artifacts/update');
 const { requireJwtAuth, validateMessageReq } = require('~/server/middleware');
 const db = require('~/models');
@@ -390,6 +390,12 @@ router.put('/:conversationId/:messageId/feedback', validateMessageReq, async (re
       },
       { context: 'updateFeedback' },
     );
+
+    if (feedback) {
+      pushFeedbackScore({ messageId, feedback }).catch(() => {});
+    } else {
+      deleteFeedbackScore({ messageId }).catch(() => {});
+    }
 
     res.json({
       messageId,
