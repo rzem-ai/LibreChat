@@ -7,6 +7,12 @@ interface:
     create: true
     share: false
     public: false
+  remoteAgents:
+    use: true
+    create: true
+  skills:
+    use: true
+    create: true
 
 endpoints:
   # ========================================

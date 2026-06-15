@@ -17,6 +17,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+# Fixed namespace for UUID5 generation — ensures the same dataset/case_key pair
+# always produces the same item ID across runs, making dataset syncs idempotent.
 _DATASET_ITEM_NAMESPACE = uuid.UUID("a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d")
 
 
