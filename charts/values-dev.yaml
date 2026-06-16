@@ -31,7 +31,7 @@ pods:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
-          TOKEN_PROXY_MCP_URL: 'https://mcp-gateway-uat.ctk.au.deloitte.com/mcp'
+          TOKEN_PROXY_MCP_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
     containers:
       librechat:
         command:

@@ -9,21 +9,11 @@ interface:
     public: false
 
 endpoints:
-  # ========================================
-  # Built-in Anthropic (via nginx proxy)
-  # Region: US (eastus2)
-  # ========================================
   agents:
     recursionLimit: 25
     maxRecursionLimit: 50
     disableBuilder: false
     capabilities: ["deferred_tools", "execute_code", "file_search", "actions", "tools"]
-
-  anthropic:
-    streamRate: 25
-    titleConvo: true
-    titleModel: "claude-haiku-4-5"
-    titleMethod: "completion"
 
   # ========================================
   # Custom endpoints (OpenAI-compatible format)
@@ -88,17 +78,36 @@ endpoints:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
         Content-Type: "application/json"
 
+    # --- Anthropic (us) ---
+    # AWS
+    - name: "Anthropic US"
+      apiKey: "dummy"
+      baseURL: "${BASE_URL_VERTEXAI}"
+      models:
+        default:
+          - "claude-opus-4-7"
+          - "claude-sonnet-4-6"
+          - "claude-opus-4-6"
+        fetch: false
+      titleConvo: true
+      titleModel: "claude-sonnet-4-6"
+      modelDisplayLabel: "Anthropic US"
+      dropParams: [ "stop", "user", "frequency_penalty", "presence_penalty" ]
+      headers:
+        x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
+        Content-Type: "application/json"
+
 mcpServers: # https://www.librechat.ai/docs/features/mcp
   cleartrack-gateway:
     type: streamable-http
-    url: https://mcp-gateway-uat.ctk.au.deloitte.com/mcp
+    url: https://mcp-gw-dev.ctk.au.deloitte.com/mcp
     headers:
       Authorization: "Bearer ${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
     timeout: 3000
 
 mcpSettings:
   allowedDomains:
-    - mcp-gateway-uat.ctk.au.deloitte.com
+    - mcp-gw-dev.ctk.au.deloitte.com
 
 speech: # https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/speech
   speechTab:
