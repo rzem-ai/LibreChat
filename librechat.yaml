@@ -13,7 +13,7 @@ endpoints:
     recursionLimit: 25
     maxRecursionLimit: 50
     disableBuilder: false
-    capabilities: ["deferred_tools", "execute_code", "file_search", "actions", "tools"]
+    capabilities: ["deferred_tools", "execute_code", "file_search", "actions", "tools", "skills"]
 
   # ========================================
   # Custom endpoints (OpenAI-compatible format)
