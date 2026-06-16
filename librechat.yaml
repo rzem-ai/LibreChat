@@ -91,14 +91,14 @@ endpoints:
 mcpServers: # https://www.librechat.ai/docs/features/mcp
   cleartrack-gateway:
     type: streamable-http
-    url: https://mcp-gateway-uat.ctk.au.deloitte.com/mcp
+    url: https://mcp-gw-dev.ctk.au.deloitte.com/mcp
     headers:
       Authorization: "Bearer ${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
     timeout: 3000
 
 mcpSettings:
   allowedDomains:
-    - mcp-gateway-uat.ctk.au.deloitte.com
+    - mcp-gw-dev.ctk.au.deloitte.com
 
 speech: # https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/speech
   speechTab:
