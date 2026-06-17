@@ -41,7 +41,10 @@ export async function pushFeedbackScore({
     logger.warn(`[Langfuse] No trace found for message ${messageId}, skipping score push`);
     return;
   }
-  const parts = [feedback.tag?.key, feedback.text].filter((s): s is string => Boolean(s));
+  const tagKey = typeof (feedback as { tag?: unknown }).tag === 'string'
+    ? ((feedback as { tag: string }).tag)
+    : feedback.tag?.key;
+  const parts = [tagKey, feedback.text].filter((s): s is string => Boolean(s));
   const comment = parts.length > 0 ? parts.join(' — ') : undefined;
   try {
     const response = await fetch(`${cfg.baseUrl}/api/public/scores`, {
