@@ -87,9 +87,10 @@ describe('pushFeedbackScore', () => {
       messageId,
       feedback: {
         rating: 'thumbsDown',
-        tag: 'inaccurate',
+        tag: { key: 'inaccurate', label: 'com_ui_feedback_tag_inaccurate', direction: 'thumbsDown', icon: 'AlertCircle' },
         text: 'Wrong answer',
-      } as any,
+      },
+    });
 
     const body = JSON.parse(mockFetch.mock.calls[1][1]?.body as string);
     expect(body.comment).toBe('inaccurate — Wrong answer');
