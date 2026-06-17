@@ -72,33 +72,13 @@ class AgentAdapter(ABC):
         ...
 
     @abstractmethod
-    def invoke_multi_turn(self, turns: List[dict]) -> AgentResponse:
-        """Invoke the agent with a sequence of conversation turns.
-
-        Used for skills that require multi-step interaction (e.g., selecting
-        options before generating output).
-
-        Each turn dict has:
-            - role: "user" or "assistant"
-            - content: the message text
-
-        Args:
-            turns: Ordered list of conversation messages.
-
-        Returns:
-            AgentResponse with the final agent output and cumulative tool calls.
-        """
-        ...
-
-    @abstractmethod
     def invoke_sequential(
         self, turns: List[dict], source_text: Optional[str] = None,
     ) -> List[AgentResponse]:
         """Invoke the agent one turn at a time, collecting real responses.
 
-        Unlike invoke_multi_turn (which sends a pre-scripted conversation),
-        this method sends each user turn sequentially, waits for the real
-        agent response, and feeds it back as history for the next turn.
+        Sends each user turn sequentially, waits for the real agent response,
+        and feeds it back as history for the next turn.
 
         Args:
             turns: List of dicts with keys:
@@ -126,8 +106,7 @@ class AgentAdapter(ABC):
         """Dispatch to the appropriate invoke method by name.
 
         Args:
-            method: One of 'invoke_text', 'invoke_file', 'invoke_multi_turn',
-                    'invoke_sequential'.
+            method: One of 'invoke_text', 'invoke_file', 'invoke_sequential'.
             **kwargs: Arguments forwarded to the chosen method.
 
         Raises:
@@ -136,7 +115,6 @@ class AgentAdapter(ABC):
         dispatch = {
             "invoke_text": self.invoke_text,
             "invoke_file": self.invoke_file,
-            "invoke_multi_turn": self.invoke_multi_turn,
             "invoke_sequential": self.invoke_sequential,
         }
         if method not in dispatch:

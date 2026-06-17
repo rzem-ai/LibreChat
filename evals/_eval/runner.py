@@ -79,16 +79,6 @@ def build_evaluator_from_adapter(adapter: AgentAdapter) -> EvaluatorModel:
         if evaluator is not None:
             return evaluator
 
-    if hasattr(adapter, "_agent") and hasattr(adapter._agent, "model"):
-        model = adapter._agent.model
-
-        def generate_fn(prompt: str) -> str:
-            from agno.agent import Message
-            response = model.response(messages=[Message(role="user", content=prompt)])
-            return response.content if hasattr(response, "content") else str(response)
-
-        return EvaluatorModel(generate_fn, model_name="Azure-OpenAI-Judge")
-
     def fallback_generate(prompt: str) -> str:
         resp = adapter.invoke_text(prompt, "")
         return resp.content
@@ -433,7 +423,7 @@ def run_eval(
     if not adapter_path:
         raise ValueError(
             f"No 'adapter' key found in {config_path}. "
-            "Specify e.g. adapter: _eval.adapters.agno_adapter.AgnoAdapter"
+            "Specify e.g. adapter: _eval.adapters.librechat_adapter.LibreChatAdapter"
         )
     adapter = load_adapter(adapter_path)
 

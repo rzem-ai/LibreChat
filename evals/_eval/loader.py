@@ -79,10 +79,6 @@ def build_invoke_kwargs(case: dict, invoke_method: str) -> dict:
         file_paths = case.get("_source_file_paths", [])
         return {"query": case["user_query"], "file_paths": file_paths}
 
-    elif invoke_method == "invoke_multi_turn":
-        turns = case.get("turns", [])
-        return {"turns": turns}
-
     elif invoke_method == "invoke_sequential":
         turns = case.get("turns", [])
         source_path = case.get("_source_path")

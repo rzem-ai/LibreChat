@@ -13,7 +13,7 @@ export function getLangfuseConfig(): LangfuseConfig | null {
     return null;
   }
   const auth = Buffer.from(`${LANGFUSE_PUBLIC_KEY}:${LANGFUSE_SECRET_KEY}`).toString('base64');
-  config = { authHeader: `Basic ${auth}`, baseUrl: LANGFUSE_BASE_URL };
+  config = { authHeader: `Basic ${auth}`, baseUrl: LANGFUSE_BASE_URL.replace(/\/+$/, '') };
   return config;
 }
 

@@ -92,7 +92,6 @@ class EvalCase(BaseModel):
     invoke_method: Literal[
         "invoke_text",
         "invoke_file",
-        "invoke_multi_turn",
         "invoke_sequential",
     ] | None = None
     source_material: str | None = None
@@ -137,7 +136,6 @@ class EvalCasesFile(BaseModel):
     invoke_method: Literal[
         "invoke_text",
         "invoke_file",
-        "invoke_multi_turn",
         "invoke_sequential",
     ]
     num_runs: int = Field(gt=0)
@@ -162,7 +160,7 @@ class EvalCasesFile(BaseModel):
             if effective_method in {"invoke_text", "invoke_file"} and not case.user_query:
                 raise ValueError(f"{case_key}: user_query is required for {effective_method}")
 
-            if effective_method in {"invoke_multi_turn", "invoke_sequential"} and not case.turns:
+            if effective_method == "invoke_sequential" and not case.turns:
                 raise ValueError(f"{case_key}: turns are required for {effective_method}")
 
             if effective_method == "invoke_file" and not (

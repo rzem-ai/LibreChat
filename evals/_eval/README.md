@@ -50,7 +50,6 @@ _eval/
 ├── adapters/
 │   ├── __init__.py          # Exports AgentAdapter, AgentResponse
 │   ├── base.py              # Abstract AgentAdapter ABC + dataclasses
-│   ├── agno_adapter.py      # Agno framework implementation
 │   └── librechat_adapter.py # LibreChat OpenAI-compatible API adapter
 ├── templates/               # Category YAML templates (starting points)
 │   ├── content_generation.yaml
@@ -236,7 +235,6 @@ from _eval.adapters.base import AgentAdapter, AgentResponse, ToolCallRecord
 class MyAdapter(AgentAdapter):
     def invoke_text(self, query, context) -> AgentResponse: ...
     def invoke_file(self, query, file_paths) -> AgentResponse: ...
-    def invoke_multi_turn(self, turns) -> AgentResponse: ...
     def invoke_sequential(self, turns, source_text=None) -> List[AgentResponse]: ...
 ```
 
@@ -246,7 +244,6 @@ Then set `adapter: _eval.adapters.my_adapter.MyAdapter` in your YAML.
 
 | Adapter | Path | Description |
 |---------|------|-------------|
-| `AgnoAdapter` | `_eval.adapters.agno_adapter.AgnoAdapter` | Direct Agno framework calls with Azure OpenAI |
 | `LibreChatAdapter` | `_eval.adapters.librechat_adapter.LibreChatAdapter` | LibreChat OpenAI-compatible API (`/api/agents/v1/chat/completions`) |
 
 The LibreChat adapter requires these env vars: `LIBRECHAT_BASE_URL`, `LIBRECHAT_API_KEY`, `LIBRECHAT_AGENT_ID`.

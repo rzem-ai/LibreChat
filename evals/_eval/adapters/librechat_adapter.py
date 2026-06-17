@@ -139,10 +139,6 @@ class LibreChatAdapter(AgentAdapter):
         content = f"{query}\n\n---\nSource material:\n{context}"
         return self._call([{"role": "user", "content": content}])
 
-    def invoke_multi_turn(self, turns: List[dict]) -> AgentResponse:
-        messages = [{"role": t["role"], "content": t["content"]} for t in turns]
-        return self._call(messages)
-
     def invoke_sequential(
         self, turns: List[dict], source_text: Optional[str] = None,
     ) -> List[AgentResponse]:
