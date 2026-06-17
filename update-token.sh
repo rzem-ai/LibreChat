@@ -13,21 +13,21 @@ fi
 NEW_TOKEN="$1"
 ENV_FILE="$(dirname "$0")/.env"
 
-sed -i '' \
+sed -i.bak \
   "s|^LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION=.*|LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION=${NEW_TOKEN}|" \
-  "$ENV_FILE"
+  "$ENV_FILE" && rm -f "${ENV_FILE}.bak"
 
-sed -i '' \
+sed -i.bak \
   "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=${NEW_TOKEN}|" \
-  "$ENV_FILE"
+  "$ENV_FILE" && rm -f "${ENV_FILE}.bak"
 
-# sed -i '' \
+# sed -i.bak \
 #   "s|^RAG_OPENAI_API_KEY=.*|RAG_OPENAI_API_KEY=${NEW_TOKEN}|" \
-#   "$ENV_FILE"
+#   "$ENV_FILE" && rm -f "${ENV_FILE}.bak"
  
-# sed -i '' \
+# sed -i.bak \
 #   "s|^OPENAI_API_KEY=.*|OPENAI_API_KEY=${NEW_TOKEN}|" \
-#   "$ENV_FILE"
+#   "$ENV_FILE" && rm -f "${ENV_FILE}.bak"
 
 echo "Token updated in .env"
 

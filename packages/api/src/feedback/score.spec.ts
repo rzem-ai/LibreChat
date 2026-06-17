@@ -18,6 +18,7 @@ function scoreId(messageId: string): string {
 }
 
 let mockFetch: jest.MockedFunction<typeof fetch>;
+let originalFetch: typeof fetch;
 
 const FAKE_TRACE_ID = 'abc123def456789012345678abcdef00';
 
@@ -34,6 +35,7 @@ function mockTraceAndScore() {
 beforeEach(() => {
   resetLangfuseConfig();
   Object.assign(process.env, LANGFUSE_ENV);
+  originalFetch = global.fetch;
   mockFetch = jest.fn() as unknown as jest.MockedFunction<typeof fetch>;
   global.fetch = mockFetch;
 });
@@ -42,6 +44,7 @@ afterEach(() => {
   for (const key of Object.keys(LANGFUSE_ENV)) {
     delete process.env[key];
   }
+  global.fetch = originalFetch;
   jest.clearAllMocks();
 });
 

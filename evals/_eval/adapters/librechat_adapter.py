@@ -10,11 +10,13 @@ Env vars:
     LIBRECHAT_API_KEY   — Agent API key from LibreChat Settings → Data
     LIBRECHAT_AGENT_ID  — Agent ID to invoke
 
-Optional (for LLM judge — avoids routing judge prompts through the agent):
+    Optional (for LLM judge — avoids routing judge prompts through the agent):
     EVAL_JUDGE_ENDPOINT — Name of a custom endpoint in librechat.yaml to
                           use as the judge (e.g. "Azure AU"). Reads baseURL,
                           apiKey, headers, and first model from the config.
     EVAL_JUDGE_MODEL    — Override model from the endpoint config.
+    EVAL_JUDGE_DISABLE_TLS_VERIFY — Set to '1' to disable TLS verification for
+                          the judge client (needed when the running eval locally).
 """
 
 import json
@@ -37,6 +39,7 @@ _AGENT_ID = os.environ.get("LIBRECHAT_AGENT_ID", "")
 
 _JUDGE_MODEL = os.environ.get("EVAL_JUDGE_MODEL", "")
 _JUDGE_ENDPOINT_NAME = os.environ.get("EVAL_JUDGE_ENDPOINT", "")
+_JUDGE_DISABLE_TLS_VERIFY = os.environ.get("EVAL_JUDGE_DISABLE_TLS_VERIFY", "").strip() == "1"
 
 _LIBRECHAT_YAML = Path(__file__).resolve().parents[3] / "librechat.yaml"
 
@@ -175,7 +178,7 @@ class LibreChatAdapter(AgentAdapter):
             base_url=judge_cfg["base_url"],
             api_key=judge_cfg["api_key"],
             default_headers=judge_cfg["headers"] or None,
-            http_client=httpx.Client(verify=False),
+            http_client=httpx.Client(verify=not _JUDGE_DISABLE_TLS_VERIFY),
         )
         model = judge_cfg["model"]
 

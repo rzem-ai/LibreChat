@@ -1,3 +1,0 @@
-[console_scripts]
-eval-run = _eval.run_eval:main
-eval-summary = _eval.summarise_results:main

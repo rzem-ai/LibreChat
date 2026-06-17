@@ -58,7 +58,7 @@ def compile_skill(config_path: Path) -> Path:
         }
         rows.append(row)
 
-    rows.sort(key=lambda r: r["case_key"])
+    rows.sort(key=lambda r: (r["metadata"]["case_no"] is None, r["metadata"]["case_no"] or 0, r["case_key"]))
 
     with open(jsonl_path, "w") as f:
         for row in rows:

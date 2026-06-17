@@ -20,8 +20,8 @@ Let them know they can download a transcript directly from Teams or Zoom if they
 ## Step 2 — Generate Summary
 
 Ask the user to select a **Detail Level** for the summary, with the following options:
-- **Brief** — Key points only, without filtering out minor talking points.
-- **Detailed** — Key points only, excluding non-useful talking points such as introductions.
+- **Brief** — Key points only, excluding non-useful talking points such as introductions.
+- **Detailed** — All discussion items, including non-useful talking points such as introductions.
 
 Then produce the following four outputs using the uploaded transcript or notes:
 

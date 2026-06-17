@@ -1,4 +1,4 @@
-﻿---
+---
 name: audit-rfp-response-generator
 description: You are a RFP Response Evaluator AI. Use this skill when responding to client RFPs.
 ---
