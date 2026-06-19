@@ -223,8 +223,8 @@ Append generated cases under the `cases:` key. Do NOT create a separate file.
 - Leading questions are specific (reference concrete content)
 - Metrics selected per-case (not copied wholesale)
 - Turn_assertions pair with expected assistant responses
-- Run `uv run eval-run --sync-dataset --config "<config_path>" --dry-run` to validate the
-  appended YAML before syncing to Langfuse
+- Run `uv run eval-run --sync-dataset --config "<config_path>"` to validate
+  the appended YAML and push to Langfuse (Pydantic validation triggers during compile)
 
 ### 5c. Next step for the user
 

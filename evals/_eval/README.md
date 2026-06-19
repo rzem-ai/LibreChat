@@ -7,6 +7,7 @@ A wrapper-agnostic evaluation framework for testing agent skills using [DeepEval
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
 - [How It Works](#how-it-works)
+  - [Multi-turn Flow](#multi-turn-flow-invoke_sequential)
 - [Per-Skill Setup](#per-skill-setup)
 - [Available Metrics](#available-metrics)
 - [CLI Reference](#cli-reference)
@@ -87,6 +88,49 @@ Leading Q: Conciseness            0.90     ✓ OK  [0.90]
    - **Diagnostic metrics + leading question probes** — reported but never block
 5. **Results persistence** — Saved to `.results/` next to the YAML as per-case JSON files.
 
+### Multi-turn Flow (`invoke_sequential`)
+
+For cases with multiple turns, the execution follows this sequence:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  For each run (N times):                                        │
+│                                                                 │
+│  1. SEND TURNS SEQUENTIALLY                                     │
+│     ┌────────────────────────────────────────────────────┐      │
+│     │ Turn 0: user message (+source if attach_source)    │      │
+│     │   → Agent responds → save response, append to      │      │
+│     │     conversation history                           │      │
+│     │ Turn 1: next user message (history included)       │      │
+│     │   → Agent responds → save response, append...      │      │
+│     │ Turn N: ...                                        │      │
+│     └────────────────────────────────────────────────────┘      │
+│                                                                 │
+│  2. EVALUATE TURN ASSERTIONS (per-turn)                         │
+│     Each turn's response is checked against its                 │
+│     turn_assertions: expected_tools, contains_any,              │
+│     not_contains, leading_question                              │
+│                                                                 │
+│  3. EVALUATE CONVERSATIONAL METRICS (session-level)             │
+│     The full conversation (all user + assistant turns)           │
+│     is evaluated as a whole: conversation_completeness,          │
+│     conversational_role_consistency, etc.                        │
+│                                                                 │
+│  4. EVALUATE GATING/DIAGNOSTIC METRICS (on final turn)          │
+│     Standard metrics (hallucination, task_completion, etc.)      │
+│     run against the last assistant response only                 │
+│                                                                 │
+│  5. EVALUATE LEADING QUESTIONS (on final turn)                  │
+│     LLM-judged probes against the last response                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+Key points:
+- The adapter maintains **conversation history** — each turn sees all prior messages, simulating a real chat session
+- Source material is attached inline to whichever turn has `attach_source: true` (typically the first)
+- Turn assertions give per-turn visibility; conversational metrics give session-level verdicts
+- Standard gating metrics only evaluate the **final** response — use `conversation_completeness` for session-wide coverage
+
 ---
 
 ## Per-Skill Setup
@@ -116,7 +160,7 @@ Use the **eval-scaffolder** skill to generate this automatically:
 
 > "Use the eval-scaffolder skill to create eval cases for the `<Skill Name>` skill."
 
-The scaffolder produces **8 cases across 4 documents** (2 cases per document — one single-turn, one multi-turn) with varied complexity and focus.
+The scaffolder produces **8 cases across 4 documents** (2 cases per document — one single-turn, one multi-turn) with varied complexity and focus. Alternatively, copy a category template from `_eval/templates/` as a starting point for manual authoring.
 
 ---
 
