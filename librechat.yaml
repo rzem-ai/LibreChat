@@ -23,6 +23,7 @@ endpoints:
     - name: "Azure AU"
       apiKey: "dummy"
       baseURL: "${BASE_URL_AZURE_AU}"
+      version: "2024-10-21"
       models:
         default:
           - "gpt-4o-mini"
@@ -43,6 +44,7 @@ endpoints:
     - name: "Azure US"
       apiKey: "dummy"
       baseURL: "${BASE_URL_AZURE_US}"
+      version: "2024-10-21"
       models:
         default:
           - "gpt-41"
