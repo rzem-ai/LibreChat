@@ -28,9 +28,9 @@ pods:
           pullPolicy: Always
           tag: 'develop@sha256:382fec62a54aa6f55cf05a309d7eba7700a5afd85fd1c208b498f92754fd8a54'
         env:
-          TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
-          TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
-          TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_AZURE_AU_URL: 'https://au-openai-exp.ctk.au.deloitte.com/openai/v1'
+          TOKEN_PROXY_AZURE_US_URL: 'https://us-openai-exp.ctk.au.deloitte.com/openai/v1'
+          TOKEN_PROXY_VERTEXAI_URL: 'https://us-vertexai-exp.ctk.au.deloitte.com'
           TOKEN_PROXY_MCP_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
     containers:
       librechat:
@@ -47,19 +47,22 @@ pods:
           tag: 'develop@sha256:44df013433739184a82cb21937f32929b729bc5dbf3c2f60dc082ce21a7e2581'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
-          NODE_ENV: 'development'
-          NODE_TLS_REJECT_UNAUTHORIZED: '0'
-          DOMAIN_CLIENT: 'https://librechat-dev.ctk.au.deloitte.com'
-          DOMAIN_SERVER: 'https://librechat-dev.ctk.au.deloitte.com'
-          MONGO_DB: 'mdb-librechat-database-dev'
-          KEY_VAULT_NAME: 'kv-int-librechat-dev'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
           BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
+          DOMAIN_CLIENT: 'https://librechat-dev.ctk.au.deloitte.com'
+          DOMAIN_SERVER: 'https://librechat-dev.ctk.au.deloitte.com'
+          ENDPOINTS: 'anthropic,custom,agents'
+          KEY_VAULT_NAME: 'kv-int-librechat-dev'
+          MONGO_DB: 'mdb-librechat-database-dev'
+          NODE_ENV: 'development'
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
           OPENID_CLIENT_ID: '2075976d-5147-47b2-89d2-4ad060d19f85'
           OPENID_ISSUER: 'https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/v2.0/'
           OPENID_REQUIRED_ROLE: ''
-          ENDPOINTS: 'anthropic,custom,agents'
+          RAG_API_URL: 'http://localhost:8000'
+          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/'
+          RAG_PORT: '8000'
         secrets:
           MONGO_URI: librechat-dev-mdb-connection-string
           JWT_SECRET: librechat-jwt-secret-dev
