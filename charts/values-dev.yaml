@@ -26,10 +26,10 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'develop@sha256:382fec62a54aa6f55cf05a309d7eba7700a5afd85fd1c208b498f92754fd8a54'
+          tag: 'develop@sha256:28ad6ca153239956ccb521f04689a8201b3a5c54841c4f9f164454dbaa43311f'
         env:
-#          TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
-#          TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
+          #          TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
+          #          TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_MCP_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
     containers:
@@ -44,7 +44,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:44df013433739184a82cb21937f32929b729bc5dbf3c2f60dc082ce21a7e2581'
+          tag: 'develop@sha256:5749faec5e6fdc47e6e107b890f738fd01b0f5d86525328b81b347a722ac2d93'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
           NODE_ENV: 'development'
@@ -53,8 +53,8 @@ pods:
           DOMAIN_SERVER: 'https://librechat-dev.ctk.au.deloitte.com'
           MONGO_DB: 'mdb-librechat-database-dev'
           KEY_VAULT_NAME: 'kv-int-librechat-dev'
-#          BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
-#          BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
+          #          BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
+          #          BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
           OPENID_CLIENT_ID: '2075976d-5147-47b2-89d2-4ad060d19f85'
           OPENID_ISSUER: 'https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/v2.0/'
