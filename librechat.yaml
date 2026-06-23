@@ -90,8 +90,7 @@ endpoints:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
         Content-Type: "application/json"
 
-    # --- Anthropic (us) ---
-    # AWS
+    # --- Anthropic models (via VertexAI US gateway) ---
     - name: "Anthropic US"
       apiKey: "dummy"
       baseURL: "${BASE_URL_VERTEXAI}"
