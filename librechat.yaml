@@ -90,24 +90,6 @@ endpoints:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
         Content-Type: "application/json"
 
-    # --- Anthropic models (via VertexAI US gateway) ---
-    - name: "Anthropic US"
-      apiKey: "dummy"
-      baseURL: "${BASE_URL_VERTEXAI}"
-      models:
-        default:
-          - "claude-opus-4-7"
-          - "claude-sonnet-4-6"
-          - "claude-opus-4-6"
-        fetch: false
-      titleConvo: true
-      titleModel: "claude-sonnet-4-6"
-      modelDisplayLabel: "Anthropic US"
-      dropParams: [ "stop", "user", "frequency_penalty", "presence_penalty" ]
-      headers:
-        x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
-        Content-Type: "application/json"
-
 mcpServers: # https://www.librechat.ai/docs/features/mcp
   cleartrack-gateway:
     type: streamable-http
