@@ -28,8 +28,8 @@ pods:
           pullPolicy: Always
           tag: 'develop@sha256:382fec62a54aa6f55cf05a309d7eba7700a5afd85fd1c208b498f92754fd8a54'
         env:
-          TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080/openai/v1'
-          TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080/openai/v1'
+          TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_MCP_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
     containers:
