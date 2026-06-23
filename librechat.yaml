@@ -9,11 +9,21 @@ interface:
     public: false
 
 endpoints:
+  # ========================================
+  # Built-in Anthropic (via nginx proxy)
+  # Region: US (eastus2)
+  # ========================================
   agents:
     recursionLimit: 25
     maxRecursionLimit: 50
     disableBuilder: false
     capabilities: ["deferred_tools", "execute_code", "file_search", "actions", "tools", "skills"]
+
+  anthropic:
+    streamRate: 25
+    titleConvo: true
+    titleModel: "claude-haiku-4-5"
+    titleMethod: "completion"
 
   # ========================================
   # Custom endpoints (OpenAI-compatible format)
