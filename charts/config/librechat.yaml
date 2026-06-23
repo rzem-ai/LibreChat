@@ -17,7 +17,7 @@ endpoints:
     recursionLimit: 25
     maxRecursionLimit: 50
     disableBuilder: false
-    capabilities: ["deferred_tools", "execute_code", "file_search", "actions", "tools"]
+    capabilities: [ "deferred_tools", "execute_code", "file_search", "actions", "tools" ]
 
   anthropic:
     streamRate: 25
@@ -25,48 +25,79 @@ endpoints:
     titleModel: "claude-haiku-4-5"
     titleMethod: "completion"
 
+  azureOpenAI:
+    titleModel: "gpt-5.1-2025-11-13"
+    titleConvo: true
+    summarize: true
+    summaryModel: "gpt-5.1-2025-11-13"
+    stream: true
+    modelDisplayLabel: "Azure OpenAI"
+
+    groups:
+      - group: "azure-foundry-models"
+        apiKey: '${AZURE_API_KEY}'
+        instanceName: "dttau-myassist-uat-models-openai-aueast" # Derived from URL: https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/
+        version: "2025-01-01-preview"
+        models:
+          gpt-4.1-mini-2025-04-14:
+            deploymentName: "gpt-4.1-mini-2025-04-14"
+          gpt-4.1-2025-04-14:
+            deploymentName: "gpt-4.1-2025-04-14"
+          gpt-4.1-nano-2025-04-14:
+            deploymentName: "gpt-4.1-nano-2025-04-14"
+          gpt-4.1-nano-prompt-2025-04-14:
+            deploymentName: "gpt-4.1-nano-prompt-2025-04-14"
+          gpt-4o-2024-11-20:
+            deploymentName: "gpt-4o-2024-11-20"
+          gpt-4o-prompt-2024-11-20:
+            deploymentName: "gpt-4o-prompt-2024-11-20"
+          gpt-5.1-2025-11-13:
+            deploymentName: "gpt-5.1-2025-11-13"
+          gpt-5.2-2025-12-11:
+            deploymentName: "gpt-5.2-2025-12-11"
+
   # ========================================
   # Custom endpoints (OpenAI-compatible format)
   # ========================================
   custom:
-    # --- Azure AU (aus-east) ---
-    - name: "Azure AU"
-      apiKey: "dummy"
-      baseURL: "${BASE_URL_AZURE_AU}"
-      models:
-        default:
-          - "gpt-4o-mini"
-          - "gpt-4o"
-          - "gpt-41"
-          - "gpt-41-nano"
-          - "gpt-41-mini"
-        fetch: false
-      titleConvo: true
-      titleModel: "gpt-4o-mini"
-      modelDisplayLabel: "Azure AU"
-      dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
-      headers:
-        Content-Type: "application/json"
-
-    # --- Azure US (eastus) ---
-    - name: "Azure US"
-      apiKey: "dummy"
-      baseURL: "${BASE_URL_AZURE_US}"
-      models:
-        default:
-          - "gpt-41"
-          - "gpt-41-nano"
-          - "gpt-41-mini"
-          - "gpt-5-chat"
-          - "gpt-5-mini"
-          - "gpt-5-nano"
-        fetch: false
-      titleConvo: true
-      titleModel: "gpt-41-mini"
-      modelDisplayLabel: "Azure US"
-      dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
-      headers:
-        Content-Type: "application/json"
+    #    # --- Azure AU (aus-east) ---
+    #    - name: "Azure AU"
+    #      apiKey: "dummy"
+    #      baseURL: "${BASE_URL_AZURE_AU}"
+    #      models:
+    #        default:
+    #          - "gpt-4o-mini"
+    #          - "gpt-4o"
+    #          - "gpt-41"
+    #          - "gpt-41-nano"
+    #          - "gpt-41-mini"
+    #        fetch: false
+    #      titleConvo: true
+    #      titleModel: "gpt-4o-mini"
+    #      modelDisplayLabel: "Azure AU"
+    #      dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
+    #      headers:
+    #        Content-Type: "application/json"
+    #
+    #    # --- Azure US (eastus) ---
+    #    - name: "Azure US"
+    #      apiKey: "dummy"
+    #      baseURL: "${BASE_URL_AZURE_US}"
+    #      models:
+    #        default:
+    #          - "gpt-41"
+    #          - "gpt-41-nano"
+    #          - "gpt-41-mini"
+    #          - "gpt-5-chat"
+    #          - "gpt-5-mini"
+    #          - "gpt-5-nano"
+    #        fetch: false
+    #      titleConvo: true
+    #      titleModel: "gpt-41-mini"
+    #      modelDisplayLabel: "Azure US"
+    #      dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
+    #      headers:
+    #        Content-Type: "application/json"
 
     # --- VertexAI / Google (us-central1) ---
     # OpenAI-compatible endpoint, model names use google/ prefix
@@ -81,7 +112,7 @@ endpoints:
       titleConvo: true
       titleModel: "google/gemini-2.5-flash"
       modelDisplayLabel: "VertexAI US"
-      dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
+      dropParams: [ "stop", "user", "frequency_penalty", "presence_penalty" ]
       headers:
         Content-Type: "application/json"
 
