@@ -21,9 +21,9 @@ sed -i.bak \
   "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=${NEW_TOKEN}|" \
   "$ENV_FILE" && rm -f "${ENV_FILE}.bak"
 
-# sed -i.bak \
-#   "s|^RAG_OPENAI_API_KEY=.*|RAG_OPENAI_API_KEY=${NEW_TOKEN}|" \
-#   "$ENV_FILE" && rm -f "${ENV_FILE}.bak"
+sed -i.bak \
+  "s|^RAG_OPENAI_API_KEY=.*|RAG_OPENAI_API_KEY=${NEW_TOKEN}|" \
+  "$ENV_FILE" && rm -f "${ENV_FILE}.bak"
  
 # sed -i.bak \
 #   "s|^OPENAI_API_KEY=.*|OPENAI_API_KEY=${NEW_TOKEN}|" \
