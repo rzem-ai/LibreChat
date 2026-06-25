@@ -77,5 +77,4 @@ pods:
           CREDS_IV: librechat-creds-iv-dev
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-dev
           OPENID_SESSION_SECRET: librechat-openid-session-secret-dev
-          RAG_OPENAI_API_KEY: librechat-rag-openai-api-key-dev
           RAG_AZURE_OPENAI_API_KEY: librechat-rag-openai-api-key-dev
