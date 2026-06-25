@@ -4,7 +4,7 @@
 #
 # Purpose
 # -------
-# Synchronises changes from the public GitHub repository into the current destination 
+# Synchronises changes from the public GitHub repository into the current destination
 # repository by:
 #   1. Fetching from the public upstream repository
 #   2. Creating a sync branch in the destination repository
