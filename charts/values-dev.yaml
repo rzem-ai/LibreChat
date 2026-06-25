@@ -52,6 +52,8 @@ pods:
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
           DOMAIN_CLIENT: 'https://librechat-dev.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://librechat-dev.ctk.au.deloitte.com'
+          EMBEDDINGS_MODEL: 'text-embedding-3-small'
+          EMBEDDINGS_PROVIDER: 'azure'
           ENDPOINTS: 'agents,anthropic,azureOpenAI,custom'
           KEY_VAULT_NAME: 'kv-int-librechat-dev'
           MONGO_DB: 'mdb-librechat-database-dev'
@@ -61,8 +63,11 @@ pods:
           OPENID_ISSUER: 'https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/v2.0/'
           OPENID_REQUIRED_ROLE: ''
           RAG_API_URL: 'http://localhost:8000'
-          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/'
+          RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
+          RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
+          RAG_OPENAI_BASEURL: http://gateway-proxy:8081/
           RAG_PORT: '8000'
+          RAG_USE_FULL_CONTEXT: 'true'
         secrets:
           AZURE_API_KEY: librechat-azure-api-key
           MONGO_URI: librechat-dev-mdb-connection-string
@@ -72,3 +77,5 @@ pods:
           CREDS_IV: librechat-creds-iv-dev
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-dev
           OPENID_SESSION_SECRET: librechat-openid-session-secret-dev
+          RAG_OPENAI_API_KEY: librechat-rag-openai-api-key-dev
+          RAG_AZURE_OPENAI_API_KEY: librechat-rag-openai-api-key-dev
