@@ -65,7 +65,7 @@ pods:
           RAG_API_URL: 'http://localhost:8000'
           RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
           RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
-          RAG_OPENAI_BASEURL: http://gateway-proxy:8081/
+          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/'
           RAG_PORT: '8000'
           RAG_USE_FULL_CONTEXT: 'true'
         secrets:
