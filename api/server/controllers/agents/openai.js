@@ -30,6 +30,7 @@ const {
   createToolExecuteHandler,
   buildNonStreamingResponse,
   createOpenAIStreamTracker,
+  extractRetrievalSources,
   resolveAgentScopedSkillIds,
   createOpenAIContentAggregator,
   isChatCompletionValidationFailure,
@@ -762,9 +763,10 @@ const OpenAIChatCompletionController = async (req, res) => {
       }
     } else {
       // For non-streaming, wait for artifacts before sending response
+      let resolvedAttachments = [];
       if (artifactPromises.length > 0) {
         try {
-          await Promise.all(artifactPromises);
+          resolvedAttachments = (await Promise.all(artifactPromises)).filter(Boolean);
         } catch (artifactError) {
           logger.warn('[OpenAI API] Error processing artifacts:', artifactError);
         }
@@ -790,6 +792,9 @@ const OpenAIChatCompletionController = async (req, res) => {
         aggregator.toolCalls,
         usage,
       );
+      if (req.body.include_retrieval === true && resolvedAttachments.length > 0) {
+        response.retrieval = { sources: extractRetrievalSources(resolvedAttachments) };
+      }
       res.json(response);
       logger.debug(
         `[OpenAI API] Response ${responseId} completed in ${duration}ms (non-streaming)`,
