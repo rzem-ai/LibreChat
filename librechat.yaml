@@ -88,10 +88,12 @@ endpoints:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
         Content-Type: "application/json"
 
+# MCP Servers configuration
+# Filter restricts tools to: teams (Teams), research (IBISWorld), news (AFR)
 mcpServers: # https://www.librechat.ai/docs/features/mcp
   cleartrack-gateway:
     type: streamable-http
-    url: https://mcp-gw-dev.ctk.au.deloitte.com/mcp
+    url: "https://mcp-gw-dev.ctk.au.deloitte.com/mcp?toolsets=teams,research,news"
     headers:
       Authorization: "Bearer ${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
     timeout: 3000
