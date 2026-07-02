@@ -44,7 +44,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:5749faec5e6fdc47e6e107b890f738fd01b0f5d86525328b81b347a722ac2d93'
+          tag: 'develop@sha256:365ac79667c5225b56d39ce279a4750e3483b5e18d6f1c8778f8eb2a69e29e78'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
