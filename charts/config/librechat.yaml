@@ -121,7 +121,7 @@ endpoints:
 mcpServers: # https://www.librechat.ai/docs/features/mcp
   cleartrack-gateway:
     type: streamable-http
-    url: "https://mcp-gw-dev.ctk.au.deloitte.com/mcp?toolsets=teams,research,news"
+    url: "https://mcp-gw-dev.ctk.au.deloitte.com/mcp?${MCP_GATEWAY_TOOLSETS}"
     headers:
       Authorization: "Bearer ${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
     timeout: 3000
