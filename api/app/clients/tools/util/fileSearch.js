@@ -86,6 +86,7 @@ const primeFiles = async (options) => {
  * @returns
  */
 const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = false }) => {
+  let invocationCount = 0;
   return tool(
     async ({ query }) => {
       if (files.length === 0) {
@@ -155,11 +156,13 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
         ];
       }
 
+      const turnNumber = invocationCount++;
+
       const resultEntries = formattedResults
         .map(
           (result, index) =>
             `File: ${result.filename}${
-              fileCitations ? `\nAnchor: \\ue202turn0file${index}` : ''
+              fileCitations ? `\nAnchor: \\ue202turn${turnNumber}file${index}` : ''
             }\nRelevance: ${(1.0 - result.distance).toFixed(4)}\nContent: ${result.content}\n`,
         )
         .join('\n---\n');
