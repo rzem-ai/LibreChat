@@ -157,6 +157,13 @@ export async function applyContextToAgent({
   configServers?: Record<string, ParsedServerConfig>;
 }): Promise<void> {
   const hasFileSearchTool =
+    agent?.tools?.some((tool) =>
+      typeof tool === 'string' ? tool === 'file_search' : tool.name === 'file_search',
+    ) || agent?.toolDefinitions?.some((toolDef) => toolDef.name === 'file_search');
+
+  const baseInstructions = [hasFileSearchTool ? GLOBAL_AGENT_INSTRUCTIONS : undefined, agent.instructions]
+    .filter(Boolean)
+    .join('\n\n');
     agent.tools?.some((t) => (typeof t === 'string' ? t === 'file_search' : t?.name === 'file_search')) ||
     agent.toolDefinitions?.some((t) => t.name === 'file_search');
 
