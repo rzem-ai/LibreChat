@@ -167,8 +167,6 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
         )
         .join('\n---\n');
 
-      const formattedString = resultEntries;
-
       const sources = formattedResults.map((result) => ({
         type: 'file',
         fileId: result.file_id,
@@ -179,7 +177,7 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
         pageRelevance: result.page ? { [result.page]: 1.0 - result.distance } : {},
       }));
 
-      return [formattedString, { [Tools.file_search]: { sources, fileCitations } }];
+      return [resultEntries, { [Tools.file_search]: { sources, fileCitations } }];
     },
     {
       name: Tools.file_search,
