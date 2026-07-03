@@ -1,3 +1,9 @@
+# Map Authorization: ****** → $token for Azure OpenAI proxy
+map $http_authorization $token {
+    ~*^Bearer\s+(.+)$  $1;
+    default             "";
+}
+
 # ===========================================
 # Anthropic Gateway Proxy (port 8080)
 # Translates x-api-key → x-id-token
@@ -25,23 +31,18 @@ server {
 # ===========================================
 # Azure OpenAI Gateway Proxy (port 8081)
 # Used by RAG API for embeddings
-# Translates Authorization: Bearer <token> → x-id-token
+# Translates Authorization: ****** → x-id-token
 # ===========================================
 server {
     listen 8081;
 
     location / {
-        set $token "";
-        if ($http_authorization ~* "^Bearer (.+)$") {
-            set $token $1;
-        }
-
         proxy_set_header x-id-token $token;
         proxy_set_header Authorization "";
         proxy_set_header Content-Type $http_content_type;
-        proxy_set_header Host au-openai-exp.ctk.au.deloitte.com;
+        proxy_set_header Host ${AZURE_OPENAI_HOST};
 
-        proxy_pass https://au-openai-exp.ctk.au.deloitte.com/openai/v1/;
+        proxy_pass https://${AZURE_OPENAI_HOST}/openai/v1/;
         proxy_ssl_server_name on;
 
         proxy_buffering off;
