@@ -35,7 +35,52 @@ git clone https://github.com/Deloitte-Australia/tt-librechat.git
 cd tt-librechat
 ```
 
-## 2. Set up Caddyfile
+## 2. Initialize Submodules
+
+This repository uses Git submodules to include external dependencies. The `rag_api` submodule contains the RAG (Retrieval-Augmented Generation) API code from the [tt-librechat-rag](https://github.com/Deloitte-Australia/tt-librechat-rag) repository.
+
+### Initial Setup
+
+After cloning, initialize and clone the submodule:
+
+```zsh
+git submodule update --init --recursive
+```
+
+This will populate the `rag_api/` folder with the contents from the tt-librechat-rag repository on the `develop` branch.
+
+### Updating the Submodule
+
+To pull the latest changes from the submodule's remote repository:
+
+```zsh
+git submodule update --remote rag_api
+```
+
+Or to update all submodules:
+
+```zsh
+git submodule update --remote
+```
+
+### Checking Submodule Status
+
+To see the current commit of each submodule:
+
+```zsh
+git submodule status
+```
+
+### What is a Git Submodule?
+
+A submodule is a Git repository embedded inside another Git repository. It allows us to:
+- Keep the RAG API code in a separate repository with its own version control
+- Update the RAG API independently of the main LibreChat codebase
+- Pin to specific commits or track a branch (we track `develop` by default)
+
+The submodule appears as a folder (`rag_api/`) in this repository, but Git treats it as a pointer to a specific commit in the external repository.
+
+## 3. Set up Caddyfile
 
 This allows us to login via Azure Auth locally. 
 
@@ -53,7 +98,7 @@ hostname
 
 3. Update `Caddyfile` to replace YOURHOSTNAME so it uses your host from step 2 above plus `.local` (for example `AU-ABC123123.local {`).
 4. Share that hostname with Ally Fulton (so it can be added as an accepted redirect URL on App Reg). This custom domain enables Deloitte auth locally (instead of `localhost`), as localhost cannot be used for Deloitte App Reg redirect URLs.
-5. To check your hostname is accessible on your machine, run `ping yourhostname.local` (e.g. `ping AU-ABC123123.local`). If you get "unknown hostname", continue to *If you cannot ping your hostname*. If your ping returns responses (even timeout responses), continue to *3. Environment configuration*.
+5. To check your hostname is accessible on your machine, run `ping yourhostname.local` (e.g. `ping AU-ABC123123.local`). If you get "unknown hostname", continue to *If you cannot ping your hostname*. If your ping returns responses (even timeout responses), continue to *4. Environment configuration*.
 
 ### If you cannot ping your hostname
 1. Enable privileges on your machine
@@ -66,7 +111,7 @@ hostname
 8. Try `ping yourhostname.local` again
 
 
-## 3. Environment configuration (.env)
+## 4. Environment configuration (.env)
 
 Start by copying the example file:
 
