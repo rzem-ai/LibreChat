@@ -10,20 +10,8 @@ const fs = require('fs');
 const TARGET = '/app/packages/api/dist/index.js';
 const MARKER = 'GLOBAL_AGENT_INSTRUCTIONS';
 
-const INSTRUCTIONS = [
-  'You have access to uploaded documents via the file_search tool.',
-  'You MUST call file_search before answering any question — no exceptions.',
-  'Never answer from memory when documents are available.',
-  '',
-  'CRITICAL CITATION REQUIREMENT: After calling file_search, you MUST cite every',
-  'piece of information using the exact anchor markers from the tool results.',
-  'Each result contains an anchor line like "Anchor: \\ue202turn0file0".',
-  'You MUST output these escape sequences VERBATIM immediately after each statement',
-  'derived from that result. Do NOT substitute with †, footnotes, or markdown links.',
-  'Always mention the source filename before the anchor.',
-  'Example: "According to document.pdf, the term means X \\ue202turn0file0."',
-  'Never omit citations.',
-].join(' ');
+const INSTRUCTIONS =
+  'If, and only if, the file_search tool is available to you and uploaded documents are attached for this conversation, use file_search before answering questions that depend on those documents. If file_search is unavailable or no documents are attached, ignore these file-search-specific instructions and answer normally without attempting tool calls or document citations.\n\nCRITICAL CITATION REQUIREMENT: Only after successfully calling file_search and receiving results, cite every piece of information drawn from those results using the exact anchor markers from the tool output. Each result contains an anchor line like "Anchor: \\ue202turn0file0". Output ONLY the escape sequence (e.g. \\ue202turn0file0) verbatim — do NOT include surrounding text, parentheses, or the filename from the anchor line itself. Do NOT substitute with †, footnotes, or markdown links. Mention the source filename (from the "File:" line) in your own words before the anchor. Example: "According to document.pdf, the term means X \\ue202turn0file0." If file_search is not used or returns no results, do not fabricate citations.';
 
 try {
   let code = fs.readFileSync(TARGET, 'utf8');
