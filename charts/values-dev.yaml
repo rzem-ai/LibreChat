@@ -106,6 +106,9 @@ pods:
           RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
           RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/'
+        secrets:
+          AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
         service:
           enabled: true
           type: ClusterIP
