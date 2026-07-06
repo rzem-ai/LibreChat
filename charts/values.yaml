@@ -75,6 +75,7 @@ pods:
           OPENID_USE_END_SESSION_ENDPOINT: 'true'
           OPENID_BUTTON_LABEL: 'Login with SSO'
           OPENID_IMAGE_URL: '/assets/favicon.svg'
+          RAG_API_URL: 'http://127.0.0.1:8000'
         service:
           enabled: true
           type: ClusterIP
@@ -85,3 +86,15 @@ pods:
           paths:
             - path: /
               pathType: Prefix
+      rag-api:
+        image:
+          repository: 'tt-librechat/rag-api'
+          pullPolicy: Always
+          tag: 'main'
+        service:
+          enabled: true
+          type: ClusterIP
+          port: 8000
+          targetPort: 8000
+        ingress:
+          enabled: false

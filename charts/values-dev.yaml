@@ -62,7 +62,7 @@ pods:
           OPENID_CLIENT_ID: '2075976d-5147-47b2-89d2-4ad060d19f85'
           OPENID_ISSUER: 'https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/v2.0/'
           OPENID_REQUIRED_ROLE: ''
-          RAG_API_URL: 'http://rag-api:8000'
+          RAG_API_URL: 'http://127.0.0.1:8000'
           RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
           RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/'
@@ -86,3 +86,30 @@ pods:
           CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET: librechat-cleartrack-mcp-gateway-client-secret-dev
           # ClearTrack MCP Gateway (OLD LLM)
           CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET_LLM: librechat-cleartrack-mcp-gateway-client-secret-llm-dev
+      rag-api:
+        image:
+          repository: 'tt-librechat/rag-api'
+          pullPolicy: Always
+          tag: 'develop'
+        env:
+          VECTOR_DB_TYPE: 'pgvector'
+          POSTGRES_USE_UNIX_SOCKET: 'False'
+          POSTGRES_DB: 'pgdb_librechat_app_dev'
+          POSTGRES_USER: 'id-int-librechat-dev'
+          POSTGRES_AUTH_TYPE: 'ActiveDirectoryMsi'
+          MANAGED_IDENTITY_CLIENT_ID: '9058562c-9eeb-4608-8613-51bec6324181'
+          DB_HOST: 'vectordb'
+          DB_PORT: '5432'
+          RAG_HOST: '0.0.0.0'
+          RAG_PORT: '8000'
+          EMBEDDINGS_PROVIDER: 'azure'
+          RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
+          RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
+          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/'
+        service:
+          enabled: true
+          type: ClusterIP
+          port: 8000
+          targetPort: 8000
+        ingress:
+          enabled: false

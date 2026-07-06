@@ -24,3 +24,6 @@ pods:
       librechat:
         image:
           tag: 'uat'
+      rag-api:
+        image:
+          tag: 'uat'
