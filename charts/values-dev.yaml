@@ -98,7 +98,7 @@ pods:
           POSTGRES_USER: 'id-int-librechat-dev'
           POSTGRES_AUTH_TYPE: 'ActiveDirectoryMsi'
           MANAGED_IDENTITY_CLIENT_ID: '9058562c-9eeb-4608-8613-51bec6324181'
-          DB_HOST: 'vectordb'
+          DB_HOST: 'psql-ctspoke-npd.postgres.database.azure.com'
           DB_PORT: '5432'
           RAG_HOST: '0.0.0.0'
           RAG_PORT: '8000'
