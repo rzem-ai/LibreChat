@@ -6,6 +6,19 @@ FROM node:20-alpine AS node
 RUN apk upgrade --no-cache
 RUN apk add --no-cache jemalloc
 RUN apk add --no-cache python3 py3-pip uv
+RUN apk add --no-cache ca-certificates
+
+# Add Zscaler/Deloitte root certs early so npm/node and all later steps trust them
+COPY deloitte/certificates/deloitte.crt /usr/local/share/ca-certificates/deloitte.crt
+COPY deloitte/certificates/zscaler_root_ca.crt /usr/local/share/ca-certificates/zscaler_root_ca.crt
+RUN update-ca-certificates
+
+# NODE_EXTRA_CA_CERTS only supports a single file path, so bundle both certs together
+RUN cat /usr/local/share/ca-certificates/deloitte.crt \
+    /usr/local/share/ca-certificates/zscaler_root_ca.crt \
+    > /etc/ssl/certs/combined-ca-bundle.crt
+
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/combined-ca-bundle.crt
 
 # Set environment variable to use jemalloc
 ENV LD_PRELOAD=/usr/lib/libjemalloc.so.2

@@ -81,9 +81,8 @@ pods:
           CREDS_IV: librechat-creds-iv-dev
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-dev
           OPENID_SESSION_SECRET: librechat-openid-session-secret-dev
-          RAG_AZURE_OPENAI_API_KEY: librechat-rag-openai-api-key-dev
+          RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
           # ClearTrack MCP Gateway
           CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET: librechat-cleartrack-mcp-gateway-client-secret-dev
           # ClearTrack MCP Gateway (OLD LLM)
           CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET_LLM: librechat-cleartrack-mcp-gateway-client-secret-llm-dev
-
