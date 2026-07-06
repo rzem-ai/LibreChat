@@ -27,16 +27,20 @@ pods:
     replicas: 1
     containers:
       librechat:
+        command:
+          - /bin/sh
+          - -c
+          - exec npm run backend
         livenessProbe:
           httpGet:
-            path: /api/health
+            path: /health
             port: 3080
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
-            path: /api/health
+            path: /health
             port: 3080
           initialDelaySeconds: 15
           periodSeconds: 10

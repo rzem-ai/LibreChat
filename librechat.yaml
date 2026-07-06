@@ -18,7 +18,7 @@ endpoints:
     recursionLimit: 25
     maxRecursionLimit: 50
     disableBuilder: false
-    capabilities: ["deferred_tools", "execute_code", "file_search", "actions", "tools"]
+    capabilities: ["deferred_tools", "execute_code", "file_search", "actions", "tools", "skills"]
     minRelevanceScore: 0.3
 
   anthropic:
@@ -34,7 +34,7 @@ endpoints:
     # --- Azure AU (aus-east) ---
     - name: "Azure AU"
       apiKey: "dummy"
-      baseURL: "https://au-openai-exp.ctk.au.deloitte.com/openai/v1"
+      baseURL: "${BASE_URL_AZURE_AU}"
       models:
         default:
           - "gpt-4o-mini"
@@ -54,7 +54,7 @@ endpoints:
     # --- Azure US (eastus) ---
     - name: "Azure US"
       apiKey: "dummy"
-      baseURL: "https://us-openai-exp.ctk.au.deloitte.com/openai/v1"
+      baseURL: "${BASE_URL_AZURE_US}"
       models:
         default:
           - "gpt-41"
@@ -74,9 +74,9 @@ endpoints:
 
     # --- VertexAI / Google (us-central1) ---
     # OpenAI-compatible endpoint, model names use google/ prefix
-    - name: "VertexAI"
+    - name: "VertexAI US"
       apiKey: "dummy"
-      baseURL: "https://us-vertexai-exp.ctk.au.deloitte.com"
+      baseURL: "${BASE_URL_VERTEXAI}"
       models:
         default:
           - "google/gemini-2.5-flash"
@@ -84,23 +84,43 @@ endpoints:
         fetch: false
       titleConvo: true
       titleModel: "google/gemini-2.5-flash"
-      modelDisplayLabel: "VertexAI"
+      modelDisplayLabel: "VertexAI US"
       dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
       headers:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
         Content-Type: "application/json"
 
 mcpServers: # https://www.librechat.ai/docs/features/mcp
-  cleartrack-gateway:
+  cleartrack-gateway-new-appreg:
+    # See documentation: https://github.com/Deloitte-Australia/ea-mcp-gateway/blob/feature/prototype/docs/MCP_Gateway_Wiki.md
     type: streamable-http
-    url: https://mcp-gateway-uat.ctk.au.deloitte.com/mcp
-    headers:
-      Authorization: "Bearer ${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
-    timeout: 3000
+    url: https://mcp-gw-dev.ctk.au.deloitte.com/mcp
+    oauth:
+      authorization_url: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/authorize
+      token_url: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/token
+      client_id: "${CLEARTRACK_MCP_GATEWAY_CLIENT_ID}"
+      client_secret: "${CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET}"
+      #redirect_uri: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/callback
+      scope: 'Channel.ReadBasic.All ChannelMember.Read.All Group.Read.All Team.ReadBasic.All User.Read.All Files.Read.All'
+#    oauth_headers:
+#      X-Custom-Header: 'custom_value'
+  cleartrack-gateway-llm-appreg:
+    # See documentation: https://github.com/Deloitte-Australia/ea-mcp-gateway/blob/feature/prototype/docs/MCP_Gateway_Wiki.md
+    type: streamable-http
+    url: https://mcp-gw-dev.ctk.au.deloitte.com/mcp
+    oauth:
+      authorization_url: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/authorize
+      token_url: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/token
+      client_id: "${CLEARTRACK_MCP_GATEWAY_CLIENT_ID_LLM}"
+      client_secret: "${CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET_LLM}"
+      #redirect_uri: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/callback
+      scope: 'Channel.ReadBasic.All ChannelMember.Read.All Group.Read.All Team.ReadBasic.All User.Read.All Files.Read.All'
+#    oauth_headers:
+#      X-Custom-Header: 'custom_value'
 
 mcpSettings:
   allowedDomains:
-    - mcp-gateway-uat.ctk.au.deloitte.com
+    - mcp-gw-dev.ctk.au.deloitte.com
 
 speech: # https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/speech
   speechTab:

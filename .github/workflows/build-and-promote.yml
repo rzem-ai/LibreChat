@@ -45,6 +45,7 @@ on:
       - api/**
       - client/**
       - packages/**
+      - llm_gateway_proxy/**
       - Dockerfile
       - package.json
 # Limit to one concurrent workflow run per workflow, event, and ref
@@ -78,7 +79,12 @@ jobs:
           - imageNameAlias: librechat
             buildContext: .
             dockerFilePath: Dockerfile
-            yamlKeyPath: '.image'
+            yamlKeyPath: '.pods.librechat.containers.librechat.image'
+          # LLM Gateway proxy image — built from llm_gateway_proxy Dockerfile (serves on port 8081)
+          - imageNameAlias: llm-gateway-proxy
+            buildContext: llm_gateway_proxy
+            dockerFilePath: llm_gateway_proxy/Dockerfile
+            yamlKeyPath: '.pods.librechat.initContainers.llm-gateway-proxy.image'
             # buildArgs: |
             #   ARG1=value
             # unitTestScript: |
