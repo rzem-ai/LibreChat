@@ -25,10 +25,14 @@ class AgentResponse:
     Attributes:
         content: The text output from the agent (required — this is what metrics evaluate).
         tools_called: List of tool calls the agent made during execution.
+        retrieval_context: RAG chunks retrieved by the agent (populated when the underlying
+            platform exposes retrieved sources, e.g. via include_retrieval=True). Empty list
+            when not available — runner falls back to source_material for DeepEval context.
         raw: Optional raw response object from the underlying framework (for debugging).
     """
     content: str
     tools_called: List[ToolCallRecord] = field(default_factory=list)
+    retrieval_context: List[str] = field(default_factory=list)
     raw: Optional[Any] = None
 
 

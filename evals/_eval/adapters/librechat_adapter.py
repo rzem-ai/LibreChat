@@ -26,7 +26,7 @@ from typing import List, Optional
 
 import httpx
 import yaml
-from openai import OpenAI
+from openai import OpenAI  # used for the judge client only
 from dotenv import load_dotenv
 
 from .base import AgentAdapter, AgentResponse, ToolCallRecord
@@ -87,17 +87,24 @@ def _resolve_judge_config() -> Optional[dict]:
 class LibreChatAdapter(AgentAdapter):
     """Adapter that calls a LibreChat agent via its OpenAI-compatible API."""
 
-    def __init__(self):
+    def __init__(self, agent_id: Optional[str] = None):
         if not _API_KEY:
             raise ValueError("LIBRECHAT_API_KEY env var is required for LibreChatAdapter")
-        if not _AGENT_ID:
-            raise ValueError("LIBRECHAT_AGENT_ID env var is required for LibreChatAdapter")
-
-        self._client = OpenAI(
+        raw_agent_id = agent_id or _AGENT_ID
+        resolved_agent_id = _expand_vars(raw_agent_id) if raw_agent_id else ""
+        if not resolved_agent_id:
+            raise ValueError(
+                "No agent_id specified. Set LIBRECHAT_AGENT_ID or add 'agent_id:' to eval_cases.yaml"
+            )
+        self._model = resolved_agent_id
+        self._http_client = httpx.Client(
             base_url=f"{_BASE_URL.rstrip('/')}/api/agents/v1",
-            api_key=_API_KEY,
+            headers={
+                "Authorization": f"Bearer {_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            timeout=120,
         )
-        self._model = _AGENT_ID
 
     def get_agent_metadata(self) -> dict:
         """Fetch agent metadata from LibreChat's remote models endpoint."""
@@ -189,26 +196,34 @@ class LibreChatAdapter(AgentAdapter):
         return EvaluatorModel(generate_fn, model_name=f"Direct-Judge-{model}")
 
     def _call(self, messages: list) -> AgentResponse:
-        response = self._client.chat.completions.create(
-            model=self._model,
-            messages=messages,
-            stream=False,
+        # TODO: add retry/backoff for transient 5xx — a single failure aborts the whole eval run
+        resp = self._http_client.post(
+            "/chat/completions",
+            json={"model": self._model, "messages": messages, "stream": False, "include_retrieval": True},
         )
-        choice = response.choices[0]
-        content = choice.message.content or ""
+        resp.raise_for_status()
+        data = resp.json()
+
+        choice = data["choices"][0]
+        content = choice["message"].get("content") or ""
 
         tools_called = []
-        if choice.message.tool_calls:
-            for tc in choice.message.tool_calls:
-                args = tc.function.arguments
-                if isinstance(args, str):
-                    try:
-                        args = json.loads(args)
-                    except (json.JSONDecodeError, TypeError):
-                        args = {}
-                tools_called.append(ToolCallRecord(
-                    name=tc.function.name,
-                    input_parameters=args if isinstance(args, dict) else {},
-                ))
+        for tc in choice["message"].get("tool_calls") or []:
+            args = tc.get("function", {}).get("arguments", {})
+            if isinstance(args, str):
+                try:
+                    args = json.loads(args)
+                except (json.JSONDecodeError, TypeError):
+                    args = {}
+            tools_called.append(ToolCallRecord(
+                name=tc.get("function", {}).get("name", ""),
+                input_parameters=args if isinstance(args, dict) else {},
+            ))
 
-        return AgentResponse(content=content, tools_called=tools_called, raw=response)
+        retrieval = data.get("retrieval", {})
+        retrieval_context = [
+            s["content"] for s in retrieval.get("sources", [])
+            if isinstance(s, dict) and s.get("content")
+        ]
+
+        return AgentResponse(content=content, tools_called=tools_called, retrieval_context=retrieval_context, raw=data)

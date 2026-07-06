@@ -58,12 +58,12 @@ NUM_RUNS = 5  # Each case is evaluated this many times; results are averaged.
 # Adapter / evaluator wiring
 # ---------------------------------------------------------------------------
 
-def load_adapter(adapter_path: str) -> AgentAdapter:
+def load_adapter(adapter_path: str, agent_id: str | None = None) -> AgentAdapter:
     """Dynamically import and instantiate an adapter class from a dotted path."""
     module_path, class_name = adapter_path.rsplit(".", 1)
     module = importlib.import_module(module_path)
     adapter_cls = getattr(module, class_name)
-    return adapter_cls()
+    return adapter_cls(agent_id=agent_id) if agent_id else adapter_cls()
 
 
 def build_evaluator_from_adapter(adapter: AgentAdapter) -> EvaluatorModel:
@@ -156,12 +156,14 @@ def run_single(
 
     # --- Build LLMTestCase ---
     source_material = get_source_text(case)
+    retrieved_chunks = agent_response.retrieval_context
+    actual_retrieval = retrieved_chunks or ([source_material] if source_material else None)
     test_case_kwargs = dict(
         name=f"{case_key}: {case.get('name', case_key)}",
         input=case["user_query"],
         actual_output=agent_response.content,
         context=[source_material] if source_material else None,
-        retrieval_context=[source_material] if source_material else None,
+        retrieval_context=actual_retrieval,
         expected_output=case.get("expected_output"),
     )
     if expected_tools:
@@ -319,12 +321,15 @@ def run_single_sequential(
         for resp in responses for t in resp.tools_called
     ]
 
+    all_retrieved = [chunk for resp in responses for chunk in resp.retrieval_context]
+    actual_retrieval = all_retrieved or ([source_material] if source_material else None)
+
     test_case_kwargs = dict(
         name=f"{case_key}: {case.get('name', case_key)}",
         input=case.get("user_query", yaml_turns[0]["content"] if yaml_turns else ""),
         actual_output=final_response.content,
         context=[source_material] if source_material else None,
-        retrieval_context=[source_material] if source_material else None,
+        retrieval_context=actual_retrieval,
         expected_output=case.get("expected_output"),
     )
     if expected_tools:
@@ -425,7 +430,7 @@ def run_eval(
             f"No 'adapter' key found in {config_path}. "
             "Specify e.g. adapter: _eval.adapters.librechat_adapter.LibreChatAdapter"
         )
-    adapter = load_adapter(adapter_path)
+    adapter = load_adapter(adapter_path, agent_id=config.get("agent_id"))
 
     # --- Resolve invoke method ---
     invoke_method = case.get("invoke_method", config.get("invoke_method", "invoke_text"))

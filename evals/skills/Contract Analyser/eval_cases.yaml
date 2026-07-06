@@ -2,6 +2,7 @@
 # Category: Data Classification & Extraction
 
 adapter: _eval.adapters.librechat_adapter.LibreChatAdapter
+agent_id: ${GENERAL_BUSINESS_ASSISTANT_AGENT_ID}
 invoke_method: invoke_text
 num_runs: 3
 

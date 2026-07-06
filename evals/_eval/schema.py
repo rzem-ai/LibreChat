@@ -1,6 +1,6 @@
 """Pydantic models for eval_cases.yaml validation."""
 
-from typing import Annotated, Any, Literal, Union
+from typing import Annotated, Any, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -133,6 +133,7 @@ class EvalCasesFile(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     adapter: str
+    agent_id: Optional[str] = None
     invoke_method: Literal[
         "invoke_text",
         "invoke_file",

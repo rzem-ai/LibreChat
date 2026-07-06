@@ -25,7 +25,9 @@ from deepeval.metrics import (
     AnswerRelevancyMetric,
     SummarizationMetric,
     FaithfulnessMetric,
+    ContextualPrecisionMetric,
     ContextualRecallMetric,
+    ContextualRelevancyMetric,
     BiasMetric,
     ToxicityMetric,
     GEval,
@@ -48,7 +50,9 @@ VALID_METRICS = {
     "answer_relevancy",
     "summarization",
     "faithfulness",
+    "contextual_precision",
     "contextual_recall",
+    "contextual_relevancy",
     "bias",
     "toxicity",
     "conversation_completeness",
@@ -72,7 +76,9 @@ DEFAULT_THRESHOLDS = {
     "answer_relevancy": 0.5,
     "summarization": 0.5,
     "faithfulness": 0.5,
+    "contextual_precision": 0.5,
     "contextual_recall": 0.5,
+    "contextual_relevancy": 0.5,
     "bias": 0.5,
     "toxicity": 0.5,
     "conversation_completeness": 0.5,
@@ -160,7 +166,13 @@ def _metric_registry(evaluator: EvaluatorModel) -> dict:
         "faithfulness": lambda t: FaithfulnessMetric(
             threshold=t, model=evaluator, strict_mode=False
         ),
+        "contextual_precision": lambda t: ContextualPrecisionMetric(
+            threshold=t, model=evaluator
+        ),
         "contextual_recall": lambda t: ContextualRecallMetric(
+            threshold=t, model=evaluator
+        ),
+        "contextual_relevancy": lambda t: ContextualRelevancyMetric(
             threshold=t, model=evaluator
         ),
         "bias": lambda t: BiasMetric(
@@ -211,7 +223,6 @@ def build_leading_question_probes(
             evaluation_params=[
                 LLMTestCaseParams.INPUT,
                 LLMTestCaseParams.ACTUAL_OUTPUT,
-                LLMTestCaseParams.CONTEXT,
             ],
             model=evaluator,
             threshold=threshold,

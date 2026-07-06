@@ -8,6 +8,7 @@ dependencies = [
     "python-dotenv",
     "rich",
     "python-docx",
+    "markitdown[pdf,docx,pptx,xlsx]>=0.1.0",
     "openai",
     "langfuse>=4.5.1",
     "plotly",
