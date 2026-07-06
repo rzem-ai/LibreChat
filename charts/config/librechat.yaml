@@ -60,44 +60,44 @@ endpoints:
   # Custom endpoints (OpenAI-compatible format)
   # ========================================
   custom:
-    #    # --- Azure AU (aus-east) ---
-    #    - name: "Azure AU"
-    #      apiKey: "dummy"
-    #      baseURL: "${BASE_URL_AZURE_AU}"
-    #      models:
-    #        default:
-    #          - "gpt-4o-mini"
-    #          - "gpt-4o"
-    #          - "gpt-41"
-    #          - "gpt-41-nano"
-    #          - "gpt-41-mini"
-    #        fetch: false
-    #      titleConvo: true
-    #      titleModel: "gpt-4o-mini"
-    #      modelDisplayLabel: "Azure AU"
-    #      dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
-    #      headers:
-    #        Content-Type: "application/json"
-    #
-    #    # --- Azure US (eastus) ---
-    #    - name: "Azure US"
-    #      apiKey: "dummy"
-    #      baseURL: "${BASE_URL_AZURE_US}"
-    #      models:
-    #        default:
-    #          - "gpt-41"
-    #          - "gpt-41-nano"
-    #          - "gpt-41-mini"
-    #          - "gpt-5-chat"
-    #          - "gpt-5-mini"
-    #          - "gpt-5-nano"
-    #        fetch: false
-    #      titleConvo: true
-    #      titleModel: "gpt-41-mini"
-    #      modelDisplayLabel: "Azure US"
-    #      dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
-    #      headers:
-    #        Content-Type: "application/json"
+       # --- Azure AU (aus-east) ---
+       - name: "Azure AU"
+         apiKey: "dummy"
+         baseURL: "${BASE_URL_AZURE_AU}"
+         models:
+           default:
+             - "gpt-4o-mini"
+             - "gpt-4o"
+             - "gpt-41"
+             - "gpt-41-nano"
+             - "gpt-41-mini"
+           fetch: false
+         titleConvo: true
+         titleModel: "gpt-4o-mini"
+         modelDisplayLabel: "Azure AU"
+         dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
+         headers:
+           Content-Type: "application/json"
+    
+       # --- Azure US (eastus) ---
+       - name: "Azure US"
+         apiKey: "dummy"
+         baseURL: "${BASE_URL_AZURE_US}"
+         models:
+           default:
+             - "gpt-41"
+             - "gpt-41-nano"
+             - "gpt-41-mini"
+             - "gpt-5-chat"
+             - "gpt-5-mini"
+             - "gpt-5-nano"
+           fetch: false
+         titleConvo: true
+         titleModel: "gpt-41-mini"
+         modelDisplayLabel: "Azure US"
+         dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
+         headers:
+           Content-Type: "application/json"
 
     # --- VertexAI / Google (us-central1) ---
     # OpenAI-compatible endpoint, model names use google/ prefix
