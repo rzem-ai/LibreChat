@@ -122,7 +122,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
   cleartrack-gateway-new-appreg:
     # See documentation: https://github.com/Deloitte-Australia/ea-mcp-gateway/blob/feature/prototype/docs/MCP_Gateway_Wiki.md
     type: streamable-http
-    url: https://mcp-gw-dev.ctk.au.deloitte.com/mcp?${MCP_GATEWAY_TOOLSETS}
+    url: https://mcp-gw-dev.ctk.au.deloitte.com/mcp?toolsets=${MCP_GATEWAY_TOOLSETS}
     oauth:
       authorization_url: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/authorize
       token_url: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/token
@@ -135,7 +135,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
   cleartrack-gateway-llm-appreg:
     # See documentation: https://github.com/Deloitte-Australia/ea-mcp-gateway/blob/feature/prototype/docs/MCP_Gateway_Wiki.md
     type: streamable-http
-    url: https://mcp-gw-dev.ctk.au.deloitte.com/mcp?${MCP_GATEWAY_TOOLSETS}
+    url: https://mcp-gw-dev.ctk.au.deloitte.com/mcp?toolsets=${MCP_GATEWAY_TOOLSETS}
     oauth:
       authorization_url: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/authorize
       token_url: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/token

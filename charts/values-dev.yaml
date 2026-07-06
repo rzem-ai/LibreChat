@@ -56,7 +56,7 @@ pods:
           EMBEDDINGS_PROVIDER: 'azure'
           ENDPOINTS: 'agents,anthropic,azureOpenAI,custom'
           KEY_VAULT_NAME: 'kv-int-librechat-dev'
-          MCP_GATEWAY_TOOLSETS: 'toolsets=teams,research,news'
+          MCP_GATEWAY_TOOLSETS: 'teams,research,news'
           MONGO_DB: 'mdb-librechat-database-dev'
           NODE_ENV: 'development'
           NODE_TLS_REJECT_UNAUTHORIZED: '0'
