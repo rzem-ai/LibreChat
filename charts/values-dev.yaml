@@ -44,7 +44,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:5749faec5e6fdc47e6e107b890f738fd01b0f5d86525328b81b347a722ac2d93'
+          tag: 'develop@sha256:67b938ff1e1f96f2e20847a789c75a79eab89cc68d50b431382ee2f460e3b9c5'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
@@ -69,6 +69,10 @@ pods:
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/'
           RAG_PORT: '8000'
           RAG_USE_FULL_CONTEXT: 'true'
+          # ClearTrack MCP Gateway
+          CLEARTRACK_MCP_GATEWAY_CLIENT_ID: '3e5d28f1-91a3-4748-ad73-5fa544f1d3e2'
+          # ClearTrack MCP Gateway (OLD LLM)
+          CLEARTRACK_MCP_GATEWAY_CLIENT_ID_LLM: '498ce9fd-195b-40c5-82f1-8fc4a6d00d88'
         secrets:
           AZURE_API_KEY: librechat-azure-api-key
           MONGO_URI: librechat-dev-mdb-connection-string
@@ -78,4 +82,8 @@ pods:
           CREDS_IV: librechat-creds-iv-dev
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-dev
           OPENID_SESSION_SECRET: librechat-openid-session-secret-dev
-          RAG_AZURE_OPENAI_API_KEY: librechat-rag-openai-api-key-dev
+          RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          # ClearTrack MCP Gateway
+          CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET: librechat-cleartrack-mcp-gateway-client-secret-dev
+          # ClearTrack MCP Gateway (OLD LLM)
+          CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET_LLM: librechat-cleartrack-mcp-gateway-client-secret-llm-dev

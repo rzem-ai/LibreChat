@@ -91,12 +91,32 @@ endpoints:
 # MCP Servers configuration
 # Filter restricts tools to: teams (Teams), research (IBISWorld), news (AFR)
 mcpServers: # https://www.librechat.ai/docs/features/mcp
-  cleartrack-gateway:
+  cleartrack-gateway-new-appreg:
+    # See documentation: https://github.com/Deloitte-Australia/ea-mcp-gateway/blob/feature/prototype/docs/MCP_Gateway_Wiki.md
     type: streamable-http
     url: "https://mcp-gw-dev.ctk.au.deloitte.com/mcp?${MCP_GATEWAY_TOOLSETS}"
-    headers:
-      Authorization: "Bearer ${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
-    timeout: 3000
+    oauth:
+      authorization_url: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/authorize
+      token_url: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/token
+      client_id: "${CLEARTRACK_MCP_GATEWAY_CLIENT_ID}"
+      client_secret: "${CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET}"
+      #redirect_uri: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/callback
+      scope: 'Channel.ReadBasic.All ChannelMember.Read.All Group.Read.All Team.ReadBasic.All User.Read.All Files.Read.All'
+#    oauth_headers:
+#      X-Custom-Header: 'custom_value'
+  cleartrack-gateway-llm-appreg:
+    # See documentation: https://github.com/Deloitte-Australia/ea-mcp-gateway/blob/feature/prototype/docs/MCP_Gateway_Wiki.md
+    type: streamable-http
+    url: https://mcp-gw-dev.ctk.au.deloitte.com/mcp?${MCP_GATEWAY_TOOLSETS}
+    oauth:
+      authorization_url: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/authorize
+      token_url: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/token
+      client_id: "${CLEARTRACK_MCP_GATEWAY_CLIENT_ID_LLM}"
+      client_secret: "${CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET_LLM}"
+      #redirect_uri: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/callback
+      scope: 'Channel.ReadBasic.All ChannelMember.Read.All Group.Read.All Team.ReadBasic.All User.Read.All Files.Read.All'
+#    oauth_headers:
+#      X-Custom-Header: 'custom_value'
 
 mcpSettings:
   allowedDomains:

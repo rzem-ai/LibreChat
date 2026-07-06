@@ -6,10 +6,12 @@ This repository contains the local development setup for **LibreChat**, configur
 
 ## What this setup gives you
 
-- A **local LibreChat instance** running via Docker
+- A **local LibreChat instance** running via Docker Compose
+- **Local source code builds** — changes to your code reflected after rebuild (not pulling pre-built images)
 - Support for **Azure OpenAI (AU & US)**, **VertexAI (US)**, and **Anthropic via gateway proxy**
 - Integration with **ClearTrack MCP Gateway**
 - Local theming via **Deloitte GEL assets**
+- Full control over dependencies and build process
 - A structure that can later be deployed to **ClearTrack** (dev / stage / prod)
 
 ---
@@ -35,7 +37,68 @@ git clone https://github.com/Deloitte-Australia/tt-librechat.git
 cd tt-librechat
 ```
 
-## 2. Set up Caddyfile
+## 2. Initialize Submodules
+
+This repository uses Git submodules to include external dependencies. The `rag_api` submodule contains the RAG (Retrieval-Augmented Generation) API code from the [tt-librechat-rag](https://github.com/Deloitte-Australia/tt-librechat-rag) repository.
+
+### Initial Setup
+
+After cloning, initialize and clone the submodule:
+
+```zsh
+git submodule update --init --recursive
+```
+
+This will populate the `rag_api/` folder with the contents from the tt-librechat-rag repository on the `develop` branch.
+
+### Updating the Submodule
+
+To pull the latest changes from the submodule's remote repository:
+
+```zsh
+git submodule update --remote rag_api
+```
+
+Or to update all submodules:
+
+```zsh
+git submodule update --remote
+```
+
+### Checking Submodule Status
+
+To see the current commit of each submodule:
+
+```zsh
+git submodule status
+```
+
+### What is a Git Submodule?
+
+A submodule is a Git repository embedded inside another Git repository. It allows us to:
+- Keep the RAG API code in a separate repository with its own version control
+- Update the RAG API independently of the main LibreChat codebase
+- Pin to specific commits or track a branch (we track `develop` by default)
+
+The submodule appears as a folder (`rag_api/`) in this repository, but Git treats it as a pointer to a specific commit in the external repository.
+
+**Important**: The RAG API is built from this submodule's source code during local Docker builds. Make sure the submodule is initialized before running Docker Compose, or the RAG API build will fail.
+
+## 3. Verify docker-compose.override.yml
+
+The local build configuration is in `docker-compose.override.yml`. This file should already exist in the repository and contains:
+- Build configurations for LibreChat and RAG API
+- Caddy reverse proxy setup
+- Gateway proxy configuration
+- Deloitte GEL asset injection
+
+If for any reason this file is missing, you won't get local builds. Verify it exists:
+
+```zsh
+ls -la docker-compose.override.yml
+```
+
+## 4. Set up Caddyfile
 
 This allows us to login via Azure Auth locally. 
 
@@ -53,7 +116,7 @@ hostname
 
 3. Update `Caddyfile` to replace YOURHOSTNAME so it uses your host from step 2 above plus `.local` (for example `AU-ABC123123.local {`).
 4. Share that hostname with Ally Fulton (so it can be added as an accepted redirect URL on App Reg). This custom domain enables Deloitte auth locally (instead of `localhost`), as localhost cannot be used for Deloitte App Reg redirect URLs.
-5. To check your hostname is accessible on your machine, run `ping yourhostname.local` (e.g. `ping AU-ABC123123.local`). If you get "unknown hostname", continue to *If you cannot ping your hostname*. If your ping returns responses (even timeout responses), continue to *3. Environment configuration*.
+5. To check your hostname is accessible on your machine, run `ping yourhostname.local` (e.g. `ping AU-ABC123123.local`). If you get "unknown hostname", continue to *If you cannot ping your hostname*. If your ping returns responses (even timeout responses), continue to *5. Environment configuration*.
 
 ### If you cannot ping your hostname
 1. Enable privileges on your machine
@@ -66,7 +129,7 @@ hostname
 8. Try `ping yourhostname.local` again
 
 
-## 3. Environment configuration (.env)
+## 5. Environment configuration (.env)
 
 Start by copying the example file:
 
@@ -146,25 +209,113 @@ There are now **two** `librechat.yaml` files on purpose:
 Why this split exists:
 - Local and deployed auth mechanisms are different (`x-id-token` locally vs `x-sa-token` in Kubernetes).
 
+---
+
+## Docker Compose Setup
+
+This local setup uses Docker Compose with two configuration files:
+
+### `docker-compose.yml` (Base)
+- Defines all services: LibreChat API, MongoDB, Meilisearch, VectorDB, RAG API
+- References pre-built images by default (not modified directly per project convention)
+
+### `docker-compose.override.yml` (Local Customizations)
+- **Automatically merged** with the base file when running `docker compose` commands
+- Overrides the base configuration to build LibreChat and RAG API from **local source code**
+- Adds local-specific services: Caddy (reverse proxy), gateway-proxy (nginx)
+- Injects Deloitte GEL assets via custom startup command
+
+### Local Builds from Source
+
+Unlike CI/CD deployments, your local environment builds images from your source code:
+
+- **LibreChat**: Built from root `Dockerfile` (includes api + React client)
+- **RAG API**: Built from `rag_api/Dockerfile.lite` (submodule source)
+
+**First-time build expectations**:
+- Total time: ~10-15 minutes
+  - LibreChat: ~8-12 minutes (npm install + React build)
+  - RAG API: ~3-5 minutes (pip install)
+- Subsequent builds with Docker layer caching: ~30 seconds - 2 minutes
+- Only changed code layers rebuild (much faster after first build)
+
+**Why build locally?**
+- Changes to your code are immediately reflected after rebuild
+- Full control over dependencies and build process
+- No reliance on external registries being available
+- Can modify Dockerfiles, add debug tools, etc.
+
 # 🚀 Running the app
 
 ## Start services
+
+**First time**: Build and start all services (will take ~10-15 minutes for initial build):
 
 ```zsh
 docker compose up -d
 ```
 
-If things behave oddly, try a clean restart:
+Docker Compose will:
+1. Build LibreChat from your local source code
+2. Build RAG API from the `rag_api` submodule
+3. Pull supporting images (MongoDB, Meilisearch, etc.)
+4. Start all containers
+
+**After code changes**: Rebuild and restart to reflect your changes:
+
+```zsh
+docker compose up -d --build
+```
+
+**Clean restart** (if things behave oddly):
 
 ```zsh
 docker compose down
 docker compose up -d
 ```
 
+**Full rebuild** (clears cache, rebuilds everything from scratch):
+
+```zsh
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+```
+
+### Build Progress
+
+You can watch the build progress in real-time:
+
+```zsh
+docker compose up --build --progress=plain
+```
+
+(Optional) To use the debug Dockerfile (`temporary_verbose_deloitte_dockerfile.Dockerfile`) locally, temporarily set `services.api.build.dockerfile` in `docker-compose.override.yml` to that filename.
+
+## When to rebuild
+
+You need to rebuild images when you change:
+
+- **Source code** in `/api`, `/client`, `/packages`, or `rag_api/`
+- **Dependencies** (`package.json`, `requirements.txt`, etc.)
+- **Dockerfiles** (`Dockerfile`, `rag_api/Dockerfile.lite`)
+
+You do NOT need to rebuild for:
+
+- **Configuration file changes** (`.env`, `librechat.yaml`, `Caddyfile`) — just restart containers
+- **Asset changes** (`deloitte/assets/`) — mounted as volume, changes reflect immediately on container restart
+
+To apply config changes without rebuilding:
+
+```zsh
+docker compose restart
+```
 
 ## Access the app
 
-Open your configured `DOMAIN_CLIENT` URL in **Safari** or via LocalHost in Chrome.
+Open your configured `DOMAIN_CLIENT` URL in **Safari** (e.g. `https://AU-ABC123123.local`). You should see the LibreChat login page.
+
+Note that you must use **VPN** to access the LLM Gateway.
 
 ---
 
@@ -172,47 +323,83 @@ Open your configured `DOMAIN_CLIENT` URL in **Safari** or via LocalHost in Chrom
 
 You may need to **swap VPN state** during setup:
 
-- Pull Docker images → ❌ VPN Off  
-- Running models via gateway → ✅ VPN On  
+- **Building images** → ❌ VPN Off (for npm/pip package downloads)
+- **Pulling Docker images** → ❌ VPN Off  
+- **Running models via gateway** → ✅ VPN On  
 
-If models fail with gateway or MCP errors, this is almost always the cause.
+If models fail with gateway or MCP errors, this is almost always the cause. If builds hang during dependency installation, turn off VPN.
 
 ---
 
 ## Common fixes
 
+### Build fails with "context" or "Dockerfile" errors
+
+Ensure the `rag_api` submodule is initialized:
+
+```zsh
+git submodule update --init --recursive
+```
+
+If the `rag_api` folder is empty, Docker cannot build the RAG API image.
+
+### Build is very slow or hangs
+
+**First-time builds** take 10-15 minutes - this is normal. Subsequent builds are much faster due to layer caching.
+
+If npm/pip install hangs during build:
+- Turn off VPN during the build
+- Check your internet connection
+- Try building with `--no-cache` to bypass corrupted cache layers
+
 ### Docker image pull hangs or fails
 
-`unset https_proxy`  
-`unset http_proxy`
+Supporting services (MongoDB, Meilisearch, etc.) use pre-built images. If pulls hang:
+
+```zsh
+unset https_proxy
+unset http_proxy
+```
 
 Manual pulls if needed:
 
-`docker pull mongo:8.0.21`  
-`docker pull registry.librechat.ai/danny-avila/librechat-dev:latest`
+```zsh
+docker pull mongo:8.0.20
+docker pull getmeili/meilisearch:v1.35.1
+docker pull pgvector/pgvector:0.8.0-pg15-trixie
+```
+
+You can also enable proxies to get downloads working on Deloitte wifi:
+```zsh
+export http_proxy=http://10.42.250.14:80
+export https_proxy=http://10.42.250.14:80
+```
 
 ### MongoDB version error
 
 If you see `featureCompatibilityVersion` errors:
 
-`docker rmi mongo:8.0.20`
+```zsh
+docker rmi mongo:8.0.20
+docker compose down
+docker compose up -d
+```
+
+### Build succeeds but containers fail to start
+
+Open the Docker Desktop app to see logs in more detail.
+
+Common issues:
+- `.env` file missing or incorrectly configured
+- `librechat.yaml` syntax errors
+- Port conflicts (3080 already in use)
 
 ### No model responses
 
 - Refresh the browser
 - Start a new chat
-- Check token expiry
+- Update JWT value in .env 
 - Confirm VPN is **on**
-
----
-
-## Notes on deployment
-
-- The intent is to later host this via **ClearTrack**
-- ClearTrack provides shared dev / stage / prod URLs
-- A lightweight fork approach is preferred:
-  - Track latest LibreChat releases
-  - Keep Deloitte changes minimal and config-only
 
 ---
 
