@@ -27,10 +27,10 @@ services:
       - RAG_PORT=${RAG_PORT:-8000}
       - RAG_API_URL=http://rag_api:${RAG_PORT:-8000}
       - NODE_TLS_REJECT_UNAUTHORIZED=0
-    # On startup: copy Deloitte GEL assets over the defaults, run citation patch, then launch normally.
+    # On startup: copy Deloitte GEL assets over the defaults, then launch normally.
     # deloitte/assets is mounted read-only; the copy targets the live client/dist/assets.
     command: >
-      sh -c "set -eu; mkdir -p /app/client/dist/assets; cp -a /app/deloitte-assets/. /app/client/dist/assets/; node /app/patch-agent-instructions.js; npm run backend"
+      sh -c "set -eu; mkdir -p /app/client/dist/assets; cp -a /app/deloitte-assets/. /app/client/dist/assets/; npm run backend"
     volumes:
       - type: bind
         source: ./librechat.yaml
@@ -39,11 +39,6 @@ services:
       - type: bind
         source: ./deloitte/assets
         target: /app/deloitte-assets
-        read_only: true
-      # Citation patches — runtime injection for agent instructions + file_search tool
-      - type: bind
-        source: ./config/patch-agent-instructions.js
-        target: /app/patch-agent-instructions.js
         read_only: true
       - type: bind
         source: ./api/app/clients/tools/util/fileSearch.js

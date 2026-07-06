@@ -156,10 +156,15 @@ export async function applyContextToAgent({
   logger?: Logger;
   configServers?: Record<string, ParsedServerConfig>;
 }): Promise<void> {
+  const isFileSearchToolName = (name?: string): boolean =>
+    typeof name === 'string' && name.includes('file_search');
+
   const hasFileSearchTool =
     agent?.tools?.some((tool) =>
-      typeof tool === 'string' ? tool === 'file_search' : tool.name === 'file_search',
-    ) || agent?.toolDefinitions?.some((toolDef) => toolDef.name === 'file_search');
+      typeof tool === 'string' ? isFileSearchToolName(tool) : isFileSearchToolName(tool.name),
+    ) ||
+    agent?.toolDefinitions?.some((toolDef) => isFileSearchToolName(toolDef.name)) ||
+    ephemeralAgent?.file_search === true;
 
   const baseInstructions = [
     hasFileSearchTool ? GLOBAL_AGENT_INSTRUCTIONS : undefined,

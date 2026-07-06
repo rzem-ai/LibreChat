@@ -2,7 +2,7 @@ version: 1.3.9
 cache: true
 
 interface:
-  fileCitations: true
+  fileCitations: true  #Enables file citations for agents.
   agents:
     use: true
     create: true

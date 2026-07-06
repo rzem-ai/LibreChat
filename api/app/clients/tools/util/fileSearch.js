@@ -158,7 +158,7 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
 
       const turnNumber = invocationCount++;
 
-      const resultEntries = formattedResults
+      const formattedString = formattedResults
         .map(
           (result, index) =>
             `File: ${result.filename}${
@@ -177,12 +177,16 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
         pageRelevance: result.page ? { [result.page]: 1.0 - result.distance } : {},
       }));
 
-      return [resultEntries, { [Tools.file_search]: { sources, fileCitations } }];
+      return [formattedString, { [Tools.file_search]: { sources, fileCitations } }];
     },
     {
       name: Tools.file_search,
       responseFormat: 'content_and_artifact',
-      description: `Performs semantic search across attached "${Tools.file_search}" documents using natural language queries. This tool analyzes the content of uploaded files to find relevant information, quotes, and passages that best match your query. Use this to extract specific information or find relevant sections within the available documents.`,
+      description: `Performs semantic search across attached "${Tools.file_search}" documents using natural language queries. This tool analyzes the content of uploaded files to find relevant information, quotes, and passages that best match your query. Use this to extract specific information or find relevant sections within the available documents.${
+        fileCitations
+          ? '\n\nWhen available, include citation anchors from the tool output in your final response.'
+          : ''
+      }`,
       schema: fileSearchJsonSchema,
     },
   );
