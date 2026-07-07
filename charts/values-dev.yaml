@@ -48,7 +48,7 @@ pods:
           tag: 'develop@sha256:0cd250a84a9c58be35a62823fb4f0e6d7dcd29f22942d83c15e1e9cb06c19da5'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
-          ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
+          ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic/v1'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
           BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
