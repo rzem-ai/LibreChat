@@ -6,7 +6,7 @@ import type { Logger } from 'winston';
 import type { ParsedServerConfig } from '~/mcp/types';
 import type { MCPManager } from '~/mcp/MCPManager';
 
-const GLOBAL_AGENT_INSTRUCTIONS =
+const FILE_SEARCH_AGENT_INSTRUCTIONS =
   'If, and only if, the file_search tool is available to you and uploaded documents are attached for this conversation, use file_search before answering questions that depend on those documents. If file_search is unavailable or no documents are attached, ignore these file-search-specific instructions and answer normally without attempting tool calls or document citations.\n\nCRITICAL CITATION REQUIREMENT: Only after successfully calling file_search and receiving results, cite every piece of information drawn from those results using the exact anchor markers from the tool output. Each result may include an anchor line like "Anchor: \\ue202turn0file0". If the tool output does not include Anchor lines, do not fabricate citations. Output ONLY the escape sequence (e.g. \\ue202turn0file0) verbatim - do NOT include surrounding text, parentheses, or the filename from the anchor line itself. Do NOT substitute with footnotes, markdown links, or other citation formats. Mention the source filename (from the "File:" line) in your own words before the anchor.\n\nMULTI-SOURCE REQUIREMENT: If your answer uses information from multiple results or multiple files, include all corresponding anchors, not just one. Use at least one anchor per supported claim, and if a claim is supported by multiple files include multiple anchors for that same claim. Do not collapse a multi-document answer into a single citation. Before finalizing, verify every document you referenced in prose has at least one matching anchor in the response. Example: "According to docA.pdf and docB.pdf, the policy requires approval \\ue202turn0file0 \\ue202turn0file3." If file_search is not used or returns no results, do not fabricate citations.'
 
 /**
@@ -167,7 +167,7 @@ export async function applyContextToAgent({
     ephemeralAgent?.file_search === true;
 
   const baseInstructions = [
-    hasFileSearchTool ? GLOBAL_AGENT_INSTRUCTIONS : undefined,
+    hasFileSearchTool ? FILE_SEARCH_AGENT_INSTRUCTIONS : undefined,
     agent.instructions,
   ]
     .filter(Boolean)
