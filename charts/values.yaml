@@ -69,13 +69,16 @@ pods:
           ALLOW_REGISTRATION: 'false'
           ALLOW_SOCIAL_LOGIN: 'true'
           ALLOW_SOCIAL_REGISTRATION: 'false'
-          OPENID_SCOPE: 'openid profile email'
           OPENID_CALLBACK_URL: '/oauth/openid/callback'
+          OPENID_GRAPH_SCOPES: 'User.Read User.ReadBasic.All' #People.Read GroupMember.Read.All scopes to be added once 
           OPENID_REQUIRED_ROLE_TOKEN_KIND: 'id'
+          OPENID_REUSE_TOKENS: 'true'
           OPENID_USE_END_SESSION_ENDPOINT: 'true'
           OPENID_BUTTON_LABEL: 'Login with SSO'
           OPENID_IMAGE_URL: '/assets/favicon.svg'
           RAG_API_URL: 'http://127.0.0.1:8000'
+          USE_ENTRA_ID_FOR_PEOPLE_SEARCH: 'true'
+          ENTRA_ID_INCLUDE_OWNERS_AS_MEMBERS: 'true'
         service:
           enabled: true
           type: ClusterIP
