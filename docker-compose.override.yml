@@ -40,10 +40,6 @@ services:
         source: ./deloitte/assets
         target: /app/deloitte-assets
         read_only: true
-      - type: bind
-        source: ./api/app/clients/tools/util/fileSearch.js
-        target: /app/api/app/clients/tools/util/fileSearch.js
-        read_only: true
     depends_on:
       - mongodb
       - rag_api
