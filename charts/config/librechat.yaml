@@ -78,7 +78,7 @@ endpoints:
       dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
       headers:
         Content-Type: "application/json"
-    
+
     # --- Azure US (eastus) ---
     - name: "Azure US"
       apiKey: "dummy"
