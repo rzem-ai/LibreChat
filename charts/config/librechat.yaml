@@ -99,22 +99,22 @@ endpoints:
          headers:
            Content-Type: "application/json"
 
-    # --- VertexAI / Google (us-central1) ---
-    # OpenAI-compatible endpoint, model names use google/ prefix
-    - name: "VertexAI US"
-      apiKey: "dummy"
-      baseURL: "${BASE_URL_VERTEXAI}"
-      models:
-        default:
-          - "google/gemini-2.5-flash"
-          - "google/gemini-2.5-pro"
-        fetch: false
-      titleConvo: true
-      titleModel: "google/gemini-2.5-flash"
-      modelDisplayLabel: "VertexAI US"
-      dropParams: [ "stop", "user", "frequency_penalty", "presence_penalty" ]
-      headers:
-        Content-Type: "application/json"
+     # --- VertexAI / Google (us-central1) ---
+     # OpenAI-compatible endpoint, model names use google/ prefix
+     - name: "VertexAI US"
+       apiKey: "dummy"
+       baseURL: "${BASE_URL_VERTEXAI}"
+       models:
+         default:
+           - "google/gemini-2.5-flash"
+           - "google/gemini-2.5-pro"
+         fetch: false
+       titleConvo: true
+       titleModel: "google/gemini-2.5-flash"
+       modelDisplayLabel: "VertexAI US"
+       dropParams: [ "stop", "user", "frequency_penalty", "presence_penalty" ]
+       headers:
+         Content-Type: "application/json"
 
 mcpServers: # https://www.librechat.ai/docs/features/mcp
   cleartrack-gateway-new-appreg:
