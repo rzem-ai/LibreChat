@@ -16,6 +16,7 @@ async function resolveTraceId(cfg: LangfuseConfig, messageId: string): Promise<s
     const url = `${cfg.baseUrl}/api/public/traces?limit=1&metadata[messageId]=${encodeURIComponent(messageId)}`;
     const response = await fetch(url, {
       headers: { Authorization: cfg.authHeader },
+      signal: AbortSignal.timeout(10_000),
     });
     if (!response.ok) {
       return undefined;
@@ -41,12 +42,14 @@ export async function pushFeedbackScore({
     logger.warn(`[Langfuse] No trace found for message ${messageId}, skipping score push`);
     return;
   }
-  const parts = [feedback.tag?.key, feedback.text].filter((s): s is string => Boolean(s));
+  const tagText = typeof feedback.tag === 'string' ? feedback.tag : feedback.tag?.key;
+  const parts = [tagText, feedback.text].filter((s): s is string => Boolean(s));
   const comment = parts.length > 0 ? parts.join(' — ') : undefined;
   try {
     const response = await fetch(`${cfg.baseUrl}/api/public/scores`, {
       method: 'POST',
       headers: { Authorization: cfg.authHeader, 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(10_000),
       body: JSON.stringify({
         id: scoreId(messageId),
         traceId,
@@ -71,6 +74,7 @@ export async function deleteFeedbackScore({ messageId }: { messageId: string }):
     const response = await fetch(`${cfg.baseUrl}/api/public/scores/${scoreId(messageId)}`, {
       method: 'DELETE',
       headers: { Authorization: cfg.authHeader },
+      signal: AbortSignal.timeout(10_000),
     });
     if (!response.ok && response.status !== 404) {
       logger.warn(`[Langfuse] Score delete returned ${response.status} for message ${messageId}`);

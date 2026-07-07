@@ -13,6 +13,7 @@ Final pass/fail is determined from the mean score vs threshold.
 import importlib
 import os
 import time
+import warnings
 from pathlib import Path
 from typing import List, Optional
 
@@ -233,6 +234,17 @@ def run_single_sequential(
     invoke_kwargs = build_invoke_kwargs(case, "invoke_sequential")
     responses: List[AgentResponse] = adapter.invoke("invoke_sequential", **invoke_kwargs)
     yaml_turns = case.get("turns", [])
+
+    # task_completion is single-turn only — skip it for multi-turn cases
+    if len(yaml_turns) > 1:
+        if "task_completion" in selected_gating:
+            warnings.warn(
+                "task_completion skipped for multi-turn case — use conversation_completeness instead.",
+                stacklevel=2,
+            )
+            selected_gating = [m for m in selected_gating if m != "task_completion"]
+        if "task_completion" in selected_diagnostic:
+            selected_diagnostic = [m for m in selected_diagnostic if m != "task_completion"]
 
     # --- Per-turn assertions ---
     all_turn_results = []

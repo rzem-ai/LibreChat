@@ -173,7 +173,6 @@ The scaffolder produces **8 cases across 4 documents** (2 cases per document —
 | `tool_correctness` | Gating | Verifies correct tools were called |
 | `role_consistency` | Gating | Checks the agent maintained its role |
 | `instruction_adherence` | Gating | Validates adherence to skill instructions |
-| `policy_compliance` | Gating | Deterministic disclaimer/policy check |
 | `answer_relevancy` | Diagnostic | Relevance of response to the query |
 | `summarization` | Diagnostic | Quality of summarisation |
 | `faithfulness` | Diagnostic | Groundedness in source material |

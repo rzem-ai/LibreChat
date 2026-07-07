@@ -94,10 +94,9 @@ VALID_PROBE_TYPES = {"gating", "diagnostic"}
 # ---------------------------------------------------------------------------
 
 class EvaluatorModel(DeepEvalBaseLLM):
-    """Bridges any LLM to DeepEval's judge interface.
+    """Wraps any callable LLM as a DeepEval judge.
 
-    Accepts a callable `generate_fn(prompt: str) -> str` so it works with
-    any framework — not just Agno.
+    Accepts a callable `generate_fn(prompt: str) -> str`.
     """
 
     def __init__(self, generate_fn: Callable[[str], str], model_name: str = "LLM-Judge"):
