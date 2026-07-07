@@ -94,6 +94,7 @@ pods:
           pullPolicy: Always
           tag: 'develop@sha256:765e35c5c9c6120a38f7aeabf3f69779ebc77b2fa24d74622eb2343116734088'
         env:
+          PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
           POSTGRES_USE_UNIX_SOCKET: 'False'
           POSTGRES_DB: 'pgdb_librechat_app_dev'
