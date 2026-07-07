@@ -31,6 +31,7 @@ pods:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_ANTHROPIC_URL: 'http://anthropic-eastus2.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_MCP_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
     containers:
       librechat:
@@ -47,6 +48,7 @@ pods:
           tag: 'develop@sha256:5b4f3ef6a200353c2b002d469ae79aa82d6a5b4786375bef1250d33b4ceacdb7'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
+          ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
           BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
@@ -65,7 +67,7 @@ pods:
           RAG_API_URL: 'http://127.0.0.1:8000'
           RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
           RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
-          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/'
+          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
           RAG_PORT: '8000'
           RAG_USE_FULL_CONTEXT: 'true'
           # ClearTrack MCP Gateway
@@ -105,7 +107,7 @@ pods:
           EMBEDDINGS_PROVIDER: 'azure'
           RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
           RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
-          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/'
+          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
         secrets:
           AZURE_OPENAI_API_KEY: librechat-azure-api-key
           RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
