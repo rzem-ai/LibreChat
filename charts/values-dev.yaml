@@ -44,7 +44,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:7d6a0e89a427d54e73bcdd99fe2acc17b1d18665ddca2fdd711eb8fd9dd029c3'
+          tag: 'develop@sha256:5b4f3ef6a200353c2b002d469ae79aa82d6a5b4786375bef1250d33b4ceacdb7'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
@@ -90,7 +90,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:e89b008f69ea6033dd8a4b946005170a15ca2f443667924dc7fb3031a8e59bdc'
+          tag: 'develop@sha256:a70d616f32b779765a6c85335fb98648029c7ffcc81beb5795a9a9846d922eab'
         env:
           VECTOR_DB_TYPE: 'pgvector'
           POSTGRES_USE_UNIX_SOCKET: 'False'
