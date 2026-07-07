@@ -44,7 +44,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:67b938ff1e1f96f2e20847a789c75a79eab89cc68d50b431382ee2f460e3b9c5'
+          tag: 'develop@sha256:0cd250a84a9c58be35a62823fb4f0e6d7dcd29f22942d83c15e1e9cb06c19da5'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
@@ -62,7 +62,7 @@ pods:
           OPENID_CLIENT_ID: '2075976d-5147-47b2-89d2-4ad060d19f85'
           OPENID_ISSUER: 'https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/v2.0/'
           OPENID_REQUIRED_ROLE: ''
-          RAG_API_URL: 'http://rag-api:8000'
+          RAG_API_URL: 'http://127.0.0.1:8000'
           RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
           RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/'
@@ -86,3 +86,33 @@ pods:
           CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET: librechat-cleartrack-mcp-gateway-client-secret-dev
           # ClearTrack MCP Gateway (OLD LLM)
           CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET_LLM: librechat-cleartrack-mcp-gateway-client-secret-llm-dev
+      rag-api:
+        image:
+          repository: 'tt-librechat/rag-api'
+          pullPolicy: Always
+          tag: 'develop@sha256:3e15f955a5034e8065b6fc162b6795f03ec8a59cbb678409de1be2274d047f62'
+        env:
+          VECTOR_DB_TYPE: 'pgvector'
+          POSTGRES_USE_UNIX_SOCKET: 'False'
+          POSTGRES_DB: 'pgdb_librechat_app_dev'
+          POSTGRES_USER: 'id-int-librechat-dev'
+          POSTGRES_AUTH_TYPE: 'ActiveDirectoryMsi'
+          MANAGED_IDENTITY_CLIENT_ID: '9058562c-9eeb-4608-8613-51bec6324181'
+          DB_HOST: 'psql-ctspoke-npd.postgres.database.azure.com'
+          DB_PORT: '5432'
+          RAG_HOST: '0.0.0.0'
+          RAG_PORT: '8000'
+          EMBEDDINGS_PROVIDER: 'azure'
+          RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
+          RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
+          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/'
+        secrets:
+          AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
+        service:
+          enabled: true
+          type: ClusterIP
+          port: 8000
+          targetPort: 8000
+        ingress:
+          enabled: false

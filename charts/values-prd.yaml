@@ -31,3 +31,6 @@ pods:
           limits:
             memory: "4Gi"
             cpu: "2000m"
+      rag-api:
+        image:
+          tag: 'main'
