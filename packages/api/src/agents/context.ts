@@ -6,8 +6,18 @@ import type { Logger } from 'winston';
 import type { ParsedServerConfig } from '~/mcp/types';
 import type { MCPManager } from '~/mcp/MCPManager';
 
+/**
+ * Nudges the model to actually call file_search before answering, so retrieval
+ * happens and grounds the response in the attached documents. End-of-trace
+ * citations depend on this: `applyEndOfTraceCitations` can only anchor sentences
+ * to sources the file_search tool retrieved, so if the model skips the tool
+ * there is nothing to cite. This purposefully omits any anchor-emission
+ * instructions — citations are inserted deterministically after the run rather
+ * than relying on the model to echo markers, which was unreliable and could
+ * degrade answer quality.
+ */
 const FILE_SEARCH_AGENT_INSTRUCTIONS =
-  'If, and only if, the file_search tool is available to you and uploaded documents are attached for this conversation, use file_search before answering questions that depend on those documents. If file_search is unavailable or no documents are attached, ignore these file-search-specific instructions and answer normally without attempting tool calls or document citations.\n\nCRITICAL CITATION REQUIREMENT: Only after successfully calling file_search and receiving results, cite every piece of information drawn from those results using the exact anchor markers from the tool output. Each result may include an anchor line like "Anchor: \\ue202turn0file0". If the tool output does not include Anchor lines, do not fabricate citations. Output ONLY the escape sequence (e.g. \\ue202turn0file0) verbatim - do NOT include surrounding text, parentheses, or the filename from the anchor line itself. Do NOT substitute with footnotes, markdown links, or other citation formats. Mention the source filename (from the "File:" line) in your own words before the anchor.\n\nMULTI-SOURCE REQUIREMENT: If your answer uses information from multiple results or multiple files, include all corresponding anchors, not just one. Use at least one anchor per supported claim, and if a claim is supported by multiple files include multiple anchors for that same claim. Do not collapse a multi-document answer into a single citation. Before finalizing, verify every document you referenced in prose has at least one matching anchor in the response. Example: "According to docA.pdf and docB.pdf, the policy requires approval \\ue202turn0file0 \\ue202turn0file3." If file_search is not used or returns no results, do not fabricate citations.'
+  'If the file_search tool is available and documents are attached for this conversation, call file_search before answering any substantive question — even one that appears answerable from general knowledge — because the attached documents may contain organization-specific definitions, policies, or details that supersede or supplement what you already know. Prefer searching over assuming. Only skip file_search for purely conversational messages such as greetings or small talk. If file_search is unavailable or no documents are attached, answer normally without attempting tool calls.';
 
 /**
  * Agent type with optional tools array that can contain DynamicStructuredTool or string.

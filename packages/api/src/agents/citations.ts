@@ -1,0 +1,360 @@
+/**
+ * End-of-trace file citations.
+ *
+ * After an agent run finishes, this module deterministically inserts citation
+ * anchors into the assistant's answer by matching each answer sentence against
+ * the passages the `file_search` tool retrieved. It replaces the previous
+ * approach of instructing the model to echo anchor markers itself, which was
+ * unreliable and risked degrading answer quality.
+ *
+ * Matching is lexical: a sentence is anchored to a passage when enough of its
+ * content words (>= `SIMILARITY_THRESHOLD`) also appear in that passage. Each
+ * anchor encodes the coordinates the frontend resolves — `turn{N}file{M}`,
+ * where N is the file_search attachment index and M is the first-seen fileId
+ * index within it (mirrors `useSearchResultsByTurn` on the client).
+ */
+import { Tools, ContentTypes } from 'librechat-data-provider';
+import type { TMessageContentParts, TAttachment } from 'librechat-data-provider';
+import type { Logger } from 'winston';
+
+/**
+ * Minimum content words a sentence must have before it is eligible for a
+ * citation anchor. Guards against spurious matches on short fragments.
+ */
+const MIN_SENTENCE_CONTENT_WORDS = 4;
+/** Fraction of a sentence's content tokens that must appear in a passage. */
+const SIMILARITY_THRESHOLD = 0.6;
+/** Upper bound on anchors appended to a single sentence. */
+const MAX_ANCHORS_PER_SENTENCE = 3;
+/** Citation marker character (U+E202) the frontend parses; see client citations.ts. */
+const ANCHOR_MARKER = '\ue202';
+
+const STOPWORDS = new Set([
+  'the',
+  'a',
+  'an',
+  'and',
+  'or',
+  'but',
+  'if',
+  'of',
+  'to',
+  'in',
+  'on',
+  'at',
+  'for',
+  'with',
+  'by',
+  'from',
+  'as',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'it',
+  'its',
+  'this',
+  'that',
+  'these',
+  'those',
+  'i',
+  'you',
+  'he',
+  'she',
+  'they',
+  'we',
+  'them',
+  'his',
+  'her',
+  'their',
+  'our',
+  'your',
+  'my',
+  'me',
+  'us',
+  'do',
+  'does',
+  'did',
+  'have',
+  'has',
+  'had',
+  'will',
+  'would',
+  'can',
+  'could',
+  'should',
+  'may',
+  'might',
+  'must',
+  'not',
+  'no',
+  'so',
+  'than',
+  'then',
+  'there',
+  'here',
+  'what',
+  'which',
+  'who',
+  'when',
+  'where',
+  'why',
+  'how',
+  'all',
+  'any',
+  'each',
+  'about',
+  'into',
+  'over',
+  'up',
+  'out',
+  'off',
+]);
+
+/** Runtime shape of a file_search attachment source (see fileSearch.js). */
+interface FileSearchSource {
+  fileId: string;
+  fileName?: string;
+  content?: string;
+  relevance?: number;
+}
+
+/** A retrieved passage mapped to the anchor coordinates the frontend resolves. */
+interface Passage {
+  turn: number;
+  fileIndex: number;
+  tokens: Set<string>;
+}
+
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((token) => token.length > 0 && !STOPWORDS.has(token));
+}
+
+function extractSources(attachment: TAttachment): FileSearchSource[] | undefined {
+  const payload = attachment[Tools.file_search] as { sources?: FileSearchSource[] } | undefined;
+  if (!payload || !Array.isArray(payload.sources)) {
+    return undefined;
+  }
+  return payload.sources;
+}
+
+/**
+ * Builds the passage list keyed by the coordinates the frontend uses to resolve
+ * `turn{N}file{M}` anchors: N is the file_search attachment index, M is the
+ * source's fileId index after first-seen deduplication (see useSearchResultsByTurn).
+ */
+function buildPassages(fileSearchAttachments: TAttachment[]): Passage[] {
+  const passages: Passage[] = [];
+
+  let turn = 0;
+  for (const attachment of fileSearchAttachments) {
+    const sources = extractSources(attachment);
+    if (!sources) {
+      continue;
+    }
+
+    const fileIndexById = new Map<string, number>();
+    for (const source of sources) {
+      if (!fileIndexById.has(source.fileId)) {
+        fileIndexById.set(source.fileId, fileIndexById.size);
+      }
+    }
+
+    for (const source of sources) {
+      const tokens = new Set(tokenize(source.content ?? ''));
+      if (tokens.size === 0) {
+        continue;
+      }
+      passages.push({ turn, fileIndex: fileIndexById.get(source.fileId) ?? 0, tokens });
+    }
+
+    turn += 1;
+  }
+
+  return passages;
+}
+
+/**
+ * Splits text into sentence-like segments losslessly — concatenating the result
+ * reproduces the input exactly, so anchors can be inserted without altering
+ * surrounding whitespace or punctuation.
+ */
+function splitIntoSentences(text: string): string[] {
+  const sentences: string[] = [];
+  let start = 0;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const isBoundary = char === '.' || char === '!' || char === '?' || char === '\n';
+    if (!isBoundary) {
+      continue;
+    }
+
+    let end = i + 1;
+    while (end < text.length && /[.!?"')\]\s]/.test(text[end])) {
+      end += 1;
+    }
+    sentences.push(text.slice(start, end));
+    start = end;
+    i = end - 1;
+  }
+
+  if (start < text.length) {
+    sentences.push(text.slice(start));
+  }
+
+  return sentences;
+}
+
+function containment(sentenceTokens: Set<string>, passageTokens: Set<string>): number {
+  if (sentenceTokens.size === 0) {
+    return 0;
+  }
+  let overlap = 0;
+  for (const token of sentenceTokens) {
+    if (passageTokens.has(token)) {
+      overlap += 1;
+    }
+  }
+  return overlap / sentenceTokens.size;
+}
+
+function anchorsForSentence(sentence: string, passages: Passage[]): string[] {
+  const sentenceTokens = new Set(tokenize(sentence));
+  if (sentenceTokens.size < MIN_SENTENCE_CONTENT_WORDS) {
+    return [];
+  }
+
+  const bestByCoord = new Map<string, { turn: number; fileIndex: number; score: number }>();
+  for (const passage of passages) {
+    const score = containment(sentenceTokens, passage.tokens);
+    if (score < SIMILARITY_THRESHOLD) {
+      continue;
+    }
+    const key = `${passage.turn}:${passage.fileIndex}`;
+    const existing = bestByCoord.get(key);
+    if (!existing || score > existing.score) {
+      bestByCoord.set(key, { turn: passage.turn, fileIndex: passage.fileIndex, score });
+    }
+  }
+
+  return Array.from(bestByCoord.values())
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_ANCHORS_PER_SENTENCE)
+    .map(({ turn, fileIndex }) => `${ANCHOR_MARKER}turn${turn}file${fileIndex}`);
+}
+
+function withAnchors(sentence: string, anchors: string[]): string {
+  if (anchors.length === 0) {
+    return sentence;
+  }
+  const trimmed = sentence.replace(/\s+$/, '');
+  const trailing = sentence.slice(trimmed.length);
+  return `${trimmed} ${anchors.join(' ')}${trailing}`;
+}
+
+function readText(part: TMessageContentParts): string | null {
+  if (part == null || part.type !== ContentTypes.TEXT) {
+    return null;
+  }
+  const { text } = part;
+  if (typeof text === 'string') {
+    return text;
+  }
+  if (text && typeof text.value === 'string') {
+    return text.value;
+  }
+  return null;
+}
+
+function writeText(part: TMessageContentParts, value: string): void {
+  if (part == null || part.type !== ContentTypes.TEXT) {
+    return;
+  }
+  if (typeof part.text === 'string') {
+    part.text = value;
+    return;
+  }
+  if (part.text && typeof part.text === 'object') {
+    part.text.value = value;
+  }
+}
+
+/**
+ * Deterministically inserts file citation anchors into the assistant's text
+ * content parts by matching each sentence against the retrieved file_search
+ * passages. Mutates the content parts in place. Pure and synchronous.
+ */
+export function insertFileCitations(
+  contentParts: TMessageContentParts[],
+  fileSearchAttachments: TAttachment[],
+): void {
+  const passages = buildPassages(fileSearchAttachments);
+  if (passages.length === 0) {
+    return;
+  }
+
+  for (const part of contentParts) {
+    const text = readText(part);
+    if (text == null || text.length === 0) {
+      continue;
+    }
+
+    const sentences = splitIntoSentences(text);
+    const rebuilt = sentences
+      .map((sentence) => withAnchors(sentence, anchorsForSentence(sentence, passages)))
+      .join('');
+
+    if (rebuilt !== text) {
+      writeText(part, rebuilt);
+    }
+  }
+}
+
+/**
+ * End-of-trace citation step: resolves the run's artifact promises, isolates the
+ * file_search attachments, and inserts citation anchors into the final answer.
+ * Never throws — a citation failure must leave the answer intact.
+ */
+export async function applyEndOfTraceCitations({
+  contentParts,
+  artifactPromises,
+  fileCitations,
+  logger,
+}: {
+  contentParts?: TMessageContentParts[];
+  artifactPromises?: Array<Promise<TAttachment | null> | undefined>;
+  fileCitations?: boolean;
+  logger?: Logger;
+}): Promise<void> {
+  if (fileCitations === false) {
+    return;
+  }
+  if (!Array.isArray(contentParts) || contentParts.length === 0) {
+    return;
+  }
+  if (!Array.isArray(artifactPromises) || artifactPromises.length === 0) {
+    return;
+  }
+
+  try {
+    const resolved = await Promise.all(artifactPromises);
+    const fileSearchAttachments = resolved.filter(
+      (attachment): attachment is TAttachment =>
+        attachment != null && attachment.type === Tools.file_search,
+    );
+    if (fileSearchAttachments.length === 0) {
+      return;
+    }
+    insertFileCitations(contentParts, fileSearchAttachments);
+  } catch (error) {
+    logger?.error('[applyEndOfTraceCitations] Failed to insert file citations:', error);
+  }
+}

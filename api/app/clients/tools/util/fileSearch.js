@@ -82,11 +82,13 @@ const primeFiles = async (options) => {
  * @param {string} options.userId
  * @param {Array<{ file_id: string; filename: string }>} options.files
  * @param {string} [options.entity_id]
- * @param {boolean} [options.fileCitations=false] - Whether to include citation instructions
+ * @param {boolean} [options.fileCitations=false] - Whether file citations are enabled. This no longer
+ *   injects anchor markers into the tool output for the model to echo; citations are now inserted
+ *   deterministically after the run by `applyEndOfTraceCitations`. The flag is passed through on the
+ *   returned artifact so `processFileCitations` can gate citation generation on it.
  * @returns
  */
 const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = false }) => {
-  let invocationCount = 0;
   return tool(
     async ({ query }) => {
       if (files.length === 0) {
@@ -156,14 +158,10 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
         ];
       }
 
-      const turnNumber = invocationCount++;
-
       const formattedString = formattedResults
         .map(
-          (result, index) =>
-            `File: ${result.filename}${
-              fileCitations ? `\nAnchor: \\ue202turn${turnNumber}file${index}` : ''
-            }\nRelevance: ${(1.0 - result.distance).toFixed(4)}\nContent: ${result.content}\n`,
+          (result) =>
+            `File: ${result.filename}\nRelevance: ${(1.0 - result.distance).toFixed(4)}\nContent: ${result.content}\n`,
         )
         .join('\n---\n');
 
@@ -182,11 +180,7 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
     {
       name: Tools.file_search,
       responseFormat: 'content_and_artifact',
-      description: `Performs semantic search across attached "${Tools.file_search}" documents using natural language queries. This tool analyzes the content of uploaded files to find relevant information, quotes, and passages that best match your query. Use this to extract specific information or find relevant sections within the available documents.${
-        fileCitations
-          ? '\n\nWhen available, include citation anchors from the tool output in your final response.'
-          : ''
-      }`,
+      description: `Performs semantic search across attached "${Tools.file_search}" documents using natural language queries. This tool analyzes the content of uploaded files to find relevant information, quotes, and passages that best match your query. Use this to extract specific information or find relevant sections within the available documents.`,
       schema: fileSearchJsonSchema,
     },
   );

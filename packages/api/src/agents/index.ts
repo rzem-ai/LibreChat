@@ -3,6 +3,7 @@ export * from './attachments';
 export * from './chain';
 export * from './client';
 export * from './config';
+export * from './citations';
 export * from './context';
 export * from './discovery';
 export * from './edges';
