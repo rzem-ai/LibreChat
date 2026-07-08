@@ -72,6 +72,11 @@ pods:
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
           RAG_PORT: '8000'
           RAG_USE_FULL_CONTEXT: 'true'
+          # Azure Storage Container
+          AZURE_CLIENT_ID: '9058562c-9eeb-4608-8613-51bec6324181'
+          AZURE_STORAGE_ACCOUNT_NAME: 'stctspokenpdshared'
+          AZURE_STORAGE_PUBLIC_ACCESS: 'false'
+          AZURE_CONTAINER_NAME: 'stc-librechat-app-dev'
           # ClearTrack MCP Gateway
           CLEARTRACK_MCP_GATEWAY_CLIENT_ID: '3e5d28f1-91a3-4748-ad73-5fa544f1d3e2'
           # ClearTrack MCP Gateway (OLD LLM)
