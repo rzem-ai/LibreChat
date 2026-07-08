@@ -9,6 +9,10 @@ export interface TelemetryConfig {
   sdkDisabled: boolean;
   serviceName: string;
   serviceVersion?: string;
+  /** Azure Monitor OTLP ingestion endpoint (e.g. https://<workspace>.ingest.monitor.azure.com/...) */
+  azureMonitorEndpoint?: string;
+  /** Client ID of the user-assigned managed identity used to authenticate with Azure Monitor */
+  azureMonitorClientId?: string;
 }
 
 function isTruthy(value?: string | boolean | null): boolean {
@@ -39,5 +43,7 @@ export function getTelemetryConfig(env: NodeJS.ProcessEnv = process.env): Teleme
     sdkDisabled,
     serviceVersion,
     healthPath: DEFAULT_HEALTH_PATH,
+    azureMonitorEndpoint: normalizeEnvValue(env.AZURE_MONITOR_OTLP_ENDPOINT),
+    azureMonitorClientId: normalizeEnvValue(env.AZURE_CLIENT_ID),
   };
 }

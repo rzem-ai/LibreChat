@@ -296,9 +296,53 @@ function getResourceAttributes(config: TelemetryConfig): Attributes {
   return attributes;
 }
 
+function createAzureMonitorExporter(config: TelemetryConfig): object | undefined {
+  if (!config.azureMonitorEndpoint) {
+    // AZURE_MONITOR_OTLP_ENDPOINT not set — use standard OTLP exporter (via OTEL_* env vars)
+    return undefined;
+  }
+
+  if (!config.azureMonitorClientId) {
+    emitWarning(
+      'AZURE_MONITOR_OTLP_ENDPOINT is set but AZURE_CLIENT_ID is missing — ' +
+        'cannot authenticate with Azure Monitor. Falling back to standard OTLP export.',
+    );
+    return undefined;
+  }
+
+  try {
+    // Dynamic require so these packages are optional — if not installed the SDK
+    // falls back to the standard OTLP exporter and a warning is emitted.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { AzureMonitorTraceExporter } = require('@azure/monitor-opentelemetry-exporter') as {
+      AzureMonitorTraceExporter: new (opts: object) => object;
+    };
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { ManagedIdentityCredential } = require('@azure/identity') as {
+      ManagedIdentityCredential: new (clientId: string) => object;
+    };
+
+    const credential = new ManagedIdentityCredential(config.azureMonitorClientId);
+    return new AzureMonitorTraceExporter({
+      connectionString: config.azureMonitorEndpoint,
+      credential,
+    });
+  } catch (error) {
+    emitWarning(
+      `Azure Monitor exporter unavailable — falling back to standard OTLP export. ` +
+        `Ensure @azure/monitor-opentelemetry-exporter and @azure/identity are installed. ` +
+        `Error: ${getErrorMessage(error)}`,
+    );
+    return undefined;
+  }
+}
+
 function createSdk(config: TelemetryConfig): NodeSDK {
+  const azureExporter = createAzureMonitorExporter(config);
+
   const sdkConfig: Partial<NodeSDKConfiguration> = {
     resource: resourceFromAttributes(getResourceAttributes(config)),
+    ...(azureExporter ? { traceExporter: azureExporter } : {}),
     instrumentations: [
       new HttpInstrumentation({
         headersToSpanAttributes: {

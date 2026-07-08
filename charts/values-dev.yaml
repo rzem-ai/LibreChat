@@ -88,9 +88,10 @@ pods:
           OTEL_SERVICE_NAME: 'librechat'
           OTEL_TRACES_EXPORTER: 'otlp'
           OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf'
-          OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: 'https://managed-app-insight-ctspoke-npd-dce-soxy.australiaeast-1.ingest.monitor.azure.com/dataCollectionRules/dcr-41786a0b3d9e448dbc7a182ede4b2220/streams/Microsoft-OTLP-Traces/otlp/v1/traces'
           OTEL_TRACES_SAMPLER: 'parentbased_traceidratio'
           OTEL_TRACES_SAMPLER_ARG: '0.1'
+          # Tracing with Azure Monitor via Managed Identity (OTLP) — auth uses existing AZURE_CLIENT_ID
+          AZURE_MONITOR_OTLP_ENDPOINT: 'https://managed-app-insight-ctspoke-npd-dce-soxy.australiaeast-1.ingest.monitor.azure.com/dataCollectionRules/dcr-41786a0b3d9e448dbc7a182ede4b2220/streams/Microsoft-OTLP-Traces/otlp/v1/traces'
         secrets:
           AZURE_API_KEY: librechat-azure-api-key
           MONGO_URI: librechat-dev-mdb-connection-string
