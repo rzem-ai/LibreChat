@@ -72,6 +72,16 @@ pods:
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
           RAG_PORT: '8000'
           RAG_USE_FULL_CONTEXT: 'true'
+          # ClearTrack Code Interpreter (ea-code-runtime)
+          LIBRECHAT_CODE_BASEURL: 'https://code-runtime-dev.ctk.au.deloitte.com/v1'
+          CODEAPI_AUTH_PROVIDER: 'librechat-jwt'
+          CODEAPI_JWT_ALGORITHM: 'EdDSA'
+          CODEAPI_JWT_KID: 'lc-codeapi-dev-2026-05'
+          CODEAPI_JWT_ISSUER: 'librechat'
+          CODEAPI_JWT_AUDIENCE: 'codeapi'
+          CODEAPI_JWT_TTL_SECONDS: '300'
+          CODEAPI_JWT_MINT_CACHE_SECONDS: '30'
+          CODEAPI_JWT_SINGLE_TENANT_ID: 'legacy'
           # ClearTrack MCP Gateway
           CLEARTRACK_MCP_GATEWAY_CLIENT_ID: '3e5d28f1-91a3-4748-ad73-5fa544f1d3e2'
           # ClearTrack MCP Gateway (OLD LLM)
@@ -90,6 +100,8 @@ pods:
           CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET: librechat-cleartrack-mcp-gateway-client-secret-dev
           # ClearTrack MCP Gateway (OLD LLM)
           CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET_LLM: librechat-cleartrack-mcp-gateway-client-secret-llm-dev
+          # ClearTrack Code Interpreter (ea-code-runtime) — JWK signing key
+          CODEAPI_JWT_PRIVATE_JWK_JSON: librechat-codeapi-jwt-private-jwk-dev
       rag-api:
         image:
           repository: 'tt-librechat/rag-api'
