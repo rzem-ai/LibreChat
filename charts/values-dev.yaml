@@ -61,6 +61,8 @@ pods:
           NODE_TLS_REJECT_UNAUTHORIZED: '0'
           OPENID_CLIENT_ID: '2075976d-5147-47b2-89d2-4ad060d19f85'
           OPENID_ISSUER: 'https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/v2.0/'
+          OPENID_ON_BEHALF_FLOW_FOR_USERINFO_REQUIRED: 'true'
+          OPENID_ON_BEHALF_FLOW_USERINFO_SCOPE: 'user.read'
           OPENID_REQUIRED_ROLE: ''
           OPENID_SCOPE: 'openid profile email offline_access https://librechat-dev.ctk.au.deloitte.com/access_user'
           RAG_API_URL: 'http://127.0.0.1:8000'
