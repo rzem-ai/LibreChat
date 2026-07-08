@@ -8,6 +8,7 @@ const express = require('express');
 const passport = require('passport');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
+const { escapeHtml } = require('../utils/htmlEscape');
 const mongoSanitize = require('express-mongo-sanitize');
 const { logger, runAsSystem } = require('@librechat/data-schemas');
 const {
@@ -110,7 +111,8 @@ const startServer = async () => {
       : `${clientUrl.pathname}/`;
     if (baseHref !== '/') {
       logger.info(`Setting base href to ${baseHref}`);
-      indexHTML = indexHTML.replace(/base href="\/"/, `base href="${baseHref}"`);
+      const escapedBaseHref = escapeHtml(baseHref);
+      indexHTML = indexHTML.replace(/base href="\/"/, `base href="${escapedBaseHref}"`);
     }
   }
 
@@ -232,13 +234,16 @@ const startServer = async () => {
       'Cache-Control': process.env.INDEX_CACHE_CONTROL || 'no-cache, no-store, must-revalidate',
       Pragma: process.env.INDEX_PRAGMA || 'no-cache',
       Expires: process.env.INDEX_EXPIRES || '0',
+      'Content-Type': 'text/html; charset=utf-8',
     });
 
     const lang = req.cookies.lang || req.headers['accept-language']?.split(',')[0] || 'en-US';
-    const saneLang = lang.replace(/"/g, '&quot;');
+    const saneLang = escapeHtml(lang);
     let updatedIndexHtml = indexHTML.replace(/lang="en-US"/g, `lang="${saneLang}"`);
 
-    res.type('html');
+    // Security: indexHTML is from trusted build output (appConfig.paths.dist).
+    // Dynamic data (lang, baseHref) are properly HTML-escaped before insertion.
+    // Content-Type charset explicitly set. This prevents Stored XSS (CWE-79).
     res.send(updatedIndexHtml);
   });
 

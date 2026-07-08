@@ -26,12 +26,13 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'develop@sha256:130b2d3ecc8722b92c1c26bef50a89b9c18db983981829b1141508843c82f483'
+          tag: 'develop@sha256:1c52de272743044bf3df9c557fc44c2699822555dfa60ad8bfb3f88c3d5b212e'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
-          TOKEN_PROXY_MCP_URL: 'https://mcp-gateway-uat.ctk.au.deloitte.com/mcp'
+          TOKEN_PROXY_ANTHROPIC_URL: 'http://anthropic-eastus2.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_MCP_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
     containers:
       librechat:
         command:
@@ -44,21 +45,38 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:c34f715007cfafa8d6f9639d5cdd3c3c3f9ec720f182a68a56b7dedbe8eeb966'
+          tag: 'develop@sha256:c07c44dd5fee5b8969c969a15de711b5795662285988ceb3f181af7df41d9367'
         env:
-          NODE_ENV: 'development'
-          NODE_TLS_REJECT_UNAUTHORIZED: '0'
-          DOMAIN_CLIENT: 'https://librechat-dev.ctk.au.deloitte.com'
-          DOMAIN_SERVER: 'https://librechat-dev.ctk.au.deloitte.com'
-          MONGO_DB: 'mdb-librechat-database-dev'
-          KEY_VAULT_NAME: 'kv-int-librechat-dev'
+          ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
+          ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
           BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
+          DOMAIN_CLIENT: 'https://librechat-dev.ctk.au.deloitte.com'
+          DOMAIN_SERVER: 'https://librechat-dev.ctk.au.deloitte.com'
+          EMBEDDINGS_MODEL: 'text-embedding-3-small'
+          EMBEDDINGS_PROVIDER: 'azure'
+          ENDPOINTS: 'agents,anthropic,azureOpenAI,custom'
+          KEY_VAULT_NAME: 'kv-int-librechat-dev'
+          MONGO_DB: 'mdb-librechat-database-dev'
+          NODE_ENV: 'development'
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
           OPENID_CLIENT_ID: '2075976d-5147-47b2-89d2-4ad060d19f85'
           OPENID_ISSUER: 'https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/v2.0/'
           OPENID_REQUIRED_ROLE: ''
+          OPENID_SCOPE: 'openid profile email https://librechat-dev.ctk.au.deloitte.com/access_user'
+          RAG_API_URL: 'http://127.0.0.1:8000'
+          RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
+          RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
+          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_PORT: '8000'
+          RAG_USE_FULL_CONTEXT: 'true'
+          # ClearTrack MCP Gateway
+          CLEARTRACK_MCP_GATEWAY_CLIENT_ID: '3e5d28f1-91a3-4748-ad73-5fa544f1d3e2'
+          # ClearTrack MCP Gateway (OLD LLM)
+          CLEARTRACK_MCP_GATEWAY_CLIENT_ID_LLM: '498ce9fd-195b-40c5-82f1-8fc4a6d00d88'
         secrets:
+          AZURE_API_KEY: librechat-azure-api-key
           MONGO_URI: librechat-dev-mdb-connection-string
           JWT_SECRET: librechat-jwt-secret-dev
           JWT_REFRESH_SECRET: librechat-jwt-refresh-secret-dev
@@ -66,3 +84,39 @@ pods:
           CREDS_IV: librechat-creds-iv-dev
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-dev
           OPENID_SESSION_SECRET: librechat-openid-session-secret-dev
+          RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          # ClearTrack MCP Gateway
+          CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET: librechat-cleartrack-mcp-gateway-client-secret-dev
+          # ClearTrack MCP Gateway (OLD LLM)
+          CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET_LLM: librechat-cleartrack-mcp-gateway-client-secret-llm-dev
+      rag-api:
+        image:
+          repository: 'tt-librechat/rag-api'
+          pullPolicy: Always
+          tag: 'develop@sha256:765e35c5c9c6120a38f7aeabf3f69779ebc77b2fa24d74622eb2343116734088'
+        env:
+          PGVECTOR_CREATE_EXTENSION: 'False'
+          VECTOR_DB_TYPE: 'pgvector'
+          POSTGRES_USE_UNIX_SOCKET: 'False'
+          POSTGRES_DB: 'pgdb_librechat_app_dev'
+          POSTGRES_USER: 'id-int-librechat-dev'
+          POSTGRES_AUTH_TYPE: 'ActiveDirectoryMsi'
+          MANAGED_IDENTITY_CLIENT_ID: '9058562c-9eeb-4608-8613-51bec6324181'
+          DB_HOST: 'psql-ctspoke-npd.postgres.database.azure.com'
+          DB_PORT: '5432'
+          RAG_HOST: '0.0.0.0'
+          RAG_PORT: '8000'
+          EMBEDDINGS_PROVIDER: 'azure'
+          RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
+          RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
+          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
+        secrets:
+          AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
+        service:
+          enabled: true
+          type: ClusterIP
+          port: 8000
+          targetPort: 8000
+        ingress:
+          enabled: false

@@ -46,6 +46,8 @@ on:
       - client/**
       - packages/**
       - llm_gateway_proxy/**
+      - rag_api
+      - rag_api/**
       - Dockerfile
       - package.json
 # Limit to one concurrent workflow run per workflow, event, and ref
@@ -80,11 +82,19 @@ jobs:
             buildContext: .
             dockerFilePath: Dockerfile
             yamlKeyPath: '.pods.librechat.containers.librechat.image'
+            submodule: false
           # LLM Gateway proxy image — built from llm_gateway_proxy Dockerfile (serves on port 8081)
           - imageNameAlias: llm-gateway-proxy
             buildContext: llm_gateway_proxy
             dockerFilePath: llm_gateway_proxy/Dockerfile
             yamlKeyPath: '.pods.librechat.initContainers.llm-gateway-proxy.image'
+            submodule: false
+          # RAG API image — built from rag_api submodule Dockerfile (serves on port 8000)
+          - imageNameAlias: rag-api
+            buildContext: rag_api
+            dockerFilePath: rag_api/Dockerfile.lite
+            yamlKeyPath: '.pods.librechat.containers.rag-api.image'
+            submodule: true
             # buildArgs: |
             #   ARG1=value
             # unitTestScript: |
@@ -104,6 +114,7 @@ jobs:
       helmFolderPath: 'charts'
       actionType: ${{ github.event.inputs.actionType }}
       yamlKeyPath: ${{ matrix.yamlKeyPath }}
+      submodule: ${{ matrix.submodule }}
   UpdateValues:
     needs: [CI]
     if: ${{ github.event_name != 'pull_request' && github.event_name != 'pull_request_target' }}
