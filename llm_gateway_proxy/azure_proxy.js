@@ -95,7 +95,7 @@ async function azureProxy(r) {
   logInfo(r, "[" + reqId + "] Incoming request:"
     + " method=" + r.method
     + " uri=" + r.uri
-    + " args=" + (r.args || "(none)")
+    + " args_len=" + (r.args ? r.args.length : 0)
     + " remoteAddr=" + r.remoteAddress
     + " httpVersion=" + r.httpVersion);
 
@@ -182,13 +182,15 @@ async function azureProxy(r) {
     args = args.split("&").filter(function(p) { return p.indexOf("api-version=") !== 0; }).join("&");
   }
   var query = "api-version=" + AZURE_API_VERSION + (args ? "&" + args : "");
+  var queryForLog = "api-version=" + AZURE_API_VERSION + (args ? "&(redacted)" : "");
   var upstreamURL = upstreamBase + "/openai/deployments/" + encodeURIComponent(model) + path + "?" + query;
+  var upstreamURLForLog = upstreamBase + "/openai/deployments/" + encodeURIComponent(model) + path + "?" + queryForLog;
 
   logInfo(r, "[" + reqId + "] URL construction:"
-    + " originalArgs=" + (argsOriginal || "(none)")
-    + " filteredArgs=" + (args || "(none)")
-    + " finalQuery=" + query);
-  logInfo(r, "[" + reqId + "] Upstream URL: " + upstreamURL);
+    + " originalArgsLen=" + (argsOriginal ? argsOriginal.length : 0)
+    + " filteredArgsLen=" + (args ? args.length : 0)
+    + " finalQuery=" + queryForLog);
+  logInfo(r, "[" + reqId + "] Upstream URL: " + upstreamURLForLog);
 
   // --- Forward headers, injecting x-sa-token and dropping hop-by-hop headers ---
   var headers = {};
@@ -206,7 +208,14 @@ async function azureProxy(r) {
   headers["x-sa-token"] = token;
 
   // Ensure Content-Type is set for JSON bodies
-  if (!headers["content-type"] && !headers["Content-Type"]) {
+  var hasContentType = false;
+  for (var hk in headers) {
+    if (hk.toLowerCase() === "content-type") {
+      hasContentType = true;
+      break;
+    }
+  }
+  if (!hasContentType) {
     headers["Content-Type"] = "application/json";
     logInfo(r, "[" + reqId + "] Content-Type was missing - defaulted to application/json");
   }
