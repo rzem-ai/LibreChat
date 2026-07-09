@@ -218,10 +218,6 @@ function isManagedCodeApiJwtMode(): boolean {
   return provider === 'librechat-jwt' || provider === 'both';
 }
 
-export function isApiKeyMode(): boolean {
-  return process.env.CODEAPI_AUTH_PROVIDER === 'api-key';
-}
-
 export function isCodeApiJwtAuthEnabled(): boolean {
   return isManagedCodeApiJwtMode() || isEnabled(process.env.CODEAPI_JWT_ENABLED);
 }
@@ -376,29 +372,7 @@ export async function mintCodeApiToken(req: ServerRequest): Promise<string> {
 }
 
 export async function getCodeApiAuthHeaders(req?: ServerRequest): Promise<Record<string, string>> {
-  if (!req) {
-    return {};
-  }
-
-  if (isApiKeyMode()) {
-    const apiKey = process.env.LIBRECHAT_CODE_API_KEY ?? '';
-    if (!apiKey) {
-      return {};
-    }
-    const headers: Record<string, string> = { 'X-API-Key': apiKey };
-    /* Pass the authenticated LibreChat user ID so the code runtime can
-     * maintain per-user session isolation even without JWT claims. */
-    const user = req.user as CodeApiUserContext | undefined;
-    const userId = user
-      ? (stringifyClaimValue(user.id) ?? stringifyClaimValue(user._id))
-      : undefined;
-    if (userId) {
-      headers['X-User-Id'] = userId;
-    }
-    return headers;
-  }
-
-  if (!isCodeApiJwtAuthEnabled()) {
+  if (!req || !isCodeApiJwtAuthEnabled()) {
     return {};
   }
   const token = await mintCodeApiToken(req);
