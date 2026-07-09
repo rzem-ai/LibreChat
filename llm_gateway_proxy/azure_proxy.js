@@ -75,8 +75,7 @@ async function azureProxy(r) {
 
   // --- Forward headers, injecting x-sa-token and dropping hop-by-hop headers ---
   var headers = {};
-  var skipHeaders = { "host": true, "content-length": true, "transfer-encoding": true, "connection": true };
-
+  var skipHeaders = { "host": true, "content-length": true, "transfer-encoding": true, "connection": true, "x-sa-token": true };
   for (var h in r.headersIn) {
     if (!skipHeaders[h.toLowerCase()]) {
       headers[h] = r.headersIn[h];
