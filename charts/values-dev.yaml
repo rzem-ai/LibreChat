@@ -26,7 +26,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'develop@sha256:1c52de272743044bf3df9c557fc44c2699822555dfa60ad8bfb3f88c3d5b212e'
+          tag: 'develop@sha256:06fb46b9f446186bd83b8e0a5856cb565d2a00a41080afa1440e7c09e9290969'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -45,7 +45,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:c07c44dd5fee5b8969c969a15de711b5795662285988ceb3f181af7df41d9367'
+          tag: 'develop@sha256:4f383b701a2079cd188c081c583a97cdf0d307dd2204d53f4a75feff67b2aac6'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
