@@ -41,8 +41,8 @@ function headersToStr(headers) {
   for (var k in headers) {
     var v = headers[k];
     var kl = k.toLowerCase();
-    if (kl === "x-sa-token" || kl === "authorization" || kl === "proxy-authorization" || kl === "cookie" || kl === "x-api-key" || kl === "api-key") {
-      v = v ? "[REDACTED len=" + v.length + "]" : "[EMPTY]";
+    if (kl === "x-sa-token" || kl === "authorization" || kl === "proxy-authorization" || kl === "cookie" || kl === "x-api-key" || kl === "api-key" || kl.indexOf("token") !== -1 || kl.indexOf("key") !== -1 || kl.indexOf("secret") !== -1 || kl.indexOf("session") !== -1) {
+      v = v ? "[REDACTED len=" + String(v).length + "]" : "[EMPTY]";
     }
     parts.push(k + ": " + v);
   }
