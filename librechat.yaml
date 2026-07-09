@@ -8,6 +8,13 @@ interface:
     share: false
     public: false
 
+  fileSearch: true
+
+  # Pin tools to the prompt bar by default for all users
+  defaultPinnedTools:
+    - 'file_search'
+    - 'skills'
+
 endpoints:
   # ========================================
   # Built-in Anthropic (via nginx proxy)
