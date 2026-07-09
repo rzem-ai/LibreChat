@@ -296,7 +296,7 @@ function getResourceAttributes(config: TelemetryConfig): Attributes {
   return attributes;
 }
 
-function createAzureMonitorExporter(config: TelemetryConfig): object | undefined {
+function createAzureMonitorExporter(config: TelemetryConfig): NodeSDKConfiguration['traceExporter'] {
   if (!config.azureMonitorEndpoint) {
     // AZURE_MONITOR_OTLP_ENDPOINT not set — use standard OTLP exporter (via OTEL_* env vars)
     return undefined;
@@ -315,7 +315,7 @@ function createAzureMonitorExporter(config: TelemetryConfig): object | undefined
     // falls back to the standard OTLP exporter and a warning is emitted.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { AzureMonitorTraceExporter } = require('@azure/monitor-opentelemetry-exporter') as {
-      AzureMonitorTraceExporter: new (opts: object) => object;
+      AzureMonitorTraceExporter: new (opts: object) => NonNullable<NodeSDKConfiguration['traceExporter']>;
     };
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { ManagedIdentityCredential } = require('@azure/identity') as {
