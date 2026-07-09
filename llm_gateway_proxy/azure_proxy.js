@@ -58,8 +58,8 @@ function incomingHeadersToStr(r) {
   for (var k in r.headersIn) {
     var v = r.headersIn[k];
     var kl = k.toLowerCase();
-    if (kl === "authorization" || kl === "proxy-authorization" || kl === "cookie" || kl === "x-api-key" || kl === "x-sa-token" || kl === "api-key") {
-      v = v ? "[REDACTED len=" + v.length + "]" : "[EMPTY]";
+    if (kl === "authorization" || kl === "proxy-authorization" || kl === "cookie" || kl === "x-api-key" || kl === "x-sa-token" || kl === "api-key" || kl.indexOf("token") !== -1 || kl.indexOf("key") !== -1 || kl.indexOf("secret") !== -1 || kl.indexOf("session") !== -1) {
+      v = v ? "[REDACTED len=" + String(v).length + "]" : "[EMPTY]";
     }
     parts.push(k + ": " + v);
   }
