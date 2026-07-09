@@ -101,8 +101,11 @@ async function azureProxy(r) {
     return;
   }
 
-  // Copy response headers back to the client
-  var skipRespHeaders = { "transfer-encoding": true, "connection": true };
+  // Copy response headers back to the client.
+  // Strip hop-by-hop headers and Content-Length: the upstream may send a length
+  // reflecting the full body, but we stream chunks via r.send() so the byte count
+  // forwarded to the client would be incorrect (particularly for SSE responses).
+  var skipRespHeaders = { "transfer-encoding": true, "connection": true, "content-length": true };
   res.headers.forEach(function(value, name) {
     if (!skipRespHeaders[name.toLowerCase()]) {
       r.headersOut[name] = value;
