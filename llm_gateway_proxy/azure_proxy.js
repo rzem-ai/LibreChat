@@ -148,7 +148,7 @@ async function azureProxy(r) {
   logInfo(r, "[" + reqId + "] Extracted model name: " + model);
 
   // --- Resolve upstream base URL from nginx variable ---
-  var region = r.uri.startsWith("/azure-au/") ? "azure-au" : "azure-us";
+  var region = /^\/azure-au(?:\/|$)/.test(r.uri) ? "azure-au" : "azure-us";
   var upstreamBase = region === "azure-au"
     ? r.variables["token_proxy_azure_au_url"]
     : r.variables["token_proxy_azure_us_url"];
@@ -193,11 +193,19 @@ async function azureProxy(r) {
   logInfo(r, "[" + reqId + "] Upstream URL: " + upstreamURLForLog);
 
   // --- Forward headers, injecting x-sa-token and dropping hop-by-hop headers ---
-  var headers = {};
-  var skipHeaders = { "host": true, "content-length": true, "transfer-encoding": true, "connection": true, "x-sa-token": true };
+  var headers = Object.create(null);
+  var skipHeaders = Object.create(null);
+  skipHeaders["host"] = true;
+  skipHeaders["content-length"] = true;
+  skipHeaders["transfer-encoding"] = true;
+  skipHeaders["connection"] = true;
+  skipHeaders["x-sa-token"] = true;
   var droppedHeaders = [];
   var forwardedHeaders = [];
   for (var h in r.headersIn) {
+    if (!Object.prototype.hasOwnProperty.call(r.headersIn, h)) {
+      continue;
+    }
     if (!skipHeaders[h.toLowerCase()]) {
       headers[h] = r.headersIn[h];
       forwardedHeaders.push(h);
