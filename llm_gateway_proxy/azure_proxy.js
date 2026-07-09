@@ -28,6 +28,7 @@ async function azureProxy(r) {
   // --- Validate and parse request body ---
   var body = r.requestBody;
   if (!body) {
+    r.headersOut["Content-Type"] = "application/json";
     r.return(400, JSON.stringify({ error: { message: "empty request body", type: "invalid_request_error" } }));
     return;
   }
@@ -37,11 +38,13 @@ async function azureProxy(r) {
     var parsed = JSON.parse(body);
     model = parsed.model || "";
   } catch (e) {
+    r.headersOut["Content-Type"] = "application/json";
     r.return(400, JSON.stringify({ error: { message: "request body is not valid JSON", type: "invalid_request_error" } }));
     return;
   }
 
   if (!model) {
+    r.headersOut["Content-Type"] = "application/json";
     r.return(400, JSON.stringify({ error: { message: "missing 'model' field in request body", type: "invalid_request_error" } }));
     return;
   }
@@ -60,11 +63,15 @@ async function azureProxy(r) {
   upstreamBase = upstreamBase.replace(/\/$/, "");
 
   // --- Build the Azure-format upstream URL ---
-  // model names may contain characters that need encoding (e.g. dots, slashes)
-  // but Azure deployment names typically only use alphanumeric + hyphens - encode to be safe
-  var upstreamURL = upstreamBase
-    + "/openai/deployments/" + encodeURIComponent(model)
-    + "/chat/completions?api-version=" + AZURE_API_VERSION;
+  // Preserve the requested OpenAI-style endpoint path (e.g. /v1/embeddings, /v1/chat/completions)
+  // but strip the provider prefix (/azure-au or /azure-us) and optional /v1 prefix.
+  var path = r.uri.replace(/^\/azure-(?:au|us)(?:\/|$)/, "/").replace(/^\/v1\//, "/");
+  if (path === "/" || path === "") {
+    path = "/chat/completions";
+  }
+
+  var query = "api-version=" + AZURE_API_VERSION + (r.args ? "&" + r.args : "");
+  var upstreamURL = upstreamBase + "/openai/deployments/" + encodeURIComponent(model) + path + "?" + query;
 
   // --- Forward headers, injecting x-sa-token and dropping hop-by-hop headers ---
   var headers = {};
@@ -90,6 +97,7 @@ async function azureProxy(r) {
       body: body,
     });
   } catch (e) {
+    r.headersOut["Content-Type"] = "application/json";
     r.return(502, JSON.stringify({ error: { message: "upstream connection failed: " + e.message, type: "api_error" } }));
     return;
   }
@@ -106,8 +114,12 @@ async function azureProxy(r) {
   r.sendHeader();
 
   // Stream response body chunk-by-chunk to preserve SSE token streaming
+  if (!res.body) {
+    r.finish();
+    return;
+  }
+
   var reader = res.body.getReader();
-  while (true) {
     var chunk = await reader.read();
     if (chunk.done) {
       break;
