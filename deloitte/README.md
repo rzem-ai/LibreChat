@@ -257,6 +257,13 @@ Unlike CI/CD deployments, your local environment builds images from your source 
 
 **First time**: Build and start all services (will take ~10-15 minutes for initial build):
 
+### If this is your first time running the containers, you will need to pull them using 
+
+```zsh
+docker compose build --no-cache
+```
+### For all other times start here:
+
 ```zsh
 docker compose up -d
 ```
