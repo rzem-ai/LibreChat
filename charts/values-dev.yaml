@@ -84,12 +84,7 @@ pods:
           # ClearTrack MCP Gateway (OLD LLM)
           CLEARTRACK_MCP_GATEWAY_CLIENT_ID_LLM: '498ce9fd-195b-40c5-82f1-8fc4a6d00d88'
           # OpenTelemetry Tracing
-          OTEL_TRACING_ENABLED: 'true'
-          OTEL_SERVICE_NAME: 'librechat'
-          OTEL_TRACES_EXPORTER: 'otlp'
-          OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf'
-          OTEL_TRACES_SAMPLER: 'parentbased_traceidratio'
-          OTEL_TRACES_SAMPLER_ARG: '0.1'
+          OTEL_TRACES_SAMPLER_ARG: '0.3'
           # Tracing with Azure Monitor via Managed Identity (OTLP) — auth uses existing AZURE_CLIENT_ID
           AZURE_MONITOR_OTLP_ENDPOINT: 'https://managed-app-insight-ctspoke-npd-dce-soxy.australiaeast-1.ingest.monitor.azure.com/dataCollectionRules/dcr-41786a0b3d9e448dbc7a182ede4b2220/streams/Microsoft-OTLP-Traces/otlp/v1/traces'
         secrets:

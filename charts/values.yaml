@@ -79,6 +79,13 @@ pods:
           RAG_API_URL: 'http://127.0.0.1:8000'
           USE_ENTRA_ID_FOR_PEOPLE_SEARCH: 'true'
           ENTRA_ID_INCLUDE_OWNERS_AS_MEMBERS: 'true'
+          # OpenTelemetry Tracing
+          OTEL_TRACING_ENABLED: 'true'
+          OTEL_SERVICE_NAME: 'librechat'
+          OTEL_TRACES_EXPORTER: 'otlp'
+          OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf'
+          OTEL_TRACES_SAMPLER: 'parentbased_traceidratio'
+          OTEL_TRACES_SAMPLER_ARG: '0.1'
         service:
           enabled: true
           type: ClusterIP
