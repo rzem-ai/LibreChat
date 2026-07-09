@@ -120,6 +120,7 @@ async function azureProxy(r) {
   }
 
   var reader = res.body.getReader();
+  while (true) {
     var chunk = await reader.read();
     if (chunk.done) {
       break;
