@@ -70,7 +70,11 @@ async function azureProxy(r) {
     path = "/chat/completions";
   }
 
-  var query = "api-version=" + AZURE_API_VERSION + (r.args ? "&" + r.args : "");
+  var args = r.args || "";
+  if (args) {
+    args = args.split("&").filter(function(p) { return p.indexOf("api-version=") !== 0; }).join("&");
+  }
+  var query = "api-version=" + AZURE_API_VERSION + (args ? "&" + args : "");
   var upstreamURL = upstreamBase + "/openai/deployments/" + encodeURIComponent(model) + path + "?" + query;
 
   // --- Forward headers, injecting x-sa-token and dropping hop-by-hop headers ---
@@ -96,8 +100,9 @@ async function azureProxy(r) {
       body: body,
     });
   } catch (e) {
+    r.error("azure_proxy upstream connection failed: " + e);
     r.headersOut["Content-Type"] = "application/json";
-    r.return(502, JSON.stringify({ error: { message: "upstream connection failed: " + e.message, type: "api_error" } }));
+    r.return(502, JSON.stringify({ error: { message: "upstream connection failed", type: "api_error" } }));
     return;
   }
 
