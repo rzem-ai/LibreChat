@@ -52,16 +52,15 @@ describe('getTelemetryConfig', () => {
   });
 
   it('reads AZURE_MONITOR_OTLP_ENDPOINT and AZURE_CLIENT_ID when set', () => {
+    const endpoint = process.env.AZURE_MONITOR_OTLP_ENDPOINT ?? 'https://test.ingest.monitor.azure.com/otlp/v1/traces';
+    const clientId = process.env.AZURE_CLIENT_ID ?? 'test-managed-identity-client-id';
     const config = getTelemetryConfig({
-      AZURE_MONITOR_OTLP_ENDPOINT:
-        'https://managed-app-insight.australiaeast-1.ingest.monitor.azure.com/dataCollectionRules/dcr-abc/streams/Microsoft-OTLP-Traces/otlp/v1/traces',
-      AZURE_CLIENT_ID: '9058562c-9eeb-4608-8613-51bec6324181',
+      AZURE_MONITOR_OTLP_ENDPOINT: endpoint,
+      AZURE_CLIENT_ID: clientId,
     });
 
-    expect(config.azureMonitorEndpoint).toBe(
-      'https://managed-app-insight.australiaeast-1.ingest.monitor.azure.com/dataCollectionRules/dcr-abc/streams/Microsoft-OTLP-Traces/otlp/v1/traces',
-    );
-    expect(config.azureMonitorClientId).toBe('9058562c-9eeb-4608-8613-51bec6324181');
+    expect(config.azureMonitorEndpoint).toBe(endpoint);
+    expect(config.azureMonitorClientId).toBe(clientId);
   });
 
   it('trims whitespace from Azure Monitor env vars', () => {

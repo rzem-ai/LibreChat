@@ -538,8 +538,9 @@ describe('telemetry SDK lifecycle', () => {
 
   describe('Azure Monitor exporter', () => {
     const AZURE_ENDPOINT =
-      'https://managed-app-insight.australiaeast-1.ingest.monitor.azure.com/dataCollectionRules/dcr-abc/streams/Microsoft-OTLP-Traces/otlp/v1/traces';
-    const AZURE_CLIENT_ID = '9058562c-9eeb-4608-8613-51bec6324181';
+      process.env.AZURE_MONITOR_OTLP_ENDPOINT ??
+      'https://test.ingest.monitor.azure.com/otlp/v1/traces';
+    const AZURE_CLIENT_ID = process.env.AZURE_CLIENT_ID ?? 'test-managed-identity-client-id';
 
     it('does not use Azure exporter when Azure Monitor env vars are absent', () => {
       initializeTelemetry({ OTEL_TRACING_ENABLED: 'true' });
