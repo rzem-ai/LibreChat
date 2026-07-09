@@ -58,7 +58,7 @@ function incomingHeadersToStr(r) {
   for (var k in r.headersIn) {
     var v = r.headersIn[k];
     var kl = k.toLowerCase();
-    if (kl === "authorization" || kl === "proxy-authorization" || kl === "cookie" || kl === "x-api-key" || kl === "x-sa-token") {
+    if (kl === "authorization" || kl === "proxy-authorization" || kl === "cookie" || kl === "x-api-key" || kl === "x-sa-token" || kl === "api-key") {
       v = v ? "[REDACTED len=" + v.length + "]" : "[EMPTY]";
     }
     parts.push(k + ": " + v);
