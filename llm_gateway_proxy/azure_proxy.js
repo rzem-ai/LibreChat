@@ -74,7 +74,7 @@ function responseHeadersToStr(res) {
   var parts = [];
   res.headers.forEach(function(value, name) {
     var nl = name.toLowerCase();
-    if (nl === "set-cookie") {
+    if (nl === "set-cookie" || nl === "authorization" || nl === "proxy-authorization" || nl.indexOf("token") !== -1 || nl.indexOf("key") !== -1 || nl.indexOf("secret") !== -1 || nl.indexOf("session") !== -1) {
       parts.push(name + ": [REDACTED]");
       return;
     }
