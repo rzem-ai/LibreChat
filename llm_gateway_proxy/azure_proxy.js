@@ -21,9 +21,6 @@ var AZURE_API_VERSION = "2025-01-01-preview";
 // Logging helpers
 // ---------------------------------------------------------------------------
 
-function ts() {
-  return new Date().toISOString();
-}
 
 function logInfo(r, msg) {
   r.log("[azure_proxy] " + msg);
@@ -33,9 +30,6 @@ function logError(r, msg) {
   r.error("[azure_proxy] " + msg);
 }
 
-function logWarn(r, msg) {
-  r.warn("[azure_proxy] " + msg);
-}
 
 /**
  * Summarise the headers object as a single-line string for logging.
@@ -46,10 +40,8 @@ function headersToStr(headers) {
   var parts = [];
   for (var k in headers) {
     var v = headers[k];
-    if (k.toLowerCase() === "x-sa-token") {
-      v = v ? "[REDACTED len=" + v.length + "]" : "[EMPTY]";
-    }
-    if (k.toLowerCase() === "authorization") {
+    var kl = k.toLowerCase();
+    if (kl === "x-sa-token" || kl === "authorization" || kl === "proxy-authorization" || kl === "cookie" || kl === "x-api-key") {
       v = v ? "[REDACTED len=" + v.length + "]" : "[EMPTY]";
     }
     parts.push(k + ": " + v);
@@ -65,7 +57,8 @@ function incomingHeadersToStr(r) {
   var parts = [];
   for (var k in r.headersIn) {
     var v = r.headersIn[k];
-    if (k.toLowerCase() === "authorization") {
+    var kl = k.toLowerCase();
+    if (kl === "authorization" || kl === "proxy-authorization" || kl === "cookie" || kl === "x-api-key" || kl === "x-sa-token") {
       v = v ? "[REDACTED len=" + v.length + "]" : "[EMPTY]";
     }
     parts.push(k + ": " + v);
@@ -80,6 +73,11 @@ function incomingHeadersToStr(r) {
 function responseHeadersToStr(res) {
   var parts = [];
   res.headers.forEach(function(value, name) {
+    var nl = name.toLowerCase();
+    if (nl === "set-cookie") {
+      parts.push(name + ": [REDACTED]");
+      return;
+    }
     parts.push(name + ": " + value);
   });
   return "{ " + parts.join(" | ") + " }";
@@ -90,7 +88,7 @@ function responseHeadersToStr(res) {
 // ---------------------------------------------------------------------------
 
 async function azureProxy(r) {
-  var reqId = r.variables["request_id"] || ("-" + Math.random().toString(36).slice(2, 8));
+  var reqId = r.headersIn["x-request-id"] || r.variables["request_id"] || ("-" + Math.random().toString(36).slice(2, 8));
   logInfo(r, "=== REQUEST START [" + reqId + "] ===");
 
   // --- Log incoming request details ---
@@ -121,7 +119,6 @@ async function azureProxy(r) {
     return;
   }
   logInfo(r, "[" + reqId + "] Request body length=" + body.length);
-  logInfo(r, "[" + reqId + "] Request body (first 2000 chars): " + body.slice(0, 2000));
 
   var model = "";
   var parsed;
@@ -254,7 +251,7 @@ async function azureProxy(r) {
   res.headers.forEach(function(value, name) {
     if (!skipRespHeaders[name.toLowerCase()]) {
       r.headersOut[name] = value;
-      forwardedRespHeaders.push(name + "=" + value);
+      forwardedRespHeaders.push(name);
     } else {
       droppedRespHeaders.push(name);
     }
@@ -279,7 +276,6 @@ async function azureProxy(r) {
   var reader = res.body.getReader();
   var chunkCount = 0;
   var totalBytes = 0;
-  var firstChunkLogged = false;
   while (true) {
     var chunk = await reader.read();
     if (chunk.done) {
@@ -288,16 +284,9 @@ async function azureProxy(r) {
     chunkCount++;
     totalBytes += chunk.value.length;
 
-    // Log the first few chunks in detail to help diagnose 400/error responses
-    if (!firstChunkLogged || chunkCount <= 3) {
-      var chunkStr = "";
-      try {
-        chunkStr = String.fromCharCode.apply(null, chunk.value).slice(0, 500);
-      } catch (e) {
-        chunkStr = "(binary chunk, length=" + chunk.value.length + ")";
-      }
-      logInfo(r, "[" + reqId + "] Chunk #" + chunkCount + " length=" + chunk.value.length + " content: " + chunkStr);
-      firstChunkLogged = true;
+    // Log the first few chunks (length only) to aid diagnostics without leaking content
+    if (chunkCount <= 3) {
+      logInfo(r, "[" + reqId + "] Chunk #" + chunkCount + " length=" + chunk.value.length);
     }
 
     r.send(chunk.value);
