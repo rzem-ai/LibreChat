@@ -95,7 +95,7 @@ async function azureProxy(r) {
   logInfo(r, "[" + reqId + "] Incoming request:"
     + " method=" + r.method
     + " uri=" + r.uri
-    + " args_len=" + (r.args ? r.args.length : 0)
+    + " args_len=" + (r.argsString ? r.argsString.length : 0)
     + " remoteAddr=" + r.remoteAddress
     + " httpVersion=" + r.httpVersion);
 
@@ -111,18 +111,12 @@ async function azureProxy(r) {
   logInfo(r, "[" + reqId + "] Service account token present (length=" + token.length + ")");
 
   // --- Validate and parse request body ---
-  // r.requestBody is only populated when nginx pre-buffers the body before the js_content
-  // phase, which does not happen automatically. Use the async r.text() API instead, which
-  // reads and buffers the body on demand inside a js_content handler.
-  var body;
-  try {
-    body = await r.text();
-  } catch (e) {
-    logError(r, "[" + reqId + "] ABORT: failed to read request body: " + e + " - returning 400");
-    r.headersOut["Content-Type"] = "application/json";
-    r.return(400, JSON.stringify({ error: { message: "failed to read request body", type: "invalid_request_error" } }));
-    return;
-  }
+  // In this njs build (nginx/1.30.x), r.requestText is a string property that
+  // contains the buffered request body. It is NOT a function — do not call it.
+  // r.requestBody and r.text() are not available in js_content handlers.
+  // client_body_in_single_buffer on (proxy.conf) helps keep the body in a single
+  // buffer (in memory up to client_body_buffer_size; larger bodies may spill to a temp file).
+  var body = r.requestText;
   if (!body) {
     logError(r, "[" + reqId + "] ABORT: request body is empty - returning 400");
     r.headersOut["Content-Type"] = "application/json";
@@ -187,7 +181,11 @@ async function azureProxy(r) {
 
   logInfo(r, "[" + reqId + "] Path rewriting: rawUri=" + rawPath + " -> stripped path=" + path);
 
-  var args = r.args || "";
+  // r.args in njs is a key/value object, not a string. Prefer r.argsString when
+  // available; fall back to nginx's $args variable for compatibility across njs builds.
+  // Strip any api-version param passed by the client so our own AZURE_API_VERSION
+  // value is always used.
+  var args = (r.argsString !== undefined ? r.argsString : (r.variables["args"] || ""));
   var argsOriginal = args;
   if (args) {
     args = args.split("&").filter(function(p) { return p.indexOf("api-version=") !== 0; }).join("&");
