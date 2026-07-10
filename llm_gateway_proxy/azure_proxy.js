@@ -112,10 +112,10 @@ async function azureProxy(r) {
 
   // --- Validate and parse request body ---
   // In this njs build (nginx/1.30.x), r.requestText is a string property that
-  // contains the pre-buffered request body. It is NOT a function — do not call
-  // it. r.requestBody and r.text() are both undefined in js_content handlers.
-  // client_body_in_single_buffer on (set in proxy.conf) ensures the body is
-  // fully buffered into memory before the js_content phase runs.
+  // contains the buffered request body. It is NOT a function — do not call it.
+  // r.requestBody and r.text() are not available in js_content handlers.
+  // client_body_in_single_buffer on (proxy.conf) helps keep the body in a single
+  // buffer (in memory up to client_body_buffer_size; larger bodies may spill to a temp file).
   var body = r.requestText;
   if (!body) {
     logError(r, "[" + reqId + "] ABORT: request body is empty - returning 400");
