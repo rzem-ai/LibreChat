@@ -138,11 +138,7 @@
     "turbo": "^2.9.14",
     "typescript-eslint": "^8.24.0"
   },
-  "dependencies": {
-    "@azure/monitor-opentelemetry-exporter": "^1.0.0-beta.32"
-  },
   "overrides": {
-    "@azure/monitor-opentelemetry-exporter": "^1.0.0-beta.32",
     "sanitize-html": "^2.17.4",
     "@xmldom/xmldom": "^0.8.13",
     "elliptic": "^6.6.1",

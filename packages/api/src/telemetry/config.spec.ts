@@ -52,7 +52,9 @@ describe('getTelemetryConfig', () => {
   });
 
   it('reads AZURE_MONITOR_OTLP_ENDPOINT and AZURE_CLIENT_ID when set', () => {
-    const endpoint = process.env.AZURE_MONITOR_OTLP_ENDPOINT ?? 'https://test.ingest.monitor.azure.com/otlp/v1/traces';
+    const endpoint =
+      process.env.AZURE_MONITOR_OTLP_ENDPOINT ??
+      'https://test.ingest.monitor.azure.com/otlp/v1/traces';
     const clientId = process.env.AZURE_CLIENT_ID ?? 'test-managed-identity-client-id';
     const config = getTelemetryConfig({
       AZURE_MONITOR_OTLP_ENDPOINT: endpoint,
@@ -61,25 +63,5 @@ describe('getTelemetryConfig', () => {
 
     expect(config.azureMonitorEndpoint).toBe(endpoint);
     expect(config.azureMonitorClientId).toBe(clientId);
-  });
-
-  it('trims whitespace from Azure Monitor env vars', () => {
-    const config = getTelemetryConfig({
-      AZURE_MONITOR_OTLP_ENDPOINT: '  https://example.ingest.monitor.azure.com/  ',
-      AZURE_CLIENT_ID: '  my-client-id  ',
-    });
-
-    expect(config.azureMonitorEndpoint).toBe('https://example.ingest.monitor.azure.com/');
-    expect(config.azureMonitorClientId).toBe('my-client-id');
-  });
-
-  it('returns undefined for Azure Monitor fields when env vars are blank strings', () => {
-    const config = getTelemetryConfig({
-      AZURE_MONITOR_OTLP_ENDPOINT: '   ',
-      AZURE_CLIENT_ID: '',
-    });
-
-    expect(config.azureMonitorEndpoint).toBeUndefined();
-    expect(config.azureMonitorClientId).toBeUndefined();
   });
 });

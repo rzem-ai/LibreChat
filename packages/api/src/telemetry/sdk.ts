@@ -24,6 +24,11 @@ export interface TelemetryController {
 const WARNING_CODE = 'LIBRECHAT_OTEL';
 const REDACTED_QUERY_VALUE = '[REDACTED]';
 const SIGNAL_SHUTDOWN_TIMEOUT_MS = 5_000;
+/**
+ * OAuth scope for the Azure Monitor DCR OTLP traces ingestion endpoint.
+ * See https://learn.microsoft.com/en-us/azure/azure-monitor/app/opentelemetry-add-modify
+ */
+const AZURE_MONITOR_TOKEN_SCOPE = 'https://monitor.azure.com/.default';
 
 interface RequestUrlParts {
   href?: string;
@@ -296,9 +301,24 @@ function getResourceAttributes(config: TelemetryConfig): Attributes {
   return attributes;
 }
 
-function createAzureMonitorExporter(config: TelemetryConfig): NodeSDKConfiguration['traceExporter'] {
+/**
+ * Minimal `@azure/identity` credential shape — kept structural so the dynamic
+ * require below stays out of the static compile-time dependency graph.
+ */
+interface AzureTokenCredential {
+  getToken: (scopes: string | string[]) => Promise<{ token: string } | null>;
+}
+
+/**
+ * Build an OTLP HTTP trace exporter that authenticates to the Azure Monitor
+ * DCR endpoint using a managed identity. The `headers` factory is invoked by
+ * the exporter before each export batch; `@azure/identity` caches the token
+ * internally and only refreshes when nearing expiry.
+ */
+function createAzureMonitorExporter(
+  config: TelemetryConfig,
+): NodeSDKConfiguration['traceExporter'] | undefined {
   if (!config.azureMonitorEndpoint) {
-    // AZURE_MONITOR_OTLP_ENDPOINT not set — use standard OTLP exporter (via OTEL_* env vars)
     return undefined;
   }
 
@@ -311,26 +331,29 @@ function createAzureMonitorExporter(config: TelemetryConfig): NodeSDKConfigurati
   }
 
   try {
-    // Dynamic require so these packages are optional — if not installed the SDK
-    // falls back to the standard OTLP exporter and a warning is emitted.
+    // Dynamic require so these packages remain optional — if either is missing
+    // we emit a warning and fall back to the default OTLP exporter path.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { AzureMonitorTraceExporter } = require('@azure/monitor-opentelemetry-exporter') as {
-      AzureMonitorTraceExporter: new (opts: object) => NonNullable<NodeSDKConfiguration['traceExporter']>;
+    const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http') as {
+      OTLPTraceExporter: new (opts: object) => NonNullable<NodeSDKConfiguration['traceExporter']>;
     };
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { ManagedIdentityCredential } = require('@azure/identity') as {
-      ManagedIdentityCredential: new (clientId: string) => object;
+      ManagedIdentityCredential: new (clientId: string) => AzureTokenCredential;
     };
 
     const credential = new ManagedIdentityCredential(config.azureMonitorClientId);
-    return new AzureMonitorTraceExporter({
-      connectionString: config.azureMonitorEndpoint,
-      credential,
+    return new OTLPTraceExporter({
+      url: config.azureMonitorEndpoint,
+      headers: async () => {
+        const accessToken = await credential.getToken(AZURE_MONITOR_TOKEN_SCOPE);
+        return { Authorization: `Bearer ${accessToken?.token ?? ''}` };
+      },
     });
   } catch (error) {
     emitWarning(
       `Azure Monitor exporter unavailable — falling back to standard OTLP export. ` +
-        `Ensure @azure/monitor-opentelemetry-exporter and @azure/identity are installed. ` +
+        `Ensure @opentelemetry/exporter-trace-otlp-http and @azure/identity are installed. ` +
         `Error: ${getErrorMessage(error)}`,
     );
     return undefined;

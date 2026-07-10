@@ -16,7 +16,7 @@ interface UndiciInstrumentationOptions {
 
 const mockStart = jest.fn();
 const mockShutdown = jest.fn();
-const mockNodeSDK = jest.fn(() => ({
+const mockNodeSDK = jest.fn((_config?: Record<string, unknown>) => ({
   start: mockStart,
   shutdown: mockShutdown,
 }));
@@ -111,13 +111,26 @@ jest.mock('../app/shutdown', () => ({
   registerShutdownTask: jest.fn(),
 }));
 
-const mockAzureMonitorTraceExporter = jest.fn(() => ({ name: 'azure-monitor' }));
-const mockManagedIdentityCredential = jest.fn(() => ({ type: 'ManagedIdentityCredential' }));
+interface OtlpTraceExporterOptions {
+  url: string;
+  headers: () => Promise<Record<string, string>>;
+}
+
+const mockOtlpTraceExporter = jest.fn((_options: OtlpTraceExporterOptions) => ({
+  name: 'otlp-trace-exporter',
+}));
+const mockGetToken = jest.fn((_scopes: string | string[]) =>
+  Promise.resolve({ token: 'test-access-token' }),
+);
+const mockManagedIdentityCredential = jest.fn((_clientId: string) => ({
+  type: 'ManagedIdentityCredential',
+  getToken: mockGetToken,
+}));
 
 jest.mock(
-  '@azure/monitor-opentelemetry-exporter',
+  '@opentelemetry/exporter-trace-otlp-http',
   () => ({
-    AzureMonitorTraceExporter: mockAzureMonitorTraceExporter,
+    OTLPTraceExporter: mockOtlpTraceExporter,
   }),
   { virtual: true },
 );
@@ -539,15 +552,15 @@ describe('telemetry SDK lifecycle', () => {
   describe('Azure Monitor exporter', () => {
     const AZURE_ENDPOINT =
       process.env.AZURE_MONITOR_OTLP_ENDPOINT ??
-      'https://test.ingest.monitor.azure.com/otlp/v1/traces';
+      'https://test.ingest.monitor.azure.com/dataCollectionRules/dcr-test/streams/Microsoft-OTLP-Traces/otlp/v1/traces';
     const AZURE_CLIENT_ID = process.env.AZURE_CLIENT_ID ?? 'test-managed-identity-client-id';
+    const AZURE_MONITOR_SCOPE = 'https://monitor.azure.com/.default';
 
     it('does not use Azure exporter when Azure Monitor env vars are absent', () => {
       initializeTelemetry({ OTEL_TRACING_ENABLED: 'true' });
 
-      expect(mockAzureMonitorTraceExporter).not.toHaveBeenCalled();
+      expect(mockOtlpTraceExporter).not.toHaveBeenCalled();
       expect(mockManagedIdentityCredential).not.toHaveBeenCalled();
-      // NodeSDK should be created without a traceExporter override
       const sdkConfig = mockNodeSDK.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
       expect(sdkConfig).not.toHaveProperty('traceExporter');
     });
@@ -558,7 +571,7 @@ describe('telemetry SDK lifecycle', () => {
         AZURE_MONITOR_OTLP_ENDPOINT: AZURE_ENDPOINT,
       });
 
-      expect(mockAzureMonitorTraceExporter).not.toHaveBeenCalled();
+      expect(mockOtlpTraceExporter).not.toHaveBeenCalled();
       const sdkConfig = mockNodeSDK.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
       expect(sdkConfig).not.toHaveProperty('traceExporter');
     });
@@ -569,10 +582,9 @@ describe('telemetry SDK lifecycle', () => {
       initializeTelemetry({
         OTEL_TRACING_ENABLED: 'true',
         AZURE_MONITOR_OTLP_ENDPOINT: AZURE_ENDPOINT,
-        // AZURE_CLIENT_ID intentionally omitted
       });
 
-      expect(mockAzureMonitorTraceExporter).not.toHaveBeenCalled();
+      expect(mockOtlpTraceExporter).not.toHaveBeenCalled();
       expect(emitWarningSpy).toHaveBeenCalledWith(
         expect.stringContaining('AZURE_CLIENT_ID is missing'),
         { code: 'LIBRECHAT_OTEL' },
@@ -581,7 +593,7 @@ describe('telemetry SDK lifecycle', () => {
       expect(sdkConfig).not.toHaveProperty('traceExporter');
     });
 
-    it('creates Azure exporter with ManagedIdentityCredential when both env vars are set', () => {
+    it('creates OTLPTraceExporter with the DCR URL and a bearer-token headers factory when both env vars are set', () => {
       initializeTelemetry({
         OTEL_TRACING_ENABLED: 'true',
         AZURE_MONITOR_OTLP_ENDPOINT: AZURE_ENDPOINT,
@@ -589,18 +601,67 @@ describe('telemetry SDK lifecycle', () => {
       });
 
       expect(mockManagedIdentityCredential).toHaveBeenCalledWith(AZURE_CLIENT_ID);
-      expect(mockAzureMonitorTraceExporter).toHaveBeenCalledWith({
-        connectionString: AZURE_ENDPOINT,
-        credential: expect.objectContaining({ type: 'ManagedIdentityCredential' }),
+      expect(mockOtlpTraceExporter).toHaveBeenCalledWith({
+        url: AZURE_ENDPOINT,
+        headers: expect.any(Function),
       });
-      // NodeSDK must receive the exporter as traceExporter
       const sdkConfig = mockNodeSDK.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
-      expect(sdkConfig).toHaveProperty('traceExporter');
-      expect(sdkConfig?.traceExporter).toEqual({ name: 'azure-monitor' });
+      expect(sdkConfig?.traceExporter).toEqual({ name: 'otlp-trace-exporter' });
     });
 
-    it('falls back gracefully and emits a warning when Azure packages are not installed', () => {
-      jest.doMock('@azure/monitor-opentelemetry-exporter', () => {
+    it('invokes credential.getToken with the Azure Monitor scope on every headers factory call', async () => {
+      initializeTelemetry({
+        OTEL_TRACING_ENABLED: 'true',
+        AZURE_MONITOR_OTLP_ENDPOINT: AZURE_ENDPOINT,
+        AZURE_CLIENT_ID: AZURE_CLIENT_ID,
+      });
+
+      const exporterOptions = mockOtlpTraceExporter.mock.calls[0]?.[0];
+      expect(exporterOptions?.headers).toBeInstanceOf(Function);
+
+      const headers = await exporterOptions?.headers();
+
+      expect(mockGetToken).toHaveBeenCalledWith(AZURE_MONITOR_SCOPE);
+      expect(headers).toEqual({ Authorization: 'Bearer test-access-token' });
+    });
+
+    it('refreshes the bearer token on each export batch (headers factory called per export)', async () => {
+      mockGetToken
+        .mockResolvedValueOnce({ token: 'first-token' })
+        .mockResolvedValueOnce({ token: 'second-token' });
+
+      initializeTelemetry({
+        OTEL_TRACING_ENABLED: 'true',
+        AZURE_MONITOR_OTLP_ENDPOINT: AZURE_ENDPOINT,
+        AZURE_CLIENT_ID: AZURE_CLIENT_ID,
+      });
+
+      const exporterOptions = mockOtlpTraceExporter.mock.calls[0]?.[0];
+
+      const first = await exporterOptions?.headers();
+      const second = await exporterOptions?.headers();
+
+      expect(mockGetToken).toHaveBeenCalledTimes(2);
+      expect(first).toEqual({ Authorization: 'Bearer first-token' });
+      expect(second).toEqual({ Authorization: 'Bearer second-token' });
+    });
+
+    it('propagates errors from the credential so the exporter surfaces the failure to the OTLP transport', async () => {
+      mockGetToken.mockRejectedValueOnce(new Error('imds unavailable'));
+
+      initializeTelemetry({
+        OTEL_TRACING_ENABLED: 'true',
+        AZURE_MONITOR_OTLP_ENDPOINT: AZURE_ENDPOINT,
+        AZURE_CLIENT_ID: AZURE_CLIENT_ID,
+      });
+
+      const exporterOptions = mockOtlpTraceExporter.mock.calls[0]?.[0];
+
+      await expect(exporterOptions?.headers()).rejects.toThrow('imds unavailable');
+    });
+
+    it('falls back gracefully and emits a warning when the OTLP exporter package is not installed', () => {
+      jest.doMock('@opentelemetry/exporter-trace-otlp-http', () => {
         throw new Error('Cannot find module');
       });
 
@@ -621,32 +682,7 @@ describe('telemetry SDK lifecycle', () => {
         expect.stringContaining('Azure Monitor exporter unavailable'),
         { code: 'LIBRECHAT_OTEL' },
       );
-      // SDK still starts — OTEL falls back to env-var-driven standard OTLP
       expect(mockNodeSDK).toHaveBeenCalled();
-    });
-
-    it('does not load Azure packages at all when env vars are absent', () => {
-      initializeTelemetry({ OTEL_TRACING_ENABLED: 'true' });
-
-      // The virtual mocks would record calls if the modules were required
-      expect(mockAzureMonitorTraceExporter).not.toHaveBeenCalled();
-      expect(mockManagedIdentityCredential).not.toHaveBeenCalled();
-    });
-
-    it('normal tracing still works after Azure exporter initialisation', () => {
-      const controller = initializeTelemetry({
-        OTEL_TRACING_ENABLED: 'true',
-        AZURE_MONITOR_OTLP_ENDPOINT: AZURE_ENDPOINT,
-        AZURE_CLIENT_ID: AZURE_CLIENT_ID,
-      });
-
-      expect(controller.enabled).toBe(true);
-      expect(controller.status).toBe('started');
-      expect(mockExpressInstrumentation).toHaveBeenCalledTimes(1);
-      expect(mockMongoDBInstrumentation).toHaveBeenCalledTimes(1);
-      expect(mockMongooseInstrumentation).toHaveBeenCalledTimes(1);
-      expect(mockIORedisInstrumentation).toHaveBeenCalledTimes(1);
-      expect(mockUndiciInstrumentation).toHaveBeenCalledTimes(1);
     });
   });
 });

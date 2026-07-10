@@ -9,9 +9,13 @@ export interface TelemetryConfig {
   sdkDisabled: boolean;
   serviceName: string;
   serviceVersion?: string;
-  /** Azure Monitor OTLP ingestion endpoint (e.g. https://<workspace>.ingest.monitor.azure.com/...) */
+  /**
+   * Azure Monitor DCR OTLP traces ingestion URL (from `AZURE_MONITOR_OTLP_ENDPOINT`).
+   * Example: `https://<dce>.<region>.ingest.monitor.azure.com/dataCollectionRules/<dcr-id>/streams/Microsoft-OTLP-Traces/otlp/v1/traces`
+   * Requires a bearer token per request; not an App Insights connection string.
+   */
   azureMonitorEndpoint?: string;
-  /** Client ID of the user-assigned managed identity used to authenticate with Azure Monitor */
+  /** Managed identity client ID (from `AZURE_CLIENT_ID`) used to obtain the bearer token. */
   azureMonitorClientId?: string;
 }
 
