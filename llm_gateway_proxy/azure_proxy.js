@@ -111,7 +111,18 @@ async function azureProxy(r) {
   logInfo(r, "[" + reqId + "] Service account token present (length=" + token.length + ")");
 
   // --- Validate and parse request body ---
-  var body = r.requestBody;
+  // r.requestBody is only populated when nginx pre-buffers the body before the js_content
+  // phase, which does not happen automatically. Use the async r.text() API instead, which
+  // reads and buffers the body on demand inside a js_content handler.
+  var body;
+  try {
+    body = await r.text();
+  } catch (e) {
+    logError(r, "[" + reqId + "] ABORT: failed to read request body: " + e + " - returning 400");
+    r.headersOut["Content-Type"] = "application/json";
+    r.return(400, JSON.stringify({ error: { message: "failed to read request body", type: "invalid_request_error" } }));
+    return;
+  }
   if (!body) {
     logError(r, "[" + reqId + "] ABORT: request body is empty - returning 400");
     r.headersOut["Content-Type"] = "application/json";
