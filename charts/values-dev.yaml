@@ -45,7 +45,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:e0f5dfc929b401902a36d43dcb69a50fd2e03e6240a6397de73fffff34437ddd'
+          tag: 'develop@sha256:9c0f55e6d10266cc62c06d758e4a592c313bdaf72e08ff84e19ecf29db32b0bc'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
