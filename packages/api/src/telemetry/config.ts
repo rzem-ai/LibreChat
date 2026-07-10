@@ -9,13 +9,8 @@ export interface TelemetryConfig {
   sdkDisabled: boolean;
   serviceName: string;
   serviceVersion?: string;
-  /**
-   * Azure Monitor DCR OTLP traces ingestion URL (from `AZURE_MONITOR_OTLP_ENDPOINT`).
-   * Example: `https://<dce>.<region>.ingest.monitor.azure.com/dataCollectionRules/<dcr-id>/streams/Microsoft-OTLP-Traces/otlp/v1/traces`
-   * Requires a bearer token per request; not an App Insights connection string.
-   */
-  azureMonitorEndpoint?: string;
-  /** Managed identity client ID (from `AZURE_CLIENT_ID`) used to obtain the bearer token. */
+  tracesEndpoint?: string;
+  azureMonitorAuthEnabled: boolean;
   azureMonitorClientId?: string;
 }
 
@@ -47,7 +42,8 @@ export function getTelemetryConfig(env: NodeJS.ProcessEnv = process.env): Teleme
     sdkDisabled,
     serviceVersion,
     healthPath: DEFAULT_HEALTH_PATH,
-    azureMonitorEndpoint: normalizeEnvValue(env.AZURE_MONITOR_OTLP_ENDPOINT),
+    tracesEndpoint: normalizeEnvValue(env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT),
+    azureMonitorAuthEnabled: isTruthy(env.AZURE_MONITOR_AUTH_ENABLED),
     azureMonitorClientId: normalizeEnvValue(env.AZURE_CLIENT_ID),
   };
 }

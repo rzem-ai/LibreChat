@@ -550,13 +550,13 @@ describe('telemetry SDK lifecycle', () => {
   });
 
   describe('Azure Monitor exporter', () => {
-    const AZURE_ENDPOINT =
-      process.env.AZURE_MONITOR_OTLP_ENDPOINT ??
+    const TRACES_ENDPOINT =
+      process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ??
       'https://test.ingest.monitor.azure.com/dataCollectionRules/dcr-test/streams/Microsoft-OTLP-Traces/otlp/v1/traces';
     const AZURE_CLIENT_ID = process.env.AZURE_CLIENT_ID ?? 'test-managed-identity-client-id';
     const AZURE_MONITOR_SCOPE = 'https://monitor.azure.com/.default';
 
-    it('does not use Azure exporter when Azure Monitor env vars are absent', () => {
+    it('does not use Azure exporter when the auth flag is unset', () => {
       initializeTelemetry({ OTEL_TRACING_ENABLED: 'true' });
 
       expect(mockOtlpTraceExporter).not.toHaveBeenCalled();
@@ -565,10 +565,12 @@ describe('telemetry SDK lifecycle', () => {
       expect(sdkConfig).not.toHaveProperty('traceExporter');
     });
 
-    it('does not use Azure exporter when only endpoint is set', () => {
+    it('does not use Azure exporter when endpoint is set but the auth flag is not', () => {
+      // Non-Azure deployments set only OTEL_EXPORTER_OTLP_TRACES_ENDPOINT; the SDK
+      // handles that natively via its own OTLP env-var support.
       initializeTelemetry({
         OTEL_TRACING_ENABLED: 'true',
-        AZURE_MONITOR_OTLP_ENDPOINT: AZURE_ENDPOINT,
+        OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: TRACES_ENDPOINT,
       });
 
       expect(mockOtlpTraceExporter).not.toHaveBeenCalled();
@@ -576,12 +578,27 @@ describe('telemetry SDK lifecycle', () => {
       expect(sdkConfig).not.toHaveProperty('traceExporter');
     });
 
-    it('emits a warning and falls back when endpoint is set but AZURE_CLIENT_ID is missing', () => {
+    it('emits a warning and falls back when the auth flag is set but the traces endpoint is missing', () => {
+      initializeTelemetry({
+        OTEL_TRACING_ENABLED: 'true',
+        AZURE_MONITOR_AUTH_ENABLED: 'true',
+        AZURE_CLIENT_ID: AZURE_CLIENT_ID,
+      });
+
+      expect(mockOtlpTraceExporter).not.toHaveBeenCalled();
+      expect(emitWarningSpy).toHaveBeenCalledWith(
+        expect.stringContaining('OTEL_EXPORTER_OTLP_TRACES_ENDPOINT is missing'),
+        { code: 'LIBRECHAT_OTEL' },
+      );
+    });
+
+    it('emits a warning and falls back when the auth flag is set but AZURE_CLIENT_ID is missing', () => {
       // AZURE_CLIENT_ID is a shared infra var that should always be present, but
       // if it is somehow absent we warn and fall back rather than crash.
       initializeTelemetry({
         OTEL_TRACING_ENABLED: 'true',
-        AZURE_MONITOR_OTLP_ENDPOINT: AZURE_ENDPOINT,
+        AZURE_MONITOR_AUTH_ENABLED: 'true',
+        OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: TRACES_ENDPOINT,
       });
 
       expect(mockOtlpTraceExporter).not.toHaveBeenCalled();
@@ -593,16 +610,17 @@ describe('telemetry SDK lifecycle', () => {
       expect(sdkConfig).not.toHaveProperty('traceExporter');
     });
 
-    it('creates OTLPTraceExporter with the DCR URL and a bearer-token headers factory when both env vars are set', () => {
+    it('creates OTLPTraceExporter with the DCR URL and a bearer-token headers factory when all Azure env vars are set', () => {
       initializeTelemetry({
         OTEL_TRACING_ENABLED: 'true',
-        AZURE_MONITOR_OTLP_ENDPOINT: AZURE_ENDPOINT,
+        AZURE_MONITOR_AUTH_ENABLED: 'true',
+        OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: TRACES_ENDPOINT,
         AZURE_CLIENT_ID: AZURE_CLIENT_ID,
       });
 
       expect(mockManagedIdentityCredential).toHaveBeenCalledWith(AZURE_CLIENT_ID);
       expect(mockOtlpTraceExporter).toHaveBeenCalledWith({
-        url: AZURE_ENDPOINT,
+        url: TRACES_ENDPOINT,
         headers: expect.any(Function),
       });
       const sdkConfig = mockNodeSDK.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
@@ -612,7 +630,8 @@ describe('telemetry SDK lifecycle', () => {
     it('invokes credential.getToken with the Azure Monitor scope on every headers factory call', async () => {
       initializeTelemetry({
         OTEL_TRACING_ENABLED: 'true',
-        AZURE_MONITOR_OTLP_ENDPOINT: AZURE_ENDPOINT,
+        AZURE_MONITOR_AUTH_ENABLED: 'true',
+        OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: TRACES_ENDPOINT,
         AZURE_CLIENT_ID: AZURE_CLIENT_ID,
       });
 
@@ -632,7 +651,8 @@ describe('telemetry SDK lifecycle', () => {
 
       initializeTelemetry({
         OTEL_TRACING_ENABLED: 'true',
-        AZURE_MONITOR_OTLP_ENDPOINT: AZURE_ENDPOINT,
+        AZURE_MONITOR_AUTH_ENABLED: 'true',
+        OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: TRACES_ENDPOINT,
         AZURE_CLIENT_ID: AZURE_CLIENT_ID,
       });
 
@@ -651,7 +671,8 @@ describe('telemetry SDK lifecycle', () => {
 
       initializeTelemetry({
         OTEL_TRACING_ENABLED: 'true',
-        AZURE_MONITOR_OTLP_ENDPOINT: AZURE_ENDPOINT,
+        AZURE_MONITOR_AUTH_ENABLED: 'true',
+        OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: TRACES_ENDPOINT,
         AZURE_CLIENT_ID: AZURE_CLIENT_ID,
       });
 
@@ -674,7 +695,8 @@ describe('telemetry SDK lifecycle', () => {
 
       freshInit({
         OTEL_TRACING_ENABLED: 'true',
-        AZURE_MONITOR_OTLP_ENDPOINT: AZURE_ENDPOINT,
+        AZURE_MONITOR_AUTH_ENABLED: 'true',
+        OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: TRACES_ENDPOINT,
         AZURE_CLIENT_ID: AZURE_CLIENT_ID,
       });
 
