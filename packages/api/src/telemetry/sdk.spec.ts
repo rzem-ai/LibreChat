@@ -119,8 +119,9 @@ interface OtlpTraceExporterOptions {
 const mockOtlpTraceExporter = jest.fn((_options: OtlpTraceExporterOptions) => ({
   name: 'otlp-trace-exporter',
 }));
-const mockGetToken = jest.fn((_scopes: string | string[]) =>
-  Promise.resolve({ token: 'test-access-token' }),
+const mockGetToken = jest.fn(
+  (_scopes: string | string[]): Promise<{ token: string } | null> =>
+    Promise.resolve({ token: 'test-access-token' }),
 );
 const mockManagedIdentityCredential = jest.fn((_clientId: string) => ({
   type: 'ManagedIdentityCredential',
@@ -681,30 +682,47 @@ describe('telemetry SDK lifecycle', () => {
       await expect(exporterOptions?.headers()).rejects.toThrow('imds unavailable');
     });
 
-    it('falls back gracefully and emits a warning when the OTLP exporter package is not installed', () => {
-      jest.doMock('@opentelemetry/exporter-trace-otlp-http', () => {
-        throw new Error('Cannot find module');
-      });
+    it('throws from the headers factory when the credential returns a null token', async () => {
+      mockGetToken.mockResolvedValueOnce(null);
 
-      // Re-require after mock override so the dynamic require inside createAzureMonitorExporter
-      // picks up the throwing mock
-      jest.resetModules();
-      const { initializeTelemetry: freshInit } =
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('./sdk') as typeof import('./sdk');
-
-      freshInit({
+      initializeTelemetry({
         OTEL_TRACING_ENABLED: 'true',
         AZURE_MONITOR_AUTH_ENABLED: 'true',
         OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: TRACES_ENDPOINT,
         AZURE_CLIENT_ID: AZURE_CLIENT_ID,
       });
 
-      expect(emitWarningSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Azure Monitor exporter unavailable'),
-        { code: 'LIBRECHAT_OTEL' },
-      );
-      expect(mockNodeSDK).toHaveBeenCalled();
+      const exporterOptions = mockOtlpTraceExporter.mock.calls[0]?.[0];
+
+      await expect(exporterOptions?.headers()).rejects.toThrow('returned no token');
+    });
+
+    it('falls back gracefully and emits a warning when the OTLP exporter package is not installed', () => {
+      jest.doMock('@opentelemetry/exporter-trace-otlp-http', () => {
+        throw new Error('Cannot find module');
+      });
+      jest.resetModules();
+      try {
+        const { initializeTelemetry: freshInit } =
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          require('./sdk') as typeof import('./sdk');
+
+        freshInit({
+          OTEL_TRACING_ENABLED: 'true',
+          AZURE_MONITOR_AUTH_ENABLED: 'true',
+          OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: TRACES_ENDPOINT,
+          AZURE_CLIENT_ID: AZURE_CLIENT_ID,
+        });
+
+        expect(emitWarningSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Azure Monitor exporter unavailable'),
+          { code: 'LIBRECHAT_OTEL' },
+        );
+        expect(mockNodeSDK).toHaveBeenCalled();
+      } finally {
+        jest.dontMock('@opentelemetry/exporter-trace-otlp-http');
+        jest.resetModules();
+      }
     });
   });
 });

@@ -84,8 +84,8 @@ pods:
           # ClearTrack MCP Gateway (OLD LLM)
           CLEARTRACK_MCP_GATEWAY_CLIENT_ID_LLM: '498ce9fd-195b-40c5-82f1-8fc4a6d00d88'
           # OpenTelemetry Tracing
+          OTEL_TRACING_ENABLED: 'true'
           OTEL_TRACES_SAMPLER_ARG: '0.3'
-          # OTLP traces endpoint
           OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: 'https://managed-ai-ctspoke-npd-dce-95rn.australiaeast-1.ingest.monitor.azure.com/dataCollectionRules/dcr-3991725585f24a5eabd0d6aa283d0e18/streams/Microsoft-OTLP-Traces/otlp/v1/traces'
           # Wrap the OTLP exporter with an Azure AD bearer-token headers factory (managed identity via AZURE_CLIENT_ID)
           AZURE_MONITOR_AUTH_ENABLED: 'true'

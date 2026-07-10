@@ -345,7 +345,10 @@ function createAzureMonitorExporter(
       url: config.tracesEndpoint,
       headers: async () => {
         const accessToken = await credential.getToken(AZURE_MONITOR_TOKEN_SCOPE);
-        return { Authorization: `Bearer ${accessToken?.token ?? ''}` };
+        if (!accessToken?.token) {
+          throw new Error('Azure Monitor: managed identity returned no token');
+        }
+        return { Authorization: `Bearer ${accessToken.token}` };
       },
     });
   } catch (error) {

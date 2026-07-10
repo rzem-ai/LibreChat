@@ -80,7 +80,6 @@ pods:
           USE_ENTRA_ID_FOR_PEOPLE_SEARCH: 'true'
           ENTRA_ID_INCLUDE_OWNERS_AS_MEMBERS: 'true'
           # OpenTelemetry Tracing
-          OTEL_TRACING_ENABLED: 'true'
           OTEL_SERVICE_NAME: 'librechat'
           OTEL_TRACES_EXPORTER: 'otlp'
           OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf'
