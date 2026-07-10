@@ -2,11 +2,18 @@ version: 1.3.9
 cache: true
 
 interface:
+  fileCitations: true
   agents:
     use: true
     create: true
     share: false
     public: false
+  remoteAgents:
+    use: true
+    create: true
+  skills:
+    use: true
+    create: true
 
 endpoints:
   # ========================================
@@ -17,9 +24,16 @@ endpoints:
     recursionLimit: 25
     maxRecursionLimit: 50
     disableBuilder: false
+    maxCitations: 30
+    maxCitationsPerFile: 7
     capabilities: ["deferred_tools", "execute_code", "file_search", "actions", "tools", "skills"]
+    minRelevanceScore: 0.35
+    # Default model for new agents — uses Azure AU custom endpoint (confirmed working)
+    model: "gpt-4o-mini"
+    endpoint: "Azure AU"
 
   anthropic:
+    userProvide: false
     streamRate: 25
     titleConvo: true
     titleModel: "claude-haiku-4-5"
@@ -87,6 +101,153 @@ endpoints:
       headers:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
         Content-Type: "application/json"
+
+modelSpecs:
+  # enforce: true would block requests without a spec name — this breaks the Agents endpoint
+  # (user-created agents don't carry a spec name), so we leave it at the default (false).
+  enforce: false
+  # prioritize: true (default) auto-applies a spec as the default for new general-chat
+  # conversations. Users can still switch to the Agents endpoint manually.
+  prioritize: true
+  # addedEndpoints re-surfaces the Agents endpoint in the model selector alongside the
+  # spec list entries, so users can still reach their user-created agents.
+  addedEndpoints:
+    - agents
+  list:
+    - name: "azure-au-gpt-4o-mini"
+      label: "Azure AU gpt-4o-mini"
+      group: "Azure AU"
+      preset:
+        endpoint: "Azure AU"
+        model: "gpt-4o-mini"
+        # promptPrefix is a private field — stripped before the config is sent to the
+        # browser. It becomes the system message for ephemeral (general-chat) requests.
+        # User-created agents use their own stored instructions and bypass this field.
+        promptPrefix: &deloitteSystemPrompt |
+          You are a Deloitte Australia AI assistant. Prioritise user instructions and provided context above stylistic defaults. Use a professional, neutral, business tone by default and write in en-GB spelling.
+
+          Instruction precedence:
+          - Follow applicable platform and safety constraints first.
+          - Then follow the current user's explicit instructions.
+          - Then follow agent-specific instructions, role, and task objectives.
+          - Use the style defaults below only when they do not conflict with user or agent instructions.
+          - When the active agent/task calls for depth (for example, detailed analysis, meeting summaries, or formal outputs), provide the longer structure and detail required by that agent/task.
+
+          Default style rules:
+          - Do not use emojis, icons, or decorative symbols unless the user explicitly asks for an informal tone, social-media style writing, or audience-appropriate expressive copy.
+          - Be concise, direct, and conversational; every sentence should add value.
+          - Prefer plain prose over heavy formatting.
+          - Use headings and lists only when they materially improve clarity.
+          - Avoid padded introductions, enthusiasm markers, and marketing language.
+
+          Formatting rules:
+          - Use standard Markdown only when helpful.
+          - Use ##/### headings and - for unordered lists.
+          - Use fenced code blocks with language tags when code is requested.
+          - Do not use LaTeX for maths; use plain text, Unicode, or HTML entities.
+
+          Response behaviour:
+          - Start with the answer, then add brief supporting detail.
+          - For policy or document summaries, provide a compact paragraph first; include short numbered points only if needed.
+          - If content from uploaded files or knowledge-base documents is used, include citations and the 'inline-citations' skill for the referenced claims.
+          - Do not present document-derived claims without citations; if sources are unavailable, explicitly state that and ask for the file or source.
+          - Preserve factual fidelity to the provided content and avoid adding unstated claims.
+
+    - name: "azure-au-gpt-4o"
+      label: "Azure AU gpt-4o"
+      group: "Azure AU"
+      preset:
+        endpoint: "Azure AU"
+        model: "gpt-4o"
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: "azure-au-gpt-41"
+      label: "Azure AU gpt-41"
+      group: "Azure AU"
+      preset:
+        endpoint: "Azure AU"
+        model: "gpt-41"
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: "azure-au-gpt-41-nano"
+      label: "Azure AU gpt-41-nano"
+      group: "Azure AU"
+      preset:
+        endpoint: "Azure AU"
+        model: "gpt-41-nano"
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: "azure-au-gpt-41-mini"
+      label: "Azure AU gpt-41-mini"
+      group: "Azure AU"
+      preset:
+        endpoint: "Azure AU"
+        model: "gpt-41-mini"
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: "azure-us-gpt-41"
+      label: "Azure US gpt-41"
+      group: "Azure US"
+      preset:
+        endpoint: "Azure US"
+        model: "gpt-41"
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: "azure-us-gpt-41-nano"
+      label: "Azure US gpt-41-nano"
+      group: "Azure US"
+      preset:
+        endpoint: "Azure US"
+        model: "gpt-41-nano"
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: "azure-us-gpt-41-mini"
+      label: "Azure US gpt-41-mini"
+      group: "Azure US"
+      preset:
+        endpoint: "Azure US"
+        model: "gpt-41-mini"
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: "azure-us-gpt-5-chat"
+      label: "Azure US gpt-5-chat"
+      group: "Azure US"
+      preset:
+        endpoint: "Azure US"
+        model: "gpt-5-chat"
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: "azure-us-gpt-5-mini"
+      label: "Azure US gpt-5-mini"
+      group: "Azure US"
+      preset:
+        endpoint: "Azure US"
+        model: "gpt-5-mini"
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: "azure-us-gpt-5-nano"
+      label: "Azure US gpt-5-nano"
+      group: "Azure US"
+      preset:
+        endpoint: "Azure US"
+        model: "gpt-5-nano"
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: "vertexai-us-gemini-2-5-flash"
+      label: "VertexAI US gemini-2.5-flash"
+      group: "VertexAI US"
+      preset:
+        endpoint: "VertexAI US"
+        model: "google/gemini-2.5-flash"
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: "vertexai-us-gemini-2-5-pro"
+      label: "VertexAI US gemini-2.5-pro"
+      group: "VertexAI US"
+      preset:
+        endpoint: "VertexAI US"
+        model: "google/gemini-2.5-pro"
+        promptPrefix: *deloitteSystemPrompt
 
 # MCP Servers configuration
 # Filter restricts tools to: teams (Teams), research (IBISWorld), news (AFR)
