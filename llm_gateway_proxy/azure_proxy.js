@@ -181,10 +181,11 @@ async function azureProxy(r) {
 
   logInfo(r, "[" + reqId + "] Path rewriting: rawUri=" + rawPath + " -> stripped path=" + path);
 
-  // r.args in njs is a key/value object, not a string. r.argsString is the raw
-  // query string. Strip any api-version param passed by the client so our own
-  // AZURE_API_VERSION value is always used.
-  var args = r.argsString || "";
+  // r.args in njs is a key/value object, not a string. Prefer r.argsString when
+  // available; fall back to nginx's $args variable for compatibility across njs builds.
+  // Strip any api-version param passed by the client so our own AZURE_API_VERSION
+  // value is always used.
+  var args = (r.argsString !== undefined ? r.argsString : (r.variables["args"] || ""));
   var argsOriginal = args;
   if (args) {
     args = args.split("&").filter(function(p) { return p.indexOf("api-version=") !== 0; }).join("&");
