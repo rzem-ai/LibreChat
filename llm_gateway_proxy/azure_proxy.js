@@ -111,18 +111,12 @@ async function azureProxy(r) {
   logInfo(r, "[" + reqId + "] Service account token present (length=" + token.length + ")");
 
   // --- Validate and parse request body ---
-  // r.requestBody is only populated when nginx pre-buffers the body before the js_content
-  // phase, which does not happen automatically. Use the async r.text() API instead, which
-  // reads and buffers the body on demand inside a js_content handler.
-  var body;
-  try {
-    body = await r.text();
-  } catch (e) {
-    logError(r, "[" + reqId + "] ABORT: failed to read request body: " + e + " - returning 400");
-    r.headersOut["Content-Type"] = "application/json";
-    r.return(400, JSON.stringify({ error: { message: "failed to read request body", type: "invalid_request_error" } }));
-    return;
-  }
+  // r.requestBody is populated synchronously because proxy.conf sets
+  // client_body_in_single_buffer on and client_body_buffer_size 1m, which
+  // instructs nginx to buffer the entire request body into memory before the
+  // js_content phase runs. r.text() is a Fetch API method that does not exist
+  // on the njs HTTP request object and must not be used here.
+  var body = r.requestBody;
   if (!body) {
     logError(r, "[" + reqId + "] ABORT: request body is empty - returning 400");
     r.headersOut["Content-Type"] = "application/json";
