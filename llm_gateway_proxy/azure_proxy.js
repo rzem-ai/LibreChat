@@ -95,7 +95,7 @@ async function azureProxy(r) {
   logInfo(r, "[" + reqId + "] Incoming request:"
     + " method=" + r.method
     + " uri=" + r.uri
-    + " args_len=" + (r.args ? r.args.length : 0)
+    + " args_len=" + (r.argsString ? r.argsString.length : 0)
     + " remoteAddr=" + r.remoteAddress
     + " httpVersion=" + r.httpVersion);
 
@@ -111,12 +111,12 @@ async function azureProxy(r) {
   logInfo(r, "[" + reqId + "] Service account token present (length=" + token.length + ")");
 
   // --- Validate and parse request body ---
-  // r.requestBody is populated synchronously because proxy.conf sets
-  // client_body_in_single_buffer on and client_body_buffer_size 1m, which
-  // instructs nginx to buffer the entire request body into memory before the
-  // js_content phase runs. r.text() is a Fetch API method that does not exist
-  // on the njs HTTP request object and must not be used here.
-  var body = r.requestBody;
+  // In this njs build (nginx/1.30.x), r.requestText is a string property that
+  // contains the pre-buffered request body. It is NOT a function — do not call
+  // it. r.requestBody and r.text() are both undefined in js_content handlers.
+  // client_body_in_single_buffer on (set in proxy.conf) ensures the body is
+  // fully buffered into memory before the js_content phase runs.
+  var body = r.requestText;
   if (!body) {
     logError(r, "[" + reqId + "] ABORT: request body is empty - returning 400");
     r.headersOut["Content-Type"] = "application/json";
@@ -181,7 +181,10 @@ async function azureProxy(r) {
 
   logInfo(r, "[" + reqId + "] Path rewriting: rawUri=" + rawPath + " -> stripped path=" + path);
 
-  var args = r.args || "";
+  // r.args in njs is a key/value object, not a string. r.argsString is the raw
+  // query string. Strip any api-version param passed by the client so our own
+  // AZURE_API_VERSION value is always used.
+  var args = r.argsString || "";
   var argsOriginal = args;
   if (args) {
     args = args.split("&").filter(function(p) { return p.indexOf("api-version=") !== 0; }).join("&");
