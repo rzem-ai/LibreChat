@@ -66,6 +66,12 @@ if [ -z "$NGINX_RESOLVER" ]; then
   log "WARNING: could not determine DNS resolver from /etc/resolv.conf; defaulting to 127.0.0.11"
   NGINX_RESOLVER="127.0.0.11"
 fi
+# nginx requires IPv6 addresses in the resolver directive to be bracketed
+# (e.g. [fd00::10]), otherwise it parses the colon as a port separator and
+# fails to start. IPv4 addresses must NOT be bracketed.
+case "$NGINX_RESOLVER" in
+  *:*) NGINX_RESOLVER="[$NGINX_RESOLVER]" ;;
+esac
 log "Resolved DNS nameserver for nginx resolver directive: $NGINX_RESOLVER"
 export NGINX_RESOLVER
 
