@@ -8,11 +8,9 @@
  * The LLM Gateway requires Azure OpenAI deployment path format:
  *   POST /openai/deployments/{model}/chat/completions?api-version=2025-01-01-preview
  *
- * This handler:
- *   1. Buffers and parses the request body to extract the model name.
- *   2. Constructs the correct upstream URL with the Azure deployment path.
- *   3. Injects the x-sa-token authentication header.
- *   4. Streams the response back to LibreChat (preserving SSE for token streaming).
+ * This handler buffers and parses the request body to extract the model name,
+ * constructs the correct upstream URL, then internally redirects to nginx's
+ * native proxying path so SSE responses stream correctly.
  */
 
 var AZURE_API_VERSION = "2025-01-01-preview";
@@ -32,24 +30,6 @@ function logError(r, msg) {
 
 
 /**
- * Summarise the headers object as a single-line string for logging.
- * Redacts the x-sa-token value to avoid leaking the service-account JWT
- * while still confirming it is present.
- */
-function headersToStr(headers) {
-  var parts = [];
-  for (var k in headers) {
-    var v = headers[k];
-    var kl = k.toLowerCase();
-    if (kl === "x-sa-token" || kl === "authorization" || kl === "proxy-authorization" || kl === "cookie" || kl === "x-api-key" || kl === "api-key" || kl.indexOf("token") !== -1 || kl.indexOf("key") !== -1 || kl.indexOf("secret") !== -1 || kl.indexOf("session") !== -1) {
-      v = v ? "[REDACTED len=" + String(v).length + "]" : "[EMPTY]";
-    }
-    parts.push(k + ": " + v);
-  }
-  return "{ " + parts.join(" | ") + " }";
-}
-
-/**
  * Summarise the incoming request headers (r.headersIn).
  * njs exposes headersIn as an object-like map; iterate with for-in.
  */
@@ -63,23 +43,6 @@ function incomingHeadersToStr(r) {
     }
     parts.push(k + ": " + v);
   }
-  return "{ " + parts.join(" | ") + " }";
-}
-
-/**
- * Summarise the upstream response headers.
- * res.headers in njs is a Headers object; iterate with forEach.
- */
-function responseHeadersToStr(res) {
-  var parts = [];
-  res.headers.forEach(function(value, name) {
-    var nl = name.toLowerCase();
-    if (nl === "set-cookie" || nl === "authorization" || nl === "proxy-authorization" || nl.indexOf("token") !== -1 || nl.indexOf("key") !== -1 || nl.indexOf("secret") !== -1 || nl.indexOf("session") !== -1) {
-      parts.push(name + ": [REDACTED]");
-      return;
-    }
-    parts.push(name + ": " + value);
-  });
   return "{ " + parts.join(" | ") + " }";
 }
 
@@ -201,126 +164,9 @@ async function azureProxy(r) {
     + " finalQuery=" + queryForLog);
   logInfo(r, "[" + reqId + "] Upstream URL: " + upstreamURLForLog);
 
-  // --- Forward headers, injecting x-sa-token and dropping hop-by-hop headers ---
-  var headers = Object.create(null);
-  var skipHeaders = Object.create(null);
-  skipHeaders["host"] = true;
-  skipHeaders["content-length"] = true;
-  skipHeaders["transfer-encoding"] = true;
-  skipHeaders["connection"] = true;
-  skipHeaders["x-sa-token"] = true;
-  var droppedHeaders = [];
-  var forwardedHeaders = [];
-  for (var h in r.headersIn) {
-    if (!Object.prototype.hasOwnProperty.call(r.headersIn, h)) {
-      continue;
-    }
-    if (!skipHeaders[h.toLowerCase()]) {
-      headers[h] = r.headersIn[h];
-      forwardedHeaders.push(h);
-    } else {
-      droppedHeaders.push(h);
-    }
-  }
-  headers["x-sa-token"] = token;
-
-  // Ensure Content-Type is set for JSON bodies
-  var hasContentType = false;
-  for (var hk in headers) {
-    if (hk.toLowerCase() === "content-type") {
-      hasContentType = true;
-      break;
-    }
-  }
-  if (!hasContentType) {
-    headers["Content-Type"] = "application/json";
-    logInfo(r, "[" + reqId + "] Content-Type was missing - defaulted to application/json");
-  }
-
-  logInfo(r, "[" + reqId + "] Header forwarding:"
-    + " forwarded=[" + forwardedHeaders.join(", ") + "]"
-    + " dropped=[" + droppedHeaders.join(", ") + "]"
-    + " injected=x-sa-token");
-  logInfo(r, "[" + reqId + "] Outbound headers to upstream: " + headersToStr(headers));
-
-  // --- Fetch from upstream and stream the response back ---
-  logInfo(r, "[" + reqId + "] Sending " + r.method + " request to upstream...");
-  var fetchStart = Date.now();
-  var res;
-  try {
-    res = await ngx.fetch(upstreamURL, {
-      method: r.method,
-      headers: headers,
-      body: body,
-    });
-  } catch (e) {
-    var fetchDuration = Date.now() - fetchStart;
-    logError(r, "[" + reqId + "] Upstream fetch FAILED after " + fetchDuration + "ms: " + e);
-    r.headersOut["Content-Type"] = "application/json";
-    r.return(502, JSON.stringify({ error: { message: "upstream connection failed", type: "api_error" } }));
-    return;
-  }
-  var fetchDuration = Date.now() - fetchStart;
-
-  logInfo(r, "[" + reqId + "] Upstream responded in " + fetchDuration + "ms:"
-    + " status=" + res.status
-    + " statusText=" + res.statusText);
-  logInfo(r, "[" + reqId + "] Upstream response headers: " + responseHeadersToStr(res));
-
-  // Copy response headers back to the client.
-  // Strip hop-by-hop headers and Content-Length: the upstream may send a length
-  // reflecting the full body, but we stream chunks via r.send() so the byte count
-  // forwarded to the client would be incorrect (particularly for SSE responses).
-  var skipRespHeaders = { "transfer-encoding": true, "connection": true, "content-length": true };
-  var forwardedRespHeaders = [];
-  var droppedRespHeaders = [];
-  res.headers.forEach(function(value, name) {
-    if (!skipRespHeaders[name.toLowerCase()]) {
-      r.headersOut[name] = value;
-      forwardedRespHeaders.push(name);
-    } else {
-      droppedRespHeaders.push(name);
-    }
-  });
-
-  logInfo(r, "[" + reqId + "] Response header forwarding:"
-    + " forwarded=[" + forwardedRespHeaders.join(", ") + "]"
-    + " dropped=[" + droppedRespHeaders.join(", ") + "]");
-
-  r.status = res.status;
-  r.sendHeader();
-
-  logInfo(r, "[" + reqId + "] Sent response status " + res.status + " to client; beginning body stream...");
-
-  // Stream response body chunk-by-chunk to preserve SSE token streaming
-  if (!res.body) {
-    logInfo(r, "[" + reqId + "] Response has no body; finishing immediately.");
-    r.finish();
-    return;
-  }
-
-  var reader = res.body.getReader();
-  var chunkCount = 0;
-  var totalBytes = 0;
-  while (true) {
-    var chunk = await reader.read();
-    if (chunk.done) {
-      break;
-    }
-    chunkCount++;
-    totalBytes += chunk.value.length;
-
-    // Log the first few chunks (length only) to aid diagnostics without leaking content
-    if (chunkCount <= 3) {
-      logInfo(r, "[" + reqId + "] Chunk #" + chunkCount + " length=" + chunk.value.length);
-    }
-
-    r.send(chunk.value);
-  }
-
-  logInfo(r, "[" + reqId + "] Stream complete: totalChunks=" + chunkCount + " totalBytes=" + totalBytes);
-  logInfo(r, "=== REQUEST END [" + reqId + "] status=" + res.status + " ===");
-  r.finish();
+  r.variables.azure_proxy_upstream_url = upstreamURL;
+  logInfo(r, "[" + reqId + "] Internal redirect to nginx streaming proxy location.");
+  r.internalRedirect("@azure_openai_upstream");
 }
 
 export default { azureProxy };
