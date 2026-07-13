@@ -43,7 +43,7 @@ render_config() {
     log "Rendering nginx config (service account token unavailable)."
   fi
 
-  envsubst '${TOKEN_PROXY_TOKEN} ${TOKEN_PROXY_AZURE_AU_URL} ${TOKEN_PROXY_AZURE_US_URL} ${TOKEN_PROXY_VERTEXAI_URL} ${TOKEN_PROXY_ANTHROPIC_URL} ${TOKEN_PROXY_MCP_URL}' \
+  envsubst '${TOKEN_PROXY_TOKEN} ${TOKEN_PROXY_AZURE_AU_URL} ${TOKEN_PROXY_AZURE_US_URL} ${TOKEN_PROXY_VERTEXAI_URL} ${TOKEN_PROXY_ANTHROPIC_URL} ${TOKEN_PROXY_MCP_URL} ${NGINX_RESOLVER}' \
     < "$TOKEN_PROXY_TEMPLATE_PATH" \
     > "$TOKEN_PROXY_OUTPUT_PATH"
 
@@ -57,6 +57,23 @@ done
 
 log "Starting proxy with sync interval ${TOKEN_PROXY_SYNC_SECONDS}s."
 log "Configured upstreams: AU=$TOKEN_PROXY_AZURE_AU_URL US=$TOKEN_PROXY_AZURE_US_URL VertexAI=$TOKEN_PROXY_VERTEXAI_URL Anthropic=$TOKEN_PROXY_ANTHROPIC_URL MCP=$TOKEN_PROXY_MCP_URL"
+
+# Derive the DNS resolver from the pod's /etc/resolv.conf so the nginx resolver
+# directive works on any Kubernetes cluster without hardcoding an IP address.
+# Falls back to 127.0.0.11 (Docker's embedded DNS) for local dev environments.
+NGINX_RESOLVER="$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf 2>/dev/null || true)"
+if [ -z "$NGINX_RESOLVER" ]; then
+  log "WARNING: could not determine DNS resolver from /etc/resolv.conf; defaulting to 127.0.0.11"
+  NGINX_RESOLVER="127.0.0.11"
+fi
+# nginx requires IPv6 addresses in the resolver directive to be bracketed
+# (e.g. [fd00::10]), otherwise it parses the colon as a port separator and
+# fails to start. IPv4 addresses must NOT be bracketed.
+case "$NGINX_RESOLVER" in
+  *:*) NGINX_RESOLVER="[$NGINX_RESOLVER]" ;;
+esac
+log "Resolved DNS nameserver for nginx resolver directive: $NGINX_RESOLVER"
+export NGINX_RESOLVER
 
 render_config
 if nginx -t; then
