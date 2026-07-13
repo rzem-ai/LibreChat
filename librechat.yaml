@@ -27,6 +27,10 @@ endpoints:
     maxCitations: 30
     maxCitationsPerFile: 7
     capabilities: ["deferred_tools", "execute_code", "file_search", "actions", "tools", "skills"]
+    minRelevanceScore: 0.3
+    # Default model for new agents — uses Azure AU custom endpoint (confirmed working)
+    model: "gpt-4o-mini"
+    endpoint: "Azure AU"
 
   anthropic:
     userProvide: false
