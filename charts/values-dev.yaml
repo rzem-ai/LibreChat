@@ -48,7 +48,7 @@ pods:
           tag: 'develop@sha256:c07c44dd5fee5b8969c969a15de711b5795662285988ceb3f181af7df41d9367'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
-          ANTHROPIC_API_KEY: 'dummy'
+          ANTHROPIC_API_KEY: ''
           ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
