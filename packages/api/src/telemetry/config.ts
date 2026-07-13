@@ -9,6 +9,9 @@ export interface TelemetryConfig {
   sdkDisabled: boolean;
   serviceName: string;
   serviceVersion?: string;
+  tracesEndpoint?: string;
+  azureMonitorAuthEnabled: boolean;
+  azureMonitorClientId?: string;
 }
 
 function isTruthy(value?: string | boolean | null): boolean {
@@ -39,5 +42,8 @@ export function getTelemetryConfig(env: NodeJS.ProcessEnv = process.env): Teleme
     sdkDisabled,
     serviceVersion,
     healthPath: DEFAULT_HEALTH_PATH,
+    tracesEndpoint: normalizeEnvValue(env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT),
+    azureMonitorAuthEnabled: isTruthy(env.AZURE_MONITOR_AUTH_ENABLED),
+    azureMonitorClientId: normalizeEnvValue(env.AZURE_CLIENT_ID),
   };
 }
