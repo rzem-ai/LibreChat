@@ -48,12 +48,15 @@ except ImportError:
 
 # ---------------------------------------------------------------------------
 
-ENDPOINT = (
-    # Copy the Traces endpoint from App Insights → Overview → OTLP Connection Info
-    "https://managed-ai-ctspoke-npd-dce-95rn.australiaeast-1.ingest.monitor.azure.com/dataCollectionRules/dcr-3991725585f24a5eabd0d6aa283d0e18/streams/Microsoft-OTLP-Traces/otlp/v1/traces"
-)
+import os
+
+ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
+if not ENDPOINT:
+    print("ERROR: set OTEL_EXPORTER_OTLP_TRACES_ENDPOINT to the App Insights Traces OTLP endpoint")
+    sys.exit(2)
+
 AZURE_MONITOR_SCOPE = "https://monitor.azure.com/.default"
-SERVICE_NAME = "sanchit-smoketest"
+SERVICE_NAME = os.getenv("OTEL_SERVICE_NAME", "librechat-otel-smoketest")
 
 
 def section(title: str) -> None:
