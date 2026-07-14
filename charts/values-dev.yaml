@@ -111,6 +111,7 @@ pods:
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-dev
           OPENID_SESSION_SECRET: librechat-openid-session-secret-dev
           RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          MEILI_MASTER_KEY: librechat-meili-master-key-dev
           # ClearTrack MCP Gateway
           CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET: librechat-cleartrack-mcp-gateway-client-secret-dev
           # ClearTrack MCP Gateway (OLD LLM)
@@ -149,3 +150,8 @@ pods:
           targetPort: 8000
         ingress:
           enabled: false
+      meilisearch:
+        env:
+          MEILI_ENV: 'development'
+        secrets:
+          MEILI_MASTER_KEY: librechat-meili-master-key-dev
