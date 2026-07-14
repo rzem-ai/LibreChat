@@ -45,7 +45,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:947351ecc736b2f90a683fc77c95ac6e8eb9ae45db03a7e8f49909f0d60f0caf'
+          tag: 'develop@sha256:8258b3708ce75f3059a96213698d48a9e467bc79708cbcdf5bb4a8a2907a99ae'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -111,6 +111,7 @@ pods:
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-dev
           OPENID_SESSION_SECRET: librechat-openid-session-secret-dev
           RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          MEILI_MASTER_KEY: librechat-meili-master-key-dev
           # ClearTrack MCP Gateway
           CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET: librechat-cleartrack-mcp-gateway-client-secret-dev
           # ClearTrack MCP Gateway (OLD LLM)
@@ -121,7 +122,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:765e35c5c9c6120a38f7aeabf3f69779ebc77b2fa24d74622eb2343116734088'
+          tag: 'develop@sha256:23e185ebb48e40063d8215e79653535de521c9471161c7ddfd9e5f6ba4c304f1'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -141,6 +142,7 @@ pods:
         secrets:
           AZURE_OPENAI_API_KEY: librechat-azure-api-key
           RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          JWT_SECRET: librechat-jwt-secret-dev
         service:
           enabled: true
           type: ClusterIP
@@ -148,3 +150,8 @@ pods:
           targetPort: 8000
         ingress:
           enabled: false
+      meilisearch:
+        env:
+          MEILI_ENV: 'development'
+        secrets:
+          MEILI_MASTER_KEY: librechat-meili-master-key-dev
