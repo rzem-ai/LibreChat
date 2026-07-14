@@ -45,7 +45,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:299ae6ce1d134960fc58c3abcf66fe96141e2a098ea45e303322081721e04739'
+          tag: 'develop@sha256:217722641d0d0bcf27db290a1b38dbc643f3cfd2c853ad207c3040ea621cd101'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
