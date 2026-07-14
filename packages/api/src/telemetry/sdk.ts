@@ -332,7 +332,7 @@ function createAzureMonitorExporter(
   try {
     // Dynamic require keeps these packages optional; missing → warn + fall back.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http') as {
+    const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-proto') as {
       OTLPTraceExporter: new (opts: object) => NonNullable<NodeSDKConfiguration['traceExporter']>;
     };
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -354,7 +354,7 @@ function createAzureMonitorExporter(
   } catch (error) {
     emitWarning(
       `Azure Monitor exporter unavailable — falling back to standard OTLP export. ` +
-        `Ensure @opentelemetry/exporter-trace-otlp-http and @azure/identity are installed. ` +
+        `Ensure @opentelemetry/exporter-trace-otlp-proto and @azure/identity are installed. ` +
         `Error: ${getErrorMessage(error)}`,
     );
     return undefined;
