@@ -5,8 +5,7 @@ Sends dummy OpenTelemetry spans to Azure Monitor (App Insights) via OTLP/HTTP+pr
 Usage:
     pip install opentelemetry-sdk opentelemetry-exporter-otlp-proto-http azure-identity requests
     az login
-    python otel_smoke_test.py
-
+    python scripts/otel_smoke_test.py
 After running, check App Insights in ~2-5 minutes:
     AppRequests    | where AppRoleName == "sanchit-smoketest" | order by TimeGenerated desc
     AppDependencies | where AppRoleName == "sanchit-smoketest" | order by TimeGenerated desc
