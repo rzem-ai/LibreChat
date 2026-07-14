@@ -129,7 +129,7 @@ const mockManagedIdentityCredential = jest.fn((_clientId: string) => ({
 }));
 
 jest.mock(
-  '@opentelemetry/exporter-trace-otlp-http',
+  '@opentelemetry/exporter-trace-otlp-proto',
   () => ({
     OTLPTraceExporter: mockOtlpTraceExporter,
   }),
@@ -698,7 +698,7 @@ describe('telemetry SDK lifecycle', () => {
     });
 
     it('falls back gracefully and emits a warning when the OTLP exporter package is not installed', () => {
-      jest.doMock('@opentelemetry/exporter-trace-otlp-http', () => {
+      jest.doMock('@opentelemetry/exporter-trace-otlp-proto', () => {
         throw new Error('Cannot find module');
       });
       jest.resetModules();
@@ -720,7 +720,7 @@ describe('telemetry SDK lifecycle', () => {
         );
         expect(mockNodeSDK).toHaveBeenCalled();
       } finally {
-        jest.dontMock('@opentelemetry/exporter-trace-otlp-http');
+        jest.dontMock('@opentelemetry/exporter-trace-otlp-proto');
         jest.resetModules();
       }
     });
