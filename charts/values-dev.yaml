@@ -152,7 +152,8 @@ pods:
           enabled: false
       meilisearch:
         image:
-          repository: 'tt-librechat/meilisearch'
+          pullPolicy: Always
+          tag: 'develop'
         env:
           MEILI_ENV: 'development'
         secrets:
