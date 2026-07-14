@@ -141,6 +141,7 @@ pods:
         secrets:
           AZURE_OPENAI_API_KEY: librechat-azure-api-key
           RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          JWT_SECRET: librechat-jwt-secret-dev
         service:
           enabled: true
           type: ClusterIP
