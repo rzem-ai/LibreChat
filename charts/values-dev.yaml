@@ -151,6 +151,8 @@ pods:
         ingress:
           enabled: false
       meilisearch:
+        image:
+          repository: 'tt-librechat/meilisearch'
         env:
           MEILI_ENV: 'development'
         secrets:
