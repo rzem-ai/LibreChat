@@ -113,15 +113,12 @@ pods:
           enabled: false
       meilisearch:
         image:
-          repository: 'getmeili/meilisearch'
+          repository: 'tt-librechat/meilisearch'
           pullPolicy: Always
-          tag: 'v1.13'
+          tag: 'main'
         env:
-          MEILI_ENV: 'production'
           MEILI_NO_ANALYTICS: 'true'
-          MEILI_HTTP_ADDR: '127.0.0.1:7700'
-        secrets:
-          MEILI_MASTER_KEY: librechat-meili-master-key
+          MEILI_HOST: '127.0.0.0:7700'
         service:
           enabled: false
           type: ClusterIP
