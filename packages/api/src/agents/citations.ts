@@ -121,16 +121,36 @@ const STOPWORDS = new Set([
 
 /** Runtime shape of a file_search attachment source (see fileSearch.js). */
 interface FileSearchSource {
+  /** Unique identifier of the source file as stored in the vector store. */
   fileId: string;
+  /** Human-readable display name of the file (used in the citation label). */
   fileName?: string;
+  /** Raw text excerpt retrieved from the file by the file_search tool. */
   content?: string;
+  /**
+   * Cosine-similarity score (0–1) between the query and this passage,
+   * as returned by the vector store. Higher values indicate a closer match.
+   */
   relevance?: number;
 }
 
-/** A retrieved passage mapped to the anchor coordinates the frontend resolves. */
+/**
+ * A retrieved passage mapped to the anchor coordinates the frontend resolves.
+ * Each passage corresponds to one source entry from a single file_search call.
+ */
 interface Passage {
+  /**
+   * Zero-based index into the ordered list of file_search attachments on the
+   * message — the `N` in the `turn{N}file{M}` anchor resolved by the client.
+   */
   turn: number;
+  /**
+   * First-seen deduplication index of the source's `fileId` within its
+   * file_search attachment — the `M` in the `turn{N}file{M}` anchor.
+   * Mirrors the index built by `useSearchResultsByTurn` on the client.
+   */
   fileIndex: number;
+  /** Normalised content-word tokens of the passage, used for similarity matching. */
   tokens: Set<string>;
 }
 
