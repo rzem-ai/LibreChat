@@ -13,7 +13,7 @@ interface:
     - 'file_search'
     - 'skills'
     - 'execute_code'
-    - 'cleartrack-gateway-new-appreg'
+    - 'mcp'
 
   fileSearch: true
 
