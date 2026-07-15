@@ -24,7 +24,12 @@ import type { Logger } from 'winston';
 const MIN_SENTENCE_CONTENT_WORDS = 4;
 /** Fraction of a sentence's content tokens that must appear in a passage. */
 const SIMILARITY_THRESHOLD = 0.6;
-/** Upper bound on anchors appended to a single sentence. */
+/**
+ * Upper bound on citation anchors appended to a single sentence. When more than
+ * three distinct sources clear the `SIMILARITY_THRESHOLD`, the highest-similarity
+ * ones are kept (see the score-sort in `anchorsForSentence`). Top 3 are the distinct sources
+ * whose best passage (highest scoring of that source) most strongly overlaps the sentence.
+ */
 const MAX_ANCHORS_PER_SENTENCE = 3;
 /** Citation marker character (U+E202) the frontend parses; see client citations.ts. */
 const ANCHOR_MARKER = '\ue202';
@@ -226,6 +231,13 @@ function containment(sentenceTokens: Set<string>, passageTokens: Set<string>): n
   return overlap / sentenceTokens.size;
 }
 
+/**
+ * Chooses the citation anchors for a single sentence. Each passage is scored by
+ * `containment`, weak matches (< `SIMILARITY_THRESHOLD`) are dropped, and the
+ * remaining passages are deduped to the best score per source. The result is the
+ * top `MAX_ANCHORS_PER_SENTENCE` — the distinct sources whose best passage most
+ * strongly overlaps the sentence.
+ */
 function anchorsForSentence(sentence: string, passages: Passage[]): string[] {
   const sentenceTokens = new Set(tokenize(sentence));
   if (sentenceTokens.size < MIN_SENTENCE_CONTENT_WORDS) {
