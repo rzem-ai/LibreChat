@@ -12,8 +12,8 @@ import type { NodeSDKConfiguration } from '@opentelemetry/sdk-node';
 import type { Span, Attributes } from '@opentelemetry/api';
 import type { RequestOptions } from 'node:http';
 import type { TelemetryConfig, TelemetryStatus } from './config';
-import { getTelemetryConfig } from './config';
 import { registerShutdownTask } from '../app/shutdown';
+import { getTelemetryConfig } from './config';
 
 export interface TelemetryController {
   readonly enabled: boolean;
@@ -363,36 +363,40 @@ function createAzureMonitorExporter(
 
 function createSdk(config: TelemetryConfig): NodeSDK {
   const azureExporter = createAzureMonitorExporter(config);
+  const instrumentations: NodeSDKConfiguration['instrumentations'] = [
+    new HttpInstrumentation({
+      headersToSpanAttributes: {
+        client: { requestHeaders: [], responseHeaders: [] },
+        server: { requestHeaders: [], responseHeaders: [] },
+      },
+      requestHook: (span: Span, request: object) => {
+        if (request instanceof IncomingMessage) {
+          requestSpans.set(request, span);
+        }
+      },
+      startIncomingSpanHook: (request: IncomingMessage) =>
+        getSanitizedIncomingUrlAttributes(request, config.healthPath),
+      startOutgoingSpanHook: (request: RequestOptions) =>
+        getSanitizedOutgoingHttpUrlAttributes(request),
+      ignoreIncomingRequestHook: (request: IncomingMessage) =>
+        shouldIgnoreIncomingRequest(request, config.healthPath),
+    }),
+    new ExpressInstrumentation(),
+    new MongoDBInstrumentation(),
+    new MongooseInstrumentation(),
+    new UndiciInstrumentation({
+      startSpanHook: (request: UndiciRequestInfo) => getSanitizedUndiciUrlAttributes(request),
+    }),
+  ];
+
+  if (config.ioredisTracingEnabled) {
+    instrumentations.push(new IORedisInstrumentation());
+  }
 
   const sdkConfig: Partial<NodeSDKConfiguration> = {
     resource: resourceFromAttributes(getResourceAttributes(config)),
     ...(azureExporter ? { traceExporter: azureExporter } : {}),
-    instrumentations: [
-      new HttpInstrumentation({
-        headersToSpanAttributes: {
-          client: { requestHeaders: [], responseHeaders: [] },
-          server: { requestHeaders: [], responseHeaders: [] },
-        },
-        requestHook: (span: Span, request: object) => {
-          if (request instanceof IncomingMessage) {
-            requestSpans.set(request, span);
-          }
-        },
-        startIncomingSpanHook: (request: IncomingMessage) =>
-          getSanitizedIncomingUrlAttributes(request, config.healthPath),
-        startOutgoingSpanHook: (request: RequestOptions) =>
-          getSanitizedOutgoingHttpUrlAttributes(request),
-        ignoreIncomingRequestHook: (request: IncomingMessage) =>
-          shouldIgnoreIncomingRequest(request, config.healthPath),
-      }),
-      new ExpressInstrumentation(),
-      new MongoDBInstrumentation(),
-      new MongooseInstrumentation(),
-      new IORedisInstrumentation(),
-      new UndiciInstrumentation({
-        startSpanHook: (request: UndiciRequestInfo) => getSanitizedUndiciUrlAttributes(request),
-      }),
-    ],
+    instrumentations,
   };
 
   return new NodeSDK(sdkConfig);
@@ -402,7 +406,10 @@ export function getTelemetryRequestSpan(request: IncomingMessage): Span | undefi
   return requestSpans.get(request);
 }
 
-/** `NodeSDK.start` is sync in some OTel versions and async in others. */
+/**
+ * NodeSDK.start has been synchronous in some supported OpenTelemetry versions
+ * and promise-returning in others, so the lifecycle wrapper accepts either form.
+ */
 function startSdk(sdk: NodeSDK): void | Promise<void> {
   return (sdk as NodeSDK & { start: () => void | Promise<void> }).start();
 }
@@ -436,7 +443,12 @@ function ensureShutdownTaskRegistered(): void {
     return;
   }
   shutdownTaskRegistered = true;
-  // Use the shared coordinator; direct signal handlers can exit before async flush completes.
+  // Register with the centralized graceful-shutdown coordinator
+  // (see ../app/shutdown.ts) rather than attaching SIGTERM/SIGINT
+  // listeners directly — signal listener return values are ignored
+  // by Node, so a separate signal handler can let the coordinator
+  // exit before the async OpenTelemetry flush completes, dropping
+  // final spans during pod shutdowns.
   registerShutdownTask('telemetry', () =>
     withTimeout(shutdownTelemetry(), SIGNAL_SHUTDOWN_TIMEOUT_MS).catch((error) => {
       emitWarning(`OpenTelemetry shutdown failed: ${getErrorMessage(error)}`);
