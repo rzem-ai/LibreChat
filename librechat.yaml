@@ -1,4 +1,4 @@
-version: 1.3.9
+version: 1.3.11
 cache: true
 
 interface:
@@ -8,12 +8,14 @@ interface:
     share: false
     public: false
 
-  fileSearch: true
-
   # Pin tools to the prompt bar by default for all users
   defaultPinnedTools:
     - 'file_search'
     - 'skills'
+    - 'execute_code'
+    - 'cleartrack-gateway-new-appreg'
+
+  fileSearch: true
 
 endpoints:
   # ========================================
