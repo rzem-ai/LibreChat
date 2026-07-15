@@ -1,8 +1,15 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const { logger } = require('@librechat/data-schemas');
-const { ContentTypes } = require('librechat-data-provider');
-const { unescapeLaTeX, countTokens, pushFeedbackScore, deleteFeedbackScore } = require('@librechat/api');
+const { ContentTypes, isAssistantsEndpoint } = require('librechat-data-provider');
+const {
+  unescapeLaTeX,
+  countTokens,
+  sendFeedbackScore,
+  traceIdForMessage,
+  pushFeedbackScore, // Deloitte custom
+  deleteFeedbackScore // Deloitte custom
+} = require('@librechat/api');
 const { findAllArtifacts, replaceArtifactContent } = require('~/server/services/Artifacts/update');
 const { requireJwtAuth, validateMessageReq } = require('~/server/middleware');
 const db = require('~/models');
@@ -391,10 +398,30 @@ router.put('/:conversationId/:messageId/feedback', validateMessageReq, async (re
       { context: 'updateFeedback' },
     );
 
+    // Deloitte custom function: add or remove feedback
     if (feedback) {
       pushFeedbackScore({ messageId, feedback }).catch(() => {});
     } else {
       deleteFeedbackScore({ messageId }).catch(() => {});
+    }
+
+    // Best-effort: Assistants messages do not have deterministic AgentRun traces.
+    if (!isAssistantsEndpoint(updatedMessage.endpoint)) {
+      sendFeedbackScore({
+        traceId: traceIdForMessage(messageId),
+        feedback: updatedMessage.feedback,
+        metadata: {
+          messageId: updatedMessage.messageId ?? messageId,
+          parentMessageId: updatedMessage.parentMessageId,
+          conversationId: updatedMessage.conversationId ?? conversationId,
+          sessionId: updatedMessage.conversationId ?? conversationId,
+          userId: req?.user?.id,
+          endpoint: updatedMessage.endpoint,
+          sender: updatedMessage.sender,
+          isCreatedByUser: updatedMessage.isCreatedByUser,
+          tokenCount: updatedMessage.tokenCount,
+        },
+      }).catch((err) => logger.error('[langfuse] feedback score failed:', err));
     }
 
     res.json({

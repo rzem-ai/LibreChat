@@ -71,6 +71,10 @@ bower_components/
 .floo
 .flooignore
 
+#config file
+# librechat.yaml
+# librechat.yml
+
 # Environment
 Caddyfile
 .npmrc
@@ -85,6 +89,7 @@ archive
 .vscode/settings.json
 src/style - official.css
 /e2e/specs/.test-results/
+/e2e/.generated/
 /e2e/playwright-report/
 /playwright/.cache/
 .DS_Store
@@ -178,6 +183,7 @@ claude-flow
 hive-mind-prompt-*.txt
 CLAUDE.md
 .gsd
+codedb.snapshot
 
 # Python bytecode
 __pycache__/
