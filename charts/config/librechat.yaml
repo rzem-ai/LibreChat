@@ -28,7 +28,7 @@ endpoints:
     recursionLimit: 25
     maxRecursionLimit: 50
     disableBuilder: false
-    capabilities: [ "deferred_tools", "execute_code", "file_search", "actions", "tools" ]
+    capabilities: ["deferred_tools", "execute_code", "file_search", "actions", "tools", "skills"]
 
   anthropic:
     streamRate: 25
