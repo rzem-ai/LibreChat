@@ -49,6 +49,7 @@ on:
       - rag_api
       - rag_api/**
       - Dockerfile
+      - Dockerfile.meilisearch
       - package.json
 # Limit to one concurrent workflow run per workflow, event, and ref
 concurrency:
@@ -95,6 +96,12 @@ jobs:
             dockerFilePath: rag_api/Dockerfile.lite
             yamlKeyPath: '.pods.librechat.containers.rag-api.image'
             submodule: true
+          # Meilisearch image — derived from upstream image and published to ACR
+          - imageNameAlias: meilisearch
+            buildContext: .
+            dockerFilePath: Dockerfile.meilisearch
+            yamlKeyPath: '.pods.librechat.containers.meilisearch.image'
+            submodule: false
             # buildArgs: |
             #   ARG1=value
             # unitTestScript: |

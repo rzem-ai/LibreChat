@@ -85,6 +85,10 @@ pods:
           OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf'
           OTEL_TRACES_SAMPLER: 'parentbased_traceidratio'
           OTEL_TRACES_SAMPLER_ARG: '0.1'
+          # Meilisearch Configuration
+          SEARCH: 'true'
+          MEILI_NO_ANALYTICS: 'true'
+          MEILI_HOST: 'http://127.0.0.1:7700'
         service:
           enabled: true
           type: ClusterIP
@@ -105,5 +109,20 @@ pods:
           type: ClusterIP
           port: 8000
           targetPort: 8000
+        ingress:
+          enabled: false
+      meilisearch:
+        image:
+          repository: 'tt-librechat/meilisearch'
+          pullPolicy: Always
+          tag: 'main'
+        env:
+          MEILI_NO_ANALYTICS: 'true'
+          MEILI_HOST: '127.0.0.0:7700'
+        service:
+          enabled: false
+          type: ClusterIP
+          port: 7700
+          targetPort: 7700
         ingress:
           enabled: false
