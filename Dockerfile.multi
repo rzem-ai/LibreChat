@@ -30,6 +30,8 @@ COPY packages/data-schemas/package*.json ./packages/data-schemas/
 COPY packages/client/package*.json ./packages/client/
 COPY client/package*.json ./client/
 COPY api/package*.json ./api/
+# Patches applied via patch-package on postinstall. See patches/README.md.
+COPY patches ./patches
 
 # Install all dependencies for every build
 FROM base-min AS base
