@@ -13,7 +13,6 @@ on outgoing requests, causing Node's HTTP client to fall back to
 `Transfer-Encoding: chunked`. Azure Monitor's DCR OTLP endpoint rejects
 chunked requests with `400 MissingContentLengthHeader`.
 
-- Full context, repro, and upstream PR draft: [`../OTEL_UPSTREAM_PR.md`](../OTEL_UPSTREAM_PR.md)
 - Regression test: [`packages/api/src/telemetry/content-length.spec.ts`](../packages/api/src/telemetry/content-length.spec.ts)
 
 ## Adding / updating a patch
