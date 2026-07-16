@@ -1,0 +1,11 @@
+# Local development with self-signed certificate
+localhost {
+    tls internal
+    reverse_proxy api:3080
+}
+
+# Run hostname in your terminal to find the correct hostname for your machine
+YOURHOSTNAME.local {
+    tls internal
+    reverse_proxy api:3080
+}
