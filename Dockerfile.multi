@@ -30,6 +30,8 @@ COPY packages/data-schemas/package*.json ./packages/data-schemas/
 COPY packages/client/package*.json ./packages/client/
 COPY client/package*.json ./client/
 COPY api/package*.json ./api/
+# `postinstall` runs `patch-package` — patch files must exist before `npm ci`.
+COPY patches ./patches
 
 # Install all dependencies for every build
 FROM base-min AS base
