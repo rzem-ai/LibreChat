@@ -1,15 +1,14 @@
 diff --git a/node_modules/@opentelemetry/otlp-exporter-base/build/esm/transport/http-transport-utils.js b/node_modules/@opentelemetry/otlp-exporter-base/build/esm/transport/http-transport-utils.js
-index 82173be..3942950 100644
+index 82173be..2cfabc2 100644
 --- a/node_modules/@opentelemetry/otlp-exporter-base/build/esm/transport/http-transport-utils.js
 +++ b/node_modules/@opentelemetry/otlp-exporter-base/build/esm/transport/http-transport-utils.js
-@@ -132,15 +132,26 @@ export function sendWithHttp(request, url, headers, compression, userAgent, agen
+@@ -132,15 +132,25 @@ export function sendWithHttp(request, url, headers, compression, userAgent, agen
      });
  }
  export function compressAndSend(req, compression, data, onError) {
 -    let dataStream = readableFromUint8Array(data);
-+    // Buffer the on-the-wire bytes so Content-Length can be set explicitly.
-+    // Azure Monitor's DCR OTLP endpoint rejects chunked-encoded requests
-+    // (400 MissingContentLengthHeader). See patches/@opentelemetry+otlp-exporter-base+*.patch.
++    // Explicit Content-Length required by Azure Monitor DCR OTLP endpoint
++    // (rejects chunked encoding with 400 MissingContentLengthHeader).
 +    let payload;
      if (compression === 'gzip') {
          req.setHeader('Content-Encoding', 'gzip');
@@ -36,17 +35,16 @@ index 82173be..3942950 100644
  function readableFromUint8Array(buff) {
      const readable = new Readable();
 diff --git a/node_modules/@opentelemetry/otlp-exporter-base/build/esnext/transport/http-transport-utils.js b/node_modules/@opentelemetry/otlp-exporter-base/build/esnext/transport/http-transport-utils.js
-index 82173be..3942950 100644
+index 82173be..2cfabc2 100644
 --- a/node_modules/@opentelemetry/otlp-exporter-base/build/esnext/transport/http-transport-utils.js
 +++ b/node_modules/@opentelemetry/otlp-exporter-base/build/esnext/transport/http-transport-utils.js
-@@ -132,15 +132,26 @@ export function sendWithHttp(request, url, headers, compression, userAgent, agen
+@@ -132,15 +132,25 @@ export function sendWithHttp(request, url, headers, compression, userAgent, agen
      });
  }
  export function compressAndSend(req, compression, data, onError) {
 -    let dataStream = readableFromUint8Array(data);
-+    // Buffer the on-the-wire bytes so Content-Length can be set explicitly.
-+    // Azure Monitor's DCR OTLP endpoint rejects chunked-encoded requests
-+    // (400 MissingContentLengthHeader). See patches/@opentelemetry+otlp-exporter-base+*.patch.
++    // Explicit Content-Length required by Azure Monitor DCR OTLP endpoint
++    // (rejects chunked encoding with 400 MissingContentLengthHeader).
 +    let payload;
      if (compression === 'gzip') {
          req.setHeader('Content-Encoding', 'gzip');
@@ -73,17 +71,16 @@ index 82173be..3942950 100644
  function readableFromUint8Array(buff) {
      const readable = new Readable();
 diff --git a/node_modules/@opentelemetry/otlp-exporter-base/build/src/transport/http-transport-utils.js b/node_modules/@opentelemetry/otlp-exporter-base/build/src/transport/http-transport-utils.js
-index 924ef29..3e0e42d 100644
+index 924ef29..27d4369 100644
 --- a/node_modules/@opentelemetry/otlp-exporter-base/build/src/transport/http-transport-utils.js
 +++ b/node_modules/@opentelemetry/otlp-exporter-base/build/src/transport/http-transport-utils.js
-@@ -136,15 +136,26 @@ function sendWithHttp(request, url, headers, compression, userAgent, agent, data
+@@ -136,15 +136,25 @@ function sendWithHttp(request, url, headers, compression, userAgent, agent, data
  }
  exports.sendWithHttp = sendWithHttp;
  function compressAndSend(req, compression, data, onError) {
 -    let dataStream = readableFromUint8Array(data);
-+    // Buffer the on-the-wire bytes so Content-Length can be set explicitly.
-+    // Azure Monitor's DCR OTLP endpoint rejects chunked-encoded requests
-+    // (400 MissingContentLengthHeader). See patches/@opentelemetry+otlp-exporter-base+*.patch.
++    // Explicit Content-Length required by Azure Monitor DCR OTLP endpoint
++    // (rejects chunked encoding with 400 MissingContentLengthHeader).
 +    let payload;
      if (compression === 'gzip') {
          req.setHeader('Content-Encoding', 'gzip');

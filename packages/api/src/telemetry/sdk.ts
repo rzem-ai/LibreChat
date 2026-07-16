@@ -352,11 +352,14 @@ function createAzureMonitorExporter(
         : undefined,
     );
 
-    const credSource = config.azureMonitorClientId
-      ? `managed identity (client ID: ${config.azureMonitorClientId})`
-      : 'DefaultAzureCredential (no AZURE_CLIENT_ID — will use az login or env vars locally)';
+    // DefaultAzureCredential picks the actual credential at token-acquisition time
+    // (managed identity in-cluster, EnvironmentCredential in CI, AzureCliCredential locally).
+    // We can only log the hint we passed in; the chosen source is not observable from here.
+    const clientIdHint = config.azureMonitorClientId
+      ? `managedIdentityClientId hint: ${config.azureMonitorClientId}`
+      : 'no managedIdentityClientId hint (AZURE_CLIENT_ID unset)';
     console.info(
-      `[otel] Azure Monitor auth enabled — credential source: ${credSource}`,
+      `[otel] Azure Monitor auth enabled — using DefaultAzureCredential (${clientIdHint})`,
     );
 
     return new OTLPTraceExporter({

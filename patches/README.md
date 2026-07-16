@@ -26,6 +26,8 @@ chunked requests with `400 MissingContentLengthHeader`.
 
 Once the upstream fix ships in a version we consume, delete the patch file
 and bump the affected package. If `patches/` ends up empty, also remove
-`patch-package` from `devDependencies`, drop the `postinstall` script from
-`package.json`, and remove the `COPY patches ./patches` lines from
-`Dockerfile` and `Dockerfile.multi`.
+`patch-package` from `dependencies` in the root `package.json` (it lives
+there — not in `devDependencies` — so that `npm ci --omit=dev` in the
+Docker `api-build` stage can still run `postinstall`), drop the
+`postinstall` script from `package.json`, and remove the
+`COPY patches ./patches` lines from `Dockerfile` and `Dockerfile.multi`.
