@@ -304,7 +304,15 @@ interface AzureTokenCredential {
 
 /**
  * When enabled, wraps the OTLP exporter with a per-batch bearer-token headers factory.
- * `@azure/identity` caches the token; returns `undefined` (SDK default path) when disabled.
+ *
+ * Uses `DefaultAzureCredential` so the same code works in multiple environments:
+ *  - **Kubernetes (prod/dev cluster):** resolves via `ManagedIdentityCredential` using
+ *    `AZURE_CLIENT_ID` as the user-assigned managed identity client ID.
+ *  - **Local development:** resolves via `AzureCliCredential` (i.e., `az login` session).
+ *  - **CI:** resolves via `EnvironmentCredential` (AZURE_CLIENT_ID + AZURE_CLIENT_SECRET etc.).
+ *
+ * `@azure/identity` caches the token internally; returns `undefined` (SDK default path) when
+ * the Azure auth flag is disabled.
  */
 function createAzureMonitorExporter(
   config: TelemetryConfig,
@@ -321,14 +329,6 @@ function createAzureMonitorExporter(
     return undefined;
   }
 
-  if (!config.azureMonitorClientId) {
-    emitWarning(
-      'AZURE_MONITOR_AUTH_ENABLED is true but AZURE_CLIENT_ID is missing — ' +
-        'cannot authenticate with Azure Monitor. Falling back to standard OTLP export.',
-    );
-    return undefined;
-  }
-
   try {
     // Dynamic require keeps these packages optional; missing → warn + fall back.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -336,17 +336,35 @@ function createAzureMonitorExporter(
       OTLPTraceExporter: new (opts: object) => NonNullable<NodeSDKConfiguration['traceExporter']>;
     };
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { ManagedIdentityCredential } = require('@azure/identity') as {
-      ManagedIdentityCredential: new (clientId: string) => AzureTokenCredential;
+    const { DefaultAzureCredential } = require('@azure/identity') as {
+      DefaultAzureCredential: new (opts?: {
+        managedIdentityClientId?: string;
+      }) => AzureTokenCredential;
     };
 
-    const credential = new ManagedIdentityCredential(config.azureMonitorClientId);
+    // Pass managedIdentityClientId so that in-cluster DefaultAzureCredential
+    // prefers the correct user-assigned managed identity rather than the
+    // system-assigned one. Locally the option is silently ignored and
+    // AzureCliCredential (az login) is used instead.
+    const credential = new DefaultAzureCredential(
+      config.azureMonitorClientId
+        ? { managedIdentityClientId: config.azureMonitorClientId }
+        : undefined,
+    );
+
+    const credSource = config.azureMonitorClientId
+      ? `managed identity (client ID: ${config.azureMonitorClientId})`
+      : 'DefaultAzureCredential (no AZURE_CLIENT_ID — will use az login or env vars locally)';
+    console.info(
+      `[otel] Azure Monitor auth enabled — credential source: ${credSource}`,
+    );
+
     return new OTLPTraceExporter({
       url: config.tracesEndpoint,
       headers: async () => {
         const accessToken = await credential.getToken(AZURE_MONITOR_TOKEN_SCOPE);
         if (!accessToken?.token) {
-          throw new Error('Azure Monitor: managed identity returned no token');
+          throw new Error('Azure Monitor: credential returned no token');
         }
         return { Authorization: `Bearer ${accessToken.token}` };
       },
@@ -480,8 +498,16 @@ export function initializeTelemetry(env: NodeJS.ProcessEnv = process.env): Telem
   const config = getTelemetryConfig(env);
   if (!config.enabled || isBunRuntime()) {
     status = 'disabled';
+    console.info('[otel] Telemetry disabled (OTEL_TRACING_ENABLED is not true or running on Bun)');
     return makeController();
   }
+
+  console.info(
+    `[otel] Initializing OpenTelemetry — service: ${config.serviceName}` +
+      (config.serviceVersion ? ` ${config.serviceVersion}` : '') +
+      (config.tracesEndpoint ? ` → ${config.tracesEndpoint}` : ' (no OTLP endpoint configured)') +
+      (config.azureMonitorAuthEnabled ? ' [Azure Monitor auth]' : ''),
+  );
 
   try {
     const sdk = createSdk(config);
@@ -495,6 +521,7 @@ export function initializeTelemetry(env: NodeJS.ProcessEnv = process.env): Telem
             pendingSdk = undefined;
             activeSdk = sdk;
             status = 'started';
+            console.info('[otel] OpenTelemetry SDK started successfully');
             ensureShutdownTaskRegistered();
           }
         })
@@ -502,6 +529,7 @@ export function initializeTelemetry(env: NodeJS.ProcessEnv = process.env): Telem
           if (pendingSdk === sdk) {
             pendingSdk = undefined;
             status = 'failed';
+            console.error(`[otel] OpenTelemetry SDK failed to start: ${getErrorMessage(error)}`);
             emitWarning(`OpenTelemetry initialization failed: ${getErrorMessage(error)}`);
           }
         });
@@ -516,10 +544,12 @@ export function initializeTelemetry(env: NodeJS.ProcessEnv = process.env): Telem
 
     activeSdk = sdk;
     status = 'started';
+    console.info('[otel] OpenTelemetry SDK started successfully');
     ensureShutdownTaskRegistered();
     return makeController();
   } catch (error) {
     status = 'failed';
+    console.error(`[otel] OpenTelemetry SDK failed to start: ${getErrorMessage(error)}`);
     emitWarning(`OpenTelemetry initialization failed: ${getErrorMessage(error)}`);
     return makeController();
   }
