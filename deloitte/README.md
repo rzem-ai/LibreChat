@@ -39,17 +39,17 @@ cd tt-librechat
 
 ## 2. Initialize Submodules
 
-This repository uses Git submodules to include external dependencies. The `rag_api` submodule contains the RAG (Retrieval-Augmented Generation) API code from the [tt-librechat-rag](https://github.com/Deloitte-Australia/tt-librechat-rag) repository.
+This repository uses Git submodules to include external dependencies. The `rag_api` submodule contains the RAG (Retrieval-Augmented Generation) API code from the [tt-librechat-rag](https://github.com/Deloitte-Australia/tt-librechat-rag) repository. The `admin_panel` submodule contains the admin panel code from the [ea-libreadmin](https://github.com/Deloitte-Australia/ea-libreadmin). 
 
 ### Initial Setup
 
-After cloning, initialize and clone the submodule:
+After cloning, initialize and clone the submodules:
 
 ```zsh
 git submodule update --init --recursive
 ```
 
-This will populate the `rag_api/` folder with the contents from the tt-librechat-rag repository on the `develop` branch.
+This will populate the `rag_api/` folder with the contents from the tt-librechat-rag repository on the `develop` branch and the `admin_panel/` folder with the contents from the ea-libreadmin repository on the `develop` branch.
 
 ### Updating the Submodule
 

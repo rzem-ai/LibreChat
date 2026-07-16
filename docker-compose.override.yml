@@ -55,6 +55,11 @@ services:
     build:
       context: ./rag_api
       dockerfile: Dockerfile.lite
+  admin-panel:
+    image: librechat-admin-panel
+    build:
+      context: ./admin_panel
+      dockerfile: Dockerfile
 volumes:
   caddy_data:
   caddy_config:

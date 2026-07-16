@@ -26,7 +26,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'develop@sha256:1c52de272743044bf3df9c557fc44c2699822555dfa60ad8bfb3f88c3d5b212e'
+          tag: 'develop@sha256:4ad97427e07711d62c7077e9e6a3bfcaca9bd700c0f395f9e4aa2f12fec73ed0'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -45,9 +45,11 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:c07c44dd5fee5b8969c969a15de711b5795662285988ceb3f181af7df41d9367'
+          tag: 'develop@sha256:038e547a60c8e582ddc9440b2576c85c336bfb200075dc0baf47fb9ab83f9a56'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
+          ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
+          ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
           BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
@@ -95,6 +97,12 @@ pods:
           CLEARTRACK_MCP_GATEWAY_CLIENT_ID_LLM: '498ce9fd-195b-40c5-82f1-8fc4a6d00d88'
           #Langfuse Observability
           LANGFUSE_HOST: 'https://langfuse-dev.ctk.au.deloitte.com'
+          # OpenTelemetry Tracing
+          OTEL_TRACING_ENABLED: 'true'
+          OTEL_TRACES_SAMPLER_ARG: '0.3'
+          OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: 'https://managed-ai-ctspoke-npd-dce-95rn.australiaeast-1.ingest.monitor.azure.com/dataCollectionRules/dcr-3991725585f24a5eabd0d6aa283d0e18/streams/Microsoft-OTLP-Traces/otlp/v1/traces'
+          # Wrap the OTLP exporter with an Azure AD bearer-token headers factory (managed identity via AZURE_CLIENT_ID)
+          AZURE_MONITOR_AUTH_ENABLED: 'true'
         secrets:
           AZURE_API_KEY: librechat-azure-api-key
           MONGO_URI: librechat-dev-mdb-connection-string
@@ -105,6 +113,7 @@ pods:
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-dev
           OPENID_SESSION_SECRET: librechat-openid-session-secret-dev
           RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          MEILI_MASTER_KEY: librechat-meili-master-key-dev
           # ClearTrack MCP Gateway
           CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET: librechat-cleartrack-mcp-gateway-client-secret-dev
           # ClearTrack MCP Gateway (OLD LLM)
@@ -118,7 +127,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:765e35c5c9c6120a38f7aeabf3f69779ebc77b2fa24d74622eb2343116734088'
+          tag: 'develop@sha256:2a774d7e2e76414beb1e8987a9d5f8d63fe867f113dbd3ffa4138fefde84117e'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -138,6 +147,7 @@ pods:
         secrets:
           AZURE_OPENAI_API_KEY: librechat-azure-api-key
           RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          JWT_SECRET: librechat-jwt-secret-dev
         service:
           enabled: true
           type: ClusterIP
@@ -145,3 +155,11 @@ pods:
           targetPort: 8000
         ingress:
           enabled: false
+      meilisearch:
+        image:
+          pullPolicy: Always
+          tag: 'develop@sha256:093c0bcc74a1809596c370a885ce86f601d90e61a3abc7c25d1ebfafed2002c7'
+        env:
+          MEILI_ENV: 'development'
+        secrets:
+          MEILI_MASTER_KEY: librechat-meili-master-key-dev
