@@ -44,10 +44,7 @@ COPY --chown=node:node client/package.json ./client/package.json
 COPY --chown=node:node packages/data-provider/package.json ./packages/data-provider/package.json
 COPY --chown=node:node packages/data-schemas/package.json ./packages/data-schemas/package.json
 COPY --chown=node:node packages/api/package.json ./packages/api/package.json
-# `postinstall` runs `patch-package`, which applies patches from `patches/`.
-# Currently patches @opentelemetry/otlp-exporter-base to set Content-Length on
-# OTLP HTTP requests — Azure Monitor DCR rejects chunked-encoded exports with
-# 400 MissingContentLengthHeader. See patches/README (or the .patch file itself).
+# Patches applied via patch-package on postinstall. See patches/README.md.
 COPY --chown=node:node patches ./patches
 
 RUN \
