@@ -1160,6 +1160,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "deepeval" },
+    { name = "httpx" },
     { name = "ipykernel" },
     { name = "kaleido" },
     { name = "langfuse" },
@@ -1173,6 +1174,7 @@ dependencies = [
     { name = "opentelemetry-sdk" },
     { name = "pandas" },
     { name = "plotly" },
+    { name = "pydantic" },
     { name = "python-docx" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
@@ -1182,6 +1184,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "deepeval", specifier = ">=3.9.6" },
+    { name = "httpx" },
     { name = "ipykernel" },
     { name = "kaleido" },
     { name = "langfuse", specifier = ">=4.5.1" },
@@ -1195,6 +1198,7 @@ requires-dist = [
     { name = "opentelemetry-sdk", specifier = ">=1.41.1" },
     { name = "pandas" },
     { name = "plotly" },
+    { name = "pydantic" },
     { name = "python-docx" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
