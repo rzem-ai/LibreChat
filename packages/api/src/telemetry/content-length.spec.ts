@@ -68,9 +68,6 @@ function makeFakeRequest() {
   return { req, headers, writes, finished };
 }
 
-async function drain(req: any): Promise<void> {
-  return new Promise((resolve) => req.on('end', resolve));
-}
 
 describe('OTLP HTTP transport — Content-Length regression', () => {
   it('sets Content-Length matching the raw payload byte length when compression is disabled', async () => {
