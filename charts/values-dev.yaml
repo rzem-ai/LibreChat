@@ -96,7 +96,7 @@ pods:
           # ClearTrack MCP Gateway (OLD LLM)
           CLEARTRACK_MCP_GATEWAY_CLIENT_ID_LLM: '498ce9fd-195b-40c5-82f1-8fc4a6d00d88'
           #Langfuse Observability
-          LANGFUSE_HOST: 'https://langfuse-dev.ctk.au.deloitte.com'
+          LANGFUSE_BASE_URL: 'https://langfuse-dev.ctk.au.deloitte.com'
           # OpenTelemetry Tracing
           OTEL_TRACING_ENABLED: 'true'
           OTEL_TRACES_SAMPLER_ARG: '0.3'
