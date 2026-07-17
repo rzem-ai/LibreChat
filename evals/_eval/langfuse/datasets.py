@@ -34,11 +34,14 @@ def _resolve_langfuse_host() -> str:
 
 def _get_langfuse_client():
     """Create and return a Langfuse client."""
+    import httpx
     from langfuse import Langfuse
 
     host = _resolve_langfuse_host()
     os.environ["LANGFUSE_BASE_URL"] = host
-    return Langfuse(host=host)
+    ssl_verify = os.environ.get("LANGFUSE_SSL_VERIFY", "true").lower() not in ("false", "0", "no")
+    httpx_client = httpx.Client(verify=ssl_verify)
+    return Langfuse(host=host, httpx_client=httpx_client)
 
 
 def _deterministic_item_id(dataset_name: str, case_key: str) -> str:

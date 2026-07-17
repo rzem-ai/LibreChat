@@ -177,16 +177,6 @@ Regardless of the original file format, always save the extracted content as a `
 For skills, write the `.md` file to `evals/skills/<Skill Name>/documents/` and set `source_material` in the YAML to that filename.
 For agents, write to `evals/agents/<Agent Name>/documents/`. For KB-backed agents, omit `source_material` — the agent retrieves its own context.
 
-### 4c. Worked Example
-
-Read the worked example for tone, structure, and level of detail:
-
-| Category | Worked Example |
-|---|---|
-| All categories | `evals/skills/Meeting Summariser/eval_cases.yaml` |
-
-This example demonstrates both single-turn (`invoke_text`) and multi-turn (`invoke_sequential`) patterns with `turns`, `turn_assertions`, and `leading_questions`. Study how it translates skill requirements into user queries, expected outputs, and tailored leading questions. Note: all metrics — including `conversation_completeness` — belong in `metrics:`; there is no `conversational_metrics:` field.
-
 ---
 
 ## Step 5 — Generate eval_cases.yaml

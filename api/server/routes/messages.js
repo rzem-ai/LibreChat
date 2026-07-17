@@ -7,8 +7,6 @@ const {
   countTokens,
   sendFeedbackScore,
   traceIdForMessage,
-  pushFeedbackScore, // Deloitte custom
-  deleteFeedbackScore // Deloitte custom
 } = require('@librechat/api');
 const { findAllArtifacts, replaceArtifactContent } = require('~/server/services/Artifacts/update');
 const { requireJwtAuth, validateMessageReq } = require('~/server/middleware');

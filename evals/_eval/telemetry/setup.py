@@ -38,10 +38,14 @@ def init_tracing() -> bool:
     _ensure_langfuse_otel_env()
 
     try:
+        ssl_verify = os.environ.get("LANGFUSE_SSL_VERIFY", "true").lower() not in ("false", "0", "no")
+        exporter = OTLPSpanExporter()
+        if not ssl_verify and hasattr(exporter, "_session"):
+            exporter._session.verify = False
         resource = Resource.create({"service.name": _SERVICE_NAME})
         provider = TracerProvider(resource=resource)
         provider.add_span_processor(BaggageSpanProcessor(ALLOW_ALL_BAGGAGE_KEYS))
-        provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+        provider.add_span_processor(BatchSpanProcessor(exporter))
         trace.set_tracer_provider(provider)
         _INITIALIZED = True
         return True
