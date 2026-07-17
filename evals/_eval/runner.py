@@ -621,7 +621,12 @@ def run_eval(
     # --- Link trace to Langfuse dataset ---
     if tracing_active and trace_id:
         link_trace_to_dataset(config_path, case_key, trace_id, run_name=run_name)
-        post_scores(trace_id, agg["gating_results"], agg["gating_passed"])
+        post_scores(
+            trace_id,
+            agg["gating_results"],
+            agg["gating_passed"],
+            conversational_results=agg["conversational_results"] or None,
+        )
 
     # --- Fallback: post-hoc export for adapters without live instrumentation ---
     if tracing_active and not live_instrumented and trace_id is None:
@@ -639,7 +644,14 @@ def run_eval(
         )
         if fallback_trace_id:
             link_trace_to_dataset(config_path, case_key, fallback_trace_id, run_name=run_name)
-            post_scores(fallback_trace_id, agg["gating_results"], agg["gating_passed"])
+            post_scores(
+                fallback_trace_id,
+                agg["gating_results"],
+                agg["gating_passed"],
+                diagnostic_results=agg["diagnostic_results"],
+                probe_results=agg["probe_results"],
+                conversational_results=agg["conversational_results"] or None,
+            )
 
     # Raise if gating failed
     if not agg["gating_passed"]:

@@ -398,12 +398,6 @@ router.put('/:conversationId/:messageId/feedback', validateMessageReq, async (re
       { context: 'updateFeedback' },
     );
 
-    // Deloitte custom function: add or remove feedback
-    if (feedback) {
-      pushFeedbackScore({ messageId, feedback }).catch(() => {});
-    } else {
-      deleteFeedbackScore({ messageId }).catch(() => {});
-    }
 
     // Best-effort: Assistants messages do not have deterministic AgentRun traces.
     if (!isAssistantsEndpoint(updatedMessage.endpoint)) {

@@ -7,6 +7,7 @@ linking an exported trace to a dataset run.
 
 import json
 import os
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -147,16 +148,23 @@ def link_trace_to_dataset(
         print(f"[LANGFUSE] Error linking trace to dataset: {exc}")
 
 
+def _score_name(raw: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", raw.lower()).strip("_")
+
+
 def post_scores(
     trace_id: str,
     gating_results: List[tuple],
     gating_passed: bool,
+    conversational_results: Optional[List[tuple]] = None,
 ) -> None:
-    """Post composite eval scores to Langfuse for experiment comparison.
+    """Post eval metric scores to Langfuse for experiment comparison.
 
-    Posts two scores per trace:
-      - eval_score: mean of all gating metric scores (0.0–1.0)
-      - gating_passed: binary pass/fail (1 or 0)
+    Posts one NUMERIC score per metric declared in the eval case's metrics list:
+      - eval_score: mean of gating metric scores (0.0–1.0)
+      - passed: binary pass/fail
+      - one score per gating metric (faithfulness, hallucination, task_completion, etc.)
+      - one score per conversational metric (conversation_completeness, etc.) if present
     """
     gating_scores = [score for _, score, _, _, _ in gating_results if score is not None]
     composite = sum(gating_scores) / len(gating_scores) if gating_scores else 0.0
@@ -170,7 +178,17 @@ def post_scores(
     try:
         langfuse.create_score(trace_id=trace_id, name="eval_score", value=composite, data_type="NUMERIC")
         langfuse.create_score(trace_id=trace_id, name="passed", value=gating_passed, data_type="BOOLEAN")
+
+        for name, avg, _threshold, _success, _scores in gating_results:
+            if avg is not None:
+                langfuse.create_score(trace_id=trace_id, name=_score_name(name), value=avg, data_type="NUMERIC")
+
+        for name, avg, _threshold, _success, _scores in (conversational_results or []):
+            if avg is not None:
+                langfuse.create_score(trace_id=trace_id, name=_score_name(name), value=avg, data_type="NUMERIC")
+
         langfuse.flush()
-        print(f"[LANGFUSE] Posted scores: eval_score={composite:.3f}, passed={gating_passed}")
+        total = 2 + len(gating_results) + len(conversational_results or [])
+        print(f"[LANGFUSE] Posted {total} scores: eval_score={composite:.3f}, passed={gating_passed}")
     except Exception as exc:
         print(f"[LANGFUSE] Error posting scores: {exc}")

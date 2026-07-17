@@ -21,6 +21,7 @@ Env vars:
 
 import json
 import os
+import time
 from pathlib import Path
 from typing import List, Optional
 
@@ -36,6 +37,10 @@ load_dotenv(override=True)
 _BASE_URL = os.environ.get("LIBRECHAT_BASE_URL", "http://localhost:3080")
 _API_KEY = os.environ.get("LIBRECHAT_API_KEY", "")
 _AGENT_ID = os.environ.get("LIBRECHAT_AGENT_ID", "")
+
+_TIMEOUT = int(os.environ.get("LIBRECHAT_TIMEOUT", "300"))
+_MAX_RETRIES = int(os.environ.get("LIBRECHAT_MAX_RETRIES", "3"))
+_RETRY_BACKOFF = float(os.environ.get("LIBRECHAT_RETRY_BACKOFF", "5"))
 
 _JUDGE_MODEL = os.environ.get("EVAL_JUDGE_MODEL", "")
 _JUDGE_ENDPOINT_NAME = os.environ.get("EVAL_JUDGE_ENDPOINT", "")
@@ -103,7 +108,7 @@ class LibreChatAdapter(AgentAdapter):
                 "Authorization": f"Bearer {_API_KEY}",
                 "Content-Type": "application/json",
             },
-            timeout=120,
+            timeout=_TIMEOUT,
         )
 
     def get_agent_metadata(self) -> dict:
@@ -196,12 +201,31 @@ class LibreChatAdapter(AgentAdapter):
         return EvaluatorModel(generate_fn, model_name=f"Direct-Judge-{model}")
 
     def _call(self, messages: list) -> AgentResponse:
-        # TODO: add retry/backoff for transient 5xx — a single failure aborts the whole eval run
-        resp = self._http_client.post(
-            "/chat/completions",
-            json={"model": self._model, "messages": messages, "stream": False, "include_retrieval": True},
-        )
-        resp.raise_for_status()
+        last_exc: Exception | None = None
+        for attempt in range(1, _MAX_RETRIES + 1):
+            try:
+                resp = self._http_client.post(
+                    "/chat/completions",
+                    json={"model": self._model, "messages": messages, "stream": False, "include_retrieval": True},
+                )
+                resp.raise_for_status()
+                break
+            except (httpx.TimeoutException, httpx.RemoteProtocolError) as exc:
+                last_exc = exc
+                if attempt < _MAX_RETRIES:
+                    delay = _RETRY_BACKOFF * (2 ** (attempt - 1))
+                    print(f"  [RETRY {attempt}/{_MAX_RETRIES}] {type(exc).__name__} — retrying in {delay:.0f}s")
+                    time.sleep(delay)
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code >= 500 and attempt < _MAX_RETRIES:
+                    last_exc = exc
+                    delay = _RETRY_BACKOFF * (2 ** (attempt - 1))
+                    print(f"  [RETRY {attempt}/{_MAX_RETRIES}] HTTP {exc.response.status_code} — retrying in {delay:.0f}s")
+                    time.sleep(delay)
+                else:
+                    raise
+        else:
+            raise last_exc
         data = resp.json()
 
         choice = data["choices"][0]

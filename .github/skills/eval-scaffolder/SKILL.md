@@ -61,16 +61,20 @@ From the definition file, extract:
 
 **YOU MUST ASK the user the following questions one at a time, in order.** Do not skip this step. Wait for a response to each question before asking the next. The user may answer "skip" to any individual question.
 
-### Question 0: Agent ID (agents only — skip for skills)
+### Question 0: Agent ID
 
-If `agent_id:` was found in the `Agent.md` frontmatter in Step 1c, **skip this question entirely** — you already have the ID.
+Skills are invoked through an agent — both skills and agents need an `agent_id` in `eval_cases.yaml`.
 
-Only ask if it was missing from the frontmatter:
+**For agents:** If `agent_id:` was already found in the `Agent.md` frontmatter in Step 1c, skip this question — you already have the ID. Only ask if it was missing.
 
-> **I couldn't find an `agent_id` in Agent.md. What env var name should I use for this agent's ID?**
-> Agent IDs are instance-specific and must not be committed to the repo. Instead, give me a env var name (e.g. `EXPENSE_ASSIST_AGENT_ID`) and I'll write `agent_id: ${EXPENSE_ASSIST_AGENT_ID}` into both `Agent.md` and `eval_cases.yaml`. You then add the real ID to your local `.env` file.
+**For skills:** Always ask this question.
+
+Ask:
+
+> **Which agent should this [skill/agent] be invoked through?**
+> Provide an env var name (e.g. `EXPENSE_ASSIST_AGENT_ID`) and I'll write `agent_id: ${EXPENSE_ASSIST_AGENT_ID}` into `eval_cases.yaml`. For agents, I'll also add it to `Agent.md`. You then add the real ID to your local `.env` file.
 >
-> Provide a var name, or say "skip" to rely on the default `LIBRECHAT_AGENT_ID` env var instead.
+> Provide a var name, or say "skip" to default to `GENERAL_BUSINESS_ASSISTANT_AGENT_ID`.
 
 Wait for the user's response before continuing.
 
@@ -117,7 +121,7 @@ Wait for the user's response before continuing.
 
 ### If the user skips all:
 
-- **Agent ID** → omit `agent_id` from the YAML; add a comment that the env var `LIBRECHAT_AGENT_ID` must be set.
+- **Agent ID** → set `agent_id: "${GENERAL_BUSINESS_ASSISTANT_AGENT_ID}"` in the YAML.
 - **Query** → derive a realistic one from the definition file's process steps and description.
 - **Document** → generate synthetic ones in Step 6.
 - **Output** → write `expected_output` as a structural description derived from the definition file only.
@@ -126,18 +130,16 @@ Wait for the user's response before continuing.
 
 ## Step 3 — Classify the Skill Category
 
-Map the skill or agent to exactly **one** of the six eval categories:
+Map the skill or agent to exactly **one** of the four eval categories:
 
 | Category | When to Use | Key Signal |
 |---|---|---|
-| **Content Generation & Transformation** | Produces written content (summaries, reports, case studies) | Output is a document or structured text |
-| **Knowledge Retrieval & Q&A** | Answers questions from documents or a knowledge base | Output cites sources, extracts findings |
-| **Data Classification & Extraction** | Classifies, extracts, or restructures data | Output is structured data, tables, tagged entities |
-| **Decision Support & Recommendation** | Provides analysis, options, or recommendations | Output has recommendations with trade-offs |
-| **Tool-Orchestrated Workflow Execution** | Primarily orchestrates tool calls to produce artefacts | Output depends on code execution, file generation |
-| **Governance / Control / Compliance** | Reviews, audits, or enforces compliance | Output flags violations, risks, or gaps |
+| **Advisory or Drafting** | Produces professional written deliverables or researched answers | Output is a document, structured narrative, or sourced answer |
+| **Data Analysis** | Classifies, extracts, or assesses structured information from documents | Output is structured data, extracted fields, or risk flags |
+| **System Integration or Utility** | Invokes external tools or APIs as the primary mechanism | Single tool call or API interaction drives the output |
+| **Workflow Automation** | Orchestrates multi-step tool chains end-to-end | Multi-turn; sequence of dependent tool calls |
 
-**For KB-backed agents** (RAG mode detected in Step 1c): always classify as **Knowledge Retrieval & Q&A** and use Pattern B (KB-backed RAG) from the template.
+**For KB-backed agents** (RAG mode detected in Step 1c): always classify as **Advisory or Drafting** and use Pattern B (KB-backed RAG) from the template.
 
 If a skill spans two categories, choose the one that describes its **primary output**.
 
@@ -153,12 +155,10 @@ Read the matching template from `evals/_eval/templates/`:
 
 | Category | Template File |
 |---|---|
-| Content Generation & Transformation | `evals/_eval/templates/content_generation.yaml` |
-| Knowledge Retrieval & Q&A | `evals/_eval/templates/knowledge_retrieval.yaml` |
-| Data Classification & Extraction | `evals/_eval/templates/data_classification.yaml` |
-| Decision Support & Recommendation | `evals/_eval/templates/decision_support.yaml` |
-| Tool-Orchestrated Workflow Execution | `evals/_eval/templates/tool_orchestration.yaml` |
-| Governance / Control / Compliance | `evals/_eval/templates/governance_compliance.yaml` |
+| Advisory or Drafting | `evals/_eval/templates/advisory_drafting.yaml` |
+| Data Analysis | `evals/_eval/templates/data_analysis.yaml` |
+| System Integration or Utility | `evals/_eval/templates/system_integration.yaml` |
+| Workflow Automation | `evals/_eval/templates/workflow_automation.yaml` |
 
 Use this template as your structural starting point. Do **not** copy it verbatim — adapt metrics, thresholds, and leading questions to the specific skill or agent.
 
@@ -172,8 +172,10 @@ uv run python .github/skills/eval-scaffolder/scripts/read_document.py "<path fro
 
 This handles PDF, DOCX, PPTX, XLSX, and markdown via `markitdown`. Use the extracted text as the source of truth for writing grounded `expected_output` descriptions and leading questions. Never fabricate or paraphrase document content.
 
-For skills, copy the source file into `evals/skills/<Skill Name>/documents/` and set `source_material` in the YAML to the copied filename.
-For agents, copy into `evals/agents/<Agent Name>/documents/`. For KB-backed agents, omit `source_material` — the agent retrieves its own context.
+Regardless of the original file format, always save the extracted content as a `.md` file — never copy the source binary into `documents/`. Derive the filename from the original file's stem (e.g. `contract_draft.docx` → `contract_draft.md`). Write the markdown to disk using code execution.
+
+For skills, write the `.md` file to `evals/skills/<Skill Name>/documents/` and set `source_material` in the YAML to that filename.
+For agents, write to `evals/agents/<Agent Name>/documents/`. For KB-backed agents, omit `source_material` — the agent retrieves its own context.
 
 ### 4c. Worked Example
 
@@ -183,13 +185,29 @@ Read the worked example for tone, structure, and level of detail:
 |---|---|
 | All categories | `evals/skills/Meeting Summariser/eval_cases.yaml` |
 
-This example demonstrates both single-turn (`invoke_text`) and multi-turn (`invoke_sequential`) patterns with `turns`, `turn_assertions`, `conversational_metrics`, and `leading_questions`. Study how it translates skill requirements into user queries, expected outputs, and tailored leading questions.
+This example demonstrates both single-turn (`invoke_text`) and multi-turn (`invoke_sequential`) patterns with `turns`, `turn_assertions`, and `leading_questions`. Study how it translates skill requirements into user queries, expected outputs, and tailored leading questions. Note: all metrics — including `conversation_completeness` — belong in `metrics:`; there is no `conversational_metrics:` field.
 
 ---
 
 ## Step 5 — Generate eval_cases.yaml
 
 Produce a complete `eval_cases.yaml`. Use the category's recommended metrics as a starting point, but **tailor everything** to the specific skill or agent.
+
+### Rule 0 — Honour user inputs in case_1 (MANDATORY)
+
+**Before applying any other rule, check what the user provided in Step 2.**
+
+If the user provided a query, document, or expected output — even partially — `case_1` MUST be built directly from those inputs:
+
+- **Query provided** → use it verbatim as `user_query` (or as the first turn's `content` for `invoke_sequential`). Do not rephrase or generalise it.
+- **Document provided** → it was already read and copied in Step 4b. Set `source_material` in `case_1` to that filename. Do not generate a synthetic document for `case_1`.
+- **Expected output provided** → write `case_1`'s `expected_output` and leading questions directly from it. Ground every probe in the specific structure, sections, or content the user described.
+
+`case_2` uses the same document as `case_1` but with a harder variant query (edge case, adversarial, or refusal). Cases 3–8 use synthetic documents generated in Step 6.
+
+If the user skipped all questions, ignore this rule and proceed normally.
+
+---
 
 ### Rules for case design:
 
@@ -209,17 +227,25 @@ Produce a complete `eval_cases.yaml`. Use the category's recommended metrics as 
 
 ### Category → Recommended Metrics:
 
-| Category | Single-turn Metrics | Multi-turn Metrics |
-|---|---|---|
-| Content Generation | hallucination, task_completion, faithfulness | hallucination, faithfulness, conversation_completeness |
-| Knowledge Retrieval (doc Q&A) | faithfulness, task_completion, hallucination | faithfulness, hallucination, conversation_completeness |
-| Knowledge Retrieval (KB/RAG) | faithfulness, answer_relevancy, contextual_recall, contextual_precision — diagnostic: contextual_relevancy | faithfulness, answer_relevancy, contextual_recall, conversation_completeness — diagnostic: contextual_relevancy |
-| Data Classification | task_completion, faithfulness | faithfulness, conversation_completeness |
-| Decision Support | task_completion, faithfulness, hallucination | faithfulness, hallucination, conversation_completeness |
-| Tool Orchestration | task_completion, faithfulness | faithfulness, conversation_completeness |
-| Governance / Compliance | task_completion, faithfulness, hallucination | faithfulness, hallucination, conversation_completeness |
+| Category | Single-turn Gating | Multi-turn Gating | Diagnostic |
+|---|---|---|---|
+| Advisory or Drafting (doc-backed) | faithfulness, hallucination, task_completion | faithfulness, hallucination, conversation_completeness | — |
+| Advisory or Drafting (RAG/KB-backed) | faithfulness, answer_relevancy, contextual_recall, contextual_precision | faithfulness, answer_relevancy, contextual_recall, conversation_completeness | contextual_relevancy |
+| Data Analysis | faithfulness, task_completion, hallucination | faithfulness, hallucination, conversation_completeness | — |
+| System Integration or Utility | faithfulness, task_completion, tool_correctness | faithfulness, tool_correctness, conversation_completeness | — |
+| Workflow Automation | always multi-turn | faithfulness, tool_correctness, conversation_completeness | — |
 
-> **Note:** `task_completion` only evaluates the final turn's output. For multi-turn cases, `conversation_completeness` evaluates the entire dialogue and is the correct replacement. All metrics in `metrics:` are gating; use `diagnostic_metrics:` for non-blocking.
+> **Note:** `task_completion` only evaluates the final turn's output. For multi-turn cases, `conversation_completeness` evaluates the entire dialogue and is the correct replacement. All metrics in `metrics:` are gating; use `diagnostic_metrics:` for non-blocking. `tool_correctness` requires `expected_tools` to be defined on the case.
+
+### Rule 12 — Metric consistency within invoke_method groups (MANDATORY)
+
+Gating metrics must be **identical across all cases of the same `invoke_method`** within a skill's `eval_cases.yaml`. The only permitted difference between the two groups is the swap of `task_completion` ↔ `conversation_completeness`.
+
+- All `invoke_text` cases → same metric set (e.g., `faithfulness`, `hallucination`, `task_completion`)
+- All `invoke_sequential` cases → same metric set (same core metrics, `task_completion` replaced by `conversation_completeness`)
+- **Use `leading_questions` as the per-case differentiator — not metric variations.**
+
+Do not add extra metrics to individual cases to make them feel more targeted. If a metric applies to the skill, it applies to all cases of that invoke_method. If it only applies to one case, it belongs in `leading_questions` instead.
 
 ### YAML structure — skill:
 
@@ -228,6 +254,7 @@ Produce a complete `eval_cases.yaml`. Use the category's recommended metrics as 
 # Category: <Category Name>
 
 adapter: _eval.adapters.librechat_adapter.LibreChatAdapter
+agent_id: "${GENERAL_BUSINESS_ASSISTANT_AGENT_ID}"
 invoke_method: invoke_text  # or invoke_sequential for multi-turn
 num_runs: 3
 
@@ -274,7 +301,7 @@ cases:
 # Category: Knowledge Retrieval & Q&A (KB-backed RAG)
 
 adapter: _eval.adapters.librechat_adapter.LibreChatAdapter
-agent_id: "<librechat-agent-id>"   # omit if relying on LIBRECHAT_AGENT_ID env var
+agent_id: "${EXPENSE_ASSIST_AGENT_ID}"   # or ${GENERAL_BUSINESS_ASSISTANT_AGENT_ID} as fallback
 invoke_method: invoke_sequential
 num_runs: 3
 

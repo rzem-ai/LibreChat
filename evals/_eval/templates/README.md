@@ -11,14 +11,12 @@ Copy the template that matches your skill's category to `evals/skills/<Skill Nam
 
 ## Available Templates
 
-| File | Category | Typical Skills |
-|------|----------|---------------|
-| [`content_generation.yaml`](content_generation.yaml) | Content Generation & Transformation | Meeting Summariser, Article Builder, CV Builder |
-| [`knowledge_retrieval.yaml`](knowledge_retrieval.yaml) | Knowledge Retrieval & Q&A | Research Assistant, Industry Trends Analyser, Policy Q&A |
-| [`data_classification.yaml`](data_classification.yaml) | Data Classification & Extraction | Contract Analyser, Document Redactor |
-| [`decision_support.yaml`](decision_support.yaml) | Decision Support & Recommendation | Scenario Planning, Cost Benefit Analyser |
-| [`tool_orchestration.yaml`](tool_orchestration.yaml) | Tool-Orchestrated Workflow Execution | PowerPoint Generator, Process Map Generator |
-| [`governance_compliance.yaml`](governance_compliance.yaml) | Governance / Control / Compliance | Audit RFP Response Generator, NDA Reviewer |
+| File | Category | Typical Skill Type |
+|------|----------|--------------------|
+| [`advisory_drafting.yaml`](advisory_drafting.yaml) | Advisory or Drafting | Summarisation, report drafting, document Q&A, KB-backed research |
+| [`data_analysis.yaml`](data_analysis.yaml) | Data Analysis | Contract extraction, document classification, risk flagging, compliance review |
+| [`system_integration.yaml`](system_integration.yaml) | System Integration or Utility | Single tool invocations, API-driven output, data import/export utilities |
+| [`workflow_automation.yaml`](workflow_automation.yaml) | Workflow Automation | Multi-step tool chains, artefact generation pipelines, end-to-end workflows |
 
 ---
 
@@ -27,17 +25,48 @@ Copy the template that matches your skill's category to `evals/skills/<Skill Nam
 Every template includes:
 
 - **`case_1`** — Single-turn (`invoke_text`) with gating metrics and leading questions
-- **`case_2`** — Multi-turn (`invoke_sequential`) with `turns`, `turn_assertions`, and `conversation_completeness`
+- **`case_2`** — Multi-turn (`invoke_sequential`) with `turns`, `turn_assertions`, and conversational metrics
 
-### Category-Specific Differences
+**Exception:** `workflow_automation.yaml` uses `invoke_sequential` for both cases — workflow skills are always multi-turn by definition.
 
-**`knowledge_retrieval.yaml`** includes two patterns:
-- *Pattern A* — Document Q&A: source provided inline via `attach_source: true`
-- *Pattern B* — KB-backed RAG: no `source_material`; agent retrieves from its own knowledge base. Uses retrieval metrics (`contextual_precision`, `contextual_recall`, `contextual_relevancy`)
+### Metric Field Rules
 
-**`data_classification.yaml`** and **`governance_compliance.yaml`** emphasise extraction accuracy and instruction adherence over creative generation, so their leading questions focus on completeness, schema compliance, and absence of hallucinated fields.
+> **Important:** All metrics — including conversational ones — belong in the `metrics:` list.
+> There is no `conversational_metrics:` field. The runner splits standard vs. conversational metrics
+> internally based on the `CONVERSATIONAL_METRICS` registry.
 
-**`tool_orchestration.yaml`** uses `tool_correctness` as a gating metric and `expected_tools` assertions on every turn to verify the agent's tool-calling sequence.
+| Field | Purpose |
+|-------|---------|
+| `metrics:` | Gating metrics — any metric from `VALID_METRICS`, including `conversation_completeness` |
+| `diagnostic_metrics:` | Non-blocking metrics (e.g., `contextual_relevancy` for RAG cases) |
+| `thresholds:` | Per-metric float thresholds |
+| `diagnostic_thresholds:` | Per-diagnostic-metric thresholds |
+
+### Multi-turn (`invoke_sequential`) Rules
+
+- **Do NOT use `task_completion`** on `invoke_sequential` cases — it only evaluates the final turn in isolation.
+- Use `conversation_completeness` in `metrics:` instead to assess task fulfilment across all turns.
+
+### Advisory or Drafting — Two Patterns
+
+**Pattern A** — Document-backed: user supplies source material alongside their query.
+Set `source_material` and use `attach_source: true` on the first turn.
+
+**Pattern B** — KB-backed RAG: agent retrieves from a pre-loaded knowledge base.
+Omit `source_material` entirely. Use `invoke_sequential`. Use retrieval metrics
+(`contextual_precision`, `contextual_recall`) alongside `faithfulness` and `answer_relevancy`.
+
+---
+
+## Recommended Metrics by Category
+
+| Category | Single-turn Gating | Multi-turn Gating | Diagnostic |
+|---|---|---|---|
+| Advisory or Drafting (doc-backed) | `faithfulness`, `hallucination`, `task_completion` | `faithfulness`, `hallucination`, `conversation_completeness` | — |
+| Advisory or Drafting (RAG/KB) | `faithfulness`, `answer_relevancy`, `contextual_recall`, `contextual_precision` | `faithfulness`, `answer_relevancy`, `contextual_recall`, `conversation_completeness` | `contextual_relevancy` |
+| Data Analysis | `faithfulness`, `task_completion`, `hallucination` | `faithfulness`, `hallucination`, `conversation_completeness` | — |
+| System Integration or Utility | `faithfulness`, `task_completion`, `tool_correctness` | `faithfulness`, `tool_correctness`, `conversation_completeness` | — |
+| Workflow Automation | always multi-turn | `faithfulness`, `tool_correctness`, `conversation_completeness` | — |
 
 ---
 
@@ -45,7 +74,7 @@ Every template includes:
 
 ```bash
 # 1. Copy the template
-cp evals/_eval/templates/content_generation.yaml \
+cp evals/_eval/templates/advisory_drafting.yaml \
    evals/skills/My\ Skill/eval_cases.yaml
 
 # 2. Edit the YAML — fill in all TODO fields
