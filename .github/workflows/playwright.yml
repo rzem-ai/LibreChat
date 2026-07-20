@@ -55,10 +55,7 @@ jobs:
         run: npm run frontend
 
       - name: Install Playwright
-        run: |
-          npx playwright install-deps
-          npm install -D @playwright/test@latest
-          npx playwright install chromium
+        run: npx playwright install --with-deps chromium
 
       - name: Run Playwright tests
         run: npm run e2e:ci
