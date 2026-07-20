@@ -20,10 +20,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Use Node.js 20.x
+      - name: Use Node.js 24.16.0
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '24.16.0'
           cache: 'npm'
 
       - name: Install depcheck
@@ -225,7 +225,7 @@ jobs:
             # Exclude dependencies used in scripts, code, workspace packages, and @librechat/client imports
             UNUSED=$(comm -23 <(echo "$UNUSED" | sort) <(cat ../client_used_deps.txt ../client_used_code.txt ../client_workspace_deps.txt ../packages_client_used_code.txt ../librechat_client_deps.txt 2>/dev/null | sort -u) || echo "")
             # Filter out false positives
-            UNUSED=$(echo "$UNUSED" | grep -v "^micromark-extension-llm-math$" || echo "")
+            UNUSED=$(echo "$UNUSED" | grep -v "^micromark-extension-llm-math$" | grep -v "^react-window$" || echo "")
             echo "CLIENT_UNUSED<<EOF" >> $GITHUB_ENV
             echo "$UNUSED" >> $GITHUB_ENV
             echo "EOF" >> $GITHUB_ENV

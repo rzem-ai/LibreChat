@@ -12,8 +12,8 @@ import type { NodeSDKConfiguration } from '@opentelemetry/sdk-node';
 import type { Span, Attributes } from '@opentelemetry/api';
 import type { RequestOptions } from 'node:http';
 import type { TelemetryConfig, TelemetryStatus } from './config';
-import { getTelemetryConfig } from './config';
 import { registerShutdownTask } from '../app/shutdown';
+import { getTelemetryConfig } from './config';
 
 export interface TelemetryController {
   readonly enabled: boolean;
@@ -304,7 +304,15 @@ interface AzureTokenCredential {
 
 /**
  * When enabled, wraps the OTLP exporter with a per-batch bearer-token headers factory.
- * `@azure/identity` caches the token; returns `undefined` (SDK default path) when disabled.
+ *
+ * Uses `DefaultAzureCredential` so the same code works in multiple environments:
+ *  - **Kubernetes (prod/dev cluster):** resolves via `ManagedIdentityCredential` using
+ *    `AZURE_CLIENT_ID` as the user-assigned managed identity client ID.
+ *  - **Local development:** resolves via `AzureCliCredential` (i.e., `az login` session).
+ *  - **CI:** resolves via `EnvironmentCredential` (AZURE_CLIENT_ID + AZURE_CLIENT_SECRET etc.).
+ *
+ * `@azure/identity` caches the token internally; returns `undefined` (SDK default path) when
+ * the Azure auth flag is disabled.
  */
 function createAzureMonitorExporter(
   config: TelemetryConfig,
@@ -321,32 +329,45 @@ function createAzureMonitorExporter(
     return undefined;
   }
 
-  if (!config.azureMonitorClientId) {
-    emitWarning(
-      'AZURE_MONITOR_AUTH_ENABLED is true but AZURE_CLIENT_ID is missing — ' +
-        'cannot authenticate with Azure Monitor. Falling back to standard OTLP export.',
-    );
-    return undefined;
-  }
-
   try {
     // Dynamic require keeps these packages optional; missing → warn + fall back.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http') as {
+    const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-proto') as {
       OTLPTraceExporter: new (opts: object) => NonNullable<NodeSDKConfiguration['traceExporter']>;
     };
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { ManagedIdentityCredential } = require('@azure/identity') as {
-      ManagedIdentityCredential: new (clientId: string) => AzureTokenCredential;
+    const { DefaultAzureCredential } = require('@azure/identity') as {
+      DefaultAzureCredential: new (opts?: {
+        managedIdentityClientId?: string;
+      }) => AzureTokenCredential;
     };
 
-    const credential = new ManagedIdentityCredential(config.azureMonitorClientId);
+    // Pass managedIdentityClientId so that in-cluster DefaultAzureCredential
+    // prefers the correct user-assigned managed identity rather than the
+    // system-assigned one. Locally the option is silently ignored and
+    // AzureCliCredential (az login) is used instead.
+    const credential = new DefaultAzureCredential(
+      config.azureMonitorClientId
+        ? { managedIdentityClientId: config.azureMonitorClientId }
+        : undefined,
+    );
+
+    // DefaultAzureCredential picks the actual credential at token-acquisition time
+    // (managed identity in-cluster, EnvironmentCredential in CI, AzureCliCredential locally).
+    // We can only log the hint we passed in; the chosen source is not observable from here.
+    const clientIdHint = config.azureMonitorClientId
+      ? `managedIdentityClientId hint: ${config.azureMonitorClientId}`
+      : 'no managedIdentityClientId hint (AZURE_CLIENT_ID unset)';
+    console.info(
+      `[otel] Azure Monitor auth enabled — using DefaultAzureCredential (${clientIdHint})`,
+    );
+
     return new OTLPTraceExporter({
       url: config.tracesEndpoint,
       headers: async () => {
         const accessToken = await credential.getToken(AZURE_MONITOR_TOKEN_SCOPE);
         if (!accessToken?.token) {
-          throw new Error('Azure Monitor: managed identity returned no token');
+          throw new Error('Azure Monitor: credential returned no token');
         }
         return { Authorization: `Bearer ${accessToken.token}` };
       },
@@ -354,7 +375,7 @@ function createAzureMonitorExporter(
   } catch (error) {
     emitWarning(
       `Azure Monitor exporter unavailable — falling back to standard OTLP export. ` +
-        `Ensure @opentelemetry/exporter-trace-otlp-http and @azure/identity are installed. ` +
+        `Ensure @opentelemetry/exporter-trace-otlp-proto and @azure/identity are installed. ` +
         `Error: ${getErrorMessage(error)}`,
     );
     return undefined;
@@ -363,36 +384,40 @@ function createAzureMonitorExporter(
 
 function createSdk(config: TelemetryConfig): NodeSDK {
   const azureExporter = createAzureMonitorExporter(config);
+  const instrumentations: NodeSDKConfiguration['instrumentations'] = [
+    new HttpInstrumentation({
+      headersToSpanAttributes: {
+        client: { requestHeaders: [], responseHeaders: [] },
+        server: { requestHeaders: [], responseHeaders: [] },
+      },
+      requestHook: (span: Span, request: object) => {
+        if (request instanceof IncomingMessage) {
+          requestSpans.set(request, span);
+        }
+      },
+      startIncomingSpanHook: (request: IncomingMessage) =>
+        getSanitizedIncomingUrlAttributes(request, config.healthPath),
+      startOutgoingSpanHook: (request: RequestOptions) =>
+        getSanitizedOutgoingHttpUrlAttributes(request),
+      ignoreIncomingRequestHook: (request: IncomingMessage) =>
+        shouldIgnoreIncomingRequest(request, config.healthPath),
+    }),
+    new ExpressInstrumentation(),
+    new MongoDBInstrumentation(),
+    new MongooseInstrumentation(),
+    new UndiciInstrumentation({
+      startSpanHook: (request: UndiciRequestInfo) => getSanitizedUndiciUrlAttributes(request),
+    }),
+  ];
+
+  if (config.ioredisTracingEnabled) {
+    instrumentations.push(new IORedisInstrumentation());
+  }
 
   const sdkConfig: Partial<NodeSDKConfiguration> = {
     resource: resourceFromAttributes(getResourceAttributes(config)),
     ...(azureExporter ? { traceExporter: azureExporter } : {}),
-    instrumentations: [
-      new HttpInstrumentation({
-        headersToSpanAttributes: {
-          client: { requestHeaders: [], responseHeaders: [] },
-          server: { requestHeaders: [], responseHeaders: [] },
-        },
-        requestHook: (span: Span, request: object) => {
-          if (request instanceof IncomingMessage) {
-            requestSpans.set(request, span);
-          }
-        },
-        startIncomingSpanHook: (request: IncomingMessage) =>
-          getSanitizedIncomingUrlAttributes(request, config.healthPath),
-        startOutgoingSpanHook: (request: RequestOptions) =>
-          getSanitizedOutgoingHttpUrlAttributes(request),
-        ignoreIncomingRequestHook: (request: IncomingMessage) =>
-          shouldIgnoreIncomingRequest(request, config.healthPath),
-      }),
-      new ExpressInstrumentation(),
-      new MongoDBInstrumentation(),
-      new MongooseInstrumentation(),
-      new IORedisInstrumentation(),
-      new UndiciInstrumentation({
-        startSpanHook: (request: UndiciRequestInfo) => getSanitizedUndiciUrlAttributes(request),
-      }),
-    ],
+    instrumentations,
   };
 
   return new NodeSDK(sdkConfig);
@@ -402,7 +427,10 @@ export function getTelemetryRequestSpan(request: IncomingMessage): Span | undefi
   return requestSpans.get(request);
 }
 
-/** `NodeSDK.start` is sync in some OTel versions and async in others. */
+/**
+ * NodeSDK.start has been synchronous in some supported OpenTelemetry versions
+ * and promise-returning in others, so the lifecycle wrapper accepts either form.
+ */
 function startSdk(sdk: NodeSDK): void | Promise<void> {
   return (sdk as NodeSDK & { start: () => void | Promise<void> }).start();
 }
@@ -436,7 +464,12 @@ function ensureShutdownTaskRegistered(): void {
     return;
   }
   shutdownTaskRegistered = true;
-  // Use the shared coordinator; direct signal handlers can exit before async flush completes.
+  // Register with the centralized graceful-shutdown coordinator
+  // (see ../app/shutdown.ts) rather than attaching SIGTERM/SIGINT
+  // listeners directly — signal listener return values are ignored
+  // by Node, so a separate signal handler can let the coordinator
+  // exit before the async OpenTelemetry flush completes, dropping
+  // final spans during pod shutdowns.
   registerShutdownTask('telemetry', () =>
     withTimeout(shutdownTelemetry(), SIGNAL_SHUTDOWN_TIMEOUT_MS).catch((error) => {
       emitWarning(`OpenTelemetry shutdown failed: ${getErrorMessage(error)}`);
@@ -468,8 +501,16 @@ export function initializeTelemetry(env: NodeJS.ProcessEnv = process.env): Telem
   const config = getTelemetryConfig(env);
   if (!config.enabled || isBunRuntime()) {
     status = 'disabled';
+    console.info('[otel] Telemetry disabled (OTEL_TRACING_ENABLED is not true or running on Bun)');
     return makeController();
   }
+
+  console.info(
+    `[otel] Initializing OpenTelemetry — service: ${config.serviceName}` +
+      (config.serviceVersion ? ` ${config.serviceVersion}` : '') +
+      (config.tracesEndpoint ? ` → ${config.tracesEndpoint}` : ' (no OTLP endpoint configured)') +
+      (config.azureMonitorAuthEnabled ? ' [Azure Monitor auth]' : ''),
+  );
 
   try {
     const sdk = createSdk(config);
@@ -483,6 +524,7 @@ export function initializeTelemetry(env: NodeJS.ProcessEnv = process.env): Telem
             pendingSdk = undefined;
             activeSdk = sdk;
             status = 'started';
+            console.info('[otel] OpenTelemetry SDK started successfully');
             ensureShutdownTaskRegistered();
           }
         })
@@ -490,6 +532,7 @@ export function initializeTelemetry(env: NodeJS.ProcessEnv = process.env): Telem
           if (pendingSdk === sdk) {
             pendingSdk = undefined;
             status = 'failed';
+            console.error(`[otel] OpenTelemetry SDK failed to start: ${getErrorMessage(error)}`);
             emitWarning(`OpenTelemetry initialization failed: ${getErrorMessage(error)}`);
           }
         });
@@ -504,10 +547,12 @@ export function initializeTelemetry(env: NodeJS.ProcessEnv = process.env): Telem
 
     activeSdk = sdk;
     status = 'started';
+    console.info('[otel] OpenTelemetry SDK started successfully');
     ensureShutdownTaskRegistered();
     return makeController();
   } catch (error) {
     status = 'failed';
+    console.error(`[otel] OpenTelemetry SDK failed to start: ${getErrorMessage(error)}`);
     emitWarning(`OpenTelemetry initialization failed: ${getErrorMessage(error)}`);
     return makeController();
   }
