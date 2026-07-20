@@ -45,7 +45,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:038e547a60c8e582ddc9440b2576c85c336bfb200075dc0baf47fb9ab83f9a56'
+          tag: 'develop@sha256:d578f55249a5f92a9863df6216622bee52e3930115931eb7a5831c657f935fae'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -96,13 +96,21 @@ pods:
           # ClearTrack MCP Gateway (OLD LLM)
           CLEARTRACK_MCP_GATEWAY_CLIENT_ID_LLM: '498ce9fd-195b-40c5-82f1-8fc4a6d00d88'
           #Langfuse Observability
-          LANGFUSE_HOST: 'https://langfuse-dev.ctk.au.deloitte.com'
+          LANGFUSE_BASE_URL: 'https://langfuse-dev.ctk.au.deloitte.com'
           # OpenTelemetry Tracing
           OTEL_TRACING_ENABLED: 'true'
-          OTEL_TRACES_SAMPLER_ARG: '0.3'
+          OTEL_TRACES_SAMPLER_ARG: '1.0'
           OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: 'https://managed-ai-ctspoke-npd-dce-95rn.australiaeast-1.ingest.monitor.azure.com/dataCollectionRules/dcr-3991725585f24a5eabd0d6aa283d0e18/streams/Microsoft-OTLP-Traces/otlp/v1/traces'
+          # Azure Monitor DCR only accepts OTLP/HTTP+protobuf
+          OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf'
           # Wrap the OTLP exporter with an Azure AD bearer-token headers factory (managed identity via AZURE_CLIENT_ID)
           AZURE_MONITOR_AUTH_ENABLED: 'true'
+          # Logging for debugging
+          OTEL_LOG_LEVEL: 'DEBUG'
+          OTEL_IOREDIS_TRACING_ENABLED: 'true'
+          DEBUG_LOGGING: 'true'
+          DEBUG_CONSOLE: 'true'
+          AGENT_DEBUG_LOGGING: 'true'
         secrets:
           AZURE_API_KEY: librechat-azure-api-key
           MONGO_URI: librechat-dev-mdb-connection-string
@@ -158,7 +166,7 @@ pods:
       meilisearch:
         image:
           pullPolicy: Always
-          tag: 'develop@sha256:093c0bcc74a1809596c370a885ce86f601d90e61a3abc7c25d1ebfafed2002c7'
+          tag: 'develop@sha256:a26e41963785342840d1bd3cce6580ea09bd4e125b87bf0c27acb40837ee4a8f'
         env:
           MEILI_ENV: 'development'
         secrets:
