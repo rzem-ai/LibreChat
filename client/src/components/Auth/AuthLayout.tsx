@@ -57,7 +57,7 @@ function AuthLayout({
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-white dark:bg-gray-900">
+    <div className="relative flex min-h-screen flex-col bg-surface-primary">
       <Banner />
       <BlinkAnimation active={isFetching}>
         <div className="mt-6 flex h-10 w-full items-center justify-center text-black dark:text-white">
@@ -68,12 +68,15 @@ function AuthLayout({
         </div>
       </BlinkAnimation>
       <DisplayError />
-   
+      <div className="absolute bottom-0 left-0 md:m-4">
+        <ThemeSelector />
+      </div>
+
       <main className="flex flex-grow items-center justify-center">
-        <div className="w-authPageWidth overflow-hidden bg-white px-6 py-4 dark:bg-gray-900 sm:max-w-md sm:rounded-lg">
+        <div className="w-authPageWidth overflow-hidden bg-surface-primary px-6 py-4 sm:max-w-md sm:rounded-lg">
           {!hasStartupConfigError && !isFetching && header && (
             <h1
-              className="mb-4 text-center text-3xl font-medium text-black dark:text-white"
+              className="mb-4 text-center text-3xl font-medium text-text-primary"
               style={{ userSelect: 'none' }}
             >
               {header}

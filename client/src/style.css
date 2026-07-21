@@ -2294,17 +2294,29 @@ html {
   display: none !important;
 }
 
-.webkit-dark-styles,
-.webkit-dark-styles:focus {
-  background-clip: content-box;
-  -webkit-box-shadow: 0 0 0 50vh #fff inset;
-}
-
-.dark .webkit-dark-styles,
-.dark .webkit-dark-styles:focus {
-  -webkit-text-fill-color: #fff;
-  background-clip: content-box;
-  -webkit-box-shadow: 0 0 0 50vh #0d0d0d inset;
+/*
+ * Chrome / Safari force a yellow-ish tint on inputs they consider autofilled.
+ * The only reliable defeat is a large inset box-shadow that repaints the
+ * background, plus overriding the text colour via -webkit-text-fill-color.
+ * Scoped to `:-webkit-autofill` so it doesn't override the normal
+ * bg-surface-primary in every other state (the previous
+ * `.webkit-dark-styles` class did, which created a seam between the input
+ * fill and its label pill / surrounding surface).
+ */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 50vh var(--surface-primary) inset;
+  -webkit-text-fill-color: var(--text-primary);
+  caret-color: var(--text-primary);
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 /* Ordered Listing */
