@@ -286,7 +286,7 @@ export default function ActionsInput({
         <button
           disabled={!functions || !functions.length}
           onClick={saveAction}
-          className="focus:shadow-outline mt-1 flex min-w-[100px] items-center justify-center rounded bg-surface-submit px-4 py-2 font-medium text-white hover:bg-surface-submit-hover focus:border-primary focus:outline-none focus:ring-0 disabled:bg-surface-submit"
+          className="focus:shadow-outline mt-1 flex min-w-[100px] items-center justify-center rounded bg-surface-submit px-4 py-2 font-medium text-white transition-opacity hover:bg-surface-submit-hover focus:border-primary focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface-submit"
           type="button"
         >
           {submitContext()}

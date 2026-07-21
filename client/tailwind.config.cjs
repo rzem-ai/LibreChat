@@ -106,7 +106,10 @@ module.exports = {
           900: '#031f29',
         },
         'brand-purple': 'var(--brand-purple)',
-        presentation: 'var(--presentation)',
+        /* Wrapped in color-mix() so `from-presentation/80`, `via-presentation/50`
+         * etc. compose alpha correctly against the oklch(...) dark-mode value.
+         */
+        presentation: mixVar('--presentation'),
         'text-primary': 'var(--text-primary)',
         'text-secondary': 'var(--text-secondary)',
         'text-secondary-alt': 'var(--text-secondary-alt)',
@@ -129,8 +132,12 @@ module.exports = {
         'surface-tertiary': 'var(--surface-tertiary)',
         'surface-tertiary-alt': 'var(--surface-tertiary-alt)',
         'surface-dialog': 'var(--surface-dialog)',
-        'surface-submit': 'var(--surface-submit)',
-        'surface-submit-hover': 'var(--surface-submit-hover)',
+        /* Wrapped for opacity-modifier support (`bg-surface-submit/10`,
+         * `hover:bg-surface-submit-hover/50`, etc.) — same reason as the
+         * shadcn tokens below.
+         */
+        'surface-submit': mixVar('--surface-submit'),
+        'surface-submit-hover': mixVar('--surface-submit-hover'),
         'surface-destructive': 'var(--surface-destructive)',
         'surface-destructive-hover': 'var(--surface-destructive-hover)',
         'surface-chat': 'var(--surface-chat)',

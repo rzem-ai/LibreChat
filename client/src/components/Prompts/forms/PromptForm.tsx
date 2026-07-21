@@ -76,7 +76,7 @@ const VersionsPanel = React.memo(
               className={cn(
                 'w-full gap-1.5 transition-all duration-200',
                 isProductionVersion &&
-                  'border border-green-500/30 bg-green-50 text-green-700 hover:bg-surface-submit-hover dark:bg-green-950/30 dark:text-green-400 dark:hover:bg-surface-submit-hover/50',
+                  'border border-green-500/30 bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-950/30 dark:text-green-400 dark:hover:bg-green-950/50',
               )}
               onClick={() => {
                 if (!selectedPrompt) {
