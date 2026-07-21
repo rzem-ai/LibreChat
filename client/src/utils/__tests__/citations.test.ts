@@ -122,6 +122,34 @@ describe('Citation Regex Patterns', () => {
     });
   });
 
+  describe('digit boundary (no leading zeros)', () => {
+    it('does not absorb trailing digits from adjacent text', () => {
+      const text = `The applicant reported a GPA of 6. turn0file082/7 overall.`;
+      STANDALONE_PATTERN.lastIndex = 0;
+      const match = STANDALONE_PATTERN.exec(text);
+      expect(match).not.toBeNull();
+      expect(match?.[1]).toBe('0');
+      expect(match?.[2]).toBe('file');
+      expect(match?.[3]).toBe('0');
+      expect(text.replace(STANDALONE_PATTERN, '[cite]')).toBe(
+        'The applicant reported a GPA of 6. [cite]82/7 overall.',
+      );
+    });
+
+    it('preserves genuine multi-digit turn and index values', () => {
+      const text = `Detail turn12file34 here`;
+      STANDALONE_PATTERN.lastIndex = 0;
+      const match = STANDALONE_PATTERN.exec(text);
+      expect(match?.[1]).toBe('12');
+      expect(match?.[3]).toBe('34');
+    });
+
+    it('INVALID_CITATION_REGEX leaves adjacent digits in place when stripping', () => {
+      const text = `score 6. turn0file082/7 end`;
+      expect(text.replace(INVALID_CITATION_REGEX, '')).toBe('score 6.82/7 end');
+    });
+  });
+
   describe('SPAN_REGEX', () => {
     it('should match literal text span markers', () => {
       const text = 'Before \\ue203highlighted text\\ue204 after';

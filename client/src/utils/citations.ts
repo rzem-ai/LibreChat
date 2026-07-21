@@ -33,14 +33,28 @@ export const SPAN_REGEX = /((?:\\ue203|\ue203).*?(?:\\ue204|\ue204))/g;
 /** Matches composite citation blocks (multiple citations grouped together) */
 export const COMPOSITE_REGEX = /((?:\\ue200|\ue200).*?(?:\\ue201|\ue201))/g;
 
-/** Matches standalone citation anchors with turn, type, and index capture groups */
+/**
+ * Matches standalone citation anchors with turn, type, and index capture groups.
+ *
+ * Turn and index are matched as non-negative integers without leading zeros
+ * (`0|[1-9]\d*`) rather than `\d+`. Both values are serialized from `Number`s,
+ * so they never carry a leading zero; bounding the match this way prevents a
+ * greedy `\d+` from absorbing digits that belong to adjacent text. Without it,
+ * an anchor placed before a number \u2014 e.g. `\ue202turn0file0` immediately
+ * followed by `82/7` \u2014 would parse as index `082` and swallow the `82`,
+ * rendering "6.82/7" as "6./7".
+ */
 export const STANDALONE_PATTERN =
-  /(?:\\ue202|\ue202)turn(\d+)(search|image|news|video|ref|file)(\d+)/g;
+  /(?:\\ue202|\ue202)turn(0|[1-9]\d*)(search|image|news|video|ref|file)(0|[1-9]\d*)/g;
 
 /** Removes all citation marker characters from text for clean display */
 export const CLEANUP_REGEX =
   /\\ue200|\\ue201|\\ue202|\\ue203|\\ue204|\\ue206|\ue200|\ue201|\ue202|\ue203|\ue204|\ue206/g;
 
-/** Matches invalid/orphaned citations (with leading whitespace) for removal */
+/**
+ * Matches invalid/orphaned citations (with leading whitespace) for removal.
+ * Turn and index use the same no-leading-zero bound as `STANDALONE_PATTERN` so
+ * removal never consumes trailing digits that belong to adjacent text.
+ */
 export const INVALID_CITATION_REGEX =
-  /\s*(?:\\ue202|\ue202)turn\d+(search|news|image|video|ref|file)\d+/g;
+  /\s*(?:\\ue202|\ue202)turn(?:0|[1-9]\d*)(search|news|image|video|ref|file)(?:0|[1-9]\d*)/g;

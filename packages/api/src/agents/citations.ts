@@ -207,6 +207,18 @@ function buildPassages(fileSearchAttachments: TAttachment[]): Passage[] {
 }
 
 /**
+ * True when the `.` at `index` is a decimal point (a digit on both sides), such
+ * as the dot in `6.82`. Decimal points must not end a sentence — splitting there
+ * would let a citation anchor land inside the number, and the anchor's trailing
+ * index digits would then merge with the fractional digits on the client.
+ */
+function isDecimalPoint(text: string, index: number): boolean {
+  const prev = text[index - 1];
+  const next = text[index + 1];
+  return prev >= '0' && prev <= '9' && next >= '0' && next <= '9';
+}
+
+/**
  * Splits text into sentence-like segments losslessly — concatenating the result
  * reproduces the input exactly, so anchors can be inserted without altering
  * surrounding whitespace or punctuation.
@@ -219,6 +231,10 @@ function splitIntoSentences(text: string): string[] {
     const char = text[i];
     const isBoundary = char === '.' || char === '!' || char === '?' || char === '\n';
     if (!isBoundary) {
+      continue;
+    }
+
+    if (char === '.' && isDecimalPoint(text, i)) {
       continue;
     }
 

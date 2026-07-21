@@ -168,6 +168,25 @@ describe('insertFileCitations', () => {
     expect(readText(parts[1])).toContain(`${MARKER}turn0file0`);
   });
 
+  it('keeps decimal numbers intact when anchoring the sentence', () => {
+    const content = 'The applicant reported a GPA of 6.82/7 on their official academic transcript.';
+    const parts = [textPart('The applicant reported a GPA of 6.82/7 on their transcript.')];
+    insertFileCitations(parts, [fileSearchAttachment([{ fileId: 'fileA', content }])]);
+    const text = readText(parts[0]);
+    expect(text).toContain(`${MARKER}turn0file0`);
+    expect(text).toContain('6.82/7');
+    expect(text).not.toContain(`6. ${MARKER}`);
+  });
+
+  it('does not split a decimal that ends a sentence-like fragment', () => {
+    const content = 'The measured accuracy of the model reached 6.82 percent overall.';
+    const parts = [textPart('The measured accuracy of the model reached 6.82 percent.')];
+    insertFileCitations(parts, [fileSearchAttachment([{ fileId: 'fileA', content }])]);
+    const text = readText(parts[0]);
+    expect(text).toContain(`${MARKER}turn0file0`);
+    expect(text).toContain('6.82');
+  });
+
   it('preserves content-part object references (mutates in place)', () => {
     const parts = [textPart('You can reserve a desk fourteen days in advance.')];
     const ref = parts[0];
