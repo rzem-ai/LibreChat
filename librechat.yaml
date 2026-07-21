@@ -55,15 +55,12 @@ endpoints:
       baseURL: "${BASE_URL_AZURE_US}"
       models:
         default:
-          - "gpt-41"
-          - "gpt-41-nano"
-          - "gpt-41-mini"
           - "gpt-5-chat"
           - "gpt-5-mini"
           - "gpt-5-nano"
         fetch: false
       titleConvo: true
-      titleModel: "gpt-41-mini"
+      titleModel: "gpt-5-nano"
       modelDisplayLabel: "Azure US"
       dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
       headers:

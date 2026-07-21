@@ -58,7 +58,7 @@ pods:
           DOMAIN_SERVER: 'https://librechat-dev.ctk.au.deloitte.com'
           EMBEDDINGS_MODEL: 'text-embedding-3-small'
           EMBEDDINGS_PROVIDER: 'azure'
-          ENDPOINTS: 'agents,anthropic,azureOpenAI,custom'
+          ENDPOINTS: 'agents,anthropic,custom'
           KEY_VAULT_NAME: 'kv-int-librechat-dev'
           MCP_GATEWAY_TOOLSETS: 'teams,research,news'
           MONGO_DB: 'mdb-librechat-database-dev'
