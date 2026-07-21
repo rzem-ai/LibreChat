@@ -11,7 +11,7 @@ module.exports = {
   darkMode: ['class'],
   theme: {
     fontFamily: {
-      sans: ['Inter', 'sans-serif'],
+      sans: ['"Open Sans"', 'ui-sans-serif', 'sans-serif', 'system-ui'],
       mono: ['Roboto Mono', 'monospace'],
     },
     // fontFamily: {
@@ -126,37 +126,41 @@ module.exports = {
         'border-heavy': 'var(--border-heavy)',
         'border-xheavy': 'var(--border-xheavy)',
         'border-destructive': 'var(--border-destructive)',
-        /* These are test styles */
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ['switch-unchecked']: 'hsl(var(--switch-unchecked))',
-        ring: 'hsl(var(--ring))',
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
+        /* GEL shadcn-compatible colour utilities (raw var — values are oklch) */
+        border: 'var(--border)',
+        input: 'var(--input)',
+        ['switch-unchecked']: 'var(--switch-unchecked)',
+        ring: 'var(--ring)',
+        background: 'var(--background)',
+        foreground: 'var(--foreground)',
         primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
+          DEFAULT: 'var(--primary)',
+          foreground: 'var(--primary-foreground)',
+          hover: 'var(--primary-hover)',
         },
         secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
+          DEFAULT: 'var(--secondary)',
+          foreground: 'var(--secondary-foreground)',
         },
         destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
+          DEFAULT: 'var(--destructive)',
+          foreground: 'var(--destructive-foreground)',
         },
         muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
+          DEFAULT: 'var(--muted)',
+          foreground: 'var(--muted-foreground)',
         },
         accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
+          DEFAULT: 'var(--accent)',
+          foreground: 'var(--accent-foreground)',
         },
         card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))',
+          DEFAULT: 'var(--card)',
+          foreground: 'var(--card-foreground)',
         },
+        /* GEL brand surface tokens */
+        'surface-contrast': 'var(--surface-contrast)',
+        'surface-contrast-foreground': 'var(--surface-contrast-foreground)',
       },
       borderRadius: {
         lg: 'var(--radius)',
