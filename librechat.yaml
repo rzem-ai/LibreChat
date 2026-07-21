@@ -8,6 +8,13 @@ interface:
     share: false
     public: false
 
+fileConfig:
+  endpoints:
+    default:
+      fileLimit: 50
+    agents:
+      fileLimit: 50
+
 endpoints:
   # ========================================
   # Built-in Anthropic (via nginx proxy)
