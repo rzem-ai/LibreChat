@@ -87,7 +87,7 @@ export default function BookmarkCard({ bookmark, position, moveRow }: BookmarkCa
       <GripVertical className="size-4 shrink-0 text-text-tertiary" aria-hidden="true" />
 
       {/* Tag name */}
-      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-text-primary">
+      <span className="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
         {bookmark.tag}
       </span>
 

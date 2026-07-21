@@ -97,7 +97,7 @@ const BackupCodesItem: React.FC = () => {
       </div>
 
       <OGDialogContent className="w-11/12 max-w-lg">
-        <OGDialogTitle className="mb-6 text-2xl font-semibold">
+        <OGDialogTitle className="mb-6 text-2xl font-medium">
           {localize('com_ui_backup_codes')}
         </OGDialogTitle>
 

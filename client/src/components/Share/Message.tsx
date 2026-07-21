@@ -66,7 +66,7 @@ export default function Message(props: TMessageProps) {
             <div
               className={cn('relative flex w-11/12 flex-col', isCreatedByUser ? '' : 'agent-turn')}
             >
-              <div className={cn('select-none font-semibold', fontSize)}>
+              <div className={cn('select-none font-medium', fontSize)}>
                 {messageLabel}
                 <MessageTimestamp value={message.createdAt ?? message.clientTimestamp} />
               </div>

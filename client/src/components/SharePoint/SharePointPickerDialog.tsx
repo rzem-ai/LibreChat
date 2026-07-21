@@ -80,7 +80,7 @@ export default function SharePointPickerDialog({
                 <div className="mx-4 w-full max-w-sm rounded-lg bg-surface-primary p-6 shadow-lg">
                   <div className="text-center">
                     <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
-                    <h3 className="mb-2 text-lg font-semibold text-text-primary">
+                    <h3 className="mb-2 text-lg font-medium text-text-primary">
                       {localize('com_files_downloading')}
                     </h3>
                     {downloadProgress && (

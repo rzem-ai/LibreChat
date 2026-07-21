@@ -220,7 +220,7 @@ const TwoFactorAuthentication: React.FC = () => {
             className="space-y-6"
           >
             <OGDialogHeader>
-              <OGDialogTitle className="mb-2 flex items-center gap-3 text-2xl font-bold">
+              <OGDialogTitle className="mb-2 flex items-center gap-3 text-2xl font-medium">
                 <SmartphoneIcon className="h-6 w-6 text-primary" aria-hidden="true" />
                 {user?.twoFactorEnabled
                   ? localize('com_ui_2fa_disable')

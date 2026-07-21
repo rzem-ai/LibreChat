@@ -286,7 +286,7 @@ export default function AssistantSelect({
       optionsClass="hover:bg-gray-20/50 dark:border-gray-700"
       optionsListClass="rounded-lg shadow-lg dark:bg-gray-850 dark:border-gray-700 dark:last:border"
       currentValueClass={cn(
-        'text-md font-semibold text-gray-900 dark:text-white',
+        'text-md font-medium text-gray-900 dark:text-white',
         value === '' ? 'text-gray-500' : '',
       )}
       className={cn(

@@ -205,7 +205,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, onRetry, cont
 
         {/* Error content with proper headings and structure */}
         <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white" id="error-title">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white" id="error-title">
             {title}
           </h3>
           <p

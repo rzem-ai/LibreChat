@@ -165,7 +165,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
       >
         <h1 className="sr-only">{localize('com_ui_skill_edit_title')}</h1>
 
-        <div className="mb-1 flex flex-col items-center justify-between font-bold sm:text-xl md:mb-0 md:text-2xl">
+        <div className="mb-1 flex flex-col items-center justify-between font-medium sm:text-xl md:mb-0 md:text-2xl">
           <div className="flex w-full flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
             <Controller
               name="name"
@@ -252,7 +252,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
             role="alert"
             className="mt-4 flex flex-col gap-1 rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-600 dark:text-amber-400"
           >
-            <div className="flex items-center gap-2 font-semibold">
+            <div className="flex items-center gap-2 font-medium">
               <AlertTriangle className="size-4" aria-hidden="true" />
               {localize('com_ui_skill_warnings')}
             </div>

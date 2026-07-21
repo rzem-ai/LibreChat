@@ -107,7 +107,7 @@ export default function ProjectsView() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2.5">
             {isSmallScreen ? <OpenSidebar /> : null}
-            <h1 className="text-2xl font-bold tracking-tight text-text-primary md:text-3xl">
+            <h1 className="text-2xl font-medium tracking-tight text-text-primary md:text-3xl">
               {localize('com_ui_projects')}
             </h1>
           </div>
@@ -196,7 +196,7 @@ export default function ProjectsView() {
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     <Folder className="h-4 w-4 shrink-0 text-text-secondary" aria-hidden="true" />
-                    <span className="truncate text-base font-semibold text-text-primary">
+                    <span className="truncate text-base font-medium text-text-primary">
                       {project.name}
                     </span>
                   </span>

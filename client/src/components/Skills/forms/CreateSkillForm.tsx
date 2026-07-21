@@ -146,7 +146,7 @@ export default function CreateSkillForm({
         aria-label={localize('com_ui_skill_create_title')}
       >
         <h1 className="sr-only">{localize('com_ui_skill_create_title')}</h1>
-        <div className="mb-1 flex flex-col items-center justify-between font-bold sm:text-xl md:mb-0 md:text-2xl">
+        <div className="mb-1 flex flex-col items-center justify-between font-medium sm:text-xl md:mb-0 md:text-2xl">
           <div className="flex w-full flex-col items-center justify-between sm:flex-row">
             <Controller
               name="name"

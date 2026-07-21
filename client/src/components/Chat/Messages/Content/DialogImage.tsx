@@ -386,7 +386,7 @@ export default function DialogImage({
           >
             <div className="h-full overflow-y-auto p-6">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-text-primary">
+                <h3 className="text-lg font-medium text-text-primary">
                   {localize('com_ui_image_details')}
                 </h3>
                 <Button

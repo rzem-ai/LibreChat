@@ -43,7 +43,7 @@ const PromptLabelsForm = ({ selectedPrompt }: { selectedPrompt?: TPrompt }) => {
         onKeyDown={handleKeyDown}
         aria-label={localize('com_ui_add_labels')}
       />
-      <h3 className="rounded-t-lg border border-border-medium px-4 text-base font-semibold text-text-primary">
+      <h3 className="rounded-t-lg border border-border-medium px-4 text-base font-medium text-text-primary">
         {localize('com_ui_labels')}
       </h3>
       <div className="mb-4 flex w-full flex-row flex-wrap rounded-b-lg border border-border-medium p-4">

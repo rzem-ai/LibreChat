@@ -118,7 +118,7 @@ const PopoverButton: React.FC<PopoverButtonProps> = ({
             <div className="space-y-2">
               <p className="flex flex-col gap-2 text-sm text-text-secondary">
                 {hoverInfo && hoverInfo}
-                {hoverTitle && <span className="flex flex-wrap gap-1 font-bold">{hoverTitle}</span>}
+                {hoverTitle && <span className="flex flex-wrap gap-1 font-medium">{hoverTitle}</span>}
                 {hoverDescription && hoverDescription}
               </p>
             </div>

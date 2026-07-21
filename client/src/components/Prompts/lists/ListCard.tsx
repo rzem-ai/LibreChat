@@ -43,7 +43,7 @@ export default function ListCard({
           <CategoryIcon category={category} className="icon-md shrink-0" aria-hidden="true" />
           <Label
             id={titleId}
-            className="min-w-0 select-none truncate text-sm font-semibold text-text-primary"
+            className="min-w-0 select-none truncate text-sm font-medium text-text-primary"
             title={name}
           >
             {name}

@@ -121,7 +121,7 @@ const CreatePromptForm = ({
             <CategorySelector />
           </div>
         ) : null}
-        <div className="mb-1 flex flex-col items-center justify-between font-bold sm:text-xl md:mb-0 md:text-2xl">
+        <div className="mb-1 flex flex-col items-center justify-between font-medium sm:text-xl md:mb-0 md:text-2xl">
           <div className="flex w-full flex-col items-center justify-between sm:flex-row">
             <Controller
               name="name"
@@ -168,7 +168,7 @@ const CreatePromptForm = ({
             <header className="flex items-center justify-between rounded-t-xl border border-border-medium bg-transparent p-2">
               <div className="ml-1 flex items-center gap-2">
                 <FileText className="size-4 text-text-secondary" aria-hidden="true" />
-                <h2 className="text-sm font-semibold text-text-primary">
+                <h2 className="text-sm font-medium text-text-primary">
                   {localize('com_ui_prompt_text')}*
                 </h2>
               </div>

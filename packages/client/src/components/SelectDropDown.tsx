@@ -240,7 +240,7 @@ function SelectDropDown({
                           <span
                             className={cn(
                               'flex h-6 items-center gap-1 text-gray-800 dark:text-gray-200',
-                              option === value ? 'font-semibold' : '',
+                              option === value ? 'font-medium' : '',
                               iconSide === 'left' ? 'ml-4' : '',
                             )}
                           >

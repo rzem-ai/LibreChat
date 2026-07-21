@@ -58,7 +58,7 @@ function FeedbackOptionButton({
     <button
       className={cn(
         'flex w-full items-center gap-3 rounded-xl p-2 text-text-secondary transition-colors duration-200 hover:bg-surface-hover hover:text-text-primary',
-        active && 'bg-surface-hover font-semibold text-text-primary',
+        active && 'bg-surface-hover font-medium text-text-primary',
       )}
       onClick={onClick}
       type="button"
@@ -316,7 +316,7 @@ export default function Feedback({
       )}
       <OGDialog open={openDialog} onOpenChange={setOpenDialog}>
         <OGDialogContent className="w-11/12 max-w-lg">
-          <OGDialogTitle className="text-token-text-primary text-lg font-semibold leading-6">
+          <OGDialogTitle className="text-token-text-primary text-lg font-medium leading-6">
             {localize('com_ui_feedback_more_information')}
           </OGDialogTitle>
           <textarea

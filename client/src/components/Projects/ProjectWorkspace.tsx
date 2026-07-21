@@ -142,7 +142,7 @@ export default function ProjectWorkspace() {
             <Folder className="h-6 w-6" aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1 pt-0.5">
-            <h1 className="truncate text-2xl font-semibold tracking-tight text-text-primary">
+            <h1 className="truncate text-2xl font-medium tracking-tight text-text-primary">
               {project.name}
             </h1>
             {project.description ? (

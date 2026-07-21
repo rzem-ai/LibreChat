@@ -89,7 +89,7 @@ const DragDropOverlay = memo(({ isActive }: DragDropOverlayProps) => {
               </clipPath>
             </defs>
           </svg>
-          <h3 className="mt-4 text-lg font-semibold">{localize('com_ui_upload_files')}</h3>
+          <h3 className="mt-4 text-lg font-medium">{localize('com_ui_upload_files')}</h3>
           <h4 className="text-sm text-text-secondary">{localize('com_ui_drag_drop')}</h4>
         </div>
       </div>

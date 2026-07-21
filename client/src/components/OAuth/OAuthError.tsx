@@ -55,7 +55,7 @@ export default function OAuthError() {
             </svg>
           </div>
         </div>
-        <h1 className="mb-4 text-3xl font-bold text-gray-900">
+        <h1 className="mb-4 text-3xl font-medium text-gray-900">
           {localize('com_ui_oauth_error_title') || 'Authentication Failed'}
         </h1>
         <p className="mb-6 text-sm text-gray-600">{getErrorMessage(error)}</p>

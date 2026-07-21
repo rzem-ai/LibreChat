@@ -49,7 +49,7 @@ export default function MemoryInfo({ memoryArtifacts }: { memoryArtifacts: Memor
     <div className="space-y-4 p-4">
       {updatedMemories.length > 0 && (
         <div>
-          <h4 className="mb-2 text-sm font-semibold text-text-primary">
+          <h4 className="mb-2 text-sm font-medium text-text-primary">
             {localize('com_ui_memory_updated_items')}
           </h4>
           <div className="space-y-2">
@@ -69,7 +69,7 @@ export default function MemoryInfo({ memoryArtifacts }: { memoryArtifacts: Memor
 
       {deletedMemories.length > 0 && (
         <div>
-          <h4 className="mb-2 text-sm font-semibold text-text-primary">
+          <h4 className="mb-2 text-sm font-medium text-text-primary">
             {localize('com_ui_memory_deleted_items')}
           </h4>
           <div className="space-y-2">
@@ -89,7 +89,7 @@ export default function MemoryInfo({ memoryArtifacts }: { memoryArtifacts: Memor
 
       {errorMessages.length > 0 && (
         <div>
-          <h4 className="mb-2 text-sm font-semibold text-red-500">
+          <h4 className="mb-2 text-sm font-medium text-red-500">
             {localize('com_ui_memory_storage_full')}
           </h4>
           <div className="space-y-2">
