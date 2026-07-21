@@ -76,7 +76,7 @@ const VersionsPanel = React.memo(
               className={cn(
                 'w-full gap-1.5 transition-all duration-200',
                 isProductionVersion &&
-                  'border border-green-500/30 bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-950/30 dark:text-green-400 dark:hover:bg-green-950/50',
+                  'border border-green-500/30 bg-green-50 text-green-700 hover:bg-surface-submit-hover dark:bg-green-950/30 dark:text-green-400 dark:hover:bg-surface-submit-hover/50',
               )}
               onClick={() => {
                 if (!selectedPrompt) {
@@ -612,7 +612,7 @@ const PromptForm = ({ promptId: promptIdProp }: { promptId?: string }) => {
             inert={!showSidePanel ? '' : undefined}
           >
             <div className="flex items-center justify-between px-4 py-2">
-              <h2 className="text-sm font-semibold text-text-primary">
+              <h2 className="text-sm font-medium text-text-primary">
                 {localize('com_ui_versions')}
               </h2>
               <Button

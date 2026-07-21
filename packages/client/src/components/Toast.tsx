@@ -6,7 +6,7 @@ import { useToast } from '~/hooks';
 export function Toast(): JSX.Element {
   const { toast, onOpenChange } = useToast();
   const severityClassName = {
-    /* Going up by 100 units in terms of darkness (eg bg-green-500 to bg-green-600) for
+    /* Going up by 100 units in terms of darkness (eg bg-surface-submit to bg-surface-submit) for
      * bg colors produces colors that are too visually dissimilar to LibreChat's standard color palette.
      * These colors were derived by adjusting the values in the HSV color space using CCA
      * until the 4.5:1 contrast ratio threshold was met against white text while maintaining
@@ -30,7 +30,7 @@ export function Toast(): JSX.Element {
     >
       <div className="w-full p-1 text-center md:w-auto md:text-justify">
         <div
-          className={`alert-root pointer-events-auto inline-flex flex-row gap-2 rounded-md border px-3 py-2 font-bold text-white ${
+          className={`alert-root pointer-events-auto inline-flex flex-row gap-2 rounded-md border px-3 py-2 font-medium text-white ${
             severityClassName[toast.severity]
           }`}
         >
