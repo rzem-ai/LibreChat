@@ -1,5 +1,19 @@
 // const { fontFamily } = require('tailwindcss/defaultTheme');
 
+/**
+ * Build a color that Tailwind 3 can compose alpha into.
+ *
+ * Tailwind 3's opacity modifier (e.g. `bg-primary/10`) requires the theme
+ * value to contain the `<alpha-value>` placeholder or to be a colour Tailwind
+ * can parse itself (hex / rgb / hsl). A bare `var(--primary)` pointing at a
+ * full `oklch(...)` expression matches neither, so the utility is silently
+ * dropped. Wrapping in color-mix() lets the placeholder participate:
+ * `<alpha-value>` is 1 with no modifier (round-trip identical to the raw
+ * token) and 0.1/0.2/0.9 with `/10`, `/20`, `/90`.
+ */
+const mixVar = (name) =>
+  `color-mix(in oklab, var(${name}) calc(<alpha-value> * 100%), transparent)`;
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -126,37 +140,47 @@ module.exports = {
         'border-heavy': 'var(--border-heavy)',
         'border-xheavy': 'var(--border-xheavy)',
         'border-destructive': 'var(--border-destructive)',
-        /* GEL shadcn-compatible colour utilities (raw var — values are oklch) */
-        border: 'var(--border)',
-        input: 'var(--input)',
-        ['switch-unchecked']: 'var(--switch-unchecked)',
-        ring: 'var(--ring)',
-        background: 'var(--background)',
-        foreground: 'var(--foreground)',
+        /* GEL shadcn-compatible colour utilities.
+         *
+         * The CSS vars hold full oklch(...) expressions, which Tailwind 3 can't
+         * inject alpha into via the standard <alpha-value> substitution.
+         * Wrapping in color-mix() lets `bg-primary/10`, `border-primary/20`,
+         * `hover:bg-destructive/80`, etc. actually emit CSS — Tailwind sets
+         * <alpha-value> to 1 when no /N modifier is used, so the wrapped colour
+         * still matches the raw token in the common case. Tokens that carry a
+         * built-in alpha channel (e.g. `--border: oklch(1 0 0 / 10%)` in dark
+         * mode) compose multiplicatively, which is the expected behaviour.
+         */
+        border: mixVar('--border'),
+        input: mixVar('--input'),
+        ['switch-unchecked']: mixVar('--switch-unchecked'),
+        ring: mixVar('--ring'),
+        background: mixVar('--background'),
+        foreground: mixVar('--foreground'),
         primary: {
-          DEFAULT: 'var(--primary)',
-          foreground: 'var(--primary-foreground)',
-          hover: 'var(--primary-hover)',
+          DEFAULT: mixVar('--primary'),
+          foreground: mixVar('--primary-foreground'),
+          hover: mixVar('--primary-hover'),
         },
         secondary: {
-          DEFAULT: 'var(--secondary)',
-          foreground: 'var(--secondary-foreground)',
+          DEFAULT: mixVar('--secondary'),
+          foreground: mixVar('--secondary-foreground'),
         },
         destructive: {
-          DEFAULT: 'var(--destructive)',
-          foreground: 'var(--destructive-foreground)',
+          DEFAULT: mixVar('--destructive'),
+          foreground: mixVar('--destructive-foreground'),
         },
         muted: {
-          DEFAULT: 'var(--muted)',
-          foreground: 'var(--muted-foreground)',
+          DEFAULT: mixVar('--muted'),
+          foreground: mixVar('--muted-foreground'),
         },
         accent: {
-          DEFAULT: 'var(--accent)',
-          foreground: 'var(--accent-foreground)',
+          DEFAULT: mixVar('--accent'),
+          foreground: mixVar('--accent-foreground'),
         },
         card: {
-          DEFAULT: 'var(--card)',
-          foreground: 'var(--card-foreground)',
+          DEFAULT: mixVar('--card'),
+          foreground: mixVar('--card-foreground'),
         },
         /* GEL brand surface tokens */
         'surface-contrast': 'var(--surface-contrast)',
