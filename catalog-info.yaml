@@ -24,3 +24,5 @@ spec:
   environment:
     dev:
       infra-deploy/pr-status: approved
+    uat:
+      infra-deploy/pr-status: pending
