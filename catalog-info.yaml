@@ -25,4 +25,4 @@ spec:
     dev:
       infra-deploy/pr-status: approved
     uat:
-      infra-deploy/pr-status: pending
+      infra-deploy/pr-status: approved
