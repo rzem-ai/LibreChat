@@ -1,4 +1,4 @@
-version: 1.3.9
+version: 1.3.13 # Copy from librechat.example.yaml
 cache: true
 
 interface:
