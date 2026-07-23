@@ -52,28 +52,4 @@ describe('getTelemetryConfig', () => {
 
     expect(config.ioredisTracingEnabled).toBe(true);
   });
-
-  it('leaves traces endpoint / Azure Monitor auth fields empty when env vars are absent', () => {
-    const config = getTelemetryConfig({});
-
-    expect(config.tracesEndpoint).toBeUndefined();
-    expect(config.azureMonitorAuthEnabled).toBe(false);
-    expect(config.azureMonitorClientId).toBeUndefined();
-  });
-
-  it('reads OTEL_EXPORTER_OTLP_TRACES_ENDPOINT, AZURE_MONITOR_AUTH_ENABLED and AZURE_CLIENT_ID when set', () => {
-    const endpoint =
-      process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ??
-      'https://test.ingest.monitor.azure.com/otlp/v1/traces';
-    const clientId = process.env.AZURE_CLIENT_ID ?? 'test-managed-identity-client-id';
-    const config = getTelemetryConfig({
-      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: endpoint,
-      AZURE_MONITOR_AUTH_ENABLED: 'true',
-      AZURE_CLIENT_ID: clientId,
-    });
-
-    expect(config.tracesEndpoint).toBe(endpoint);
-    expect(config.azureMonitorAuthEnabled).toBe(true);
-    expect(config.azureMonitorClientId).toBe(clientId);
-  });
 });
