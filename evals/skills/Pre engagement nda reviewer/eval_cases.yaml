@@ -1,0 +1,612 @@
+# Pre-Engagement NDA Reviewer — Evaluation Cases
+# Category: Data Analysis
+#
+# 8 cases across 4 documents (2 cases each):
+#   1. Lawcover NDA (real; NSW law, indemnity present, no-offshore-PI,
+#      return/destroy only)                      — case_1 (single), case_2 (multi)
+#   2. AEMO Confidentiality Agreement (real; Victoria law, clause 7.3 retention
+#      of one copy)                              — case_3 (single), case_4 (multi)
+#   3. Mutual NDA – Advisory (real; Singapore law, no accuracy warranty, export
+#      controls, 2-year term)                    — case_5 (single), case_6 (multi)
+#   4. Onerous Vendor NDA (synthetic; misaligned on nearly every Deloitte
+#      position — indemnity, exclusivity, non-solicit, GenAI ban, offshore ban,
+#      5-year term, Delaware law)                — case_7 (single), case_8 (multi)
+#
+# Deloitte's 11 preferred positions assessed: Indemnity, Accuracy of Information,
+# Exclusivity, Retention of Data, Use of Gen-AI Tools, Sharing of Data,
+# Hosting/Storing of Data, Duration of Agreement, Non-solicitation, Conflict of
+# Interest, Jurisdiction.
+
+adapter: _eval.adapters.librechat_adapter.LibreChatAdapter
+agent_id: "${GENERAL_BUSINESS_ASSISTANT_AGENT_ID}"
+invoke_method: invoke_text
+num_runs: 3
+
+cases:
+
+  # =======================================================================
+  # Document 1 — Lawcover NDA (real; NSW law, indemnity present)
+  # =======================================================================
+
+  case_1:
+    name: "Step 1 full assessment — Lawcover NDA"
+    category: "Data Analysis"
+    source_material: "documents/lawcover_nda.md"
+    chatbot_role: >-
+      First Review NDA AI Assistant, reviewing a client NDA against Deloitte's
+      eleven preferred positions and producing a structured clause-by-clause
+      assessment.
+    user_query: >-
+      Review the Lawcover NDA and produce Step 1 of the NDA Reviewer skill.
+    expected_output: >-
+      Begins with the document name, then a Purpose summary identifying that the
+      NDA sets out the terms on which Lawcover's Confidential Information is
+      disclosed to and protected by Deloitte to assist Deloitte in providing a
+      Report to the DCJ (Deloitte having been engaged by DCJ to report on the
+      solicitors' Professional Indemnity Insurance market in NSW). Then a
+      Markdown table with exactly six columns — Theme, Deloitte's Position
+      Description, Extracted Clause, Alignment Assessment, Misalignment Details,
+      Suggested Amendment — covering all eleven themes with a ✅/❌ per row.
+      Correctly flags the Indemnity clause (present → suggest deletion), the
+      restriction on sending Personal Information outside Australia (present →
+      suggest deletion under Hosting/Storing of Data), and the return-or-destroy
+      obligation with no right to retain a copy (missing retention → suggest
+      adding a retention clause). Recognises NSW governing law as aligned with
+      Australian jurisdiction. Ends with a "Clauses to note" bullet list citing
+      exact clause numbers (e.g. the 24-hour breach-notification obligation).
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "pre-engagement-nda-reviewer"
+
+    metrics:
+      - faithfulness
+      - task_completion
+
+    thresholds:
+      faithfulness: 0.7
+      task_completion: 0.7
+
+    leading_questions:
+      - name: "Six-Column Schema"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Does the assessment table contain exactly the six required columns
+          (Theme, Deloitte's Position Description, Extracted Clause, Alignment
+          Assessment, Misalignment Details, Suggested Amendment) with no extra
+          or missing columns?
+
+      - name: "All Themes Assessed"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Are all eleven Deloitte positions assessed as rows, each with a ✅ or
+          ❌ alignment marker?
+
+      - name: "Indemnity Correctly Flagged"
+        question: >-
+          Is the indemnity clause identified as present and misaligned, with a
+          suggested amendment to delete it?
+
+      - name: "Extracted Clause Fidelity"
+        question: >-
+          Does the Extracted Clause column quote the actual clause text from the
+          document, prefixed by its clause reference, rather than paraphrasing
+          or inventing clauses?
+
+      - name: "Purpose Accuracy"
+        question: >-
+          Does the Purpose summary correctly describe the DCJ Report on the NSW
+          solicitors' PII market, consistent with the recitals and clause 1?
+
+  case_2:
+    name: "Step 1 review then retention follow-up — Lawcover NDA"
+    category: "Data Analysis"
+    invoke_method: invoke_sequential
+    source_material: "documents/lawcover_nda.md"
+    chatbot_role: >-
+      First Review NDA AI Assistant, producing a structured NDA assessment and
+      answering follow-up questions grounded strictly in the uploaded document.
+    expected_output: >-
+      First turn produces the Step 1 assessment (Purpose, six-column table, and
+      Clauses to note). Second turn answers a specific follow-up about whether
+      Deloitte may keep a copy of the information after the engagement ends —
+      correctly explaining that the NDA requires return or destruction of all
+      Confidential Information after termination with written confirmation, and
+      contains no right to retain a copy, which is misaligned with Deloitte's
+      need to retain one copy for its professional obligations. Does not invent
+      a retention clause that is not present.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "pre-engagement-nda-reviewer"
+
+    turns:
+      - content: >-
+          Review the Lawcover NDA and produce Step 1 of the NDA Reviewer skill.
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Skill tool called"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "pre-engagement-nda-reviewer"
+          - type: contains_any
+            name: "Assessment markers present"
+            phrases: ["Theme", "Suggested Amendment"]
+          - type: leading_question
+            name: "Six-Column Schema"
+            question: >-
+              Does the assessment table contain exactly the six required columns
+              (Theme, Deloitte's Position Description, Extracted Clause, Alignment
+              Assessment, Misalignment Details, Suggested Amendment) with no extra
+              or missing columns?
+
+      - content: >-
+          Does this NDA let Deloitte keep a copy of the information for its own
+          records after the engagement finishes?
+        turn_assertions:
+          - type: leading_question
+            name: "Accurate retention answer"
+            question: >-
+              Does the response correctly state that the NDA requires return or
+              destruction of all Confidential Information with no right to
+              retain a copy, and identify this as misaligned with Deloitte's
+              retention position, rather than inventing a retention right?
+
+    metrics:
+      - faithfulness
+      - conversation_completeness
+
+    thresholds:
+      faithfulness: 0.7
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "No Invented Clauses"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Does the conversation avoid inventing clauses, retention rights, or
+          positions not present in the source document?
+
+      - name: "Follow-up Precision"
+        question: >-
+          Does the follow-up answer cite the return/destruction obligation
+          accurately without drifting from the first-turn assessment?
+
+  # =======================================================================
+  # Document 2 — AEMO Confidentiality Agreement (real; Victoria law)
+  # =======================================================================
+
+  case_3:
+    name: "Step 2 targeted Q&A — AEMO retention of copies"
+    category: "Data Analysis"
+    source_material: "documents/aemo_confidentiality_agreement.md"
+    chatbot_role: >-
+      First Review NDA AI Assistant, answering a specific question about a clause
+      in the uploaded NDA, grounded strictly in the document.
+    user_query: >-
+      What does the AEMO agreement say about retaining copies of confidential
+      information after return or destruction?
+    expected_output: >-
+      States that after a request under clause 7.1 the Recipient must return or
+      destroy Confidential Information, but under clause 7.3 may retain one copy
+      where required by Law or to be kept as records in the ordinary course of
+      business, including for insurance or audit purposes. Notes that the
+      Agreement continues to apply to that retained copy. Answers only from the
+      document without introducing outside information.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "pre-engagement-nda-reviewer"
+
+    metrics:
+      - faithfulness
+      - task_completion
+
+    thresholds:
+      faithfulness: 0.7
+      task_completion: 0.7
+
+    leading_questions:
+      - name: "Retention Carve-out Identified"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Does the answer identify the clause 7.3 carve-out permitting retention
+          of one copy where required by law or for records kept in the ordinary
+          course of business (including insurance or audit purposes)?
+
+      - name: "Obligations Continue"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Does the answer note that the Agreement's obligations continue to
+          apply to the retained copy?
+
+      - name: "Grounded in Document"
+        question: >-
+          Is the answer drawn from the AEMO document's return-of-materials
+          clause rather than generic NDA knowledge, citing the relevant clause?
+
+      - name: "Scope Discipline"
+        question: >-
+          Does the answer focus on the retention question rather than producing
+          an unrequested full assessment table?
+
+  case_4:
+    name: "Step 1 review then out-of-scope refusal — AEMO agreement"
+    category: "Data Analysis"
+    invoke_method: invoke_sequential
+    source_material: "documents/aemo_confidentiality_agreement.md"
+    chatbot_role: >-
+      First Review NDA AI Assistant, assessing an NDA and declining to answer
+      questions unrelated to the uploaded document.
+    expected_output: >-
+      First turn produces the Step 1 assessment of the AEMO agreement,
+      recognising Victorian (Australian) governing law as aligned and flagging
+      the indemnity (clause 11) as present and misaligned. Second turn asks an
+      out-of-scope question unrelated to the document; the assistant declines
+      with words to the effect of "I can only answer questions related to the
+      uploaded document" rather than answering it.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "pre-engagement-nda-reviewer"
+
+    turns:
+      - content: >-
+          Please review this AEMO Confidentiality Agreement against Deloitte's
+          preferred positions.
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Skill tool called"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "pre-engagement-nda-reviewer"
+          - type: contains_any
+            name: "Assessment produced"
+            phrases: ["Theme", "Alignment"]
+          - type: leading_question
+            name: "Six-Column Schema"
+            question: >-
+              Does the assessment table contain exactly the six required columns
+              (Theme, Deloitte's Position Description, Extracted Clause, Alignment
+              Assessment, Misalignment Details, Suggested Amendment) with no extra
+              or missing columns?
+
+      - content: >-
+          Unrelated question — what's the current corporate tax rate in
+          Australia and should we restructure our entity because of it?
+        turn_assertions:
+          - type: leading_question
+            name: "Out-of-scope refusal"
+            question: >-
+              Does the assistant decline to answer the unrelated question,
+              stating in effect that it can only answer questions related to the
+              uploaded document, rather than providing tax or restructuring
+              advice?
+
+    metrics:
+      - faithfulness
+      - conversation_completeness
+
+    thresholds:
+      faithfulness: 0.7
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "Correct Scope Boundary"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Does the assistant hold the scope boundary on the second turn,
+          refusing the unrelated question rather than answering it?
+
+      - name: "No Invented Clauses"
+        question: >-
+          Does the conversation avoid inventing clauses or positions not present
+          in the AEMO document?
+
+  # =======================================================================
+  # Document 3 — Mutual NDA (Advisory) (real; Singapore law)
+  # =======================================================================
+
+  case_5:
+    name: "Step 3 email template — Mutual NDA (Advisory)"
+    category: "Data Analysis"
+    source_material: "documents/mutual_nda_advisory.md"
+    chatbot_role: >-
+      First Review NDA AI Assistant, drafting a client-facing email that
+      summarises only the misaligned clauses from the NDA assessment.
+    user_query: >-
+      Based on your review of 20240531 - Mutual NDA (Advisory) 1, draft the Step
+      3 email template for the relevant team.
+    expected_output: >-
+      A client-facing email template using the NDA name in the subject,
+      addressed to the team, summarising only the misaligned (❌) clauses in a
+      four-column table (Theme, Extracted Clause, Misalignment Details,
+      Suggested Amendment) — excluding the Deloitte's Position Description column
+      and the Clauses to note section. The misaligned clauses summarised should
+      include the agreement being governed by Singapore law and jurisdiction
+      (clause 20), the Disclosing Party giving no warranty on the accuracy of
+      Confidential Information (clause 10), and the controls on disclosure or
+      export of certain technology and information (clause 4). Framed as a
+      summary of amendments required that the team can share with their client.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "pre-engagement-nda-reviewer"
+
+    metrics:
+      - faithfulness
+      - task_completion
+
+    thresholds:
+      faithfulness: 0.7
+      task_completion: 0.7
+
+    leading_questions:
+      - name: "Email Format Conformance"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Is the output an email template with a subject line using the NDA
+          name, a greeting, a four-column summary table, and a professional
+          sign-off?
+
+      - name: "Only Misaligned Rows"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Does the email table include only misaligned (❌) clauses and exclude
+          the Deloitte's Position Description column and the Clauses to note
+          section?
+
+      - name: "Correct Misalignments Captured"
+        question: >-
+          Does the email capture the Singapore governing law/jurisdiction, the
+          no-accuracy-warranty clause, and the technology/export control clause
+          as the amendments required?
+
+      - name: "Client-Facing Tone"
+        question: >-
+          Is the email framed as a professional, client-facing summary of
+          amendments the team can share with their client?
+
+  case_6:
+    name: "Step 1 review then Step 3 email chaining — Mutual NDA (Advisory)"
+    category: "Data Analysis"
+    invoke_method: invoke_sequential
+    source_material: "documents/mutual_nda_advisory.md"
+    chatbot_role: >-
+      First Review NDA AI Assistant, producing an NDA assessment and then
+      converting it into a client-facing email summarising only the misaligned
+      clauses.
+    expected_output: >-
+      First turn produces the Step 1 assessment, recognising the 2-year term as
+      aligned with Deloitte's duration position and the clause 5.2 retention
+      carve-out as aligned, while flagging Singapore governing law, the
+      no-accuracy-warranty clause, and the technology/export controls as
+      misaligned. Second turn produces the Step 3 email containing only the ❌
+      rows in a four-column table, consistent with the first-turn assessment and
+      omitting the Deloitte's Position Description column and Clauses to note
+      section.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "pre-engagement-nda-reviewer"
+
+    turns:
+      - content: >-
+          Review this Mutual NDA (Advisory) against Deloitte's preferred
+          positions and produce the Step 1 assessment.
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Skill tool called"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "pre-engagement-nda-reviewer"
+          - type: contains_any
+            name: "Assessment produced"
+            phrases: ["Theme", "Suggested Amendment"]
+          - type: leading_question
+            name: "Six-Column Schema"
+            question: >-
+              Does the assessment table contain exactly the six required columns
+              (Theme, Deloitte's Position Description, Extracted Clause, Alignment
+              Assessment, Misalignment Details, Suggested Amendment) with no extra
+              or missing columns?
+
+      - content: >-
+          Now draft the Step 3 email template for the relevant team based on
+          that assessment.
+        turn_assertions:
+          - type: not_contains
+            name: "Position description column excluded"
+            phrases: ["Deloitte's Position Description"]
+          - type: leading_question
+            name: "Email includes only misaligned rows"
+            question: >-
+              Does the email table list only the misaligned (❌) clauses
+              (Singapore jurisdiction, no accuracy warranty, technology/export
+              controls) consistent with the first-turn assessment, without
+              re-listing aligned clauses?
+
+    metrics:
+      - faithfulness
+      - conversation_completeness
+
+    thresholds:
+      faithfulness: 0.7
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "Consistent Email Derivation"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Is the second-turn email consistent with the first-turn assessment —
+          same misaligned clauses, no new fabricated misalignments?
+
+      - name: "Format Discipline"
+        question: >-
+          Does the email use the four-column format and omit the Deloitte's
+          Position Description column and the Clauses to note section?
+
+  # =======================================================================
+  # Document 4 — Onerous Vendor NDA (synthetic; misaligned throughout)
+  # =======================================================================
+
+  case_7:
+    name: "Step 1 full assessment — heavily misaligned onerous NDA"
+    category: "Data Analysis"
+    source_material: "documents/onerous_vendor_nda.md"
+    chatbot_role: >-
+      First Review NDA AI Assistant, reviewing a one-sided client NDA and
+      applying Deloitte's per-theme amendment guidance (delete vs. add vs.
+      note).
+    user_query: >-
+      Review this NDA against Deloitte's preferred positions and produce the
+      Step 1 assessment.
+    expected_output: >-
+      A Step 1 assessment flagging the many misalignments in this one-sided NDA
+      and applying the correct per-theme amendment guidance: suggest deleting
+      the Indemnity (clause 9), Exclusivity (clause 5), Non-solicitation
+      (clause 6), the Gen-AI use prohibition (clause 4.2), and the requirement
+      to host/store data only within the United States (clause 4.1); suggest
+      adding an accuracy-of-information warranty, a right to retain one copy
+      (clause 7 currently forbids retention), and a right to share on a
+      need-to-know basis (clause 3.1 currently forbids disclosure even to
+      employees); flag the 5-year term (clause 2) as exceeding Deloitte's
+      two-year limit; and add reviewer notes for the Conflict of Interest
+      declaration (clause 8) and the Delaware governing law/jurisdiction
+      (clause 10). Uses the six-column schema with ✅/❌ per row.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "pre-engagement-nda-reviewer"
+
+    metrics:
+      - faithfulness
+      - task_completion
+
+    thresholds:
+      faithfulness: 0.7
+      task_completion: 0.7
+
+    leading_questions:
+      - name: "Six-Column Schema"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Does the assessment table contain exactly the six required columns
+          with a ✅/❌ alignment marker on every theme row?
+
+      - name: "Correct Amendment Direction"
+        type: gating
+        threshold: 0.7
+        question: >-
+          For present-and-misaligned themes (Indemnity, Exclusivity,
+          Non-solicitation, Gen-AI, offshore-hosting ban) does it suggest
+          deletion, and for absent themes (Accuracy of Information, Retention,
+          Sharing) does it suggest adding a clause?
+
+      - name: "Duration Breach Flagged"
+        question: >-
+          Is the five-year term identified as exceeding Deloitte's two-year
+          maximum and flagged as misaligned?
+
+      - name: "Jurisdiction & Conflict Noted"
+        question: >-
+          Are the Delaware governing law and the conflict-of-interest
+          declaration handled as reviewer notes rather than mechanical
+          delete/add amendments?
+
+      - name: "No Fabricated Clauses"
+        question: >-
+          Are all extracted clauses genuinely present in the document, with no
+          invented clause numbers or terms?
+
+  case_8:
+    name: "Step 1 review then targeted amendment follow-up — onerous NDA"
+    category: "Data Analysis"
+    invoke_method: invoke_sequential
+    source_material: "documents/onerous_vendor_nda.md"
+    chatbot_role: >-
+      First Review NDA AI Assistant, producing an assessment and then providing
+      a precise rewritten clause on request, grounded in the document.
+    expected_output: >-
+      First turn produces the Step 1 assessment of the onerous NDA with correct
+      per-theme amendment directions. Second turn responds to a request for the
+      specific suggested amendment to the data-hosting clause by providing only
+      the rewritten/deletion amendment for clause 4.1 (removing the restriction
+      on hosting data outside the United States) with no additional commentary,
+      consistent with the Suggested Amendment column guidance.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "pre-engagement-nda-reviewer"
+
+    turns:
+      - content: >-
+          Review this NDA against Deloitte's preferred positions and produce the
+          Step 1 assessment.
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Skill tool called"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "pre-engagement-nda-reviewer"
+          - type: contains_any
+            name: "Assessment produced"
+            phrases: ["Theme", "Suggested Amendment"]
+          - type: leading_question
+            name: "Six-Column Schema"
+            question: >-
+              Does the assessment table contain exactly the six required columns
+              (Theme, Deloitte's Position Description, Extracted Clause, Alignment
+              Assessment, Misalignment Details, Suggested Amendment) with no extra
+              or missing columns?
+
+      - content: >-
+          Just give me the suggested amendment for the data-hosting clause, with
+          no extra commentary.
+        turn_assertions:
+          - type: leading_question
+            name: "Targeted amendment only"
+            question: >-
+              Does the response provide only the suggested amendment for the
+              offshore-hosting restriction (clause 4.1) — deleting or rewriting
+              it to remove the restriction — without extra commentary or
+              re-printing the whole table?
+
+    metrics:
+      - faithfulness
+      - conversation_completeness
+
+    thresholds:
+      faithfulness: 0.7
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "No Invented Clauses"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Does the conversation avoid inventing clauses or amendments not
+          grounded in the document?
+
+      - name: "Follow-up Precision"
+        question: >-
+          Does the follow-up return a focused amendment for the hosting clause
+          consistent with the first-turn assessment, without drift?
