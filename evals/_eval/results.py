@@ -5,6 +5,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import List, Optional
 
+from .metrics import LOWER_IS_BETTER_METRICS
+
 
 # ---------------------------------------------------------------------------
 # Aggregation
@@ -28,13 +30,9 @@ def aggregate_results(all_runs: List[dict]) -> dict:
             threshold = data["threshold"]
             if valid_scores:
                 avg = sum(valid_scores) / len(valid_scores)
-                lower_is_better = any(
-                    s is not None and threshold is not None and s < threshold and ok
-                    for s, ok in zip(data["scores"], data["successes"])
-                )
                 if threshold is None:
                     success = True
-                elif lower_is_better:
+                elif name in LOWER_IS_BETTER_METRICS:
                     success = avg <= threshold
                 else:
                     success = avg >= threshold

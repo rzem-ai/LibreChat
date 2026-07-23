@@ -78,26 +78,32 @@ Ask:
 
 Wait for the user's response before continuing.
 
-### Question 1: Sample query
+### Question 1: Sample queries
 
 Ask:
 
-> **Do you have a sample user query for this skill/agent?**
-> This is the prompt you'd typically type to trigger it. It helps me write realistic test cases.
+> **Do you have sample user queries for this skill/agent?**
+> These are prompts you'd typically type to trigger it. You can provide up to 4 — paste them as a numbered list (one per line), or say "skip".
 >
-> Paste it here, or say "skip".
+> Example:
+> 1. Summarise this SoW and highlight the key deliverables
+> 2. Extract all payment terms from this MSA
 
 Wait for the user's response before continuing.
 
-### Question 2: Input document
+### Question 2: Input documents
 
 Ask:
 
-> **Do you have an input document you'd normally provide?**
-> This is the source material it processes (e.g. transcript, contract, report).
+> **Do you have input documents you'd normally provide?**
+> Provide up to 4 — matched by position to your queries above (query 1 pairs with document 1, etc.).
 > For KB-backed agents, this could be a sample of your knowledge base content.
 >
-> Provide the path to your source document — PDF, DOCX, PPTX, XLSX, and markdown all work. Paste its content, or say "skip".
+> Paste paths as a numbered list — PDF, DOCX, PPTX, XLSX, and markdown all work. Or say "skip".
+>
+> Example:
+> 1. /path/to/sow_draft.docx
+> 2. /path/to/msa_vendor.pdf
 
 Wait for the user's response before continuing.
 
@@ -105,25 +111,27 @@ Wait for the user's response before continuing.
 
 Ask:
 
-> **What should the output look like for the document/query you just provided?**
+> **What should the output look like for the queries/documents you provided?**
 > This is what a correct response should contain — structure, key sections, tone, or specific content.
+> If you provided multiple inputs, describe the expected output for each (numbered to match).
 >
-> Paste an example, describe it, or say "skip".
+> Paste examples, describe them, or say "skip".
 
 Wait for the user's response before continuing.
 
 ### If the user provides inputs:
 
 - **Agent ID** → set `agent_id: "<id>"` at the top level of the YAML.
-- **Query** → use it as-is for `user_query` in case_1. Generate case_2's query as a harder variant (edge case, adversarial, or refusal test).
-- **Document** → save it as-is to `documents/`. Skip synthetic document generation for that case.
+- **Queries / Documents** → each numbered pair (query N + document N) seeds one document slot (2 cases). Pair 1 → cases 1–2, pair 2 → cases 3–4, pair 3 → cases 5–6, pair 4 → cases 7–8. Any unprovided slots are filled with synthetic documents in Step 6.
+- **Single query/doc** → use it for case_1. Generate case_2 as a harder variant (edge case, adversarial, or refusal) on the same document.
+- **Document** → read and save it per Step 4b. Skip synthetic generation for that slot.
 - **Expected output** → use it to write a precise `expected_output` description and design leading questions that verify the specific structural and content requirements shown.
 
 ### If the user skips all:
 
 - **Agent ID** → set `agent_id: "${GENERAL_BUSINESS_ASSISTANT_AGENT_ID}"` in the YAML.
-- **Query** → derive a realistic one from the definition file's process steps and description.
-- **Document** → generate synthetic ones in Step 6.
+- **Queries** → derive realistic ones from the definition file's process steps and description.
+- **Documents** → generate all 4 synthetic ones in Step 6.
 - **Output** → write `expected_output` as a structural description derived from the definition file only.
 
 ---
@@ -183,17 +191,27 @@ For agents, write to `evals/agents/<Agent Name>/documents/`. For KB-backed agent
 
 Produce a complete `eval_cases.yaml`. Use the category's recommended metrics as a starting point, but **tailor everything** to the specific skill or agent.
 
-### Rule 0 — Honour user inputs in case_1 (MANDATORY)
+### Rule 0 — Honour user inputs (MANDATORY)
 
 **Before applying any other rule, check what the user provided in Step 2.**
 
-If the user provided a query, document, or expected output — even partially — `case_1` MUST be built directly from those inputs:
+Each numbered (query, document) pair from Step 2 maps to one document slot — two cases:
 
-- **Query provided** → use it verbatim as `user_query` (or as the first turn's `content` for `invoke_sequential`). Do not rephrase or generalise it.
-- **Document provided** → it was already read and copied in Step 4b. Set `source_material` in `case_1` to that filename. Do not generate a synthetic document for `case_1`.
-- **Expected output provided** → write `case_1`'s `expected_output` and leading questions directly from it. Ground every probe in the specific structure, sections, or content the user described.
+| Pair | Cases | Document slot |
+|------|-------|---------------|
+| Pair 1 | case_1 (single-turn), case_2 (harder variant) | document_1 |
+| Pair 2 | case_3 (single-turn), case_4 (harder variant) | document_2 |
+| Pair 3 | case_5 (single-turn), case_6 (harder variant) | document_3 |
+| Pair 4 | case_7 (single-turn), case_8 (harder variant) | document_4 |
 
-`case_2` uses the same document as `case_1` but with a harder variant query (edge case, adversarial, or refusal). Cases 3–8 use synthetic documents generated in Step 6.
+For each provided pair:
+
+- **Query provided** → use it verbatim as `user_query` (or as the first turn's `content` for `invoke_sequential`) in the slot's first case. Do not rephrase or generalise it.
+- **Document provided** → it was already read and copied in Step 4b. Set `source_material` to that filename. Do not generate a synthetic document for this slot.
+- **Expected output provided** → write `expected_output` and leading questions directly from it. Ground every probe in the specific structure, sections, or content the user described.
+- **Harder variant case** → uses the same document as its pair's first case, but with a harder query (edge case, adversarial, or refusal test).
+
+Any slot whose pair was not provided by the user is filled with a synthetic document generated in Step 6.
 
 If the user skipped all questions, ignore this rule and proceed normally.
 
@@ -236,6 +254,43 @@ Gating metrics must be **identical across all cases of the same `invoke_method`*
 - **Use `leading_questions` as the per-case differentiator — not metric variations.**
 
 Do not add extra metrics to individual cases to make them feel more targeted. If a metric applies to the skill, it applies to all cases of that invoke_method. If it only applies to one case, it belongs in `leading_questions` instead.
+
+### Rule 13 — Place structural probes on the turn that produces the output (MANDATORY for invoke_sequential)
+
+Case-level `leading_questions` on an `invoke_sequential` case are evaluated against the **final turn's output only** — not earlier turns.
+
+For cases where an intermediate turn produces structured output (a table, extracted fields, a schema, a numbered list), place probes about that structure as a `turn_assertion` of type `leading_question` on the specific turn, not at the case level. A probe at the case level asking "does the table have six columns?" will be evaluated against the final prose reply and will always fail.
+
+**When to use each:**
+
+| Probe target | Where to place it |
+|---|---|
+| Does the table/schema/structured output from turn N conform to the required format? | `turn_assertion` of type `leading_question` on turn N |
+| Does the first-turn output contain required phrases or section markers? | `turn_assertion` of type `contains_any` on turn 0 |
+| Does the final turn's response correctly answer the follow-up question? | Case-level `leading_questions` |
+| Does the full conversation avoid hallucinating or inventing content? | Case-level `leading_questions` (surveys the whole dialogue) |
+
+**Example turn_assertion for a table schema probe:**
+
+```yaml
+    turns:
+      - content: >-
+          Produce the Step 1 assessment.
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Skill tool called"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "my-skill"
+          - type: leading_question
+            name: "Six-Column Schema"
+            question: >-
+              Does the assessment table contain exactly the six required columns
+              (Theme, Position, Extracted Clause, Alignment, Details, Amendment)
+              with no extra or missing columns?
+```
 
 ### YAML structure — skill:
 

@@ -14,8 +14,11 @@ import importlib
 import os
 import time
 import warnings
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import List, Optional
+
+from opentelemetry import context as otel_ctx
 
 from deepeval.test_case import LLMTestCase, ToolCall, ConversationalTestCase, Turn
 from deepeval.metrics import SummarizationMetric
@@ -415,6 +418,7 @@ def run_eval(
     num_runs: Optional[int] = None,
     push_langfuse: bool = False,
     run_name: Optional[str] = None,
+    parallel_runs: bool = True,
 ) -> None:
     """Load a case, run the agent NUM_RUNS times, evaluate, then average results.
 
@@ -425,6 +429,7 @@ def run_eval(
         num_runs: Number of evaluation runs (defaults to NUM_RUNS constant or YAML).
         push_langfuse: If True, export OpenTelemetry spans to Langfuse after evaluation.
         run_name: Shared Langfuse dataset run name for grouping cases in one experiment.
+        parallel_runs: If True (default), run all num_runs concurrently via threads.
     """
     os.environ["DO_NOT_TRACK"] = "1"
     run_start = time.time()
@@ -526,57 +531,115 @@ def run_eval(
         if root_span is not None:
             trace_id = trace_id_hex(root_span)
 
-        for i in range(effective_runs):
-            print(f"\n{'='*60}")
-            print(f"[RUN {i + 1}/{effective_runs}] {case_key}")
-            print(f"{'='*60}")
+        if parallel_runs and effective_runs > 1:
+            parent_ctx = otel_ctx.get_current()
 
-            attempt_ctx = (
-                otel_span("eval.attempt", {
-                    "eval.run.index": i + 1,
-                    "eval.run.total": effective_runs,
-                    "langfuse.observation.type": "span",
-                    "langfuse.observation.metadata.run_index": i + 1,
-                })
-                if tracing_active
-                else nullcontext(None)
-            )
-
-            with attempt_ctx:
-                if is_sequential:
-                    run_result = run_single_sequential(
-                        case_key=case_key,
-                        case=case,
-                        adapter=adapter,
-                        evaluator=evaluator,
-                        selected_gating=selected_gating,
-                        selected_diagnostic=selected_diagnostic,
-                        thresholds=thresholds,
-                        leading_questions=leading_questions,
-                        expected_tools=expected_tools,
-                        conversational_metric_keys=conversational_metric_keys,
-                        conversational_thresholds=conversational_thresholds,
+            def _run_one(i: int) -> dict:
+                token = otel_ctx.attach(parent_ctx)
+                try:
+                    attempt_ctx = (
+                        otel_span("eval.attempt", {
+                            "eval.run.index": i + 1,
+                            "eval.run.total": effective_runs,
+                            "langfuse.observation.type": "span",
+                            "langfuse.observation.metadata.run_index": i + 1,
+                        })
+                        if tracing_active
+                        else nullcontext(None)
                     )
-                else:
-                    run_result = run_single(
-                        case_key=case_key,
-                        case=case,
-                        adapter=adapter,
-                        invoke_method=invoke_method,
-                        evaluator=evaluator,
-                        selected_gating=selected_gating,
-                        selected_diagnostic=selected_diagnostic,
-                        thresholds=thresholds,
-                        leading_questions=leading_questions,
-                        expected_tools=expected_tools,
-                    )
+                    with attempt_ctx:
+                        if is_sequential:
+                            result = run_single_sequential(
+                                case_key=case_key,
+                                case=case,
+                                adapter=adapter,
+                                evaluator=evaluator,
+                                selected_gating=selected_gating,
+                                selected_diagnostic=selected_diagnostic,
+                                thresholds=thresholds,
+                                leading_questions=leading_questions,
+                                expected_tools=expected_tools,
+                                conversational_metric_keys=conversational_metric_keys,
+                                conversational_thresholds=conversational_thresholds,
+                            )
+                        else:
+                            result = run_single(
+                                case_key=case_key,
+                                case=case,
+                                adapter=adapter,
+                                invoke_method=invoke_method,
+                                evaluator=evaluator,
+                                selected_gating=selected_gating,
+                                selected_diagnostic=selected_diagnostic,
+                                thresholds=thresholds,
+                                leading_questions=leading_questions,
+                                expected_tools=expected_tools,
+                            )
+                        if tracing_active:
+                            record_run_metrics(result)
+                    return result
+                finally:
+                    otel_ctx.detach(token)
 
-                if tracing_active:
-                    record_run_metrics(run_result)
+            with ThreadPoolExecutor(max_workers=effective_runs) as pool:
+                all_runs = list(pool.map(_run_one, range(effective_runs)))
 
-            all_runs.append(run_result)
-            gating_ok = all(s for _, _, _, s, _ in run_result["gating"])
-            print(f"[RUN {i + 1}/{effective_runs}] Gating: {'PASS' if gating_ok else 'FAIL'}")
+            for i, run_result in enumerate(all_runs):
+                gating_ok = all(s for _, _, _, s, _ in run_result["gating"])
+                print(f"[RUN {i + 1}/{effective_runs}] Gating: {'PASS' if gating_ok else 'FAIL'}")
+
+        else:
+            for i in range(effective_runs):
+                print(f"\n{'='*60}")
+                print(f"[RUN {i + 1}/{effective_runs}] {case_key}")
+                print(f"{'='*60}")
+
+                attempt_ctx = (
+                    otel_span("eval.attempt", {
+                        "eval.run.index": i + 1,
+                        "eval.run.total": effective_runs,
+                        "langfuse.observation.type": "span",
+                        "langfuse.observation.metadata.run_index": i + 1,
+                    })
+                    if tracing_active
+                    else nullcontext(None)
+                )
+
+                with attempt_ctx:
+                    if is_sequential:
+                        run_result = run_single_sequential(
+                            case_key=case_key,
+                            case=case,
+                            adapter=adapter,
+                            evaluator=evaluator,
+                            selected_gating=selected_gating,
+                            selected_diagnostic=selected_diagnostic,
+                            thresholds=thresholds,
+                            leading_questions=leading_questions,
+                            expected_tools=expected_tools,
+                            conversational_metric_keys=conversational_metric_keys,
+                            conversational_thresholds=conversational_thresholds,
+                        )
+                    else:
+                        run_result = run_single(
+                            case_key=case_key,
+                            case=case,
+                            adapter=adapter,
+                            invoke_method=invoke_method,
+                            evaluator=evaluator,
+                            selected_gating=selected_gating,
+                            selected_diagnostic=selected_diagnostic,
+                            thresholds=thresholds,
+                            leading_questions=leading_questions,
+                            expected_tools=expected_tools,
+                        )
+
+                    if tracing_active:
+                        record_run_metrics(run_result)
+
+                all_runs.append(run_result)
+                gating_ok = all(s for _, _, _, s, _ in run_result["gating"])
+                print(f"[RUN {i + 1}/{effective_runs}] Gating: {'PASS' if gating_ok else 'FAIL'}")
 
         # --- Aggregate ---
         agg = aggregate_results(all_runs)

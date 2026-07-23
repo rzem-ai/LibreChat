@@ -50,7 +50,7 @@ cases:
 
     thresholds:
       faithfulness: 0.7
-      hallucination: 0.7
+      hallucination: 0.3
       task_completion: 0.7
 
     leading_questions:
@@ -126,7 +126,7 @@ cases:
 
     thresholds:
       faithfulness: 0.7
-      hallucination: 0.7
+      hallucination: 0.3
       conversation_completeness: 0.5
 
     leading_questions:

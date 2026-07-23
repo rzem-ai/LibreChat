@@ -88,6 +88,13 @@ DEFAULT_THRESHOLDS = {
 
 VALID_PROBE_TYPES = {"gating", "diagnostic"}
 
+# DeepEval metric display names (metric.name — what result tuples carry) whose
+# success is `score <= threshold`: lower is better. Everything else is
+# higher-is-better (`score >= threshold`). Used to orient both aggregate
+# pass/fail and the composite eval_score, so a good result on these metrics (a
+# low score) is never treated as a failure or averaged as if higher were better.
+LOWER_IS_BETTER_METRICS = {"Hallucination", "Bias", "Toxicity"}
+
 
 # ---------------------------------------------------------------------------
 # Evaluator bridge (framework-agnostic)

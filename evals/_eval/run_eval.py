@@ -10,6 +10,8 @@ Usage:
 
 import argparse
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -66,6 +68,14 @@ def main():
         "--run-name", default=None,
         help="Custom name for the Langfuse dataset run (e.g. 'baseline', 'v2-prompt'). Defaults to eval-YYYYMMDD-HHMMSS.",
     )
+    parser.add_argument(
+        "--no-parallel-runs", action="store_true", default=False,
+        help="Run num_runs sequentially within each case (default: parallel).",
+    )
+    parser.add_argument(
+        "--parallelism", type=int, default=1, metavar="N",
+        help="Max concurrent cases (default: 1 = sequential cases).",
+    )
     args = parser.parse_args()
 
     config_path = Path(args.config).resolve()
@@ -91,8 +101,12 @@ def main():
         with open(config_path) as f:
             case_keys = list(yaml.safe_load(f).get("cases", {}).keys())
 
-    errors = []
-    for key in case_keys:
+    parallel_runs = not args.no_parallel_runs
+
+    errors: list = []
+    errors_lock = threading.Lock()
+
+    def _run_case(key: str) -> None:
         print(f"\n{'='*60}\nRunning: {key}\n{'='*60}")
         try:
             run_eval(
@@ -102,10 +116,20 @@ def main():
                 num_runs=args.num_runs,
                 push_langfuse=args.langfuse,
                 run_name=run_name,
+                parallel_runs=parallel_runs,
             )
         except Exception as exc:
             print(f"[FAIL] {key}: {exc}")
-            errors.append((key, exc))
+            with errors_lock:
+                errors.append((key, exc))
+
+    if args.parallelism > 1:
+        with ThreadPoolExecutor(max_workers=args.parallelism) as pool:
+            list(pool.map(_run_case, case_keys))
+    else:
+        for key in case_keys:
+            _run_case(key)
+
     if errors:
         failed = ", ".join(k for k, _ in errors)
         raise SystemExit(f"\n{len(errors)} case(s) failed: {failed}")

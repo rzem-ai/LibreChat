@@ -42,7 +42,7 @@ cases:
     thresholds:
       faithfulness: 0.7
       task_completion: 0.7
-      hallucination: 0.7
+      hallucination: 0.3
 
     leading_questions:
       - name: "Schema Conformance"
@@ -116,7 +116,7 @@ cases:
 
     thresholds:
       faithfulness: 0.7
-      hallucination: 0.7
+      hallucination: 0.3
       conversation_completeness: 0.5
 
     leading_questions:

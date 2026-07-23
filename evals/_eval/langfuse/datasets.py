@@ -15,6 +15,8 @@ from typing import List, Optional
 
 from dotenv import load_dotenv
 
+from ..metrics import LOWER_IS_BETTER_METRICS
+
 load_dotenv()
 
 
@@ -169,8 +171,12 @@ def post_scores(
       - one score per gating metric (faithfulness, hallucination, task_completion, etc.)
       - one score per conversational metric (conversation_completeness, etc.) if present
     """
-    gating_scores = [score for _, score, _, _, _ in gating_results if score is not None]
-    composite = sum(gating_scores) / len(gating_scores) if gating_scores else 0.0
+    oriented_scores = [
+        (1.0 - score) if name in LOWER_IS_BETTER_METRICS else score
+        for name, score, _, _, _ in gating_results
+        if score is not None
+    ]
+    composite = sum(oriented_scores) / len(oriented_scores) if oriented_scores else 0.0
 
     try:
         langfuse = _get_langfuse_client()

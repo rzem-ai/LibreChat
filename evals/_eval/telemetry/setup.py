@@ -7,6 +7,7 @@ attributes. Langfuse can ingest these spans through its native OTLP endpoint.
 import base64
 import json
 import os
+import threading
 from contextlib import contextmanager, nullcontext
 from typing import Any, Dict, Iterable, Iterator, Optional
 
@@ -21,6 +22,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 _SERVICE_NAME = "librechat-evals"
 _TRACER_NAME = "librechat.evals"
 _INITIALIZED = False
+_INIT_LOCK = threading.Lock()
 
 
 def telemetry_enabled(cli_flag: bool) -> bool:
@@ -32,26 +34,29 @@ def telemetry_enabled(cli_flag: bool) -> bool:
 def init_tracing() -> bool:
     """Initialise OpenTelemetry tracing once and return whether setup succeeded."""
     global _INITIALIZED
-    if _INITIALIZED:
-        return True
+    with _INIT_LOCK:
+        if _INITIALIZED:
+            return True
 
-    _ensure_langfuse_otel_env()
+        _ensure_langfuse_otel_env()
 
-    try:
-        ssl_verify = os.environ.get("LANGFUSE_SSL_VERIFY", "true").lower() not in ("false", "0", "no")
-        exporter = OTLPSpanExporter()
-        if not ssl_verify and hasattr(exporter, "_session"):
-            exporter._session.verify = False
-        resource = Resource.create({"service.name": _SERVICE_NAME})
-        provider = TracerProvider(resource=resource)
-        provider.add_span_processor(BaggageSpanProcessor(ALLOW_ALL_BAGGAGE_KEYS))
-        provider.add_span_processor(BatchSpanProcessor(exporter))
-        trace.set_tracer_provider(provider)
-        _INITIALIZED = True
-        return True
-    except Exception as exc:
-        print(f"[OTEL] Warning: tracing setup failed: {exc}")
-        return False
+        try:
+            ssl_verify = os.environ.get("LANGFUSE_SSL_VERIFY", "true").lower() not in ("false", "0", "no")
+            exporter = OTLPSpanExporter()
+            if not ssl_verify:
+                exporter._certificate_file = False
+                if hasattr(exporter, "_session"):
+                    exporter._session.verify = False
+            resource = Resource.create({"service.name": _SERVICE_NAME})
+            provider = TracerProvider(resource=resource)
+            provider.add_span_processor(BaggageSpanProcessor(ALLOW_ALL_BAGGAGE_KEYS))
+            provider.add_span_processor(BatchSpanProcessor(exporter))
+            trace.set_tracer_provider(provider)
+            _INITIALIZED = True
+            return True
+        except Exception as exc:
+            print(f"[OTEL] Warning: tracing setup failed: {exc}")
+            return False
 
 
 def get_tracer():
@@ -60,6 +65,7 @@ def get_tracer():
 
 
 _OPENAI_INSTRUMENTED = False
+_INSTRUMENT_LOCK = threading.Lock()
 
 
 def instrument_openai() -> bool:
@@ -69,23 +75,24 @@ def instrument_openai() -> bool:
     succeeded; False if the instrumentor package is not installed.
     """
     global _OPENAI_INSTRUMENTED
-    if _OPENAI_INSTRUMENTED:
-        return True
+    with _INSTRUMENT_LOCK:
+        if _OPENAI_INSTRUMENTED:
+            return True
 
-    try:
-        from opentelemetry.instrumentation.openai_v2 import OpenAIInstrumentor
-        OpenAIInstrumentor().instrument()
-        _OPENAI_INSTRUMENTED = True
-        return True
-    except ImportError:
-        print(
-            "[OTEL] Warning: opentelemetry-instrumentation-openai-v2 not installed, "
-            "skipping OpenAI SDK instrumentation"
-        )
-        return False
-    except Exception as exc:
-        print(f"[OTEL] Warning: OpenAI instrumentation failed: {exc}")
-        return False
+        try:
+            from opentelemetry.instrumentation.openai_v2 import OpenAIInstrumentor
+            OpenAIInstrumentor().instrument()
+            _OPENAI_INSTRUMENTED = True
+            return True
+        except ImportError:
+            print(
+                "[OTEL] Warning: opentelemetry-instrumentation-openai-v2 not installed, "
+                "skipping OpenAI SDK instrumentation"
+            )
+            return False
+        except Exception as exc:
+            print(f"[OTEL] Warning: OpenAI instrumentation failed: {exc}")
+            return False
 
 
 def shutdown_tracing() -> None:
