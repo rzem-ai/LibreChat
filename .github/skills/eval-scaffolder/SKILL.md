@@ -237,13 +237,13 @@ If the user skipped all questions, ignore this rule and proceed normally.
 
 | Category | Single-turn Gating | Multi-turn Gating | Diagnostic |
 |---|---|---|---|
-| Advisory or Drafting (doc-backed) | faithfulness, hallucination, task_completion | faithfulness, hallucination, conversation_completeness | — |
+| Advisory or Drafting (doc-backed) | faithfulness, hallucination†, task_completion | faithfulness, hallucination†, conversation_completeness | — |
 | Advisory or Drafting (RAG/KB-backed) | faithfulness, answer_relevancy, contextual_recall, contextual_precision | faithfulness, answer_relevancy, contextual_recall, conversation_completeness | contextual_relevancy |
-| Data Analysis | faithfulness, task_completion, hallucination | faithfulness, hallucination, conversation_completeness | — |
+| Data Analysis | faithfulness, task_completion, hallucination† | faithfulness, hallucination†, conversation_completeness | — |
 | System Integration or Utility | faithfulness, task_completion, tool_correctness | faithfulness, tool_correctness, conversation_completeness | — |
 | Workflow Automation | always multi-turn | faithfulness, tool_correctness, conversation_completeness | — |
 
-> **Note:** `task_completion` only evaluates the final turn's output. For multi-turn cases, `conversation_completeness` evaluates the entire dialogue and is the correct replacement. All metrics in `metrics:` are gating; use `diagnostic_metrics:` for non-blocking. `tool_correctness` requires `expected_tools` to be defined on the case.
+> **Note:** `task_completion` only evaluates the final turn's output. For multi-turn cases, `conversation_completeness` evaluates the entire dialogue and is the correct replacement. All metrics in `metrics:` are gating; use `diagnostic_metrics:` for non-blocking. `tool_correctness` requires `expected_tools` to be defined on the case. **†** `hallucination` is lower-is-better with threshold `0.3`; drop it when the skill draws on domain knowledge beyond the source document — see Rule 14.
 
 ### Rule 12 — Metric consistency within invoke_method groups (MANDATORY)
 
@@ -291,6 +291,26 @@ For cases where an intermediate turn produces structured output (a table, extrac
               (Theme, Position, Extracted Clause, Alignment, Details, Amendment)
               with no extra or missing columns?
 ```
+
+### Rule 14 — Hallucination: threshold, and when to include or drop it (MANDATORY)
+
+`HallucinationMetric` is **lower-is-better** — score 0 means no hallucination, score 1 means every context item was contradicted. The metric passes when `score ≤ threshold`.
+
+**Threshold:** Always use `hallucination: 0.3`. A threshold of 0.7 permits 70% of the source material to be contradicted before failing — that is too permissive to be meaningful.
+
+**When to include hallucination:** Only when the skill output should be derived **exclusively** from the provided source document — for example, a pure document summariser or data extractor where the model must not add any information beyond what the source contains.
+
+**When to drop hallucination and use faithfulness + leading questions instead:**
+
+| Condition | Why hallucination misfires |
+|---|---|
+| The skill applies domain knowledge from its system prompt (preferred positions, standard policies, institutional expertise) | The judge sees that knowledge as "not in the source document" → contradiction → score 1.0, guaranteed failure regardless of quality |
+| Only one context item is passed | Score is always binary (0.0 or 1.0); a single contradiction = full failure; the threshold is effectively irrelevant |
+| The agent uses RAG/KB (retrieves its own context) | The context passed to the metric is incomplete relative to what the agent actually used |
+
+`faithfulness` (higher-is-better) already covers the "is output grounded in the source document?" angle. For the fabrication check, add a leading question such as: *"Does the output introduce any facts, clauses, or positions not present in the source document?"*
+
+The category table marks `hallucination` with `†` for categories where this caveat applies most often.
 
 ### YAML structure — skill:
 
