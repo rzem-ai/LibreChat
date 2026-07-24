@@ -15,6 +15,13 @@ interface:
     use: true
     create: true
 
+fileConfig:
+  endpoints:
+    default:
+      fileLimit: 50
+    agents:
+      fileLimit: 50
+
 endpoints:
   # ========================================
   # Built-in Anthropic (via nginx proxy)
@@ -26,7 +33,7 @@ endpoints:
     disableBuilder: false
     maxCitations: 30
     maxCitationsPerFile: 7
-    capabilities: ["deferred_tools", "execute_code", "file_search", "actions", "tools", "skills"]
+    capabilities: ["actions", "artifacts", "context", "deferred_tools", "execute_code", "file_search", "skills", "tools"]
     minRelevanceScore: 0.3
     # Default model for new agents — uses Azure AU custom endpoint (confirmed working)
     model: "gpt-4o-mini"
@@ -69,15 +76,12 @@ endpoints:
       baseURL: "${BASE_URL_AZURE_US}"
       models:
         default:
-          - "gpt-41"
-          - "gpt-41-nano"
-          - "gpt-41-mini"
           - "gpt-5-chat"
           - "gpt-5-mini"
           - "gpt-5-nano"
         fetch: false
       titleConvo: true
-      titleModel: "gpt-41-mini"
+      titleModel: "gpt-5-nano"
       modelDisplayLabel: "Azure US"
       dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
       headers:
