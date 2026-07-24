@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-import { ArrowUpDown, ArrowUp, ArrowDown, Database } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, Database, Download } from 'lucide-react';
 import { FileSources, FileContext } from 'librechat-data-provider';
 import {
   Button,
@@ -13,9 +13,10 @@ import type { ColumnDef } from '@tanstack/react-table';
 import type { TFile } from 'librechat-data-provider';
 import ImagePreview from '~/components/Chat/Input/Files/ImagePreview';
 import FilePreview from '~/components/Chat/Input/Files/FilePreview';
-import { TranslationKeys, useLocalize } from '~/hooks';
+import { TranslationKeys, useLocalize, useAuthContext } from '~/hooks';
+import { useFileDownload } from '~/data-provider';
 import { SortFilterHeader } from './SortFilterHeader';
-import { formatDate, getFileType } from '~/utils';
+import { formatDate, getFileType, triggerDownload } from '~/utils';
 
 const contextMap: Record<any, TranslationKeys> = {
   [FileContext.avatar]: 'com_ui_avatar',
@@ -290,5 +291,45 @@ export const columns: ColumnDef<TFile>[] = [
 
       return `${value}${suffix}`;
     },
+  },
+  {
+    id: 'actions',
+    size: 40,
+    header: () => null,
+    cell: ({ row }) => {
+      const localize = useLocalize();
+      const { user } = useAuthContext();
+      const file = row.original;
+      const { refetch, isFetching } = useFileDownload(user?.id, file.file_id, {
+        source: file.source,
+      });
+
+      const handleDownload = async () => {
+        const result = await refetch();
+        if (result.data) {
+          triggerDownload(result.data, file.filename);
+        }
+      };
+
+      return (
+        <TooltipAnchor
+          description={localize('com_ui_download')}
+          side="top"
+          render={
+            <Button
+              variant="ghost"
+              disabled={isFetching}
+              onClick={handleDownload}
+              aria-label={localize('com_ui_download')}
+              className="p-1 hover:bg-surface-hover"
+            >
+              <Download className="size-3.5 sm:size-4" />
+            </Button>
+          }
+        />
+      );
+    },
+    enableSorting: false,
+    enableHiding: false,
   },
 ];
