@@ -80,7 +80,7 @@ cp evals/_eval/templates/advisory_drafting.yaml \
 # 2. Edit the YAML — fill in all TODO fields
 
 # 3. Run a single case to verify the setup
-uv run eval-run --config "evals/skills/My Skill/eval_cases.yaml" --case case_1
+uv run eval-run "My Skill" --case case_1
 ```
 
 See the [top-level `_eval` README](../README.md#eval_casesyaml-schema) for the full YAML schema reference.

@@ -477,17 +477,17 @@ for confirmation — execute all three automatically after Step 7 completes.
 ### 8a. Sync cases to Langfuse Dataset
 
 ```bash
-uv run eval-run --config "evals/<skills|agents>/<Name>/eval_cases.yaml" --sync-dataset
+uv run eval-run "<Name>" --sync-dataset
 ```
 
 ### 8b. Run the baseline eval
 
 ```bash
-uv run eval-run --config "evals/<skills|agents>/<Name>/eval_cases.yaml" --langfuse --run-name "1_scaffold_baseline"
+uv run eval-run "<Name>" --langfuse --run-name "1_scaffold_baseline"
 ```
 
 ### 8c. Display the summary
 
 ```bash
-uv run eval-summary --config "evals/<skills|agents>/<Name>/eval_cases.yaml"
+uv run eval-summary "<Name>"
 ```

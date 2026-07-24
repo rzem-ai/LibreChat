@@ -34,19 +34,19 @@ When using `LibreChatAdapter` as the agent adapter, ensure the following before 
 
 ```bash
 # Run all cases for a skill
-uv run eval-run --config "evals/skills/<Skill Name>/eval_cases.yaml"
+uv run eval-run "<Skill Name>"
 ```
 
 This runs all cases defined in the YAML (default). To run a single case:
 
 ```bash
-uv run eval-run --config "evals/skills/<Skill Name>/eval_cases.yaml" --case case_1
+uv run eval-run "<Skill Name>" --case case_1
 ```
 
 View results:
 
 ```bash
-uv run eval-summary --config "evals/skills/<Skill Name>/eval_cases.yaml"
+uv run eval-summary "<Skill Name>"
 ```
 
 ### Sample Output
@@ -199,21 +199,22 @@ These metrics evaluate the entire conversation rather than a single turn. They a
 ### `eval-run`
 
 ```bash
-uv run eval-run --config <path>                          # Run all cases (default)
-uv run eval-run --config <path> --case case_1            # Run specific case
-uv run eval-run --config <path> --case case_1 case_2      # Run multiple cases
-uv run eval-run --config <path> --num-runs 5             # Override run count
-uv run eval-run --config <path> --metrics hallucination,task_completion  # Override gating metrics
-uv run eval-run --config <path> --langfuse               # Push scores to Langfuse
-uv run eval-run --config <path> --langfuse --run-name "baseline"  # Named experiment
-uv run eval-run --config <path> --sync-dataset           # Upload cases to Langfuse Dataset
+uv run eval-run "<Skill Name>"                                      # Run all cases (default)
+uv run eval-run "<Skill Name>" --case case_1                        # Run specific case
+uv run eval-run "<Skill Name>" --case case_1 case_2                 # Run multiple cases
+uv run eval-run "<Skill Name>" --num-runs 5                         # Override run count
+uv run eval-run "<Skill Name>" --metrics hallucination,task_completion  # Override gating metrics
+uv run eval-run "<Skill Name>" --langfuse                           # Push scores to Langfuse
+uv run eval-run "<Skill Name>" --langfuse --run-name "baseline"     # Named experiment
+uv run eval-run "<Skill Name>" --sync-dataset                       # Upload cases to Langfuse Dataset
+uv run eval-run --config <path> ...                                 # --config still works (CI/scripts)
 ```
 
 ### `eval-summary`
 
 ```bash
-uv run eval-summary --config <path>              # Show all cases (default)
-uv run eval-summary --config <path> --latest     # Show only last run
+uv run eval-summary "<Skill Name>"              # Show all cases (default)
+uv run eval-summary "<Skill Name>" --latest     # Show only last run
 uv run eval-summary --file <path/to/case_1.json> # Show specific file
 ```
 
@@ -317,7 +318,7 @@ Add `--langfuse` to any eval run to export eval traces to Langfuse through its
 native OpenTelemetry endpoint:
 
 ```bash
-uv run eval-run --config "evals/skills/Meeting Summariser/eval_cases.yaml" --langfuse --num-runs 2
+uv run eval-run "Meeting Summariser" --langfuse --num-runs 2
 ```
 
 Each eval creates an OTel trace with:
@@ -335,13 +336,13 @@ Langfuse Datasets provide a benchmarking layer on top of traces:
 
 ```bash
 # 1. Sync your eval_cases.yaml to a Langfuse Dataset (compile + push, idempotent)
-uv run eval-run --config "evals/skills/Meeting Summariser/eval_cases.yaml" --sync-dataset
+uv run eval-run "Meeting Summariser" --sync-dataset
 
 # 2. Run evals — traces are automatically linked to dataset items
-uv run eval-run --config "..." --langfuse --run-name "baseline"
+uv run eval-run "Meeting Summariser" --langfuse --run-name "baseline"
 
 # 3. Make changes, run again with a new name
-uv run eval-run --config "..." --langfuse --run-name "v2-improved-prompt"
+uv run eval-run "Meeting Summariser" --langfuse --run-name "v2-improved-prompt"
 ```
 
 The `--sync-dataset` command performs two steps:
@@ -399,7 +400,7 @@ The LibreChat adapter requires these env vars: `LIBRECHAT_BASE_URL`, `LIBRECHAT_
 ```
 _eval/
 ├── __init__.py              # Package marker, re-exports run_eval
-├── run_eval.py              # CLI entry point (--config, --case, --num-runs, --metrics, --langfuse)
+├── run_eval.py              # CLI entry point (name | --config, --case, --num-runs, --metrics, --langfuse)
 ├── loader.py                # YAML config loading, case resolution, source text helpers
 ├── schema.py                # Pydantic models for eval_cases.yaml validation
 ├── compile.py               # Compiles eval_cases.yaml → dataset.jsonl (auto-runs before sync)
@@ -407,7 +408,7 @@ _eval/
 ├── results.py               # Aggregation, report printing, JSON persistence
 ├── metrics.py               # All metric definitions, EvaluatorModel, registries
 ├── conftest.py              # pytest integration (pytest_addoption, pytest_generate_tests)
-├── summarise_results.py     # Rich-formatted result viewer (--config, --latest, --file)
+├── summarise_results.py     # Rich-formatted result viewer (name | --config, --latest, --file)
 ├── tests/                   # Schema and framework validation tests
 ├── telemetry/               # OpenTelemetry setup + eval span reporting
 │   ├── __init__.py

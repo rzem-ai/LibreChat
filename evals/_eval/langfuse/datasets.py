@@ -25,6 +25,43 @@ load_dotenv()
 _DATASET_ITEM_NAMESPACE = uuid.UUID("a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d")
 
 
+def find_evals_root() -> Path:
+    """Walk upward from CWD to locate the evals/ directory."""
+    env_root = os.environ.get("EVAL_ROOT", "").strip()
+    if env_root:
+        return Path(env_root)
+    for parent in [Path.cwd(), *Path.cwd().parents]:
+        candidate = parent / "evals"
+        if (candidate / "skills").exists() or (candidate / "agents").exists():
+            return candidate
+        if (parent / "skills").exists() or (parent / "agents").exists():
+            return parent
+    return Path.cwd() / "evals"
+
+
+def resolve_skill_config(name: str) -> Optional[Path]:
+    """Return the eval_cases.yaml path for a skill/agent folder name, or None."""
+    evals_root = find_evals_root()
+    for subdir in ("skills", "agents"):
+        candidate = evals_root / subdir / name / "eval_cases.yaml"
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def list_available_names() -> List[str]:
+    """List all skill/agent folder names that contain an eval_cases.yaml."""
+    evals_root = find_evals_root()
+    names = []
+    for subdir in ("skills", "agents"):
+        base = evals_root / subdir
+        if base.exists():
+            for folder in sorted(base.iterdir()):
+                if folder.is_dir() and (folder / "eval_cases.yaml").exists():
+                    names.append(folder.name)
+    return names
+
+
 def _resolve_langfuse_host() -> str:
     """Return the Langfuse base URL suitable for host-side eval runs."""
     return (

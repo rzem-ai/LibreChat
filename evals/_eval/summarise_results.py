@@ -5,8 +5,9 @@ Reads the JSON saved by runner.py and displays gating metrics, diagnostic
 metrics, and leading question probe results in styled tables.
 
 Usage:
-    PYTHONPATH="evals:$PYTHONPATH" python -m _eval.summarise_results --config "evals/Meeting Summariser/eval_cases.yaml"
-    PYTHONPATH="evals:$PYTHONPATH" python -m _eval.summarise_results --file "evals/Meeting Summariser/.results/case_1.json"
+    eval-summary "Pre engagement nda reviewer"
+    eval-summary "Contract Analyser" --latest
+    eval-summary --file "evals/skills/Meeting Summariser/.results/case_1.json"
 """
 
 import json
@@ -320,43 +321,61 @@ def summarise_all(results_dir: Path) -> None:
 
 
 def main():
+    from _eval.langfuse.datasets import resolve_skill_config, list_available_names
+
     parser = argparse.ArgumentParser(
         description="Summarise an eval run with Rich-formatted output.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            '  python -m _eval.summarise_results --config "evals/Meeting Summariser/eval_cases.yaml"\n'
-            '  python -m _eval.summarise_results --config "evals/Meeting Summariser/eval_cases.yaml" --latest\n'
-            '  python -m _eval.summarise_results --file path/to/.results/case_1.json\n'
+            '  eval-summary "Pre engagement nda reviewer"\n'
+            '  eval-summary "Contract Analyser" --latest\n'
+            '  eval-summary --file path/to/.results/case_1.json\n'
         ),
     )
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument(
-        "--config",
-        help="Path to the skill's eval_cases.yaml (results are read from .results/ next to it).",
+    parser.add_argument(
+        "name", nargs="?",
+        help="Skill or agent folder name (e.g. 'Pre engagement nda reviewer').",
     )
-    group.add_argument(
+    parser.add_argument(
+        "--config",
+        help="Path to the skill's eval_cases.yaml (alternative to positional name).",
+    )
+    parser.add_argument(
         "--file",
         help="Direct path to the eval run JSON file.",
     )
     parser.add_argument(
         "--latest", action="store_true", default=False,
-        help="Show only the latest run (requires --config). Reads .latest_eval_run.json.",
+        help="Show only the latest run. Reads .latest_eval_run.json.",
     )
     args = parser.parse_args()
 
     if args.file:
-        results_path = Path(args.file).resolve()
-        summarise(results_path)
-    else:
-        config_path = Path(args.config).resolve()
-        results_dir = config_path.parent / ".results"
+        summarise(Path(args.file).resolve())
+        return
 
-        if args.latest:
-            results_path = results_dir / ".latest_eval_run.json"
-            summarise(results_path)
-        else:
-            summarise_all(results_dir)
+    if args.config:
+        config_path = Path(args.config).resolve()
+    elif args.name:
+        config_path = resolve_skill_config(args.name)
+        if config_path is None:
+            import sys
+            print(f"ERROR: No eval config found for '{args.name}'", file=sys.stderr)
+            available = list_available_names()
+            if available:
+                print("Available skills/agents:", file=sys.stderr)
+                for n in available:
+                    print(f"  {n}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        parser.error("Provide a skill/agent name, --config <path>, or --file <path>")
+
+    results_dir = config_path.parent / ".results"
+    if args.latest:
+        summarise(results_dir / ".latest_eval_run.json")
+    else:
+        summarise_all(results_dir)
 
 
 if __name__ == "__main__":

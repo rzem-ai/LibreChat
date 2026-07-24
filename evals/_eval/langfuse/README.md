@@ -19,7 +19,7 @@ This package handles the Langfuse-API-specific pieces of the eval framework. Ope
 - The compile step (`eval_cases.yaml` → `dataset.jsonl`) runs automatically before sync when you pass `--sync-dataset`
 
 ```bash
-uv run eval-run --config "evals/skills/Meeting Summariser/eval_cases.yaml" --sync-dataset
+uv run eval-run "Meeting Summariser" --sync-dataset
 ```
 
 ### Trace Linking
@@ -30,8 +30,8 @@ This enables the **Datasets → Runs** view in Langfuse, where you can compare `
 
 ```bash
 # Named experiments for comparison
-uv run eval-run --config "..." --langfuse --run-name "baseline"
-uv run eval-run --config "..." --langfuse --run-name "v2-improved-prompt"
+uv run eval-run "Meeting Summariser" --langfuse --run-name "baseline"
+uv run eval-run "Meeting Summariser" --langfuse --run-name "v2-improved-prompt"
 ```
 
 ### Score Posting

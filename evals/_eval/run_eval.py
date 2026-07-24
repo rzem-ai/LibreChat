@@ -2,10 +2,9 @@
 Standalone CLI entry point for the eval framework.
 
 Usage:
-    PYTHONPATH="evals:$PYTHONPATH" python -m _eval.run_eval --config "evals/skills/<Skill>/eval_cases.yaml" --case case_1
-    PYTHONPATH="evals:$PYTHONPATH" python -m _eval.run_eval --config "evals/skills/<Skill>/eval_cases.yaml" --all
-    PYTHONPATH="evals:$PYTHONPATH" python -m _eval.run_eval --config "evals/skills/<Skill>/eval_cases.yaml" --case case_1 --metrics hallucination,task_completion
-    PYTHONPATH="evals:$PYTHONPATH" python -m _eval.run_eval --config "evals/skills/<Skill>/eval_cases.yaml" --all --num-runs 3
+    eval-run "Pre engagement nda reviewer" --langfuse --run-name baseline
+    eval-run "Contract Analyser" --case case_1
+    eval-run --config "evals/skills/<Skill>/eval_cases.yaml" --all
 """
 
 import argparse
@@ -25,6 +24,7 @@ if str(_EVAL_DIR.parent) not in sys.path:
 from _eval.runner import run_eval
 from _eval.compile import compile_skill
 from _eval.langfuse import sync_dataset_to_langfuse
+from _eval.langfuse.datasets import resolve_skill_config, list_available_names
 
 
 def main():
@@ -33,20 +33,24 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            '  python -m _eval.run_eval --config "evals/skills/Meeting Summariser/eval_cases.yaml" --case case_1\n'
-            '  python -m _eval.run_eval --config "evals/skills/Meeting Summariser/eval_cases.yaml" --all\n'
-            '  python -m _eval.run_eval --config "..." --case case_1 --metrics hallucination,task_completion\n'
+            '  eval-run "Pre engagement nda reviewer" --langfuse --run-name baseline\n'
+            '  eval-run "Contract Analyser" --case case_1\n'
+            '  eval-run --config "evals/skills/Meeting Summariser/eval_cases.yaml" --all\n'
         ),
     )
-    group = parser.add_mutually_exclusive_group(required=False)
-    group.add_argument("--case", nargs="+", help="One or more case keys from eval_cases.yaml (e.g. case_1 case_2)")
-    group.add_argument(
+    parser.add_argument(
+        "name", nargs="?",
+        help="Skill or agent folder name (e.g. 'Pre engagement nda reviewer').",
+    )
+    case_group = parser.add_mutually_exclusive_group(required=False)
+    case_group.add_argument("--case", nargs="+", help="One or more case keys from eval_cases.yaml (e.g. case_1 case_2)")
+    case_group.add_argument(
         "--all", action="store_true", default=False,
         help="Run every case defined in the config YAML sequentially (default if --case is omitted).",
     )
     parser.add_argument(
-        "--config", required=True,
-        help="Path to the skill's eval_cases.yaml config file.",
+        "--config", default=None,
+        help="Path to the skill's eval_cases.yaml config file (alternative to positional name).",
     )
     parser.add_argument(
         "--metrics", default=None,
@@ -78,10 +82,23 @@ def main():
     )
     args = parser.parse_args()
 
-    config_path = Path(args.config).resolve()
-    if not config_path.exists():
-        print(f"ERROR: Config file not found: {config_path}", file=sys.stderr)
-        sys.exit(1)
+    if args.config:
+        config_path = Path(args.config).resolve()
+        if not config_path.exists():
+            print(f"ERROR: Config file not found: {config_path}", file=sys.stderr)
+            sys.exit(1)
+    elif args.name:
+        config_path = resolve_skill_config(args.name)
+        if config_path is None:
+            print(f"ERROR: No eval config found for '{args.name}'", file=sys.stderr)
+            available = list_available_names()
+            if available:
+                print("Available skills/agents:", file=sys.stderr)
+                for n in available:
+                    print(f"  {n}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        parser.error("Provide a skill/agent name or --config <path>")
 
     if args.sync_dataset:
         with open(config_path) as f:
