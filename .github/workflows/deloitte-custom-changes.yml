@@ -17,7 +17,7 @@ env:
 
 jobs:
   update-csv:
-    if: github.event.pull_request.merged == true && !startsWith(github.event.pull_request.head.ref, env.EXCLUDED_BRANCH_PREFIX)
+    if: github.event.pull_request.merged == true && !startsWith(github.event.pull_request.head.ref, 'sync/')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout develop
