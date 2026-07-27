@@ -170,10 +170,10 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 25. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
 26. `CLEARTRACK_MCP_GATEWAY_CLIENT_ID=3e5d28f1-91a3-4748-ad73-5fa544f1d3e2`
 27. `CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET=<update with the provided secret from another team member>`
-28. `CLEARTRACK_MCP_GATEWAY_CLIENT_ID_LLM=498ce9fd-195b-40c5-82f1-8fc4a6d00d88`
-29. `CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET_LLM=<update with the provided secret from another team member>`
+28. `MCP_GATEWAY_TOOLSETS=teams,research,news`
 
-> Items 26–29 supply OAuth credentials for the **ClearTrack MCP Gateway** app registrations referenced by the `mcpServers` block in `librechat.yaml` (repo root) and `charts/config/librechat.yaml` (Helm). The client IDs are identifiers and are safe to commit; the client secrets must be obtained from another team member and kept out of source control.
+
+> Items 26–27 supply OAuth credentials for the **ClearTrack MCP Gateway** app registration referenced by the `mcpServers` block in `librechat.yaml` (repo root) and `charts/config/librechat.yaml` (Helm). The client ID is an identifier and is safe to commit; the client secret must be obtained from another team member and kept out of source control.
 
 #### How to obtain the JWT token
 ⚠️ As of May 2026, tokens expire after ~8 hours. If models suddenly stop working, reissue the token.
