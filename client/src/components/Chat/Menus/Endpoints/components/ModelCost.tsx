@@ -1,11 +1,10 @@
 import type { TModelPricing } from 'librechat-data-provider';
 import { useModelSelectorContext } from '../ModelSelectorContext';
 
-function formatPrice(value: number) {
-  return `$${value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
+function formatMultiplier(value: number) {
+  return `${value.toLocaleString(undefined, {
     maximumFractionDigits: 3,
-  })}`;
+  })}x`;
 }
 
 export function getModelCost(
@@ -30,11 +29,11 @@ export default function ModelCost({ modelId }: { modelId: string | null | undefi
   return (
     <span
       className="shrink-0 whitespace-nowrap rounded-md bg-surface-tertiary px-1.5 py-0.5 text-xs text-text-secondary"
-      title={`Input ${formatPrice(pricing.inputPer1M)} / 1M tokens, output ${formatPrice(
+      title={`Input ${formatMultiplier(pricing.inputPer1M)}, output ${formatMultiplier(
         pricing.outputPer1M,
-      )} / 1M tokens`}
+      )}`}
     >
-      {formatPrice(pricing.inputPer1M)} in / {formatPrice(pricing.outputPer1M)} out
+      {formatMultiplier(pricing.inputPer1M)} in / {formatMultiplier(pricing.outputPer1M)} out
     </span>
   );
 }
