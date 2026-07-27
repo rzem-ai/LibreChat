@@ -1,10 +1,6 @@
 import type { TModelPricing } from 'librechat-data-provider';
 import { useModelSelectorContext } from '../ModelSelectorContext';
 
-const REFERENCE_MODEL_ID = 'gpt-41';
-const MULTIPLIER_ROUNDING_INCREMENT = 0.1;
-const MIN_MULTIPLIER = 0.1;
-
 function formatMultiplier(value: number) {
   return `${value.toLocaleString(undefined, {
     maximumFractionDigits: 3,
@@ -23,12 +19,14 @@ function getCostFactor(
   outputCost: number,
   referenceInputCost: number,
   referenceOutputCost: number,
+  roundingIncrement: number,
+  minMultiplier: number,
 ) {
   const factor = (inputCost / referenceInputCost + outputCost / referenceOutputCost) / 2;
 
   return Math.max(
-    Math.ceil(factor / MULTIPLIER_ROUNDING_INCREMENT) * MULTIPLIER_ROUNDING_INCREMENT,
-    MIN_MULTIPLIER,
+    Math.ceil(factor / roundingIncrement) * roundingIncrement,
+    minMultiplier,
   );
 }
 
@@ -44,11 +42,18 @@ export function getModelCost(
 }
 
 export default function ModelCost({ modelId }: { modelId: string | null | undefined }) {
-  const { modelPricing = {} } = useModelSelectorContext();
+  const { modelPricing = {}, endpointCostConfig } = useModelSelectorContext();
   const pricing = getModelCost(modelId, modelPricing);
+
+  if (!pricing || !endpointCostConfig) {
+    return null;
+  }
+
+  const { REFERENCE_MODEL_ID, MULTIPLIER_ROUNDING_INCREMENT, MIN_MULTIPLIER } =
+    endpointCostConfig;
   const referencePricing = getModelCost(REFERENCE_MODEL_ID, modelPricing);
 
-  if (!pricing || !referencePricing) {
+  if (!referencePricing) {
     return null;
   }
 
@@ -57,6 +62,8 @@ export default function ModelCost({ modelId }: { modelId: string | null | undefi
     pricing.outputPer1M,
     referencePricing.inputPer1M,
     referencePricing.outputPer1M,
+    MULTIPLIER_ROUNDING_INCREMENT,
+    MIN_MULTIPLIER,
   );
 
   return (

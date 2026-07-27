@@ -1,3 +1,3 @@
-const { getModelPricing, clearModelPricingCache } = require('@librechat/api');
+const { getEndpointCostConfig, getModelPricing, clearModelPricingCache } = require('@librechat/api');
 
-module.exports = { getModelPricing, clearModelPricingCache };
+module.exports = { getEndpointCostConfig, getModelPricing, clearModelPricingCache };

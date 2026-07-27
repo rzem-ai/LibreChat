@@ -36,8 +36,8 @@ services:
         source: ./librechat.yaml
         target: /app/librechat.yaml
       - type: bind
-        source: ./charts/config/llm-cost-analyzer-configmap.yaml
-        target: /app/charts/config/llm-cost-analyzer-configmap.yaml
+        source: ./charts/config/endpoint-costs.yaml
+        target: /app/endpoint-costs.yaml
         read_only: true
       # Deloitte GEL assets — auto-injected at container start via command above
       - type: bind

@@ -1,15 +1,22 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { logger } from '@librechat/data-schemas';
-import type { TModelPricing } from 'librechat-data-provider';
+import type { TEndpointCostConfig, TModelPricing } from 'librechat-data-provider';
 
-const DEFAULT_PRICING_PATH = '/app/llm-pricing.yaml';
+const DEFAULT_PRICING_PATH = '/app/endpoint-costs.yaml';
 const LOCAL_CONFIGMAP_PATH = path.resolve(
   process.cwd(),
-  'charts/config/llm-cost-analyzer-configmap.yaml',
+  'charts/config/endpoint-costs.yaml',
 );
+const DEFAULT_ENDPOINT_COST_CONFIG: TEndpointCostConfig = {
+  REFERENCE_MODEL_ID: 'gpt-41',
+  MULTIPLIER_ROUNDING_INCREMENT: 0.1,
+  MIN_MULTIPLIER: 0.1,
+};
 
-let cachedPricing: TModelPricing | undefined;
+let cachedEndpointCosts:
+  | { modelPricing: TModelPricing; endpointCostConfig: TEndpointCostConfig }
+  | undefined;
 
 function readFirstExisting(paths: Array<string | undefined>): string | null {
   for (const filePath of paths) {
@@ -98,33 +105,76 @@ function parsePricingYaml(pricingYaml: string): TModelPricing {
   return pricing;
 }
 
-export function getModelPricing(): TModelPricing {
-  if (cachedPricing) {
-    return cachedPricing;
+function parseEndpointCostConfig(contents: string): TEndpointCostConfig {
+  const config = { ...DEFAULT_ENDPOINT_COST_CONFIG };
+
+  const referenceModelMatch = contents.match(/^\s*REFERENCE_MODEL_ID:\s*['"]?([^'"\n]+)['"]?\s*$/m);
+  if (referenceModelMatch?.[1]) {
+    config.REFERENCE_MODEL_ID = referenceModelMatch[1].trim();
+  }
+
+  const roundingIncrementMatch = contents.match(
+    /^\s*MULTIPLIER_ROUNDING_INCREMENT:\s*([0-9.]+)\s*$/m,
+  );
+  const roundingIncrement = Number(roundingIncrementMatch?.[1]);
+  if (Number.isFinite(roundingIncrement) && roundingIncrement > 0) {
+    config.MULTIPLIER_ROUNDING_INCREMENT = roundingIncrement;
+  }
+
+  const minMultiplierMatch = contents.match(/^\s*MIN_MULTIPLIER:\s*([0-9.]+)\s*$/m);
+  const minMultiplier = Number(minMultiplierMatch?.[1]);
+  if (Number.isFinite(minMultiplier) && minMultiplier > 0) {
+    config.MIN_MULTIPLIER = minMultiplier;
+  }
+
+  return config;
+}
+
+function getEndpointCosts() {
+  if (cachedEndpointCosts) {
+    return cachedEndpointCosts;
   }
 
   try {
     const rawContents = readFirstExisting([
+      process.env.ENDPOINT_COSTS_CONFIG_PATH,
       process.env.LLM_PRICING_CONFIG_PATH,
       DEFAULT_PRICING_PATH,
       LOCAL_CONFIGMAP_PATH,
     ]);
     if (!rawContents) {
-      cachedPricing = {};
-      return cachedPricing;
+      cachedEndpointCosts = {
+        modelPricing: {},
+        endpointCostConfig: DEFAULT_ENDPOINT_COST_CONFIG,
+      };
+      return cachedEndpointCosts;
     }
 
     const pricingYaml = extractPricingYaml(rawContents);
-    cachedPricing = parsePricingYaml(pricingYaml);
-    return cachedPricing;
+    cachedEndpointCosts = {
+      modelPricing: parsePricingYaml(pricingYaml),
+      endpointCostConfig: parseEndpointCostConfig(rawContents),
+    };
+    return cachedEndpointCosts;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.warn(`[config] Failed to load model pricing: ${message}`);
-    cachedPricing = {};
-    return cachedPricing;
+    cachedEndpointCosts = {
+      modelPricing: {},
+      endpointCostConfig: DEFAULT_ENDPOINT_COST_CONFIG,
+    };
+    return cachedEndpointCosts;
   }
 }
 
+export function getModelPricing(): TModelPricing {
+  return getEndpointCosts().modelPricing;
+}
+
+export function getEndpointCostConfig(): TEndpointCostConfig {
+  return getEndpointCosts().endpointCostConfig;
+}
+
 export function clearModelPricingCache(): void {
-  cachedPricing = undefined;
+  cachedEndpointCosts = undefined;
 }
