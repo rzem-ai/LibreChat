@@ -9,15 +9,16 @@ on:
 
 permissions:
   contents: write
-  pull-requests: read
+  pull-requests: write
 
 env:
   EXCLUDED_PATH_PREFIXES: admin_panel/,charts/,deloitte/,rag_api/
   EXCLUDED_BRANCH_PREFIX: sync/
+  EXCLUDED_AUTOGEN_BRANCH_PREFIX: track-changes/
 
 jobs:
   update-csv:
-    if: github.event.pull_request.merged == true && !startsWith(github.event.pull_request.head.ref, 'sync/')
+    if: github.event.pull_request.merged == true && !startsWith(github.event.pull_request.head.ref, 'sync/') && !startsWith(github.event.pull_request.head.ref, 'track-changes/')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout develop
@@ -182,29 +183,31 @@ jobs:
               writer.writerows(sorted_rows)
           PY
 
-      - name: Commit CSV changes
+      - name: Prepare CSV change state
+        id: csv-state
         run: |
           rm -f deloitte/pr-metadata.json
           if git diff --quiet -- deloitte/DeloitteCustomChanges.csv; then
             echo "No CSV changes to commit."
-            exit 0
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add deloitte/DeloitteCustomChanges.csv
-          git commit -m "chore(deloitte): update custom changes CSV for PR #${{ github.event.pull_request.number }}"
+      - name: Create CSV update pull request
+        if: steps.csv-state.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: develop
+          branch: track-changes/deloitte-csv-pr-${{ github.event.pull_request.number }}
+          delete-branch: true
+          commit-message: 'chore(deloitte): update custom changes CSV for PR #${{ github.event.pull_request.number }}'
+          title: 'chore(deloitte): update custom changes CSV for PR #${{ github.event.pull_request.number }}'
+          body: |
+            Automated CSV update generated after merge of [#${{ github.event.pull_request.number }}](https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}).
 
-          for attempt in 1 2 3 4 5; do
-            if git push origin HEAD:develop; then
-              echo "Push succeeded on attempt $attempt."
-              break
-            fi
-            if [ "$attempt" -eq 5 ]; then
-              echo "Push failed after $attempt attempts."
-              exit 1
-            fi
-            echo "Push failed (attempt $attempt), rebasing and retrying..."
-            git fetch origin develop
-            git rebase origin/develop
-          done
+            This PR updates:
+            - deloitte/DeloitteCustomChanges.csv
+          add-paths: |
+            deloitte/DeloitteCustomChanges.csv
