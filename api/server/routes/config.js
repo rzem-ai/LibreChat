@@ -14,6 +14,7 @@ const { hasCapability } = require('~/server/middleware/roles/capabilities');
 const { getLdapConfig } = require('~/server/services/Config/ldap');
 const { getRumConfig } = require('~/server/services/Config/rum');
 const { getAppConfig } = require('~/server/services/Config/app');
+const { getModelPricing } = require('~/server/services/Config/modelPricing');
 
 const router = express.Router();
 const emailLoginEnabled =
@@ -251,6 +252,7 @@ router.get('/', async function (req, res) {
 
     const balanceConfig = getBalanceConfig(appConfig);
     const cloudFront = buildCloudFrontStartupConfig();
+    const modelPricing = getModelPricing();
 
     /** @type {TStartupConfig} */
     const payload = {
@@ -266,6 +268,7 @@ router.get('/', async function (req, res) {
       }),
       turnstile: appConfig?.turnstileConfig,
       modelSpecs: sanitizeModelSpecs(appConfig?.modelSpecs),
+      ...(Object.keys(modelPricing).length ? { modelPricing } : {}),
       balance: balanceConfig,
       bundlerURL: process.env.SANDPACK_BUNDLER_URL,
       staticBundlerURL: process.env.SANDPACK_STATIC_BUNDLER_URL,

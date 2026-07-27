@@ -10,6 +10,7 @@ import { CustomMenuItem as MenuItem } from '../CustomMenu';
 import { shouldRenderEndpointOption } from '../utils';
 import SpecDescription from './SpecDescription';
 import SpecIcon from './SpecIcon';
+import ModelCost from './ModelCost';
 import { cn } from '~/utils';
 
 interface SearchResultsProps {
@@ -86,6 +87,7 @@ export function SearchResults({ results, localize, searchValue }: SearchResultsP
                   <SpecDescription description={spec.description} />
                 </div>
               </div>
+              <ModelCost modelId={spec.preset.model} />
               {selectedSpec === spec.name && (
                 <>
                   <CheckCircle2
@@ -184,9 +186,9 @@ export function SearchResults({ results, localize, searchValue }: SearchResultsP
                       key={`${endpoint.value}-${modelId}-search-${i}`}
                       onClick={() => handleSelectModel(endpoint, modelId)}
                       aria-selected={isModelSelected || undefined}
-                      className="flex w-full cursor-pointer items-center justify-start rounded-lg px-3 py-2 pl-6 text-sm"
+                      className="flex w-full cursor-pointer items-center justify-start gap-2 rounded-lg px-3 py-2 pl-6 text-sm"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
                         {endpoint.modelIcons?.[modelId] && (
                           <div className="flex h-5 w-5 items-center justify-center overflow-hidden rounded-full">
                             <img
@@ -196,8 +198,9 @@ export function SearchResults({ results, localize, searchValue }: SearchResultsP
                             />
                           </div>
                         )}
-                        <span>{modelName}</span>
+                        <span className="truncate">{modelName}</span>
                       </div>
+                      <ModelCost modelId={modelId} />
                       {isGlobal && (
                         <EarthIcon className="ml-auto size-4 text-green-400" aria-hidden="true" />
                       )}

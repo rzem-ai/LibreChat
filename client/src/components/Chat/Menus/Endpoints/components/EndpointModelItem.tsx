@@ -6,6 +6,7 @@ import type { Endpoint } from '~/common';
 import { useFavorites, useLocalize, useIsActiveItem } from '~/hooks';
 import { useModelSelectorContext } from '../ModelSelectorContext';
 import { CustomMenuItem as MenuItem } from '../CustomMenu';
+import ModelCost from './ModelCost';
 import { cn } from '~/utils';
 
 interface EndpointModelItemProps {
@@ -108,6 +109,7 @@ export function EndpointModelItem({ modelId, endpoint }: EndpointModelItemProps)
         <span className="truncate">{modelName}</span>
         {isGlobal && <EarthIcon className="ml-1 size-4 text-surface-submit" />}
       </div>
+      <ModelCost modelId={modelId} />
       <button
         type="button"
         tabIndex={isActive ? 0 : -1}

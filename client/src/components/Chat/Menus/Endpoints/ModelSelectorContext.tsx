@@ -28,6 +28,7 @@ type ModelSelectorContextType = {
   agentsMap: t.TAgentsMap | undefined;
   assistantsMap: t.TAssistantsMap | undefined;
   endpointsConfig: t.TEndpointsConfig;
+  modelPricing: t.TModelPricing;
 
   // Functions
   endpointRequiresUserKey: (endpoint: string) => boolean;
@@ -40,6 +41,7 @@ type ModelSelectorContextType = {
 } & ReturnType<typeof useKeyDialog>;
 
 const ModelSelectorContext = createContext<ModelSelectorContextType | undefined>(undefined);
+const emptyModelPricing: t.TModelPricing = {};
 
 export function useModelSelectorContext() {
   const context = useContext(ModelSelectorContext);
@@ -80,6 +82,7 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
       return true;
     });
   }, [startupConfig, agentsMap]);
+  const modelPricing = startupConfig?.modelPricing ?? emptyModelPricing;
 
   const permissionLevel = useAgentDefaultPermissionLevel();
   const { data: agents = null } = useListAgentsQuery(
@@ -251,6 +254,7 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
       assistantsMap,
       mappedEndpoints,
       endpointsConfig,
+      modelPricing,
       handleSelectSpec,
       handleSelectModel,
       setSelectedValues,
@@ -270,6 +274,7 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
       assistantsMap,
       mappedEndpoints,
       endpointsConfig,
+      modelPricing,
       handleSelectSpec,
       handleSelectModel,
       setSelectedValues,

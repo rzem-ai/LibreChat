@@ -1356,6 +1356,15 @@ export type TRumConfig = {
   environment?: string;
 };
 
+export type TModelPricing = Record<
+  string,
+  {
+    inputPer1M: number;
+    outputPer1M: number;
+    provider?: string;
+  }
+>;
+
 export type StartupConfigContext = 'share';
 
 export type TStartupConfig = {
@@ -1394,6 +1403,7 @@ export type TStartupConfig = {
   helpAndFaqURL: string;
   customFooter?: string;
   modelSpecs?: TSpecsConfig;
+  modelPricing?: TModelPricing;
   modelDescriptions?: Record<string, Record<string, string>>;
   sharedLinksEnabled: boolean;
   publicSharedLinksEnabled: boolean;

@@ -7,4 +7,5 @@ metadata:
 data:
   librechat.yaml: |-
 {{- .Files.Get "config/librechat.yaml" | nindent 4 }}
-
+  llm-cost-analyzer-configmap.yaml: |-
+{{- .Files.Get "config/llm-cost-analyzer-configmap.yaml" | nindent 4 }}

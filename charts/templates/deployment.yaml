@@ -112,6 +112,10 @@ spec:
               mountPath: /app/librechat.yaml
               subPath: librechat.yaml
               readOnly: true
+            - name: librechat-config
+              mountPath: /app/llm-pricing.yaml
+              subPath: llm-cost-analyzer-configmap.yaml
+              readOnly: true
             {{- with $config.volumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

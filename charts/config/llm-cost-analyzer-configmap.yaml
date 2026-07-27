@@ -1,0 +1,78 @@
+{{- if .Values.llmCostAnalyzer.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-llm-cost-analyzer-config
+  labels:
+    app: llm-cost-analyzer
+    release: {{ .Release.Name }}
+    chart: {{ include "envoy-gateway.chart" . }}
+data:
+  pricing.yaml: |
+    # LLM Pricing Configuration for Cost Analysis
+    # Prices are per 1M tokens (input/output) in USD
+    providers:
+      azure-openai:
+        models:
+            gpt-41:
+                input_per_1m: 2
+                output_per_1m: 8
+            gpt-41-mini:
+                input_per_1m: 0.4
+                output_per_1m: 1.6
+            gpt-41-nano:
+                input_per_1m: 0.1
+                output_per_1m: 0.4            
+            gpt-5-chat:
+                input_per_1m: 2
+                output_per_1m: 8
+            gpt-5-mini:
+                input_per_1m: 0.4
+                output_per_1m: 1.6
+            gpt-5-nano:
+                input_per_1m: 0.1
+                output_per_1m: 0.4
+            gpt-4o:
+                input_per_1m: 2.5
+                output_per_1m: 10
+            gpt-4o-mini:
+                input_per_1m: 0.15
+                output_per_1m: 0.6
+      vertex-ai:
+        models:
+            gemini-2.0-flash:
+                input_per_1m: 0.1
+                output_per_1m: 0.4
+            gemini-2.5-pro:
+                input_per_1m: 1.25
+                output_per_1m: 10
+            gemini-2.5-flash:
+                input_per_1m: 0.15
+                output_per_1m: 0.6
+            gemini-1.5-pro:
+                input_per_1m: 1.25
+                output_per_1m: 5
+            gemini-1.5-flash:
+                input_per_1m: 0.075
+                output_per_1m: 0.3
+      anthropic:
+        models:
+            claude-sonnet-4-5:
+                input_per_1m: 3
+                output_per_1m: 15
+            claude-sonnet-4-6:
+                input_per_1m: 3
+                output_per_1m: 15
+            claude-opus-4-5:
+                input_per_1m: 5
+                output_per_1m: 25
+            claude-opus-4-6:
+                input_per_1m: 5
+                output_per_1m: 25
+            claude-opus-4-7:
+                input_per_1m: 5
+                output_per_1m: 25
+            claude-haiku-4-5:
+                input_per_1m: 1
+                output_per_1m: 5
+{{- end }}
