@@ -69,9 +69,9 @@ export default function ModelCost({ modelId }: { modelId: string | null | undefi
   return (
     <span
       className="shrink-0 whitespace-nowrap rounded-md bg-surface-tertiary px-1.5 py-0.5 text-xs text-text-secondary"
-      title={`Input ${formatPrice(pricing.inputPer1M)} / 1M tokens, output ${formatPrice(
+      title={`${formatPrice(pricing.inputPer1M)} (USD) per 1M input tokens, ${formatPrice(
         pricing.outputPer1M,
-      )} / 1M tokens`}
+      )} (USD) per 1M output tokens`}
     >
       {formatMultiplier(costFactor)}
     </span>
