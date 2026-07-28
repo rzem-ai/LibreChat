@@ -14,7 +14,7 @@ metadata:
   billCode: GAS04665-01-01-01-1000
 spec:
   type: website
-  owner: 'user:'
+  owner: 'group:myassist-core'
   lifecycle: experimental
   businessUnit: tt
   businessLead: AU_CTK_TT_BULeads

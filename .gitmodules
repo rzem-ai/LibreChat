@@ -1,0 +1,27 @@
+# Git Submodules Configuration
+#
+# Submodules allow us to include external Git repositories as subdirectories within this project.
+# They maintain their own commit history and can be updated independently.
+#
+# To initialize after cloning: git submodule update --init --recursive
+
+# The 'rag_api' submodule links to the tt-librechat-rag repository, which provides
+# RAG (Retrieval-Augmented Generation) API functionality for LibreChat.
+# It is configured to follow the 'develop' branch when updating with `git submodule update --remote`.
+#
+# To update to latest: git submodule update --remote rag_api
+
+[submodule "rag_api"]
+	path = rag_api
+	url = https://github.com/Deloitte-Australia/tt-librechat-rag.git
+	branch = develop
+
+# The 'admin_panel' submodule links to the ea-libre-admin repository, which provides
+# Admin Panel functionality for LibreChat.
+# It is configured to follow the 'develop' branch when updating with `git submodule update --remote`.
+#
+# To update to latest: git submodule update --remote admin_panel
+[submodule "admin_panel"]
+	path = admin_panel
+	url = https://github.com/Deloitte-Australia/ea-libreadmin.git
+	branch = develop

@@ -1,0 +1,282 @@
+name: Upstream Sync PR
+#
+# Authentication: GitHub App (repo secrets APP_ID + APP_PRIVATE_KEY)
+#
+# This workflow uses a GitHub App to authenticate to sidestep EMU restrictions
+# by authenticating as an app rather than a user. It's also repo-scoped
+# and doesn't rely on any individual user account, making it a cleaner long-term
+# solution.
+#
+# Setup:
+#   1. Create a GitHub App with the following permissions:
+#       • Read and Write access to Contents and Pull Requests
+#       • Read access to Metadata (auto-required)
+#      Scope the app to the target organisation.
+#   2. Install the app on the specific repository.
+#   3. Generate a PEM private key and add APP_ID and APP_PRIVATE_KEY as
+#      repository secrets.
+#
+# The workflow also requires UPSTREAM_SYNC_TOKEN (a PAT with repo + workflow
+# scopes) ONLY if upstream changes include files under .github/workflows/,
+# since the default GITHUB_TOKEN cannot push workflow file changes.
+#
+
+on:
+  # Scheduled runs intentionally disabled while the workflow is being validated.
+  # Re-enable in a follow-up PR once the upstream-sync-test branch has confirmed
+  # the workflow behaves correctly end-to-end.
+  # schedule:
+  #   # Every Monday at 00:00 UTC
+  #   - cron: "0 0 * * 1"
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: "Target branch for the sync PR"
+        required: true
+        default: "develop"
+        type: choice
+        options:
+          - develop
+          - dev
+          - uat
+          - main
+
+permissions: {} # Default to no permissions; scoped per job below
+
+concurrency:
+  group: upstream-sync-pr
+  cancel-in-progress: false
+
+env:
+  # Upstream repository to sync from (owner/repo format)
+  UPSTREAM_REPO: "danny-avila/LibreChat"
+  # Upstream branch to sync from
+  UPSTREAM_BRANCH: "main"
+  # Comma-separated GitHub usernames to request review from on the sync PR
+  PR_REVIEWERS: "jwalkinshaw_deloitte"
+
+jobs:
+  sync-upstream:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write # push to upstream-sync branch
+      pull-requests: write # create / update PR
+
+    env:
+      TARGET_BRANCH: ${{ inputs.target_branch || 'develop' }}
+
+    steps:
+      - name: Checkout upstream-sync branch
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          # Use a PAT (if provided) so workflow file updates can be pushed.
+          token: ${{ secrets.UPSTREAM_SYNC_TOKEN || secrets.GITHUB_TOKEN }}
+          ref: upstream-sync
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote remove upstream || true
+          git remote add upstream https://github.com/${{ env.UPSTREAM_REPO }}.git
+          git fetch upstream ${{ env.UPSTREAM_BRANCH }} --tags
+          git fetch origin ${{ env.TARGET_BRANCH }}
+          git fetch origin upstream-sync
+
+      - name: Check for upstream delta
+        id: delta
+        run: |
+          LOCAL_SHA="$(git rev-parse origin/upstream-sync)"
+          UPSTREAM_SHA="$(git rev-parse upstream/${{ env.UPSTREAM_BRANCH }})"
+
+          echo "local_sha=$LOCAL_SHA" >> "$GITHUB_OUTPUT"
+          echo "upstream_sha=$UPSTREAM_SHA" >> "$GITHUB_OUTPUT"
+
+          # Treat upstream-sync as up-to-date if upstream/<branch> is already an
+          # ancestor (i.e., upstream-sync = upstream + preserved fork-only commit).
+          if git merge-base --is-ancestor upstream/${{ env.UPSTREAM_BRANCH }} origin/upstream-sync 2>/dev/null; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No upstream changes detected (upstream/${{ env.UPSTREAM_BRANCH }} is ancestor of upstream-sync)."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Upstream changes detected."
+          fi
+
+      - name: Check for merge conflicts
+        id: conflict
+        if: steps.delta.outputs.changed == 'true'
+        run: |
+          # Test-merge upstream into origin/TARGET_BRANCH to detect conflicts
+          git checkout -b conflict-test origin/${{ env.TARGET_BRANCH }}
+          if git merge --no-commit --no-ff upstream/${{ env.UPSTREAM_BRANCH }} 2>/dev/null; then
+            echo "has_conflicts=false" >> "$GITHUB_OUTPUT"
+            echo "No merge conflicts detected."
+          else
+            echo "has_conflicts=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::Merge conflicts detected between upstream/${{ env.UPSTREAM_BRANCH }} and origin/${{ env.TARGET_BRANCH }}"
+          fi
+          git merge --abort 2>/dev/null || true
+          git checkout upstream-sync
+          git branch -D conflict-test 2>/dev/null || true
+
+      - name: Validate token for workflow file sync
+        if: steps.delta.outputs.changed == 'true'
+        env:
+          HAS_UPSTREAM_SYNC_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN != '' }}
+        run: |
+          # Only flag workflow files that upstream itself introduced/modified
+          # since the last common ancestor. A naive diff between target and
+          # upstream would always match fork-only workflow files (like this
+          # one) that exist on target but not on upstream, falsely demanding
+          # the PAT on every run.
+          MERGE_BASE=$(git merge-base origin/${{ env.TARGET_BRANCH }} upstream/${{ env.UPSTREAM_BRANCH }})
+          if git diff --name-only "$MERGE_BASE" upstream/${{ env.UPSTREAM_BRANCH }} | grep -q '^\.github/workflows/'; then
+            if [ "$HAS_UPSTREAM_SYNC_TOKEN" != "true" ]; then
+              echo "::error::Upstream includes changes under .github/workflows/."
+              echo "::error::Set repository secret UPSTREAM_SYNC_TOKEN to a PAT with repo + workflow scopes."
+              exit 1
+            fi
+          fi
+
+      - name: Reset upstream-sync branch to upstream (preserving fork-only workflow file)
+        if: steps.delta.outputs.changed == 'true'
+        run: |
+          git checkout upstream-sync
+
+          # Save current version of the fork-only workflow file (this file)
+          git show HEAD:.github/workflows/upstream-sync-pr.yml > /tmp/upstream-sync-pr.yml 2>/dev/null || true
+
+          git reset --hard upstream/${{ env.UPSTREAM_BRANCH }}
+
+          # Re-apply fork-only workflow file if it exists
+          if [ -f /tmp/upstream-sync-pr.yml ]; then
+            mkdir -p .github/workflows
+            cp /tmp/upstream-sync-pr.yml .github/workflows/upstream-sync-pr.yml
+            git add .github/workflows/upstream-sync-pr.yml
+
+            # Commit the preserved file only if it actually changes the tree
+            if ! git diff --cached --quiet; then
+              git commit -m "chore: preserve fork-only workflow files during upstream sync"
+            fi
+          fi
+
+          git push --force-with-lease origin upstream-sync
+
+      - name: Generate changelog
+        if: steps.delta.outputs.changed == 'true'
+        id: changelog
+        run: |
+          # Get tags (releases) included in this range
+          MERGE_BASE=$(git merge-base origin/${{ env.TARGET_BRANCH }} upstream/${{ env.UPSTREAM_BRANCH }})
+          TAGS=$(git tag --contains "$MERGE_BASE" --no-contains origin/${{ env.TARGET_BRANCH }} 2>/dev/null | sort -rV | head -20)
+
+          # Get commits between current target and upstream
+          COMMITS=$(git log --oneline origin/${{ env.TARGET_BRANCH }}..upstream/${{ env.UPSTREAM_BRANCH }} --no-merges | head -50)
+
+          {
+            echo "CHANGELOG<<CHANGELOG_EOF"
+            if [ -n "$TAGS" ]; then
+              echo "### Releases included"
+              echo "$TAGS" | while read -r tag; do echo "- \`$tag\`"; done
+              echo ""
+            fi
+            echo "### Commits (up to 50)"
+            echo '```'
+            echo "$COMMITS"
+            echo '```'
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Generate GitHub App token for PR creation
+        if: steps.delta.outputs.changed == 'true'
+        id: app-token
+        uses: actions/create-github-app-token@7bfa3a4717ef143a604ee0a99d859b8886a96d00 # v1.9.3
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Create or update pull request into target branch
+        if: steps.delta.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_REVIEWERS: ${{ env.PR_REVIEWERS }}
+          HAS_CONFLICTS: ${{ steps.conflict.outputs.has_conflicts }}
+          # Pass changelog as env var so untrusted upstream commit messages are
+          # never expanded by the shell or by GitHub Actions expression syntax.
+          CHANGELOG: ${{ steps.changelog.outputs.CHANGELOG }}
+        run: |
+          CONFLICT_LINE=""
+          if [ "$HAS_CONFLICTS" = "true" ]; then
+            CONFLICT_LINE=$'\n- :warning: **This PR has merge conflicts that must be resolved manually.**'
+          fi
+
+          # Build PR body via printf to avoid YAML-indentation fragility.
+          # All variable expansion happens in the shell, not in GitHub Actions
+          # expression syntax, so upstream content cannot inject expressions.
+          BODY=$(printf '%s\n' \
+            "## Summary" \
+            "This PR syncs the latest changes from \`${UPSTREAM_REPO}:${UPSTREAM_BRANCH}\` into this fork via the \`upstream-sync\` branch." \
+            "" \
+            "## Details" \
+            "- Source: \`${UPSTREAM_REPO}:${UPSTREAM_BRANCH}\`" \
+            "- PR branch: \`upstream-sync\`" \
+            "- Target branch: \`${TARGET_BRANCH}\`" \
+            "- Merge conflicts detected: **${HAS_CONFLICTS}**" \
+            "" \
+            "## Changelog" \
+            "${CHANGELOG}" \
+            "" \
+            "## Notes" \
+            "- This PR is automatically refreshed weekly if upstream changes are detected." \
+            "- No PR is created or updated when there is no upstream delta.${CONFLICT_LINE}")
+
+          # Check if a PR already exists from upstream-sync -> TARGET_BRANCH
+          EXISTING_PR=$(curl -sS --fail-with-body -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls?head=${{ github.repository_owner }}:upstream-sync&base=${TARGET_BRANCH}&state=open" \
+            | jq -r '.[0].number // empty')
+
+          if [ -n "$EXISTING_PR" ]; then
+            echo "Updating existing PR #${EXISTING_PR}"
+            curl -sS --fail-with-body -X PATCH \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/pulls/${EXISTING_PR}" \
+              -d "$(jq -n --arg body "$BODY" '{body: $body}')"
+            PR_NUMBER="$EXISTING_PR"
+          else
+            echo "Creating new PR using GitHub API"
+            curl -sS --fail-with-body -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/pulls" \
+              -d "$(jq -n \
+                --arg title "chore: sync upstream ${UPSTREAM_BRANCH} into ${TARGET_BRANCH}" \
+                --arg body "$BODY" \
+                --arg head "upstream-sync" \
+                --arg base "${TARGET_BRANCH}" \
+                '{title: $title, body: $body, head: $head, base: $base}')" > /tmp/pr_response.json
+            PR_NUMBER=$(jq -r '.number' /tmp/pr_response.json)
+          fi
+
+          # Assign reviewers
+          if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
+            REVIEWERS_JSON=$(echo "$PR_REVIEWERS" | jq -R 'split(",") | map(gsub("^\\s+|\\s+$";""))')
+            curl -sS --fail-with-body -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/pulls/${PR_NUMBER}/requested_reviewers" \
+              -d "$(jq -n --argjson reviewers "$REVIEWERS_JSON" '{reviewers: $reviewers}')"
+          fi
+
+      - name: No changes
+        if: steps.delta.outputs.changed != 'true'
+        run: echo "No upstream changes to sync."

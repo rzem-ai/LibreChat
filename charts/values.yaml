@@ -3,6 +3,7 @@ branch: ''
 
 serviceAccount:
   name: sa-librechat-prd
+
 ingress:
   className: cilium
   host: 'librechat.ctk.au.deloitte.com'
@@ -15,80 +16,113 @@ ingress:
       secretStoreName: external-secret-store
       hosts:
         - 'librechat.ctk.au.deloitte.com'
+
+image:
+  repository: 'tt-librechat/librechat'
+  pullPolicy: Always
+  tag: 'main'
+
 pods:
-  frontend:
+  librechat:
     replicas: 1
     containers:
-      frontend:
-        # livenessProbe:
-        #   httpGet:
-        #     path: /
-        #     port: 3000
-        #   initialDelaySeconds: 60
-        #   periodSeconds: 10
-        #   timeoutSeconds: 30
-        # readinessProbe:
-        #   httpGet:
-        #     path: /
-        #     port: 3000
-        #   initialDelaySeconds: 60
-        #   periodSeconds: 10
-        #   timeoutSeconds: 30
+      librechat:
+        command:
+          - /bin/sh
+          - -c
+          - exec npm run backend
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
         image:
-          repository: 'tt-librechat/frontend'
+          repository: 'tt-librechat/librechat'
           pullPolicy: Always
           tag: 'main'
         containerSecurityContext:
-          runAsUser: 3000
-          runAsGroup: 3000
+          runAsUser: 1000
+          runAsGroup: 1000
           allowPrivilegeEscalation: false
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        # Runtime env vars — non-sensitive values here, secrets via External Secrets
+        env:
+          HOST: '0.0.0.0'
+          PORT: '3080'
+          NODE_ENV: 'production'
+          ALLOW_EMAIL_LOGIN: 'false'
+          ALLOW_REGISTRATION: 'false'
+          ALLOW_SOCIAL_LOGIN: 'true'
+          ALLOW_SOCIAL_REGISTRATION: 'false'
+          OPENID_CALLBACK_URL: '/oauth/openid/callback'
+          OPENID_GRAPH_SCOPES: 'User.Read,User.ReadBasic.All' #People.Read GroupMember.Read.All scopes to be added once App Registration admins grant them to us
+          OPENID_REQUIRED_ROLE_TOKEN_KIND: 'id'
+          OPENID_REUSE_TOKENS: 'true'
+          OPENID_USE_END_SESSION_ENDPOINT: 'true'
+          OPENID_BUTTON_LABEL: 'Login with SSO'
+          OPENID_IMAGE_URL: '/assets/favicon.svg'
+          RAG_API_URL: 'http://127.0.0.1:8000'
+          USE_ENTRA_ID_FOR_PEOPLE_SEARCH: 'true'
+          ENTRA_ID_INCLUDE_OWNERS_AS_MEMBERS: 'true'
+          # OpenTelemetry Tracing
+          OTEL_SERVICE_NAME: 'librechat'
+          OTEL_TRACES_EXPORTER: 'otlp'
+          OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf'
+          OTEL_TRACES_SAMPLER: 'parentbased_traceidratio'
+          OTEL_TRACES_SAMPLER_ARG: '0.1'
+          # Meilisearch Configuration
+          SEARCH: 'true'
+          MEILI_NO_ANALYTICS: 'true'
+          MEILI_HOST: 'http://127.0.0.1:7700'
         service:
           enabled: true
           type: ClusterIP
           port: 80
-          targetPort: 3000
+          targetPort: 3080
         ingress:
           enabled: true
           paths:
             - path: /
               pathType: Prefix
-  api:
-    replicas: 1
-    containers:
-      api:
-        # livenessProbe:
-        #   httpGet:
-        #     path: /health
-        #     port: 8080
-        #   initialDelaySeconds: 60
-        #   periodSeconds: 10
-        #   timeoutSeconds: 30
-        # readinessProbe:
-        #   httpGet:
-        #     path: /health
-        #     port: 8080
-        #   initialDelaySeconds: 60
-        #   periodSeconds: 10
-        #   timeoutSeconds: 30
+      rag-api:
         image:
-          repository: 'tt-librechat/api'
+          repository: 'tt-librechat/rag-api'
           pullPolicy: Always
           tag: 'main'
-        containerSecurityContext:
-          runAsUser: 8080
-          runAsGroup: 8080
-          allowPrivilegeEscalation: false
-        # env:
-        #   example_env_name: 'example_env_value'
-        # secrets:
-        #   example_env_name: example_secret_key_name
         service:
           enabled: true
           type: ClusterIP
-          port: 80
-          targetPort: 8080
+          port: 8000
+          targetPort: 8000
         ingress:
-          enabled: true
-          paths:
-            - path: /api
-              pathType: Prefix
+          enabled: false
+      meilisearch:
+        image:
+          repository: 'tt-librechat/meilisearch'
+          pullPolicy: Always
+          tag: 'main'
+        env:
+          MEILI_NO_ANALYTICS: 'true'
+          MEILI_HOST: '127.0.0.0:7700'
+        service:
+          enabled: false
+          type: ClusterIP
+          port: 7700
+          targetPort: 7700
+        ingress:
+          enabled: false
