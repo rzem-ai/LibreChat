@@ -124,6 +124,9 @@ describe('Citation Regex Patterns', () => {
 
   describe('digit boundary (no leading zeros)', () => {
     it('does not absorb trailing digits from adjacent text', () => {
+      // The marker sits directly before "82/7" (plain-text digits, not part of
+      // the anchor) so a greedy index match would misparse it as "082" and
+      // swallow the "82", turning "6.82/7" into "6./7".
       const text = `The applicant reported a GPA of 6. turn0file082/7 overall.`;
       STANDALONE_PATTERN.lastIndex = 0;
       const match = STANDALONE_PATTERN.exec(text);
