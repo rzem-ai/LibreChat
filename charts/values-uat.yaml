@@ -139,7 +139,7 @@ pods:
           POSTGRES_DB: 'pgdb_librechat_app_uat'
           POSTGRES_USER: 'id-int-librechat-uat'
           POSTGRES_AUTH_TYPE: 'ActiveDirectoryMsi'
-          MANAGED_IDENTITY_CLIENT_ID: '9058562c-9eeb-4608-8613-51bec6324181'
+          MANAGED_IDENTITY_CLIENT_ID: '52374007-5e9d-4f88-b6ac-7e33b13b38c2'
           DB_HOST: 'psql-ctspoke-npd.postgres.database.azure.com'
           DB_PORT: '5432'
           RAG_HOST: '0.0.0.0'
