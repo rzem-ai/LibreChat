@@ -1,7 +1,7 @@
 const axios = require('axios');
-const { tool } = require('@librechat/agents/langchain/tools');
 const { logger } = require('@librechat/data-schemas');
-const { generateShortLivedToken } = require('@librechat/api');
+const { tool } = require('@librechat/agents/langchain/tools');
+const { generateShortLivedToken, logAxiosError } = require('@librechat/api');
 const { Tools, EToolResources } = require('librechat-data-provider');
 const { filterFilesByAgentAccess } = require('~/server/services/Files/permissions');
 const { getFiles } = require('~/models');
@@ -134,7 +134,10 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
             },
           })
           .catch((error) => {
-            logger.error('Error encountered in `file_search` while querying file:', error);
+            logAxiosError({
+              message: 'Error encountered in `file_search` while querying file',
+              error,
+            });
             return null;
           }),
       );
