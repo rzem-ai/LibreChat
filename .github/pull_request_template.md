@@ -1,41 +1,37 @@
-# Pull Request Template
+# Goal 🎯
 
-⚠️ Before Submitting a PR, Please Review:
-- Please ensure that you have thoroughly read and understood the [Contributing Docs](https://github.com/danny-avila/LibreChat/blob/main/.github/CONTRIBUTING.md) before submitting your Pull Request.
+Why does this PR exist? What problem does it solve? What value does it add to the repo or the business?
 
-⚠️ Documentation Updates Notice:
-- Kindly note that documentation updates are managed in this repository: [librechat.ai](https://github.com/LibreChat-AI/librechat.ai)
+# Description ℹ️
 
-## Summary
+Describe your changes and link to any documentation, code files or issues that are relevant.
 
-Please provide a brief summary of your changes and the related issue. Include any motivation and context that is relevant to your changes. If there are any dependencies necessary for your changes, please list them here.
+# How Should Reviewers Test Your Changes? 🧪
 
-## Change Type
+Describe the steps required to test your changes, including any setup or configuration needed. Give exact terminal commands and example prompts where relevant.
 
-Please delete any irrelevant options.
+1. `docker compose build --no-cache api` to rebuild the api image with this PR's changes
+2. `docker compose up` to start the application
+3. ...
 
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] This change requires a documentation update
-- [ ] Translation update
+# Checklist ✅
+
+**Only tick items that have actually been completed! It's okay not to tick something, and we can discuss further in a code review session.**
+
+## Code Cleanliness
+- [ ] I based my PR on the latest `develop` branch and resolved any merge conflicts
+- [ ] I read through my PR and reviewed all of my changes myself
+- [ ] I used [conventional commits](https://www.bavaga.com/blog/2025/01/27/my-ultimate-conventional-commit-types-cheatsheet/) (e.g. feat, fix, refactor) to commit my changes
+- [ ] I named this PR with a clear and descriptive title, starting with FEAT, FIX, REFACTOR, CHORE, DOCS or TEST
+- [ ] I wrote and commented my code for maximum clarity (see [tips](https://www.py4u.org/python-tutorial/best-practices-for-documenting-python-code-effectively/))
+- [ ] I can confidently explain the changes made in this PR and how they work
 
 ## Testing
+- [ ] I tested my changes locally using the steps above and confirmed changes work as expected (include screenshots below, if applicable)
+- [ ] I created tests for my changes which pass successfully
+- [ ] I created at least one integration test (without monkey patching)
 
-Please describe your test process and include instructions so that we can reproduce your test. If there are any important variables for your testing configuration, list them here.
-
-### **Test Configuration**:
-
-## Checklist
-
-Please delete any irrelevant options.
-
-- [ ] My code adheres to this project's style guidelines
-- [ ] I have performed a self-review of my own code
-- [ ] I have commented in any complex areas of my code
-- [ ] I have made pertinent documentation changes
-- [ ] My changes do not introduce new warnings
-- [ ] I have written tests demonstrating that my changes are effective or that my feature works
-- [ ] Local unit tests pass with my changes
-- [ ] Any changes dependent on mine have been merged and published in downstream modules.
-- [ ] A pull request for updating the documentation has been submitted.
+## Documentation
+- [ ] I added any new .env variables to the end of the `.env.example` file, and explained them in the `deloitte/README.md` file
+- [ ] I wrote documentation on major changes in Confluence, and linked it in my code as comments where relevant
+- [ ] I listed ALL changes to/additional files outside the `deloitte` directory in the `deloitte/DeloitteCustomChanges.md` file

@@ -1,11 +1,10 @@
 import { RecoilRoot, useRecoilValue } from 'recoil';
 import { Constants } from 'librechat-data-provider';
 import { renderHook, act } from '@testing-library/react';
-
 import type { TMessage, TConversation, TSubmission } from 'librechat-data-provider';
 import type { MutableSnapshot } from 'recoil';
 import type { ReactNode } from 'react';
-
+import type { PendingSteer, QueuedMessage } from '~/store/families';
 import useResumeOnLoad from '../useResumeOnLoad';
 import store from '~/store';
 
@@ -67,6 +66,11 @@ function renderUseResumeOnLoad({
   conversationId = CONVERSATION_ID,
   messagesLoaded = true,
   onSubmission,
+  siblingIndexParentId,
+  onSiblingIndex,
+  pendingSteers,
+  onPendingSteers,
+  onQueuedMessages,
 }: {
   messages?: TMessage[];
   getMessages?: () => TMessage[] | undefined;
@@ -74,11 +78,19 @@ function renderUseResumeOnLoad({
   conversationId?: string;
   messagesLoaded?: boolean;
   onSubmission?: (submission: TSubmission | null) => void;
+  siblingIndexParentId?: string;
+  onSiblingIndex?: (siblingIndex: number) => void;
+  pendingSteers?: PendingSteer[];
+  onPendingSteers?: (steers: PendingSteer[]) => void;
+  onQueuedMessages?: (queued: QueuedMessage[]) => void;
 }) {
   const getMessages = jest.fn(getMessagesOverride ?? (() => messages));
   const initializeState = (snapshot: MutableSnapshot) => {
     snapshot.set(store.conversationByIndex(0), buildConversation(conversationId));
     snapshot.set(store.submissionByIndex(0), submission);
+    if (pendingSteers) {
+      snapshot.set(store.pendingSteersByConvoId(conversationId), pendingSteers);
+    }
   };
 
   const SubmissionProbe = () => {
@@ -86,10 +98,30 @@ function renderUseResumeOnLoad({
     onSubmission?.(currentSubmission);
     return null;
   };
+  const PendingSteersProbe = () => {
+    const steers = useRecoilValue(store.pendingSteersByConvoId(conversationId));
+    onPendingSteers?.(steers);
+    return null;
+  };
+  const QueuedMessagesProbe = () => {
+    const queued = useRecoilValue(store.queuedMessagesByConvoId(conversationId));
+    onQueuedMessages?.(queued);
+    return null;
+  };
+  const SiblingIndexProbe = () => {
+    const siblingIndex = useRecoilValue(store.messagesSiblingIdxFamily(siblingIndexParentId));
+    if (siblingIndexParentId) {
+      onSiblingIndex?.(siblingIndex);
+    }
+    return null;
+  };
 
   const wrapper = ({ children }: { children: ReactNode }) => (
     <RecoilRoot initializeState={initializeState}>
       <SubmissionProbe />
+      <SiblingIndexProbe />
+      <PendingSteersProbe />
+      <QueuedMessagesProbe />
       {children}
     </RecoilRoot>
   );
@@ -190,5 +222,414 @@ describe('useResumeOnLoad', () => {
 
     expect(mockUseStreamStatus).toHaveBeenCalledWith(CONVERSATION_ID, true);
     expect(observedSubmissions[observedSubmissions.length - 1]).toBe(submission);
+  });
+
+  it('restores model spec icon metadata on the resumed assistant placeholder', async () => {
+    const observedSubmissions: Array<TSubmission | null> = [];
+    mockUseStreamStatus.mockReturnValue({
+      isSuccess: true,
+      isFetching: false,
+      data: {
+        active: true,
+        status: 'running',
+        streamId: CONVERSATION_ID,
+        resumeState: {
+          runSteps: [],
+          aggregatedContent: [{ type: 'text', text: 'Streaming...' }],
+          responseMessageId: RESPONSE_MESSAGE_ID,
+          conversationId: CONVERSATION_ID,
+          sender: 'Spec Agent',
+          iconURL: 'https://example.com/spec-icon.png',
+          model: 'gpt-4.1',
+          userMessage: {
+            messageId: USER_MESSAGE_ID,
+            parentMessageId: Constants.NO_PARENT,
+            conversationId: CONVERSATION_ID,
+            text: 'Hello',
+          },
+        },
+      },
+    });
+
+    renderUseResumeOnLoad({
+      messages: [
+        buildUserMessage(CONVERSATION_ID),
+        {
+          messageId: RESPONSE_MESSAGE_ID,
+          parentMessageId: USER_MESSAGE_ID,
+          conversationId: CONVERSATION_ID,
+          text: '',
+          isCreatedByUser: false,
+          iconURL: '',
+          model: '',
+        } as TMessage,
+      ],
+      onSubmission: (currentSubmission) => observedSubmissions.push(currentSubmission),
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(observedSubmissions[observedSubmissions.length - 1]?.initialResponse).toEqual(
+      expect.objectContaining({
+        messageId: RESPONSE_MESSAGE_ID,
+        sender: 'Spec Agent',
+        iconURL: 'https://example.com/spec-icon.png',
+        model: 'gpt-4.1',
+      }),
+    );
+  });
+
+  it('strips the paused user/assistant rows from submission.messages (no duplicate on resume)', async () => {
+    const observedSubmissions: Array<TSubmission | null> = [];
+    mockUseStreamStatus.mockReturnValue({
+      isSuccess: true,
+      isFetching: false,
+      data: {
+        active: true,
+        status: 'running',
+        streamId: CONVERSATION_ID,
+        resumeState: {
+          runSteps: [],
+          aggregatedContent: [{ type: 'text', text: 'Streaming...' }],
+          responseMessageId: RESPONSE_MESSAGE_ID,
+          conversationId: CONVERSATION_ID,
+          sender: 'Agent',
+          userMessage: {
+            messageId: USER_MESSAGE_ID,
+            parentMessageId: Constants.NO_PARENT,
+            conversationId: CONVERSATION_ID,
+            text: 'Hello',
+          },
+        },
+      },
+    });
+
+    renderUseResumeOnLoad({
+      // The reloaded DB array already holds the paused user row + the partial
+      // (unfinished) assistant row under the same ids the resume re-supplies.
+      messages: [
+        buildUserMessage(CONVERSATION_ID),
+        {
+          messageId: RESPONSE_MESSAGE_ID,
+          parentMessageId: USER_MESSAGE_ID,
+          conversationId: CONVERSATION_ID,
+          text: '',
+          isCreatedByUser: false,
+          unfinished: true,
+        } as TMessage,
+      ],
+      onSubmission: (currentSubmission) => observedSubmissions.push(currentSubmission),
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const submission = observedSubmissions[observedSubmissions.length - 1];
+    const ids = (submission?.messages ?? []).map((m) => m.messageId);
+    // Stripped from the flat array (re-supplied via the placeholders + final event)...
+    expect(ids).not.toContain(USER_MESSAGE_ID);
+    expect(ids).not.toContain(RESPONSE_MESSAGE_ID);
+    // ...but still carried on the placeholders for re-insertion.
+    expect(submission?.userMessage?.messageId).toBe(USER_MESSAGE_ID);
+    expect(submission?.initialResponse?.messageId).toBe(RESPONSE_MESSAGE_ID);
+  });
+
+  it('restores the branch that owns a pending OAuth resume user message', async () => {
+    const rootUser = buildUserMessage(CONVERSATION_ID, 'root-user');
+    const branchOneResponse = {
+      messageId: 'branch-one-response',
+      parentMessageId: rootUser.messageId,
+      conversationId: CONVERSATION_ID,
+      text: 'Branch one response',
+      isCreatedByUser: false,
+    } as TMessage;
+    const branchOneFollowUp = buildUserMessage(CONVERSATION_ID, 'branch-one-follow-up');
+    branchOneFollowUp.parentMessageId = branchOneResponse.messageId;
+    const branchOneTail = {
+      messageId: 'branch-one-tail',
+      parentMessageId: branchOneFollowUp.messageId,
+      conversationId: CONVERSATION_ID,
+      text: 'Branch one tail',
+      isCreatedByUser: false,
+    } as TMessage;
+    const branchTwoResponse = {
+      messageId: 'branch-two-response',
+      parentMessageId: rootUser.messageId,
+      conversationId: CONVERSATION_ID,
+      text: 'Branch two response',
+      isCreatedByUser: false,
+    } as TMessage;
+    const observedSiblingIndexes: number[] = [];
+
+    mockUseStreamStatus.mockReturnValue({
+      isSuccess: true,
+      isFetching: false,
+      data: {
+        active: true,
+        status: 'running',
+        streamId: CONVERSATION_ID,
+        resumeState: {
+          runSteps: [],
+          aggregatedContent: [],
+          replayEvents: [],
+          responseMessageId: 'pending-user_',
+          conversationId: CONVERSATION_ID,
+          userMessage: {
+            messageId: 'pending-user',
+            parentMessageId: branchOneTail.messageId,
+            conversationId: CONVERSATION_ID,
+            text: 'Use OAuth tool on branch one',
+          },
+        },
+      },
+    });
+
+    renderUseResumeOnLoad({
+      messages: [rootUser, branchOneResponse, branchOneFollowUp, branchOneTail, branchTwoResponse],
+      siblingIndexParentId: rootUser.messageId,
+      onSiblingIndex: (siblingIndex) => observedSiblingIndexes.push(siblingIndex),
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(observedSiblingIndexes[observedSiblingIndexes.length - 1]).toBe(1);
+  });
+
+  it('restores the assistant sibling selected by a pending regenerate response', async () => {
+    const rootUser = buildUserMessage(CONVERSATION_ID, 'root-user');
+    const olderResponse = {
+      messageId: 'older-response',
+      parentMessageId: rootUser.messageId,
+      conversationId: CONVERSATION_ID,
+      text: 'Older response',
+      isCreatedByUser: false,
+    } as TMessage;
+    const newerResponse = {
+      messageId: 'newer-response',
+      parentMessageId: rootUser.messageId,
+      conversationId: CONVERSATION_ID,
+      text: 'Newer response',
+      isCreatedByUser: false,
+    } as TMessage;
+    const observedSiblingIndexes: number[] = [];
+
+    mockUseStreamStatus.mockReturnValue({
+      isSuccess: true,
+      isFetching: false,
+      data: {
+        active: true,
+        status: 'running',
+        streamId: CONVERSATION_ID,
+        resumeState: {
+          runSteps: [],
+          aggregatedContent: [],
+          replayEvents: [],
+          responseMessageId: `${olderResponse.messageId}_`,
+          conversationId: CONVERSATION_ID,
+          userMessage: {
+            messageId: rootUser.messageId,
+            parentMessageId: rootUser.parentMessageId,
+            conversationId: CONVERSATION_ID,
+            text: rootUser.text,
+          },
+        },
+      },
+    });
+
+    renderUseResumeOnLoad({
+      messages: [rootUser, olderResponse, newerResponse],
+      siblingIndexParentId: rootUser.messageId,
+      onSiblingIndex: (siblingIndex) => observedSiblingIndexes.push(siblingIndex),
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(observedSiblingIndexes[observedSiblingIndexes.length - 1]).toBe(1);
+  });
+
+  describe('steer chip restore', () => {
+    const staleChip: PendingSteer = {
+      steerId: 'stale-1',
+      text: 'applied while away',
+      status: 'pending',
+      createdAt: 1,
+    };
+    const failedChip: PendingSteer = {
+      steerId: 'failed-1',
+      text: 'recoverable words',
+      status: 'failed',
+      createdAt: 2,
+    };
+
+    function buildActiveStatus(pendingSteers?: Array<Record<string, unknown>>) {
+      return {
+        isSuccess: true,
+        isFetching: false,
+        data: {
+          active: true,
+          status: 'running',
+          streamId: CONVERSATION_ID,
+          resumeState: {
+            runSteps: [],
+            aggregatedContent: [],
+            responseMessageId: RESPONSE_MESSAGE_ID,
+            conversationId: CONVERSATION_ID,
+            userMessage: {
+              messageId: USER_MESSAGE_ID,
+              parentMessageId: Constants.NO_PARENT,
+              conversationId: CONVERSATION_ID,
+              text: 'Hello',
+            },
+            ...(pendingSteers && { pendingSteers }),
+          },
+        },
+      };
+    }
+
+    it('clears stale pending chips when the server reports no still-queued steers', async () => {
+      const observedSteers: PendingSteer[][] = [];
+      mockUseStreamStatus.mockReturnValue(buildActiveStatus());
+
+      renderUseResumeOnLoad({
+        messages: [buildUserMessage(CONVERSATION_ID)],
+        pendingSteers: [staleChip, failedChip],
+        onPendingSteers: (steers) => observedSteers.push(steers),
+      });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      // Only the failed chip survives — its text is client-local and recoverable.
+      expect(observedSteers[observedSteers.length - 1]).toEqual([failedChip]);
+    });
+
+    it('restores still-queued steers (with files) and drops chips absent from the server list', async () => {
+      const observedSteers: PendingSteer[][] = [];
+      const files = [{ file_id: 'f1', filename: 'notes.pdf', type: 'application/pdf' }];
+      mockUseStreamStatus.mockReturnValue(
+        buildActiveStatus([{ steerId: 'queued-1', text: 'still queued', createdAt: 5, files }]),
+      );
+
+      renderUseResumeOnLoad({
+        messages: [buildUserMessage(CONVERSATION_ID)],
+        pendingSteers: [staleChip],
+        onPendingSteers: (steers) => observedSteers.push(steers),
+      });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(observedSteers[observedSteers.length - 1]).toEqual([
+        { steerId: 'queued-1', text: 'still queued', status: 'pending', createdAt: 5, files },
+      ]);
+    });
+
+    it('clears stale pending chips when the run finished while away (no active job)', async () => {
+      const observedSteers: PendingSteer[][] = [];
+      mockUseStreamStatus.mockReturnValue({
+        isSuccess: true,
+        isFetching: false,
+        data: { active: false },
+      });
+
+      renderUseResumeOnLoad({
+        messages: [buildUserMessage(CONVERSATION_ID)],
+        pendingSteers: [staleChip, failedChip],
+        onPendingSteers: (steers) => observedSteers.push(steers),
+      });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(observedSteers[observedSteers.length - 1]).toEqual([failedChip]);
+    });
+
+    it('converts resumeState.pendingSteers to queued when inactive (expired action, unparked queue)', async () => {
+      const observedSteers: PendingSteer[][] = [];
+      const observedQueues: QueuedMessage[][] = [];
+      mockUseStreamStatus.mockReturnValue({
+        isSuccess: true,
+        isFetching: false,
+        data: {
+          active: false,
+          resumeState: {
+            pendingSteers: [{ steerId: 'steer-unparked', text: 'still queued', createdAt: 5 }],
+          },
+        },
+      });
+
+      renderUseResumeOnLoad({
+        messages: [buildUserMessage(CONVERSATION_ID)],
+        // Local chip carries the client-only context the server list lacks.
+        pendingSteers: [
+          {
+            steerId: 'steer-unparked',
+            text: 'still queued',
+            status: 'pending',
+            createdAt: 5,
+            quotes: ['carried quote'],
+            manualSkills: ['carried-skill'],
+          },
+        ],
+        onPendingSteers: (steers) => observedSteers.push(steers),
+        onQueuedMessages: (queued) => observedQueues.push(queued),
+      });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(observedQueues[observedQueues.length - 1]).toEqual([
+        expect.objectContaining({
+          id: 'steer-unparked',
+          text: 'still queued',
+          quotes: ['carried quote'],
+          manualSkills: ['carried-skill'],
+        }),
+      ]);
+      expect(observedSteers[observedSteers.length - 1]).toEqual([]);
+    });
+
+    it('dedupes unrecoveredSteers against resumeState.pendingSteers by steer id', async () => {
+      const observedQueues: QueuedMessage[][] = [];
+      mockUseStreamStatus.mockReturnValue({
+        isSuccess: true,
+        isFetching: false,
+        data: {
+          active: false,
+          unrecoveredSteers: [{ steerId: 'steer-dup', text: 'delivered once', createdAt: 3 }],
+          resumeState: {
+            pendingSteers: [
+              { steerId: 'steer-dup', text: 'delivered once', createdAt: 3 },
+              { steerId: 'steer-extra', text: 'second words', createdAt: 4 },
+            ],
+          },
+        },
+      });
+
+      renderUseResumeOnLoad({
+        messages: [buildUserMessage(CONVERSATION_ID)],
+        onQueuedMessages: (queued) => observedQueues.push(queued),
+      });
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(observedQueues[observedQueues.length - 1]).toEqual([
+        expect.objectContaining({ id: 'steer-dup', text: 'delivered once' }),
+        expect.objectContaining({ id: 'steer-extra', text: 'second words' }),
+      ]);
+    });
   });
 });

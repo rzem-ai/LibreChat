@@ -3,21 +3,25 @@ import { useAtomValue } from 'jotai';
 import { useRecoilValue } from 'recoil';
 import type { TMessageContentParts } from 'librechat-data-provider';
 import type { TMessageProps, TMessageIcon } from '~/common';
+import {
+  cn,
+  getMessageAriaLabel,
+  areMessageRowPropsEqual,
+  getHeaderPrefixForScreenReader,
+} from '~/utils';
 import { useMessageHelpers, useLocalize, useAttachments, useContentMetadata } from '~/hooks';
-import { cn, getHeaderPrefixForScreenReader, getMessageAriaLabel } from '~/utils';
+import MessageTimestamp from '~/components/Chat/Messages/ui/MessageTimestamp';
 import MessageIcon from '~/components/Chat/Messages/MessageIcon';
 import ContentParts from './Content/ContentParts';
 import { fontSizeAtom } from '~/store/fontSize';
 import SiblingSwitch from './SiblingSwitch';
-import MultiMessage from './MultiMessage';
 import HoverButtons from './HoverButtons';
 import SubRow from './SubRow';
 import store from '~/store';
 
-export default function Message(props: TMessageProps) {
+function MessageParts(props: TMessageProps) {
   const localize = useLocalize();
-  const { message, siblingIdx, siblingCount, setSiblingIdx, currentEditId, setCurrentEditId } =
-    props;
+  const { message, siblingIdx, siblingCount, setSiblingIdx } = props;
   const { attachments, searchResults } = useAttachments({
     messageId: message?.messageId,
     attachments: message?.attachments,
@@ -40,7 +44,7 @@ export default function Message(props: TMessageProps) {
 
   const fontSize = useAtomValue(fontSizeAtom);
   const maximizeChatSpace = useRecoilValue(store.maximizeChatSpace);
-  const { children, messageId = null, isCreatedByUser } = message ?? {};
+  const { messageId = null, isCreatedByUser } = message ?? {};
 
   const name = useMemo(() => {
     let result = '';
@@ -107,7 +111,12 @@ export default function Message(props: TMessageProps) {
           <div
             id={messageId ?? ''}
             aria-label={getMessageAriaLabel(message, localize)}
-            className={cn(baseClasses.common, baseClasses.chat, 'message-render')}
+            className={cn(
+              baseClasses.common,
+              baseClasses.chat,
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-xheavy',
+              'message-render',
+            )}
           >
             {!hasParallelContent && (
               <div className="relative flex flex-shrink-0 flex-col items-center">
@@ -129,6 +138,7 @@ export default function Message(props: TMessageProps) {
                     {getHeaderPrefixForScreenReader(message, localize)}
                   </span>
                   {name}
+                  <MessageTimestamp value={message.createdAt ?? message.clientTimestamp} />
                 </h2>
               )}
               <div className="flex flex-col gap-1">
@@ -179,13 +189,8 @@ export default function Message(props: TMessageProps) {
           </div>
         </div>
       </div>
-      <MultiMessage
-        messageId={messageId}
-        conversation={conversation}
-        messagesTree={children ?? []}
-        currentEditId={currentEditId}
-        setCurrentEditId={setCurrentEditId}
-      />
     </>
   );
 }
+
+export default React.memo(MessageParts, areMessageRowPropsEqual);

@@ -1,8 +1,9 @@
-# v0.8.6-rc1
+# v0.8.7
 
 # Base node image
-FROM node:20-alpine AS node
+FROM node:24.16.0-alpine AS node
 
+# Add requirements for certs
 RUN apk upgrade --no-cache
 RUN apk add --no-cache jemalloc
 RUN apk add --no-cache python3 py3-pip uv
@@ -43,12 +44,14 @@ COPY --chown=node:node client/package.json ./client/package.json
 COPY --chown=node:node packages/data-provider/package.json ./packages/data-provider/package.json
 COPY --chown=node:node packages/data-schemas/package.json ./packages/data-schemas/package.json
 COPY --chown=node:node packages/api/package.json ./packages/api/package.json
+# Patches applied via patch-package on postinstall. See patches/README.md.
+COPY --chown=node:node patches ./patches
 
 RUN \
     # Allow mounting of these files, which have no default
     touch .env ; \
     # Create directories for the volumes to inherit the correct permissions
-    mkdir -p /app/client/public/images /app/logs /app/uploads ; \
+    mkdir -p /app/client/public/images /app/logs /app/uploads /app/skill ; \
     npm config set fetch-retry-maxtimeout 600000 ; \
     npm config set fetch-retries 5 ; \
     npm config set fetch-retry-mintimeout 15000 ; \

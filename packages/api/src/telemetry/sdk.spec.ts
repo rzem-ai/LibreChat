@@ -1,8 +1,8 @@
 import { Socket } from 'node:net';
 import { IncomingMessage } from 'node:http';
 import { Agent as HttpsAgent } from 'node:https';
-import type { Span } from '@opentelemetry/api';
 import type { RequestOptions } from 'node:http';
+import type { Span } from '@opentelemetry/api';
 
 interface HttpInstrumentationOptions {
   requestHook?: (span: Span, request: object) => void;
@@ -123,8 +123,8 @@ const mockGetToken = jest.fn(
   (_scopes: string | string[]): Promise<{ token: string } | null> =>
     Promise.resolve({ token: 'test-access-token' }),
 );
-const mockManagedIdentityCredential = jest.fn((_clientId: string) => ({
-  type: 'ManagedIdentityCredential',
+const mockDefaultAzureCredential = jest.fn((_opts?: { managedIdentityClientId?: string }) => ({
+  type: 'DefaultAzureCredential',
   getToken: mockGetToken,
 }));
 
@@ -139,7 +139,7 @@ jest.mock(
 jest.mock(
   '@azure/identity',
   () => ({
-    ManagedIdentityCredential: mockManagedIdentityCredential,
+    DefaultAzureCredential: mockDefaultAzureCredential,
   }),
   { virtual: true },
 );
@@ -224,6 +224,20 @@ describe('telemetry SDK lifecycle', () => {
     expect(mockExpressInstrumentation).toHaveBeenCalledTimes(1);
     expect(mockMongoDBInstrumentation).toHaveBeenCalledTimes(1);
     expect(mockMongooseInstrumentation).toHaveBeenCalledTimes(1);
+    expect(mockIORedisInstrumentation).not.toHaveBeenCalled();
+    expect(mockUndiciInstrumentation).toHaveBeenCalledTimes(1);
+  });
+
+  it('enables ioredis instrumentation when explicitly configured', () => {
+    initializeTelemetry({
+      OTEL_IOREDIS_TRACING_ENABLED: 'true',
+      OTEL_TRACING_ENABLED: 'true',
+    });
+
+    expect(mockMongooseInstrumentation).toHaveBeenCalledTimes(1);
+    expect(mockHttpInstrumentation).toHaveBeenCalledTimes(1);
+    expect(mockExpressInstrumentation).toHaveBeenCalledTimes(1);
+    expect(mockMongoDBInstrumentation).toHaveBeenCalledTimes(1);
     expect(mockIORedisInstrumentation).toHaveBeenCalledTimes(1);
     expect(mockUndiciInstrumentation).toHaveBeenCalledTimes(1);
   });
@@ -539,7 +553,8 @@ describe('telemetry SDK lifecycle', () => {
     mockShutdown.mockRejectedValueOnce(new Error('flush failed'));
     initializeTelemetry({ OTEL_TRACING_ENABLED: 'true' });
 
-    const taskFn = (registerShutdownTask as jest.Mock).mock.calls.at(-1)?.[1] as
+    const shutdownTaskCalls = (registerShutdownTask as jest.Mock).mock.calls;
+    const taskFn = shutdownTaskCalls[shutdownTaskCalls.length - 1]?.[1] as
       | (() => Promise<void>)
       | undefined;
     expect(taskFn).toBeDefined();
@@ -561,7 +576,7 @@ describe('telemetry SDK lifecycle', () => {
       initializeTelemetry({ OTEL_TRACING_ENABLED: 'true' });
 
       expect(mockOtlpTraceExporter).not.toHaveBeenCalled();
-      expect(mockManagedIdentityCredential).not.toHaveBeenCalled();
+      expect(mockDefaultAzureCredential).not.toHaveBeenCalled();
       const sdkConfig = mockNodeSDK.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
       expect(sdkConfig).not.toHaveProperty('traceExporter');
     });
@@ -593,22 +608,22 @@ describe('telemetry SDK lifecycle', () => {
       );
     });
 
-    it('emits a warning and falls back when the auth flag is set but AZURE_CLIENT_ID is missing', () => {
-      // AZURE_CLIENT_ID is a shared infra var that should always be present, but
-      // if it is somehow absent we warn and fall back rather than crash.
+    it('creates OTLPTraceExporter without managed identity hint when AZURE_CLIENT_ID is absent (falls back to az login / env creds)', () => {
+      // Without AZURE_CLIENT_ID, DefaultAzureCredential is still used; it will
+      // resolve via AzureCliCredential (az login) locally or system-assigned MI in cluster.
       initializeTelemetry({
         OTEL_TRACING_ENABLED: 'true',
         AZURE_MONITOR_AUTH_ENABLED: 'true',
         OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: TRACES_ENDPOINT,
       });
 
-      expect(mockOtlpTraceExporter).not.toHaveBeenCalled();
-      expect(emitWarningSpy).toHaveBeenCalledWith(
-        expect.stringContaining('AZURE_CLIENT_ID is missing'),
-        { code: 'LIBRECHAT_OTEL' },
-      );
+      expect(mockDefaultAzureCredential).toHaveBeenCalledWith(undefined);
+      expect(mockOtlpTraceExporter).toHaveBeenCalledWith({
+        url: TRACES_ENDPOINT,
+        headers: expect.any(Function),
+      });
       const sdkConfig = mockNodeSDK.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
-      expect(sdkConfig).not.toHaveProperty('traceExporter');
+      expect(sdkConfig?.traceExporter).toEqual({ name: 'otlp-trace-exporter' });
     });
 
     it('creates OTLPTraceExporter with the DCR URL and a bearer-token headers factory when all Azure env vars are set', () => {
@@ -619,7 +634,9 @@ describe('telemetry SDK lifecycle', () => {
         AZURE_CLIENT_ID: AZURE_CLIENT_ID,
       });
 
-      expect(mockManagedIdentityCredential).toHaveBeenCalledWith(AZURE_CLIENT_ID);
+      expect(mockDefaultAzureCredential).toHaveBeenCalledWith({
+        managedIdentityClientId: AZURE_CLIENT_ID,
+      });
       expect(mockOtlpTraceExporter).toHaveBeenCalledWith({
         url: TRACES_ENDPOINT,
         headers: expect.any(Function),

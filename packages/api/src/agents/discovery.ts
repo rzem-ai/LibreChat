@@ -2,17 +2,17 @@ import { logger } from '@librechat/data-schemas';
 import { ResourceType, PermissionBits, EModelEndpoint } from 'librechat-data-provider';
 import type { Agent, GraphEdge, TModelsConfig, TEndpointOption } from 'librechat-data-provider';
 import type { Response as ServerResponse } from 'express';
-import type { ServerRequest } from '~/types';
 import type {
   InitializedAgent,
   InitializeAgentParams,
   InitializeAgentDbMethods,
 } from './initialize';
 import type { ValidateAgentModelParams } from './validation';
-import { createEdgeCollector, filterOrphanedEdges } from './edges';
-import { createSequentialChainEdges } from './chain';
+import type { ServerRequest } from '~/types';
 import { validateAgentModel as defaultValidateAgentModel } from './validation';
 import { initializeAgent as defaultInitializeAgent } from './initialize';
+import { createEdgeCollector, filterOrphanedEdges } from './edges';
+import { createSequentialChainEdges } from './chain';
 
 /**
  * Callback invoked after a sub-agent is successfully initialized.
@@ -69,6 +69,11 @@ export interface DiscoverConnectedAgentsParams {
    * allowlist (or the full accessible set when scoping is disabled).
    */
   computeAccessibleSkillIds?: (agent: Agent) => InitializeAgentParams['accessibleSkillIds'];
+  /** Optional per-sub-agent skill authoring gate, paired with the scoped skill IDs. */
+  computeSkillAuthoringAvailable?: (
+    agent: Agent,
+    accessibleSkillIds: InitializeAgentParams['accessibleSkillIds'],
+  ) => InitializeAgentParams['skillAuthoringAvailable'];
   /** Per-user skill active/inactive state, forwarded to each sub-agent. */
   skillStates?: InitializeAgentParams['skillStates'];
   /** Default active-on-share flag, forwarded to each sub-agent. */
@@ -83,6 +88,21 @@ export interface DiscoverConnectedAgentsParams {
    * code-execution tooling even though their parent had it.
    */
   codeEnvAvailable?: InitializeAgentParams['codeEnvAvailable'];
+  /** Sibling of `codeEnvAvailable` — the `stateful_code_sessions` capability flag, forwarded to every handoff `initializeAgent`. */
+  statefulSessionsAvailable?: InitializeAgentParams['statefulSessionsAvailable'];
+  /**
+   * Run-level inline memory availability gate. Forwarded verbatim to every
+   * handoff agent so sub-agents that list the `memory` capability expand the
+   * `set_memory` + `delete_memory` pair only when the parent run permits it.
+   */
+  memoryAvailable?: InitializeAgentParams['memoryAvailable'];
+  /**
+   * Run-level `run_in_background` capability gate. Forwarded verbatim so a
+   * handoff/connected agent's own event-driven tools with
+   * `tool_options[tool].run_in_background` get the injected param + poll tool,
+   * matching how the same agent behaves when run as the primary.
+   */
+  backgroundToolsAvailable?: InitializeAgentParams['backgroundToolsAvailable'];
 }
 
 export interface DiscoverConnectedAgentsDeps {
@@ -148,9 +168,13 @@ export async function discoverConnectedAgents(
     parentMessageId,
     resourceType = ResourceType.AGENT,
     computeAccessibleSkillIds,
+    computeSkillAuthoringAvailable,
     skillStates,
     defaultActiveOnShare,
     codeEnvAvailable,
+    backgroundToolsAvailable,
+    statefulSessionsAvailable,
+    memoryAvailable,
   } = params;
 
   const {
@@ -237,6 +261,7 @@ export async function discoverConnectedAgents(
       endpoint: EModelEndpoint.agents,
     };
 
+    const scopedSkillIds = computeAccessibleSkillIds?.(agent);
     const config = await initializeAgent(
       {
         req,
@@ -248,10 +273,14 @@ export async function discoverConnectedAgents(
         parentMessageId,
         endpointOption: subAgentEndpointOption,
         allowedProviders,
-        accessibleSkillIds: computeAccessibleSkillIds?.(agent),
+        accessibleSkillIds: scopedSkillIds,
+        skillAuthoringAvailable: computeSkillAuthoringAvailable?.(agent, scopedSkillIds),
         skillStates,
         defaultActiveOnShare,
         codeEnvAvailable,
+        backgroundToolsAvailable,
+        statefulSessionsAvailable,
+        memoryAvailable,
       },
       db,
     );

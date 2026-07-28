@@ -31,6 +31,7 @@ import type {
   ToolCall,
 } from './types';
 import type { OpenAIStreamHandlerConfig, EventHandler } from './handlers';
+import type { ToolExecuteOptions } from '../handlers';
 import {
   createOpenAIContentAggregator,
   createOpenAIStreamTracker,
@@ -39,7 +40,7 @@ import {
   createChunk,
   writeSSE,
 } from './handlers';
-import type { ToolExecuteOptions } from '../handlers';
+import { createSafeUser } from '~/utils';
 
 /**
  * Dependencies for the chat completion service
@@ -68,15 +69,17 @@ export interface ChatCompletionDependencies {
   /** Create agent run */
   createRun?: CreateRunFn;
   /**
-   * App config. Optional, but required for agents with `execute_code` in
-   * their tools: the helper derives `codeEnvAvailable` from
+   * App config. Optional for basic chat, but required for tenant-scoped
+   * Langfuse fanout and for agents with `execute_code` in their tools:
+   * tenant Langfuse keys are forwarded to `createRun`, and the helper derives
+   * `codeEnvAvailable` from
    * `appConfig?.endpoints?.agents?.capabilities` and forwards it into
    * `deps.initializeAgent`. When `appConfig` is omitted, the resolved
    * `codeEnvAvailable` is `undefined`, so `initializeAgent` skips the
    * `execute_code` → `bash_tool` + `read_file` expansion entirely and
    * code-requesting agents silently lose sandbox tools. Pass `appConfig`
    * (even a minimal shape with just `endpoints.agents.capabilities`) to
-   * keep code execution working.
+   * keep tenant tracing and code execution working.
    */
   appConfig?: AppConfig;
   /** Tool execute options for event-driven tool execution */
@@ -143,6 +146,20 @@ interface InitializeAgentParams {
    * skips the expansion (same semantics as the in-repo controllers).
    */
   codeEnvAvailable?: boolean;
+  /**
+   * Whether the admin-level `stateful_code_sessions` capability is enabled.
+   * Threaded to `initializeAgent` alongside `codeEnvAvailable` so this
+   * OpenAI-compatible route resolves stateful sessions identically to the
+   * in-repo controllers; absent / `undefined` disables the feature.
+   */
+  statefulSessionsAvailable?: boolean;
+  /**
+   * Whether the admin-level `run_in_background` capability is enabled.
+   * Gates `applyBackgroundToolCalls` in `initializeAgent` (the injected
+   * `run_in_background` param + the `check_background_task` poll tool);
+   * absent / `undefined` disables background tool calls on this route.
+   */
+  backgroundToolsAvailable?: boolean;
 }
 
 /**
@@ -174,6 +191,8 @@ type CreateRunFn = (params: {
   customHandlers: Record<string, EventHandler>;
   requestBody: Record<string, unknown>;
   user: Record<string, unknown>;
+  tenantId?: string;
+  appConfig?: Pick<AppConfig, 'endpoints' | 'langfuse'>;
   tokenCounter?: (message: unknown) => number;
 }) => Promise<{
   Graph?: unknown;
@@ -433,12 +452,21 @@ export async function createAgentChatCompletion(
      * use.
      */
     const agentsConfig = (deps.appConfig?.endpoints as Record<string, unknown> | undefined)?.agents;
-    const codeEnvAvailable =
+    const capabilityEnabled = (capability: AgentCapabilities): boolean | undefined =>
       agentsConfig != null && typeof agentsConfig === 'object'
-        ? ((agentsConfig as { capabilities?: string[] }).capabilities ?? []).includes(
-            AgentCapabilities.execute_code,
-          )
+        ? ((agentsConfig as { capabilities?: string[] }).capabilities ?? []).includes(capability)
         : undefined;
+    const codeEnvAvailable = capabilityEnabled(AgentCapabilities.execute_code);
+    /** Mirror `codeEnvAvailable` for the stateful-session gate so an agent with
+     *  `execute_code`, the app `stateful_code_sessions` capability, and its own
+     *  builder opt-in resolves stateful sessions on this route too — otherwise
+     *  `statefulCodeSessions` stays false and `createRun` never sends
+     *  `toolExecution.sandbox`. */
+    const statefulSessionsAvailable = capabilityEnabled(AgentCapabilities.stateful_code_sessions);
+    /** Same gate as the in-repo controllers: without it, agents that opted
+     *  tools in via tool_options.run_in_background silently lose the
+     *  background param + poll tool on this route. */
+    const backgroundToolsAvailable = capabilityEnabled(AgentCapabilities.run_in_background);
 
     // Initialize the agent first to check for disableStreaming
     const initializedAgent = await deps.initializeAgent({
@@ -455,6 +483,8 @@ export async function createAgentChatCompletion(
       allowedProviders,
       isInitialAgent: true,
       codeEnvAvailable,
+      statefulSessionsAvailable,
+      backgroundToolsAvailable,
     });
 
     // Determine if streaming is enabled (check both request and agent config)
@@ -500,7 +530,17 @@ export async function createAgentChatCompletion(
 
     // Create and run the agent
     if (deps.createRun) {
-      const userId = (req as unknown as { user?: { id?: string } }).user?.id ?? 'api-user';
+      const reqUser = (req as unknown as { user?: Parameters<typeof createSafeUser>[0] }).user;
+      const userId = reqUser?.id ?? 'api-user';
+      /**
+       * Propagate the full safe user (id + role), matching the in-repo agent
+       * controllers (responses.js / openai.js). The runtime MCP permission
+       * check reads `configurable.user`; passing only `user_id` would make
+       * every MCP tool call fail closed for an authenticated caller. When the
+       * host app didn't attach a user, this falls back to a bare id, which
+       * correctly leaves MCP gated.
+       */
+      const safeUser: Record<string, unknown> = { ...createSafeUser(reqUser), id: userId };
 
       const run = await deps.createRun({
         agents: [initializedAgent],
@@ -512,7 +552,14 @@ export async function createAgentChatCompletion(
           messageId: requestId,
           conversationId,
         },
-        user: { id: userId },
+        user: safeUser,
+        tenantId: typeof reqUser?.tenantId === 'string' ? reqUser.tenantId : undefined,
+        appConfig: deps.appConfig
+          ? {
+              endpoints: deps.appConfig.endpoints,
+              langfuse: deps.appConfig.langfuse,
+            }
+          : undefined,
       });
 
       if (run) {
@@ -523,6 +570,7 @@ export async function createAgentChatCompletion(
             configurable: {
               thread_id: conversationId,
               user_id: userId,
+              user: safeUser,
             },
             signal: abortController.signal,
             streamMode: 'values',

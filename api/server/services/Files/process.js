@@ -17,12 +17,14 @@ const {
   isAssistantsEndpoint,
   getEndpointFileConfig,
   documentParserMimeTypes,
+  isPermissiveMimeConfig,
 } = require('librechat-data-provider');
 const { logger, runAsSystem } = require('@librechat/data-schemas');
 const {
   sanitizeFilename,
   parseText,
   processAudioFile,
+  sendUploadSuccess,
   getStorageMetadata,
   sweepExpiredFiles: sweepExpiredFilesWithDeps,
   startExpiredFileSweep: startExpiredFileSweepWithDeps,
@@ -38,7 +40,7 @@ const { loadAuthValues } = require('~/server/services/Tools/credentials');
 const { getFileStrategy } = require('~/server/utils/getFileStrategy');
 const { checkCapability } = require('~/server/services/Config');
 const { LB_QueueAsyncCall } = require('~/server/utils/queue');
-const { getRetentionExpiry } = require('./retention');
+const { getRetentionExpiry, getAgentFileRetentionExpiry } = require('./retention');
 const { getStrategyFunctions } = require('./strategies');
 const { determineFileType } = require('~/server/utils');
 const { STTService } = require('./Audio/STTService');
@@ -66,6 +68,8 @@ const createSanitizedUploadWrapper = (uploadFunction) => {
     return uploadFunction({ req, file: sanitizedFile, file_id, ...restParams });
   };
 };
+
+const hasCodeEnvRef = (file) => file?.metadata?.codeEnvRef != null;
 
 const isMissingStorageError = (err) => {
   const code = err?.code ?? err?.status ?? err?.statusCode ?? err?.response?.status;
@@ -143,6 +147,49 @@ function enqueueDeleteOperation({
     );
   }
 }
+
+const getDeleteMethod = ({ source, deletionMethods }) => {
+  if (deletionMethods[source]) {
+    return deletionMethods[source];
+  }
+
+  const { deleteFile } = getStrategyFunctions(source);
+  if (!deleteFile) {
+    throw new Error(`Delete function not implemented for ${source}`);
+  }
+
+  deletionMethods[source] = deleteFile;
+  return deleteFile;
+};
+
+const createDeleteFileWithSecondaryStorage = ({ source, deleteFile, deletionMethods }) => {
+  return async (req, file, openai) => {
+    const secondaryDeleteMethods = [];
+    if (file.embedded === true && source !== FileSources.vectordb) {
+      secondaryDeleteMethods.push(
+        getDeleteMethod({ source: FileSources.vectordb, deletionMethods }),
+      );
+    }
+    if (hasCodeEnvRef(file) && source !== FileSources.execute_code) {
+      secondaryDeleteMethods.push(
+        getDeleteMethod({ source: FileSources.execute_code, deletionMethods }),
+      );
+    }
+
+    try {
+      await deleteFile(req, file, openai);
+    } catch (err) {
+      if (!isMissingStorageError(err)) {
+        throw err;
+      }
+      logger.warn('Primary file storage was already missing during delete', err);
+    }
+
+    await Promise.all(
+      secondaryDeleteMethods.map((secondaryDeleteFile) => secondaryDeleteFile(req, file)),
+    );
+  };
+};
 
 // TODO: refactor as currently only image files can be deleted this way
 // as other filetypes will not reside in public path
@@ -229,29 +276,11 @@ const processDeleteRequest = async ({ req, files }) => {
       promises.push(openai.beta.assistants.files.del(req.body.assistant_id, file.file_id));
     }
 
-    if (deletionMethods[source]) {
-      enqueueDeleteOperation({
-        req,
-        file,
-        deleteFile: deletionMethods[source],
-        promises,
-        resolvedFileIds,
-        failedFileIds,
-        openai,
-      });
-      continue;
-    }
-
-    const { deleteFile } = getStrategyFunctions(source);
-    if (!deleteFile) {
-      throw new Error(`Delete function not implemented for ${source}`);
-    }
-
-    deletionMethods[source] = deleteFile;
+    const deleteFile = getDeleteMethod({ source, deletionMethods });
     enqueueDeleteOperation({
       req,
       file,
-      deleteFile,
+      deleteFile: createDeleteFileWithSecondaryStorage({ source, deleteFile, deletionMethods }),
       promises,
       resolvedFileIds,
       failedFileIds,
@@ -419,9 +448,10 @@ const processFileURL = async ({
  * @param {Express.Response} [params.res] - The Express response object.
  * @param {ImageMetadata} params.metadata - Additional metadata for the file.
  * @param {boolean} params.returnFile - Whether to return the file metadata or return response as normal.
+ * @param {import('@librechat/api').UploadSseStream | null} [params.sseStream] - Active upload SSE stream, if enabled.
  * @returns {Promise<void>}
  */
-const processImageFile = async ({ req, res, metadata, returnFile = false }) => {
+const processImageFile = async ({ req, res, metadata, returnFile = false, sseStream }) => {
   const { file } = req;
   const appConfig = req.config;
   const source = getFileStrategy(appConfig, { isImage: true });
@@ -459,7 +489,7 @@ const processImageFile = async ({ req, res, metadata, returnFile = false }) => {
   if (returnFile) {
     return result;
   }
-  res.status(200).json({ message: 'File uploaded and processed successfully', ...result });
+  sendUploadSuccess(res, sseStream, 'File uploaded and processed successfully', result);
 };
 
 /**
@@ -526,9 +556,10 @@ const uploadImageBuffer = async ({ req, context, metadata = {}, resize = true })
  * @param {ServerRequest} params.req - The Express request object.
  * @param {Express.Response} params.res - The Express response object.
  * @param {FileMetadata} params.metadata - Additional metadata for the file.
+ * @param {import('@librechat/api').UploadSseStream | null} [params.sseStream] - Active upload SSE stream, if enabled.
  * @returns {Promise<void>}
  */
-const processFileUpload = async ({ req, res, metadata }) => {
+const processFileUpload = async ({ req, res, metadata, sseStream }) => {
   const appConfig = req.config;
   const isAssistantUpload = isAssistantsEndpoint(metadata.endpoint);
   const assistantSource =
@@ -621,7 +652,7 @@ const processFileUpload = async ({ req, res, metadata }) => {
     },
     true,
   );
-  res.status(200).json({ message: 'File uploaded and processed successfully', ...result });
+  sendUploadSuccess(res, sseStream, 'File uploaded and processed successfully', result);
 };
 
 /**
@@ -633,9 +664,10 @@ const processFileUpload = async ({ req, res, metadata }) => {
  * @param {ServerRequest} params.req - The Express request object.
  * @param {Express.Response} params.res - The Express response object.
  * @param {FileMetadata} params.metadata - Additional metadata for the file.
+ * @param {import('@librechat/api').UploadSseStream | null} [params.sseStream] - Active upload SSE stream, if enabled.
  * @returns {Promise<void>}
  */
-const processAgentFileUpload = async ({ req, res, metadata }) => {
+const processAgentFileUpload = async ({ req, res, metadata, sseStream }) => {
   const { file } = req;
   const appConfig = req.config;
   const { agent_id, tool_resource, file_id, temp_file_id = null } = metadata;
@@ -727,7 +759,11 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
           `Extracted text from "${file.originalname}" exceeds the 15MB storage limit (${Math.round(textBytes / megabyte)}MB). Try a shorter document.`,
         );
       }
-      const retentionExpiry = await getRetentionExpiry(req);
+      const retentionExpiry = await getAgentFileRetentionExpiry({
+        req,
+        messageAttachment,
+        tool_resource,
+      });
       const fileInfo = {
         ...removeNullishValues({
           text,
@@ -755,9 +791,7 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
         });
       }
       const result = await db.createFile(fileInfo, true);
-      return res
-        .status(200)
-        .json({ message: 'Agent file uploaded and processed successfully', ...result });
+      sendUploadSuccess(res, sseStream, 'Agent file uploaded and processed successfully', result);
     };
 
     const fileConfig = mergeFileConfig(appConfig.fileConfig);
@@ -766,8 +800,25 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
       appConfig?.ocr != null &&
       fileConfig.checkType(file.mimetype, fileConfig.ocr?.supportedMimeTypes || []);
 
+    const isDocumentParserEligible = documentParserMimeTypes.some((regex) =>
+      regex.test(file.mimetype),
+    );
+
+    /**
+     * When an admin narrows `fileConfig.text.supportedMimeTypes` to a non-permissive allowlist that
+     * includes a document type and a RAG API is configured, honor that intent by sending the file to
+     * RAG `/text` instead of the built-in document parser. The permissive default catch-all is
+     * excluded via `isPermissiveMimeConfig`, so RAG deployments that never customized text handling
+     * keep the built-in parser introduced in #11900.
+     */
+    const shouldUseConfiguredText =
+      !!process.env.RAG_API_URL &&
+      isDocumentParserEligible &&
+      !isPermissiveMimeConfig(fileConfig.text?.supportedMimeTypes) &&
+      fileConfig.checkType(file.mimetype, fileConfig.text?.supportedMimeTypes || []);
+
     const shouldUseDocumentParser =
-      !shouldUseConfiguredOCR && documentParserMimeTypes.some((regex) => regex.test(file.mimetype));
+      !shouldUseConfiguredOCR && !shouldUseConfiguredText && isDocumentParserEligible;
 
     const shouldUseOCR = shouldUseConfiguredOCR || shouldUseDocumentParser;
 
@@ -828,6 +879,38 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
 
     if (!shouldUseText) {
       throw new Error(`File type ${file.mimetype} is not supported for text parsing.`);
+    }
+
+    /**
+     * A document type the admin routed to configured text extraction: prefer RAG `/text`, but fall
+     * back to the built-in document parser (not raw native text) when RAG is unavailable, so a
+     * transient outage doesn't degrade a docx/pdf to unreadable bytes. Only the RAG extraction is
+     * inside the fallback catch: a downstream persistence failure (size guard, DB, agent-resource
+     * mutation) must surface as itself, not trigger a second extraction attempt.
+     */
+    if (shouldUseConfiguredText) {
+      let configuredText;
+      try {
+        configuredText = await parseText({ req, file, file_id, allowNativeFallback: false });
+      } catch (err) {
+        logger.warn(
+          `[processAgentFileUpload] Configured RAG text extraction unavailable for "${file.originalname}", using built-in document parser:`,
+          err,
+        );
+        const documentText = await resolveDocumentText();
+        if (!documentText) {
+          throw new Error(
+            `Unable to extract text from "${file.originalname}". RAG text extraction was unavailable and the built-in parser produced no result.`,
+          );
+        }
+        const { text, bytes, filepath: docFileURL } = documentText;
+        return await createTextFile({ text, bytes, filepath: docFileURL });
+      }
+      return await createTextFile({
+        text: configuredText.text,
+        bytes: configuredText.bytes,
+        type: file.mimetype,
+      });
     }
 
     const { text, bytes } = await parseText({ req, file, file_id });
@@ -925,7 +1008,11 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
     });
   }
 
-  const retentionExpiry = await getRetentionExpiry(req);
+  const retentionExpiry = await getAgentFileRetentionExpiry({
+    req,
+    messageAttachment,
+    tool_resource,
+  });
   const fileInfo = {
     ...removeNullishValues({
       user: req.user.id,
@@ -950,7 +1037,7 @@ const processAgentFileUpload = async ({ req, res, metadata }) => {
 
   const result = await db.createFile(fileInfo, true);
 
-  res.status(200).json({ message: 'Agent file uploaded and processed successfully', ...result });
+  sendUploadSuccess(res, sseStream, 'Agent file uploaded and processed successfully', result);
 };
 
 /**
@@ -999,7 +1086,11 @@ const processOpenAIFile = async ({
     await db.createFile(file, true);
   } else if (updateUsage) {
     try {
-      await db.updateFileUsage({ file_id });
+      await db.updateFileUsage({
+        file_id,
+        user: userId,
+        tenantId: openai.req?.user?.tenantId,
+      });
     } catch (error) {
       logger.error('Error updating file usage', error);
     }

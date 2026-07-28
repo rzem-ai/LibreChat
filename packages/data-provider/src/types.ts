@@ -7,12 +7,14 @@ import type {
   TAttachment,
   TMessage,
   TBanner,
+  ReasoningResponseKey,
+  ReasoningParameterFormat,
 } from './schemas';
+import type { Agent, EToolResources } from './types/assistants';
 import type { RefillIntervalUnit } from './balance';
 import type { SettingDefinition } from './generate';
 import type { TMinimalFeedback } from './feedback';
 import type { ContentTypes } from './types/runs';
-import type { Agent } from './types/assistants';
 
 export * from './schemas';
 
@@ -51,6 +53,7 @@ export type TEndpointOption = Pick<
   | 'additionalModelRequestFields'
   // Anthropic-specific
   | 'promptCache'
+  | 'promptCacheTtl'
   | 'thinking'
   | 'thinkingBudget'
   | 'thinkingLevel'
@@ -69,6 +72,7 @@ export type TEndpointOption = Pick<
   | 'file_ids'
   // System field
   | 'system'
+  | 'chatProjectId'
   // Google examples
   | 'examples'
   // Context
@@ -104,6 +108,15 @@ export type TEphemeralAgent = {
   execute_code?: boolean;
   artifacts?: string;
   skills?: boolean;
+  memory?: boolean;
+  /** Equip the ephemeral agent with the `ask_user_question` HITL tool. */
+  ask_user_question?: boolean;
+  /**
+   * Let the model dispatch this ephemeral agent's eligible tool calls in the
+   * background (poll results via `check_background_task`). Requires the
+   * `run_in_background` agent capability to be enabled by the admin.
+   */
+  run_in_background?: boolean;
 };
 
 export type TPayload = Partial<TMessage> &
@@ -124,6 +137,15 @@ export type TPayload = Partial<TMessage> &
      * before the LLM turn runs.
      */
     manualSkills?: string[];
+    /** Browser IANA timezone (e.g. `America/New_York`) used to resolve local-time prompt variables server-side. */
+    timezone?: string;
+    /**
+     * Stable per-submission idempotency key (uuid) generated once per `ask()`. Identical
+     * across the client's start-generation network retries, unique per user action (including
+     * regenerate). The server dedups retried start requests on it so a lost/reset response
+     * cannot trigger a second billed generation.
+     */
+    clientRequestId?: string;
   };
 
 export type TEditedContent =
@@ -144,6 +166,8 @@ export type TSubmission = {
   isContinued?: boolean;
   isTemporary: boolean;
   messages: TMessage[];
+  /** Client-only full message context used to restore branch siblings after scoped regenerate. */
+  regenerateMessages?: TMessage[];
   isRegenerate?: boolean;
   initialResponse?: TMessage;
   conversation: Partial<TConversation>;
@@ -155,6 +179,8 @@ export type TSubmission = {
   addedConvo?: TConversation;
   /** Skills the user invoked via the `$` popover for this submission. */
   manualSkills?: string[];
+  /** Stable per-submission idempotency key (uuid) forwarded to the server to dedup retried start-generation requests. */
+  clientRequestId?: string;
 };
 
 export type EventSubmission = Omit<TSubmission, 'initialResponse'> & { initialResponse: TMessage };
@@ -191,6 +217,8 @@ export type TMarketplaceCategory = TCategory & {
 export type TError = {
   message: string;
   code?: number | string;
+  file_id?: string;
+  tool_resource?: EToolResources;
   response?: {
     data?: {
       message?: string;
@@ -213,6 +241,7 @@ export type TUser = {
   avatar: string;
   role: string;
   provider: string;
+  tenantId?: string;
   plugins?: string[];
   twoFactorEnabled?: boolean;
   backupCodes?: TBackupCode[];
@@ -284,6 +313,43 @@ export type TUpdateConversationRequest = {
 
 export type TUpdateConversationResponse = TConversation;
 
+export type TChatProject = {
+  _id: string;
+  name: string;
+  description?: string;
+  user?: string;
+  conversationCount: number;
+  lastConversationAt?: string | null;
+  lastConversationId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TCreateChatProjectRequest = {
+  name: string;
+  description?: string;
+};
+
+export type TUpdateChatProjectRequest = Partial<TCreateChatProjectRequest> & {
+  projectId: string;
+};
+
+export type TDeleteChatProjectResponse = {
+  deletedCount: number;
+  modifiedCount: number;
+};
+
+export type TAssignConversationToProjectRequest = {
+  conversationId: string;
+  projectId: string | null;
+};
+
+export type TAssignConversationToProjectResponse = {
+  conversation: TConversation;
+  previousProjectId: string | null;
+  projectId: string | null;
+};
+
 export type TDeleteConversationRequest = {
   conversationId?: string;
   thread_id?: string;
@@ -307,6 +373,13 @@ export type TArchiveConversationRequest = {
 
 export type TArchiveConversationResponse = TConversation;
 
+export type TPinConversationRequest = {
+  conversationId: string;
+  pinned: boolean;
+};
+
+export type TPinConversationResponse = TConversation;
+
 export type TSharedMessagesResponse = Omit<TSharedLink, 'messages'> & {
   messages: TMessage[];
 };
@@ -317,11 +390,15 @@ export type TUpdateShareLinkRequest = Pick<TSharedLink, 'shareId' | 'targetMessa
 
 export type TSharedLinkResponse = Pick<TSharedLink, 'shareId'> &
   Pick<TSharedLink, 'targetMessageId'> &
-  Pick<TConversation, 'conversationId'>;
+  Pick<TConversation, 'conversationId'> & {
+    _id?: string;
+  };
 
 export type TSharedLinkGetResponse = Omit<TSharedLinkResponse, 'shareId'> & {
   shareId: string | null;
   success: boolean;
+  /** Per-link "share files" choice; absent on legacy links (treated as enabled). */
+  snapshotFiles?: boolean;
 };
 
 // type for getting conversation tags
@@ -365,6 +442,14 @@ export type TForkConvoResponse = {
   messages: TMessage[];
 };
 
+export type TForkSharedConvoRequest = {
+  shareId: string;
+  /** Index of the viewer's active message within the shared payload; reduces the
+   *  fork to that branch. An index is used because shared ids are re-anonymized
+   *  per request and `createdAt` can collide, while the payload order is stable. */
+  targetMessageIndex?: number;
+};
+
 export type TSearchResults = {
   conversations: TConversation[];
   messages: TMessage[];
@@ -397,6 +482,10 @@ export type TConfig = {
   capabilities?: string[];
   customParams?: {
     defaultParamsEndpoint?: string;
+    reasoningFormat?: ReasoningParameterFormat;
+    reasoningKey?: ReasoningResponseKey;
+    includeReasoningContent?: boolean;
+    includeReasoningHistory?: boolean;
     paramDefinitions?: Partial<SettingDefinition>[];
   };
 };
@@ -406,6 +495,18 @@ export type TEndpointsConfig =
   | undefined;
 
 export type TModelsConfig = Record<string, string[]>;
+
+/** Server-resolved context window and pricing for one model. Rates are USD per 1M tokens. */
+export type TModelTokenomics = {
+  context?: number;
+  prompt?: number;
+  completion?: number;
+  cacheWrite?: number;
+  cacheRead?: number;
+};
+
+/** endpoint → model → resolved tokenomics, from GET /api/endpoints/token-config */
+export type TTokenConfigMap = Record<string, Record<string, TModelTokenomics>>;
 
 export type TUpdateTokenCountResponse = {
   count: number;
@@ -667,10 +768,12 @@ export type TCustomConfigSpeechResponse = { [key: string]: string };
 
 export type TUserTermsResponse = {
   termsAccepted: boolean;
+  termsAcceptedAt: Date | string | null;
 };
 
 export type TAcceptTermsResponse = {
-  success: boolean;
+  message: string;
+  termsAcceptedAt: Date | string;
 };
 
 export type TBannerResponse = TBanner | null;

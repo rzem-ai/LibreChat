@@ -39,17 +39,17 @@ cd tt-librechat
 
 ## 2. Initialize Submodules
 
-This repository uses Git submodules to include external dependencies. The `rag_api` submodule contains the RAG (Retrieval-Augmented Generation) API code from the [tt-librechat-rag](https://github.com/Deloitte-Australia/tt-librechat-rag) repository.
+This repository uses Git submodules to include external dependencies. The `rag_api` submodule contains the RAG (Retrieval-Augmented Generation) API code from the [tt-librechat-rag](https://github.com/Deloitte-Australia/tt-librechat-rag) repository. The `admin_panel` submodule contains the admin panel code from the [ea-libreadmin](https://github.com/Deloitte-Australia/ea-libreadmin). 
 
 ### Initial Setup
 
-After cloning, initialize and clone the submodule:
+After cloning, initialize and clone the submodules:
 
 ```zsh
 git submodule update --init --recursive
 ```
 
-This will populate the `rag_api/` folder with the contents from the tt-librechat-rag repository on the `develop` branch.
+This will populate the `rag_api/` folder with the contents from the tt-librechat-rag repository on the `develop` branch and the `admin_panel/` folder with the contents from the ea-libreadmin repository on the `develop` branch.
 
 ### Updating the Submodule
 
@@ -170,10 +170,10 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 25. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
 26. `CLEARTRACK_MCP_GATEWAY_CLIENT_ID=3e5d28f1-91a3-4748-ad73-5fa544f1d3e2`
 27. `CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET=<update with the provided secret from another team member>`
-28. `CLEARTRACK_MCP_GATEWAY_CLIENT_ID_LLM=498ce9fd-195b-40c5-82f1-8fc4a6d00d88`
-29. `CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET_LLM=<update with the provided secret from another team member>`
+28. `MCP_GATEWAY_TOOLSETS=teams,research,news`
 
-> Items 26–29 supply OAuth credentials for the **ClearTrack MCP Gateway** app registrations referenced by the `mcpServers` block in `librechat.yaml` (repo root) and `charts/config/librechat.yaml` (Helm). The client IDs are identifiers and are safe to commit; the client secrets must be obtained from another team member and kept out of source control.
+
+> Items 26–27 supply OAuth credentials for the **ClearTrack MCP Gateway** app registration referenced by the `mcpServers` block in `librechat.yaml` (repo root) and `charts/config/librechat.yaml` (Helm). The client ID is an identifier and is safe to commit; the client secret must be obtained from another team member and kept out of source control.
 
 #### How to obtain the JWT token
 ⚠️ As of May 2026, tokens expire after ~8 hours. If models suddenly stop working, reissue the token.
@@ -417,14 +417,18 @@ For LOCAL development, we need to add each user's hostname to the Redirect URIs 
 
 ### Details Per Environment
 - **DEV (Inc. LOCAL):** [AU CTK_TT_Librechat NONPROD](https://appreg.iam.deloitteresources.com/AppProperties/2075976d-5147-47b2-89d2-4ad060d19f85)
-- **UAT:** TBC
+- **UAT:** [AU CTK_TT_Librechat NONPROD](https://appreg.iam.deloitteresources.com/AppProperties/2075976d-5147-47b2-89d2-4ad060d19f85)
 - **PROD:** TBC
 
 ### Configuration
-- Setup Method: WebAPI/OIDC
-- Authentication Tab: Configured Identifier URI and Redirect URIs
-- Secrets Tab: Generated a client secret, used for local `.env` configuration and, where applicable, the relevant Helm `values*.yaml` under `charts/`
-- Users and Groups: Currently just linked to the MyAssist DEV user group (AU_App_MyGenAI_Dev, request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb))
+1. Setup Method: WebAPI/OIDC
+2. Authentication Tab: Configured Identifier URI and Redirect URIs
+3. Secrets Tab: Generated a client secret, used for local `.env` configuration and, where applicable, the relevant Helm `values*.yaml` under `charts/`
+4. Permissions Tab: Enable the 6 following permissions: User.ReadBasic.All, email, openid, profile, offline_access, User.Read
+5. Offered API(s) Tab: Add the access_user suffix to "Scopes defined by this api". Copy from DEV configuration.
+6. Users and Groups: Set "Assignment Required" to "Enabled" and choose access group. 
+  - DEV: Linked to the MyAssist DEV user group (AU_App_MyGenAI_Dev, request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb))
+  - UAT: Linked to the MyAssist UAT user Group (AU_App_MyGenAI_Stg, request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb))
 
 # 🔐 Security
 
