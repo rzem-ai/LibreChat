@@ -262,7 +262,7 @@ modelSpecs:
 # MCP Servers configuration
 # Filter restricts tools to: teams (Teams), research (IBISWorld), news (AFR)
 mcpServers: # https://www.librechat.ai/docs/features/mcp
-  cleartrack-gateway-appreg:
+  cleartrack-mcp-gateway:
     # See documentation: https://github.com/Deloitte-Australia/ea-mcp-gateway/blob/feature/prototype/docs/MCP_Gateway_Wiki.md
     type: streamable-http
     url: "https://mcp-gw-dev.ctk.au.deloitte.com/mcp?toolsets=${MCP_GATEWAY_TOOLSETS}"
