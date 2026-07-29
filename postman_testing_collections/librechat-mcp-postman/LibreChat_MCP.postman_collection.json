@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "LibreChat — MCP (DEV)",
-    "description": "Queries LibreChat's MCP API on DEV (https://librechat-dev.ctk.au.deloitte.com).\n\nAUTH (SSO — do this ONCE before running):\n1. Log into LibreChat in your browser via SSO.\n2. DevTools (F12) -> Network -> click any /api/... request -> Request Headers -> copy the value after 'Authorization: Bearer '.\n3. Paste it into the environment variable {{token}} and Save.\nJWTs last ~15 min; if you get 401s, grab a fresh one.\n\nWHAT THIS DOES: lists the MCP servers LibreChat has configured, the tools each exposes, their live connection status, and can force a reconnect. NOTE: LibreChat has no REST endpoint that executes an MCP tool by name — tools only run when an agent's LLM calls them mid-chat. This collection inspects/verifies MCP servers via the API.\n\nRun top-to-bottom (Coverage report reads state saved by the earlier requests). See README.md.",
+    "description": "Queries LibreChat's MCP API on DEV (https://librechat-dev.ctk.au.deloitte.com).\n\nAUTH (SSO — do this ONCE before running):\n1. Log into LibreChat in your browser via SSO.\n2. DevTools (F12) -> Network -> click any /api/... request -> Request Headers -> copy the value after 'Authorization: Bearer '.\n3. Paste it into the environment variable {{token}} and Save.\nJWTs last ~15 min; if you get 401s, grab a fresh one.\n\nWHAT THIS DOES: lists the MCP servers LibreChat has configured, the tools each exposes, their live connection status, and can force a reconnect. NOTE: LibreChat has no REST endpoint that executes an MCP tool by name — tools only run when an agent's LLM calls them mid-chat. This collection inspects/verifies MCP servers via the API.\n\nRun top-to-bottom (Coverage report reads state saved by the earlier requests). Requests 1-2 discover the server and complete its OAuth BEFORE folder 3's 3a lists tools, so the tools list isn't empty by the time you get there. See README.md.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
@@ -38,7 +38,7 @@
     "    }",
     "  }",
     "} catch (e) { /* token not a decodable JWT yet; ignore */ }",
-    "// /api/agents/* (folder 6) is guarded by a browser User-Agent check (uaParser). Postman's",
+    "// /api/agents/* (folder 5) is guarded by a browser User-Agent check (uaParser). Postman's",
     "// default UA is rejected with { \"message\": \"Illegal request\" } and logs a non-browser violation.",
     "// Force a browser UA so the agent-chat requests are accepted.",
     "try { pm.request.headers.upsert({ key: 'User-Agent', value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36' }); } catch (e) {}"
@@ -110,31 +110,7 @@
       ]
     },
     {
-      "name": "1 · List MCP tools (per server)",
-      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-        "var json = null; try { json = pm.response.json(); } catch (e) {}",
-        "pm.test('HTTP 200 (401 => set {{token}} from browser Bearer)', function(){ pm.expect(pm.response.code).to.eql(200); });",
-        "pm.test('has servers map', function(){ pm.expect(json, 'body').to.be.an('object'); pm.expect(json).to.have.property('servers'); });",
-        "var servers = (json && json.servers) || {};",
-        "var summary = {}; var total = 0;",
-        "Object.keys(servers).forEach(function(name){",
-        "  var t = (servers[name] && servers[name].tools) || [];",
-        "  var toolNames = t.map(function(x){ return x.name || (x.function && x.function.name) || x.pluginKey; }).filter(Boolean);",
-        "  summary[name] = toolNames; total += toolNames.length;",
-        "  console.log(name + ' — ' + toolNames.length + ' tool(s): ' + toolNames.join(', '));",
-        "});",
-        "pm.environment.set('tools_summary', JSON.stringify(summary));",
-        "console.log('Total MCP tools: ' + total + ' across ' + Object.keys(servers).length + ' server(s).');",
-        "if (total === 0) { console.warn('0 tools — on DEV the ClearTrack gateway servers are OAuth-gated; tools appear only AFTER you complete the per-server OAuth in the browser. Expected pre-auth, not a failure.'); }"
-      ] } }],
-      "request": {
-        "method": "GET",
-        "header": [{ "key": "Accept", "value": "application/json" }],
-        "url": { "raw": "{{base_url}}/api/mcp/tools", "host": ["{{base_url}}"], "path": ["api", "mcp", "tools"] }
-      }
-    },
-    {
-      "name": "2 · Connection status (all servers)",
+      "name": "1 · Connection status (all servers)",
       "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
         "var json = null; try { json = pm.response.json(); } catch (e) {}",
         "pm.test('HTTP 200', function(){ pm.expect(pm.response.code).to.eql(200); });",
@@ -154,52 +130,12 @@
       }
     },
     {
-      "name": "3 · Per-server status sweep",
-      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-        "var servers = [];",
-        "try { servers = JSON.parse(pm.environment.get('mcp_servers') || '[]'); } catch (e) {}",
-        "if (!servers.length) { pm.test('servers discovered (run request 2 first)', function(){ pm.expect.fail('mcp_servers empty. Run the collection in order.'); }); return; }",
-        "var base = pm.environment.get('base_url'); var token = pm.environment.get('token');",
-        "var pending = servers.slice(); var results = [];",
-        "console.log('Sweeping ' + pending.length + ' MCP server(s) individually...');",
-        "function done(){",
-        "  pm.environment.set('sweep_results', JSON.stringify(results));",
-        "  var bad = results.filter(function(r){ return !r.httpOk || (r.state === 'error' && !r.requiresOAuth); });",
-        "  console.log('Sweep complete: ' + results.length + ' server(s), ' + bad.length + ' in a genuine error state.');",
-        "  pm.test('every configured server was queried', function(){ pm.expect(results.length).to.eql(servers.length); });",
-        "}",
-        "function next(){",
-        "  if (!pending.length) { done(); return; }",
-        "  var name = pending.shift();",
-        "  pm.sendRequest({ url: base + '/api/mcp/connection/status/' + encodeURIComponent(name), method: 'GET', header: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + token } }, function(err, res){",
-        "    var httpOk = false, state = 'unknown', requiresOAuth = false, detail = '';",
-        "    if (err) { detail = 'transport error: ' + err; }",
-        "    else { httpOk = res.code === 200; var obj = null; try { obj = res.json(); } catch (e) {} if (obj) { state = obj.connectionStatus || 'unknown'; requiresOAuth = !!obj.requiresOAuth; detail = 'state=' + state + (requiresOAuth ? ' (OAuth)' : ''); } else { detail = 'HTTP ' + res.code + ' non-JSON'; } }",
-        "    results.push({ server: name, httpOk: httpOk, state: state, requiresOAuth: requiresOAuth, detail: detail });",
-        "    pm.test('sweep: ' + name + ' — reachable (state=' + state + ')', function(){",
-        "      pm.expect(httpOk, detail).to.be.true;",
-        "      if (state === 'error' && !requiresOAuth) { pm.expect.fail(name + ' connectionState=error'); }",
-        "      if (requiresOAuth && state !== 'connected') { console.warn(name + ': ' + state + ' — OAuth not completed (expected on DEV until you authorize in the browser).'); }",
-        "      else if (state === 'disconnected' || state === 'connecting') { console.warn(name + ': ' + state + ' — idle/lazy connection (tolerated).'); }",
-        "    });",
-        "    next();",
-        "  });",
-        "}",
-        "next();"
-      ] } }],
-      "request": {
-        "method": "GET",
-        "header": [{ "key": "Accept", "value": "application/json" }],
-        "url": { "raw": "{{base_url}}/api/mcp/connection/status", "host": ["{{base_url}}"], "path": ["api", "mcp", "connection", "status"] }
-      }
-    },
-    {
-      "name": "4 · Reinitialize {{mcp_server}}",
+      "name": "2 · Reinitialize {{mcp_server}}",
       "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
         "var json = null; try { json = pm.response.json(); } catch (e) {}",
         "pm.test('HTTP 200 (404 => set {{mcp_server}} to a configured server)', function(){ pm.expect(pm.response.code).to.eql(200); });",
         "pm.test('has success + serverName', function(){ pm.expect(json, 'body').to.be.an('object'); pm.expect(json).to.have.property('success'); });",
-        "if (json && json.oauthRequired) { console.warn('Server requires OAuth. Open this URL in the browser to authorize, then re-run: ' + json.oauthUrl); }",
+        "if (json && json.oauthRequired) { console.warn('Server requires OAuth. Open this URL in the browser to authorize, then re-run THIS request before moving on to 3a · List MCP tools: ' + json.oauthUrl); }",
         "pm.test('succeeded OR requires OAuth (both acceptable)', function(){ pm.expect(json.success === true || json.oauthRequired === true, JSON.stringify(json)).to.be.true; });",
         "console.log('reinit ' + (json && json.serverName) + ': ' + (json && json.message));"
       ] } }],
@@ -214,7 +150,77 @@
       }
     },
     {
-      "name": "5 · Coverage report",
+      "name": "3 · Tools & per-server sweep",
+      "description": "Once request 2 has connected {{mcp_server}}, 3a lists the tools it exposes and 3b sweeps every configured server's connection status individually.",
+      "item": [
+        {
+          "name": "3a · List MCP tools (per server)",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var json = null; try { json = pm.response.json(); } catch (e) {}",
+            "pm.test('HTTP 200 (401 => set {{token}} from browser Bearer)', function(){ pm.expect(pm.response.code).to.eql(200); });",
+            "pm.test('has servers map', function(){ pm.expect(json, 'body').to.be.an('object'); pm.expect(json).to.have.property('servers'); });",
+            "var servers = (json && json.servers) || {};",
+            "var summary = {}; var total = 0;",
+            "Object.keys(servers).forEach(function(name){",
+            "  var t = (servers[name] && servers[name].tools) || [];",
+            "  var toolNames = t.map(function(x){ return x.name || (x.function && x.function.name) || x.pluginKey; }).filter(Boolean);",
+            "  summary[name] = toolNames; total += toolNames.length;",
+            "  console.log(name + ' — ' + toolNames.length + ' tool(s): ' + toolNames.join(', '));",
+            "});",
+            "pm.environment.set('tools_summary', JSON.stringify(summary));",
+            "console.log('Total MCP tools: ' + total + ' across ' + Object.keys(servers).length + ' server(s).');",
+            "if (total === 0) { console.warn('0 tools — if 2 · Reinitialize returned oauthRequired, open its oauthUrl, authorize in the browser, then re-run 2 before this request. Expected empty pre-OAuth, not a failure.'); }"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/mcp/tools", "host": ["{{base_url}}"], "path": ["api", "mcp", "tools"] }
+          }
+        },
+        {
+          "name": "3b · Per-server status sweep",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "var servers = [];",
+            "try { servers = JSON.parse(pm.environment.get('mcp_servers') || '[]'); } catch (e) {}",
+            "if (!servers.length) { pm.test('servers discovered (run request 1 first)', function(){ pm.expect.fail('mcp_servers empty. Run the collection in order.'); }); return; }",
+            "var base = pm.environment.get('base_url'); var token = pm.environment.get('token');",
+            "var pending = servers.slice(); var results = [];",
+            "console.log('Sweeping ' + pending.length + ' MCP server(s) individually...');",
+            "function done(){",
+            "  pm.environment.set('sweep_results', JSON.stringify(results));",
+            "  var bad = results.filter(function(r){ return !r.httpOk || (r.state === 'error' && !r.requiresOAuth); });",
+            "  console.log('Sweep complete: ' + results.length + ' server(s), ' + bad.length + ' in a genuine error state.');",
+            "  pm.test('every configured server was queried', function(){ pm.expect(results.length).to.eql(servers.length); });",
+            "}",
+            "function next(){",
+            "  if (!pending.length) { done(); return; }",
+            "  var name = pending.shift();",
+            "  pm.sendRequest({ url: base + '/api/mcp/connection/status/' + encodeURIComponent(name), method: 'GET', header: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + token } }, function(err, res){",
+            "    var httpOk = false, state = 'unknown', requiresOAuth = false, detail = '';",
+            "    if (err) { detail = 'transport error: ' + err; }",
+            "    else { httpOk = res.code === 200; var obj = null; try { obj = res.json(); } catch (e) {} if (obj) { state = obj.connectionStatus || 'unknown'; requiresOAuth = !!obj.requiresOAuth; detail = 'state=' + state + (requiresOAuth ? ' (OAuth)' : ''); } else { detail = 'HTTP ' + res.code + ' non-JSON'; } }",
+            "    results.push({ server: name, httpOk: httpOk, state: state, requiresOAuth: requiresOAuth, detail: detail });",
+            "    pm.test('sweep: ' + name + ' — reachable (state=' + state + ')', function(){",
+            "      pm.expect(httpOk, detail).to.be.true;",
+            "      if (state === 'error' && !requiresOAuth) { pm.expect.fail(name + ' connectionState=error'); }",
+            "      if (requiresOAuth && state !== 'connected') { console.warn(name + ': ' + state + ' — OAuth not completed (expected on DEV until you authorize in the browser).'); }",
+            "      else if (state === 'disconnected' || state === 'connecting') { console.warn(name + ': ' + state + ' — idle/lazy connection (tolerated).'); }",
+            "    });",
+            "    next();",
+            "  });",
+            "}",
+            "next();"
+          ] } }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/mcp/connection/status", "host": ["{{base_url}}"], "path": ["api", "mcp", "connection", "status"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 · Coverage report",
       "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
         "var servers = [], conn = {}, tools = {}, sweep = [];",
         "try { servers = JSON.parse(pm.environment.get('mcp_servers') || '[]'); } catch (e) {}",
@@ -243,11 +249,11 @@
       }
     },
     {
-      "name": "6 · Call MCP via agent chat (actually invoke a tool)",
-      "description": "LibreChat has no direct 'run this MCP tool' endpoint — a tool only runs when an agent's LLM decides to call it. This folder does that end-to-end.\n\nPREREQUISITES (all required, or the tool won't fire):\n1. An Agent exists that has MCP tools attached (create one in the LibreChat UI, add the MCP tools).\n2. You've completed the ClearTrack gateway OAuth for your user (see folder 4 / the UI), so the MCP tools are actually available.\n3. A working model endpoint (DEV uses VertexAI Gemini).\n\nFLOW: 6a list agents -> pick agent_id -> 6b start chat (returns streamId) -> 6c subscribe SSE stream (watch the tool call + result) -> 6d read final status.\n\nSSE NOTE: 6c returns text/event-stream. Send it in the Postman request tab (not the Collection Runner, which doesn't render SSE) to watch events live. 6d is the scriptable fallback that reads the finished result.",
+      "name": "5 · Call MCP via agent chat (actually invoke a tool)",
+      "description": "LibreChat has no direct 'run this MCP tool' endpoint — a tool only runs when an agent's LLM decides to call it. This folder does that end-to-end.\n\nPREREQUISITES (all required, or the tool won't fire):\n1. An Agent exists that has MCP tools attached (create one in the LibreChat UI, add the MCP tools).\n2. You've completed the ClearTrack gateway OAuth for your user (see request 2 / the UI), so the MCP tools are actually available.\n3. A working model endpoint (DEV uses VertexAI Gemini).\n\nFLOW: 5a list agents -> pick agent_id -> 5b start chat (returns streamId) -> 5c subscribe SSE stream (watch the tool call + result) -> 5d read final status.\n\nSSE NOTE: 5c returns text/event-stream. Send it in the Postman request tab (not the Collection Runner, which doesn't render SSE) to watch events live. 5d is the scriptable fallback that reads the finished result.",
       "item": [
         {
-          "name": "6a · List agents (pick one with MCP tools)",
+          "name": "5a · List agents (pick one with MCP tools)",
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var json = null; try { json = pm.response.json(); } catch (e) {}",
             "pm.test('HTTP 200', function(){ pm.expect(pm.response.code).to.eql(200); });",
@@ -266,12 +272,12 @@
           }
         },
         {
-          "name": "6b · Start chat (returns streamId)",
+          "name": "5b · Start chat (returns streamId)",
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var json = null; try { json = pm.response.json(); } catch (e) {}",
             "pm.test('HTTP 200 (400/403 => agent_id missing/no access; 429 => concurrent limit)', function(){ pm.expect(pm.response.code).to.eql(200); });",
             "pm.test('returns streamId + conversationId', function(){ pm.expect(json, 'body').to.be.an('object'); pm.expect(json.streamId, 'streamId').to.be.a('string').that.is.not.empty; });",
-            "if (json && json.streamId) { pm.environment.set('stream_id', json.streamId); pm.environment.set('chat_conversation_id', json.conversationId || json.streamId); console.log('Started. streamId=' + json.streamId + ' status=' + json.status + '. Now run 6c (SSE) or 6d (status).'); }"
+            "if (json && json.streamId) { pm.environment.set('stream_id', json.streamId); pm.environment.set('chat_conversation_id', json.conversationId || json.streamId); console.log('Started. streamId=' + json.streamId + ' status=' + json.status + '. Now run 5c (SSE) or 5d (status).'); }"
           ] } }],
           "request": {
             "method": "POST",
@@ -284,12 +290,12 @@
           }
         },
         {
-          "name": "6c · Subscribe SSE stream (watch the tool call)",
+          "name": "5c · Subscribe SSE stream (watch the tool call)",
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
             "// This is a Server-Sent Events stream (text/event-stream). Open it from the",
             "// request tab and watch events live — tool_call / on_run_step events show the",
             "// MCP tool being invoked and its result. Scripts can't reliably read a live SSE",
-            "// body in the Collection Runner; use 6d for a scriptable result.",
+            "// body in the Collection Runner; use 5d for a scriptable result.",
             "var body = '';",
             "try { body = pm.response.text() || ''; } catch (e) {}",
             "var sawTool = /tool_call|on_run_step|tool_result|mcp/i.test(body);",
@@ -306,7 +312,7 @@
           }
         },
         {
-          "name": "6d · Chat status (final result + tool steps)",
+          "name": "5d · Chat status (final result + tool steps)",
           "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
             "var json = null; try { json = pm.response.json(); } catch (e) {}",
             "pm.test('HTTP 200', function(){ pm.expect(pm.response.code).to.eql(200); });",
