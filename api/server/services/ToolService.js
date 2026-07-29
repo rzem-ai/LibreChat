@@ -28,6 +28,7 @@ const {
   buildMCPAuthRunStepDeltaEvent,
   buildMCPAuthRunStepCompletedEvent,
   isFileAuthoringToolDefinition,
+  ASK_USER_QUESTION_TOOL_NAME,
 } = require('@librechat/api');
 const {
   Time,
@@ -507,7 +508,12 @@ async function processRequiredActions(client, requiredActions) {
  * }>} The agent tools and registry.
  */
 /** Native LibreChat tools that are not in the manifest */
-const nativeTools = new Set([Tools.execute_code, Tools.file_search, Tools.web_search]);
+const nativeTools = new Set([
+  Tools.execute_code,
+  Tools.file_search,
+  Tools.web_search,
+  Tools.memory,
+]);
 
 /** Checks if a tool name is a known built-in tool */
 const isBuiltInTool = (toolName) =>
@@ -570,6 +576,12 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
     }
     if (tool === Tools.web_search) {
       return checkCapability(AgentCapabilities.web_search);
+    }
+    if (tool === Tools.memory) {
+      return checkCapability(AgentCapabilities.memory);
+    }
+    if (tool === ASK_USER_QUESTION_TOOL_NAME) {
+      return checkCapability(AgentCapabilities.ask_user_question);
     }
     if (isActionTool(tool)) {
       return actionsEnabled;
@@ -1123,6 +1135,10 @@ async function loadAgentTools({
     } else if (tool === Tools.web_search) {
       includesWebSearch = checkCapability(AgentCapabilities.web_search);
       return includesWebSearch;
+    } else if (tool === Tools.memory) {
+      return checkCapability(AgentCapabilities.memory);
+    } else if (tool === ASK_USER_QUESTION_TOOL_NAME) {
+      return checkCapability(AgentCapabilities.ask_user_question);
     } else if (isActionTool(tool)) {
       return actionsEnabled;
     } else if (tool?.includes(Constants.mcp_delimiter)) {
@@ -1187,6 +1203,7 @@ async function loadAgentTools({
       loadedTools,
       userId: req.user.id,
       agentId: agent.id,
+      provider: agent.provider,
       agentToolOptions: agent.tool_options,
       deferredToolsEnabled,
       programmaticToolsEnabled,
@@ -1433,6 +1450,7 @@ async function loadToolsForExecution({
   agent,
   toolNames,
   toolRegistry,
+  backgroundToolNames,
   mcpAvailableTools,
   requestScopedConnections,
   userMCPAuthMap,
@@ -1444,6 +1462,12 @@ async function loadToolsForExecution({
   const allLoadedTools = [];
   const mcpRequestScopedConnections = requestScopedConnections ?? getMCPRequestContext(req, res);
   const configurable = { userMCPAuthMap, requestScopedConnections: mcpRequestScopedConnections };
+  /** Per-agent set of tools that received the injected `run_in_background`
+   *  param; the event-driven executor gates background dispatch and the
+   *  `check_background_task` poll tool on this reliable per-agent channel. */
+  if (backgroundToolNames?.length) {
+    configurable.backgroundToolNames = backgroundToolNames;
+  }
 
   const isToolSearch = toolNames.includes(AgentConstants.TOOL_SEARCH);
   const ptcToolNames = [
@@ -1465,6 +1489,18 @@ async function loadToolsForExecution({
   const codeExecutionEnabled =
     enabledCapabilities?.has(AgentCapabilities.execute_code) === true &&
     agent?.tools?.includes(Tools.execute_code) === true;
+
+  /**
+   * Opt bash_tool into the hedged stateful-session description. Gated on code
+   * execution being enabled AND the admin `stateful_code_sessions` capability
+   * AND the agent's own builder opt-in; off by default. Sets prompt text only
+   * (the wire hint is set at run config). PTC keeps its stateless prompt in
+   * v1. Older @librechat/agents ignore the param.
+   */
+  const statefulCodeSessions =
+    codeExecutionEnabled &&
+    enabledCapabilities?.has(AgentCapabilities.stateful_code_sessions) === true &&
+    agent?.stateful_code_sessions === true;
 
   const isPTC =
     isPTCRequested &&
@@ -1517,6 +1553,7 @@ async function loadToolsForExecution({
     try {
       const bashTool = createBashExecutionTool({
         authHeaders: () => getCodeApiAuthHeaders(req),
+        statefulSessions: statefulCodeSessions,
       });
       allLoadedTools.push(bashTool);
     } catch (error) {

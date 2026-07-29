@@ -45,7 +45,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:d578f55249a5f92a9863df6216622bee52e3930115931eb7a5831c657f935fae'
+          tag: 'develop@sha256:3e3eb11baf4b95d9dac7105abaf9c1f802cf925c0373570a720c6b35bc2c6bdd'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -93,8 +93,6 @@ pods:
           AZURE_CONTAINER_NAME: 'stc-librechat-app-dev'
           # ClearTrack MCP Gateway
           CLEARTRACK_MCP_GATEWAY_CLIENT_ID: '3e5d28f1-91a3-4748-ad73-5fa544f1d3e2'
-          # ClearTrack MCP Gateway (OLD LLM)
-          CLEARTRACK_MCP_GATEWAY_CLIENT_ID_LLM: '498ce9fd-195b-40c5-82f1-8fc4a6d00d88'
           #Langfuse Observability
           LANGFUSE_BASE_URL: 'https://langfuse-dev.ctk.au.deloitte.com'
           # OpenTelemetry Tracing
@@ -124,8 +122,6 @@ pods:
           MEILI_MASTER_KEY: librechat-meili-master-key-dev
           # ClearTrack MCP Gateway
           CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET: librechat-cleartrack-mcp-gateway-client-secret-dev
-          # ClearTrack MCP Gateway (OLD LLM)
-          CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET_LLM: librechat-cleartrack-mcp-gateway-client-secret-llm-dev
           # ClearTrack Code Interpreter (ea-code-runtime) — JWK signing key
           CODEAPI_JWT_PRIVATE_JWK_JSON: librechat-codeapi-jwt-private-jwk-dev
           #Langfuse Observability
@@ -166,7 +162,7 @@ pods:
       meilisearch:
         image:
           pullPolicy: Always
-          tag: 'develop@sha256:a26e41963785342840d1bd3cce6580ea09bd4e125b87bf0c27acb40837ee4a8f'
+          tag: 'develop@sha256:8729e4e71da8a0105d2ddd262d7c848b54884d114f07bb5a356102f3afff860c'
         env:
           MEILI_ENV: 'development'
         secrets:
