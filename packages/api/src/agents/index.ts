@@ -4,6 +4,7 @@ export * from './chain';
 export * from './client';
 export * from './config';
 export * from './checkpointer';
+export * from './citations';
 export * from './contact';
 export * from './context';
 export * from './discovery';
