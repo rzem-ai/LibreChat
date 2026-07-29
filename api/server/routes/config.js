@@ -3,9 +3,11 @@ const {
   isEnabled,
   getBalanceConfig,
   getCloudFrontConfig,
+  getAppConfigOptionsFromUser,
   resolveBuildInfo,
   resolveTitleTiming,
   sanitizeModelSpecs,
+  excludeHiddenModelSpecs,
   isFileSnapshotEnabled,
 } = require('@librechat/api');
 const { EModelEndpoint, defaultSocialLogins } = require('librechat-data-provider');
@@ -244,11 +246,7 @@ router.get('/', async function (req, res) {
       return res.status(200).send(payload);
     }
 
-    const appConfig = await getAppConfig({
-      role: req.user.role,
-      userId: req.user.id,
-      tenantId: req.user.tenantId || getTenantId(),
-    });
+    const appConfig = await getAppConfig(getAppConfigOptionsFromUser(req.user));
 
     const balanceConfig = getBalanceConfig(appConfig);
     const cloudFront = buildCloudFrontStartupConfig();
@@ -268,7 +266,7 @@ router.get('/', async function (req, res) {
         endpoint: EModelEndpoint.agents,
       }),
       turnstile: appConfig?.turnstileConfig,
-      modelSpecs: sanitizeModelSpecs(appConfig?.modelSpecs),
+      modelSpecs: sanitizeModelSpecs(excludeHiddenModelSpecs(appConfig?.modelSpecs)),
       ...(Object.keys(modelPricing).length ? { modelPricing } : {}),
       endpointCostConfig,
       balance: balanceConfig,
@@ -283,6 +281,7 @@ router.get('/', async function (req, res) {
         : 0,
       ...(cloudFront ? { cloudFront } : {}),
       ...(rum ? { rum } : {}),
+      fileUploadSseEnabled: isEnabled(process.env.FILE_UPLOAD_SSE_ENABLED),
     };
 
     const webSearch = buildWebSearchConfig(appConfig);
