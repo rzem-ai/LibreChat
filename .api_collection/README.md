@@ -93,8 +93,8 @@ Missing a cookie → `401 {"message":"invalid algorithm"}` (verified live).
 3. **Save** (Cmd/Ctrl+S).
 
 **4.2 — Add BOTH cookies (this is the step that fixes `invalid algorithm`)**
-1. Open any request, e.g. **0 · Health & connectivity → 0d · Token valid?**
-2. Below the address bar, click the **Cookies** link → **Manage Cookies** opens.
+1. Open any request in Postman, e.g. **0 · Health & connectivity → 0d · Token valid?**
+2. Below the address bar's Send Button, click the **Cookies** link → **Manage Cookies** opens.
 3. If `librechat-dev.ctk.au.deloitte.com` isn't listed → **Add Domain** → type
    `librechat-dev.ctk.au.deloitte.com` → **Add**.
 4. With that domain selected, click **+ Add Cookie**, replace the sample with this **exact** line,
@@ -110,11 +110,13 @@ Missing a cookie → `401 {"message":"invalid algorithm"}` (verified live).
    ```
    openid_user_id=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMGQ0YWY0M2JjNjBjNzk1ZTYyMzE0MCIsImlhdCI6MTc4NDY3OTIzOSwiZXhwIjoxNzg1Mjg0MDM5fQ.xSm7UUokBqi2njlQbXByDb7rA-WDAExiD32xtJSNp1o; path=/; Secure
    ```
-6. Confirm **two** cookies now show under the domain. Close the dialog.
+6. Confirm **two** cookies now show under the domain: openid_user_id and token_provider. Close the dialog.
 
 **4.3 — Run**
 - Send **0d · Token valid?** → expect **200** with your user JSON.
 - Then run **1 → 2 → 3 → 5** (or use the Collection Runner).
+
+Troubleshooting: if you get `401 unauthorised error`, try updating your Bearer Token.
 
 **Convenience alternative (skip 4.2's manual cookies):** add the domain to
 **Cookies → Domains Allow List**, and set the `openid_user_id` env var. The pre-request script then
