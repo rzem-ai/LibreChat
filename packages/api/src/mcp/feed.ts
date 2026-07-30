@@ -1,0 +1,172 @@
+import { XMLParser } from 'fast-xml-parser';
+import type { MCPResultSource } from 'librechat-data-provider';
+
+import { buildReportSources } from './report';
+
+/** Upper bound on articles extracted from a single feed (feeds are already newest-first). */
+const MAX_FEED_ITEMS = 30;
+
+const FEED_ROOT_PATTERN = /^\s*(<\?xml[^>]*\?>\s*)?<(rss|feed)[\s>]/i;
+
+type XMLValue = string | number | boolean | XMLNode | XMLValue[];
+type XMLNode = { [key: string]: XMLValue | undefined };
+
+function toText(value: XMLValue | undefined): string {
+  if (value == null) {
+    return '';
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    return toText(value[0]);
+  }
+  if (typeof value === 'object' && '#text' in value) {
+    return toText(value['#text']);
+  }
+  return '';
+}
+
+function stripHtmlTags(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0?39;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function asArray(value: XMLValue | undefined): XMLNode[] {
+  if (value == null) {
+    return [];
+  }
+  if (Array.isArray(value)) {
+    return value.filter((item): item is XMLNode => typeof item === 'object' && item !== null);
+  }
+  if (typeof value === 'object') {
+    return [value];
+  }
+  return [];
+}
+
+function extractRssLink(item: XMLNode): string {
+  return toText(item.link);
+}
+
+function extractAtomLink(item: XMLNode): string {
+  const links = asArray(item.link);
+  if (links.length === 0) {
+    return toText(item.link);
+  }
+  const alternate = links.find((link) => toText(link['@_rel']) === 'alternate' || !link['@_rel']);
+  const href = (alternate ?? links[0])['@_href'];
+  return toText(href);
+}
+
+function buildSourceFromItem(
+  toolName: string,
+  serverName: string,
+  title: string,
+  link: string,
+  description: string,
+): MCPResultSource | undefined {
+  if (!title && !link) {
+    return undefined;
+  }
+  const cleanDescription = stripHtmlTags(description);
+  return {
+    toolName,
+    serverName,
+    title,
+    link,
+    content: [title, cleanDescription].filter(Boolean).join('\n\n'),
+  };
+}
+
+function parseRssItems(toolName: string, serverName: string, channel: XMLNode): MCPResultSource[] {
+  const items = asArray(channel.item).slice(0, MAX_FEED_ITEMS);
+  const sources: MCPResultSource[] = [];
+  for (const item of items) {
+    const source = buildSourceFromItem(
+      toolName,
+      serverName,
+      toText(item.title),
+      extractRssLink(item),
+      toText(item.description ?? item['content:encoded']),
+    );
+    if (source) {
+      sources.push(source);
+    }
+  }
+  return sources;
+}
+
+function parseAtomEntries(toolName: string, serverName: string, feed: XMLNode): MCPResultSource[] {
+  const entries = asArray(feed.entry).slice(0, MAX_FEED_ITEMS);
+  const sources: MCPResultSource[] = [];
+  for (const entry of entries) {
+    const source = buildSourceFromItem(
+      toolName,
+      serverName,
+      toText(entry.title),
+      extractAtomLink(entry),
+      toText(entry.summary ?? entry.content),
+    );
+    if (source) {
+      sources.push(source);
+    }
+  }
+  return sources;
+}
+
+/**
+ * Splits an MCP tool result into one {@link MCPResultSource} per article/section when
+ * the content is a recognizable RSS/Atom feed or a `{ Sections: [...] }` report payload
+ * (see {@link buildReportSources}), so each citation can point at the specific article
+ * or section instead of the whole raw result. Falls back to today's single-source
+ * behavior for anything else, or if parsing fails.
+ */
+export function buildMCPResultSources({
+  toolName,
+  serverName,
+  content,
+}: {
+  toolName: string;
+  serverName: string;
+  content: string;
+}): MCPResultSource[] {
+  const fallback: MCPResultSource[] = [{ toolName, serverName, content }];
+
+  if (FEED_ROOT_PATTERN.test(content)) {
+    try {
+      const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+      const parsed = parser.parse(content) as XMLNode;
+
+      const rssChannel = asArray((parsed.rss as XMLNode | undefined)?.channel)[0];
+      if (rssChannel) {
+        const sources = parseRssItems(toolName, serverName, rssChannel);
+        return sources.length > 0 ? sources : fallback;
+      }
+
+      const atomFeed = parsed.feed as XMLNode | undefined;
+      if (atomFeed) {
+        const sources = parseAtomEntries(toolName, serverName, atomFeed);
+        return sources.length > 0 ? sources : fallback;
+      }
+
+      return fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  const reportSources = buildReportSources({ toolName, serverName, content });
+  return reportSources ?? fallback;
+}

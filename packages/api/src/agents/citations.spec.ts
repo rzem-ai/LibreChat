@@ -1,6 +1,6 @@
 import { Tools, ContentTypes } from 'librechat-data-provider';
-import type { TMessageContentParts, TAttachment } from 'librechat-data-provider';
-import { insertFileCitations, applyEndOfTraceCitations } from './citations';
+import type { TMessageContentParts, TAttachment, MCPResultSource } from 'librechat-data-provider';
+import { insertFileCitations, insertMCPCitations, applyEndOfTraceCitations } from './citations';
 
 const MARKER = '\ue202';
 
@@ -35,6 +35,16 @@ function fileSearchAttachment(sources: SourceInput[]): TAttachment {
         pageRelevance: {},
       })),
     },
+  } as unknown as TAttachment;
+}
+
+function mcpAttachment(sources: MCPResultSource[]): TAttachment {
+  return {
+    type: Tools.mcp_results,
+    messageId: 'msg-1',
+    toolCallId: 'call-1',
+    conversationId: 'conv-1',
+    [Tools.mcp_results]: { sources },
   } as unknown as TAttachment;
 }
 
@@ -194,6 +204,87 @@ describe('insertFileCitations', () => {
       fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
     ]);
     expect(parts[0]).toBe(ref);
+  });
+});
+
+describe('insertMCPCitations', () => {
+  const AFR_ARTICLE =
+    'The Reserve Bank held the cash rate steady at its meeting today, citing steady inflation.';
+  const OTHER_ARTICLE =
+    'Shares in the mining sector rallied after a surprise jump in iron ore prices overseas.';
+
+  it('anchors each sentence to the correct article by distinct fileIndex', () => {
+    const parts = [
+      textPart(
+        'The Reserve Bank held the cash rate steady at its meeting today. ' +
+          'Shares in the mining sector rallied after a surprise jump in iron ore prices.',
+      ),
+    ];
+    insertMCPCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'afr_get_latest_news', serverName: 'afr', content: AFR_ARTICLE },
+          { toolName: 'afr_get_latest_news', serverName: 'afr', content: OTHER_ARTICLE },
+        ]),
+      ],
+      0,
+    );
+    const text = readText(parts[0]);
+    expect(text).toContain(`${MARKER}turn0mcp0`);
+    expect(text).toContain(`${MARKER}turn0mcp1`);
+  });
+
+  it('is a no-op when there are no mcp sources', () => {
+    const original = 'The Reserve Bank held the cash rate steady at its meeting today.';
+    const parts = [textPart(original)];
+    insertMCPCitations(parts, [], 0);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('anchors a paraphrased sentence that clears the lower MCP threshold but not the file threshold', () => {
+    // Overlap ratio here is 5/9 ≈ 0.56: above MCP_SIMILARITY_THRESHOLD (0.35),
+    // below the stricter file_search SIMILARITY_THRESHOLD (0.6).
+    const passageContent =
+      'macquarie group appointed ward chief executive mandate accelerate technology globally';
+    const sentence = 'Macquarie Group named Ward as its new chief executive this week overall.';
+    const mcpParts = [textPart(sentence)];
+    insertMCPCitations(
+      mcpParts,
+      [mcpAttachment([{ toolName: 't', serverName: 's', content: passageContent }])],
+      0,
+    );
+    expect(readText(mcpParts[0])).toContain(`${MARKER}turn0mcp0`);
+
+    const fileParts = [textPart(sentence)];
+    insertFileCitations(fileParts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: passageContent }]),
+    ]);
+    expect(readText(fileParts[0])).toBe(sentence);
+  });
+});
+
+describe('tokenize stemming', () => {
+  const passageContent =
+    'the bank governor reported steady inflation figures across several industries';
+  const sentence = 'Analysts said the governor reports steady inflation figures across industry.';
+
+  it('matches different inflections of the same fact for MCP citations', () => {
+    const parts = [textPart(sentence)];
+    insertMCPCitations(
+      parts,
+      [mcpAttachment([{ toolName: 't', serverName: 's', content: passageContent }])],
+      0,
+    );
+    expect(readText(parts[0])).toContain(`${MARKER}turn0mcp0`);
+  });
+
+  it('does not stem file_search matching, to avoid retuning an already-shipped feature', () => {
+    const parts = [textPart(sentence)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: passageContent }]),
+    ]);
+    expect(readText(parts[0])).toBe(sentence);
   });
 });
 

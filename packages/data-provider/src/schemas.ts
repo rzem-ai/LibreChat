@@ -884,6 +884,14 @@ export type UIResource = {
   [key: string]: unknown;
 };
 
+export type MCPResultSource = {
+  toolName: string;
+  serverName: string;
+  content: string;
+  title?: string;
+  link?: string;
+};
+
 export type TAttachmentMetadata = {
   type?: Tools;
   messageId: string;
@@ -892,6 +900,7 @@ export type TAttachmentMetadata = {
   [Tools.ui_resources]?: UIResource[];
   [Tools.web_search]?: SearchResultData;
   [Tools.file_search]?: SearchResultData;
+  [Tools.mcp_results]?: { sources: MCPResultSource[] };
 };
 
 export type TAttachment =

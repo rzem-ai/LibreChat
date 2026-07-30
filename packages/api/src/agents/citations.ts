@@ -14,7 +14,7 @@
  * index within it (mirrors `useSearchResultsByTurn` on the client).
  */
 import { Tools, ContentTypes } from 'librechat-data-provider';
-import type { TMessageContentParts, TAttachment } from 'librechat-data-provider';
+import type { TMessageContentParts, TAttachment, MCPResultSource } from 'librechat-data-provider';
 import type { Logger } from 'winston';
 
 /**
@@ -24,6 +24,13 @@ import type { Logger } from 'winston';
 const MIN_SENTENCE_CONTENT_WORDS = 4;
 /** Fraction of a sentence's content tokens that must appear in a passage. */
 const SIMILARITY_THRESHOLD = 0.6;
+/**
+ * Lower similarity bar used for MCP citations. File_search sentences tend to
+ * closely paraphrase a retrieved chunk; MCP answers summarize a news article
+ * much more freely (different wording, added context), so the same 0.6 bar
+ * used for file citations misses most true matches.
+ */
+const MCP_SIMILARITY_THRESHOLD = 0.35;
 /**
  * Upper bound on citation anchors appended to a single sentence. When more than
  * three distinct sources clear the `SIMILARITY_THRESHOLD`, the highest-similarity
@@ -162,6 +169,38 @@ function tokenize(text: string): string[] {
     .filter((token) => token.length > 0 && !STOPWORDS.has(token));
 }
 
+/**
+ * Reduces a content word to a crude root form so different inflections of the
+ * same fact overlap (e.g. `succeeding`/`succeeds`, `reported`/`reports`,
+ * `named`/`names`). MCP answers frequently restate a source passage using a
+ * different verb tense or plurality, and exact-string matching alone treats
+ * those as unrelated tokens. Applied only to MCP matching — file_search
+ * passages tend to closely paraphrase, so stemming there would loosen an
+ * already-tuned threshold rather than help it.
+ */
+function stem(token: string): string {
+  if (token.length > 6 && token.endsWith('ing')) {
+    return token.slice(0, -3);
+  }
+  if (token.length > 5 && token.endsWith('ies')) {
+    return `${token.slice(0, -3)}y`;
+  }
+  if (token.length > 5 && token.endsWith('ed')) {
+    return token.slice(0, -2);
+  }
+  if (token.length > 4 && token.endsWith('es')) {
+    return token.slice(0, -2);
+  }
+  if (token.length > 4 && token.endsWith('s') && !token.endsWith('ss')) {
+    return token.slice(0, -1);
+  }
+  return token;
+}
+
+function tokenizeStemmed(text: string): string[] {
+  return tokenize(text).map(stem);
+}
+
 function extractSources(attachment: TAttachment): FileSearchSource[] | undefined {
   const payload = attachment[Tools.file_search] as { sources?: FileSearchSource[] } | undefined;
   if (!payload || !Array.isArray(payload.sources)) {
@@ -269,13 +308,22 @@ function containment(sentenceTokens: Set<string>, passageTokens: Set<string>): n
 
 /**
  * Chooses the citation anchors for a single sentence. Each passage is scored by
- * `containment`, weak matches (< `SIMILARITY_THRESHOLD`) are dropped, and the
+ * `containment`, weak matches (< `threshold`) are dropped, and the
  * remaining passages are deduped to the best score per source. The result is the
  * top `MAX_ANCHORS_PER_SENTENCE` — the distinct sources whose best passage most
  * strongly overlaps the sentence.
  */
-function anchorsForSentence(sentence: string, passages: Passage[]): string[] {
-  const sentenceTokens = new Set(tokenize(sentence));
+function anchorsForSentence(
+  sentence: string,
+  passages: Passage[],
+  options: {
+    threshold?: number;
+    tokenizeFn?: (text: string) => string[];
+    anchorTag?: string;
+  } = {},
+): string[] {
+  const { threshold = SIMILARITY_THRESHOLD, tokenizeFn = tokenize, anchorTag = 'file' } = options;
+  const sentenceTokens = new Set(tokenizeFn(sentence));
   if (sentenceTokens.size < MIN_SENTENCE_CONTENT_WORDS) {
     return [];
   }
@@ -283,7 +331,7 @@ function anchorsForSentence(sentence: string, passages: Passage[]): string[] {
   const bestByCoord = new Map<string, { turn: number; fileIndex: number; score: number }>();
   for (const passage of passages) {
     const score = containment(sentenceTokens, passage.tokens);
-    if (score < SIMILARITY_THRESHOLD) {
+    if (score < threshold) {
       continue;
     }
     const key = `${passage.turn}:${passage.fileIndex}`;
@@ -296,7 +344,7 @@ function anchorsForSentence(sentence: string, passages: Passage[]): string[] {
   return Array.from(bestByCoord.values())
     .sort((a, b) => b.score - a.score)
     .slice(0, MAX_ANCHORS_PER_SENTENCE)
-    .map(({ turn, fileIndex }) => `${ANCHOR_MARKER}turn${turn}file${fileIndex}`);
+    .map(({ turn, fileIndex }) => `${ANCHOR_MARKER}turn${turn}${anchorTag}${fileIndex}`);
 }
 
 function withAnchors(sentence: string, anchors: string[]): string {
@@ -367,9 +415,71 @@ export function insertFileCitations(
 }
 
 /**
+ * Builds MCP passages for sentence-level matching, offset so MCP turn numbers
+ * don't collide with file_search turn numbers in the client's shared turnMap.
+ */
+function buildMCPPassages(mcpAttachments: TAttachment[], turnOffset: number): Passage[] {
+  const passages: Passage[] = [];
+  let turn = turnOffset;
+  for (const attachment of mcpAttachments) {
+    const payload = attachment[Tools.mcp_results] as { sources?: MCPResultSource[] } | undefined;
+    if (!payload?.sources) {
+      continue;
+    }
+    payload.sources.forEach((source, fileIndex) => {
+      const tokens = new Set(tokenizeStemmed(source.content ?? ''));
+      if (tokens.size > 0) {
+        passages.push({ turn, fileIndex, tokens });
+      }
+    });
+    turn += 1;
+  }
+  return passages;
+}
+
+/**
+ * Inserts MCP citation anchors (`turn{N}mcp0`) into assistant text parts by
+ * matching each sentence against the MCP tool result content, using the more
+ * lenient `MCP_SIMILARITY_THRESHOLD`. Mutates in place.
+ */
+export function insertMCPCitations(
+  contentParts: TMessageContentParts[],
+  mcpAttachments: TAttachment[],
+  turnOffset: number,
+): void {
+  const passages = buildMCPPassages(mcpAttachments, turnOffset);
+  if (passages.length === 0) {
+    return;
+  }
+
+  for (const part of contentParts) {
+    const text = readText(part);
+    if (text == null || text.length === 0) {
+      continue;
+    }
+
+    const sentences = splitIntoSentences(text);
+    const rebuilt = sentences
+      .map((sentence) => {
+        const anchors = anchorsForSentence(sentence, passages, {
+          threshold: MCP_SIMILARITY_THRESHOLD,
+          tokenizeFn: tokenizeStemmed,
+          anchorTag: 'mcp',
+        });
+        return withAnchors(sentence, anchors);
+      })
+      .join('');
+
+    if (rebuilt !== text) {
+      writeText(part, rebuilt);
+    }
+  }
+}
+
+/**
  * End-of-trace citation step: resolves the run's artifact promises, isolates the
- * file_search attachments, and inserts citation anchors into the final answer.
- * Never throws — a citation failure must leave the answer intact.
+ * file_search and mcp_results attachments, and inserts citation anchors into the
+ * final answer. Never throws — a citation failure must leave the answer intact.
  */
 export async function applyEndOfTraceCitations({
   contentParts,
@@ -398,11 +508,18 @@ export async function applyEndOfTraceCitations({
       (attachment): attachment is TAttachment =>
         attachment != null && attachment.type === Tools.file_search,
     );
-    if (fileSearchAttachments.length === 0) {
-      return;
+    const mcpAttachments = resolved.filter(
+      (attachment): attachment is TAttachment =>
+        attachment != null && attachment.type === Tools.mcp_results,
+    );
+
+    if (fileSearchAttachments.length > 0) {
+      insertFileCitations(contentParts, fileSearchAttachments);
     }
-    insertFileCitations(contentParts, fileSearchAttachments);
+    if (mcpAttachments.length > 0) {
+      insertMCPCitations(contentParts, mcpAttachments, fileSearchAttachments.length);
+    }
   } catch (error) {
-    logger?.error('[applyEndOfTraceCitations] Failed to insert file citations:', error);
+    logger?.error('[applyEndOfTraceCitations] Failed to insert citations:', error);
   }
 }

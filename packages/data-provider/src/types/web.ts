@@ -2,7 +2,7 @@ import type { Logger as WinstonLogger } from 'winston';
 import type { z } from 'zod';
 import type { webSearchSchema } from '../config';
 
-export type SearchRefType = 'search' | 'image' | 'news' | 'video' | 'ref';
+export type SearchRefType = 'search' | 'image' | 'news' | 'video' | 'ref' | 'mcp';
 
 export enum DATE_RANGE {
   PAST_HOUR = 'h',
@@ -40,6 +40,17 @@ export type ResultReference = {
   title?: string;
   attribution?: string;
 };
+
+export type MCPResultReference = {
+  toolName: string;
+  serverName: string;
+  title: string;
+  snippet: string;
+  link: string;
+  attribution: string;
+  type: 'mcp';
+};
+
 export interface SearchResultData {
   turn?: number;
   organic?: ProcessedOrganic[];
@@ -54,6 +65,7 @@ export interface SearchResultData {
   peopleAlsoAsk?: PeopleAlsoAskResult[];
   relatedSearches?: Array<{ query: string }>;
   references?: ResultReference[];
+  mcp_results?: MCPResultReference[];
   error?: string;
 }
 

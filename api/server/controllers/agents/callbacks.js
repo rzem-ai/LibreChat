@@ -7,6 +7,7 @@ const {
   FileContext,
   ErrorTypes,
   UsageEvents,
+  Constants,
 } = require('librechat-data-provider');
 const {
   GraphEvents,
@@ -19,6 +20,7 @@ const {
   computeUsageCostUSD,
   GenerationJobManager,
   writeAttachmentEvent,
+  buildMCPResultSources,
   createToolExecuteHandler,
   HOST_FILE_AUTHORING_ARTIFACT_KEY,
   isCodeSessionToolName,
@@ -35,6 +37,21 @@ function isHostFileAuthoringArtifact(artifact) {
 
 function isCodeArtifactToolOutput(output) {
   return isCodeSessionToolName(output.name) || isHostFileAuthoringArtifact(output.artifact);
+}
+
+/** Extracts plain text from a FormattedContent array or raw string returned by an MCP tool. */
+function extractMCPTextContent(content) {
+  if (typeof content === 'string') {
+    return content.trim() || null;
+  }
+  if (!Array.isArray(content)) {
+    return null;
+  }
+  const text = content
+    .map((part) => (typeof part === 'string' ? part : (part?.text ?? JSON.stringify(part))))
+    .join('\n')
+    .trim();
+  return text || null;
 }
 
 class ModelEndHandler {
@@ -725,11 +742,12 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null }) 
       return;
     }
 
-    if (!output.artifact) {
+    const isMCPTool = output.name?.includes(Constants.mcp_delimiter);
+    if (!output.artifact && !isMCPTool) {
       return;
     }
 
-    if (output.artifact[Tools.file_search]) {
+    if (output.artifact?.[Tools.file_search]) {
       artifactPromises.push(
         (async () => {
           const user = req.user;
@@ -755,7 +773,7 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null }) 
       );
     }
 
-    if (output.artifact[Tools.ui_resources]) {
+    if (output.artifact?.[Tools.ui_resources]) {
       artifactPromises.push(
         (async () => {
           const attachment = {
@@ -777,7 +795,7 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null }) 
       );
     }
 
-    if (output.artifact[Tools.web_search]) {
+    if (output.artifact?.[Tools.web_search]) {
       artifactPromises.push(
         (async () => {
           const attachment = {
@@ -799,7 +817,7 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null }) 
       );
     }
 
-    if (output.artifact[Tools.memory]) {
+    if (output.artifact?.[Tools.memory]) {
       artifactPromises.push(
         (async () => {
           const attachment = {
@@ -821,7 +839,36 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null }) 
       );
     }
 
-    if (output.artifact.content) {
+    if (isMCPTool) {
+      const rawContent = extractMCPTextContent(output.content);
+      if (rawContent) {
+        const [toolName, serverName] = (output.name ?? '').split(Constants.mcp_delimiter);
+        artifactPromises.push(
+          (async () => {
+            const sources = buildMCPResultSources({ toolName, serverName, content: rawContent });
+            const attachment = {
+              type: Tools.mcp_results,
+              messageId: metadata.run_id,
+              toolCallId: output.tool_call_id,
+              conversationId: metadata.thread_id,
+              [Tools.mcp_results]: {
+                sources,
+              },
+            };
+            if (!streamId && !res.headersSent) {
+              return attachment;
+            }
+            writeAttachment(res, streamId, attachment);
+            return attachment;
+          })().catch((error) => {
+            logger.error('Error processing MCP citations:', error);
+            return null;
+          }),
+        );
+      }
+    }
+
+    if (output.artifact?.content) {
       /** @type {FormattedContent[]} */
       const content = output.artifact.content;
       for (let i = 0; i < content.length; i++) {
@@ -1010,11 +1057,12 @@ function createResponsesToolEndCallback({ req, res, tracker, artifactPromises })
       return;
     }
 
-    if (!output.artifact) {
+    const isMCPTool = output.name?.includes(Constants.mcp_delimiter);
+    if (!output.artifact && !isMCPTool) {
       return;
     }
 
-    if (output.artifact[Tools.file_search]) {
+    if (output.artifact?.[Tools.file_search]) {
       artifactPromises.push(
         (async () => {
           const user = req.user;
@@ -1040,7 +1088,7 @@ function createResponsesToolEndCallback({ req, res, tracker, artifactPromises })
       );
     }
 
-    if (output.artifact[Tools.ui_resources]) {
+    if (output.artifact?.[Tools.ui_resources]) {
       artifactPromises.push(
         (async () => {
           const attachment = {
@@ -1060,7 +1108,7 @@ function createResponsesToolEndCallback({ req, res, tracker, artifactPromises })
       );
     }
 
-    if (output.artifact[Tools.web_search]) {
+    if (output.artifact?.[Tools.web_search]) {
       artifactPromises.push(
         (async () => {
           const attachment = {
@@ -1080,7 +1128,33 @@ function createResponsesToolEndCallback({ req, res, tracker, artifactPromises })
       );
     }
 
-    if (output.artifact.content) {
+    if (isMCPTool) {
+      const rawContent = extractMCPTextContent(output.content);
+      if (rawContent) {
+        const [toolName, serverName] = (output.name ?? '').split(Constants.mcp_delimiter);
+        artifactPromises.push(
+          (async () => {
+            const sources = buildMCPResultSources({ toolName, serverName, content: rawContent });
+            const attachment = {
+              type: Tools.mcp_results,
+              toolCallId: output.tool_call_id,
+              [Tools.mcp_results]: {
+                sources,
+              },
+            };
+            if (res.headersSent && !res.writableEnded) {
+              writeResponsesAttachment(res, tracker, attachment, metadata);
+            }
+            return attachment;
+          })().catch((error) => {
+            logger.error('Error processing MCP citations:', error);
+            return null;
+          }),
+        );
+      }
+    }
+
+    if (output.artifact?.content) {
       /** @type {FormattedContent[]} */
       const content = output.artifact.content;
       for (let i = 0; i < content.length; i++) {
