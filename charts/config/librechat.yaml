@@ -7,8 +7,34 @@ interface:
   agents:
     use: true
     create: true
-    share: false
-    public: false
+    share: true # Enable share with other users
+    public: false # Disable share with everyone
+
+  modelSelect: true
+
+  parameters: true
+
+  presets: true
+
+  prompts:
+    use: true
+    create: true
+    share: true # Enable share with other users
+    public: false # Disable share with everyone
+
+  bookmarks: true
+
+  multiConvo: true
+
+  peoplePicker:
+    users: false
+    groups: false
+    roles: false
+
+  marketplace:
+    use: false
+
+  fileCitations: true
 
 fileConfig:
   endpoints:
