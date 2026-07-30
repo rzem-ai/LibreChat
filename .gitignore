@@ -105,6 +105,7 @@ junit.xml
 **/.venv/
 **/venv/
 secrets.json
+update-token.sh
 
 # docker override file
 # docker-compose.override.yaml
