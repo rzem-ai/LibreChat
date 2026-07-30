@@ -19,7 +19,7 @@ interface:
     prompts:
       use: true
       create: true
-      share: false # Disable share with other users - need to activate people picker
+      share: true # Enable share with other users
       public: false # Disable share with everyone
 
     bookmarks: true
@@ -27,7 +27,7 @@ interface:
     multiConvo: true
 
     peoplePicker:
-      users: false
+      users: true # TODO: Restrict to deloitte.com.au emails
       groups: false
       roles: false
 
