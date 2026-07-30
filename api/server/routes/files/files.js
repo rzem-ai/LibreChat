@@ -593,6 +593,34 @@ router.get('/download/:userId/:file_id', fileAccess, async (req, res) => {
           : passThrough.body;
 
       stream.pipe(res);
+    } else if (file.source === FileSources.execute_code) {
+      /* Code-output files use a different getDownloadStream contract than
+       * other sources:
+       *   local/firebase/s3/azure/cloudfront -> (req, filepath) -> ReadableStream
+       *   execute_code                       -> (fileIdentifier, identity, req) -> AxiosResponse
+       * The identity + storage_session_id + file_id live on
+       * `metadata.codeEnvRef`, populated by processCodeOutput when the
+       * File document is first persisted. Without this branch the generic
+       * (req, filepath) call throws inside buildCodeEnvDownloadQuery
+       * ("invalid kind 'undefined'") and the route 500s. */
+      const ref = file.metadata?.codeEnvRef;
+      if (!ref || !ref.storage_session_id || !ref.file_id || !ref.kind || !ref.id) {
+        logger.error(
+          `File download requested by user ${userId}: execute_code file ${file_id} is missing metadata.codeEnvRef fields`,
+        );
+        return res.status(500).send('Missing code environment reference');
+      }
+      const identity =
+        ref.kind === 'skill'
+          ? { kind: ref.kind, id: ref.id, version: ref.version }
+          : { kind: ref.kind, id: ref.id };
+      const response = await getDownloadStream(
+        `${ref.storage_session_id}/${ref.file_id}`,
+        identity,
+        req,
+      );
+      setHeaders();
+      response.data.pipe(res);
     } else {
       if (getDownloadURL && req.query.direct === 'true') {
         try {
