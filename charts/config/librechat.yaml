@@ -19,7 +19,7 @@ interface:
   prompts:
     use: true
     create: true
-    share: true # Enable share with other users
+    share: false # Disable share with other users - need to activate people picker
     public: false # Disable share with everyone
 
   bookmarks: true
@@ -32,7 +32,7 @@ interface:
     roles: false
 
   marketplace:
-    use: false
+    use: true
 
   fileCitations: true
 

@@ -2,37 +2,39 @@ version: 1.3.13 # Copy from librechat.example.yaml
 cache: true
 
 interface:
-  agents:
-    use: true
-    create: true
-    share: true # Enable share with other users
-    public: false # Disable share with everyone
 
-  modelSelect: true
+  interface:
+    agents:
+      use: true
+      create: true
+      share: true # Enable share with other users
+      public: false # Disable share with everyone
 
-  parameters: true
+    modelSelect: true
 
-  presets: true
+    parameters: true
 
-  prompts:
-    use: true
-    create: true
-    share: true # Enable share with other users
-    public: false # Disable share with everyone
+    presets: true
 
-  bookmarks: true
+    prompts:
+      use: true
+      create: true
+      share: false # Disable share with other users - need to activate people picker
+      public: false # Disable share with everyone
 
-  multiConvo: true
+    bookmarks: true
 
-  peoplePicker:
-    users: false
-    groups: false
-    roles: false
+    multiConvo: true
 
-  marketplace:
-    use: false
+    peoplePicker:
+      users: false
+      groups: false
+      roles: false
 
-  fileCitations: true
+    marketplace:
+      use: true
+
+    fileCitations:
 
 fileConfig:
   endpoints:
