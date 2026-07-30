@@ -69,6 +69,7 @@ pods:
           ALLOW_REGISTRATION: 'false'
           ALLOW_SOCIAL_LOGIN: 'true'
           ALLOW_SOCIAL_REGISTRATION: 'false'
+          APP_TITLE: "MyAssist 2.0"
           OPENID_CALLBACK_URL: '/oauth/openid/callback'
           OPENID_GRAPH_SCOPES: 'User.Read,User.ReadBasic.All' #People.Read GroupMember.Read.All scopes to be added once App Registration admins grant them to us
           OPENID_REQUIRED_ROLE_TOKEN_KIND: 'id'
