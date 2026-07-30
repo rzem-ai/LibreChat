@@ -55,7 +55,7 @@ pods:
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
           BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
-          CUSTOM_FOOTER: 'WARNING: This is a User Acceptance Testing environment. Do not upload client or confidential data.'
+          CUSTOM_FOOTER: '⚠️ WARNING: This is a User Acceptance Testing environment. Do not upload client or confidential data.'
           DOMAIN_CLIENT: 'https://myassist-uat.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://myassist-uat.ctk.au.deloitte.com'
           EMBEDDINGS_MODEL: 'text-embedding-3-small'
