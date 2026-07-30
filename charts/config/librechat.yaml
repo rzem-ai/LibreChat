@@ -10,7 +10,16 @@ interface:
     share: true # Enable share with other users
     public: false # Disable share with everyone
 
+  bookmarks: true
+
+  fileCitations: true
+
+  marketplace:
+    use: true
+
   modelSelect: true
+
+  multiConvo: true
 
   parameters: true
 
@@ -22,19 +31,10 @@ interface:
     share: false # Enable share with other users
     public: false # Disable share with everyone
 
-  bookmarks: true
-
-  multiConvo: true
-
   peoplePicker:
     users: true # TODO: Restrict to deloitte.com.au emails
     groups: false
     roles: false
-
-  marketplace:
-    use: true
-
-  fileCitations: true
 
 fileConfig:
   endpoints:
