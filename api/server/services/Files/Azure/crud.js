@@ -252,17 +252,27 @@ async function uploadFileToAzure({
  */
 async function getAzureFileStream(_req, fileURL) {
   try {
-    // Use authenticated SDK (DefaultAzureCredential) — mirrors saveBufferToAzure.
+    logger.debug(`[getAzureFileStream] container=${AZURE_CONTAINER_NAME} url=${fileURL}`);
     const containerClient = await getAzureContainerClient(AZURE_CONTAINER_NAME);
+    if (!containerClient) {
+      throw new Error('[getAzureFileStream] getAzureContainerClient returned null (check AZURE_STORAGE_ACCOUNT_NAME)');
+    }
     const blobPath = fileURL.split(`${AZURE_CONTAINER_NAME}/`)[1];
     if (!blobPath) {
       throw new Error(`Could not extract blob path from URL: ${fileURL}`);
     }
+    logger.debug(`[getAzureFileStream] blobPath=${blobPath}`);
     const blockBlobClient = containerClient.getBlockBlobClient(blobPath);
-    const response = await blockBlobClient.download();
+    // Empty options: clear default lease/ETag conditions to avoid 409 on upload settlement.
+    const response = await blockBlobClient.download(0, undefined, {});
+    logger.debug(`[getAzureFileStream] ok status=${response._response?.status} bytes=${response.contentLength}`);
     return response.readableStreamBody;
   } catch (error) {
-    logger.error('[getAzureFileStream] Error getting blob stream:', error);
+    logger.error('[getAzureFileStream] Error getting blob stream:', {
+      message: error.message,
+      code: error.code,
+      statusCode: error.statusCode,
+    });
     throw error;
   }
 }
