@@ -252,12 +252,15 @@ async function uploadFileToAzure({
  */
 async function getAzureFileStream(_req, fileURL) {
   try {
-    const response = await axios({
-      method: 'get',
-      url: fileURL,
-      responseType: 'stream',
-    });
-    return response.data;
+    // Use authenticated SDK (DefaultAzureCredential) — mirrors saveBufferToAzure.
+    const containerClient = await getAzureContainerClient(AZURE_CONTAINER_NAME);
+    const blobPath = fileURL.split(`${AZURE_CONTAINER_NAME}/`)[1];
+    if (!blobPath) {
+      throw new Error(`Could not extract blob path from URL: ${fileURL}`);
+    }
+    const blockBlobClient = containerClient.getBlockBlobClient(blobPath);
+    const response = await blockBlobClient.download();
+    return response.readableStreamBody;
   } catch (error) {
     logger.error('[getAzureFileStream] Error getting blob stream:', error);
     throw error;
