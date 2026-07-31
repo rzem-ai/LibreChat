@@ -8,8 +8,8 @@ ingress:
   className: cilium
   host: 'librechat-dev.ctk.au.deloitte.com'
   annotations:
-    ingress.cilium.io/loadbalancer-mode: "shared"
-    ingress.cilium.io/force-https: "true"
+    ingress.cilium.io/loadbalancer-mode: 'shared'
+    ingress.cilium.io/force-https: 'true'
     kubernetes.io/ingress.class: cilium
   tls:
     - secretName: ctk-au-deloitte-com
@@ -51,9 +51,11 @@ pods:
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
           ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
+          APP_TITLE: 'MyAssist 2.0 (DEV)'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
           BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
+          CUSTOM_FOOTER: '⚠️ WARNING: This is a development environment. Do not upload client or confidential data.'
           DOMAIN_CLIENT: 'https://librechat-dev.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://librechat-dev.ctk.au.deloitte.com'
           EMBEDDINGS_MODEL: 'text-embedding-3-small'
