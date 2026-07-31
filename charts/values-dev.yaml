@@ -167,3 +167,10 @@ pods:
           MEILI_ENV: 'development'
         secrets:
           MEILI_MASTER_KEY: librechat-meili-master-key-dev
+        persistence:
+          enabled: true
+          size: 10Gi
+          accessModes:
+            - ReadWriteOnce
+          name: "meilisearch-data"
+          mountPath: /meili_data
