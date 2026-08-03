@@ -67,7 +67,21 @@ router.get('/', async (req, res) => {
         logger.warn('[/files] Error refreshing S3 file URLs:', error);
       }
     }
-    res.status(200).send(files);
+    // Azure Blob container is private (PublicAccessNotPermitted 409 on direct
+    // `<img src>` / `<a href>` from browser). Rewrite filepath to a same-origin
+    // proxy URL served by the authenticated /download route with ?inline=true
+    // so images render and downloads authenticate via session cookie.
+    const rewritten = files.map((file) => {
+      if (file.source === FileSources.azure_blob && file.file_id) {
+        const obj = file.toObject ? file.toObject() : file;
+        return {
+          ...obj,
+          filepath: `/api/files/download/${req.user.id}/${file.file_id}?inline=true`,
+        };
+      }
+      return file;
+    });
+    res.status(200).send(rewritten);
   } catch (error) {
     logger.error('[/files] Error getting files:', error);
     res.status(400).json({ message: 'Error in request', error: error.message });
@@ -125,7 +139,19 @@ router.get('/agent/:agent_id', async (req, res) => {
       text: 0,
     });
 
-    res.status(200).json(files);
+    // Same azure_blob filepath rewrite as GET /files.
+    const rewritten = files.map((file) => {
+      if (file.source === FileSources.azure_blob && file.file_id) {
+        const obj = file.toObject ? file.toObject() : file;
+        return {
+          ...obj,
+          filepath: `/api/files/download/${userId}/${file.file_id}?inline=true`,
+        };
+      }
+      return file;
+    });
+
+    res.status(200).json(rewritten);
   } catch (error) {
     logger.error('[/files/agent/:agent_id] Error fetching agent files:', error);
     res.status(500).json({ error: 'Failed to fetch agent files' });
@@ -567,9 +593,20 @@ router.get('/download/:userId/:file_id', fileAccess, async (req, res) => {
       return res.status(501).send('Not Implemented');
     }
 
+    // `?inline=true` serves the file with its real Content-Type and no
+    // attachment header — used when the frontend renders images via `<img
+    // src=/api/files/download/...?inline=true>` for azure_blob files that
+    // can't be `<img src>`-ed directly at the private blob URL.
+    const inline = req.query.inline === 'true';
     const setHeaders = () => {
-      res.setHeader('Content-Disposition', getContentDisposition(file.filename));
-      res.setHeader('Content-Type', 'application/octet-stream');
+      if (inline) {
+        // Real MIME type when known; fallback to a broadly-renderable default
+        // rather than attachment so <img>/<video>/<audio> tags still work.
+        res.setHeader('Content-Type', file.type || 'application/octet-stream');
+      } else {
+        res.setHeader('Content-Disposition', getContentDisposition(file.filename));
+        res.setHeader('Content-Type', 'application/octet-stream');
+      }
       res.setHeader(
         'X-File-Metadata',
         encodeURIComponent(JSON.stringify(getDownloadFileMetadata(file))),
