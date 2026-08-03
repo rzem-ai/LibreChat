@@ -1,7 +1,7 @@
 const axios = require('axios');
 const { logger } = require('@librechat/data-schemas');
 const { tool } = require('@librechat/agents/langchain/tools');
-const { generateShortLivedToken } = require('@librechat/api');
+const { generateShortLivedToken, logAxiosError } = require('@librechat/api');
 const { Tools, EToolResources } = require('librechat-data-provider');
 const { filterFilesByAgentAccess } = require('~/server/services/Files/permissions');
 const { getFiles } = require('~/models');
@@ -83,7 +83,10 @@ const primeFiles = async (options) => {
  * @param {string} options.userId
  * @param {Array<{ file_id: string; filename: string; fromAgent?: boolean }>} options.files
  * @param {string} [options.entity_id]
- * @param {boolean} [options.fileCitations=false] - Whether to include citation instructions
+ * @param {boolean} [options.fileCitations=false] - Whether file citations are enabled. This no longer
+ *   injects anchor markers into the tool output for the model to echo; citations are now inserted
+ *   deterministically after the run by `applyEndOfTraceCitations`. The flag is passed through on the
+ *   returned artifact so `processFileCitations` can gate citation generation on it.
  * @returns
  */
 const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = false }) => {
@@ -131,7 +134,10 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
             },
           })
           .catch((error) => {
-            logger.error('Error encountered in `file_search` while querying file:', error);
+            logAxiosError({
+              message: 'Error encountered in `file_search` while querying file',
+              error,
+            });
             return null;
           }),
       );
@@ -165,10 +171,8 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
 
       const formattedString = formattedResults
         .map(
-          (result, index) =>
-            `File: ${result.filename}${
-              fileCitations ? `\nAnchor: \\ue202turn0file${index} (${result.filename})` : ''
-            }\nRelevance: ${(1.0 - result.distance).toFixed(4)}\nContent: ${result.content}\n`,
+          (result) =>
+            `File: ${result.filename}\nRelevance: ${(1.0 - result.distance).toFixed(4)}\nContent: ${result.content}\n`,
         )
         .join('\n---\n');
 
@@ -187,20 +191,7 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
     {
       name: Tools.file_search,
       responseFormat: 'content_and_artifact',
-      description: `Performs semantic search across attached "${Tools.file_search}" documents using natural language queries. This tool analyzes the content of uploaded files to find relevant information, quotes, and passages that best match your query. Use this to extract specific information or find relevant sections within the available documents.${
-        fileCitations
-          ? `
-
-**CITE FILE SEARCH RESULTS:**
-Use the EXACT anchor markers shown below (copy them verbatim) immediately after statements derived from file content. Reference the filename in your text:
-- File citation: "The document.pdf states that... \\ue202turn0file0"  
-- Page reference: "According to report.docx... \\ue202turn0file1"
-- Multi-file: "Multiple sources confirm... \\ue200\\ue202turn0file0\\ue202turn0file1\\ue201"
-
-**CRITICAL:** Output these escape sequences EXACTLY as shown (e.g., \\ue202turn0file0). Do NOT substitute with other characters like † or similar symbols.
-**ALWAYS mention the filename in your text before the citation marker. NEVER use markdown links or footnotes.**`
-          : ''
-      }`,
+      description: `Performs semantic search across attached "${Tools.file_search}" documents using natural language queries. This tool analyzes the content of uploaded files to find relevant information, quotes, and passages that best match your query. Use this to extract specific information or find relevant sections within the available documents.`,
       schema: fileSearchJsonSchema,
     },
   );

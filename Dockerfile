@@ -52,6 +52,8 @@ COPY --chown=node:node client/package.json ./client/package.json
 COPY --chown=node:node packages/data-provider/package.json ./packages/data-provider/package.json
 COPY --chown=node:node packages/data-schemas/package.json ./packages/data-schemas/package.json
 COPY --chown=node:node packages/api/package.json ./packages/api/package.json
+# Patches applied via patch-package on postinstall. See patches/README.md.
+COPY --chown=node:node patches ./patches
 
 RUN \
     # Allow mounting of these files, which have no default

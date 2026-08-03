@@ -40,6 +40,7 @@
     "backend": "cross-env NODE_ENV=production node api/server/index.js",
     "backend:inspect": "cross-env NODE_ENV=production node --inspect --expose-gc api/server/index.js",
     "backend:dev": "cross-env NODE_ENV=development npx nodemon api/server/index.js",
+    "backend:experimental": "cross-env NODE_ENV=production node api/server/experimental.js",
     "backend:stop": "node config/stop-backend.js",
     "build:data-provider": "cd packages/data-provider && npm run build",
     "build:api": "cd packages/api && npm run build",
@@ -95,6 +96,7 @@
     "b:balance": "bun config/add-balance.js",
     "b:list-balances": "bun config/list-balances.js",
     "reset-terms": "node config/reset-terms.js",
+    "migrate:terms-timestamp": "node config/migrate-terms-timestamp.js",
     "flush-cache": "node config/flush-cache.js",
     "migrate:agent-permissions:dry-run": "node config/migrate-agent-permissions.js --dry-run",
     "migrate:agent-permissions": "node config/migrate-agent-permissions.js",
@@ -146,7 +148,6 @@
     "lint-staged": "^15.4.3",
     "prettier": "^3.5.0",
     "prettier-plugin-tailwindcss": "^0.6.11",
-    "react-window": "1.8.10",
     "turbo": "^2.9.17",
     "typescript-eslint": "^8.60.1"
   },
@@ -162,9 +163,7 @@
     "form-data": "^4.0.6",
     "langsmith": "^0.6.0",
     "postcss": "^8.5.13",
-    "postcss-modules": "^6.0.0",
     "tslib": "^2.8.1",
-    "@anthropic-ai/sdk": "^0.92.0",
     "fast-xml-parser": "5.7.2",
     "serialize-javascript": "7.0.5",
     "mdast-util-gfm-autolink-literal": "2.0.0",
@@ -194,7 +193,8 @@
     },
     "svgo": "^2.8.2",
     "js-yaml": "^4.2.0",
-    "ws": "^8.21.0"
+    "ws": "^8.21.0",
+    "@opentelemetry/core": "^2.9.0"
   },
   "nodemonConfig": {
     "ignore": [

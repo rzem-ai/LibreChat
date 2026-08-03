@@ -145,35 +145,36 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 
 1. `ENDPOINTS=anthropic,custom,agents`
 2. `ANTHROPIC_REVERSE_PROXY=http://gateway-proxy:8080/anthropic`
-3. `APP_TITLE=MyAssist 2.0`
-4. `DOMAIN_CLIENT=https://<yourhostname>.local` (for example `https://AU-ABC123123.local`)
-5. `DOMAIN_SERVER=https://<yourhostname>.local` (for example `https://AU-ABC123123.local`)
-6. `ALLOW_SOCIAL_LOGIN=true`
-7. `OPENID_CLIENT_ID=<update with the provided value from another team member>`
-8. `OPENID_CLIENT_SECRET=<update with the provided secret from another team member>`
-9. `OPENID_ISSUER=<update with the provided issuer URL from another team member>`
-10. `OPENID_SESSION_SECRET=<update with the provided secret from another team member>`
-11. `OPENID_SCOPE="openid profile email"`
-12. `OPENID_CALLBACK_URL=/oauth/openid/callback`
-13. `OPENID_REQUIRED_ROLE=`
-14. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
-15. `OPENID_BUTTON_LABEL="Login with SSO"`
-16. `OPENID_IMAGE_URL=/assets/favicon.svg`
-17. `ALLOW_EMAIL_LOGIN=false`
-18. `ALLOW_REGISTRATION=false`
-19. `ALLOW_SOCIAL_REGISTRATION=false`
-20. Comment out `OPENAI_API_KEY=`
-21. Comment out `ASSISTANTS_API_KEY=`
-22. BASE_URL_AZURE_AU=https://au-openai-exp.ctk.au.deloitte.com/openai/v1
-23. BASE_URL_AZURE_US=https://us-openai-exp.ctk.au.deloitte.com/openai/v1
-24. BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com
-25. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
-26. `CLEARTRACK_MCP_GATEWAY_CLIENT_ID=3e5d28f1-91a3-4748-ad73-5fa544f1d3e2`
-27. `CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET=<update with the provided secret from another team member>`
-28. `CLEARTRACK_MCP_GATEWAY_CLIENT_ID_LLM=498ce9fd-195b-40c5-82f1-8fc4a6d00d88`
-29. `CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET_LLM=<update with the provided secret from another team member>`
+3. `APP_TITLE="MyAssist 2.0"`
+4. `CUSTOM_FOOTER="⚠️ WARNING: This is a development environment. Do not upload client or confidential data."`
+5. `DOMAIN_CLIENT=https://<yourhostname>.local` (for example `https://AU-ABC123123.local`)
+6. `DOMAIN_SERVER=https://<yourhostname>.local` (for example `https://AU-ABC123123.local`)
+7. `ALLOW_SOCIAL_LOGIN=true`
+8. `OPENID_CLIENT_ID=<update with the provided value from another team member>`
+9. `OPENID_CLIENT_SECRET=<update with the provided secret from another team member>`
+10. `OPENID_ISSUER=<update with the provided issuer URL from another team member>`
+11. `OPENID_SESSION_SECRET=<update with the provided secret from another team member>`
+12. `OPENID_SCOPE="openid profile email"`
+13. `OPENID_CALLBACK_URL=/oauth/openid/callback`
+14. `OPENID_REQUIRED_ROLE=`
+15. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
+16. `OPENID_BUTTON_LABEL="Login with SSO"`
+17. `OPENID_IMAGE_URL=/assets/favicon.svg`
+18. `ALLOW_EMAIL_LOGIN=false`
+19. `ALLOW_REGISTRATION=false`
+20. `ALLOW_SOCIAL_REGISTRATION=false`
+21. Comment out `OPENAI_API_KEY=`
+22. Comment out `ASSISTANTS_API_KEY=`
+23. BASE_URL_AZURE_AU=https://au-openai-exp.ctk.au.deloitte.com/openai/v1
+24. BASE_URL_AZURE_US=https://us-openai-exp.ctk.au.deloitte.com/openai/v1
+25. BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com
+26. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
+27. `CLEARTRACK_MCP_GATEWAY_CLIENT_ID=3e5d28f1-91a3-4748-ad73-5fa544f1d3e2`
+28. `CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET=<update with the provided secret from another team member>`
+29. `MCP_GATEWAY_TOOLSETS=teams,research,news`
 
-> Items 26–29 supply OAuth credentials for the **ClearTrack MCP Gateway** app registrations referenced by the `mcpServers` block in `librechat.yaml` (repo root) and `charts/config/librechat.yaml` (Helm). The client IDs are identifiers and are safe to commit; the client secrets must be obtained from another team member and kept out of source control.
+
+> Items 26–27 supply OAuth credentials for the **ClearTrack MCP Gateway** app registration referenced by the `mcpServers` block in `librechat.yaml` (repo root) and `charts/config/librechat.yaml` (Helm). The client ID is an identifier and is safe to commit; the client secret must be obtained from another team member and kept out of source control.
 
 #### How to obtain the JWT token
 ⚠️ As of May 2026, tokens expire after ~8 hours. If models suddenly stop working, reissue the token.
@@ -256,6 +257,13 @@ Unlike CI/CD deployments, your local environment builds images from your source 
 ## Start services
 
 **First time**: Build and start all services (will take ~10-15 minutes for initial build):
+
+### If this is your first time running the containers, you will need to pull them using 
+
+```zsh
+docker compose build --no-cache
+```
+### For all other times start here:
 
 ```zsh
 docker compose up -d
@@ -417,14 +425,18 @@ For LOCAL development, we need to add each user's hostname to the Redirect URIs 
 
 ### Details Per Environment
 - **DEV (Inc. LOCAL):** [AU CTK_TT_Librechat NONPROD](https://appreg.iam.deloitteresources.com/AppProperties/2075976d-5147-47b2-89d2-4ad060d19f85)
-- **UAT:** TBC
+- **UAT:** [AU CTK_TT_Librechat NONPROD](https://appreg.iam.deloitteresources.com/AppProperties/2075976d-5147-47b2-89d2-4ad060d19f85)
 - **PROD:** TBC
 
 ### Configuration
-- Setup Method: WebAPI/OIDC
-- Authentication Tab: Configured Identifier URI and Redirect URIs
-- Secrets Tab: Generated a client secret, used for local `.env` configuration and, where applicable, the relevant Helm `values*.yaml` under `charts/`
-- Users and Groups: Currently just linked to the MyAssist DEV user group (AU_App_MyGenAI_Dev, request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb))
+1. Setup Method: WebAPI/OIDC
+2. Authentication Tab: Configured Identifier URI and Redirect URIs
+3. Secrets Tab: Generated a client secret, used for local `.env` configuration and, where applicable, the relevant Helm `values*.yaml` under `charts/`
+4. Permissions Tab: Enable the 6 following permissions: User.ReadBasic.All, email, openid, profile, offline_access, User.Read
+5. Offered API(s) Tab: Add the access_user suffix to "Scopes defined by this api". Copy from DEV configuration.
+6. Users and Groups: Set "Assignment Required" to "Enabled" and choose access group. 
+  - DEV: Linked to the MyAssist DEV user group (AU_App_MyGenAI_Dev, request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb))
+  - UAT: Linked to the MyAssist UAT user Group (AU_App_MyGenAI_Stg, request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb))
 
 # 🔐 Security
 

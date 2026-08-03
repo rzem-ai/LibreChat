@@ -110,6 +110,7 @@ junit.xml
 **/.results/
 
 secrets.json
+update-token.sh
 
 # docker override file
 # docker-compose.override.yaml
@@ -152,6 +153,7 @@ helm/**/.values.yaml
 /.openai/
 /.tabnine/
 /.codeium
+/.pi/
 *.local.md
 
 # Removed Windows wrapper files per user request

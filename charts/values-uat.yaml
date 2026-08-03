@@ -6,24 +6,166 @@ serviceAccount:
 
 ingress:
   className: cilium
-  host: 'librechat-uat.ctk.au.deloitte.com'
+  host: 'myassist-uat.ctk.au.deloitte.com'
   annotations:
-    ingress.cilium.io/loadbalancer-mode: "shared"
-    ingress.cilium.io/force-https: "true"
+    ingress.cilium.io/loadbalancer-mode: 'shared'
+    ingress.cilium.io/force-https: 'true'
     kubernetes.io/ingress.class: cilium
   tls:
     - secretName: ctk-au-deloitte-com
       secretStoreName: external-secret-store
       hosts:
-        - 'librechat-uat.ctk.au.deloitte.com'
+        - 'myassist-uat.ctk.au.deloitte.com'
 
 pods:
   librechat:
     replicas: 1
+    initContainers:
+      llm-gateway-proxy:
+        restartPolicy: Always
+        image:
+          repository: 'tt-librechat/llm-gateway-proxy'
+          pullPolicy: Always
+          tag: 'uat'
+        env:
+          TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_ANTHROPIC_URL: 'http://anthropic-eastus2.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_MCP_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
     containers:
       librechat:
+        command:
+          - /bin/sh
+          - -c
+          - >-
+            mkdir -p /app/client/dist/assets && if [ -d /app/deloitte/assets ]; then
+              cp -a /app/deloitte/assets/. /app/client/dist/assets/;
+            elif [ -d /app/deloitte-assets ]; then
+              cp -a /app/deloitte-assets/. /app/client/dist/assets/;
+            fi && exec npm run backend
         image:
           tag: 'uat'
+        env:
+          ADMIN_PANEL_URL: 'https://libre-admin-panel-uat.ctk.au.deloitte.com'
+          ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
+          ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7'
+          ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
+          APP_TITLE: 'MyAssist 2.0 (UAT)'
+          BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
+          BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
+          BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
+          CUSTOM_FOOTER: '⚠️ WARNING: This is a User Acceptance Testing environment. Do not upload client or confidential data.'
+          DOMAIN_CLIENT: 'https://myassist-uat.ctk.au.deloitte.com'
+          DOMAIN_SERVER: 'https://myassist-uat.ctk.au.deloitte.com'
+          EMBEDDINGS_MODEL: 'text-embedding-3-small'
+          EMBEDDINGS_PROVIDER: 'azure'
+          ENDPOINTS: 'agents,anthropic,custom'
+          KEY_VAULT_NAME: 'kv-int-librechat-uat'
+          MCP_GATEWAY_TOOLSETS: 'teams,research,news'
+          MONGO_DB: 'mdb-librechat-database-uat'
+          NODE_ENV: 'production' # Use production to mimic PROD environment behaviour
+          NODE_TLS_REJECT_UNAUTHORIZED: '0' # TODO: Review Node TLS setup. See: https://github.com/Deloitte-Australia/tt-librechat/issues/159
+          OPENID_CLIENT_ID: '66cc6e2e-670a-47c9-a362-94c86c46782a' # This is the Azure Client ID in Deloitte App Reg
+          OPENID_ISSUER: 'https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/v2.0/'
+          OPENID_ON_BEHALF_FLOW_FOR_USERINFO_REQUIRED: 'true'
+          OPENID_ON_BEHALF_FLOW_USERINFO_SCOPE: 'user.read'
+          OPENID_REQUIRED_ROLE: ''
+          OPENID_SCOPE: 'openid profile email offline_access https://myassist-uat.ctk.au.deloitte.com/access_user'
+          RAG_API_URL: 'http://127.0.0.1:8000'
+          RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
+          RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
+          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_PORT: '8000'
+          RAG_USE_FULL_CONTEXT: 'true'
+          # ClearTrack Code Interpreter (ea-code-runtime)
+          LIBRECHAT_CODE_BASEURL: 'https://code-runtime-uat.ctk.au.deloitte.com/v1'
+          CODEAPI_AUTH_PROVIDER: 'librechat-jwt'
+          CODEAPI_JWT_ALGORITHM: 'EdDSA'
+          CODEAPI_JWT_KID: 'lc-codeapi-uat-2026-05'
+          CODEAPI_JWT_ISSUER: 'librechat'
+          CODEAPI_JWT_AUDIENCE: 'codeapi'
+          CODEAPI_JWT_TTL_SECONDS: '300'
+          CODEAPI_JWT_MINT_CACHE_SECONDS: '30'
+          CODEAPI_JWT_SINGLE_TENANT_ID: 'legacy'
+          # Azure Storage Container
+          AZURE_CLIENT_ID: '6fbe2a73-4566-43e3-a7f3-66276353afc3' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-uat
+          AZURE_STORAGE_ACCOUNT_NAME: 'stctspokenpdshared'
+          AZURE_STORAGE_PUBLIC_ACCESS: 'false'
+          AZURE_CONTAINER_NAME: 'stc-librechat-app-uat'
+          # ClearTrack MCP Gateway
+          CLEARTRACK_MCP_GATEWAY_CLIENT_ID: '3e5d28f1-91a3-4748-ad73-5fa544f1d3e2'
+          #Langfuse Observability
+          LANGFUSE_BASE_URL: 'https://langfuse-uat.ctk.au.deloitte.com'
+          # OpenTelemetry Tracing
+          OTEL_TRACING_ENABLED: 'true'
+          OTEL_TRACES_SAMPLER_ARG: '1.0'
+          OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: 'https://managed-ai-ctspoke-npd-dce-95rn.australiaeast-1.ingest.monitor.azure.com/dataCollectionRules/dcr-3991725585f24a5eabd0d6aa283d0e18/streams/Microsoft-OTLP-Traces/otlp/v1/traces'
+          # Azure Monitor DCR only accepts OTLP/HTTP+protobuf
+          OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf'
+          # Wrap the OTLP exporter with an Azure AD bearer-token headers factory (managed identity via AZURE_CLIENT_ID)
+          AZURE_MONITOR_AUTH_ENABLED: 'true'
+          # Logging for debugging
+          OTEL_LOG_LEVEL: 'DEBUG'
+          OTEL_IOREDIS_TRACING_ENABLED: 'true'
+          DEBUG_LOGGING: 'true'
+          DEBUG_CONSOLE: 'true'
+          AGENT_DEBUG_LOGGING: 'true'
+        secrets:
+          AZURE_API_KEY: librechat-azure-api-key
+          MONGO_URI: librechat-uat-mdb-connection-string
+          JWT_SECRET: librechat-jwt-secret-uat
+          JWT_REFRESH_SECRET: librechat-jwt-refresh-secret-uat
+          CREDS_KEY: librechat-creds-key-uat
+          CREDS_IV: librechat-creds-iv-uat
+          OPENID_CLIENT_SECRET: librechat-openid-client-secret-uat
+          OPENID_SESSION_SECRET: librechat-openid-session-secret-uat
+          RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          MEILI_MASTER_KEY: librechat-meili-master-key-uat
+          # ClearTrack MCP Gateway
+          CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET: librechat-cleartrack-mcp-gateway-client-secret-uat
+          # ClearTrack Code Interpreter (ea-code-runtime) — JWK signing key
+          CODEAPI_JWT_PRIVATE_JWK_JSON: librechat-codeapi-jwt-private-jwk-uat
+          #Langfuse Observability
+          LANGFUSE_PUBLIC_KEY: librechat-langfuse-public-key-uat
+          LANGFUSE_SECRET_KEY: librechat-langfuse-secret-key-uat
       rag-api:
         image:
+          repository: 'tt-librechat/rag-api'
+          pullPolicy: Always
           tag: 'uat'
+        env:
+          PGVECTOR_CREATE_EXTENSION: 'False'
+          VECTOR_DB_TYPE: 'pgvector'
+          POSTGRES_USE_UNIX_SOCKET: 'False'
+          POSTGRES_DB: 'pgdb_librechat_app_uat'
+          POSTGRES_USER: 'id-int-librechat-uat'
+          POSTGRES_AUTH_TYPE: 'ActiveDirectoryMsi'
+          MANAGED_IDENTITY_CLIENT_ID: '6fbe2a73-4566-43e3-a7f3-66276353afc3' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-uat
+          DB_HOST: 'psql-ctspoke-npd.postgres.database.azure.com'
+          DB_PORT: '5432'
+          RAG_HOST: '0.0.0.0'
+          RAG_PORT: '8000'
+          EMBEDDINGS_PROVIDER: 'azure'
+          RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
+          RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
+          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
+        secrets:
+          AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          JWT_SECRET: librechat-jwt-secret-uat
+        service:
+          enabled: true
+          type: ClusterIP
+          port: 8000
+          targetPort: 8000
+        ingress:
+          enabled: false
+      meilisearch:
+        image:
+          pullPolicy: Always
+          tag: 'uat'
+        env:
+          MEILI_ENV: 'production' # Use production to mimic PROD environment behaviour
+        secrets:
+          MEILI_MASTER_KEY: librechat-meili-master-key-uat

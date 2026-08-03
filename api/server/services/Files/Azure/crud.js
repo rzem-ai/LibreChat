@@ -4,7 +4,14 @@ const mime = require('mime');
 const axios = require('axios');
 const fetch = require('node-fetch');
 const { logger } = require('@librechat/data-schemas');
-const { getAzureContainerClient, deleteRagFile } = require('@librechat/api');
+const {
+  deleteRagFile,
+  assertRemoteFileURL,
+  getAzureContainerClient,
+  getRemoteFileFetchMaxBytes,
+  getRemoteFileFetchTimeoutMs,
+  assertRemoteFileContentLength,
+} = require('@librechat/api');
 
 const defaultBasePath = 'images';
 const { AZURE_STORAGE_PUBLIC_ACCESS = 'true', AZURE_CONTAINER_NAME = 'files' } = process.env;
@@ -63,8 +70,20 @@ async function saveURLToAzure({
   containerName,
 }) {
   try {
-    const response = await fetch(URL);
+    const maxBytes = getRemoteFileFetchMaxBytes();
+    const response = await fetch(assertRemoteFileURL(URL), {
+      timeout: getRemoteFileFetchTimeoutMs(),
+      size: maxBytes,
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+    }
+    assertRemoteFileContentLength(response.headers, maxBytes);
     const buffer = await response.buffer();
+    if (buffer.length > maxBytes) {
+      throw new Error(`Remote file response too large: ${buffer.length} bytes`);
+    }
+
     return await saveBufferToAzure({ userId, buffer, fileName, basePath, containerName });
   } catch (error) {
     logger.error('[saveURLToAzure] Error uploading file from URL:', error);
@@ -233,14 +252,27 @@ async function uploadFileToAzure({
  */
 async function getAzureFileStream(_req, fileURL) {
   try {
-    const response = await axios({
-      method: 'get',
-      url: fileURL,
-      responseType: 'stream',
-    });
-    return response.data;
+    logger.debug(`[getAzureFileStream] container=${AZURE_CONTAINER_NAME} url=${fileURL}`);
+    const containerClient = await getAzureContainerClient(AZURE_CONTAINER_NAME);
+    if (!containerClient) {
+      throw new Error('[getAzureFileStream] getAzureContainerClient returned null (check AZURE_STORAGE_ACCOUNT_NAME)');
+    }
+    const blobPath = fileURL.split(`${AZURE_CONTAINER_NAME}/`)[1];
+    if (!blobPath) {
+      throw new Error(`Could not extract blob path from URL: ${fileURL}`);
+    }
+    logger.debug(`[getAzureFileStream] blobPath=${blobPath}`);
+    const blockBlobClient = containerClient.getBlockBlobClient(blobPath);
+    // Empty options: clear default lease/ETag conditions to avoid 409 on upload settlement.
+    const response = await blockBlobClient.download(0, undefined, {});
+    logger.debug(`[getAzureFileStream] ok status=${response._response?.status} bytes=${response.contentLength}`);
+    return response.readableStreamBody;
   } catch (error) {
-    logger.error('[getAzureFileStream] Error getting blob stream:', error);
+    logger.error('[getAzureFileStream] Error getting blob stream:', {
+      message: error.message,
+      code: error.code,
+      statusCode: error.statusCode,
+    });
     throw error;
   }
 }
