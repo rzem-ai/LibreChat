@@ -197,3 +197,6 @@ __pycache__/
 *.pyo
 *.egg-info/
 .deepeval*
+
+# Local untested skill drafts
+untested_skills/
