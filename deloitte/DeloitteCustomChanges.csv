@@ -3,6 +3,7 @@ path_to_file,type,changes_made,related_prs
 .github/workflows/deloitte-custom-changes.yml,modified existing file,Modified in PR #155 at 2026-07-27T03:30:28Z: Feat/pr template and custom change tracker.,https://github.com/Deloitte-Australia/tt-librechat/pull/155
 api/db/connect.js,modified existing file,"Allows use of MONGO_DB_NAME to connect to the database, instead of only MONGO_URI.",https://github.com/Deloitte-Australia/tt-librechat/pull/18
 api/server/controller/agents/client.js,modified existing file,Allows detaching trace parent.,https://github.com/Deloitte-Australia/tt-librechat/pull/143
+client/src/components/Chat/Input/Files/Table/Columns.tsx,modified existing file,Modified in PR #164 at 2026-08-04T00:46:39Z: 6️⃣ FIX - Add download button for user uploaded attachments (Revised).,https://github.com/Deloitte-Australia/tt-librechat/pull/164
 Dockerfile,modified existing file,Added Deloitte certs.,https://github.com/Deloitte-Australia/tt-librechat/pull/76
 librechat.yaml,modified existing file,Modified in PR #148 at 2026-07-27T07:10:47Z: FIX: remove llm gateway from mcp servers. | Modified in PR #163 at 2026-07-28T22:25:26Z: FIX: managed identity and MCP name correction.,https://github.com/Deloitte-Australia/tt-librechat/pull/148 | https://github.com/Deloitte-Australia/tt-librechat/pull/163
 packages/api/src/langfuse/context.spec.ts,created new file,New file.,https://github.com/Deloitte-Australia/tt-librechat/pull/143
