@@ -5,6 +5,15 @@ on:
   # pull_request:
   #   branches: [ develop ]
   workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Test mode'
+        required: true
+        default: 'e2e:ci'
+        type: choice
+        options:
+          - e2e:ci
+          - e2e:mock
 permissions:
   contents: read
 
@@ -25,7 +34,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run Playwright tests
-        run: npm run e2e:ci
+        run: npm run ${{ github.event.inputs.test_mode }}
 
       - name: Upload test report
         uses: actions/upload-artifact@v4
