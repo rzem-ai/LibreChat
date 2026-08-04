@@ -34,7 +34,7 @@ const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { getOpenAIClient } = require('~/server/controllers/assistants/helpers');
 const { hasCapability } = require('~/server/middleware/roles/capabilities');
 const { checkPermission } = require('~/server/services/PermissionService');
-const { cleanFileName, getContentDisposition } = require('~/server/utils/files');
+const { cleanFileName, getContentDisposition, SAFE_INLINE_TYPES } = require('~/server/utils/files');
 const { getLogStores } = require('~/cache');
 const { Readable } = require('stream');
 const db = require('~/models');
@@ -67,10 +67,7 @@ router.get('/', async (req, res) => {
         logger.warn('[/files] Error refreshing S3 file URLs:', error);
       }
     }
-    // Azure Blob container is private (PublicAccessNotPermitted 409 on direct
-    // `<img src>` / `<a href>` from browser). Rewrite filepath to a same-origin
-    // proxy URL served by the authenticated /download route with ?inline=true
-    // so images render and downloads authenticate via session cookie.
+    // Deloitte: rewrite azure_blob filepath to authenticated proxy for private containers.
     const rewritten = files.map((file) => {
       if (file.source === FileSources.azure_blob && file.file_id) {
         const obj = file.toObject ? file.toObject() : file;
@@ -139,7 +136,7 @@ router.get('/agent/:agent_id', async (req, res) => {
       text: 0,
     });
 
-    // Same azure_blob filepath rewrite as GET /files.
+    // Deloitte: rewrite azure_blob filepath to authenticated proxy for private containers.
     const rewritten = files.map((file) => {
       if (file.source === FileSources.azure_blob && file.file_id) {
         const obj = file.toObject ? file.toObject() : file;
@@ -593,16 +590,13 @@ router.get('/download/:userId/:file_id', fileAccess, async (req, res) => {
       return res.status(501).send('Not Implemented');
     }
 
-    // `?inline=true` serves the file with its real Content-Type and no
-    // attachment header — used when the frontend renders images via `<img
-    // src=/api/files/download/...?inline=true>` for azure_blob files that
-    // can't be `<img src>`-ed directly at the private blob URL.
-    const inline = req.query.inline === 'true';
+    const inline = req.query.inline === 'true' && SAFE_INLINE_TYPES.has(file.type);
     const setHeaders = () => {
+      // Prevents browsers from sniffing the Content-Type and executing e.g. an
+      // SVG served as image/png as active script content under our origin.
+      res.setHeader('X-Content-Type-Options', 'nosniff');
       if (inline) {
-        // Real MIME type when known; fallback to a broadly-renderable default
-        // rather than attachment so <img>/<video>/<audio> tags still work.
-        res.setHeader('Content-Type', file.type || 'application/octet-stream');
+        res.setHeader('Content-Type', file.type);
       } else {
         res.setHeader('Content-Disposition', getContentDisposition(file.filename));
         res.setHeader('Content-Type', 'application/octet-stream');

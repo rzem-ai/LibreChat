@@ -100,6 +100,9 @@ export default function OpenAIImageGen({
     height: imageHeight,
     filepath = null,
     filename = '',
+    source,
+    file_id,
+    user,
   } = (attachment as TFile & TAttachmentMetadata) || {};
 
   let origWidth = width ?? imageWidth;
@@ -243,10 +246,15 @@ export default function OpenAIImageGen({
             {filepath && (
               <Image
                 altText={filename}
+                fileName={filename}
                 imagePath={filepath}
                 width={Number(dimensions.width?.split('px')[0])}
                 height={Number(dimensions.height?.split('px')[0])}
                 args={parsedArgs}
+                // Deloitte: enable authenticated proxy for private azure_blob.
+                source={source}
+                fileId={file_id}
+                userId={user}
               />
             )}
           </div>

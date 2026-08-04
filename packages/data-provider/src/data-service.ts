@@ -1065,6 +1065,20 @@ export function getSkillFileContent(
   return request.get(endpoints.skillFile(skillId, relativePath));
 }
 
+// Deloitte: fetch skill file bytes as Blob via authenticated axios for binary previews/downloads.
+export function getSkillFileBlob(
+  skillId: string,
+  relativePath: string,
+): Promise<AxiosResponse<Blob>> {
+  return request.getResponse<AxiosResponse<Blob>>(
+    `${endpoints.skillFile(skillId, relativePath)}?raw=true`,
+    {
+      responseType: 'blob',
+      headers: { Accept: 'application/octet-stream' },
+    },
+  );
+}
+
 export function deleteSkillFile(
   skillId: string,
   relativePath: string,
