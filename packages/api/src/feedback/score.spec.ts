@@ -1,5 +1,4 @@
-import { createHash } from 'node:crypto';
-import { pushFeedbackScore, deleteFeedbackScore } from './score';
+import { pushFeedbackScore, deleteFeedbackScore, scoreId } from './score';
 import { resetLangfuseConfig } from './client';
 
 jest.mock('@librechat/data-schemas', () => ({
@@ -11,11 +10,6 @@ const LANGFUSE_ENV = {
   LANGFUSE_SECRET_KEY: 'sk-test',
   LANGFUSE_BASE_URL: 'http://langfuse.test',
 };
-
-function scoreId(messageId: string): string {
-  const h = createHash('sha256').update(`${messageId}:user-feedback`).digest('hex');
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
-}
 
 let mockFetch: jest.MockedFunction<typeof fetch>;
 let originalFetch: typeof fetch;
@@ -50,6 +44,13 @@ afterEach(() => {
 
 describe('pushFeedbackScore', () => {
   const messageId = 'f23f3243-f6cb-361a-12c9-0a2cae2e5294';
+
+  it('generates deterministic RFC 4122 version 4 score IDs', () => {
+    expect(scoreId(messageId)).toBe(scoreId(messageId));
+    expect(scoreId(messageId)).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+  });
 
   it('resolves trace ID then POSTs a numeric score of 1 for thumbsUp', async () => {
     mockTraceAndScore();

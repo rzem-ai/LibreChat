@@ -5,9 +5,12 @@ import { getLangfuseConfig } from './client';
 import type { LangfuseConfig } from './client';
 
 /** Deterministic score ID keyed on messageId so re-rating upserts the same row. */
-function scoreId(messageId: string): string {
-  const h = createHash('sha256').update(`${messageId}:user-feedback`).digest('hex');
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+export function scoreId(messageId: string): string {
+  const bytes = createHash('sha256').update(`${messageId}:user-feedback`).digest().subarray(0, 16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const h = bytes.toString('hex');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
 }
 
 /** Resolve the Langfuse trace ID for a given messageId by querying trace metadata. */

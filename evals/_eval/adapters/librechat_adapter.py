@@ -49,6 +49,14 @@ _JUDGE_DISABLE_TLS_VERIFY = os.environ.get("EVAL_JUDGE_DISABLE_TLS_VERIFY", "").
 _LIBRECHAT_YAML = Path(__file__).resolve().parents[3] / "librechat.yaml"
 
 
+def _read_inline_source_file(fp: Path) -> str:
+    data = fp.read_bytes()
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        return f"[Binary file omitted from inline context: {fp.name}]"
+
+
 def _expand_vars(value: str) -> str:
     """Expand ${VAR} references in a string using os.environ."""
     return os.path.expandvars(value)
@@ -145,8 +153,7 @@ class LibreChatAdapter(AgentAdapter):
     def invoke_file(self, query: str, file_paths: List[Path]) -> AgentResponse:
         file_contents = []
         for fp in file_paths:
-            with open(fp, "r") as f:
-                file_contents.append(f"--- File: {fp.name} ---\n{f.read()}")
+            file_contents.append(f"--- File: {fp.name} ---\n{_read_inline_source_file(fp)}")
         context = "\n\n".join(file_contents)
         content = f"{query}\n\n---\nSource material:\n{context}"
         return self._call([{"role": "user", "content": content}])

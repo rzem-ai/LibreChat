@@ -156,7 +156,7 @@
     "react-vtree": {
       "react-window": "1.8.10"
     },
-    "undici": ">=6.24.0",
+    "undici": ">=6.24.0 <8.0.0",
     "sanitize-html": "^2.17.4",
     "@xmldom/xmldom": "^0.8.13",
     "elliptic": "^6.6.1",

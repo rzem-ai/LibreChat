@@ -148,7 +148,7 @@ Use the metric selection table in REFERENCE.md. Do NOT blindly copy from
 existing cases. Always apply base metrics (`task_completion`, `hallucination`).
 Add content-driven metrics only when the corresponding pattern is detected.
 
-Add `conversational_metrics: [conversation_completeness]` when case has 3+ turns.
+Add `conversation_completeness` to `metrics:` when case has 3+ turns.
 
 **Thresholds:** match the thresholds used in the existing eval_cases.yaml for
 consistency (typically 0.5 for all metrics). Only use higher thresholds (0.7+)

@@ -1,3 +1,4 @@
+// Verifies extraction of file_search chunks exposed to eval RAG retrieval_context.
 import { extractRetrievalSources } from './retrieval';
 
 describe('extractRetrievalSources', () => {
@@ -95,6 +96,18 @@ describe('extractRetrievalSources', () => {
     expect(extractRetrievalSources([attachment])).toEqual([
       { content: '', fileName: '', fileId: '', relevance: 0, pages: [] },
     ]);
+  });
+
+  it('filters non-numeric page values', () => {
+    const attachment = {
+      type: 'file_search',
+      file_search: {
+        sources: [
+          { fileId: 'f1', fileName: 'doc.pdf', pages: [1, '2', null, 3], relevance: 0.9, content: 'x' },
+        ],
+      },
+    };
+    expect(extractRetrievalSources([attachment])[0].pages).toEqual([1, 3]);
   });
 
   it('skips null entries within the sources array', () => {

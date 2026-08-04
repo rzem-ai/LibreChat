@@ -53,12 +53,15 @@ export function extractRetrievalSources(attachments: unknown[]): RetrievedChunk[
         continue;
       }
       const src = s as Record<string, unknown>;
+      const pages = Array.isArray(src.pages)
+        ? src.pages.filter((page): page is number => typeof page === 'number')
+        : [];
       sources.push({
         content: typeof src.content === 'string' ? src.content : '',
         fileName: typeof src.fileName === 'string' ? src.fileName : '',
         fileId: typeof src.fileId === 'string' ? src.fileId : '',
         relevance: typeof src.relevance === 'number' ? src.relevance : 0,
-        pages: Array.isArray(src.pages) ? (src.pages as number[]) : [],
+        pages,
       });
     }
   }
