@@ -548,6 +548,11 @@ router.get('/download/:userId/:file_id', fileAccess, async (req, res) => {
 
     // Access already validated by fileAccess middleware
     const file = req.fileAccess.file;
+    logger.debug(
+      `[DOWNLOAD ROUTE] file_id=${file.file_id} source=${file.source} ` +
+        `context=${file.context} hasCodeEnvRef=${!!file.metadata?.codeEnvRef} ` +
+        `filepath=${(file.filepath || '').slice(0, 100)}`,
+    );
 
     if (checkOpenAIStorage(file.source) && !file.model) {
       logger.warn(`File download requested by user ${userId} has no associated model: ${file_id}`);
@@ -606,7 +611,15 @@ router.get('/download/:userId/:file_id', fileAccess, async (req, res) => {
         ref.kind === 'skill'
           ? { kind: ref.kind, id: ref.id, version: ref.version }
           : { kind: ref.kind, id: ref.id };
-      const response = await getDownloadStream(
+      logger.debug(
+        `[DOWNLOAD ROUTE] routing CI file to ea-code-runtime session=${ref.storage_session_id} fileId=${ref.file_id}`,
+      );
+      // Use code strategy explicitly — outer getStrategyFunctions(file.source)
+      // returns getAzureFileStream for azure_blob source, wrong signature for CI.
+      const { getDownloadStream: getCodeStream } = getStrategyFunctions(
+        FileSources.execute_code,
+      );
+      const response = await getCodeStream(
         `${ref.storage_session_id}/${ref.file_id}`,
         identity,
         req,
