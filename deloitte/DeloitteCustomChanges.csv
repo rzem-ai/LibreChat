@@ -1,6 +1,7 @@
 path_to_file,type,changes_made,related_prs
 .env.example,modified existing file,Modified in PR #148 at 2026-07-27T07:10:47Z: FIX: remove llm gateway from mcp servers. | Modified in PR #111 at 2026-07-29T05:19:20Z: FEAT: end of trace citations and system prompts.,https://github.com/Deloitte-Australia/tt-librechat/pull/148 | https://github.com/Deloitte-Australia/tt-librechat/pull/111
 .github/workflows/deloitte-custom-changes.yml,modified existing file,Modified in PR #155 at 2026-07-27T03:30:28Z: Feat/pr template and custom change tracker.,https://github.com/Deloitte-Australia/tt-librechat/pull/155
+.github/workflows/playwright-tests.yml,renamed existing file,Renamed in PR #183 at 2026-08-04T03:46:23Z: fix: rename playwright-tests.yaml in develop to match main (from .github/workflows/playwright-test.yml).,https://github.com/Deloitte-Australia/tt-librechat/pull/183
 .github/workflows/sync-public-repo.yml,modified existing file,Modified in PR #123 at 2026-08-04T03:16:07Z: 5️⃣ FEAT: Update sync-from-public pipeline.,https://github.com/Deloitte-Australia/tt-librechat/pull/123
 .github/workflows/upstream-sync-pr.yml,deleted existing file,Deleted in PR #123 at 2026-08-04T03:16:07Z: 5️⃣ FEAT: Update sync-from-public pipeline.,https://github.com/Deloitte-Australia/tt-librechat/pull/123
 .gitignore,modified existing file,Modified in PR #111 at 2026-07-29T05:19:20Z: FEAT: end of trace citations and system prompts.,https://github.com/Deloitte-Australia/tt-librechat/pull/111
