@@ -33,6 +33,17 @@ jobs:
       - name: Install Playwright browsers
         run: DEBUG=pw:install npx playwright install --with-deps chromium
 
+      - name: Install Playwright browsers II
+        run: |
+          # 1. Update your local OS package definitions
+          sudo apt-get update
+
+          # 2. Install the system dependencies explicitly 
+          sudo npx playwright install-deps chromium
+
+          # 3. Download the specific Chromium binary
+          npx playwright install chromium
+
       - name: Run Playwright tests
         run: npm run ${{ github.event.inputs.test_mode }}
 
