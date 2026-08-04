@@ -363,6 +363,8 @@ dataset item to its OTel trace. Two scores are posted per trace:
 | `EVAL_PUSH_LANGFUSE=1` | Enable Langfuse globally (alternative to `--langfuse` flag) |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Optional explicit OTLP endpoint (default: `<Langfuse base>/api/public/otel`) |
 | `OTEL_EXPORTER_OTLP_HEADERS` | Optional explicit OTLP headers |
+| `LANGFUSE_SSL_CERT_FILE` | Optional CA bundle for Langfuse OTLP TLS verification |
+| `LANGFUSE_SSL_VERIFY=false` | Local-dev fallback: try repo Deloitte/Zscaler certs, then disable OTLP TLS verification if none are available |
 
 If `OTEL_EXPORTER_OTLP_HEADERS` is not set, the framework builds it from
 `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` and includes

@@ -41,12 +41,11 @@ def init_tracing() -> bool:
         _ensure_langfuse_otel_env()
 
         try:
-            ssl_verify = os.environ.get("LANGFUSE_SSL_VERIFY", "true").lower() not in ("false", "0", "no")
-            exporter = OTLPSpanExporter()
-            if not ssl_verify:
-                exporter._certificate_file = False
-                if hasattr(exporter, "_session"):
-                    exporter._session.verify = False
+            ssl_verify = _langfuse_ssl_verify_enabled()
+            cert_file = _resolve_langfuse_cert_file(ssl_verify)
+            exporter = OTLPSpanExporter(certificate_file=cert_file)
+            if not ssl_verify and cert_file is None:
+                _disable_otlp_ssl_verification_for_local_dev(exporter)
             resource = Resource.create({"service.name": _SERVICE_NAME})
             provider = TracerProvider(resource=resource)
             provider.add_span_processor(BaggageSpanProcessor(ALLOW_ALL_BAGGAGE_KEYS))
@@ -62,6 +61,42 @@ def init_tracing() -> bool:
 def get_tracer():
     """Return the eval framework tracer."""
     return trace.get_tracer(_TRACER_NAME)
+
+
+def _langfuse_ssl_verify_enabled() -> bool:
+    return os.environ.get("LANGFUSE_SSL_VERIFY", "true").strip().lower() not in ("false", "0", "no")
+
+
+def _resolve_langfuse_cert_file(ssl_verify: bool) -> Optional[str]:
+    explicit = os.environ.get("LANGFUSE_SSL_CERT_FILE", "").strip()
+    if explicit:
+        return explicit
+    if ssl_verify:
+        return None
+
+    repo_root = Path(__file__).resolve().parents[3]
+    for candidate in (
+        repo_root / "deloitte/certificates/combined-ca-bundle.crt",
+        repo_root / "deloitte/certificates/zscaler_root_ca.crt",
+        repo_root / "deloitte/certificates/deloitte.crt",
+    ):
+        if candidate.exists():
+            return str(candidate)
+    return None
+
+
+def _disable_otlp_ssl_verification_for_local_dev(exporter: OTLPSpanExporter) -> None:
+    """Best-effort local-dev fallback when no CA bundle is available.
+
+    OTLPSpanExporter exposes `certificate_file` but not a public `verify=False`
+    option, so keep the private-field mutation isolated and non-fatal.
+    """
+    try:
+        exporter._certificate_file = False
+        if hasattr(exporter, "_session"):
+            exporter._session.verify = False
+    except Exception as exc:
+        print(f"[OTEL] Warning: could not disable OTLP TLS verification: {exc}")
 
 
 _OPENAI_INSTRUMENTED = False

@@ -88,4 +88,6 @@ This package configures the OpenTelemetry SDK and exports eval results as struct
 | `LANGFUSE_SECRET_KEY` | Used to build OTLP Basic auth header |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Override OTLP endpoint (auto-derived from Langfuse URL if absent) |
 | `OTEL_EXPORTER_OTLP_HEADERS` | Override OTLP headers (auto-derived from Langfuse keys if absent) |
+| `LANGFUSE_SSL_CERT_FILE` | Optional CA bundle for Langfuse OTLP TLS verification |
+| `LANGFUSE_SSL_VERIFY` | Set to `false` for local dev to try repo Deloitte/Zscaler certs, then fall back to disabling OTLP TLS verification |
 | `EVAL_LANGFUSE_ENVIRONMENT` | Langfuse environment tag on traces (default: `development`) |
