@@ -96,19 +96,22 @@ def build_invoke_kwargs(case: dict, invoke_method: str) -> dict:
 
 def get_source_text(case: dict) -> Optional[str]:
     """Read source material text for use as context in LLMTestCase."""
+
+    def _read_text(fp: Path) -> str:
+        data = fp.read_bytes()
+        try:
+            return data.decode("utf-8")
+        except UnicodeDecodeError:
+            return f"[Binary file omitted from inline context: {fp.name}]"
+
     source_path = case.get("_source_path")
     if source_path and source_path.exists():
-        with open(source_path, "r") as f:
-            return f.read()
+        return _read_text(source_path)
 
     # For file-based cases, concatenate file contents
     file_paths = case.get("_source_file_paths", [])
     if file_paths:
-        parts = []
-        for fp in file_paths:
-            if fp.exists():
-                with open(fp, "r") as f:
-                    parts.append(f.read())
+        parts = [_read_text(fp) for fp in file_paths if fp.exists()]
         return "\n\n".join(parts) if parts else None
 
     return case.get("context_text")

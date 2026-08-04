@@ -29,7 +29,7 @@ def pytest_addoption(parser):
     )
     parser.addoption(
         "--config",
-        required=True,
+        default=None,
         help="Path to the eval_cases.yaml config file for the skill under test.",
     )
     parser.addoption(
