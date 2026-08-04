@@ -147,7 +147,7 @@ jobs:
 
           git checkout "$DESTINATION_BRANCH" -- "$SYNC_WORKFLOW_FILE" || true
 
-          if ! git diff --quiet; then
+          if ! git diff --quiet HEAD -- "$SYNC_WORKFLOW_FILE"; then
             git add "$SYNC_WORKFLOW_FILE"
             git commit -m "Preserve destination-owned public sync workflow"
           fi
