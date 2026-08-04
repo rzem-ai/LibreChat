@@ -30,9 +30,12 @@ interface:
     public: false # Disable share with everyone
 
   peoplePicker:
-    users: true # TODO: Restrict to deloitte.com.au emails
+    users: true
     groups: false
     roles: false
+    allowedDomains:
+      - deloitte.com.au
+      - deloitte.co.nz
 
 fileConfig:
   endpoints:

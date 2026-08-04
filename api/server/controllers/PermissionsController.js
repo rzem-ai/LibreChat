@@ -401,7 +401,7 @@ const getUserEffectivePermissions = async (req, res) => {
 const searchPrincipals = async (req, res) => {
   try {
     const { q: rawQuery, limit = 20, types } = req.query;
-    const allowedEmailDomain = 'deloitte.com.au';
+    const allowedDomains = req.config?.config?.interface?.peoplePicker?.allowedDomains;
 
     if (typeof rawQuery !== 'string' || rawQuery.trim().length === 0) {
       return res.status(400).json({
@@ -483,8 +483,22 @@ const searchPrincipals = async (req, res) => {
       }
     }
     const domainFilteredPrincipals = allPrincipals.filter((principal) => {
+      if (!Array.isArray(allowedDomains) || allowedDomains.length === 0) {
+        return true;
+      }
+
       const email = typeof principal.email === 'string' ? principal.email.trim().toLowerCase() : '';
-      return email.endsWith(`@${allowedEmailDomain}`);
+      if (email.length === 0) {
+        return true;
+      }
+
+      return allowedDomains.some((domain) => {
+        if (typeof domain !== 'string') {
+          return false;
+        }
+
+        return email.endsWith(`@${domain.trim().toLowerCase()}`);
+      });
     });
 
     const scoredResults = domainFilteredPrincipals.map((item) => ({
