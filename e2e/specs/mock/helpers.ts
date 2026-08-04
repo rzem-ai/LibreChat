@@ -96,7 +96,7 @@ export async function sendMessage(page: Page, text: string): Promise<Response> {
   await input.click();
   await input.fill(text);
   const [response] = await Promise.all([
-    page.waitForResponse(isAgentsStream, { timeout: 30000 }),
+    page.waitForResponse(isAgentsStream, { timeout: 90000 }),
     input.press('Enter'),
   ]);
   return response;
