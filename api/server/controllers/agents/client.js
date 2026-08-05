@@ -20,6 +20,7 @@ const {
   memoryInstructions,
   createTokenCounter,
   applyContextToAgent,
+  applyEndOfTraceCitations,
   isMemoryAgentEnabled,
   recordCollectedUsage,
   sendEvent,
@@ -1099,6 +1100,18 @@ class AgentClient extends BaseClient {
       onProgress: opts.onProgress,
       userMCPAuthMap: opts.userMCPAuthMap,
       abortController: opts.abortController,
+    });
+
+    /* Insert file citation anchors into the final answer before it is captured
+     * as `completion` and persisted. Runs after `chatCompletion` so every
+     * file_search artifact has resolved into `this.artifactPromises`, and before
+     * `filterMalformedContentParts` so anchors land on the same content parts
+     * that get saved. Mutates `this.contentParts` in place and never throws. */
+    await applyEndOfTraceCitations({
+      contentParts: this.contentParts,
+      artifactPromises: this.artifactPromises,
+      fileCitations: this.options.req?.config?.interfaceConfig?.fileCitations,
+      logger,
     });
 
     const completion = filterMalformedContentParts(this.contentParts);
