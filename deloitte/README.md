@@ -176,6 +176,30 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 
 > Items 26–27 supply OAuth credentials for the **ClearTrack MCP Gateway** app registration referenced by the `mcpServers` block in `librechat.yaml` (repo root) and `charts/config/librechat.yaml` (Helm). The client ID is an identifier and is safe to commit; the client secret must be obtained from another team member and kept out of source control.
 
+### Evaluation framework variables
+
+The optional Python evaluation framework reads the following variables from the repository `.env` file:
+
+| Variable | Purpose |
+|---|---|
+| `LIBRECHAT_BASE_URL` | LibreChat instance to evaluate; defaults to `http://localhost:3080`. |
+| `LIBRECHAT_API_KEY` | Agent API key from LibreChat Settings → Data. Required for agent evals. |
+| `LIBRECHAT_AGENT_ID` | Default agent ID. A config-specific variable such as `EXPENSE_ASSIST_AGENT_ID` can be referenced by `agent_id: ${VAR}` instead. |
+| `LIBRECHAT_TIMEOUT` | LibreChat request timeout in seconds; defaults to `300`. |
+| `LIBRECHAT_MAX_RETRIES` | Maximum LibreChat request retries; defaults to `3`. |
+| `LIBRECHAT_RETRY_BACKOFF` | Retry backoff in seconds; defaults to `5`. |
+| `EVAL_JUDGE_ENDPOINT` | Optional custom endpoint name from `librechat.yaml` for DeepEval judge calls. |
+| `EVAL_JUDGE_MODEL` | Optional judge model override. |
+| `EVAL_JUDGE_DISABLE_TLS_VERIFY` | Set to `1` only for local judge endpoints with untrusted certificates. |
+| `EVAL_ROOT` | Optional override for the eval workspace root. |
+| `EVAL_LANGFUSE_BASE_URL` | Optional Langfuse URL used by eval dataset and telemetry integrations. |
+| `EVAL_PUSH_LANGFUSE` | Set to `1` to export eval telemetry without passing `--langfuse`. |
+| `EVAL_LANGFUSE_ENVIRONMENT` | Langfuse environment tag; defaults to `development`. |
+| `LANGFUSE_SSL_VERIFY` | Set to `false` only for local development with an untrusted Langfuse certificate. |
+| `LANGFUSE_SSL_CERT_FILE` | Optional CA bundle used to verify Langfuse OTLP TLS. |
+
+The existing `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`, `OTEL_EXPORTER_OTLP_ENDPOINT`, and `OTEL_EXPORTER_OTLP_HEADERS` variables are also reused when Langfuse export is enabled. See `evals/_eval/README.md` for commands and examples.
+
 #### How to obtain the JWT token
 ⚠️ As of May 2026, tokens expire after ~8 hours. If models suddenly stop working, reissue the token.
 1. Navigate to [here](https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/oauth2/v2.0/authorize?client_id=498ce9fd-195b-40c5-82f1-8fc4a6d00d88&response_type=id_token&redirect_uri=https%3A%2F%2Fjwt.ms&scope=openid%20profile%20email%20https%3A%2F%2Fgraph.microsoft.com%2FUser.Read&response_mode=fragment&state=random_state&nonce=random_nonce)

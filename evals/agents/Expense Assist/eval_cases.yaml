@@ -12,7 +12,7 @@
 #   4. Multi-step clarification   — case_7 (single), case_8 (multi)
 
 adapter: _eval.adapters.librechat_adapter.LibreChatAdapter
-agent_id: "agent_8IwmtaKdFlPIOgKyac_eD"
+agent_id: ${EXPENSE_ASSIST_AGENT_ID}
 invoke_method: invoke_sequential
 num_runs: 3
 
