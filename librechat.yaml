@@ -2,18 +2,37 @@ version: 1.3.13 # Copy from librechat.example.yaml
 cache: true
 
 interface:
-  fileCitations: true  #Enables file citations for agents.
   agents:
     use: true
     create: true
-    share: false
-    public: false
-  remoteAgents:
+    share: true # Enable share with other users
+    public: false # Disable share with everyone
+
+  bookmarks: true
+
+  fileCitations: true
+
+  marketplace:
+    use: true
+
+  modelSelect: true
+
+  multiConvo: true
+
+  parameters: true
+
+  presets: true
+
+  prompts:
     use: true
     create: true
-  skills:
-    use: true
-    create: true
+    share: false # Enable share with other users
+    public: false # Disable share with everyone
+
+  peoplePicker:
+    users: true # TODO: Restrict to deloitte.com.au emails
+    groups: false
+    roles: false
 
 fileConfig:
   endpoints:
