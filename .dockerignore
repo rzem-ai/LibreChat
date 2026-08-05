@@ -19,4 +19,4 @@ evals
 untested_skills
 
 # Ignore all hidden files
-.*
+.?*
