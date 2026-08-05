@@ -7,8 +7,34 @@ interface:
   agents:
     use: true
     create: true
-    share: false
-    public: false
+    share: true # Enable share with other users
+    public: false # Disable share with everyone
+
+  bookmarks: true
+
+  fileCitations: true
+
+  marketplace:
+    use: true
+
+  modelSelect: true
+
+  multiConvo: true
+
+  parameters: true
+
+  presets: true
+
+  prompts:
+    use: true
+    create: true
+    share: false # Enable share with other users
+    public: false # Disable share with everyone
+
+  peoplePicker:
+    users: true # TODO: Restrict to deloitte.com.au emails
+    groups: false
+    roles: false
 
   # Pin tools to the prompt bar by default for all users
   defaultPinnedTools:
