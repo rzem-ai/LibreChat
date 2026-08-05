@@ -34,6 +34,15 @@ interface:
     groups: false
     roles: false
 
+  # Pin tools to the prompt bar by default for all users
+  defaultPinnedTools:
+    - 'file_search'
+    - 'skills'
+    - 'execute_code'
+    - 'mcp'
+
+  fileSearch: true
+
 fileConfig:
   endpoints:
     default:
