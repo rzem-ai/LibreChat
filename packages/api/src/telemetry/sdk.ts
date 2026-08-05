@@ -346,7 +346,7 @@ function getAzureMonitorTraceExporter(
           throw new Error('Azure Monitor credential returned no token');
         }
 
-        return { Authorization: `Bearer ${token.token}` };
+        return { Authorization: 'Bearer ' + token.token };
       },
     });
   } catch (error) {
