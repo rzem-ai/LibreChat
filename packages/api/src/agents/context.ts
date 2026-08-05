@@ -7,6 +7,22 @@ import type { ParsedServerConfig } from '~/mcp/types';
 import type { MCPManager } from '~/mcp/MCPManager';
 
 /**
+ * Nudges the model to actually call file_search before answering, so retrieval
+ * happens and grounds the response in the attached documents. Source-card
+ * citations depend on this: the file_search attachment (and any end-of-trace
+ * anchors) can only reference sources the tool retrieved on the current turn,
+ * so if the model skips the tool there is nothing to cite. Critically, this
+ * demands a fresh search on EVERY substantive turn — not just the first —
+ * because the model otherwise answers follow-ups from passages already in
+ * context and no new file_search artifact is produced, leaving those turns
+ * uncited. This purposefully omits any anchor-emission instructions — citations
+ * are attached deterministically after the run rather than relying on the model
+ * to echo markers, which was unreliable and could degrade answer quality.
+ */
+const FILE_SEARCH_AGENT_INSTRUCTIONS =
+  'If the file_search tool is available and documents are attached for this conversation, call file_search before answering any substantive question — on every turn, not just the first, and even for questions which appear answerable from general knowledge or from passages already retrieved earlier in this conversation. Do not reuse or rely on results from a previous turn: re-run file_search for each new question so the current answer is freshly grounded in and citable from the retrieved sources. The attached documents may contain organisation-specific definitions, policies, or details that supersede or supplement what you already know. Prefer searching over assuming. Only skip file_search for purely conversational messages such as greetings or small talk. If file_search is unavailable or no documents are attached, answer normally without attempting tool calls.';
+
+/**
  * Agent type with optional tools array that can contain DynamicStructuredTool or string.
  * For context operations, we only require id and instructions, other Agent fields are optional.
  */
@@ -153,8 +169,24 @@ export async function applyContextToAgent({
   logger?: Logger;
   configServers?: Record<string, ParsedServerConfig>;
 }): Promise<void> {
-  const baseInstructions = agent.instructions || '';
-  const additionalInstructions = agent.additional_instructions || '';
+  const isFileSearchToolName = (name?: string): boolean =>
+    typeof name === 'string' && name.includes('file_search');
+
+  const hasFileSearchTool =
+    agent?.tools?.some((tool) =>
+      typeof tool === 'string' ? isFileSearchToolName(tool) : isFileSearchToolName(tool.name),
+    ) ||
+    agent?.toolDefinitions?.some((toolDef) => isFileSearchToolName(toolDef.name)) ||
+    ephemeralAgent?.file_search === true;
+
+  const baseInstructions = [
+    hasFileSearchTool ? FILE_SEARCH_AGENT_INSTRUCTIONS : undefined,
+    agent.instructions,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
+  const additionalInstructions = agent.additional_instructions ?? undefined;
 
   try {
     const mcpServers = ephemeralAgent?.mcp?.length ? ephemeralAgent.mcp : extractMCPServers(agent);
