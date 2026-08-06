@@ -401,7 +401,9 @@ const getUserEffectivePermissions = async (req, res) => {
 const searchPrincipals = async (req, res) => {
   try {
     const { q: rawQuery, limit = 20, types } = req.query;
-    const allowedDomains = req.config?.config?.interface?.peoplePicker?.allowedDomains;
+    const allowedDomains =
+      req.config?.interfaceConfig?.peoplePicker?.allowedDomains ??
+      req.config?.config?.interface?.peoplePicker?.allowedDomains;
 
     if (typeof rawQuery !== 'string' || rawQuery.trim().length === 0) {
       return res.status(400).json({
