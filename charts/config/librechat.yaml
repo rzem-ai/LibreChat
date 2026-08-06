@@ -7,6 +7,14 @@ interface:
   agents:
     use: true
     create: true
+    share: false
+    public: false
+  remoteAgents:
+    use: true
+    create: true
+  skills:
+    use: true
+    create: true
     share: true # Enable share with other users
     public: false # Disable share with everyone
 
