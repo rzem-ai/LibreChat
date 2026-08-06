@@ -44,6 +44,15 @@ interface:
     groups: false
     roles: false
 
+  # Pin tools to the prompt bar by default for all users
+  defaultPinnedTools:
+    - 'file_search'
+    - 'skills'
+    - 'execute_code'
+    - 'mcp'
+
+  fileSearch: true
+
 fileConfig:
   endpoints:
     default:
@@ -60,7 +69,7 @@ endpoints:
     recursionLimit: 25
     maxRecursionLimit: 50
     disableBuilder: false
-    capabilities: ["actions", "artifacts", "context", "deferred_tools", "execute_code", "file_search", "tools"]
+    capabilities: ["actions", "artifacts", "context", "deferred_tools", "execute_code", "file_search", "skills", "tools"]
 
   anthropic:
     streamRate: 25
