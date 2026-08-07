@@ -8,8 +8,8 @@ ingress:
   className: cilium
   host: 'myassist-uat.ctk.au.deloitte.com'
   annotations:
-    ingress.cilium.io/loadbalancer-mode: "shared"
-    ingress.cilium.io/force-https: "true"
+    ingress.cilium.io/loadbalancer-mode: 'shared'
+    ingress.cilium.io/force-https: 'true'
     kubernetes.io/ingress.class: cilium
   tls:
     - secretName: ctk-au-deloitte-com
@@ -51,9 +51,11 @@ pods:
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
           ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
+          APP_TITLE: 'MyAssist 2.0 (UAT)'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
           BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
+          CUSTOM_FOOTER: '⚠️ WARNING: This is a User Acceptance Testing environment. Do not upload client or confidential data.'
           DOMAIN_CLIENT: 'https://myassist-uat.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://myassist-uat.ctk.au.deloitte.com'
           EMBEDDINGS_MODEL: 'text-embedding-3-small'
@@ -64,7 +66,7 @@ pods:
           MONGO_DB: 'mdb-librechat-database-uat'
           NODE_ENV: 'production' # Use production to mimic PROD environment behaviour
           NODE_TLS_REJECT_UNAUTHORIZED: '0' # TODO: Review Node TLS setup. See: https://github.com/Deloitte-Australia/tt-librechat/issues/159
-          OPENID_CLIENT_ID: '2075976d-5147-47b2-89d2-4ad060d19f85'
+          OPENID_CLIENT_ID: '66cc6e2e-670a-47c9-a362-94c86c46782a' # This is the Azure Client ID in Deloitte App Reg
           OPENID_ISSUER: 'https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/v2.0/'
           OPENID_ON_BEHALF_FLOW_FOR_USERINFO_REQUIRED: 'true'
           OPENID_ON_BEHALF_FLOW_USERINFO_SCOPE: 'user.read'
