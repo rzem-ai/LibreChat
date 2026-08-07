@@ -1,0 +1,98 @@
+name: Citrix SDS Workspace App on PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: citrix-sds-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  create-sds-workspace:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout code
+        if: github.event.action != 'closed'
+        uses: actions/checkout@v4
+
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+
+      - name: Set action
+        id: action
+        run: |
+          if [ "${{ github.event.action }}" = "closed" ]; then
+            echo "action=destroy" >> "$GITHUB_OUTPUT"
+          else
+            echo "action=provision" >> "$GITHUB_OUTPUT"
+          fi
+
+
+      - name: Obtain OAuth token
+        env:
+          CITRIX_SDS_URL: ${{ secrets.CITRIX_SDS_URL }}
+          CITRIX_CLIENT_ID: ${{ secrets.CITRIX_CLIENT_ID }}
+          CITRIX_CLIENT_SECRET: ${{ secrets.CITRIX_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+
+          TOKEN_RESPONSE=$(curl --fail --silent --show-error \
+            -X POST "${CITRIX_SDS_URL}/oauth/token" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            --data-urlencode "grant_type=client_credentials" \
+            --data-urlencode "client_id=${CITRIX_CLIENT_ID}" \
+            --data-urlencode "client_secret=${CITRIX_CLIENT_SECRET}")
+
+          TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.access_token')
+
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "Failed to obtain access token"
+            echo "$TOKEN_RESPONSE"
+            exit 1
+          fi
+
+          echo "TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
+
+      - name: Build payload
+        env:
+          ACTION: ${{ steps.action.outputs.action }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
+          REPO: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          cat > payload.json <<EOF
+          {
+            "action": "${ACTION}",
+            "appName": "pr-app-${PR_NUMBER}",
+            "branch": "${BRANCH_NAME}",
+            "prNumber": "${PR_NUMBER}",
+            "repo": "${REPO}",
+            "commit": "${COMMIT_SHA}",
+            "sharing": "Project Sharing"
+          }
+          EOF
+
+          cat payload.json
+
+
+      - name: Call Citrix SDS API
+        env:
+          CITRIX_SDS_URL: ${{ secrets.CITRIX_SDS_URL }}
+          TOKEN: ${{ env.TOKEN }}
+        run: |
+          set -euo pipefail
+
+          curl --fail --silent --show-error \
+            -X POST "${CITRIX_SDS_URL}/api/workspaces/apps" \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data @payload.json
