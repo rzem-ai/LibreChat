@@ -401,6 +401,7 @@ const getUserEffectivePermissions = async (req, res) => {
 const searchPrincipals = async (req, res) => {
   try {
     const { q: rawQuery, limit = 20, types } = req.query;
+    const allowedEmailDomain = 'deloitte.com.au';
 
     if (typeof rawQuery !== 'string' || rawQuery.trim().length === 0) {
       return res.status(400).json({
@@ -481,7 +482,13 @@ const searchPrincipals = async (req, res) => {
         logger.warn('Graph API search failed, falling back to local results:', graphError.message);
       }
     }
-    const scoredResults = allPrincipals.map((item) => ({
+    
+    const domainFilteredPrincipals = allPrincipals.filter((principal) => {
+      const email = typeof principal.email === 'string' ? principal.email.trim().toLowerCase() : '';
+      return email.endsWith(`@${allowedEmailDomain}`);
+    });
+
+    const scoredResults = domainFilteredPrincipals.map((item) => ({
       ...item,
       _searchScore: db.calculateRelevanceScore(item, query),
     }));
