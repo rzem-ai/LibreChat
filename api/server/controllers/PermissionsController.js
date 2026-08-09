@@ -401,7 +401,12 @@ const getUserEffectivePermissions = async (req, res) => {
 const searchPrincipals = async (req, res) => {
   try {
     const { q: rawQuery, limit = 20, types } = req.query;
-    const allowedEmailDomain = 'deloitte.com.au';
+
+    // List of allowed domains
+    const allowedEmailDomains = [
+      'deloitte.com.au',
+      'deloitte.co.nz'
+    ].map((d) => d.toLowerCase());
 
     if (typeof rawQuery !== 'string' || rawQuery.trim().length === 0) {
       return res.status(400).json({
@@ -436,20 +441,26 @@ const searchPrincipals = async (req, res) => {
     if (useEntraId && localResults.length < searchLimit) {
       try {
         let graphType = 'all';
+
         if (typeFilters && typeFilters.length === 1) {
           const graphTypeMap = {
             [PrincipalType.USER]: 'users',
             [PrincipalType.GROUP]: 'groups',
           };
+
           const mappedType = graphTypeMap[typeFilters[0]];
+
           if (mappedType) {
             graphType = mappedType;
           }
         }
 
         const authHeader = req.headers.authorization;
+
         const accessToken =
-          authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
+          authHeader && authHeader.startsWith('Bearer ')
+            ? authHeader.substring(7)
+            : null;
 
         if (accessToken) {
           const graphResults = await searchEntraIdPrincipals(
@@ -463,15 +474,19 @@ const searchPrincipals = async (req, res) => {
           const localEmails = new Set(
             localResults.map((p) => p.email?.toLowerCase()).filter(Boolean),
           );
+
           const localGroupSourceIds = new Set(
             localResults.map((p) => p.idOnTheSource).filter(Boolean),
           );
 
           for (const principal of graphResults) {
             const isDuplicateByEmail =
-              principal.email && localEmails.has(principal.email.toLowerCase());
+              principal.email &&
+              localEmails.has(principal.email.toLowerCase());
+
             const isDuplicateBySourceId =
-              principal.idOnTheSource && localGroupSourceIds.has(principal.idOnTheSource);
+              principal.idOnTheSource &&
+              localGroupSourceIds.has(principal.idOnTheSource);
 
             if (!isDuplicateByEmail && !isDuplicateBySourceId) {
               allPrincipals.push(principal);
@@ -479,13 +494,22 @@ const searchPrincipals = async (req, res) => {
           }
         }
       } catch (graphError) {
-        logger.warn('Graph API search failed, falling back to local results:', graphError.message);
+        logger.warn(
+          'Graph API search failed, falling back to local results:',
+          graphError.message,
+        );
       }
     }
-    
+
     const domainFilteredPrincipals = allPrincipals.filter((principal) => {
-      const email = typeof principal.email === 'string' ? principal.email.trim().toLowerCase() : '';
-      return email.endsWith(`@${allowedEmailDomain}`);
+      const email =
+        typeof principal.email === 'string'
+          ? principal.email.trim().toLowerCase()
+          : '';
+
+      return allowedEmailDomains.some((domain) =>
+        email.endsWith(`@${domain}`),
+      );
     });
 
     const scoredResults = domainFilteredPrincipals.map((item) => ({
@@ -514,12 +538,12 @@ const searchPrincipals = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error searching principals:', error);
+
     res.status(500).json({
       error: 'Failed to search principals',
     });
   }
 };
-
 /**
  * Get user's effective permissions for all accessible resources of a type
  * @route GET /api/permissions/{resourceType}/effective/all
