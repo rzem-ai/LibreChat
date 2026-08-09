@@ -1,37 +1,58 @@
+# Summary:
+# - On PR open/update/reopen against Feat/citrix-sds, call Citrix SDS API to provision or update
+#   a PR-specific Workspace app.
+# - On PR close, delete the Workspace app only if the PR was merged.
+# - If the PR is closed without merge, do nothing.
+
 name: Citrix SDS Workspace App on PR
 
 on:
   pull_request:
+    # Trigger on PR lifecycle events
     types: [opened, synchronize, reopened, closed]
     branches:
+      # Run only for PRs targeting this branch
       - Feat/citrix-sds
 
+# Ensure only one workflow run per PR is active at a time.
+# If a new commit is pushed to the same PR, cancel the older run.
 concurrency:
   group: citrix-sds-pr-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
   create-sds-workspace:
+    # Run the job for:
+    # - opened / synchronize / reopened
+    # - closed only when the PR was actually merged
+    if: github.event.action != 'closed' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     steps:
+      # Checkout repository code.
+      # Not needed for merged/closed cleanup because we are only calling APIs then.
       - name: Checkout code
         if: github.event.action != 'closed'
         uses: actions/checkout@v4
 
+      # Install jq so we can parse the OAuth token JSON response.
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
+      # Decide whether this run should provision/update or destroy the Workspace app.
+      # - closed + merged = destroy
+      # - all other allowed PR events = provision
       - name: Set action
         id: action
         run: |
-          if [ "${{ github.event.action }}" = "closed" ]; then
+          if [ "${{ github.event.action }}" = "closed" ] && [ "${{ github.event.pull_request.merged }}" = "true" ]; then
             echo "action=destroy" >> "$GITHUB_OUTPUT"
           else
             echo "action=provision" >> "$GITHUB_OUTPUT"
           fi
 
-
+      # Get an OAuth access token from the Citrix SDS platform using client credentials.
+      # This token is used to authenticate the API call in a later step.
       - name: Obtain OAuth token
         env:
           CITRIX_SDS_URL: ${{ secrets.CITRIX_SDS_URL }}
@@ -57,7 +78,9 @@ jobs:
 
           echo "TOKEN=$TOKEN" >> "$GITHUB_ENV"
 
-
+      # Build the JSON payload sent to the SDS API.
+      # This includes PR metadata so SDS can create, update, or destroy
+      # the PR-specific Workspace app.
       - name: Build payload
         env:
           ACTION: ${{ steps.action.outputs.action }}
@@ -82,7 +105,10 @@ jobs:
 
           cat payload.json
 
-
+      # Call the Citrix SDS API with the OAuth token and payload.
+      # SDS is expected to interpret:
+      # - action=provision -> create or update the PR-specific Workspace app
+      # - action=destroy   -> delete the PR-specific Workspace app
       - name: Call Citrix SDS API
         env:
           CITRIX_SDS_URL: ${{ secrets.CITRIX_SDS_URL }}
