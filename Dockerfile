@@ -3,11 +3,19 @@
 # Base node image
 FROM node:24.16.0-alpine AS node
 
-# Add requirements for certs
-RUN apk upgrade --no-cache
-RUN apk add --no-cache jemalloc
-RUN apk add --no-cache python3 py3-pip uv
-RUN apk add --no-cache ca-certificates
+# Add requirements for certs (with retries for transient mirror/proxy errors)
+RUN set -eux; \
+        attempt=1; \
+        until [ "$attempt" -gt 4 ]; do \
+            apk update \
+            && apk upgrade --no-cache \
+            && apk add --no-cache jemalloc python3 py3-pip uv ca-certificates \
+            && break; \
+            echo "apk bootstrap failed (attempt ${attempt}/4), retrying..."; \
+            attempt=$((attempt + 1)); \
+            sleep 5; \
+        done; \
+        [ "$attempt" -le 4 ]
 
 # Add Zscaler/Deloitte root certs early so npm/node and all later steps trust them
 COPY deloitte/certificates/deloitte.crt /usr/local/share/ca-certificates/deloitte.crt

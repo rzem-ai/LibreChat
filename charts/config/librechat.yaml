@@ -7,6 +7,14 @@ interface:
   agents:
     use: true
     create: true
+    share: false
+    public: false
+  remoteAgents:
+    use: true
+    create: true
+  skills:
+    use: true
+    create: true
     share: true # Enable share with other users
     public: false # Disable share with everyone
 
@@ -36,8 +44,17 @@ interface:
     groups: false
     roles: false
     allowedDomains:
-      - deloitte.com.au
-      - deloitte.co.nz
+      - 'deloitte.com.au'
+      - 'deloitte.co.nz'
+
+  # Pin tools to the prompt bar by default for all users
+  defaultPinnedTools:
+    - 'file_search'
+    - 'skills'
+    - 'execute_code'
+    - 'mcp'
+
+  fileSearch: true
 
 fileConfig:
   endpoints:
@@ -55,7 +72,7 @@ endpoints:
     recursionLimit: 25
     maxRecursionLimit: 50
     disableBuilder: false
-    capabilities: ["actions", "artifacts", "context", "deferred_tools", "execute_code", "file_search", "tools"]
+    capabilities: ["actions", "artifacts", "context", "deferred_tools", "execute_code", "file_search", "skills", "tools"]
 
   anthropic:
     streamRate: 25
