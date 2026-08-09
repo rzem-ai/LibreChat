@@ -43,6 +43,9 @@ interface:
     users: true # TODO: Restrict to deloitte.com.au emails
     groups: false
     roles: false
+    allowedDomains:
+      - 'deloitte.com.au'
+      - 'deloitte.co.nz'
 
   # Pin tools to the prompt bar by default for all users
   defaultPinnedTools:

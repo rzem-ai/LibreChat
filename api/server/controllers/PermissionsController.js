@@ -402,11 +402,10 @@ const searchPrincipals = async (req, res) => {
   try {
     const { q: rawQuery, limit = 20, types } = req.query;
 
-    // List of allowed domains
-    const allowedEmailDomains = [
-      'deloitte.com.au',
-      'deloitte.co.nz'
-    ].map((d) => d.toLowerCase());
+    const configuredDomains = req.config?.interfaceConfig?.peoplePicker?.allowedDomains;
+    const allowedEmailDomains = Array.isArray(configuredDomains)
+      ? configuredDomains.map((d) => d.toLowerCase())
+      : [];
 
     if (typeof rawQuery !== 'string' || rawQuery.trim().length === 0) {
       return res.status(400).json({

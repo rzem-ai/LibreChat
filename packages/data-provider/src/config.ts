@@ -1342,6 +1342,7 @@ export const interfaceSchema = z
         users: z.boolean().optional(),
         groups: z.boolean().optional(),
         roles: z.boolean().optional(),
+        allowedDomains: z.array(z.string()).optional(),
       })
       .optional(),
     marketplace: z
