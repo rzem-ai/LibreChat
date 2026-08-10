@@ -14,8 +14,8 @@ import {
 } from 'librechat-data-provider';
 import type { TSkill } from 'librechat-data-provider';
 import { useCreateSkillMutation } from '~/data-provider';
+import { cn, formatSkillScanError } from '~/utils';
 import { useLocalize } from '~/hooks';
-import { cn } from '~/utils';
 
 interface CreateSkillDialogProps {
   isOpen: boolean;
@@ -75,10 +75,10 @@ export default function CreateSkillDialog({
       navigate(`/skills/${skill._id}`);
     },
     onError: (error: unknown) => {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        localize('com_ui_skill_create_error');
-      showToast({ status: 'error', message });
+      showToast({
+        status: 'error',
+        message: formatSkillScanError(error, localize('com_ui_skill_create_error')),
+      });
     },
   });
 

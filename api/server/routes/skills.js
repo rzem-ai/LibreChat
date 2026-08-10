@@ -7,6 +7,8 @@ const {
   createImportHandler,
   generateCheckAccess,
   getStorageMetadata,
+  isSkillScanError,
+  scanSkillFileUpload,
   resolveRequestTenantId,
   restoreTenantContextFromReq,
 } = require('@librechat/api');
@@ -217,6 +219,8 @@ async function uploadFileHandler(req, res) {
     // Look up existing file before saving — needed to clean up old blob on replace
     const existingFile = await getSkillFileByPath(skillId, relativePath);
 
+    await scanSkillFileUpload({ fileName: file.originalname, content: file.buffer });
+
     const fileId = crypto.randomUUID();
     const filename = file.originalname;
     const storageFileName = `${fileId}__${filename}`;
@@ -275,6 +279,13 @@ async function uploadFileHandler(req, res) {
 
     return res.status(200).json(result);
   } catch (error) {
+    if (isSkillScanError(error)) {
+      return res.status(error.statusCode).json({
+        error: 'Skill scan failed',
+        message: error.message,
+        issues: error.issues,
+      });
+    }
     if (error.code === 'SKILL_FILE_VALIDATION_FAILED') {
       return res.status(400).json({ error: error.message });
     }

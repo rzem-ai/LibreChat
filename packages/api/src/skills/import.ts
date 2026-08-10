@@ -13,6 +13,7 @@ import type {
 import type { Request, Response } from 'express';
 import type { Types } from 'mongoose';
 import type { ImportLimits } from './limits';
+import { isSkillScanError, scanSkillMarkdown, scanSkillUpload } from './scanner';
 import { resolveRequestTenantId } from '~/middleware/tenant';
 import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
 import { isSafeSkillFilePath } from './path';
@@ -161,13 +162,25 @@ export function createImportHandler(deps: ImportSkillDeps) {
 
     try {
       if (ext === '.md') {
+        await scanSkillMarkdown({
+          content: file.buffer.toString('utf-8'),
+          fileName: `${file.originalname}.zip`,
+        });
         return await handleMarkdown(req, res, deps, file);
       }
       if (ext === '.zip' || ext === '.skill') {
+        await scanSkillUpload({ archive: file.buffer, fileName: file.originalname });
         return await handleZip(req, res, deps, file);
       }
       return res.status(400).json({ error: `Unsupported file type: ${ext}` });
     } catch (error) {
+      if (isSkillScanError(error)) {
+        return res.status(error.statusCode).json({
+          error: 'Skill scan failed',
+          message: error.message,
+          issues: error.issues,
+        });
+      }
       // Surface validation errors as 400 instead of generic 500
       if (isValidationError(error)) {
         return res.status(400).json({

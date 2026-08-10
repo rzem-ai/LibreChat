@@ -8,8 +8,8 @@ import {
   fileConfig as defaultFileConfig,
 } from 'librechat-data-provider';
 import { useGetFileConfig, useImportSkillMutation } from '~/data-provider';
+import { cn, formatSkillScanError } from '~/utils';
 import { useLocalize } from '~/hooks';
-import { cn } from '~/utils';
 
 interface UploadSkillDialogProps {
   isOpen: boolean;
@@ -50,11 +50,10 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
       navigate(`/skills/${skill._id}`);
     },
     onError: (error: unknown) => {
-      const errData = (error as { response?: { data?: { error?: string; message?: string } } })
-        ?.response?.data;
-      const message =
-        errData?.message ?? errData?.error ?? localize('com_ui_create_skill_upload_error');
-      showToast({ status: 'error', message });
+      showToast({
+        status: 'error',
+        message: formatSkillScanError(error, localize('com_ui_create_skill_upload_error')),
+      });
     },
   });
 

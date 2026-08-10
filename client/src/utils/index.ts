@@ -14,6 +14,7 @@ export * from './tilde';
 export * from './forms';
 export * from './roles';
 export * from './errors';
+export * from './skills';
 export * from './agents';
 export * from './drafts';
 export * from './convos';

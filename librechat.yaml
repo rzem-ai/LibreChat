@@ -8,6 +8,14 @@ interface:
     share: true # Enable share with other users
     public: false # Disable share with everyone
 
+  remoteAgents:
+    use: true
+    create: true
+
+  skills:
+    use: true
+    create: true
+
   bookmarks: true
 
   fileCitations: true

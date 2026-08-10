@@ -32,6 +32,7 @@ import type {
 import type { Response } from 'express';
 import type { Types } from 'mongoose';
 import type { ServerRequest, StrategyFunctions } from '~/types';
+import { isSkillScanError, scanSkillOnCreate, scanSkillOnUpdate } from './scanner';
 import { resolveSkillFilePathParam } from './path';
 import { isBinaryBuffer } from './binary';
 
@@ -383,6 +384,23 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       const authorId = (user._id ?? user.id) as unknown as Types.ObjectId;
       const authorName = user.name ?? user.username ?? 'Unknown';
 
+      try {
+        await scanSkillOnCreate({
+          name: body.name,
+          description: body.description,
+          body: body.body,
+        });
+      } catch (error) {
+        if (isSkillScanError(error)) {
+          return res.status(error.statusCode).json({
+            error: 'Skill scan failed',
+            message: error.message,
+            issues: error.issues,
+          });
+        }
+        throw error;
+      }
+
       let createResult: CreateSkillResult;
       try {
         createResult = await createSkill({
@@ -501,6 +519,33 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
 
       if (Object.keys(update).length === 0) {
         return res.status(400).json({ error: 'At least one field must be provided for update' });
+      }
+
+      const resolved = (
+        req as ServerRequest & {
+          resourceAccess?: { resourceInfo?: ISkill & { _id: Types.ObjectId } };
+        }
+      ).resourceAccess?.resourceInfo;
+      const currentSkill = resolved ?? (await getSkillById(id));
+      if (!currentSkill) {
+        return res.status(404).json({ error: 'Skill not found' });
+      }
+
+      try {
+        await scanSkillOnUpdate({
+          name: update.name ?? currentSkill.name,
+          description: update.description ?? currentSkill.description,
+          body: update.body ?? currentSkill.body,
+        });
+      } catch (error) {
+        if (isSkillScanError(error)) {
+          return res.status(error.statusCode).json({
+            error: 'Skill scan failed',
+            message: error.message,
+            issues: error.issues,
+          });
+        }
+        throw error;
       }
 
       let result: UpdateSkillResult;
