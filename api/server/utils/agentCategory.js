@@ -34,6 +34,14 @@ async function syncCategories(customCategoriesList, enableDefaultCategories) {
       continue;
     }
     const isActive = cat.value === FALLBACK_CATEGORY ? true : enableDefaultCategories;
+    /* fix: skip the write when isActive is already correct, to avoid an unnecessary DB write
+     * (and log line) on every config load. Still mutate the in-memory record so later steps
+     * (default overrides below) see the intended final state even when we skip the write. */
+    const needsUpdate = cat.isActive !== isActive;
+    cat.isActive = isActive;
+    if (!needsUpdate) {
+      continue;
+    }
     logger.info(`${isActive ? 'Enabling' : 'Disabling'} category: ${cat.value}`);
     await updateCategory(cat.value, { isActive });
   }
@@ -84,15 +92,22 @@ async function syncCategories(customCategoriesList, enableDefaultCategories) {
      * managing their localization keys. Only explicitly provided fields are applied — otherwise
      * re-declaring a default purely to reactivate it would clobber its `com_` label. */
     if (existing && !existing.custom) {
-      const overrides = { isActive: true };
-      if (prepared.label) {
+      // fix: only include fields that actually changed, and skip the write entirely when
+      // overrides ends up empty, instead of unconditionally writing `{ isActive: true, ... }`.
+      const overrides = {};
+      if (!existing.isActive) {
+        overrides.isActive = true;
+      }
+      if (prepared.label && prepared.label !== existing.label) {
         overrides.label = prepared.label;
       }
-      if (prepared.description !== undefined) {
+      if (prepared.description !== undefined && prepared.description !== existing.description) {
         overrides.description = prepared.description;
       }
-      logger.info(`Updating category: ${existing.value}`);
-      await updateCategory(existing.value, overrides);
+      if (Object.keys(overrides).length > 0) {
+        logger.info(`Updating category: ${existing.value}`);
+        await updateCategory(existing.value, overrides);
+      }
       continue;
     }
 
@@ -105,12 +120,19 @@ async function syncCategories(customCategoriesList, enableDefaultCategories) {
       order: prepared.order,
     };
 
-    if (existing) {
-      logger.info(`Updating category: ${prepared.normalizedValue}`);
-      await updateCategory(prepared.normalizedValue, data);
-    } else {
+    if (!existing) {
       logger.info(`Creating category: ${prepared.normalizedValue}`);
       await createCategory(data);
+    } else if (
+      // fix: only update an existing custom category when a field actually differs, instead of
+      // unconditionally re-writing it on every sync.
+      existing.label !== data.label ||
+      existing.description !== data.description ||
+      existing.isActive !== data.isActive ||
+      existing.order !== data.order
+    ) {
+      logger.info(`Updating category: ${prepared.normalizedValue}`);
+      await updateCategory(prepared.normalizedValue, data);
     }
   }
 
