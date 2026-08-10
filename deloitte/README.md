@@ -37,6 +37,18 @@ git clone https://github.com/Deloitte-Australia/tt-librechat.git
 cd tt-librechat
 ```
 
+### Check out the `develop` branch:
+
+```zsh
+git checkout origin/develop
+```
+
+### Enable `husky` pre-commit hooks
+
+```zsh
+npm run prepare
+```
+
 ## 2. Initialize Submodules
 
 This repository uses Git submodules to include external dependencies. The `rag_api` submodule contains the RAG (Retrieval-Augmented Generation) API code from the [tt-librechat-rag](https://github.com/Deloitte-Australia/tt-librechat-rag) repository. The `admin_panel` submodule contains the admin panel code from the [ea-libreadmin](https://github.com/Deloitte-Australia/ea-libreadmin). 
@@ -145,35 +157,60 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 
 1. `ENDPOINTS=anthropic,custom,agents`
 2. `ANTHROPIC_REVERSE_PROXY=http://gateway-proxy:8080/anthropic`
-3. `APP_TITLE=MyAssist 2.0`
-4. `DOMAIN_CLIENT=https://<yourhostname>.local` (for example `https://AU-ABC123123.local`)
-5. `DOMAIN_SERVER=https://<yourhostname>.local` (for example `https://AU-ABC123123.local`)
-6. `ALLOW_SOCIAL_LOGIN=true`
-7. `OPENID_CLIENT_ID=<update with the provided value from another team member>`
-8. `OPENID_CLIENT_SECRET=<update with the provided secret from another team member>`
-9. `OPENID_ISSUER=<update with the provided issuer URL from another team member>`
-10. `OPENID_SESSION_SECRET=<update with the provided secret from another team member>`
-11. `OPENID_SCOPE="openid profile email"`
-12. `OPENID_CALLBACK_URL=/oauth/openid/callback`
-13. `OPENID_REQUIRED_ROLE=`
-14. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
-15. `OPENID_BUTTON_LABEL="Login with SSO"`
-16. `OPENID_IMAGE_URL=/assets/favicon.svg`
-17. `ALLOW_EMAIL_LOGIN=false`
-18. `ALLOW_REGISTRATION=false`
-19. `ALLOW_SOCIAL_REGISTRATION=false`
-20. Comment out `OPENAI_API_KEY=`
-21. Comment out `ASSISTANTS_API_KEY=`
-22. BASE_URL_AZURE_AU=https://au-openai-exp.ctk.au.deloitte.com/openai/v1
-23. BASE_URL_AZURE_US=https://us-openai-exp.ctk.au.deloitte.com/openai/v1
-24. BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com
-25. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
-26. `CLEARTRACK_MCP_GATEWAY_CLIENT_ID=3e5d28f1-91a3-4748-ad73-5fa544f1d3e2`
-27. `CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET=<update with the provided secret from another team member>`
-28. `MCP_GATEWAY_TOOLSETS=teams,research,news`
+3. `APP_TITLE="MyAssist 2.0"`
+4. `CUSTOM_FOOTER="⚠️ WARNING: This is a development environment. Do not upload client or confidential data."`
+5. `DOMAIN_CLIENT=https://<yourhostname>.local` (for example `https://AU-ABC123123.local`)
+6. `DOMAIN_SERVER=https://<yourhostname>.local` (for example `https://AU-ABC123123.local`)
+7. `ALLOW_SOCIAL_LOGIN=true`
+8. `OPENID_CLIENT_ID=<update with the provided value from another team member>`
+9. `OPENID_CLIENT_SECRET=<update with the provided secret from another team member>`
+10. `OPENID_ISSUER=<update with the provided issuer URL from another team member>`
+11. `OPENID_SESSION_SECRET=<update with the provided secret from another team member>`
+12. `OPENID_SCOPE="openid profile email"`
+13. `OPENID_CALLBACK_URL=/oauth/openid/callback`
+14. `OPENID_REQUIRED_ROLE=`
+15. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
+16. `OPENID_BUTTON_LABEL="Login with SSO"`
+17. `OPENID_IMAGE_URL=/assets/favicon.svg`
+18. `ALLOW_EMAIL_LOGIN=false`
+19. `ALLOW_REGISTRATION=false`
+20. `ALLOW_SOCIAL_REGISTRATION=false`
+21. Comment out `OPENAI_API_KEY=`
+22. Comment out `ASSISTANTS_API_KEY=`
+23. BASE_URL_AZURE_AU=https://au-openai-exp.ctk.au.deloitte.com/openai/v1
+24. BASE_URL_AZURE_US=https://us-openai-exp.ctk.au.deloitte.com/openai/v1
+25. BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com
+26. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
+27. `CLEARTRACK_MCP_GATEWAY_CLIENT_ID=3e5d28f1-91a3-4748-ad73-5fa544f1d3e2`
+28. `CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET=<update with the provided secret from another team member>`
+29. `MCP_GATEWAY_TOOLSETS=teams,research,news`
 
 
 > Items 26–27 supply OAuth credentials for the **ClearTrack MCP Gateway** app registration referenced by the `mcpServers` block in `librechat.yaml` (repo root) and `charts/config/librechat.yaml` (Helm). The client ID is an identifier and is safe to commit; the client secret must be obtained from another team member and kept out of source control.
+
+### Evaluation framework variables
+
+The optional Python evaluation framework reads the following variables from the repository `.env` file:
+
+| Variable | Purpose |
+|---|---|
+| `LIBRECHAT_BASE_URL` | LibreChat instance to evaluate; defaults to `http://localhost:3080`. |
+| `LIBRECHAT_API_KEY` | Agent API key from LibreChat Settings → Data. Required for agent evals. |
+| `LIBRECHAT_AGENT_ID` | Default agent ID. A config-specific variable such as `EXPENSE_ASSIST_AGENT_ID` can be referenced by `agent_id: ${VAR}` instead. |
+| `LIBRECHAT_TIMEOUT` | LibreChat request timeout in seconds; defaults to `300`. |
+| `LIBRECHAT_MAX_RETRIES` | Maximum LibreChat request retries; defaults to `3`. |
+| `LIBRECHAT_RETRY_BACKOFF` | Retry backoff in seconds; defaults to `5`. |
+| `EVAL_JUDGE_ENDPOINT` | Optional custom endpoint name from `librechat.yaml` for DeepEval judge calls. |
+| `EVAL_JUDGE_MODEL` | Optional judge model override. |
+| `EVAL_JUDGE_DISABLE_TLS_VERIFY` | Set to `1` only for local judge endpoints with untrusted certificates. |
+| `EVAL_ROOT` | Optional override for the eval workspace root. |
+| `EVAL_LANGFUSE_BASE_URL` | Optional Langfuse URL used by eval dataset and telemetry integrations. |
+| `EVAL_PUSH_LANGFUSE` | Set to `1` to export eval telemetry without passing `--langfuse`. |
+| `EVAL_LANGFUSE_ENVIRONMENT` | Langfuse environment tag; defaults to `development`. |
+| `LANGFUSE_SSL_VERIFY` | Set to `false` only for local development with an untrusted Langfuse certificate. |
+| `LANGFUSE_SSL_CERT_FILE` | Optional CA bundle used to verify Langfuse OTLP TLS. |
+
+The existing `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`, `OTEL_EXPORTER_OTLP_ENDPOINT`, and `OTEL_EXPORTER_OTLP_HEADERS` variables are also reused when Langfuse export is enabled. See `evals/_eval/README.md` for commands and examples.
 
 #### How to obtain the JWT token
 ⚠️ As of May 2026, tokens expire after ~8 hours. If models suddenly stop working, reissue the token.

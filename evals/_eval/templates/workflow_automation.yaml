@@ -1,0 +1,171 @@
+# Template: Workflow Automation
+#
+# Use this template for skills that orchestrate multi-step tool chains
+# where the output depends on a sequence of dependent tool calls:
+#   - Artefact generation pipelines (e.g., charts, slides, diagrams)
+#   - Multi-stage data processing workflows
+#   - End-to-end automated sequences with conditional branching
+#
+# Workflow skills are always multi-turn (invoke_sequential). If your skill
+# produces output from a single tool call, use system_integration.yaml instead.
+#
+# Note: tool_correctness requires expected_tools to be populated on each case.
+#
+# Copy this file to: evals/skills/<Skill Name>/eval_cases.yaml
+# Then customise the cases below.
+#
+# Run with:
+#   uv run eval-run --config "evals/skills/<Skill Name>/eval_cases.yaml" --case case_1
+
+adapter: _eval.adapters.librechat_adapter.LibreChatAdapter
+invoke_method: invoke_sequential  # workflow skills are always multi-turn
+num_runs: 3
+
+cases:
+
+  # --- Standard workflow case ---
+  case_1:
+    name: "TODO: Describe this workflow test case"
+    category: "Workflow Automation"
+    invoke_method: invoke_sequential
+    source_material: "documents/TODO_sample_input.md"
+    chatbot_role: "TODO: Describe the agent's role"
+    expected_output: >-
+      TODO: Describe the expected artefact or end state after all workflow
+      steps complete.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "TODO: skill-name"
+      # Add downstream tool calls the workflow is expected to make.
+
+    turns:
+      - content: >-
+          TODO: Initial user request that kicks off the workflow.
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Correct skill invoked"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "TODO: skill-name"
+          - type: leading_question
+            name: "TODO: Verify workflow started"
+            question: >-
+              TODO: Does the response indicate the workflow has been initiated
+              and the first step completed?
+
+      - content: >-
+          TODO: User provides confirmation or additional input for the next step.
+        turn_assertions:
+          - type: leading_question
+            name: "TODO: Verify output artefact"
+            question: >-
+              TODO: Does the response contain or reference the expected
+              artefact or workflow result?
+
+    metrics:
+      - faithfulness
+      - tool_correctness
+      - conversation_completeness
+
+    thresholds:
+      faithfulness: 0.7
+      tool_correctness: 1.0
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "Correct Skill Selection"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Did the agent select the correct skill(s) without user disambiguation?
+
+      - name: "Parameter Correctness"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Were the tool input parameters populated correctly from context
+          (e.g., skill name, task type, required fields)?
+
+      - name: "Dependency Order"
+        question: >-
+          If the workflow required chaining steps, were they executed in the
+          correct dependency order?
+
+      - name: "Minimal Tool Calls"
+        question: >-
+          Was the number of tool calls minimised — no redundant or retry
+          calls?
+
+      - name: "No Irrelevant Tools"
+        question: >-
+          Did the agent avoid invoking tools that were irrelevant to the
+          workflow?
+
+  # --- Harder variant: partial input or error path ---
+  case_2:
+    name: "TODO: Describe the harder workflow variant"
+    category: "Workflow Automation"
+    invoke_method: invoke_sequential
+    source_material: "documents/TODO_sample_input.md"
+    chatbot_role: "TODO: Describe the agent's role"
+    expected_output: >-
+      TODO: Describe the expected output for this harder case — e.g., graceful
+      handling of missing input, partial results, or an error response.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "TODO: skill-name"
+
+    turns:
+      - content: >-
+          TODO: User request with ambiguous, incomplete, or edge-case input.
+        attach_source: true
+        turn_assertions:
+          - type: leading_question
+            name: "TODO: Verify agent's handling"
+            question: >-
+              TODO: Does the agent correctly handle the ambiguity or missing
+              input rather than proceeding with fabricated assumptions?
+
+      - content: >-
+          TODO: User provides the missing detail or clarification.
+        turn_assertions:
+          - type: expected_tools
+            name: "Correct skill invoked after clarification"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "TODO: skill-name"
+
+    metrics:
+      - faithfulness
+      - tool_correctness
+      - conversation_completeness
+
+    thresholds:
+      faithfulness: 0.7
+      tool_correctness: 1.0
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "Graceful Ambiguity Handling"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Did the agent ask for clarification rather than proceeding with
+          incorrect assumptions when input was incomplete?
+
+      - name: "Parameter Correctness After Clarification"
+        type: gating
+        threshold: 0.7
+        question: >-
+          After the user provided missing details, were the tool parameters
+          correctly updated?
+
+      - name: "No Phantom Results"
+        question: >-
+          Did the agent avoid returning fabricated output for steps that
+          had not yet been executed?

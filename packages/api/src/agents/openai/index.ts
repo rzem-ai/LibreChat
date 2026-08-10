@@ -36,6 +36,8 @@
 
 export * from './types';
 export * from './handlers';
+export { extractRetrievalSources } from './retrieval';
+export type { RetrievedChunk, RetrievalPayload } from './retrieval';
 export {
   createAgentChatCompletion,
   listAgentModels,
