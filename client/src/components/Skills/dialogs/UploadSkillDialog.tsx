@@ -104,7 +104,7 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
     <OGDialog open={isOpen} onOpenChange={setIsOpen}>
       <OGDialogContent className="w-11/12 max-w-lg overflow-hidden">
         <div className="flex flex-col gap-6 p-1 sm:p-2">
-          <h2 className="text-lg font-medium text-text-primary">
+          <h2 className="text-lg font-bold text-text-primary">
             {localize('com_ui_skill_upload_title')}
           </h2>
 

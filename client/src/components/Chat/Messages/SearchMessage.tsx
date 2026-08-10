@@ -27,7 +27,7 @@ const MessageBody = ({ message, messageLabel, fontSize }) => (
   <div
     className={cn('relative flex w-11/12 flex-col', message.isCreatedByUser ? '' : 'agent-turn')}
   >
-    <div className={cn('select-none font-medium', fontSize)}>
+    <div className={cn('select-none font-semibold', fontSize)}>
       {messageLabel}
       <MessageTimestamp value={message.createdAt ?? message.clientTimestamp} />
     </div>

@@ -142,7 +142,7 @@ const PromptVariables = ({ promptText }: { promptText: string }) => {
       <header className="flex items-center justify-between border-b border-border-medium p-3">
         <div className="flex items-center gap-2">
           <Variable className="size-4 text-text-secondary" aria-hidden="true" />
-          <h4 className="text-sm font-medium text-text-primary">
+          <h4 className="text-sm font-semibold text-text-primary">
             {localize('com_ui_variables')}
           </h4>
         </div>

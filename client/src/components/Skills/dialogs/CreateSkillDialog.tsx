@@ -107,7 +107,7 @@ export default function CreateSkillDialog({
           onSubmit={handleSubmit(onSubmit)}
           className="flex max-h-[80vh] min-w-0 flex-col gap-3 overflow-hidden p-1 sm:gap-4 sm:p-2"
         >
-          <h2 className="text-lg font-medium text-text-primary">
+          <h2 className="text-lg font-bold text-text-primary">
             {localize('com_ui_skill_write_instructions')}
           </h2>
 

@@ -323,7 +323,7 @@ function SkillListItem({
         </span>
 
         <span className="flex min-w-0 flex-1 items-center gap-1.5">
-          <span className={cn('truncate', isActive && 'font-medium')}>{skill.name}</span>
+          <span className={cn('truncate', isActive && 'font-semibold')}>{skill.name}</span>
           {skill.alwaysApply === true && (
             <Pin
               className="size-3 shrink-0 text-cyan-500"

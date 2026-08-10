@@ -84,7 +84,7 @@ const DeleteAccount = ({ disabled = false }: { title?: string; disabled?: boolea
             </OGDialogTitle>
           </OGDialogHeader>
           <div className="mb-8 text-sm text-black dark:text-white">
-            <ul className="font-medium text-amber-600">
+            <ul className="font-semibold text-amber-600">
               <li>{localize('com_nav_delete_warning')}</li>
               <li>{localize('com_nav_delete_data_info')}</li>
             </ul>

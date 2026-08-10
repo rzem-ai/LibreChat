@@ -78,7 +78,7 @@ function RequestPasswordReset() {
 
   const VerificationSuccess = () => (
     <div className="flex flex-col items-center justify-center">
-      <h1 className="mb-4 text-center text-3xl font-medium text-black dark:text-white">
+      <h1 className="mb-4 text-center text-3xl font-semibold text-black dark:text-white">
         {headerText}
       </h1>
       {countdown > 0 && (
@@ -103,7 +103,7 @@ function RequestPasswordReset() {
 
   const VerificationInProgress = () => (
     <div className="flex flex-col items-center justify-center">
-      <h1 className="mb-4 text-center text-3xl font-medium text-black dark:text-white">
+      <h1 className="mb-4 text-center text-3xl font-semibold text-black dark:text-white">
         {localize('com_auth_email_verification_in_progress')}
       </h1>
       <div className="mt-4 flex justify-center">

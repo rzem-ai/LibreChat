@@ -98,7 +98,7 @@ export default function SkillDetail({ skill, onEdit, onDelete }: SkillDetailProp
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-2">
-                <h2 className="truncate text-xl font-medium text-text-primary" title={skill.name}>
+                <h2 className="truncate text-xl font-bold text-text-primary" title={skill.name}>
                   {skill.name}
                 </h2>
                 {isPublic && (
@@ -142,7 +142,7 @@ export default function SkillDetail({ skill, onEdit, onDelete }: SkillDetailProp
             <button
               type="button"
               onClick={onEdit}
-              className="inline-flex h-9 items-center justify-center rounded-md border border-border-medium px-3 text-xs font-medium text-text-primary transition-colors hover:bg-surface-hover"
+              className="inline-flex h-9 items-center justify-center rounded-md border border-border-medium px-3 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-hover"
             >
               {localize('com_ui_edit')}
             </button>

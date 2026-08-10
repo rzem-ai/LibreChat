@@ -133,7 +133,7 @@ function MessageParts(props: TMessageProps) {
               )}
             >
               {!hasParallelContent && (
-                <h2 className={cn('select-none font-medium text-text-primary', fontSize)}>
+                <h2 className={cn('select-none font-semibold text-text-primary', fontSize)}>
                   <span className="sr-only">
                     {getHeaderPrefixForScreenReader(message, localize)}
                   </span>

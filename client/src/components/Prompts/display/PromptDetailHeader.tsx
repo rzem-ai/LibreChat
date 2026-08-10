@@ -27,7 +27,7 @@ const PromptDetailHeader = ({ group }: PromptDetailHeaderProps) => {
 
       <div className="min-w-0 flex-1 overflow-hidden">
         <div className="flex min-w-0 items-center gap-2">
-          <h2 className="truncate text-xl font-medium text-text-primary" title={group.name}>
+          <h2 className="truncate text-xl font-bold text-text-primary" title={group.name}>
             {group.name}
           </h2>
           {isGlobalGroup && (

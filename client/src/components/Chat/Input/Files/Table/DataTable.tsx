@@ -209,7 +209,7 @@ export default function DataTable<TData, TValue>({ columns, data }: DataTablePro
             }`}
           </span>
         </div>
-        <div className="flex items-center space-x-1 pr-2 text-xs font-medium text-text-primary sm:text-sm">
+        <div className="flex items-center space-x-1 pr-2 text-xs font-bold text-text-primary sm:text-sm">
           <span className="hidden sm:inline">{localize('com_ui_page')}</span>
           <span>{table.getState().pagination.pageIndex + 1}</span>
           <span>/</span>

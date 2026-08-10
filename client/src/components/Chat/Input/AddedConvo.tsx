@@ -48,7 +48,7 @@ export default function AddedConvo({
           />
         </div>
       </span>
-      <span className="text-token-text-secondary line-clamp-3 flex-1 py-0.5 font-medium">
+      <span className="text-token-text-secondary line-clamp-3 flex-1 py-0.5 font-semibold">
         {title}
       </span>
       <button

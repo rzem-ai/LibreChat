@@ -197,7 +197,7 @@ function MultiSelectDropDown({
                           <span
                             className={cn(
                               'flex h-6 items-center gap-1 text-gray-800 dark:text-gray-200',
-                              selected ? 'font-medium' : '',
+                              selected ? 'font-semibold' : '',
                             )}
                           >
                             {option.name}

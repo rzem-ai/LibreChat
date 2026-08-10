@@ -216,7 +216,7 @@ export default function VectorStorePreview() {
         <div className="flex flex-row justify-between">
           <b className="text-base md:text-lg lg:text-xl">Used by</b>
           <Button variant={'default'}>
-            <PlusIcon className="h-4 w-4 font-medium" />
+            <PlusIcon className="h-4 w-4 font-bold" />
             &nbsp; Create Assistant
           </Button>
         </div>

@@ -72,7 +72,7 @@ export default function SkillsSidePanel({ className }: SkillsSidePanelProps) {
           </>
         ) : (
           <>
-            <h2 className="truncate text-lg font-medium text-text-primary">
+            <h2 className="truncate text-lg font-bold text-text-primary">
               {localize('com_ui_skills')}
             </h2>
             <div className="flex items-center gap-1">

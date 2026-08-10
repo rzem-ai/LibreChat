@@ -157,7 +157,7 @@ function ChatGroupItem({
           />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <span className="truncate text-sm font-medium text-text-primary" title={group.name}>
+              <span className="truncate text-sm font-semibold text-text-primary" title={group.name}>
                 {group.name}
               </span>
               {isSharedPrompt && (

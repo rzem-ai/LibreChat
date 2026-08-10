@@ -57,7 +57,7 @@ const UploadFileModal = ({ open, onOpenChange }) => {
 
           <div className="mt-3 flex w-full flex-row justify-between">
             <div className="hidden w-1/3 sm:block">
-              <span className="font-medium">Learn about file purpose</span>
+              <span className="font-bold">Learn about file purpose</span>
             </div>
             <div className="flex w-full flex-row justify-evenly sm:w-1/3">
               <Button

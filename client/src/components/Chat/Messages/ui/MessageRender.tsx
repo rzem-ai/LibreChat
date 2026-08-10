@@ -192,7 +192,7 @@ const MessageRender = memo(function MessageRender({
         )}
       >
         {!hasParallelContent && (
-          <h2 className={cn('select-none font-medium', fontSize)}>
+          <h2 className={cn('select-none font-semibold', fontSize)}>
             <span className="sr-only">{getHeaderPrefixForScreenReader(msg, localize)}</span>
             {messageLabel}
             <MessageTimestamp value={msg.createdAt ?? msg.clientTimestamp} />

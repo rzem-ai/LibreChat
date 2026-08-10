@@ -12,7 +12,7 @@ export default function Section({ heading, danger, children }: SectionProps) {
     <section className="mb-7">
       <h3
         className={cn(
-          'mb-2 px-1 text-xs font-medium uppercase tracking-wide',
+          'mb-2 px-1 text-xs font-semibold uppercase tracking-wide',
           danger ? 'text-red-500' : 'text-text-secondary',
         )}
       >
