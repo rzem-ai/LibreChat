@@ -21,8 +21,7 @@ module.exports = {
     // Include component library files
     '../packages/client/src/**/*.{js,jsx,ts,tsx}',
   ],
-  // darkMode: 'class',
-  darkMode: ['class'],
+  darkMode: 'class',
   theme: {
     fontFamily: {
       sans: ['"Open Sans"', 'ui-sans-serif', 'sans-serif', 'system-ui'],
