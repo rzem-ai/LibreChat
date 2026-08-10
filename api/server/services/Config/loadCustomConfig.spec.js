@@ -53,12 +53,18 @@ jest.mock('@librechat/data-schemas', () => {
       debug: jest.fn(),
       error: jest.fn(),
     },
+    runAsSystem: jest.fn((fn) => fn()),
   };
 });
 
+jest.mock('~/server/utils/agentCategory', () => ({
+  syncCategories: jest.fn(),
+}));
+
 const axios = require('axios');
 const { loadYaml } = require('@librechat/api');
-const { logger } = require('@librechat/data-schemas');
+const { logger, runAsSystem } = require('@librechat/data-schemas');
+const { syncCategories } = require('~/server/utils/agentCategory');
 const { ReasoningParameterFormat, ReasoningResponseKey } = require('librechat-data-provider');
 const loadCustomConfig = require('./loadCustomConfig');
 
@@ -119,6 +125,52 @@ describe('loadCustomConfig', () => {
     const result = await loadCustomConfig();
 
     expect(result).toEqual(mockConfig);
+  });
+
+  it('runs marketplace category sync within a system tenant context', async () => {
+    runAsSystem.mockImplementation((fn) => fn());
+    const config = {
+      version: '1.0',
+      cache: true,
+      interface: {
+        marketplace: {
+          use: true,
+          categories: {
+            enableDefaultCategories: false,
+            list: [{ value: 'pursue-shape', label: 'Pursue & Shape' }],
+          },
+        },
+      },
+    };
+    process.env.CONFIG_PATH = 'marketplaceConfig.yaml';
+    loadYaml.mockReturnValueOnce(config);
+
+    await loadCustomConfig();
+
+    expect(runAsSystem).toHaveBeenCalledTimes(1);
+    expect(syncCategories).toHaveBeenCalledWith(
+      [{ value: 'pursue-shape', label: 'Pursue & Shape' }],
+      false,
+    );
+  });
+
+  it('does not run marketplace category sync when marketplace is disabled', async () => {
+    const config = {
+      version: '1.0',
+      cache: true,
+      interface: {
+        marketplace: {
+          use: false,
+          categories: { enableDefaultCategories: false, list: [] },
+        },
+      },
+    };
+    process.env.CONFIG_PATH = 'marketplaceDisabledConfig.yaml';
+    loadYaml.mockReturnValueOnce(config);
+
+    await loadCustomConfig();
+
+    expect(syncCategories).not.toHaveBeenCalled();
   });
 
   it('should return null and log if config schema validation fails', async () => {

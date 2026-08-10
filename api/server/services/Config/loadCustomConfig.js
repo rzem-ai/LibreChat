@@ -4,7 +4,7 @@ const yaml = require('js-yaml');
 const keyBy = require('lodash/keyBy');
 const { loadYaml } = require('@librechat/api');
 const { Providers } = require('@librechat/agents');
-const { logger } = require('@librechat/data-schemas');
+const { logger, runAsSystem } = require('@librechat/data-schemas');
 const {
   configSchema,
   paramSettings,
@@ -12,6 +12,7 @@ const {
   agentParamSettings,
   validateSettingDefinitions,
 } = require('librechat-data-provider');
+const { syncCategories } = require('~/server/utils/agentCategory');
 
 const projectRoot = path.resolve(__dirname, '..', '..', '..', '..');
 const defaultConfigPath = path.resolve(projectRoot, 'librechat.yaml');
@@ -160,6 +161,17 @@ https://www.librechat.ai/docs/configuration/stt_tts`);
       logger.info(JSON.stringify(customConfig, null, 2));
       logger.debug('Custom config:', customConfig);
     }
+  }
+
+  if (customConfig.interface?.marketplace?.use && customConfig.interface.marketplace.categories) {
+    const marketplaceConfig = customConfig.interface.marketplace;
+    const enableDefaultCategories =
+      typeof marketplaceConfig.categories.enableDefaultCategories === 'boolean'
+        ? marketplaceConfig.categories.enableDefaultCategories
+        : true;
+    await runAsSystem(() =>
+      syncCategories(marketplaceConfig.categories.list, enableDefaultCategories),
+    );
   }
 
   (customConfig.endpoints?.custom ?? []).forEach(addOpenRouterDefaults);

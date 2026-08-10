@@ -168,6 +168,22 @@ interface:
     roles: true
   marketplace:
     use: false
+    # categories is only applied when marketplace is enabled above
+    categories:
+      # When false, the built-in categories (general, hr, rd, finance, it, sales,
+      # aftersales) are hidden. `general` always stays active because it is the
+      # fallback category assigned to agents created without one.
+      enableDefaultCategories: true
+      list:
+        # `label` and `description` are optional and fall back to `value`.
+        - value: "Education"
+          description: "Educational agents."
+        - value: "Productivity"
+          description: "Productivity agents."
+        # Declaring a built-in category overrides its label and description, and
+        # keeps it visible even when enableDefaultCategories is false.
+        - value: "aftersales"
+          label: "Customer Success"
   fileCitations: true
   # Tools pinned to the prompt bar by default for all users.
   # Only seeds the initial state — once a user pins/unpins a tool, their choice is kept.

@@ -559,3 +559,58 @@ describe('webSearchSchema', () => {
     ).toThrow();
   });
 });
+
+describe('configSchema — interface.marketplace.categories', () => {
+  const withCategories = (categories: unknown) => ({
+    version: '1.2.8',
+    interface: { marketplace: { use: true, categories } },
+  });
+
+  it('accepts a valid categories block with an ordered list', () => {
+    const result = configSchema.safeParse(
+      withCategories({
+        enableDefaultCategories: true,
+        list: [{ value: 'pursue-shape', label: 'Pursue & Shape' }, { value: 'discover-define' }],
+      }),
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts an optional `label` and `description`', () => {
+    const result = configSchema.safeParse(
+      withCategories({
+        list: [{ value: 'build-deliver', label: 'Build & Deliver', description: 'Delivery work' }],
+      }),
+    );
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects a non-string `label`', () => {
+    const result = configSchema.safeParse(
+      withCategories({ list: [{ value: 'produce-assure', label: 42 }] }),
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts categories with only enableDefaultCategories (no list)', () => {
+    const result = configSchema.safeParse(withCategories({ enableDefaultCategories: false }));
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects a list item missing the required `value`', () => {
+    const result = configSchema.safeParse(
+      withCategories({ list: [{ description: 'no value here' }] }),
+    );
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a non-array `list`', () => {
+    const result = configSchema.safeParse(withCategories({ list: 'pursue-shape' }));
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a non-boolean `enableDefaultCategories`', () => {
+    const result = configSchema.safeParse(withCategories({ enableDefaultCategories: 'yes' }));
+    expect(result.success).toBe(false);
+  });
+});
