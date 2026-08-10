@@ -37,6 +37,18 @@ git clone https://github.com/Deloitte-Australia/tt-librechat.git
 cd tt-librechat
 ```
 
+### Check out the `develop` branch:
+
+```zsh
+git checkout origin/develop
+```
+
+### Enable `husky` pre-commit hooks
+
+```zsh
+npm run prepare
+```
+
 ## 2. Initialize Submodules
 
 This repository uses Git submodules to include external dependencies. The `rag_api` submodule contains the RAG (Retrieval-Augmented Generation) API code from the [tt-librechat-rag](https://github.com/Deloitte-Australia/tt-librechat-rag) repository. The `admin_panel` submodule contains the admin panel code from the [ea-libreadmin](https://github.com/Deloitte-Australia/ea-libreadmin). 
