@@ -1,3 +1,6 @@
+REBUILD.md
+dtt-librechat-setup/
+
 ### node etc ###
 
 # Logs
@@ -104,6 +107,8 @@ config.local.ts
 junit.xml
 **/.venv/
 **/venv/
+**/.results/
+
 secrets.json
 update-token.sh
 
@@ -184,3 +189,14 @@ hive-mind-prompt-*.txt
 CLAUDE.md
 .gsd
 codedb.snapshot
+
+# Python bytecode
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.deepeval*
+
+# Local untested skill drafts
+untested_skills/

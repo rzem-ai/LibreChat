@@ -116,6 +116,7 @@ jest.mock('@librechat/api', () => ({
     alwaysApplyDedupedFromManual: 0,
   }),
   buildNonStreamingResponse: jest.fn().mockReturnValue({ id: 'resp-123' }),
+  extractRetrievalSources: jest.fn().mockReturnValue([]),
   createOpenAIStreamTracker: jest.fn().mockReturnValue({
     addText: jest.fn(),
     addReasoning: jest.fn(),
@@ -391,6 +392,85 @@ describe('OpenAIChatCompletionController', () => {
           model: 'gpt-4',
         }),
       );
+    });
+  });
+
+  describe('include_retrieval flag', () => {
+    const mockFileSearchAttachment = {
+      type: 'file_search',
+      file_search: {
+        sources: [
+          { fileId: 'f1', fileName: 'policy.pdf', pages: [1], relevance: 0.9, content: 'chunk' },
+        ],
+      },
+    };
+
+    it('does not set response.retrieval when flag is absent', async () => {
+      await OpenAIChatCompletionController(req, res);
+
+      const [[responseArg]] = res.json.mock.calls;
+      expect(responseArg).not.toHaveProperty('retrieval');
+    });
+
+    it('does not set response.retrieval when flag is false', async () => {
+      req.body.include_retrieval = false;
+      await OpenAIChatCompletionController(req, res);
+
+      const [[responseArg]] = res.json.mock.calls;
+      expect(responseArg).not.toHaveProperty('retrieval');
+    });
+
+    it('does not set response.retrieval when flag is true but no artifacts resolved', async () => {
+      req.body.include_retrieval = true;
+      await OpenAIChatCompletionController(req, res);
+
+      const [[responseArg]] = res.json.mock.calls;
+      expect(responseArg).not.toHaveProperty('retrieval');
+    });
+
+    it('sets response.retrieval when flag is true and artifacts are present', async () => {
+      req.body.include_retrieval = true;
+
+      const mockSources = [
+        { content: 'chunk', fileName: 'policy.pdf', fileId: 'f1', relevance: 0.9, pages: [1] },
+      ];
+      const { extractRetrievalSources } = require('@librechat/api');
+      extractRetrievalSources.mockReturnValueOnce(mockSources);
+
+      const { createToolEndCallback } = require('~/server/controllers/agents/callbacks');
+      createToolEndCallback.mockImplementationOnce(({ artifactPromises }) => {
+        artifactPromises.push(Promise.resolve(mockFileSearchAttachment));
+        return jest.fn();
+      });
+
+      await OpenAIChatCompletionController(req, res);
+
+      expect(extractRetrievalSources).toHaveBeenCalledWith([mockFileSearchAttachment]);
+      const [[responseArg]] = res.json.mock.calls;
+      expect(responseArg).toHaveProperty('retrieval');
+      expect(responseArg.retrieval).toEqual({ sources: mockSources });
+    });
+
+    it('response shape is otherwise unchanged when flag is true', async () => {
+      const { buildNonStreamingResponse } = require('@librechat/api');
+      buildNonStreamingResponse.mockReturnValueOnce({ id: 'resp-999', choices: [] });
+
+      req.body.include_retrieval = true;
+
+      const { createToolEndCallback } = require('~/server/controllers/agents/callbacks');
+      createToolEndCallback.mockImplementationOnce(({ artifactPromises }) => {
+        artifactPromises.push(Promise.resolve(mockFileSearchAttachment));
+        return jest.fn();
+      });
+
+      const { extractRetrievalSources } = require('@librechat/api');
+      extractRetrievalSources.mockReturnValueOnce([]);
+
+      await OpenAIChatCompletionController(req, res);
+
+      const [[responseArg]] = res.json.mock.calls;
+      expect(responseArg.id).toBe('resp-999');
+      expect(responseArg.choices).toEqual([]);
     });
   });
 
