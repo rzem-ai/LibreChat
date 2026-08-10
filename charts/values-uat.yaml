@@ -174,4 +174,4 @@ pods:
             - ReadWriteOnce
           name: "meilisearch-data"
           mountPath: /meili_data
-
+          storageClass: "managed-csi-standard-private"
