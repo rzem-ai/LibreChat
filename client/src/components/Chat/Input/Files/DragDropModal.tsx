@@ -1,57 +1,17 @@
-import React, { useMemo } from 'react';
-import { useRecoilValue } from 'recoil';
+import React, { useMemo, useEffect } from 'react';
 import { OGDialog, OGDialogTemplate } from '@librechat/client';
-import {
-  FileSearch,
-  ImageUpIcon,
-  FileType2Icon,
-  FileImageIcon,
-  TerminalSquareIcon,
-} from 'lucide-react';
-import {
-  Constants,
-  Providers,
-  EToolResources,
-  EModelEndpoint,
-  isDocumentSupportedProvider,
-} from 'librechat-data-provider';
-import {
-  useLocalize,
-  useUploadOptions,
-  useFileUploadRouter,
-  useAgentToolPermissions,
-} from '~/hooks';
-import { useDragDropContext, useUploadModalContext } from '~/Providers';
-import { ephemeralAgentByConvoId } from '~/store';
+import { FileSearch, FileType2Icon, TerminalSquareIcon } from 'lucide-react';
+import { EToolResources } from 'librechat-data-provider';
+import { useLocalize, useUploadOptions, useFileUploadRouter } from '~/hooks';
+import { useUploadModalContext } from '~/Providers';
 
 const DragDropModal = () => {
   const localize = useLocalize();
   const { isVisible, files, closeModal } = useUploadModalContext();
-  const { conversationId, agentId, endpoint, endpointType, useResponsesApi } = useDragDropContext();
-  const ephemeralAgent = useRecoilValue(
-    ephemeralAgentByConvoId(conversationId ?? Constants.NEW_CONVO),
-  );
-  const { provider } = useAgentToolPermissions(agentId, ephemeralAgent);
   const { getOptions } = useUploadOptions();
   const routeFiles = useFileUploadRouter();
 
-  const isProviderDocSupported = useMemo(() => {
-    let currentProvider = (provider || endpoint) ?? '';
-    if (currentProvider.toLowerCase() === Providers.OPENROUTER) {
-      currentProvider = Providers.OPENROUTER;
-    }
-    const isAzureWithResponsesApi =
-      (currentProvider === EModelEndpoint.azureOpenAI ||
-        endpointType === EModelEndpoint.azureOpenAI) &&
-      useResponsesApi === true;
-    return (
-      isDocumentSupportedProvider(endpointType) ||
-      isDocumentSupportedProvider(currentProvider) ||
-      isAzureWithResponsesApi
-    );
-  }, [provider, endpoint, endpointType, useResponsesApi]);
-
-  const getOptionMeta = (value: EToolResources | undefined) => {
+  const getOptionMeta = (value: EToolResources) => {
     switch (value) {
       case EToolResources.file_search:
         return {
@@ -69,22 +29,42 @@ const DragDropModal = () => {
           icon: <FileType2Icon className="icon-md" />,
         };
       default:
-        return isProviderDocSupported
-          ? {
-              label: localize('com_ui_upload_provider'),
-              icon: <FileImageIcon className="icon-md" />,
-            }
-          : {
-              label: localize('com_ui_upload_image_input'),
-              icon: <ImageUpIcon className="icon-md" />,
-            };
+        return {
+          label: localize('com_ui_upload_file_search'),
+          icon: <FileSearch className="icon-md" />,
+        };
     }
   };
 
   const options = useMemo(() => getOptions(files), [getOptions, files]);
 
+  // Auto-route to file search if it's the only viable option
+  useEffect(() => {
+    if (options.length === 1 && options[0] === EToolResources.file_search) {
+      routeFiles(files, EToolResources.file_search);
+      closeModal();
+    }
+  }, [options, files, routeFiles, closeModal]);
+
+
   if (!isVisible) {
     return null;
+  }
+
+  // If no options available, show error
+  if (options.length === 0) {
+    return (
+      <OGDialog open={isVisible} onOpenChange={(open) => !open && closeModal()}>
+        <OGDialogTemplate
+          title={localize('com_ui_upload_type')}
+          main={
+            <div className="text-center text-red-500">
+              {localize('com_error_files_not_supported')}
+            </div>
+          }
+        />
+      </OGDialog>
+    );
   }
 
   return (
@@ -98,7 +78,7 @@ const DragDropModal = () => {
               const { label, icon } = getOptionMeta(value);
               return (
                 <button
-                  key={value ?? 'provider'}
+                  key={value}
                   onClick={() => {
                     routeFiles(files, value);
                     closeModal();

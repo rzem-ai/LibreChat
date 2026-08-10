@@ -8,17 +8,12 @@ import {
 } from '@librechat/client';
 import {
   megabyte,
-  Providers,
   QueryKeys,
   inferMimeType,
   excelMimeTypes,
   EToolResources,
-  EModelEndpoint,
   retrievalMimeTypes,
-  isBedrockDocumentType,
-  isPermissiveMimeConfig,
   codeInterpreterMimeTypes,
-  isDocumentSupportedProvider,
   fileConfig as defaultFileConfig,
 } from 'librechat-data-provider';
 import type { TFile, EndpointFileConfig, FileConfig } from 'librechat-data-provider';
@@ -339,46 +334,6 @@ export type UploadOptionContext = {
   endpointSupportedMimeTypes?: RegExp[];
 };
 
-const isProviderAttachType = (type: string, ctx: UploadOptionContext): boolean => {
-  let currentProvider = (ctx.provider || ctx.endpoint) ?? '';
-  if (currentProvider.toLowerCase() === Providers.OPENROUTER) {
-    currentProvider = Providers.OPENROUTER;
-  }
-  const isAzureWithResponsesApi =
-    (currentProvider === EModelEndpoint.azureOpenAI ||
-      ctx.endpointType === EModelEndpoint.azureOpenAI) &&
-    ctx.useResponsesApi === true;
-
-  if (
-    isDocumentSupportedProvider(ctx.endpointType) ||
-    isDocumentSupportedProvider(currentProvider) ||
-    isAzureWithResponsesApi
-  ) {
-    /** Custom endpoints that the admin opened up (permissive config) honor that allowlist,
-     * matching the file picker; an inherited default config is not treated as opened up. */
-    if (
-      ctx.endpointType === EModelEndpoint.custom &&
-      ctx.endpointSupportedMimeTypes != null &&
-      isPermissiveMimeConfig(ctx.endpointSupportedMimeTypes)
-    ) {
-      return checkType(type, ctx.endpointSupportedMimeTypes);
-    }
-    if (currentProvider === EModelEndpoint.google || currentProvider === Providers.OPENROUTER) {
-      return (
-        type.startsWith('image/') ||
-        type.startsWith('video/') ||
-        type.startsWith('audio/') ||
-        type === 'application/pdf'
-      );
-    }
-    if (currentProvider === Providers.BEDROCK || ctx.endpointType === EModelEndpoint.bedrock) {
-      return type.startsWith('image/') || isBedrockDocumentType(type);
-    }
-    return type.startsWith('image/') || type === 'application/pdf';
-  }
-  return type.startsWith('image/');
-};
-
 const isContextType = (type: string, fileConfig: FileConfig | null): boolean =>
   checkType(type, [
     ...(fileConfig?.text?.supportedMimeTypes || []),
@@ -388,14 +343,13 @@ const isContextType = (type: string, fileConfig: FileConfig | null): boolean =>
 
 /**
  * Upload destinations a file set can be routed to, given the active endpoint and agent
- * capabilities. `undefined` is direct provider attachment; the rest are tool resources.
- * Each option requires every file to be valid for it, so the caller can decide between
- * auto-routing (one option), prompting (multiple), or rejecting (none).
+ * capabilities. Each option requires every file to be valid for it, so the caller can decide
+ * between auto-routing (one option), prompting (multiple), or rejecting (none).
  */
 export const getViableUploadOptions = (
   fileList: File[],
   ctx: UploadOptionContext,
-): (EToolResources | undefined)[] => {
+): EToolResources[] => {
   if (fileList.length === 0) {
     return [];
   }
@@ -406,10 +360,7 @@ export const getViableUploadOptions = (
   const every = (predicate: (type: string) => boolean) =>
     types.every((type) => predicate(type as string));
 
-  const options: (EToolResources | undefined)[] = [];
-  if (every((type) => isProviderAttachType(type, ctx))) {
-    options.push(undefined);
-  }
+  const options: EToolResources[] = [];
   if (
     ctx.fileSearchEnabled &&
     ctx.fileSearchAllowedByAgent &&
