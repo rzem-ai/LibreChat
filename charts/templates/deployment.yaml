@@ -1,14 +1,5 @@
 {{- range $pod, $podConfig := .Values.pods }}
 {{- with $ -}}
-{{- $mountPath := "/meili_data" }}
-{{- if and $podConfig.persistence $podConfig.persistence.mountPath }}
-  {{- $mountPath = $podConfig.persistence.mountPath }}
-{{- end }}
-{{- $persistenceEnabled := false }}
-{{- if and $podConfig.persistence (hasKey $podConfig.persistence "enabled") $podConfig.persistence.enabled }}
-  {{- $persistenceEnabled = true }}
-{{- end }}
-{{- $persistenceVolumeName := printf "%s-data" $pod }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -41,10 +32,12 @@ spec:
         - name: librechat-config
           configMap:
             name: {{ include "helm.fullname" . }}-config
-        {{- if $persistenceEnabled }}
-        - name: {{ $persistenceVolumeName }}
+        {{- range $container, $config := $podConfig.containers }}
+        {{- if and $config.persistence (hasKey $config.persistence "enabled") $config.persistence.enabled }}
+        - name: {{ $container }}-data
           persistentVolumeClaim:
-            claimName: {{ if and $podConfig.persistence $podConfig.persistence.name }}{{ $podConfig.persistence.name }}{{ else }}n8n-pvc{{ end }}
+            claimName: {{ $config.persistence.name | default (printf "%s-%s-data" $pod $container) }}
+        {{- end }}
         {{- end }}
       {{- with $podConfig.initContainers }}
       initContainers:
@@ -132,9 +125,9 @@ spec:
               mountPath: /app/librechat.yaml
               subPath: librechat.yaml
               readOnly: true
-            {{- if $persistenceEnabled }}
-            - name: {{ $persistenceVolumeName }}
-              mountPath: {{ $mountPath }}
+            {{- if and $config.persistence (hasKey $config.persistence "enabled") $config.persistence.enabled }}
+            - name: {{ $container }}-data
+              mountPath: {{ $config.persistence.mountPath | default "/data" }}
             {{- end }}
             {{- with $config.volumeMounts }}
             {{- toYaml . | nindent 12 }}

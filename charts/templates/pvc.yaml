@@ -1,25 +1,27 @@
 {{- range $pod, $podConfig := .Values.pods }}
-{{- if and $podConfig.persistence (hasKey $podConfig.persistence "enabled") $podConfig.persistence.enabled }}
+{{- range $container, $config := $podConfig.containers }}
+{{- if and $config.persistence (hasKey $config.persistence "enabled") $config.persistence.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ if $podConfig.persistence.name }}{{ $podConfig.persistence.name }}{{ else }}n8n-pvc{{ end }}
+  name: {{ $config.persistence.name | default (printf "%s-%s-data" $pod $container) }}
   labels:
     {{- include "helm.labels" $ | nindent 4 }}
-    component: {{ $pod }}
+    component: {{ $container }}
 spec:
   accessModes:
-    {{- if $podConfig.persistence.accessModes }}
-    {{- toYaml $podConfig.persistence.accessModes | nindent 4 }}
+    {{- if $config.persistence.accessModes }}
+    {{- toYaml $config.persistence.accessModes | nindent 4 }}
     {{- else }}
     - ReadWriteOnce
     {{- end }}
   resources:
     requests:
-      storage: {{ $podConfig.persistence.size | default "5Gi" }}
-  {{- if $podConfig.persistence.storageClass }}
-  storageClassName: {{ $podConfig.persistence.storageClass }}
+      storage: {{ $config.persistence.size | default "5Gi" }}
+  {{- if $config.persistence.storageClass }}
+  storageClassName: {{ $config.persistence.storageClass }}
   {{- end }}
 ---
+{{- end }}
 {{- end }}
 {{- end }}
