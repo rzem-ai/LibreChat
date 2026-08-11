@@ -385,7 +385,7 @@ If models fail with gateway or MCP errors, this is almost always the cause. If b
 
 ### Build succeeds but SSO says "An unknown error occurred"
 
-Ensure that the OPENID_ISSUER, OPENID_CLIENT_ID, and OPENID_CLIENT_SECRET values in your `.env` are populated. Get these values from another team member if you don't have them.
+Ensure that the `OPENID_ISSUER`, `OPENID_CLIENT_ID`, and `OPENID_CLIENT_SECRET` values in your `.env` are populated. Get these values from another team member if you don't have them.
 
 ### Build fails with "context" or "Dockerfile" errors
 
