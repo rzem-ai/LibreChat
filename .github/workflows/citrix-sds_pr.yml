@@ -1,0 +1,126 @@
+# Summary:
+# - On PR open, update, or reopen against the Feat/citrix-sds target branch,
+#   call the Citrix SDS API to provision or update a PR-specific Workspace app.
+# - On PR close, delete the Workspace app only if the PR was merged.
+# - If the PR is closed without merge, do nothing.
+# - Authentication uses an API key stored as a GitHub Actions secret.
+
+name: Citrix SDS Workspace Provision by pr
+
+on:
+  pull_request:
+    # Run this workflow when a pull request is:
+    # - opened
+    # - updated with new commits
+    # - reopened
+    # - closed
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      # Only trigger when the PR target branch is Feat/citrix-sds.
+      # This is the base branch the PR is being merged into.
+
+      - Feat/citrix-sds
+
+# Ensure only one run per PR is active at a time.
+# If another commit is pushed to the same PR, the older in-progress run is cancelled.
+concurrency:
+  group: citrix-sds-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  create-sds-workspace:
+    # Run the job when:
+    # - the PR is opened, synchronised, or reopened
+    # - the PR is closed AND actually merged
+    # Do not run when the PR is simply closed without merge.
+    if: github.event.action != 'closed' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out the repository code to the GitHub Actions runner.
+      # This is only needed for non-closed events.
+      # For merged cleanup runs, we are only calling the API and do not need the repo contents.
+
+      - name: Checkout code
+        if: github.event.action != 'closed'
+        uses: actions/checkout@v4
+
+      # Determine which action should be sent to the SDS API.
+      # - If the PR event is 'closed' and the PR was merged, set action=destroy
+      # - Otherwise, set action=provision
+      # The result is stored as a step output and used later when building the payload.
+
+      - name: Set action
+        id: action
+        run: |
+          if [ "${{ github.event.action }}" = "closed" ] && [ "${{ github.event.pull_request.merged }}" = "true" ]; then
+            echo "action=destroy" >> "$GITHUB_OUTPUT"
+          else
+            echo "action=provision" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Build the JSON payload to send to the Citrix SDS API.
+      # This payload contains the PR-specific metadata that SDS can use
+      # to create, update, or delete the Workspace app for this PR.
+
+      - name: Build payload
+        env:
+          # The action determined in the previous step: provision or destroy
+          ACTION: ${{ steps.action.outputs.action }}
+          # PR number used to create a unique app name such as pr-app-123
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          # Source branch of the pull request
+          BRANCH_NAME: ${{ github.event.pull_request.head.ref }}
+          # Repository in owner/repo format
+          REPO: ${{ github.repository }}
+          # Commit SHA at the head of the PR
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          cat > payload.json <<EOF
+          {
+            "action": "${ACTION}",
+            "appName": "pr-app-${PR_NUMBER}",
+            "branch": "${BRANCH_NAME}",
+            "prNumber": "${PR_NUMBER}",
+            "repo": "${REPO}",
+            "commit": "${COMMIT_SHA}",
+            "sharing": "Project Sharing"
+          }
+          EOF
+
+          # Output the payload for visibility in the workflow logs.
+          # Be careful not to include secrets here.
+          cat payload.json
+
+      # Call the Citrix SDS API using an API key stored in GitHub Actions secrets.
+      # The SDS backend is expected to interpret:
+      # - action=provision as create/update the PR-specific Workspace app
+      # - action=destroy as delete the PR-specific Workspace app
+      #
+      # Required GitHub secrets:
+      # - CITRIX_SDS_URL
+      # - CITRIX_SDS_API_KEY
+      #
+      # If your API expects a different auth header format, replace:
+      #   x-api-key: ${CITRIX_SDS_API_KEY}
+      # with the correct format, for example:
+      #   Authorization: Bearer ${CITRIX_SDS_API_KEY}
+      # or
+      #   Authorization: ApiKey ${CITRIX_SDS_API_KEY}
+
+      - name: Call Citrix SDS API
+        env:
+          # Base URL of the SDS platform or API
+          CITRIX_SDS_URL: ${{ secrets.CITRIX_SDS_URL }}
+          # API key used to authenticate the request
+          CITRIX_SDS_API_KEY: ${{ secrets.CITRIX_SDS_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          curl --fail --silent --show-error \
+            -X POST "${CITRIX_SDS_URL}/api/workspaces/apps" \
+            -H "x-api-key: ${CITRIX_SDS_API_KEY}" \
+            -H "Content-Type: application/json" \
+            --data @payload.json
