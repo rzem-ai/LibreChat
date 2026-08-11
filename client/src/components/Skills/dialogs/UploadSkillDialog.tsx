@@ -50,6 +50,7 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
       navigate(`/skills/${skill._id}`);
     },
     onError: (error: unknown) => {
+      // Show the scanner's validation error (if present), otherwise fall back to the generic skill creation error.
       showToast({
         status: 'error',
         message: formatSkillScanError(error, localize('com_ui_create_skill_upload_error')),
