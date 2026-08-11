@@ -20,7 +20,18 @@ import { logger } from '@librechat/data-schemas';
 
 const SKILL_MD = 'SKILL.md';
 const DEFAULT_TIMEOUT_MS = 15000;
-const DEFAULT_MIN_SEVERITY = 'low';
+
+// Fallback blocking threshold when the operator hasn't set
+// SKILL_SCANNER_MIN_SEVERITY (or set it to something unrecognized). Only
+// affects deployments with no explicit config — this repo's dev/uat/local
+// environments always set SKILL_SCANNER_MIN_SEVERITY explicitly.
+const DEFAULT_MIN_SEVERITY_THRESHOLD = 'high';
+
+// Fallback rank for a finding the scanner sends back with no `severity` field,
+// or a value not in SEVERITY_RANK (e.g. a new level the scanner adds later).
+// Independent of SKILL_SCANNER_MIN_SEVERITY — this is about incomplete data
+// from the scanner, not the configured threshold.
+const UNKNOWN_FINDING_SEVERITY = 'low';
 
 // Ordered severity ladder. A finding gates the request when its rank is >= the
 // configured minimum (SKILL_SCANNER_MIN_SEVERITY). e.g. min='medium' ignores
@@ -85,16 +96,16 @@ type SkillScanResult = {
 
 function severityRank(severity: string | undefined): number {
   if (!severity) {
-    return SEVERITY_RANK[DEFAULT_MIN_SEVERITY];
+    return SEVERITY_RANK[UNKNOWN_FINDING_SEVERITY];
   }
   const rank = SEVERITY_RANK[severity.toLowerCase()];
-  return typeof rank === 'number' ? rank : SEVERITY_RANK[DEFAULT_MIN_SEVERITY];
+  return typeof rank === 'number' ? rank : SEVERITY_RANK[UNKNOWN_FINDING_SEVERITY];
 }
 
 function minSeverityRank(): number {
   const raw = process.env.SKILL_SCANNER_MIN_SEVERITY;
   const rank = raw ? SEVERITY_RANK[raw.toLowerCase()] : undefined;
-  return typeof rank === 'number' ? rank : SEVERITY_RANK[DEFAULT_MIN_SEVERITY];
+  return typeof rank === 'number' ? rank : SEVERITY_RANK[DEFAULT_MIN_SEVERITY_THRESHOLD];
 }
 
 /** Security findings whose severity meets/exceeds the configured threshold. */
