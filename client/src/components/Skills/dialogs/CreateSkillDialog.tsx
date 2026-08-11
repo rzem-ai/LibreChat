@@ -75,7 +75,7 @@ export default function CreateSkillDialog({
       navigate(`/skills/${skill._id}`);
     },
     onError: (error: unknown) => {
-      // Show the scanner's validation error (if present), otherwise fall back to the generic skill creation error.
+      // Deloitte Custom Change: Show the scanner's validation error (if present), otherwise fall back to the generic skill creation error.
       showToast({
         status: 'error',
         message: formatSkillScanError(error, localize('com_ui_skill_create_error')),
