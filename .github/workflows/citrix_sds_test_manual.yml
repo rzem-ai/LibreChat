@@ -11,16 +11,6 @@ on:
         options:
           - provision
           - destroy
-      branch_name:
-        description: Branch name to associate with the test app
-        required: true
-        default: Feat/citrix-sds
-        type: string
-      repo_name:
-        description: Repository in owner/repo format
-        required: true
-        default: ${{ github.repository }}
-        type: string
       commit_sha:
         description: Commit SHA to associate with the test app
         required: false
@@ -47,8 +37,8 @@ jobs:
       - name: Build payload
         env:
           ACTION: ${{ inputs.action }}
-          BRANCH_NAME: ${{ inputs.branch_name }}
-          REPO_NAME: ${{ inputs.repo_name }}
+          BRANCH_NAME: ${{ github.ref_name }}
+          REPO_NAME: ${{ github.repository }}
           COMMIT_SHA: ${{ inputs.commit_sha }}
           SHARING: ${{ inputs.sharing }}
           RUN_ID: ${{ github.run_id }}
