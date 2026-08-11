@@ -30,17 +30,21 @@ function severityRank(severity?: string): number {
 }
 
 /**
- * Render one scan issue as `SEVERITY · RULE_ID — description`, omitting whichever
- * parts the scanner did not supply. The severity and rule id are what make a
- * finding actionable; a bare description like "Pattern detected: exec(" is not.
+ * Render one scan issue as `severity=SEVERITY code=RULE_ID — description`, omitting
+ * whichever parts the scanner did not supply. The severity and rule id are what make
+ * a finding actionable; a bare description like "Pattern detected: exec(" is not.
+ * Kept to a single line since this renders inside a toast.
  */
 function formatIssue(issue: SkillScanIssue): string | null {
   const { message, severity, code } = issue;
   if (!message) {
     return null;
   }
-  const prefix = [severity?.toUpperCase(), code].filter(Boolean).join(' · ');
-  return prefix ? `${prefix} — ${message}` : message;
+  const parts = [
+    severity ? `severity=${severity.toUpperCase()}` : null,
+    code ? `code=${code}` : null,
+  ].filter((part): part is string => Boolean(part));
+  return parts.length > 0 ? `${parts.join(' ')} — ${message}` : message;
 }
 
 function extractErrorData(error: unknown): SkillScanErrorData | undefined {
