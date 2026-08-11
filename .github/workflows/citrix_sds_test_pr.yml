@@ -5,7 +5,7 @@
 # - If the PR is closed without merge, do nothing.
 # - Authentication uses an API key stored as a GitHub Actions secret.
 
-name: Citrix SDS Workspace by PR
+name: 'Citrix SDS Workspace by PR'
 
 on:
   pull_request:

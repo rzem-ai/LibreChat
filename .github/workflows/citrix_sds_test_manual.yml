@@ -1,4 +1,4 @@
-name: Citrix SDS Workspace test
+name: 'Citrix SDS Workspace test'
 
 on:
   workflow_dispatch:
