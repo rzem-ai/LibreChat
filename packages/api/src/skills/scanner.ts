@@ -1,5 +1,5 @@
 /**
- * Skill scanner client.
+ * Deloitte Skill scanner client.
  *
  * Every path that introduces new skill content into LibreChat (create-from-form,
  * import a .md/.zip/.skill, or upload a file into an existing skill) zips that
