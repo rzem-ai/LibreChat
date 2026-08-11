@@ -389,6 +389,8 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
           name: body.name,
           description: body.description,
           body: body.body,
+          frontmatter: body.frontmatter as Record<string, unknown> | undefined,
+          alwaysApply: body.alwaysApply,
         });
       } catch (error) {
         if (isSkillScanError(error)) {
@@ -536,6 +538,10 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
           name: update.name ?? currentSkill.name,
           description: update.description ?? currentSkill.description,
           body: update.body ?? currentSkill.body,
+          frontmatter: (update.frontmatter ?? currentSkill.frontmatter) as
+            | Record<string, unknown>
+            | undefined,
+          alwaysApply: update.alwaysApply ?? currentSkill.alwaysApply,
         });
       } catch (error) {
         if (isSkillScanError(error)) {

@@ -200,7 +200,8 @@ function buildSkillMarkdown(params: {
 }): string {
   // Only include fields the external registry allows in its frontmatter schema.
   // LibreChat-internal fields (e.g. always-apply) must be omitted or the
-  // scanner will reject the content with an "Unexpected fields" error.
+  // scanner will reject the content with an "Unexpected fields" error — they're
+  // scanned separately, see `scanFrontmatter`.
   const lines = [
     '---',
     `name: ${yamlValue(params.name)}`,
@@ -228,6 +229,45 @@ async function buildSingleFileArchive(
   const zip = new JSZip();
   zip.file(fileName, bytes);
   return zip.generateAsync({ type: 'uint8array' });
+}
+
+/**
+ * Flatten frontmatter/alwaysApply into plain text for a security-findings-only
+ * scan (see {@link scanFrontmatter}). These fields are never scanned as part of
+ * the SKILL.md manifest — the external registry's manifest schema rejects any
+ * key it doesn't recognize (see {@link buildSkillMarkdown}) — so they'd
+ * otherwise bypass the scanner entirely.
+ */
+function serializeFrontmatterForScan(
+  frontmatter: Record<string, unknown> | undefined,
+  alwaysApply: boolean | undefined,
+): string | undefined {
+  const entries = Object.entries(frontmatter ?? {});
+  if (alwaysApply !== undefined) {
+    entries.push(['alwaysApply', alwaysApply]);
+  }
+  if (entries.length === 0) {
+    return undefined;
+  }
+  return entries.map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join('\n');
+}
+
+/**
+ * Scan frontmatter/alwaysApply for security findings without gating on manifest
+ * validation — this isn't a SKILL.md, just arbitrary text, so `requireValidation`
+ * stays off (same treatment as {@link scanSkillFileUpload}).
+ */
+async function scanFrontmatter(
+  frontmatter: Record<string, unknown> | undefined,
+  alwaysApply: boolean | undefined,
+  fileNamePrefix: string,
+): Promise<void> {
+  const text = serializeFrontmatterForScan(frontmatter, alwaysApply);
+  if (!text) {
+    return;
+  }
+  const archive = await buildSingleFileArchive('frontmatter.txt', Buffer.from(text, 'utf8'));
+  await scanArchive(archive, `${fileNamePrefix}.frontmatter.zip`, { requireValidation: false });
 }
 
 export function isSkillScanError(error: unknown): error is SkillScanError {
@@ -365,6 +405,8 @@ export async function scanSkillOnCreate(params: {
   name: string;
   description: string;
   body?: string;
+  frontmatter?: Record<string, unknown>;
+  alwaysApply?: boolean;
 }): Promise<void> {
   if (!isSkillScanEnabled()) {
     return;
@@ -372,6 +414,7 @@ export async function scanSkillOnCreate(params: {
   const skillMd = buildSkillMarkdown(params);
   const archive = await buildSkillArchive(skillMd);
   await scanArchive(archive, `${params.name}.skill`);
+  await scanFrontmatter(params.frontmatter, params.alwaysApply, params.name);
 }
 
 /**
@@ -382,6 +425,8 @@ export async function scanSkillOnUpdate(params: {
   name: string;
   description: string;
   body?: string;
+  frontmatter?: Record<string, unknown>;
+  alwaysApply?: boolean;
 }): Promise<void> {
   if (!isSkillScanEnabled()) {
     return;
@@ -389,6 +434,7 @@ export async function scanSkillOnUpdate(params: {
   const skillMd = buildSkillMarkdown(params);
   const archive = await buildSkillArchive(skillMd);
   await scanArchive(archive, `${params.name}.skill`);
+  await scanFrontmatter(params.frontmatter, params.alwaysApply, params.name);
 }
 
 /**
