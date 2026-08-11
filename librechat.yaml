@@ -8,14 +8,6 @@ interface:
     share: true # Enable share with other users
     public: false # Disable share with everyone
 
-  remoteAgents:
-    use: true
-    create: true
-
-  skills:
-    use: true
-    create: true
-
   bookmarks: true
 
   fileCitations: true
@@ -41,6 +33,14 @@ interface:
     users: true # TODO: Restrict to deloitte.com.au emails
     groups: false
     roles: false
+
+  remoteAgents:
+    use: true
+    create: true
+
+  skills:
+    use: true
+    create: true
 
   # Pin tools to the prompt bar by default for all users
   defaultPinnedTools:
