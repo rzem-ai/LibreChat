@@ -20,6 +20,7 @@ const SEVERITY_ORDER: Record<string, number> = {
   info: 4,
 };
 
+/** Maps a severity string to its sort rank; missing/unrecognized severities rank last. */
 function severityRank(severity?: string): number {
   if (!severity) {
     return Number.MAX_SAFE_INTEGER;
