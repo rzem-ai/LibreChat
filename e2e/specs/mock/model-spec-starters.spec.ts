@@ -14,7 +14,7 @@ const STARTER_BEYOND_CAP = 'Fifth starter beyond the cap';
 /** A spec without `conversation_starters`. */
 const PLAIN_SPEC_LABEL = 'E2E Soft Default';
 
-test.describe('model spec conversation starters', () => {
+test.describe('model spec conversation starters', { tag: ['@mock', '@model-specs'] }, () => {
   test('starter prompts render on the landing for a spec that defines them', async ({ page }) => {
     await page.goto(NEW_CHAT_PATH, { timeout: 10000 });
     await selectModelSpec(page, STARTER_SPEC_LABEL);

@@ -101,7 +101,7 @@ async function deleteConversation(page: Page, conversation: Locator): Promise<vo
   expect(response.ok()).toBeTruthy();
 }
 
-test.describe('bookmark counts', () => {
+test.describe('bookmark counts', { tag: ['@mock', '@conversations'] }, () => {
   test.describe.configure({ timeout: 120_000 });
 
   test('drops a bookmark count to zero when its only conversation is deleted', async ({ page }) => {

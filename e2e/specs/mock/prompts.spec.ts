@@ -125,7 +125,7 @@ async function ensureAutoSendPrompts(page: Page) {
   await expect(autoSend).toHaveAttribute('aria-pressed', 'true');
 }
 
-test.describe('prompt manager', () => {
+test.describe('prompt manager', { tag: ['@mock', '@prompts'] }, () => {
   test('creates a prompt and can send it from chat', async ({ page }) => {
     test.setTimeout(120000);
 

@@ -65,7 +65,7 @@ async function typeDuringRun(page: Page, text: string) {
   await expect(duringRunSendButton(page)).toBeVisible({ timeout: 5000 });
 }
 
-test.describe('mid-run steering and queuing', () => {
+test.describe('mid-run steering and queuing', { tag: ['@mock', '@chat'] }, () => {
   /**
    * The applied-steer contract (requires @librechat/agents ≥ 3.2.63, where
    * top-level `PostToolBatch` hook inputs carry no subagent-scope `agentId`):

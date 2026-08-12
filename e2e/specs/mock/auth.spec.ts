@@ -49,7 +49,7 @@ async function getIsolatedStorageState(request: APIRequestContext, user: User) {
   return request.storageState();
 }
 
-test.describe('auth session', () => {
+test.describe('auth session', { tag: ['@mock', '@auth'] }, () => {
   test('session persists across a full page reload', async ({ page }) => {
     await page.goto(NEW_CHAT_PATH, { timeout: 10000 });
     await expect(page).not.toHaveURL(/\/login/);

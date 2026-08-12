@@ -641,7 +641,7 @@ async function clickForkVisibleMessages(
   return (await response.json()) as ForkResponse;
 }
 
-test.describe('message tree stream operations', () => {
+test.describe('message tree stream operations', { tag: ['@mock', '@chat'] }, () => {
   test.setTimeout(180000);
 
   test('streams follow-ups and keeps an aborted response as the next parent', async ({ page }) => {

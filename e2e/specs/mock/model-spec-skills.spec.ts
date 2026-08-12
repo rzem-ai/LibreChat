@@ -147,7 +147,7 @@ async function seedInaccessibleSkill() {
   }
 }
 
-test.describe('model spec skills', () => {
+test.describe('model spec skills', { tag: ['@mock', '@model-specs'] }, () => {
   test('loads accessible configured skills and skips missing or inaccessible names', async ({
     page,
   }) => {

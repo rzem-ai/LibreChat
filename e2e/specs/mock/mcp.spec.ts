@@ -74,7 +74,7 @@ async function expectSelectedMCPServerTools(form: Locator) {
   await expect(form.getByText(MCP_SERVER_NAME, { exact: true })).toBeVisible();
 }
 
-test.describe('agent builder MCP tools', () => {
+test.describe('agent builder MCP tools', { tag: ['@mock', '@mcp'] }, () => {
   test('creates an agent with MCP server tools and persists the selection', async ({ page }) => {
     test.setTimeout(120000);
 

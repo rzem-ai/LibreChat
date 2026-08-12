@@ -10,7 +10,7 @@ import { NEW_CHAT_PATH } from './helpers';
  * This only reproduces in a production build (the mock harness builds the client
  * via `e2e:prepare`), matching the original report.
  */
-test.describe('account settings · two-factor dialog', () => {
+test.describe('account settings · two-factor dialog', { tag: ['@mock', '@auth'] }, () => {
   test('opening the Enable 2FA dialog renders without a framer-motion crash', async ({ page }) => {
     test.setTimeout(60000);
 
