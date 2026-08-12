@@ -42,7 +42,7 @@ function createTailwindColors() {
     'surface-active-alt': `var(--surface-active-alt)`,
     'surface-hover': `var(--surface-hover)`,
     'surface-hover-alt': `var(--surface-hover-alt)`,
-    'surface-primary': `var(--surface-primary)`,
+    'surface-primary': withAlpha('--surface-primary'),
     'surface-primary-alt': `var(--surface-primary-alt)`,
     'surface-primary-contrast': `var(--surface-primary-contrast)`,
     'surface-secondary': `var(--surface-secondary)`,
