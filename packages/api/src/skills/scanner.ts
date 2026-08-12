@@ -324,6 +324,13 @@ async function scanArchive(
     } catch {
       payload = undefined;
     }
+    if (response.ok && !payload) {
+      throw new SkillScanError(
+        'Skill scan returned an invalid response',
+        [{ message: 'Skill scanner did not return a JSON result' }],
+        422,
+      );
+    }
 
     const validationPassed = payload?.validation?.passed ?? payload?.passed;
     const isSafe = payload?.scan?.is_safe;

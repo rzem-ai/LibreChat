@@ -175,6 +175,15 @@ describe('skill scanner', () => {
     });
   });
 
+  it('blocks a 2xx response with a non-JSON (or empty) body instead of failing open', async () => {
+    global.fetch = jest.fn().mockResolvedValue(nonJsonResponse(200)) as unknown as typeof fetch;
+
+    await expect(upload()).rejects.toMatchObject({
+      statusCode: 422,
+      message: 'Skill scan returned an invalid response',
+    });
+  });
+
   it('blocks with a timeout-specific message when the request aborts', async () => {
     global.fetch = jest.fn().mockImplementation(() => {
       const error = new Error('The operation was aborted');
