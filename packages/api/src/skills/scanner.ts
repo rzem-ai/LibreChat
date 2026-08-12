@@ -73,6 +73,8 @@ type ValidationProblem =
 
 type SkillScanResult = {
   validation?: {
+    // Whether the SKILL.md manifest is structurally valid (required fields
+    // present, etc.) — independent of the security scan (`scan.is_safe`/`findings`).
     passed?: boolean;
     problems?: ValidationProblem[];
     details?: {
