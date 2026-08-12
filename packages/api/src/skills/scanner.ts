@@ -81,6 +81,9 @@ type SkillScanResult = {
   };
   scan?: {
     verdict?: string;
+    // The scanner's own verdict on whether findings pass its internal minimum
+    // severity — independent of our SKILL_SCANNER_MIN_SEVERITY, which we apply
+    // separately to `findings` via blockingFindings().
     is_safe?: boolean;
     max_severity?: string;
     findings?: ScanFinding[];
