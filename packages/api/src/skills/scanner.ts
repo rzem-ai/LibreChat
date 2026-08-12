@@ -59,19 +59,9 @@ type ScanFinding = {
   rule_id?: string;
 };
 
-// The scanner is inconsistent about how it reports validation problems: in
-// practice it returns plain strings, e.g.
-//   "Missing required field in frontmatter: name"
-// but some responses use a structured object instead, e.g.
-//   { code: "MISSING_FIELD", path: "frontmatter.name", message: "Missing required field: name" }
-// Accept both.
-type ValidationProblem =
-  | string
-  | {
-      code?: string;
-      message?: string;
-      path?: string;
-    };
+// Per the scanner's OpenAPI schema, a manifest validation problem is always a
+// plain string, e.g. "Missing required field in frontmatter: name".
+type ValidationProblem = string;
 
 type SkillScanResult = {
   validation?: {
@@ -79,9 +69,6 @@ type SkillScanResult = {
     // present, etc.) — independent of the security scan (`scan.is_safe`/`findings`).
     passed?: boolean;
     problems?: ValidationProblem[];
-    details?: {
-      errors?: ValidationProblem[];
-    };
   };
   scan?: {
     verdict?: string;
@@ -93,11 +80,7 @@ type SkillScanResult = {
     findings?: ScanFinding[];
   };
   passed?: boolean;
-  issues?: ValidationProblem[];
   error?: {
-    details?: {
-      errors?: ValidationProblem[];
-    };
     message?: string;
   };
   message?: string;
@@ -160,16 +143,9 @@ function parseTimeout(raw: string | undefined): number {
   return parsed;
 }
 
-/** Coerce a string-or-object validation problem into a normalized issue. */
+/** Wrap a validation problem string in a normalized issue. */
 function problemToIssue(problem: ValidationProblem): SkillScanIssue {
-  if (typeof problem === 'string') {
-    return { message: problem };
-  }
-  return {
-    code: problem.code,
-    field: problem.path,
-    message: problem.message ?? 'Skill manifest is invalid',
-  };
+  return { message: problem };
 }
 
 /**
@@ -181,10 +157,7 @@ function problemToIssue(problem: ValidationProblem): SkillScanIssue {
 function toIssues(result: SkillScanResult | undefined): SkillScanIssue[] {
   const issues: SkillScanIssue[] = [];
 
-  // Manifest problems live under `validation.problems` (newer) or
-  // `validation.details.errors` (older) depending on scanner version.
-  const validationProblems =
-    result?.validation?.problems ?? result?.validation?.details?.errors ?? [];
+  const validationProblems = result?.validation?.problems ?? [];
   for (const problem of validationProblems) {
     issues.push(problemToIssue(problem));
   }
@@ -199,13 +172,6 @@ function toIssues(result: SkillScanResult | undefined): SkillScanIssue[] {
 
   if (issues.length > 0) {
     return issues;
-  }
-
-  const fromError =
-    result?.error?.details?.errors?.map((issue) => problemToIssue(issue)) ?? [];
-
-  if (fromError.length > 0) {
-    return fromError;
   }
 
   const fallbackMessage =
@@ -367,8 +333,7 @@ async function scanArchive(
     // specific problems. A bare `passed=false` with no problems is a scanner
     // quirk (common with `verbose=false` mode) and should not block — genuine
     // invalidity always comes with at least one problem entry.
-    const validationProblems =
-      payload?.validation?.problems ?? payload?.validation?.details?.errors ?? [];
+    const validationProblems = payload?.validation?.problems ?? [];
     const validationFailed =
       requireValidation && validationPassed === false && validationProblems.length > 0;
 
