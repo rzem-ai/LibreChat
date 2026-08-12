@@ -23,7 +23,7 @@ function createTailwindColors() {
   return {
     /* Text */
     'text-primary': `var(--text-primary)`,
-    'text-secondary': `var(--text-secondary)`,
+    'text-secondary': withAlpha('--text-secondary'),
     'text-secondary-alt': `var(--text-secondary-alt)`,
     'text-tertiary': `var(--text-tertiary)`,
     'text-warning': `var(--text-warning)`,
