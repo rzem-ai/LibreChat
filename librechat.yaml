@@ -11,6 +11,7 @@ interface:
   bookmarks: true
 
   fileCitations: true
+  providerUpload: true
 
   marketplace:
     use: true

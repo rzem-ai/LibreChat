@@ -7,13 +7,18 @@ import {
   SheetPaths,
 } from '@librechat/client';
 import {
+  Providers,
   megabyte,
   QueryKeys,
   inferMimeType,
+  EModelEndpoint,
   excelMimeTypes,
   EToolResources,
   retrievalMimeTypes,
+  isBedrockDocumentType,
+  isDocumentSupportedProvider,
   codeInterpreterMimeTypes,
+  isPermissiveMimeConfig,
   fileConfig as defaultFileConfig,
 } from 'librechat-data-provider';
 import type { TFile, EndpointFileConfig, FileConfig } from 'librechat-data-provider';
@@ -325,6 +330,7 @@ export type UploadOptionContext = {
   endpoint?: string | null;
   endpointType?: string | null;
   useResponsesApi?: boolean;
+  providerUploadEnabled?: boolean;
   fileSearchEnabled: boolean;
   codeEnabled: boolean;
   contextEnabled: boolean;
@@ -332,6 +338,44 @@ export type UploadOptionContext = {
   codeAllowedByAgent: boolean;
   fileConfig: FileConfig | null;
   endpointSupportedMimeTypes?: RegExp[];
+};
+
+const isProviderAttachType = (type: string, ctx: UploadOptionContext): boolean => {
+  let currentProvider = (ctx.provider || ctx.endpoint) ?? '';
+  if (currentProvider.toLowerCase() === Providers.OPENROUTER) {
+    currentProvider = Providers.OPENROUTER;
+  }
+  const isAzureWithResponsesApi =
+    (currentProvider === EModelEndpoint.azureOpenAI ||
+      ctx.endpointType === EModelEndpoint.azureOpenAI) &&
+    ctx.useResponsesApi === true;
+
+  if (
+    isDocumentSupportedProvider(ctx.endpointType) ||
+    isDocumentSupportedProvider(currentProvider) ||
+    isAzureWithResponsesApi
+  ) {
+    if (
+      ctx.endpointType === EModelEndpoint.custom &&
+      ctx.endpointSupportedMimeTypes != null &&
+      isPermissiveMimeConfig(ctx.endpointSupportedMimeTypes)
+    ) {
+      return checkType(type, ctx.endpointSupportedMimeTypes);
+    }
+    if (currentProvider === EModelEndpoint.google || currentProvider === Providers.OPENROUTER) {
+      return (
+        type.startsWith('image/') ||
+        type.startsWith('video/') ||
+        type.startsWith('audio/') ||
+        type === 'application/pdf'
+      );
+    }
+    if (currentProvider === Providers.BEDROCK || ctx.endpointType === EModelEndpoint.bedrock) {
+      return type.startsWith('image/') || isBedrockDocumentType(type);
+    }
+    return type.startsWith('image/') || type === 'application/pdf';
+  }
+  return type.startsWith('image/');
 };
 
 const isContextType = (type: string, fileConfig: FileConfig | null): boolean =>
@@ -360,7 +404,10 @@ export const getViableUploadOptions = (
   const every = (predicate: (type: string) => boolean) =>
     types.every((type) => predicate(type as string));
 
-  const options: EToolResources[] = [];
+  const options: (EToolResources | undefined)[] = [];
+  if (ctx.providerUploadEnabled === true && every((type) => isProviderAttachType(type, ctx))) {
+    options.push(undefined);
+  }
   if (
     ctx.fileSearchEnabled &&
     ctx.fileSearchAllowedByAgent &&

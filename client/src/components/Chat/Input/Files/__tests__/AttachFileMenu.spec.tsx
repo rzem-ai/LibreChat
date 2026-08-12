@@ -97,6 +97,8 @@ function setupMocks(overrides: { provider?: string } = {}) {
   const translations: Record<string, string> = {
     com_files_upload_sharepoint: 'Upload from SharePoint',
     com_sidepanel_attach_files: 'Attach Files',
+    com_ui_upload_provider: 'Upload to Provider',
+    com_ui_upload_image_input: 'Upload as Image',
     com_ui_upload_code_environment: 'Upload to Code Environment',
     com_ui_upload_file_search: 'Upload for File Search',
     com_ui_upload_ocr_text: 'Upload as Text',
@@ -117,7 +119,9 @@ function setupMocks(overrides: { provider?: string } = {}) {
   };
   mockUseSharePointFileHandling.mockReturnValue(sharePointReturnValue);
   mockUseSharePointFileHandlingNoChatContext.mockReturnValue(sharePointReturnValue);
-  mockUseGetStartupConfig.mockReturnValue({ data: { sharePointFilePickerEnabled: false } });
+  mockUseGetStartupConfig.mockReturnValue({
+    data: { sharePointFilePickerEnabled: false, interface: { providerUpload: false } },
+  });
   mockUseAgentToolPermissions.mockReturnValue({
     fileSearchAllowedByAgent: false,
     codeAllowedByAgent: false,
@@ -245,6 +249,24 @@ describe('AttachFileMenu', () => {
       expect(screen.getByText('Upload as Text')).toBeInTheDocument();
       expect(screen.getByText('Upload for File Search')).toBeInTheDocument();
       expect(screen.getByText('Upload to Code Environment')).toBeInTheDocument();
+    });
+
+    it('shows provider upload option when providerUpload is enabled', () => {
+      setupMocks();
+      mockUseGetStartupConfig.mockReturnValue({
+        data: { sharePointFilePickerEnabled: false, interface: { providerUpload: true } },
+      });
+      renderMenu({ endpointType: EModelEndpoint.openAI, endpoint: EModelEndpoint.openAI });
+      openMenu();
+      expect(screen.getByText('Upload to Provider')).toBeInTheDocument();
+    });
+
+    it('does NOT show provider upload option when providerUpload is disabled', () => {
+      setupMocks();
+      renderMenu({ endpointType: EModelEndpoint.openAI, endpoint: EModelEndpoint.openAI });
+      openMenu();
+      expect(screen.queryByText('Upload to Provider')).not.toBeInTheDocument();
+      expect(screen.queryByText('Upload as Image')).not.toBeInTheDocument();
     });
 
   });

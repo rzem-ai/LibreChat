@@ -27,6 +27,27 @@ import { ephemeralAgentByConvoId } from '~/store';
 import { MenuItemProps } from '~/common';
 import { cn } from '~/utils';
 
+type FileUploadType =
+  | 'image'
+  | 'document'
+  | 'image_document'
+  | 'image_document_extended'
+  | 'image_document_video_audio';
+
+const fileTypeCapabilities: Record<FileUploadType, MimeUploadCapability> = {
+  image: { categories: ['image'] },
+  document: { categories: ['document'] },
+  image_document: { categories: ['image', 'document'] },
+  image_document_extended: {
+    categories: ['image', 'document'],
+    documentMimeTypes: bedrockDocumentMimeTypes,
+  },
+  image_document_video_audio: {
+    categories: ['image', 'document', 'audio', 'video'],
+    documentMimeTypes: ['application/pdf'],
+  },
+};
+
 interface AttachFileMenuProps {
   agentId?: string | null;
   endpoint?: string | null;
@@ -76,6 +97,7 @@ const AttachFileMenu = ({
   const { agentsConfig } = useGetAgentsConfig();
   const { data: startupConfig } = useGetStartupConfig();
   const sharePointEnabled = startupConfig?.sharePointFilePickerEnabled;
+  const providerUploadEnabled = startupConfig?.interface?.providerUpload === true;
 
   const [isSharePointDialogOpen, setIsSharePointDialogOpen] = useState(false);
 
@@ -107,6 +129,51 @@ const AttachFileMenu = ({
 
     const createMenuItems = (onAction: () => void) => {
       const items: MenuItemProps[] = [];
+
+      let currentProvider = provider || endpoint;
+      if (currentProvider?.toLowerCase() === Providers.OPENROUTER) {
+        currentProvider = Providers.OPENROUTER;
+      }
+
+      const isAzureWithResponsesApi =
+        (currentProvider === EModelEndpoint.azureOpenAI ||
+          endpointType === EModelEndpoint.azureOpenAI) &&
+        useResponsesApi === true;
+
+      if (providerUploadEnabled) {
+        if (
+          isDocumentSupportedProvider(endpointType) ||
+          isDocumentSupportedProvider(currentProvider) ||
+          isAzureWithResponsesApi
+        ) {
+          items.push({
+            label: localize('com_ui_upload_provider'),
+            onClick: () => {
+              setToolResource(undefined);
+              let fileType: Exclude<FileUploadType, 'image' | 'document'> = 'image_document';
+              if (currentProvider === Providers.GOOGLE || currentProvider === Providers.OPENROUTER) {
+                fileType = 'image_document_video_audio';
+              } else if (
+                currentProvider === Providers.BEDROCK ||
+                endpointType === EModelEndpoint.bedrock
+              ) {
+                fileType = 'image_document_extended';
+              }
+              onAction(fileType);
+            },
+            icon: <FileImageIcon className="icon-md" />,
+          });
+        } else {
+          items.push({
+            label: localize('com_ui_upload_image_input'),
+            onClick: () => {
+              setToolResource(undefined);
+              onAction('image');
+            },
+            icon: <ImageUpIcon className="icon-md" />,
+          });
+        }
+      }
 
       if (capabilities.contextEnabled) {
         items.push({
@@ -157,14 +224,15 @@ const AttachFileMenu = ({
     if (sharePointEnabled) {
       const sharePointItems = createMenuItems(() => {
         setIsSharePointDialogOpen(true);
-        // Note: toolResource will be set by the specific item clicked
       });
-      localItems.push({
-        label: localize('com_files_upload_sharepoint'),
-        onClick: () => {},
-        icon: <SharePointIcon className="icon-md" />,
-        subItems: sharePointItems,
-      });
+      if (sharePointItems.length > 0) {
+        localItems.push({
+          label: localize('com_files_upload_sharepoint'),
+          onClick: () => {},
+          icon: <SharePointIcon className="icon-md" />,
+          subItems: sharePointItems,
+        });
+      }
       return localItems;
     }
 
@@ -175,6 +243,11 @@ const AttachFileMenu = ({
     handleUploadClick,
     setEphemeralAgent,
     sharePointEnabled,
+    providerUploadEnabled,
+    provider,
+    endpoint,
+    endpointType,
+    useResponsesApi,
     codeAllowedByAgent,
     fileSearchAllowedByAgent,
     setIsSharePointDialogOpen,
