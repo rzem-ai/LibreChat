@@ -17,6 +17,7 @@
  */
 import JSZip from 'jszip';
 import { logger } from '@librechat/data-schemas';
+import { SKILL_SEVERITY_LEVELS } from 'librechat-data-provider';
 
 const SKILL_MD = 'SKILL.md';
 const DEFAULT_TIMEOUT_MS = 15000;
@@ -33,16 +34,14 @@ const DEFAULT_MIN_SEVERITY_THRESHOLD = 'high';
 // from the scanner, not the configured threshold.
 const UNKNOWN_FINDING_SEVERITY = 'low';
 
-// Ordered severity ladder. A finding gates the request when its rank is >= the
-// configured minimum (SKILL_SCANNER_MIN_SEVERITY). e.g. min='medium' ignores
-// info/low findings but blocks medium/high/critical.
-const SEVERITY_RANK: Record<string, number> = {
-  info: 0,
-  low: 1,
-  medium: 2,
-  high: 3,
-  critical: 4,
-};
+// Ascending rank derived from the shared severity ladder (see
+// SKILL_SEVERITY_LEVELS in librechat-data-provider). A finding gates the
+// request when its rank is >= the configured minimum
+// (SKILL_SCANNER_MIN_SEVERITY). e.g. min='medium' ignores info/low findings
+// but blocks medium/high/critical.
+const SEVERITY_RANK: Record<string, number> = Object.fromEntries(
+  SKILL_SEVERITY_LEVELS.map((severity, index) => [severity, index]),
+);
 
 /** Normalized, UI-ready problem. This is what we hand back to the client. */
 type SkillScanIssue = {

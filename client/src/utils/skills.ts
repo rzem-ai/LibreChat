@@ -1,3 +1,5 @@
+import { SKILL_SEVERITY_LEVELS } from 'librechat-data-provider';
+
 export interface SkillScanIssue {
   code?: string;
   field?: string;
@@ -11,14 +13,15 @@ export interface SkillScanErrorData {
   issues?: SkillScanIssue[];
 }
 
-/** Highest-risk first; unknown severities sort last but keep their relative order. */
-const SEVERITY_ORDER: Record<string, number> = {
-  critical: 0,
-  high: 1,
-  medium: 2,
-  low: 3,
-  info: 4,
-};
+// Descending rank derived from the shared severity ladder (see
+// SKILL_SEVERITY_LEVELS in librechat-data-provider): highest-risk first.
+// Unknown severities sort last but keep their relative order.
+const SEVERITY_ORDER: Record<string, number> = Object.fromEntries(
+  SKILL_SEVERITY_LEVELS.map((severity, index) => [
+    severity,
+    SKILL_SEVERITY_LEVELS.length - 1 - index,
+  ]),
+);
 
 /** Maps a severity string to its sort rank; missing/unrecognized severities rank last. */
 function severityRank(severity?: string): number {
