@@ -58,8 +58,11 @@ type ScanFinding = {
 };
 
 // The scanner is inconsistent about how it reports validation problems: in
-// practice it returns plain strings (e.g. "Missing required field in
-// frontmatter: name"), but some responses use a structured object. Accept both.
+// practice it returns plain strings, e.g.
+//   "Missing required field in frontmatter: name"
+// but some responses use a structured object instead, e.g.
+//   { code: "MISSING_FIELD", path: "frontmatter.name", message: "Missing required field: name" }
+// Accept both.
 type ValidationProblem =
   | string
   | {
