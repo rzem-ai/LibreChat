@@ -13,8 +13,6 @@ import { _resetStrictCache } from '../models/plugins/tenantIsolation';
 import { tenantStorage } from '~/config/tenantContext';
 import { createRoleMethods } from './role';
 import { createModels } from '../models';
-import { _resetStrictCache } from '../models/plugins/tenantIsolation';
-import { tenantStorage } from '~/config/tenantContext';
 
 jest.mock('~/config/winston', () => ({
   error: jest.fn(),
