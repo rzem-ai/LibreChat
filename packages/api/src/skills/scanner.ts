@@ -31,8 +31,10 @@ const DEFAULT_MIN_SEVERITY_THRESHOLD = 'high';
 // Fallback rank for a finding the scanner sends back with no `severity` field,
 // or a value not in SEVERITY_RANK (e.g. a new level the scanner adds later).
 // Independent of SKILL_SCANNER_MIN_SEVERITY — this is about incomplete data
-// from the scanner, not the configured threshold.
-const UNKNOWN_FINDING_SEVERITY = 'low';
+// from the scanner, not the configured threshold. Fail-safe: this is a security
+// gate, so data we can't classify must always block rather than silently
+// ranking below the configured minimum.
+const UNKNOWN_FINDING_SEVERITY = 'critical';
 
 // Ascending rank derived from the shared severity ladder (see
 // SKILL_SEVERITY_LEVELS in librechat-data-provider). A finding gates the
