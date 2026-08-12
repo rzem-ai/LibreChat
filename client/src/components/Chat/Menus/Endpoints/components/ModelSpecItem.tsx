@@ -7,6 +7,7 @@ import { useModelSelectorContext } from '../ModelSelectorContext';
 import { CustomMenuItem as MenuItem } from '../CustomMenu';
 import SpecDescription from './SpecDescription';
 import SpecIcon from './SpecIcon';
+import ModelCost from './ModelCost';
 import { cn } from '~/utils';
 
 interface ModelSpecItemProps {
@@ -52,6 +53,7 @@ export function ModelSpecItem({ spec, isSelected }: ModelSpecItemProps) {
           <SpecDescription description={spec.description} />
         </div>
       </div>
+      <ModelCost modelId={spec.preset.model} />
       <button
         type="button"
         tabIndex={isActive ? 0 : -1}

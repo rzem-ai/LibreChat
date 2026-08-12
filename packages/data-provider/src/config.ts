@@ -1485,6 +1485,21 @@ export type TRumConfig = {
   environment?: string;
 };
 
+export type TModelPricing = Record<
+  string,
+  {
+    inputPer1M: number;
+    outputPer1M: number;
+    provider?: string;
+  }
+>;
+
+export type TEndpointCostConfig = {
+  REFERENCE_MODEL_ID: string;
+  MULTIPLIER_ROUNDING_INCREMENT: number;
+  MIN_MULTIPLIER: number;
+};
+
 export type StartupConfigContext = 'share';
 
 export type TStartupConfig = {
@@ -1523,6 +1538,8 @@ export type TStartupConfig = {
   helpAndFaqURL: string;
   customFooter?: string;
   modelSpecs?: TSpecsConfig;
+  modelPricing?: TModelPricing;
+  endpointCostConfig?: TEndpointCostConfig;
   modelDescriptions?: Record<string, Record<string, string>>;
   sharedLinksEnabled: boolean;
   publicSharedLinksEnabled: boolean;
