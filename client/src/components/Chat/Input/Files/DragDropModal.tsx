@@ -1,17 +1,52 @@
 import React, { useMemo, useEffect } from 'react';
+import { useRecoilValue } from 'recoil';
 import { OGDialog, OGDialogTemplate } from '@librechat/client';
-import { FileSearch, FileType2Icon, TerminalSquareIcon } from 'lucide-react';
-import { EToolResources } from 'librechat-data-provider';
-import { useLocalize, useUploadOptions, useFileUploadRouter } from '~/hooks';
-import { useUploadModalContext } from '~/Providers';
+import {
+  FileSearch,
+  ImageUpIcon,
+  FileType2Icon,
+  FileImageIcon,
+  TerminalSquareIcon,
+} from 'lucide-react';
+import {
+  Constants,
+  Providers,
+  EToolResources,
+  EModelEndpoint,
+  isDocumentSupportedProvider,
+} from 'librechat-data-provider';
+import { useLocalize, useUploadOptions, useFileUploadRouter, useAgentToolPermissions } from '~/hooks';
+import { useDragDropContext, useUploadModalContext } from '~/Providers';
+import { ephemeralAgentByConvoId } from '~/store';
 
 const DragDropModal = () => {
   const localize = useLocalize();
   const { isVisible, files, closeModal } = useUploadModalContext();
+  const { conversationId, agentId, endpoint, endpointType, useResponsesApi } = useDragDropContext();
+  const ephemeralAgent = useRecoilValue(
+    ephemeralAgentByConvoId(conversationId ?? Constants.NEW_CONVO),
+  );
+  const { provider } = useAgentToolPermissions(agentId, ephemeralAgent);
   const { getOptions } = useUploadOptions();
   const routeFiles = useFileUploadRouter();
 
-  const getOptionMeta = (value: EToolResources) => {
+  const isProviderDocSupported = useMemo(() => {
+    let currentProvider = (provider || endpoint) ?? '';
+    if (currentProvider.toLowerCase() === Providers.OPENROUTER) {
+      currentProvider = Providers.OPENROUTER;
+    }
+    const isAzureWithResponsesApi =
+      (currentProvider === EModelEndpoint.azureOpenAI ||
+        endpointType === EModelEndpoint.azureOpenAI) &&
+      useResponsesApi === true;
+    return (
+      isDocumentSupportedProvider(endpointType) ||
+      isDocumentSupportedProvider(currentProvider) ||
+      isAzureWithResponsesApi
+    );
+  }, [provider, endpoint, endpointType, useResponsesApi]);
+
+  const getOptionMeta = (value: EToolResources | undefined) => {
     switch (value) {
       case EToolResources.file_search:
         return {
@@ -29,10 +64,15 @@ const DragDropModal = () => {
           icon: <FileType2Icon className="icon-md" />,
         };
       default:
-        return {
-          label: localize('com_ui_upload_file_search'),
-          icon: <FileSearch className="icon-md" />,
-        };
+        return isProviderDocSupported
+          ? {
+              label: localize('com_ui_upload_provider'),
+              icon: <FileImageIcon className="icon-md" />,
+            }
+          : {
+              label: localize('com_ui_upload_image_input'),
+              icon: <ImageUpIcon className="icon-md" />,
+            };
     }
   };
 
@@ -78,7 +118,7 @@ const DragDropModal = () => {
               const { label, icon } = getOptionMeta(value);
               return (
                 <button
-                  key={value}
+                  key={value ?? 'provider'}
                   onClick={() => {
                     routeFiles(files, value);
                     closeModal();

@@ -1,7 +1,13 @@
 import React, { useRef, useState, useMemo, useCallback } from 'react';
 import { useRecoilState } from 'recoil';
 import * as Ariakit from '@ariakit/react';
-import { FileSearch, FileType2Icon, TerminalSquareIcon } from 'lucide-react';
+import {
+  FileSearch,
+  ImageUpIcon,
+  FileType2Icon,
+  FileImageIcon,
+  TerminalSquareIcon,
+} from 'lucide-react';
 import {
   FileUpload,
   TooltipAnchor,
@@ -9,8 +15,21 @@ import {
   AttachmentIcon,
   SharePointIcon,
 } from '@librechat/client';
-import { EToolResources, EModelEndpoint, defaultAgentCapabilities } from 'librechat-data-provider';
-import type { TConversation, EndpointFileConfig } from 'librechat-data-provider';
+import {
+  Providers,
+  EToolResources,
+  EModelEndpoint,
+  getConfiguredMimeAccept,
+  bedrockDocumentMimeTypes,
+  defaultAgentCapabilities,
+  bedrockDocumentExtensions,
+  isDocumentSupportedProvider,
+} from 'librechat-data-provider';
+import type {
+  TConversation,
+  EndpointFileConfig,
+  MimeUploadCapability,
+} from 'librechat-data-provider';
 import type { ExtendedFile, FileSetter } from '~/common';
 import {
   useAgentToolPermissions,
@@ -64,9 +83,12 @@ interface AttachFileMenuProps {
 
 const AttachFileMenu = ({
   agentId,
+  endpoint,
   disabled,
+  endpointType,
   conversationId,
   endpointFileConfig,
+  useResponsesApi,
   files,
   setFiles,
   setFilesLoading,
@@ -107,27 +129,51 @@ const AttachFileMenu = ({
    * */
   const capabilities = useAgentCapabilities(agentsConfig?.capabilities ?? defaultAgentCapabilities);
 
-  const { fileSearchAllowedByAgent, codeAllowedByAgent } = useAgentToolPermissions(
+  const { fileSearchAllowedByAgent, codeAllowedByAgent, provider } = useAgentToolPermissions(
     agentId,
     ephemeralAgent,
   );
 
-  const handleUploadClick = useCallback(() => {
-    if (!inputRef.current) {
-      return;
-    }
-    inputRef.current.value = '';
-    inputRef.current.accept = '';
-    inputRef.current.click();
-    inputRef.current.accept = '';
-  }, []);
+  const handleUploadClick = useCallback(
+    (fileType?: FileUploadType) => {
+      if (!inputRef.current) {
+        return;
+      }
+      inputRef.current.value = '';
+      const configuredAccept =
+        fileType !== undefined
+          ? getConfiguredMimeAccept(
+              endpointFileConfig?.supportedMimeTypes,
+              fileTypeCapabilities[fileType],
+            )
+          : undefined;
+      if (configuredAccept != null) {
+        inputRef.current.accept = configuredAccept;
+      } else if (fileType === 'image') {
+        inputRef.current.accept = 'image/*,.heif,.heic';
+      } else if (fileType === 'document') {
+        inputRef.current.accept = '.pdf,application/pdf';
+      } else if (fileType === 'image_document') {
+        inputRef.current.accept = 'image/*,.heif,.heic,.pdf,application/pdf';
+      } else if (fileType === 'image_document_extended') {
+        inputRef.current.accept = `image/*,.heif,.heic,${bedrockDocumentExtensions}`;
+      } else if (fileType === 'image_document_video_audio') {
+        inputRef.current.accept = 'image/*,.heif,.heic,.pdf,application/pdf,video/*,audio/*';
+      } else {
+        inputRef.current.accept = '';
+      }
+      inputRef.current.click();
+      inputRef.current.accept = '';
+    },
+    [endpointFileConfig?.supportedMimeTypes],
+  );
 
   const dropdownItems = useMemo(() => {
     const setToolResource = (value: EToolResources | undefined) => {
       toolResourceRef.current = value;
     };
 
-    const createMenuItems = (onAction: () => void) => {
+    const createMenuItems = (onAction: (fileType?: FileUploadType) => void) => {
       const items: MenuItemProps[] = [];
 
       let currentProvider = provider || endpoint;
