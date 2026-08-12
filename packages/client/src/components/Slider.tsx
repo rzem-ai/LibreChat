@@ -37,7 +37,7 @@ const Slider: React.ForwardRefExoticComponent<SliderProps & React.RefAttributes<
         }}
       >
         <SliderPrimitive.Track
-          {...{ className: 'relative h-2 w-full grow overflow-hidden rounded-full bg-border-medium' }}
+          {...{ className: 'relative h-2 w-full grow overflow-hidden rounded-full bg-secondary' }}
         >
           <SliderPrimitive.Range {...{ className: 'absolute h-full bg-primary' }} />
         </SliderPrimitive.Track>

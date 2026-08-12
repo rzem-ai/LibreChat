@@ -96,7 +96,7 @@ export function getStatusColor(
 
   // Connected: green (success)
   if (connectionState === 'connected') {
-    return 'bg-surface-submit';
+    return 'bg-green-500';
   }
 
   // Error: red
