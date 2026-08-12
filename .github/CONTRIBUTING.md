@@ -150,7 +150,7 @@ Imports are organized into three sections (in order):
 - Consolidate value imports from the same module as much as possible.
 - Always use standalone `import type { ... }` for type imports; never use inline `type` keyword inside value imports (e.g., `import { Foo, type Bar }` is wrong).
 
-**Note:** ESLint will automatically enforce these import conventions when you run `npm run lint --fix` or through pre-commit hooks.
+**Note:** ESLint will automatically enforce these import conventions when you run `npm run lint --fix` or through pre-commit hooks. Python files are formatted with Black in the same pre-commit flow.
 
 For the full set of coding standards, see [`AGENTS.md`](../AGENTS.md).
 
