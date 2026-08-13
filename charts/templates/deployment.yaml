@@ -22,10 +22,26 @@ spec:
         component: {{ $pod }}
     spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
+
+      {{- with $podConfig.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
       volumes:
         - name: librechat-config
           configMap:
             name: {{ include "helm.fullname" . }}-config
+        - name: librechat-config-costs
+          configMap:
+            name: {{ include "helm.fullname" . }}-config
+        {{- range $container, $config := $podConfig.containers }}
+        {{- if and $config.persistence (hasKey $config.persistence "enabled") $config.persistence.enabled }}
+        - name: {{ $container }}-data
+          persistentVolumeClaim:
+            claimName: {{ $config.persistence.name | default (printf "%s-%s-data" $pod $container) }}
+        {{- end }}
+        {{- end }}
       {{- with $podConfig.initContainers }}
       initContainers:
         {{- range $container, $config := . }}
@@ -111,6 +127,14 @@ spec:
             - name: librechat-config
               mountPath: /app/librechat.yaml
               subPath: librechat.yaml
+              readOnly: true
+            {{- if and $config.persistence (hasKey $config.persistence "enabled") $config.persistence.enabled }}
+            - name: {{ $container }}-data
+              mountPath: {{ $config.persistence.mountPath | default "/data" }}
+            {{- end }}
+            - name: librechat-config-costs
+              mountPath: /app/endpoint-costs.yaml
+              subPath: endpoint-costs.yaml
               readOnly: true
             {{- with $config.volumeMounts }}
             {{- toYaml . | nindent 12 }}
