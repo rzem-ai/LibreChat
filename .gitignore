@@ -115,7 +115,7 @@ junit.xml
 secrets.json
 update-token.sh
 
-# Deloitte Custom Chaneg: Track docker override file
+# Deloitte Custom Change: Track docker override file
 # docker-compose.override.yaml
 # docker-compose.override.yml
 
