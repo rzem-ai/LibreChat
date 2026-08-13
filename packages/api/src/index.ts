@@ -1,4 +1,6 @@
 export * from './app';
+/* Config */
+export * from './config';
 /* Artifacts */
 export * from './artifacts';
 /* Admin */
@@ -73,6 +75,8 @@ export * from './shared-links/service';
 export * from './shared-links/config';
 /* Stream */
 export * from './stream';
+/* Feedback */
+export * from './feedback';
 /* Diagnostics */
 export { memoryDiagnostics } from './utils/memory';
 /* RUM */
