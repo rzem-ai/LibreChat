@@ -1,3 +1,7 @@
+/**
+ * Deloitte-custom skill scan error formatting. Not part of upstream LibreChat —
+ * supports the Deloitte Skill scanner (see `packages/api/src/skills/scanner.ts`).
+ */
 import { SKILL_SEVERITY_LEVELS } from 'librechat-data-provider';
 
 export interface SkillScanIssue {
