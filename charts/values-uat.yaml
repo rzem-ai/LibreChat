@@ -112,7 +112,7 @@ pods:
           DEBUG_CONSOLE: 'true'
           AGENT_DEBUG_LOGGING: 'true'
           # Skill Security Scanner
-          SKILL_SCANNER_URL: 'https://portal-dev.ctk.au.deloitte.com/v1/scan?verbose=false'
+          SKILL_SCANNER_URL: 'https://ai-registry-uat.ctk.au.deloitte.com/v1/scan?verbose=false'
           SKILL_SCANNER_TIMEOUT_MS: '15000'
           SKILL_SCANNER_MIN_SEVERITY: 'high'
         secrets:
