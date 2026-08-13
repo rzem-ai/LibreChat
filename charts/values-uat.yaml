@@ -175,3 +175,11 @@ pods:
           MEILI_ENV: 'production' # Use production to mimic PROD environment behaviour
         secrets:
           MEILI_MASTER_KEY: librechat-meili-master-key-uat
+        persistence:
+          enabled: true
+          size: 10Gi
+          accessModes:
+            - ReadWriteOnce
+          name: "meilisearch-data"
+          mountPath: /meili_data
+          storageClass: "managed-csi-standard-private"

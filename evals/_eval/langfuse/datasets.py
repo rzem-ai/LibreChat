@@ -78,7 +78,11 @@ def _get_langfuse_client():
 
     host = _resolve_langfuse_host()
     os.environ["LANGFUSE_BASE_URL"] = host
-    ssl_verify = os.environ.get("LANGFUSE_SSL_VERIFY", "true").lower() not in ("false", "0", "no")
+    ssl_verify = os.environ.get("LANGFUSE_SSL_VERIFY", "true").lower() not in (
+        "false",
+        "0",
+        "no",
+    )
     httpx_client = httpx.Client(verify=ssl_verify)
     return Langfuse(host=host, httpx_client=httpx_client)
 
@@ -185,7 +189,9 @@ def link_trace_to_dataset(
             trace_id=trace_id,
         )
         langfuse.flush()
-        print(f"[LANGFUSE] Linked trace {trace_id} to dataset item '{case_key}' (run: {run_name})")
+        print(
+            f"[LANGFUSE] Linked trace {trace_id} to dataset item '{case_key}' (run: {run_name})"
+        )
     except Exception as exc:
         print(f"[LANGFUSE] Error linking trace to dataset: {exc}")
 
@@ -222,19 +228,35 @@ def post_scores(
         return
 
     try:
-        langfuse.create_score(trace_id=trace_id, name="eval_score", value=composite, data_type="NUMERIC")
-        langfuse.create_score(trace_id=trace_id, name="passed", value=gating_passed, data_type="BOOLEAN")
+        langfuse.create_score(
+            trace_id=trace_id, name="eval_score", value=composite, data_type="NUMERIC"
+        )
+        langfuse.create_score(
+            trace_id=trace_id, name="passed", value=gating_passed, data_type="BOOLEAN"
+        )
 
         for name, avg, _threshold, _success, _scores in gating_results:
             if avg is not None:
-                langfuse.create_score(trace_id=trace_id, name=_score_name(name), value=avg, data_type="NUMERIC")
+                langfuse.create_score(
+                    trace_id=trace_id,
+                    name=_score_name(name),
+                    value=avg,
+                    data_type="NUMERIC",
+                )
 
-        for name, avg, _threshold, _success, _scores in (conversational_results or []):
+        for name, avg, _threshold, _success, _scores in conversational_results or []:
             if avg is not None:
-                langfuse.create_score(trace_id=trace_id, name=_score_name(name), value=avg, data_type="NUMERIC")
+                langfuse.create_score(
+                    trace_id=trace_id,
+                    name=_score_name(name),
+                    value=avg,
+                    data_type="NUMERIC",
+                )
 
         langfuse.flush()
         total = 2 + len(gating_results) + len(conversational_results or [])
-        print(f"[LANGFUSE] Posted {total} scores: eval_score={composite:.3f}, passed={gating_passed}")
+        print(
+            f"[LANGFUSE] Posted {total} scores: eval_score={composite:.3f}, passed={gating_passed}"
+        )
     except Exception as exc:
         print(f"[LANGFUSE] Error posting scores: {exc}")

@@ -1485,6 +1485,21 @@ export type TRumConfig = {
   environment?: string;
 };
 
+export type TModelPricing = Record<
+  string,
+  {
+    inputPer1M: number;
+    outputPer1M: number;
+    provider?: string;
+  }
+>;
+
+export type TEndpointCostConfig = {
+  REFERENCE_MODEL_ID: string;
+  MULTIPLIER_ROUNDING_INCREMENT: number;
+  MIN_MULTIPLIER: number;
+};
+
 export type StartupConfigContext = 'share';
 
 export type TStartupConfig = {
@@ -1523,6 +1538,8 @@ export type TStartupConfig = {
   helpAndFaqURL: string;
   customFooter?: string;
   modelSpecs?: TSpecsConfig;
+  modelPricing?: TModelPricing;
+  endpointCostConfig?: TEndpointCostConfig;
   modelDescriptions?: Record<string, Record<string, string>>;
   sharedLinksEnabled: boolean;
   publicSharedLinksEnabled: boolean;
@@ -2874,7 +2891,7 @@ export type TSpecialVarLabel = `com_ui_special_var_${keyof typeof specialVariabl
  * Does not infer or default any endpoint type when absent.
  */
 export function getEndpointField<
-  K extends TConfig[keyof TConfig] extends never ? never : keyof TConfig,
+  K extends (TConfig[keyof TConfig] extends never ? never : keyof TConfig),
 >(
   endpointsConfig: TEndpointsConfig | undefined | null,
   endpoint: EModelEndpoint | string | null | undefined,

@@ -37,6 +37,18 @@ git clone https://github.com/Deloitte-Australia/tt-librechat.git
 cd tt-librechat
 ```
 
+### Check out the `develop` branch:
+
+```zsh
+git checkout origin/develop
+```
+
+### Enable `husky` pre-commit hooks
+
+```zsh
+npm run prepare
+```
+
 ## 2. Initialize Submodules
 
 This repository uses Git submodules to include external dependencies. The `rag_api` submodule contains the RAG (Retrieval-Augmented Generation) API code from the [tt-librechat-rag](https://github.com/Deloitte-Australia/tt-librechat-rag) repository. The `admin_panel` submodule contains the admin panel code from the [ea-libreadmin](https://github.com/Deloitte-Australia/ea-libreadmin). 
@@ -369,7 +381,11 @@ If models fail with gateway or MCP errors, this is almost always the cause. If b
 
 ---
 
-## Common fixes
+## Troubleshooting
+
+### Build succeeds but SSO says "An unknown error occurred"
+
+Ensure that the `OPENID_ISSUER`, `OPENID_CLIENT_ID`, and `OPENID_CLIENT_SECRET` values in your `.env` are populated. Get these values from another team member if you don't have them.
 
 ### Build fails with "context" or "Dockerfile" errors
 
