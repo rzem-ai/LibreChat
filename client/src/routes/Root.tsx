@@ -1,28 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRecoilValue } from 'recoil';
 import { Outlet } from 'react-router-dom';
 import { useMediaQuery } from '@librechat/client';
+import type { CSSProperties } from 'react';
 import {
-  PromptGroupsProvider,
-  AssistantsMapContext,
   AgentsMapContext,
-  SetConvoProvider,
+  AssistantsMapContext,
   FileMapContext,
+  PromptGroupsProvider,
+  SetConvoProvider,
 } from '~/Providers';
 import {
-  useSearchEnabled,
+  useAgentsMap,
   useAssistantsMap,
   useAuthContext,
-  useAgentsMap,
   useFileMap,
+  useSearchEnabled,
 } from '~/hooks';
+import { useGetStartupConfig, useHealthCheck, useUserTermsQuery } from '~/data-provider';
+import { DeloitteHeader } from '~/components/DeloitteComponents/DeloitteTopHeader';
 import KeyboardShortcutsDialog from '~/components/Nav/KeyboardShortcutsDialog';
 import KeyboardDeleteDialog from '~/components/Nav/KeyboardDeleteDialog';
-import { useUserTermsQuery, useGetStartupConfig } from '~/data-provider';
 import useKeyboardShortcuts from '~/hooks/useKeyboardShortcuts';
 import { UnifiedSidebar } from '~/components/UnifiedSidebar';
 import { TermsAndConditionsModal } from '~/components/ui';
-import { useHealthCheck } from '~/data-provider';
 import { Banner } from '~/components/Banners';
 import store from '~/store';
 
@@ -84,19 +85,27 @@ export default function Root() {
           <AgentsMapContext.Provider value={agentsMap}>
             <PromptGroupsProvider>
               <Banner onHeightChange={setBannerHeight} />
-              <div className="flex" style={{ height: `calc(100dvh - ${bannerHeight}px)` }}>
-                <div className="relative z-0 flex h-full w-full overflow-hidden">
-                  <UnifiedSidebar />
-                  <div
-                    className="relative flex h-full max-w-full flex-1 flex-col overflow-hidden"
-                    style={{
-                      transform:
-                        isSmallScreen && sidebarExpanded ? 'translateX(min(85vw, 380px))' : 'none',
-                      transition: 'transform 300ms cubic-bezier(0.2, 0, 0, 1)',
-                    }}
-                    inert={isSmallScreen && sidebarExpanded ? '' : undefined}
-                  >
-                    <Outlet />
+              <div style={{ '--header-height': '54px' } as CSSProperties}>
+                <DeloitteHeader />
+                <div
+                  className="flex"
+                  style={{ height: `calc(100dvh - ${bannerHeight}px - var(--header-height))` }}
+                >
+                  <div className="relative z-0 flex h-full w-full overflow-hidden">
+                    <UnifiedSidebar />
+                    <div
+                      className="relative flex h-full max-w-full flex-1 flex-col overflow-hidden"
+                      style={{
+                        transform:
+                          isSmallScreen && sidebarExpanded
+                            ? 'translateX(min(85vw, 380px))'
+                            : 'none',
+                        transition: 'transform 300ms cubic-bezier(0.2, 0, 0, 1)',
+                      }}
+                      inert={isSmallScreen && sidebarExpanded ? '' : undefined}
+                    >
+                      <Outlet />
+                    </div>
                   </div>
                 </div>
               </div>
