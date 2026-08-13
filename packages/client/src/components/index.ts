@@ -1,5 +1,4 @@
 export * from './Accordion';
-export * from './DeloitteLogo';
 export * from './AnimatedTabs';
 export * from './AlertDialog';
 export * from './Breadcrumb';

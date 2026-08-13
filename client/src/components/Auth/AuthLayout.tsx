@@ -1,4 +1,4 @@
-import { DeloitteLogo, ThemeSelector } from '@librechat/client';
+import { ThemeSelector } from '@librechat/client';
 import { TStartupConfig } from 'librechat-data-provider';
 import { ErrorMessage } from '~/components/Auth/ErrorMessage';
 import { TranslationKeys, useLocalize } from '~/hooks';
@@ -60,10 +60,11 @@ function AuthLayout({
     <div className="relative flex min-h-screen flex-col bg-surface-primary">
       <Banner />
       <BlinkAnimation active={isFetching}>
-        <div className="mt-6 flex h-10 w-full items-center justify-center text-black dark:text-white">
-          <DeloitteLogo
-            className="h-6 w-auto"
-            title={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'Deloitte' })}
+        <div className="mt-6 h-10 w-full bg-cover">
+          <img
+            src="assets/logo.svg"
+            className="h-full w-full object-contain"
+            alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'LibreChat' })}
           />
         </div>
       </BlinkAnimation>
