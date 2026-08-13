@@ -45,7 +45,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:076581b31a335a1ef239c53a238ee4c561dc5f5137f615638c1975429a56388a'
+          tag: 'develop@sha256:b8af160dea97a45217009e4e60b76083ab8869e82aaf5571671733c016c3d9b2'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -164,8 +164,16 @@ pods:
       meilisearch:
         image:
           pullPolicy: Always
-          tag: 'develop@sha256:b5d53c92a926c37875b6cb309f77c65e274d61a40b2883d7b7e5a8737c1d5e0c'
+          tag: 'develop@sha256:7e66819662e466f129a0729106dc7efa96d19b47bf956dee734a7447b430b7bd'
         env:
           MEILI_ENV: 'development'
         secrets:
           MEILI_MASTER_KEY: librechat-meili-master-key-dev
+        persistence:
+          enabled: true
+          size: 10Gi
+          accessModes:
+            - ReadWriteOnce
+          name: "meilisearch-data"
+          mountPath: /meili_data
+          storageClass: "managed-csi-standard-private"
