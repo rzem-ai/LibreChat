@@ -6,6 +6,7 @@ import { useFavorites, useLocalize, useIsActiveItem } from '~/hooks';
 import { useModelSelectorContext } from '../ModelSelectorContext';
 import { CustomMenuItem as MenuItem } from '../CustomMenu';
 import SpecDescription from './SpecDescription';
+import ModelCost from './ModelCost';
 import SpecIcon from './SpecIcon';
 import { cn } from '~/utils';
 
@@ -52,6 +53,7 @@ export function ModelSpecItem({ spec, isSelected }: ModelSpecItemProps) {
           <SpecDescription description={spec.description} />
         </div>
       </div>
+      <ModelCost modelId={spec.preset.model} />
       <button
         type="button"
         tabIndex={isActive ? 0 : -1}

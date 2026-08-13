@@ -110,7 +110,8 @@
     "migrate:shared-link-permissions:batch": "node config/migrate-shared-link-permissions.js --batch-size=50",
     "migrate:orphaned-agent-files:dry-run": "node config/migrate-orphaned-agent-files.js --dry-run",
     "migrate:orphaned-agent-files": "node config/migrate-orphaned-agent-files.js",
-    "migrate:orphaned-agent-files:batch": "node config/migrate-orphaned-agent-files.js --batch-size=50"
+    "migrate:orphaned-agent-files:batch": "node config/migrate-orphaned-agent-files.js --batch-size=50",
+    "postinstall": "patch-package"
   },
   "repository": {
     "type": "git",
@@ -196,6 +197,9 @@
     "js-yaml": "^4.2.0",
     "ws": "^8.21.0",
     "@opentelemetry/core": "^2.9.0"
+  },
+  "dependencies": {
+    "patch-package": "^8.0.1"
   },
   "nodemonConfig": {
     "ignore": [
