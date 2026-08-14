@@ -53,6 +53,7 @@ export default function Root() {
   const fileMap = useFileMap({ isAuthenticated });
 
   const { data: config } = useGetStartupConfig();
+  const deloitteHeader = config?.interface?.deloitteHeader;
   const { data: termsData } = useUserTermsQuery({
     enabled: isAuthenticated && config?.interface?.termsOfService?.modalAcceptance === true,
   });
@@ -85,8 +86,12 @@ export default function Root() {
           <AgentsMapContext.Provider value={agentsMap}>
             <PromptGroupsProvider>
               <Banner onHeightChange={setBannerHeight} />
-              <div style={{ '--header-height': '54px' } as CSSProperties}>
-                <DeloitteHeader />
+              <div
+                style={
+                  { '--header-height': deloitteHeader?.enabled ? '54px' : '0px' } as CSSProperties
+                }
+              >
+                {deloitteHeader?.enabled && <DeloitteHeader title={deloitteHeader.title} />}
                 <div
                   className="flex"
                   style={{ height: `calc(100dvh - ${bannerHeight}px - var(--header-height))` }}

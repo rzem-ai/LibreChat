@@ -1255,6 +1255,13 @@ const termsOfServiceSchema = z.object({
 
 export type TTermsOfService = z.infer<typeof termsOfServiceSchema>;
 
+const deloitteHeaderSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    title: z.string().optional(),
+  })
+  .optional();
+
 // Schema for localized string (either simple string or language-keyed object)
 const localizedStringSchema = z.union([z.string(), z.record(z.string())]);
 export type LocalizedString = z.infer<typeof localizedStringSchema>;
@@ -1292,6 +1299,7 @@ export const interfaceSchema = z
       })
       .optional(),
     termsOfService: termsOfServiceSchema.optional(),
+    deloitteHeader: deloitteHeaderSchema,
     customWelcome: z.string().optional(),
     mcpServers: mcpServersSchema.optional(),
     modelSelect: z.boolean().optional(),
@@ -2891,7 +2899,7 @@ export type TSpecialVarLabel = `com_ui_special_var_${keyof typeof specialVariabl
  * Does not infer or default any endpoint type when absent.
  */
 export function getEndpointField<
-  K extends (TConfig[keyof TConfig] extends never ? never : keyof TConfig),
+  K extends TConfig[keyof TConfig] extends never ? never : keyof TConfig,
 >(
   endpointsConfig: TEndpointsConfig | undefined | null,
   endpoint: EModelEndpoint | string | null | undefined,
