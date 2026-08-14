@@ -77,7 +77,7 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 git status --short
 git branch --show-current
 git rev-parse HEAD
-git remote -v
+git remote -v # redact any embedded credentials/tokens before sharing output
 git worktree list
 ```
 
@@ -257,7 +257,7 @@ services:
 
 Compose project scoping automatically isolates generated container names. Explicit `container_name`
 values bypass that scoping and will collide. For every service with `container_name`, override it
-with a unique project-prefixed value or remove it with a supported Compose reset:
+with a unique project-prefixed value:
 
 ```yaml
 services:
@@ -538,7 +538,7 @@ Confirm the normal environment still exists in the same state recorded before th
 
 ## Reporting Template
 
-After deployment:
+After testing:
 
 ```text
 PR: <URL/number>
