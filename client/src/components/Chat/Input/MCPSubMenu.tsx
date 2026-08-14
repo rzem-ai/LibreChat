@@ -90,8 +90,9 @@ const MCPSubMenu = React.forwardRef<HTMLButtonElement, MCPSubMenuProps>(
             portal={true}
             unmountOnHide={true}
             aria-label={localize('com_ui_mcp_servers')}
+            // Fixed width prevents shrink-to-fit snapping as rows mount/unmount during auth; max-w clamps it on narrow viewports.
             className={cn(
-              'animate-popover-left z-40 ml-3 flex w-[300px] flex-col rounded-xl',
+              'animate-popover-left z-40 ml-3 flex w-[300px] max-w-[calc(100vw-2rem)] flex-col rounded-xl',
               'border border-border-light bg-presentation p-1.5 shadow-lg',
             )}
           >

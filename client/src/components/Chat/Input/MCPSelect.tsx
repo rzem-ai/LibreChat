@@ -99,8 +99,9 @@ function MCPSelectContent() {
           modal={true}
           unmountOnHide={true}
           aria-label={localize('com_ui_mcp_servers')}
+          // Fixed width prevents shrink-to-fit snapping as rows mount/unmount during auth; max-w clamps it on narrow viewports.
           className={cn(
-            'z-50 flex w-[300px] flex-col rounded-xl',
+            'z-50 flex w-[300px] max-w-[calc(100vw-2rem)] flex-col rounded-xl',
             'border border-border-light bg-presentation p-1.5 shadow-lg',
             'origin-top opacity-0 transition-[opacity,transform] duration-200 ease-out',
             'data-[enter]:scale-100 data-[enter]:opacity-100',
