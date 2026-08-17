@@ -1,5 +1,5 @@
-import { getConfigDefaults, RetentionMode } from 'librechat-data-provider';
 import type { TCustomConfig } from 'librechat-data-provider';
+import { getConfigDefaults, RetentionMode } from 'librechat-data-provider';
 import { loadDefaultInterface } from './interface';
 
 describe('loadDefaultInterface', () => {
