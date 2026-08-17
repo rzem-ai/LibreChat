@@ -53,6 +53,7 @@ type FileUploadType =
   | 'image_document_extended'
   | 'image_document_video_audio';
 
+  /** What each provider upload path can actually send, used to scope the picker filter to selectable files. */
 const fileTypeCapabilities: Record<FileUploadType, MimeUploadCapability> = {
   image: { categories: ['image'] },
   document: { categories: ['document'] },
@@ -61,7 +62,8 @@ const fileTypeCapabilities: Record<FileUploadType, MimeUploadCapability> = {
     categories: ['image', 'document'],
     documentMimeTypes: bedrockDocumentMimeTypes,
   },
-  image_document_video_audio: {
+  /** Google/Vertex/OpenRouter media path: documents are limited to PDF (see isProviderAttachType). */
+    image_document_video_audio: {
     categories: ['image', 'document', 'audio', 'video'],
     documentMimeTypes: ['application/pdf'],
   },

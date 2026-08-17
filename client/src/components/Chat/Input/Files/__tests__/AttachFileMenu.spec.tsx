@@ -99,7 +99,7 @@ function setupMocks(overrides: { provider?: string } = {}) {
     com_sidepanel_attach_files: 'Attach Files',
     com_ui_upload_code_environment: 'Upload to Code Environment',
     com_ui_upload_file_search: 'Upload for File Search',
-    com_ui_upload_image_input: 'Upload as Image',
+    com_ui_upload_image_input: 'Upload Image',
     com_ui_upload_ocr_text: 'Upload as Text',
     com_ui_upload_provider: 'Upload to Provider',
   };
@@ -129,6 +129,12 @@ function setupMocks(overrides: { provider?: string } = {}) {
   });
 }
 
+function enableProviderUpload() {
+  mockUseGetStartupConfig.mockReturnValue({
+    data: { sharePointFilePickerEnabled: false, interface: { providerUpload: true } },
+  });
+}
+
 function renderMenu(props: Record<string, unknown> = {}) {
   return render(
     <QueryClientProvider client={queryClient}>
@@ -152,6 +158,42 @@ function openMenu() {
 
 describe('AttachFileMenu', () => {
   beforeEach(jest.clearAllMocks);
+
+  describe('Provider Upload', () => {
+    it('uses the resolved agent provider for custom endpoints', () => {
+      setupMocks({ provider: 'Moonshot' });
+      enableProviderUpload();
+      renderMenu({ endpoint: EModelEndpoint.agents, endpointType: EModelEndpoint.custom });
+      openMenu();
+      expect(screen.getByText('Upload to Provider')).toBeInTheDocument();
+      expect(screen.queryByText('Upload Image')).not.toBeInTheDocument();
+    });
+
+    it('falls back to image upload when an agent has no resolved provider', () => {
+      setupMocks();
+      enableProviderUpload();
+      renderMenu({ endpoint: EModelEndpoint.agents, endpointType: EModelEndpoint.agents });
+      openMenu();
+      expect(screen.getByText('Upload Image')).toBeInTheDocument();
+      expect(screen.queryByText('Upload to Provider')).not.toBeInTheDocument();
+    });
+
+    it('supports Azure OpenAI provider upload with the Responses API', () => {
+      setupMocks({ provider: EModelEndpoint.azureOpenAI });
+      enableProviderUpload();
+      renderMenu({ endpointType: EModelEndpoint.azureOpenAI, useResponsesApi: true });
+      openMenu();
+      expect(screen.getByText('Upload to Provider')).toBeInTheDocument();
+    });
+
+    it('falls back to image upload for Azure OpenAI without the Responses API', () => {
+      setupMocks({ provider: EModelEndpoint.azureOpenAI });
+      enableProviderUpload();
+      renderMenu({ endpointType: EModelEndpoint.azureOpenAI, useResponsesApi: false });
+      openMenu();
+      expect(screen.getByText('Upload Image')).toBeInTheDocument();
+    });
+  });
 
   describe('Basic Rendering', () => {
     it('renders the attachment button', () => {
