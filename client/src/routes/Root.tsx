@@ -86,7 +86,7 @@ export default function Root() {
           <AgentsMapContext.Provider value={agentsMap}>
             <PromptGroupsProvider>
               <Banner onHeightChange={setBannerHeight} />
-              {/* CSS variable for Deloitte header height, used in viewport height calculations below */}
+              {/* Deloitte Custom Change: Add Deloitte Header to top of view */}
               <div
                 style={
                   { '--header-height': deloitteHeader?.enabled ? '54px' : '0px' } as CSSProperties
