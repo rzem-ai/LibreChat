@@ -56,9 +56,6 @@
   --amber-900: #78350f;
   --amber-950: #451a03;
   --brand-purple: #ab68ff;
-  --gizmo-gray-500: #999;
-  --gizmo-gray-600: #666;
-  --gizmo-gray-950: #0f0f0f;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
@@ -346,9 +343,9 @@ html {
   --surface-contrast-foreground: oklch(0.985 0 0);
 }
 .gizmo {
-  --text-primary: var(--gizmo-gray-950);
-  --text-secondary: var(--gizmo-gray-600);
-  --text-tertiary: var(--gizmo-gray-500);
+  --text-primary: oklch(0.15 0 0); /* Dark gray ~#0f0f0f */
+  --text-secondary: oklch(0.45 0 0); /* Medium gray ~#666 */
+  --text-tertiary: oklch(0.6 0 0); /* Light gray ~#999 */
   --surface-primary: oklch(1 0 0);
   --surface-secondary: oklch(0.97 0 0);
   --surface-tertiary: oklch(0.93 0 0);
@@ -360,7 +357,7 @@ html {
 .gizmo.dark {
   --text-primary: oklch(0.985 0 0);
   --text-secondary: oklch(0.75 0 0);
-  --text-tertiary: var(--gizmo-gray-500);
+  --text-tertiary: oklch(0.6 0 0); /* Light gray ~#999 */
   --surface-primary: oklch(0.145 0 0);
   --surface-secondary: oklch(0.205 0 0);
   --surface-tertiary: oklch(0.269 0 0);
