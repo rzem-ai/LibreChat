@@ -4,7 +4,7 @@ cache: true
 interface:
   deloitteHeader:
     enabled: true
-    title: MyAssist 2.0
+    title: MyAssist
 
   agents:
     use: true
