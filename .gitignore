@@ -101,6 +101,7 @@ monospace.json
 *.pem
 config.local.ts
 **/storageState.json
+/e2e/live-auth.json
 junit.xml
 **/.venv/
 **/venv/
