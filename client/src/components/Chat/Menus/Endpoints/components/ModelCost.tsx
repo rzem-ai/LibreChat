@@ -24,16 +24,10 @@ function getCostFactor(
 ) {
   const factor = (inputCost / referenceInputCost + outputCost / referenceOutputCost) / 2;
 
-  return Math.max(
-    Math.ceil(factor / roundingIncrement) * roundingIncrement,
-    minMultiplier,
-  );
+  return Math.max(Math.ceil(factor / roundingIncrement) * roundingIncrement, minMultiplier);
 }
 
-export function getModelCost(
-  modelId: string | null | undefined,
-  modelPricing: TModelPricing = {},
-) {
+export function getModelCost(modelId: string | null | undefined, modelPricing: TModelPricing = {}) {
   if (!modelId) {
     return undefined;
   }
@@ -49,8 +43,7 @@ export default function ModelCost({ modelId }: { modelId: string | null | undefi
     return null;
   }
 
-  const { REFERENCE_MODEL_ID, MULTIPLIER_ROUNDING_INCREMENT, MIN_MULTIPLIER } =
-    endpointCostConfig;
+  const { REFERENCE_MODEL_ID, MULTIPLIER_ROUNDING_INCREMENT, MIN_MULTIPLIER } = endpointCostConfig;
   const referencePricing = getModelCost(REFERENCE_MODEL_ID, modelPricing);
 
   if (!referencePricing) {
