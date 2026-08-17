@@ -576,10 +576,13 @@ describe('configSchema — interface.marketplace.categories', () => {
     expect(result.success).toBe(true);
   });
 
-  it('accepts an optional `label` and `description`', () => {
+  it('accepts an optional `label` used as a translation key', () => {
     const result = configSchema.safeParse(
       withCategories({
-        list: [{ value: 'build-deliver', label: 'Build & Deliver', description: 'Delivery work' }],
+        list: [
+          { value: 'pursue-shape', label: 'com_agents_category_pursue_shape' },
+          { value: 'aftersales', label: 'Customer Success' },
+        ],
       }),
     );
     expect(result.success).toBe(true);

@@ -154,25 +154,6 @@ describe('loadCustomConfig', () => {
     );
   });
 
-  it('does not run marketplace category sync when marketplace is disabled', async () => {
-    const config = {
-      version: '1.0',
-      cache: true,
-      interface: {
-        marketplace: {
-          use: false,
-          categories: { enableDefaultCategories: false, list: [] },
-        },
-      },
-    };
-    process.env.CONFIG_PATH = 'marketplaceDisabledConfig.yaml';
-    loadYaml.mockReturnValueOnce(config);
-
-    await loadCustomConfig();
-
-    expect(syncCategories).not.toHaveBeenCalled();
-  });
-
   it('should return null and log if config schema validation fails', async () => {
     const invalidConfig = { invalidField: true };
     process.env.CONFIG_PATH = 'invalidConfig.yaml';

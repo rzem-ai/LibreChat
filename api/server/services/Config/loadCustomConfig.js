@@ -163,15 +163,28 @@ https://www.librechat.ai/docs/configuration/stt_tts`);
     }
   }
 
-  if (customConfig.interface?.marketplace?.use && customConfig.interface.marketplace.categories) {
+  // Injecting custom marketplace categories
+  logger.info('Checking for custom marketplace categories to sync.');
+  if (customConfig.interface?.marketplace?.use) {
+    logger.info('Marketplace is enabled in config.');
     const marketplaceConfig = customConfig.interface.marketplace;
-    const enableDefaultCategories =
-      typeof marketplaceConfig.categories.enableDefaultCategories === 'boolean'
-        ? marketplaceConfig.categories.enableDefaultCategories
-        : true;
-    await runAsSystem(() =>
-      syncCategories(marketplaceConfig.categories.list, enableDefaultCategories),
-    );
+    if (marketplaceConfig.categories) {
+      logger.info('Marketplace categories configuration found.');
+      // enableDefaultCategories should be set as a boolean, defaulting to true if not specified
+      const enableDefaultCategories =
+        typeof marketplaceConfig.categories.enableDefaultCategories === 'boolean'
+          ? marketplaceConfig.categories.enableDefaultCategories
+          : true;
+      const customCategoriesList = marketplaceConfig.categories.list;
+      if (Array.isArray(customCategoriesList)) {
+        logger.info(`Found ${customCategoriesList.length} custom categories to sync.`);
+      } else {
+        logger.info(
+          'No custom categories `list` provided; only default-category toggling will run.',
+        );
+      }
+      await runAsSystem(() => syncCategories(customCategoriesList, enableDefaultCategories));
+    }
   }
 
   (customConfig.endpoints?.custom ?? []).forEach(addOpenRouterDefaults);
