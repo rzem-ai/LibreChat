@@ -99,7 +99,7 @@ function MCPSelectContent() {
           modal={true}
           unmountOnHide={true}
           aria-label={localize('com_ui_mcp_servers')}
-          // Fixed width prevents shrink-to-fit snapping as rows mount/unmount during auth; max-w clamps it on narrow viewports.
+          // Deloitte Custom Change: Fixed width prevents shrink-to-fit snapping as rows mount/unmount during auth; max-w clamps it on narrow viewports.
           className={cn(
             'z-50 flex w-[300px] max-w-[calc(100vw-2rem)] flex-col rounded-xl',
             'border border-border-light bg-presentation p-1.5 shadow-lg',
