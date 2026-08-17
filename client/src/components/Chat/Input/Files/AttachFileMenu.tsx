@@ -179,6 +179,8 @@ const AttachFileMenu = ({
       const items: MenuItemProps[] = [];
 
       let currentProvider = provider || endpoint;
+      
+      // This will be removed in a future PR to formally normalize Providers comparisons to be case insensitive
       if (currentProvider?.toLowerCase() === Providers.OPENROUTER) {
         currentProvider = Providers.OPENROUTER;
       }
