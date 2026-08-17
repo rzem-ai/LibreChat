@@ -11,11 +11,11 @@ spec:
   replicas: {{ $podConfig.replicas }}
   {{ - if $podConfig.strategy }}
   strategy:
-    { { - toYaml $podConfig.strategy | nindent 4 } }
-  { { - else if $persistenceEnabled } }
+    {{ - toYaml $podConfig.strategy | nindent 4 }}
+  {{ - else if $persistenceEnabled }}
   strategy:
     type: Recreate
-  { { - end } }
+  {{ - end }}
   selector:
     matchLabels:
       {{- include "helm.selectorLabels" . | nindent 6 }}
