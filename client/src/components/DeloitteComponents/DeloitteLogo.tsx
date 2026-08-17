@@ -4,16 +4,11 @@ export interface DeloitteLogoProps extends React.SVGProps<SVGSVGElement> {
   /** Accessible title announced for the wordmark. */
   title?: string;
 }
-export const DeloitteLogo = ({
-  title = 'Deloitte',
-  ref,
-  ...props
-}: DeloitteLogoProps & { ref?: React.Ref<SVGSVGElement> }) => (
+export const DeloitteLogo = ({ title = 'Deloitte', ...props }: DeloitteLogoProps) => (
   <svg
     aria-label={title}
     fill="none"
     height={24}
-    ref={ref}
     role="img"
     viewBox="0 0 97 24"
     width={97}
