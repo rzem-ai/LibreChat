@@ -1,5 +1,5 @@
-import type { TCustomConfig } from 'librechat-data-provider';
 import { getConfigDefaults, RetentionMode } from 'librechat-data-provider';
+import type { TCustomConfig } from 'librechat-data-provider';
 import { loadDefaultInterface } from './interface';
 
 describe('loadDefaultInterface', () => {
@@ -216,6 +216,35 @@ describe('loadDefaultInterface', () => {
       enabled: true,
       title: 'MyAssist NextGenV2',
     });
+  });
+
+  it('resolves environment variables in the configured Deloitte header title', async () => {
+    const originalAppTitle = process.env.APP_TITLE;
+    process.env.APP_TITLE = 'MyAssist NextGenV2';
+
+    try {
+      const config: Partial<TCustomConfig> = {
+        interface: {
+          deloitteHeader: { enabled: true, title: '${APP_TITLE}' },
+        },
+      };
+
+      const interfaceConfig = await loadDefaultInterface({
+        config,
+        configDefaults: getConfigDefaults(),
+      });
+
+      expect(interfaceConfig?.deloitteHeader).toEqual({
+        enabled: true,
+        title: 'MyAssist NextGenV2',
+      });
+    } finally {
+      if (originalAppTitle === undefined) {
+        delete process.env.APP_TITLE;
+      } else {
+        process.env.APP_TITLE = originalAppTitle;
+      }
+    }
   });
 
   it('omits the Deloitte header when it is not explicitly configured', async () => {
