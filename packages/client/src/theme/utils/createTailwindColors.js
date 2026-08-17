@@ -22,55 +22,55 @@ function withAlpha(variableName) {
 function createTailwindColors() {
   return {
     /* Text */
-    'text-primary': `var(--text-primary)`,
+    'text-primary': withAlpha('--text-primary'),
     'text-secondary': withAlpha('--text-secondary'),
-    'text-secondary-alt': `var(--text-secondary-alt)`,
-    'text-tertiary': `var(--text-tertiary)`,
-    'text-warning': `var(--text-warning)`,
-    'text-destructive': `var(--text-destructive)`,
+    'text-secondary-alt': withAlpha('--text-secondary-alt'),
+    'text-tertiary': withAlpha('--text-tertiary'),
+    'text-warning': withAlpha('--text-warning'),
+    'text-destructive': withAlpha('--text-destructive'),
 
     /* Ring */
-    'ring-primary': `var(--ring-primary)`,
+    'ring-primary': withAlpha('--ring-primary'),
 
     /* Header */
-    'header-primary': `var(--header-primary)`,
-    'header-hover': `var(--header-hover)`,
-    'header-button-hover': `var(--header-button-hover)`,
+    'header-primary': withAlpha('--header-primary'),
+    'header-hover': withAlpha('--header-hover'),
+    'header-button-hover': withAlpha('--header-button-hover'),
 
     /* Surfaces */
-    'surface-active': `var(--surface-active)`,
-    'surface-active-alt': `var(--surface-active-alt)`,
-    'surface-hover': `var(--surface-hover)`,
-    'surface-hover-alt': `var(--surface-hover-alt)`,
+    'surface-active': withAlpha('--surface-active'),
+    'surface-active-alt': withAlpha('--surface-active-alt'),
+    'surface-hover': withAlpha('--surface-hover'),
+    'surface-hover-alt': withAlpha('--surface-hover-alt'),
     'surface-primary': withAlpha('--surface-primary'),
-    'surface-primary-alt': `var(--surface-primary-alt)`,
-    'surface-primary-contrast': `var(--surface-primary-contrast)`,
-    'surface-secondary': `var(--surface-secondary)`,
-    'surface-secondary-alt': `var(--surface-secondary-alt)`,
-    'surface-tertiary': `var(--surface-tertiary)`,
-    'surface-tertiary-alt': `var(--surface-tertiary-alt)`,
-    'surface-dialog': `var(--surface-dialog)`,
-    'surface-chat': `var(--surface-chat)`,
-    'surface-contrast': `var(--surface-contrast)`,
-    'surface-contrast-foreground': `var(--surface-contrast-foreground)`,
+    'surface-primary-alt': withAlpha('--surface-primary-alt'),
+    'surface-primary-contrast': withAlpha('--surface-primary-contrast'),
+    'surface-secondary': withAlpha('--surface-secondary'),
+    'surface-secondary-alt': withAlpha('--surface-secondary-alt'),
+    'surface-tertiary': withAlpha('--surface-tertiary'),
+    'surface-tertiary-alt': withAlpha('--surface-tertiary-alt'),
+    'surface-dialog': withAlpha('--surface-dialog'),
+    'surface-chat': withAlpha('--surface-chat'),
+    'surface-contrast': withAlpha('--surface-contrast'),
+    'surface-contrast-foreground': withAlpha('--surface-contrast-foreground'),
     /* Wrapped for opacity-modifier support (`bg-surface-submit/10` etc.) */
     'surface-submit': withAlpha('--surface-submit'),
     'surface-submit-hover': withAlpha('--surface-submit-hover'),
-    'surface-destructive': `var(--surface-destructive)`,
-    'surface-destructive-hover': `var(--surface-destructive-hover)`,
+    'surface-destructive': withAlpha('--surface-destructive'),
+    'surface-destructive-hover': withAlpha('--surface-destructive-hover'),
 
     /* Borders */
-    'border-light': `var(--border-light)`,
-    'border-medium': `var(--border-medium)`,
-    'border-medium-alt': `var(--border-medium-alt)`,
-    'border-heavy': `var(--border-heavy)`,
-    'border-xheavy': `var(--border-xheavy)`,
-    'border-destructive': `var(--border-destructive)`,
+    'border-light': withAlpha('--border-light'),
+    'border-medium': withAlpha('--border-medium'),
+    'border-medium-alt': withAlpha('--border-medium-alt'),
+    'border-heavy': withAlpha('--border-heavy'),
+    'border-xheavy': withAlpha('--border-xheavy'),
+    'border-destructive': withAlpha('--border-destructive'),
 
     /* Brand
     Should remove when we get the chance.
     */
-    'brand-purple': `var(--brand-purple)`,
+    'brand-purple': withAlpha('--brand-purple'),
 
     /*
      * Wrapped in color-mix() so `from-presentation/80`, `via-presentation/50`
@@ -117,6 +117,15 @@ function createTailwindColors() {
       DEFAULT: withAlpha('--card'),
       foreground: withAlpha('--card-foreground'),
     },
+    /* GEL Sidebar */
+    sidebar: withAlpha('--sidebar'),
+    'sidebar-foreground': withAlpha('--sidebar-foreground'),
+    'sidebar-primary': withAlpha('--sidebar-primary'),
+    'sidebar-primary-foreground': withAlpha('--sidebar-primary-foreground'),
+    'sidebar-accent': withAlpha('--sidebar-accent'),
+    'sidebar-accent-foreground': withAlpha('--sidebar-accent-foreground'),
+    'sidebar-border': withAlpha('--sidebar-border'),
+    'sidebar-ring': withAlpha('--sidebar-ring'),
   };
 }
 

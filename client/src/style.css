@@ -134,51 +134,10 @@
 }
 
 html {
-  /* ── GEL Brand colours ────────────────────────────────────────────── */
-  --brand-purple: #ab68ff;
-  --presentation: #ffffff;
-
-  /* Semantic surface colours – light */
-  --text-primary: oklch(0.145 0 0);
-  --text-secondary: oklch(0.4 0 0);
-  --text-secondary-alt: oklch(0.556 0 0);
-  --text-tertiary: oklch(0.556 0 0);
-  --text-warning: var(--amber-500);
-  --text-destructive: oklch(0.577 0.245 27.325);
-  --ring-primary: oklch(0.5 0.134 242.749);
-  --header-primary: oklch(0 0 0);
-  --header-hover: oklch(0.1 0 0);
-  --header-button-hover: oklch(0.12 0 0);
-  --surface-active: oklch(0.93 0 0);
-  --surface-active-alt: oklch(0.88 0 0);
-  --surface-hover: oklch(0.93 0 0);
-  --surface-hover-alt: oklch(0.88 0 0);
-  --surface-primary: oklch(0.985 0 0);
-  --surface-primary-alt: oklch(0.97 0 0);
-  --surface-primary-contrast: oklch(0.93 0 0);
-  --surface-secondary: oklch(0.97 0 0);
-  --surface-secondary-alt: oklch(0.93 0 0);
-  --surface-tertiary: oklch(0.93 0 0);
-  --surface-tertiary-alt: oklch(1 0 0);
-  --surface-dialog: oklch(1 0 0);
-  /* GEL brand green for CTA buttons */
-  --surface-submit: oklch(0.5519 0.1748 140.7437);
-  --surface-submit-hover: oklch(0.45 0.1748 140.7437);
-  --surface-destructive: oklch(0.577 0.245 27.325);
-  --surface-destructive-hover: oklch(0.48 0.245 27.325);
-  --surface-chat: oklch(1 0 0);
-  --border-light: oklch(0.922 0 0);
-  --border-medium-alt: oklch(0.87 0 0);
-  --border-medium: oklch(0.87 0 0);
-  --border-heavy: oklch(0.75 0 0);
-  --border-xheavy: oklch(0.556 0 0);
-  --border-destructive: oklch(0.577 0.245 27.325);
-
-  /* GEL high-contrast surface (always-dark — for future header/footer use) */
-  --surface-contrast: oklch(0 0 0);
-  --surface-contrast-foreground: oklch(0.985 0 0);
-
-  /* ── GEL shadcn-compatible token layer (oklch, not hsl) ─────────── */
+  /* ══════════════════════════════════════════════════════════════════
+     GEL BASE TOKENS (from @deloitte-australia/gel-ds-*)
+     These are the foundation - DO NOT modify these values
+     ══════════════════════════════════════════════════════════════════ */
   --background: oklch(0.985 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -218,52 +177,76 @@ html {
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.5 0.134 242.749);
-}
-.dark {
-  /* ── GEL dark-mode surface colours ────────────────────────────────── */
-  --brand-purple: #ab68ff;
-  --presentation: oklch(0.145 0 0);
 
-  --text-primary: oklch(0.985 0 0);
-  --text-secondary: oklch(0.75 0 0);
-  --text-secondary-alt: oklch(0.65 0 0);
-  --text-tertiary: oklch(0.556 0 0);
+  /* ══════════════════════════════════════════════════════════════════
+     APP SEMANTIC TOKENS (reference GEL where possible)
+     These consume GEL base tokens and add app-specific semantics
+     ══════════════════════════════════════════════════════════════════ */
+
+  /* Text hierarchy - maps to GEL foreground tokens */
+  --text-primary: var(--foreground);
+  --text-secondary: var(--secondary-foreground);
+  --text-secondary-alt: var(--muted-foreground);
+  --text-tertiary: var(--muted-foreground);
   --text-warning: var(--amber-500);
-  --text-destructive: oklch(0.704 0.191 22.216);
-  --ring-primary: oklch(0.5 0.134 242.749);
-  --header-primary: oklch(0.08 0 0);
-  --header-hover: oklch(0.14 0 0);
-  --header-button-hover: oklch(0.1 0 0);
-  --surface-active: oklch(0.35 0 0);
-  --surface-active-alt: oklch(0.269 0 0);
-  --surface-hover: oklch(0.3 0 0);
-  --surface-hover-alt: oklch(0.3 0 0);
-  --surface-primary: oklch(0.145 0 0);
-  --surface-primary-alt: oklch(0.175 0 0);
-  --surface-primary-contrast: oklch(0.175 0 0);
-  --surface-secondary: oklch(0.205 0 0);
-  --surface-secondary-alt: oklch(0.205 0 0);
-  --surface-tertiary: oklch(0.269 0 0);
-  --surface-tertiary-alt: oklch(0.269 0 0);
-  --surface-dialog: oklch(0.175 0 0);
-  /* GEL brand green stays the same in dark */
+  --text-destructive: var(--destructive);
+
+  /* Surfaces - primary surfaces map to GEL */
+  --surface-primary: var(--background);
+  --surface-dialog: var(--popover);
+  --surface-chat: var(--card);
+  --surface-destructive: var(--destructive);
+
+  /* Borders - unified to single GEL border */
+  --border-light: var(--border);
+  --border-medium: var(--border);
+  --border-medium-alt: var(--border);
+  --border-heavy: var(--border);
+  --border-xheavy: var(--border);
+  --border-destructive: var(--destructive);
+
+  /* Focus rings */
+  --ring-primary: var(--ring);
+
+  /* ══════════════════════════════════════════════════════════════════
+     APP-SPECIFIC CUSTOM TOKENS
+     These are unique to this app and don't have GEL equivalents
+     ══════════════════════════════════════════════════════════════════ */
+
+  /* Brand colors */
+  --brand-purple: #ab68ff;
+  --presentation: #ffffff;
+
+  /* Header (app-specific dark header) */
+  --header-primary: oklch(0 0 0);
+  --header-hover: oklch(0.1 0 0);
+  --header-button-hover: oklch(0.12 0 0);
+
+  /* Surface variants (interaction states) */
+  --surface-active: oklch(0.93 0 0);
+  --surface-active-alt: oklch(0.88 0 0);
+  --surface-hover: oklch(0.93 0 0);
+  --surface-hover-alt: oklch(0.88 0 0);
+  --surface-primary-alt: oklch(0.97 0 0);
+  --surface-primary-contrast: oklch(0.93 0 0);
+  --surface-secondary: oklch(0.97 0 0);
+  --surface-secondary-alt: oklch(0.93 0 0);
+  --surface-tertiary: oklch(0.93 0 0);
+  --surface-tertiary-alt: oklch(1 0 0);
+
+  /* CTA buttons (GEL brand green) */
   --surface-submit: oklch(0.5519 0.1748 140.7437);
   --surface-submit-hover: oklch(0.45 0.1748 140.7437);
-  --surface-destructive: oklch(0.704 0.191 22.216);
-  --surface-destructive-hover: oklch(0.6 0.191 22.216);
-  --surface-chat: oklch(0.269 0 0);
-  --border-light: oklch(1 0 0 / 10%);
-  --border-medium-alt: oklch(1 0 0 / 15%);
-  --border-medium: oklch(1 0 0 / 15%);
-  --border-heavy: oklch(1 0 0 / 25%);
-  --border-xheavy: oklch(1 0 0 / 35%);
-  --border-destructive: oklch(0.704 0.191 22.216);
+  --surface-destructive-hover: oklch(0.48 0.245 27.325);
 
-  /* GEL high-contrast surface (always-dark) */
-  --surface-contrast: oklch(0.08 0 0);
+  /* High-contrast surface (always-dark header/footer) */
+  --surface-contrast: oklch(0 0 0);
   --surface-contrast-foreground: oklch(0.985 0 0);
-
-  /* ── GEL shadcn-compatible dark tokens ──────────────────────────── */
+}
+.dark {
+  /* ══════════════════════════════════════════════════════════════════
+     GEL BASE TOKENS - DARK MODE
+     ══════════════════════════════════════════════════════════════════ */
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -298,26 +281,89 @@ html {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.5 0.134 242.749);
+
+  /* ══════════════════════════════════════════════════════════════════
+     APP SEMANTIC TOKENS - DARK MODE
+     ══════════════════════════════════════════════════════════════════ */
+
+  /* Text hierarchy - maps to GEL foreground tokens */
+  --text-primary: var(--foreground);
+  --text-secondary: var(--secondary-foreground);
+  --text-secondary-alt: var(--muted-foreground);
+  --text-tertiary: var(--muted-foreground);
+  --text-warning: var(--amber-500);
+  --text-destructive: var(--destructive);
+
+  /* Surfaces - primary surfaces map to GEL */
+  --surface-primary: var(--background);
+  --surface-dialog: var(--popover);
+  --surface-chat: var(--card);
+  --surface-destructive: var(--destructive);
+
+  /* Borders - unified to single GEL border */
+  --border-light: var(--border);
+  --border-medium: var(--border);
+  --border-medium-alt: var(--border);
+  --border-heavy: var(--border);
+  --border-xheavy: var(--border);
+  --border-destructive: var(--destructive);
+
+  /* Focus rings */
+  --ring-primary: var(--ring);
+
+  /* ══════════════════════════════════════════════════════════════════
+     APP-SPECIFIC CUSTOM TOKENS - DARK MODE
+     ══════════════════════════════════════════════════════════════════ */
+
+  /* Brand colors */
+  --brand-purple: #ab68ff;
+  --presentation: oklch(0.145 0 0);
+
+  /* Header (app-specific dark header) */
+  --header-primary: oklch(0.08 0 0);
+  --header-hover: oklch(0.14 0 0);
+  --header-button-hover: oklch(0.1 0 0);
+
+  /* Surface variants (interaction states) */
+  --surface-active: oklch(0.35 0 0);
+  --surface-active-alt: oklch(0.269 0 0);
+  --surface-hover: oklch(0.3 0 0);
+  --surface-hover-alt: oklch(0.3 0 0);
+  --surface-primary-alt: oklch(0.175 0 0);
+  --surface-primary-contrast: oklch(0.175 0 0);
+  --surface-secondary: oklch(0.205 0 0);
+  --surface-secondary-alt: oklch(0.205 0 0);
+  --surface-tertiary: oklch(0.269 0 0);
+  --surface-tertiary-alt: oklch(0.269 0 0);
+
+  /* CTA buttons (GEL brand green) */
+  --surface-submit: oklch(0.5519 0.1748 140.7437);
+  --surface-submit-hover: oklch(0.45 0.1748 140.7437);
+  --surface-destructive-hover: oklch(0.6 0.191 22.216);
+
+  /* High-contrast surface (always-dark) */
+  --surface-contrast: oklch(0.08 0 0);
+  --surface-contrast-foreground: oklch(0.985 0 0);
 }
 .gizmo {
   --text-primary: var(--gizmo-gray-950);
   --text-secondary: var(--gizmo-gray-600);
   --text-tertiary: var(--gizmo-gray-500);
-  --surface-primary: var(--white);
-  --surface-secondary: var(--gray-50);
-  --surface-tertiary: var(--gray-100);
+  --surface-primary: oklch(1 0 0);
+  --surface-secondary: oklch(0.97 0 0);
+  --surface-tertiary: oklch(0.93 0 0);
   --border-light: rgba(0, 0, 0, 0.1);
   --border-medium: rgba(0, 0, 0, 0.15);
   --border-heavy: rgba(0, 0, 0, 0.2);
   --border-xheavy: rgba(0, 0, 0, 0.25);
 }
 .gizmo.dark {
-  --text-primary: var(--gray-100);
-  --text-secondary: var(--gray-300);
+  --text-primary: oklch(0.985 0 0);
+  --text-secondary: oklch(0.75 0 0);
   --text-tertiary: var(--gizmo-gray-500);
-  --surface-primary: var(--gray-900);
-  --surface-secondary: var(--gray-800);
-  --surface-tertiary: var(--gray-700);
+  --surface-primary: oklch(0.145 0 0);
+  --surface-secondary: oklch(0.205 0 0);
+  --surface-tertiary: oklch(0.269 0 0);
   --border-light: rgba(217, 217, 227, 0.1);
   --border-medium: rgba(217, 217, 227, 0.15);
   --border-heavy: rgba(217, 217, 227, 0.2);
@@ -1016,12 +1062,12 @@ pre {
   color: var(--tw-prose-code);
   font-size: 0.875em;
   font-weight: 600;
-  background-color: var(--gray-200);
+  background-color: var(--surface-secondary-alt);
   padding: 0.125rem 0.25rem;
   border-radius: 0.35rem;
 }
 .dark .prose :where(code):not(:where([class~='not-prose'] *)):not(:where(pre *)) {
-  background-color: var(--gray-600);
+  background-color: var(--surface-hover);
 }
 .prose :where(a code):not(:where([class~='not-prose'] *)) {
   color: inherit;
@@ -1328,7 +1374,7 @@ code[class*='language-'],
 pre[class*='language-'] {
   word-wrap: normal;
   background: none;
-  color: var(--gray-800);
+  color: var(--text-primary);
   -webkit-hyphens: none;
   hyphens: none;
   font-size: 0.85rem;
@@ -1350,10 +1396,10 @@ pre[class*='language-'] {
   white-space: normal;
 }
 .hljs-comment {
-  color: var(--gray-500);
+  color: var(--text-tertiary);
 }
 .hljs-meta {
-  color: var(--gray-600);
+  color: var(--text-secondary);
 }
 .hljs-built_in,
 .hljs-class .hljs-title {
@@ -1697,7 +1743,7 @@ html {
 
 .markdown blockquote {
   --tw-border-opacity: 1;
-  border-color: var(--gray-400);
+  border-color: var(--border-medium);
   border-left-width: 2px;
   line-height: 1rem;
   padding-left: 1rem;
@@ -1945,13 +1991,13 @@ html {
 }
 .markdown blockquote {
   --tw-border-opacity: 1;
-  border-color: var(--gray-300);
+  border-color: var(--border-medium);
   border-left-width: 2px;
   line-height: 1rem;
   padding-left: 1rem;
 }
 .dark .markdown blockquote {
-  border-color: var(--gray-600);
+  border-color: var(--border-medium);
 }
 .markdown table {
   --tw-border-spacing-x: 0px;
@@ -1959,20 +2005,20 @@ html {
   border-collapse: separate;
   border-spacing: var(--tw-border-spacing-x) var(--tw-border-spacing-y);
   width: 100%;
-  border-color: var(--gray-300);
+  border-color: var(--border-medium);
 }
 .markdown th {
-  background-color: var(--gray-100);
+  background-color: var(--surface-tertiary);
   border-bottom-width: 1px;
   border-left-width: 1px;
   border-top-width: 1px;
-  border-color: var(--gray-300);
+  border-color: var(--border-medium);
   padding: 0.25rem 0.75rem;
   font-weight: 600;
 }
 .dark .markdown th {
-  border-color: var(--gray-600);
-  background-color: var(--gray-600);
+  border-color: var(--border-medium);
+  background-color: var(--surface-hover);
 }
 .markdown th:first-child {
   border-top-left-radius: 0.75rem;
@@ -1984,18 +2030,18 @@ html {
 .markdown td {
   border-bottom-width: 1px;
   border-left-width: 1px;
-  border-color: var(--gray-300);
+  border-color: var(--border-medium);
   padding: 0.25rem 0.75rem;
 }
 .markdown td:last-child {
   border-right-width: 1px;
-  border-color: var(--gray-300);
+  border-color: var(--border-medium);
 }
 .dark .markdown td {
-  border-color: var(--gray-600);
+  border-color: var(--border-medium);
 }
 .dark .markdown td:last-child {
-  border-color: var(--gray-600);
+  border-color: var(--border-medium);
 }
 .markdown tbody tr:last-child td:first-child {
   border-bottom-left-radius: 0.75rem;
