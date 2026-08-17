@@ -173,7 +173,7 @@ pods:
           enabled: true
           size: 10Gi
           accessModes:
-            - ReadWriteMany
+            - ReadWriteOnce
           name: "meilisearch-data"
           mountPath: /meili_data
           storageClass: "managed-csi-standard-private"
