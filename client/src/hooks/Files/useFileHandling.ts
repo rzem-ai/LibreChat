@@ -152,6 +152,7 @@ const useFileHandlingCore = (params: UseFileHandling | undefined, fileState: Fil
               filename: data.filename,
               source: data.source,
               embedded: data.embedded,
+              metadata: data.metadata,
             },
             assistant_id ? true : false,
           );

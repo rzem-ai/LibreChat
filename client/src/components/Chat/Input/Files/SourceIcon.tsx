@@ -1,4 +1,4 @@
-import { Terminal, Type, Database } from 'lucide-react';
+import { Search, Terminal, Type } from 'lucide-react';
 import { EModelEndpoint, FileSources } from 'librechat-data-provider';
 import { MinimalIcon } from '~/components/Endpoints';
 import { cn } from '~/utils';
@@ -23,17 +23,29 @@ const defaultClassName =
 export default function SourceIcon({
   source,
   isCodeFile,
+  isFileSearch,
   className = defaultClassName,
 }: {
   source?: FileSources;
   isCodeFile?: boolean;
+  isFileSearch?: boolean;
   className?: string;
 }) {
   if (isCodeFile === true) {
     return (
       <div className={cn(className, sourceToClassname[FileSources.execute_code] ?? '')}>
-        <span className="flex items-center justify-center">
-          <Terminal className="h-3 w-3" aria-hidden="true" />
+        <span className="flex items-center justify-center text-white" aria-hidden="true">
+          <Terminal className="h-3 w-3 stroke-[2.5]" />
+        </span>
+      </div>
+    );
+  }
+
+  if (isFileSearch === true || source === FileSources.vectordb) {
+    return (
+      <div className={cn(className, sourceToClassname[FileSources.vectordb] ?? '')}>
+        <span className="flex items-center justify-center text-white" aria-hidden="true">
+          <Search className="h-3 w-3 stroke-[2.5]" />
         </span>
       </div>
     );
@@ -44,16 +56,6 @@ export default function SourceIcon({
       <div className={cn(className, sourceToClassname[source] ?? '')}>
         <span className="flex items-center justify-center">
           <Type className="h-3 w-3" aria-hidden="true" />
-        </span>
-      </div>
-    );
-  }
-
-  if (source === FileSources.vectordb) {
-    return (
-      <div className={cn(className, sourceToClassname[source] ?? '')}>
-        <span className="flex items-center justify-center">
-          <Database className="h-3 w-3" aria-hidden="true" />
         </span>
       </div>
     );
