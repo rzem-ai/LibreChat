@@ -84,6 +84,7 @@ git worktree list
 Inspect Docker and Compose without modifying them:
 
 ```bash
+cd "$REPO_ROOT"
 docker compose version
 docker compose config --services
 docker compose config --images
@@ -234,12 +235,20 @@ that need rebuilding. Unchanged third-party dependencies may retain their normal
 Assign unique host ports for every published port, or remove unnecessary dependency ports from the
 host while keeping them available on the isolated Compose network.
 
-Inspect current listeners first:
+Inspect current listeners first. This surfaces conflicts from any running stack, not just the
+normal one, including other PR stacks already under test:
 
 ```bash
 docker ps --format '{{.Names}} {{.Ports}}'
 lsof -nP -iTCP -sTCP:LISTEN
 ```
+
+Do not hardcode a fixed port per PR. Auto-select an unused host port for each published port:
+start from a base offset (for example, derived from the PR number) and probe upward, skipping any
+port already bound per the listener check above, until a free one is found. Do not prompt the user
+to pick a port manually; only stop and ask if no free port turns up in the expected range after a
+reasonable number of attempts. Always report every final chosen host port in the Reporting
+Template, so the tester has the exact URL/port for the isolated stack without re-deriving it.
 
 Use `!override` to replace, rather than append to, existing port lists:
 
