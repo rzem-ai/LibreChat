@@ -2,19 +2,28 @@ version: 1.3.13 # Copy from librechat.example.yaml
 cache: true
 
 interface:
-  deloitteHeader:
-    enabled: true
-    title: MyAssist
-
   agents:
     use: true
     create: true
-    share: true # Enable share with other users
-    public: false # Disable share with everyone
+    share: false
+    public: false
 
   bookmarks: true
 
+  # Pin tools to the prompt bar by default for all users
+  defaultPinnedTools:
+    - 'file_search'
+    - 'skills'
+    - 'execute_code'
+    - 'mcp'
+
+  deloitteHeader:
+    enabled: true
+    title: "${APP_TITLE}"
+
   fileCitations: true
+
+  fileSearch: true
 
   marketplace:
     use: true
@@ -38,14 +47,15 @@ interface:
     groups: false
     roles: false
 
-  # Pin tools to the prompt bar by default for all users
-  defaultPinnedTools:
-    - 'file_search'
-    - 'skills'
-    - 'execute_code'
-    - 'mcp'
+  remoteAgents:
+    use: true
+    create: true
 
-  fileSearch: true
+  skills:
+    use: true
+    create: true
+    share: true # Enable share with other users
+    public: false # Disable share with everyone
 
 fileConfig:
   endpoints:
