@@ -381,6 +381,13 @@ export namespace Agents {
   export interface AskUserQuestionInterruptPayload {
     type: 'ask_user_question';
     question: AskUserQuestionRequest;
+    /**
+     * The ask tool call that raised this interrupt (mirrors the SDK field,
+     * present from `@librechat/agents` > 3.3.8). Lets the question/answer
+     * stamps target the exact tool-call part instead of guessing by
+     * position when a model emits several ask calls in one turn.
+     */
+    tool_call_id?: string;
   }
 
   /**
@@ -388,8 +395,7 @@ export namespace Agents {
    * so the SDK's `Run.getInterrupt()` output can be embedded directly.
    */
   export type HumanInterruptPayload =
-    | ToolApprovalInterruptPayload
-    | AskUserQuestionInterruptPayload;
+    ToolApprovalInterruptPayload | AskUserQuestionInterruptPayload;
 
   /**
    * Server-side record of a job that is waiting for user input.
