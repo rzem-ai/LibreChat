@@ -18,21 +18,21 @@ const require = createRequire(import.meta.url);
  * the shim specifiers to absolute paths via CJS require.resolve anchored to the client directory.
  */
 const NODE_POLYFILL_SHIMS: Record<string, string> = {
-  'vite-plugin-node-polyfills/shims/process': require.resolve(
-    'vite-plugin-node-polyfills/shims/process',
-  ),
-  'vite-plugin-node-polyfills/shims/buffer': require.resolve(
-    'vite-plugin-node-polyfills/shims/buffer',
-  ),
-  'vite-plugin-node-polyfills/shims/global': require.resolve(
-    'vite-plugin-node-polyfills/shims/global',
-  ),
+  'vite-plugin-node-polyfills/shims/process':
+    require.resolve('vite-plugin-node-polyfills/shims/process'),
+  'vite-plugin-node-polyfills/shims/buffer':
+    require.resolve('vite-plugin-node-polyfills/shims/buffer'),
+  'vite-plugin-node-polyfills/shims/global':
+    require.resolve('vite-plugin-node-polyfills/shims/global'),
 };
 
 // https://vitejs.dev/config/
 const backendPort = (process.env.BACKEND_PORT && Number(process.env.BACKEND_PORT)) || 3080;
-const backendURL = process.env.HOST
-  ? `http://${process.env.HOST}:${backendPort}`
+/** IPv6 hosts arrive unbracketed (valid for the listen address) but must be
+ *  bracketed inside a URL, or the proxy target parses as host `:` port soup. */
+const backendHost = process.env.HOST?.includes(':') ? `[${process.env.HOST}]` : process.env.HOST;
+const backendURL = backendHost
+  ? `http://${backendHost}:${backendPort}`
   : `http://localhost:${backendPort}`;
 const buildSourceMap = process.env.NODE_ENV === 'development';
 const QUERY_DEVTOOLS_CHUNK_MODULES = [
@@ -252,7 +252,7 @@ export default defineConfig(({ command }) => ({
                   if (normalizedId.includes('react-hook-form')) {
                     return 'forms';
                   }
-                  if (normalizedId.includes('react-router-dom')) {
+                  if (normalizedId.includes('react-router')) {
                     return 'routing';
                   }
                   if (
