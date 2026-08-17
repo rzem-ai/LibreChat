@@ -200,6 +200,33 @@ describe('loadDefaultInterface', () => {
     expect(interfaceConfig?.defaultPinnedTools).toEqual(['artifacts', 'execute_code', 'mcp']);
   });
 
+  it('passes through the configured Deloitte header', async () => {
+    const config: Partial<TCustomConfig> = {
+      interface: {
+        deloitteHeader: { enabled: true, title: 'MyAssist NextGenV2' },
+      },
+    };
+
+    const interfaceConfig = await loadDefaultInterface({
+      config,
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.deloitteHeader).toEqual({
+      enabled: true,
+      title: 'MyAssist NextGenV2',
+    });
+  });
+
+  it('omits the Deloitte header when it is not explicitly configured', async () => {
+    const interfaceConfig = await loadDefaultInterface({
+      config: {},
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig).not.toHaveProperty('deloitteHeader');
+  });
+
   it('omits default pinned tools when not explicitly configured', async () => {
     const interfaceConfig = await loadDefaultInterface({
       config: {},
