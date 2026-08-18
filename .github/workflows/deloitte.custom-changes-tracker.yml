@@ -69,7 +69,7 @@ jobs:
               metadata = json.load(file)
 
           rows = {}
-          fieldnames = ["filename", "path_to_file", "type", "changes_made", "related_prs"]
+          fieldnames = ["path_to_file", "filename", "type", "changes_made", "related_prs"]
           excluded_prefixes = []
           for value in os.getenv("EXCLUDED_PATH_PREFIXES", "").split(","):
               prefix = value.strip().lstrip("./")
@@ -177,10 +177,10 @@ jobs:
                       "related_prs": pr_url,
                   }
 
-          sorted_rows = [rows[path] for path in sorted(rows, key=lambda p: Path(p).name.casefold())]
+          sorted_rows = [rows[path] for path in sorted(rows, key=lambda p: rows[p]["path_to_file"].casefold())]
           csv_path.parent.mkdir(parents=True, exist_ok=True)
           with csv_path.open("w", encoding="utf-8", newline="") as file:
-              writer = csv.DictWriter(file, fieldnames=fieldnames)
+              writer = csv.DictWriter(file, fieldnames=fieldnames, lineterminator="\n")
               writer.writeheader()
               writer.writerows(sorted_rows)
           PY
@@ -196,81 +196,20 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Configure git
+      - name: Create CSV update pull request
         if: steps.csv-state.outputs.changed == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Commit and push to develop
-        if: steps.csv-state.outputs.changed == 'true'
-        run: |
-          git add deloitte/DeloitteCustomChanges.csv
-          git commit -m "chore(deloitte): update custom changes CSV for PR #${{ github.event.pull_request.number }}"
-           
-          git fetch origin develop
-           
-          if ! git merge --no-edit origin/develop 2>&1; then
-            echo "Merge conflict detected, attempting to combine CSVs..."
-             
-            # Save both versions
-            cp deloitte/DeloitteCustomChanges.csv deloitte/DeloitteCustomChanges.local.csv || true
-            git show origin/develop:deloitte/DeloitteCustomChanges.csv > deloitte/DeloitteCustomChanges.remote.csv || true
-             
-            python3 - <<'MERGE_PY'
-          import csv
-          from pathlib import Path
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: develop
+          branch: track-changes/deloitte-csv-pr-${{ github.event.pull_request.number }}
+          delete-branch: true
+          commit-message: 'chore(deloitte): update custom changes CSV for PR #${{ github.event.pull_request.number }}'
+          title: 'chore(deloitte): update custom changes CSV for PR #${{ github.event.pull_request.number }}'
+          body: |
+            Automated CSV update generated after merge of [#${{ github.event.pull_request.number }}](https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}).
             
-          local_path = Path("deloitte/DeloitteCustomChanges.local.csv")
-          remote_path = Path("deloitte/DeloitteCustomChanges.remote.csv")
-          merged_path = Path("deloitte/DeloitteCustomChanges.csv")
-            
-          fieldnames = ["filename", "path_to_file", "type", "changes_made", "related_prs"]
-          merged_rows = {}
-            
-          # Load remote (develop) version
-          if remote_path.exists():
-            with remote_path.open("r", encoding="utf-8", newline="") as f:
-              for row in csv.DictReader(f):
-                path = row.get("path_to_file", "").strip()
-                if path:
-                  row["filename"] = Path(path).name
-                  merged_rows[path] = row
-            
-          # Load and merge local version, combining related PRs
-          if local_path.exists():
-            with local_path.open("r", encoding="utf-8", newline="") as f:
-              for row in csv.DictReader(f):
-                path = row.get("path_to_file", "").strip()
-                if not path:
-                  continue
-                  
-                if path in merged_rows:
-                  # Merge related PRs
-                  local_prs = [v.strip() for v in row.get("related_prs", "").split("|") if v.strip()]
-                  remote_prs = [v.strip() for v in merged_rows[path].get("related_prs", "").split("|") if v.strip()]
-                  combined_prs = list(dict.fromkeys(local_prs + remote_prs))
-                    
-                  merged_rows[path]["related_prs"] = " | ".join(combined_prs)
-                    
-                  # Use local changes_made if more recent
-                  merged_rows[path]["changes_made"] = row.get("changes_made", merged_rows[path].get("changes_made", ""))
-                  merged_rows[path]["type"] = row.get("type", merged_rows[path].get("type", ""))
-                else:
-                  row["filename"] = Path(path).name
-                  merged_rows[path] = row
-            
-          # Write merged result, sorted by filename
-          sorted_rows = [merged_rows[path] for path in sorted(merged_rows, key=lambda p: Path(p).name.casefold())]
-          with merged_path.open("w", encoding="utf-8", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(sorted_rows)
-          MERGE_PY
-             
-            rm -f deloitte/DeloitteCustomChanges.local.csv deloitte/DeloitteCustomChanges.remote.csv
-            git add deloitte/DeloitteCustomChanges.csv
-            git commit --no-edit -m "Merge conflict resolved: combine CSV entries from both branches"
-          fi
-           
-          git push origin develop
+            This PR updates:
+            - deloitte/DeloitteCustomChanges.csv
+          add-paths: |
+            deloitte/DeloitteCustomChanges.csv
