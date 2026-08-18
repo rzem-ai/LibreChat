@@ -88,9 +88,29 @@ export async function sendMessage(page: Page, text: string) {
   await page.getByTestId('send-button').click();
 }
 
-/** Delete the currently open conversation via its menu (real UI, no API). */
+/**
+ * Delete the currently open conversation via its menu (real UI, no API).
+ * The left sidebar is a single rail with mutually exclusive tabs
+ * (conversations/agents/skills) — after building an agent, the "agents" tab
+ * is left active, so the conversation list (and its "Conversation Menu
+ * Options" button) never rendered at all, which is why this used to hang
+ * until the outer test timeout killed it. Switch back to the conversations
+ * tab first, then scope to the newest conversation item and hover it — same
+ * pattern already proven in specs/mock/conversation-management.spec.ts —
+ * and give the click its own short timeout so a real failure here surfaces
+ * in seconds, not by exhausting the whole test's budget.
+ */
 export async function deleteCurrentConversation(page: Page) {
-  await page.getByRole('button', { name: 'Conversation Menu Options' }).click();
+  const conversationsTab = page.getByTestId('nav-panel-conversations');
+  if ((await conversationsTab.getAttribute('aria-pressed')) !== 'true') {
+    await conversationsTab.click();
+  }
+
+  const conversation = page.getByTestId('convo-item').first();
+  await conversation.hover();
+  await conversation
+    .getByRole('button', { name: 'Conversation Menu Options' })
+    .click({ timeout: 10000 });
   await page.getByRole('menuitem', { name: 'Delete' }).click();
   await page.getByRole('button', { name: 'Delete' }).click();
 }
