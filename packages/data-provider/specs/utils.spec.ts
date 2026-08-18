@@ -226,8 +226,15 @@ describe('Environment Variable Extraction', () => {
     });
 
     it('returns the input unchanged when it is not a parseable URL', () => {
-      expect(stripUnresolvedPlaceholderQueryParams('${MCP_SERVER_URL}')).toBe(
-        '${MCP_SERVER_URL}',
+      expect(stripUnresolvedPlaceholderQueryParams('${MCP_SERVER_URL}')).toBe('${MCP_SERVER_URL}');
+    });
+
+    it('does not alter a bare-origin URL when nothing needs stripping', () => {
+      // Regression: `new URL(...).toString()` appends a trailing slash to bare origins
+      // (e.g. 'https://mcp.example.com' -> 'https://mcp.example.com/'), so this must
+      // return the original input untouched whenever no param was actually dropped.
+      expect(stripUnresolvedPlaceholderQueryParams('https://mcp.example.com')).toBe(
+        'https://mcp.example.com',
       );
     });
   });

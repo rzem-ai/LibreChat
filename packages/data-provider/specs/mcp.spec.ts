@@ -121,6 +121,17 @@ describe('MCP schemas', () => {
       }
       delete process.env.MCP_RESOLVED_PARAM;
     });
+
+    it('does not alter a bare-origin streamable-http URL when nothing needs stripping', () => {
+      const result = StreamableHTTPOptionsSchema.safeParse({
+        type: 'streamable-http',
+        url: 'https://mcp-server.com',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.url).toBe('https://mcp-server.com');
+      }
+    });
   });
 
   describe('OAuth URL env variable resolution (admin schema)', () => {

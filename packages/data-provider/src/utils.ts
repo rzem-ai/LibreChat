@@ -99,6 +99,9 @@ export function stripUnresolvedPlaceholderQueryParams(url: string): string {
       staleKeys.push(key);
     }
   });
+  if (staleKeys.length === 0) {
+    return url;
+  }
   staleKeys.forEach((key) => parsed.searchParams.delete(key));
 
   return parsed.toString();
