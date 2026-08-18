@@ -332,7 +332,7 @@ function BadgeRow({
       isSubmitting={isSubmitting}
     >
       <div ref={containerRef} className="relative flex flex-wrap items-center gap-2">
-        {showEphemeralBadges === true && startupConfig?.interface?.tools !== false && (
+        {showEphemeralBadges === true && startupConfig?.interface?.tools === true && (
           <ToolsDropdown />
         )}
         {tempBadges.map((badge, index) => (

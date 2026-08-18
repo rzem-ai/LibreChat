@@ -8,16 +8,9 @@ interface:
     share: false
     public: false
 
-  bookmarks: false
+  bookmarks: false # Set to false to disable saving conversations as bookmarks
 
-  memories: false
-
-  # Pin tools to the prompt bar by default for all users
-  defaultPinnedTools:
-    - 'file_search'
-    - 'skills'
-    - 'execute_code'
-    - 'mcp'
+  memories: false # Set to false to disable persistent user memories
 
   deloitteHeader:
     enabled: true
@@ -25,34 +18,32 @@ interface:
 
   fileCitations: true
 
-  fileSearch: true
-
   marketplace:
     use: true
 
   modelSelect: true
 
-  multiConvo: false
+  multiConvo: false # Set to false to disable multiple conversations in the chat interface
 
-  temporaryChat: false
+  temporaryChat: false # Set to false to disable temporary chats
 
-  parameters: false
+  parameters: false # Set to false to disable adjustable model parameters
 
-  presets: false
+  presets: false # Set to false to disable saved conversation presets
 
-  sharedLinks: false
+  sharedLinks: false # Set to false to disable sharing conversations through links
 
-  regenerate: false
+  regenerate: false # Set to false to disable regenerating assistant responses
 
-  fork: false
+  fork: false # Set to false to disable branching conversations from earlier messages
 
-  edit: false
+  edit: false # Set to false to disable editing submitted messages
 
-  tools: false
+  tools: false # Set to false to disable the chat tools menu
 
-  landingIcon: false
+  landingIcon: false # Set to false to hide the model or agent icon beside the landing greeting
 
-  conversationIcon: false
+  conversationIcon: false # Set to false to hide model or endpoint icons in conversation history
 
   prompts:
     use: true
@@ -83,14 +74,14 @@ interface:
     - "execute_code"
     - "mcp"
 
-  fileSearch: false
+  fileSearch: false # Set to false to disable searching uploaded files
 
 fileConfig:
   endpoints:
     default:
-      fileLimit: 0
+      fileLimit: 0 # Set to 0 to disable file uploads for standard conversations
     agents:
-      fileLimit: 0
+      fileLimit: 0 # Set to 0 to disable file uploads for agent conversations
 
 endpoints:
   # ========================================
@@ -100,7 +91,7 @@ endpoints:
   agents:
     recursionLimit: 25
     maxRecursionLimit: 50
-    disableBuilder: true
+    disableBuilder: true # Set to false to disable the agent builder interface
     maxCitations: 30
     maxCitationsPerFile: 7
     capabilities:

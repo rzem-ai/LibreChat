@@ -273,7 +273,7 @@ function Conversation({
           isSmallScreen={isSmallScreen}
           localize={localize}
         >
-          {startupConfig?.interface?.conversationIcon !== false && (
+          {startupConfig?.interface?.conversationIcon === true && (
             <ConversationEndpointIcon conversation={conversation} size={20} context="menu-item" />
           )}
         </ConvoLink>

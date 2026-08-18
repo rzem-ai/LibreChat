@@ -170,7 +170,7 @@ const HoverButtons = ({
   if (error === true) {
     return (
       <div className="visible flex justify-center self-end lg:justify-start">
-        {regenerateEnabled && interfaceConfig?.regenerate !== false && (
+        {regenerateEnabled && interfaceConfig?.regenerate === true && (
           <HoverButton
             onClick={regenerate}
             title={localize('com_ui_regenerate')}
@@ -232,7 +232,7 @@ const HoverButtons = ({
       />
 
       {/* Edit Button */}
-      {isEditableEndpoint && interfaceConfig?.edit !== false && (
+      {isEditableEndpoint && interfaceConfig?.edit === true && (
         <HoverButton
           id={`edit-${message.messageId}`}
           onClick={onEdit}
@@ -250,7 +250,7 @@ const HoverButtons = ({
       <Fork
         messageId={message.messageId}
         conversationId={conversation.conversationId}
-        forkingSupported={forkingSupported && interfaceConfig?.fork !== false}
+        forkingSupported={forkingSupported && interfaceConfig?.fork === true}
         latestMessageId={latestMessageId}
         isLast={isLast}
       />
@@ -261,7 +261,7 @@ const HoverButtons = ({
       )}
 
       {/* Regenerate Button */}
-      {regenerateEnabled && interfaceConfig?.regenerate !== false && (
+      {regenerateEnabled && interfaceConfig?.regenerate === true && (
         <HoverButton
           onClick={regenerate}
           title={localize('com_ui_regenerate')}

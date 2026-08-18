@@ -179,7 +179,7 @@ export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: 
           className={`flex ${textHasMultipleLines ? 'flex-col' : 'flex-col md:flex-row'} items-center justify-center gap-2`}
         >
           <div className={`relative size-10 justify-center ${textHasMultipleLines ? 'mb-2' : ''}`}>
-            {startupConfig?.interface?.landingIcon !== false && (
+            {startupConfig?.interface?.landingIcon === true && (
               <ConvoIcon
                 agentsMap={agentsMap}
                 assistantMap={assistantMap}
