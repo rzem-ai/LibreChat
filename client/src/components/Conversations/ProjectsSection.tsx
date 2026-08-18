@@ -354,7 +354,7 @@ const ProjectItem = memo(
                   className={iconButtonClassName}
                   onClick={startChat}
                 >
-                  <NewChatIcon className="h-4 w-4" />
+                  <NewChatIcon />
                 </button>
               }
             />

@@ -1375,6 +1375,12 @@ export const interfaceSchema = z
     bookmarks: z.boolean().optional(),
     memories: z.boolean().optional(),
     presets: z.boolean().optional(),
+    regenerate: z.boolean().optional(),
+    fork: z.boolean().optional(),
+    edit: z.boolean().optional(),
+    tools: z.boolean().optional(),
+    landingIcon: z.boolean().optional(),
+    conversationIcon: z.boolean().optional(),
     prompts: z
       .union([
         z.boolean(),

@@ -3,6 +3,7 @@ import { useRecoilState } from 'recoil';
 import { EditIcon, Clipboard, CheckMark, ContinueIcon, RegenerateIcon } from '@librechat/client';
 import type { TConversation, TMessage, TFeedback } from 'librechat-data-provider';
 import { useGenerationsByLatest, useLocalize } from '~/hooks';
+import { useGetStartupConfig } from '~/data-provider';
 import { Fork } from '~/components/Conversations';
 import MessageAudio from './MessageAudio';
 import Feedback from './Feedback';
@@ -128,6 +129,7 @@ const HoverButtons = ({
   handleFeedback,
 }: THoverButtons) => {
   const localize = useLocalize();
+  const { data: startupConfig } = useGetStartupConfig();
   const [isCopied, setIsCopied] = useState(false);
   const [TextToSpeech] = useRecoilState<boolean>(store.textToSpeech);
 
@@ -157,6 +159,7 @@ const HoverButtons = ({
     forkingSupported,
     isEditableEndpoint,
   } = generationCapabilities;
+  const interfaceConfig = startupConfig?.interface;
 
   if (!conversation) {
     return null;
@@ -167,7 +170,7 @@ const HoverButtons = ({
   if (error === true) {
     return (
       <div className="visible flex justify-center self-end lg:justify-start">
-        {regenerateEnabled && (
+        {regenerateEnabled && interfaceConfig?.regenerate !== false && (
           <HoverButton
             onClick={regenerate}
             title={localize('com_ui_regenerate')}
@@ -229,7 +232,7 @@ const HoverButtons = ({
       />
 
       {/* Edit Button */}
-      {isEditableEndpoint && (
+      {isEditableEndpoint && interfaceConfig?.edit !== false && (
         <HoverButton
           id={`edit-${message.messageId}`}
           onClick={onEdit}
@@ -247,7 +250,7 @@ const HoverButtons = ({
       <Fork
         messageId={message.messageId}
         conversationId={conversation.conversationId}
-        forkingSupported={forkingSupported}
+        forkingSupported={forkingSupported && interfaceConfig?.fork !== false}
         latestMessageId={latestMessageId}
         isLast={isLast}
       />
@@ -258,7 +261,7 @@ const HoverButtons = ({
       )}
 
       {/* Regenerate Button */}
-      {regenerateEnabled && (
+      {regenerateEnabled && interfaceConfig?.regenerate !== false && (
         <HoverButton
           onClick={regenerate}
           title={localize('com_ui_regenerate')}

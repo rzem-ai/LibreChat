@@ -8,7 +8,9 @@ interface:
     share: false
     public: false
 
-  bookmarks: true
+  bookmarks: false
+
+  memories: false
 
   # Pin tools to the prompt bar by default for all users
   defaultPinnedTools:
@@ -30,11 +32,27 @@ interface:
 
   modelSelect: true
 
-  multiConvo: true
+  multiConvo: false
 
-  parameters: true
+  temporaryChat: false
 
-  presets: true
+  parameters: false
+
+  presets: false
+
+  sharedLinks: false
+
+  regenerate: false
+
+  fork: false
+
+  edit: false
+
+  tools: false
+
+  landingIcon: false
+
+  conversationIcon: false
 
   prompts:
     use: true
@@ -59,13 +77,20 @@ interface:
     create: true
     share: true # Enable share with other users
     public: false # Disable share with everyone
+  # Pin tools to the prompt bar by default for all users
+  defaultPinnedTools:
+    - "skills"
+    - "execute_code"
+    - "mcp"
+
+  fileSearch: false
 
 fileConfig:
   endpoints:
     default:
-      fileLimit: 50
+      fileLimit: 0
     agents:
-      fileLimit: 50
+      fileLimit: 0
 
 endpoints:
   # ========================================
@@ -75,10 +100,20 @@ endpoints:
   agents:
     recursionLimit: 25
     maxRecursionLimit: 50
-    disableBuilder: false
+    disableBuilder: true
     maxCitations: 30
     maxCitationsPerFile: 7
-    capabilities: ["actions", "artifacts", "context", "deferred_tools", "execute_code", "file_search", "skills", "tools"]
+    capabilities:
+      [
+        "actions",
+        "artifacts",
+        "context",
+        "deferred_tools",
+        "execute_code",
+        "file_search",
+        "skills",
+        "tools",
+      ]
     minRelevanceScore: 0.3
     # Default model for new agents — uses Azure AU custom endpoint (confirmed working)
     model: "gpt-4o-mini"
@@ -316,7 +351,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
       client_id: "${CLEARTRACK_MCP_GATEWAY_CLIENT_ID}"
       client_secret: "${CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET}"
       #redirect_uri: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/callback
-      scope: 'Channel.ReadBasic.All ChannelMember.Read.All Group.Read.All Team.ReadBasic.All User.Read.All Files.Read.All'
+      scope: "Channel.ReadBasic.All ChannelMember.Read.All Group.Read.All Team.ReadBasic.All User.Read.All Files.Read.All"
 #    oauth_headers:
 #      X-Custom-Header: 'custom_value'
 
@@ -339,9 +374,9 @@ speech: # https://www.librechat.ai/docs/configuration/librechat_yaml/object_stru
     #   cacheTTS: true
   tts:
     elevenlabs:
-      apiKey: '${TTS_API_KEY}'
-      model: 'eleven_multilingual_v2'
+      apiKey: "${TTS_API_KEY}"
+      model: "eleven_multilingual_v2"
       voices:
-        - '5GZaeOOG7yqLdoTRsaa6'  # Rachel
-        - 'DTLT09E2cxHF0DqjKVbc'  # Paul
-        - 'aGkVQvWUZi16EH8aZJvT'  # Steve
+        - "5GZaeOOG7yqLdoTRsaa6" # Rachel
+        - "DTLT09E2cxHF0DqjKVbc" # Paul
+        - "aGkVQvWUZi16EH8aZJvT" # Steve
