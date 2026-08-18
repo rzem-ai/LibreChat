@@ -119,14 +119,14 @@ jobs:
         set -euo pipefail
         rm -f charts/config/librechat.yaml
         cp librechat.yaml charts/config/librechat.yaml
-        python - <<'PY'
+        python3 - <<'PY'
         import re
         from pathlib import Path
 
         path = Path("charts/config/librechat.yaml")
         content = path.read_text()
         content = re.sub(
-          r'(?m)^\s*x-id-token:\s*"?\$\{LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION\}"?\s*\n?',
+          r'(?m)^[ \t]*(?:#\s*Local-only identity token header; build-and-promote strips this from deployment chart config\.\s*\n[ \t]*)?x-id-token:\s*"?\$\{LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION\}"?[ \t]*\n?',
           '',
           content,
         )
