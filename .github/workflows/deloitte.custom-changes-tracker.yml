@@ -69,7 +69,7 @@ jobs:
               metadata = json.load(file)
 
           rows = {}
-          fieldnames = ["path_to_file", "type", "changes_made", "related_prs"]
+          fieldnames = ["path_to_file", "filename", "type", "changes_made", "related_prs"]
           excluded_prefixes = []
           for value in os.getenv("EXCLUDED_PATH_PREFIXES", "").split(","):
               prefix = value.strip().lstrip("./")
@@ -99,6 +99,7 @@ jobs:
                       path = row.get("path_to_file", "").strip()
                       if path:
                           rows[path] = {
+                              "filename": Path(path).name,
                               "path_to_file": path,
                               "type": row.get("type", "modified existing file").strip() or "modified existing file",
                               "changes_made": row.get("changes_made", "").strip(),
@@ -169,16 +170,17 @@ jobs:
                   existing["related_prs"] = " | ".join(existing_prs)
               else:
                   rows[path] = {
+                      "filename": Path(path).name,
                       "path_to_file": path,
                       "type": change_type,
                       "changes_made": description,
                       "related_prs": pr_url,
                   }
 
-          sorted_rows = [rows[path] for path in sorted(rows, key=str.casefold)]
+          sorted_rows = [rows[path] for path in sorted(rows, key=lambda p: rows[p]["path_to_file"].casefold())]
           csv_path.parent.mkdir(parents=True, exist_ok=True)
           with csv_path.open("w", encoding="utf-8", newline="") as file:
-              writer = csv.DictWriter(file, fieldnames=fieldnames)
+              writer = csv.DictWriter(file, fieldnames=fieldnames, lineterminator="\n")
               writer.writeheader()
               writer.writerows(sorted_rows)
           PY
@@ -206,7 +208,7 @@ jobs:
           title: 'chore(deloitte): update custom changes CSV for PR #${{ github.event.pull_request.number }}'
           body: |
             Automated CSV update generated after merge of [#${{ github.event.pull_request.number }}](https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}).
-
+            
             This PR updates:
             - deloitte/DeloitteCustomChanges.csv
           add-paths: |
