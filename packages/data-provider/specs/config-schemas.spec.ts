@@ -1006,6 +1006,14 @@ describe('interfaceSchema', () => {
 
     expect(result.defaultPinnedTools).toBeUndefined();
   });
+
+  it('accepts Deloitte header configuration', () => {
+    const result = interfaceSchema.parse({
+      deloitteHeader: { enabled: true, title: 'MyAssist' },
+    });
+
+    expect(result.deloitteHeader).toEqual({ enabled: true, title: 'MyAssist' });
+  });
 });
 
 describe('summarizationTriggerSchema', () => {
