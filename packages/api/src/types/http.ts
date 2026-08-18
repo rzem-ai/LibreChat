@@ -18,6 +18,7 @@ export type RequestBody = {
   endpointOption?: Partial<TEndpointOption>;
   /** Browser IANA timezone used to resolve local-time prompt variables (e.g. `{{current_datetime}}`). */
   timezone?: string;
+  /** Per-message tool/capability selection (MCP servers, web search, code execution, etc.) for a conversation not backed by a saved Agent document. */
   ephemeralAgent?: TEphemeralAgent;
 };
 

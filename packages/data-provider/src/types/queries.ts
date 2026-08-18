@@ -116,7 +116,7 @@ export type AllPromptGroupsResponse = t.TPromptGroup[];
 export type ConversationTagsResponse = s.TConversationTag[];
 
 /* MCP Types */
-/** Mirrors packages/api's ToolsetCatalogEntry (kept separate — see that type for why) */
+/** A capability-profile grouping of an MCP server's tools, as returned by the server catalog. */
 export type MCPToolsetCatalogEntry = {
   name: string;
   description?: string;

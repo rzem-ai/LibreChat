@@ -16,7 +16,12 @@ import type {
   TextContent,
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
-import type { SearchResultData, UIResource, TPlugin } from 'librechat-data-provider';
+import type {
+  SearchResultData,
+  UIResource,
+  TPlugin,
+  MCPToolsetCatalogEntry,
+} from 'librechat-data-provider';
 import type { TokenMethods, IUser } from '@librechat/data-schemas';
 import type { LCTool } from '@librechat/agents';
 import type { OboTokenResolver, OboTrustChecker } from '~/mcp/oauth/obo';
@@ -46,15 +51,7 @@ export interface MCPResource {
   mimeType?: string;
 }
 
-/** Mirrors `MCPToolsetCatalogEntry` in `librechat-data-provider` (kept separate — one is the internal cache-service shape, the other the public API response shape). */
-export interface ToolsetCatalogEntry {
-  name: string;
-  description?: string;
-  /** True when the server always serves this toolset's tools regardless of client-side toolset filtering. */
-  alwaysVisible?: boolean;
-  /** Discriminates a selectable server identity from an admin-facing category grouping. */
-  kind?: 'server' | 'category';
-}
+export type ToolsetCatalogEntry = MCPToolsetCatalogEntry;
 
 export interface LCFunctionTool {
   type: 'function';
