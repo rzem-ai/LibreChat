@@ -99,9 +99,9 @@ function MCPSelectContent() {
           modal={true}
           unmountOnHide={true}
           aria-label={localize('com_ui_mcp_servers')}
-          // Deloitte Custom Change: Fixed width prevents shrink-to-fit snapping as rows mount/unmount during auth; max-w clamps it on narrow viewports.
+          // Deloitte Custom Change: Increase minimum width on MCP selector.
           className={cn(
-            'z-50 flex w-[300px] max-w-[calc(100vw-2rem)] flex-col rounded-xl',
+            'z-50 flex min-w-[300px] max-w-[320px] flex-col rounded-xl',
             'border border-border-light bg-presentation p-1.5 shadow-lg',
             'origin-top opacity-0 transition-[opacity,transform] duration-200 ease-out',
             'data-[enter]:scale-100 data-[enter]:opacity-100',
