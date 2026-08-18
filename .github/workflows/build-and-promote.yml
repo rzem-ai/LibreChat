@@ -115,7 +115,13 @@ jobs:
       buildContext: ${{ matrix.buildContext }}
       targetBranch: ${{ ( github.event_name == 'pull_request' || github.event_name == 'pull_request_target' ) && github.head_ref || github.ref_name }} # If the event is a pull request, use the base branch of the pull request. Otherwise, use the current branch
       buildArgs: ${{ matrix.buildArgs }}
-      customBuildSetupScript: ${{ matrix.customBuildSetupScript }}
+      customBuildSetupScript: |
+        rm -f charts/config/librechat.yaml
+        cp librechat.yaml charts/config/librechat.yaml
+        sed -i '/^[[:space:]]*x-id-token: "\${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"$/d' charts/config/librechat.yaml
+        if ! grep -q '^fileStrategy:' charts/config/librechat.yaml; then
+          python -c 'from pathlib import Path; path = Path("charts/config/librechat.yaml"); content = path.read_text(); path.write_text(content.replace("cache: true\\n", "cache: true\\n\\nfileStrategy: \\"azure_blob\\"\\n", 1) if "cache: true\\n" in content else content)'
+        fi
       skipPromotionOnFail: false
       parentHelmValuesFile: 'values.yaml'
       helmFolderPath: 'charts'
