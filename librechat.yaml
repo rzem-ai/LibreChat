@@ -1,4 +1,4 @@
-version: 1.3.13 # Copy from librechat.example.yaml
+version: 1.3.13
 cache: true
 
 interface:
@@ -109,6 +109,7 @@ endpoints:
       modelDisplayLabel: "Azure AU"
       dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
       headers:
+        # Local-only identity token header; build-and-promote strips this from deployment chart config.
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
         Content-Type: "application/json"
 
@@ -127,6 +128,7 @@ endpoints:
       modelDisplayLabel: "Azure US"
       dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
       headers:
+        # Local-only identity token header; build-and-promote strips this from deployment chart config.
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
         Content-Type: "application/json"
 
@@ -145,6 +147,7 @@ endpoints:
       modelDisplayLabel: "VertexAI US"
       dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
       headers:
+        # Local-only identity token header; build-and-promote strips this from deployment chart config.
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
         Content-Type: "application/json"
 
