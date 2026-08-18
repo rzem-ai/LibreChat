@@ -121,7 +121,13 @@ REPO_PARENT="$(dirname "$REPO_ROOT")"
 REPO_NAME="$(basename "$REPO_ROOT")"
 WORKTREE="$REPO_PARENT/${REPO_NAME}-pr${PR_NUMBER}"
 ARTIFACT_ROOT="$REPO_PARENT/${REPO_NAME}-pr${PR_NUMBER}-artifacts"
+PORT_REGISTRY="$REPO_ROOT/.git/safe-docker-pr-testing-ports.yaml"
 ```
+
+`PORT_REGISTRY` is a single file per repository clone, not per PR. It lives under `.git/` so it is
+never committed, never shows up in `git status`, and survives the per-PR `ARTIFACT_ROOT` teardown in
+Phase 11 — this is what makes port assignments reusable across separate test sessions for the same
+PR. See Host Ports below for its schema and how it is read/written.
 
 If the repository is inside OneDrive, SharePoint, or another synced `CloudStorage` path, put the
 worktree and artifacts in the operating system's temporary directory to avoid syncing thousands of
@@ -235,20 +241,50 @@ that need rebuilding. Unchanged third-party dependencies may retain their normal
 Assign unique host ports for every published port, or remove unnecessary dependency ports from the
 host while keeping them available on the isolated Compose network.
 
-Inspect current listeners first. This surfaces conflicts from any running stack, not just the
-normal one, including other PR stacks already under test:
+Use `PORT_REGISTRY` (defined in Phase 2) as a cache in front of live discovery, not a replacement
+for it — the registry avoids re-probing every run, but a recorded port is only ever reused after
+confirming it is actually free right now.
 
-```bash
-docker ps --format '{{.Names}} {{.Ports}}'
-lsof -nP -iTCP -sTCP:LISTEN
+```yaml
+# .git/safe-docker-pr-testing-ports.yaml
+# Auto-maintained by the safe-docker-pr-testing skill. Safe to delete; ports are rediscovered
+# on the next run. Keyed by PR number, then by service name.
+123:
+  web: 3201
+  postgres: 25432
+456:
+  web: 3301
 ```
 
-Do not hardcode a fixed port per PR. Auto-select an unused host port for each published port:
-start from a base offset (for example, derived from the PR number) and probe upward, skipping any
-port already bound per the listener check above, until a free one is found. Do not prompt the user
+Resolution order for each published port:
+
+1. Read `PORT_REGISTRY` if it exists. If the current `PR_NUMBER` has a recorded port for this
+   service, tentatively reuse it.
+2. Inspect current listeners to verify. This surfaces conflicts from any running stack, not just
+   the normal one, including other PR stacks already under test:
+
+   ```bash
+   docker ps --format '{{.Names}} {{.Ports}}'
+   lsof -nP -iTCP -sTCP:LISTEN
+   ```
+
+3. If the recorded port is free, or is already held by this same PR's own containers (for example
+   during Phase 10's update-on-new-commit), reuse it as-is — no reprobing needed.
+4. If the recorded port is now held by something else (another PR's stack, an unrelated process),
+   treat the registry entry as stale and fall back to fresh discovery: start from a base offset (for
+   example, derived from the PR number) and probe upward, skipping any port already bound per the
+   listener check above, until a free one is found.
+5. If the PR has no registry entry yet, go straight to fresh discovery from step 4.
+
+Do not hardcode a fixed port per PR outside of what the registry records, and do not prompt the user
 to pick a port manually; only stop and ask if no free port turns up in the expected range after a
-reasonable number of attempts. Always report every final chosen host port in the Reporting
-Template, so the tester has the exact URL/port for the isolated stack without re-deriving it.
+reasonable number of attempts. After the final ports are chosen, write/update this PR's entry in
+`PORT_REGISTRY` (creating the file if absent) so later runs — including Phase 10 updates and future
+test sessions for the same PR — resolve to the same ports deterministically. Do not remove a PR's
+registry entry during Phase 11 teardown; the containers are gone but the reservation staying in
+place is what keeps re-testing the same PR later deterministic, and step 4 above already handles the
+case where another PR needs that port in the meantime. Always report every final chosen host port,
+and whether it came from the registry or fresh discovery, in the Reporting Template.
 
 Use `!override` to replace, rather than append to, existing port lists:
 
@@ -475,10 +511,12 @@ When the PR receives a new commit:
 5. move the detached worktree to the new PR ref;
 6. derive new SHA-tagged image names;
 7. update only the external isolation override;
-8. build new images;
-9. run `up -d --no-build` with the same project name;
-10. preserve the isolated volumes unless a fresh-data test is explicitly required;
-11. verify the containers use the new image tags and re-run affected tests.
+8. reuse this PR's ports from `PORT_REGISTRY` (Host Ports, Phase 4) rather than re-probing — they
+   are still bound by this same PR's own containers until step 9 recreates them;
+9. build new images;
+10. run `up -d --no-build` with the same project name;
+11. preserve the isolated volumes unless a fresh-data test is explicitly required;
+12. verify the containers use the new image tags and re-run affected tests.
 
 Example fetch/update:
 
@@ -556,6 +594,7 @@ Worktree: <path>
 Compose project: <unique project name>
 PR images: <unique tags>
 Application URL: <isolated URL>
+Ports: <host ports, one per service, each noting registry reuse or freshly discovered>
 Isolation checks: ports / containers / networks / volumes / data
 Normal environment unchanged: yes/no
 Automated checks: <results>
