@@ -103,6 +103,8 @@ export type TEndpointOption = Pick<
 
 export type TEphemeralAgent = {
   mcp?: string[];
+  /** Selected toolset names per MCP server name; absent server key means all toolsets enabled. */
+  mcpToolsets?: Record<string, string[]>;
   web_search?: boolean;
   file_search?: boolean;
   execute_code?: boolean;

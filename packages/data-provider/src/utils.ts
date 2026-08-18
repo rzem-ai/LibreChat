@@ -76,6 +76,34 @@ export function extractEnvVariable(value: string) {
   return result;
 }
 
+const unresolvedPlaceholderPattern = /\$\{[^}]+\}/;
+
+/**
+ * Drops query parameters whose value still contains an unresolved `${VAR}` placeholder
+ * after `extractEnvVariable` has run. An unset optional env var used in a query string
+ * (e.g. `?toolsets=${VAR}`) should mean "parameter omitted", not a literal placeholder
+ * forwarded to the server as a meaningless filter value. Leaves the input untouched if
+ * it isn't a parseable URL, so callers can surface the real validation error instead.
+ */
+export function stripUnresolvedPlaceholderQueryParams(url: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return url;
+  }
+
+  const staleKeys: string[] = [];
+  parsed.searchParams.forEach((value, key) => {
+    if (unresolvedPlaceholderPattern.test(value)) {
+      staleKeys.push(key);
+    }
+  });
+  staleKeys.forEach((key) => parsed.searchParams.delete(key));
+
+  return parsed.toString();
+}
+
 /**
  * Normalize the endpoint name to system-expected value.
  * @param name

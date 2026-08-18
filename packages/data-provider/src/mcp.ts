@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TokenExchangeMethodEnum } from './types/agents';
-import { extractEnvVariable } from './utils';
+import { extractEnvVariable, stripUnresolvedPlaceholderQueryParams } from './utils';
 
 const validateOAuthClientCredentials = (
   oauth: {
@@ -296,6 +296,7 @@ export const WebSocketOptionsSchema = BaseOptionsSchema.extend({
   url: z
     .string()
     .transform((val: string) => extractEnvVariable(val))
+    .transform((val: string) => stripUnresolvedPlaceholderQueryParams(val))
     .pipe(z.string().url())
     .refine(
       (val: string) => {
@@ -324,6 +325,7 @@ export const SSEOptionsSchema = BaseOptionsSchema.extend({
   url: z
     .string()
     .transform((val: string) => extractEnvVariable(val))
+    .transform((val: string) => stripUnresolvedPlaceholderQueryParams(val))
     .pipe(z.string().url())
     .refine(
       (val: string) => {
@@ -352,6 +354,7 @@ export const StreamableHTTPOptionsSchema = BaseOptionsSchema.extend({
   url: z
     .string()
     .transform((val: string) => extractEnvVariable(val))
+    .transform((val: string) => stripUnresolvedPlaceholderQueryParams(val))
     .pipe(z.string().url())
     .refine(
       (val: string) => {

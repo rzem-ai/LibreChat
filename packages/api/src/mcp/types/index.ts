@@ -46,9 +46,21 @@ export interface MCPResource {
   mimeType?: string;
 }
 
+/** Mirrors `MCPToolsetCatalogEntry` in `librechat-data-provider` (kept separate — one is the internal cache-service shape, the other the public API response shape). */
+export interface ToolsetCatalogEntry {
+  name: string;
+  description?: string;
+  /** True when the server always serves this toolset's tools regardless of client-side toolset filtering. */
+  alwaysVisible?: boolean;
+  /** Discriminates a selectable server identity from an admin-facing category grouping. */
+  kind?: 'server' | 'category';
+}
+
 export interface LCFunctionTool {
   type: 'function';
   ['function']: LCTool;
+  /** Capability-profile names this tool belongs to, from the MCP server's `_meta.toolsets`. */
+  toolsets?: string[];
 }
 
 export type LCAvailableTools = Record<string, LCFunctionTool>;

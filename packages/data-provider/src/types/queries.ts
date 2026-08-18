@@ -116,10 +116,21 @@ export type AllPromptGroupsResponse = t.TPromptGroup[];
 export type ConversationTagsResponse = s.TConversationTag[];
 
 /* MCP Types */
+/** Mirrors packages/api's ToolsetCatalogEntry (kept separate — see that type for why) */
+export type MCPToolsetCatalogEntry = {
+  name: string;
+  description?: string;
+  /** True when the server always serves this toolset's tools regardless of client-side toolset filtering. */
+  alwaysVisible?: boolean;
+  /** Discriminates a selectable server identity from an admin-facing category grouping. */
+  kind?: 'server' | 'category';
+};
+
 export type MCPTool = {
   name: string;
   pluginKey: string;
   description: string;
+  toolsets?: string[];
 };
 
 export type MCPServer = {
@@ -128,6 +139,7 @@ export type MCPServer = {
   authenticated: boolean;
   authConfig: s.TPluginAuthConfig[];
   tools: MCPTool[];
+  toolsetCatalogue?: MCPToolsetCatalogEntry[];
 };
 
 export type MCPServersResponse = {

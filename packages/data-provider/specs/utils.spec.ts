@@ -1,4 +1,8 @@
-import { extractEnvVariable, isSensitiveEnvVar } from '../src/utils';
+import {
+  extractEnvVariable,
+  isSensitiveEnvVar,
+  stripUnresolvedPlaceholderQueryParams,
+} from '../src/utils';
 
 describe('Environment Variable Extraction', () => {
   const originalEnv = process.env;
@@ -190,6 +194,40 @@ describe('Environment Variable Extraction', () => {
     it('should resolve non-sensitive vars while blocking sensitive ones in the same string', () => {
       expect(extractEnvVariable('key=${OPENAI_API_KEY}&secret=${JWT_SECRET}')).toBe(
         'key=sk-legit-key&secret=${JWT_SECRET}',
+      );
+    });
+  });
+
+  describe('stripUnresolvedPlaceholderQueryParams', () => {
+    it('drops a query param whose value is still an unresolved placeholder', () => {
+      expect(
+        stripUnresolvedPlaceholderQueryParams('https://example.com/mcp?toolsets=${MISSING_VAR}'),
+      ).toBe('https://example.com/mcp');
+    });
+
+    it('keeps a query param whose value has already been resolved', () => {
+      expect(stripUnresolvedPlaceholderQueryParams('https://example.com/mcp?toolsets=teams')).toBe(
+        'https://example.com/mcp?toolsets=teams',
+      );
+    });
+
+    it('leaves a URL with no query params unchanged', () => {
+      expect(stripUnresolvedPlaceholderQueryParams('https://example.com/mcp')).toBe(
+        'https://example.com/mcp',
+      );
+    });
+
+    it('strips only the offending param when others are fine', () => {
+      expect(
+        stripUnresolvedPlaceholderQueryParams(
+          'https://example.com/mcp?keep=ok&drop=${MISSING_VAR}&static=1',
+        ),
+      ).toBe('https://example.com/mcp?keep=ok&static=1');
+    });
+
+    it('returns the input unchanged when it is not a parseable URL', () => {
+      expect(stripUnresolvedPlaceholderQueryParams('${MCP_SERVER_URL}')).toBe(
+        '${MCP_SERVER_URL}',
       );
     });
   });
