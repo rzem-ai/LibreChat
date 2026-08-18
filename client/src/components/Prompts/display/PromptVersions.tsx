@@ -32,7 +32,7 @@ const VersionBadge = ({
         >
           {isProduction ? (
             <>
-              <span className="slow-pulse size-1.5 rounded-full bg-green-500" />
+              <span className="slow-pulse size-1.5 rounded-full bg-surface-submit" />
               <span>{label}</span>
             </>
           ) : (
@@ -49,7 +49,7 @@ const VersionBadge = ({
 
 const getTimelineConnectorClasses = (isSelected: boolean, isProduction: boolean) => {
   if (isSelected) {
-    return 'border-green-500 bg-green-500 text-white';
+    return 'border-green-500 bg-surface-submit text-white';
   }
   if (isProduction) {
     return 'border-green-400 bg-transparent text-green-500';
@@ -115,7 +115,7 @@ const VersionCard = ({
         <div className="flex items-center justify-between gap-2">
           <span
             className={cn(
-              'text-sm font-semibold',
+              'text-sm font-medium',
               isSelected ? 'text-green-700 dark:text-green-400' : 'text-text-primary',
             )}
           >
