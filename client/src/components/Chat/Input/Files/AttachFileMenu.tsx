@@ -63,7 +63,7 @@ const fileTypeCapabilities: Record<FileUploadType, MimeUploadCapability> = {
     documentMimeTypes: bedrockDocumentMimeTypes,
   },
   /** Google/Vertex/OpenRouter media path: documents are limited to PDF (see isProviderAttachType). */
-    image_document_video_audio: {
+  image_document_video_audio: {
     categories: ['image', 'document', 'audio', 'video'],
     documentMimeTypes: ['application/pdf'],
   },
@@ -179,7 +179,6 @@ const AttachFileMenu = ({
       const items: MenuItemProps[] = [];
 
       let currentProvider = provider || endpoint;
-      
       // This will be removed in a future PR to formally normalize Providers comparisons to be case insensitive
       if (currentProvider?.toLowerCase() === Providers.OPENROUTER) {
         currentProvider = Providers.OPENROUTER;
@@ -274,15 +273,15 @@ const AttachFileMenu = ({
     if (sharePointEnabled) {
       const sharePointItems = createMenuItems(() => {
         setIsSharePointDialogOpen(true);
+        // Note: toolResource will be set by the specific item clicked
       });
-      if (sharePointItems.length > 0) {
-        localItems.push({
-          label: localize('com_files_upload_sharepoint'),
-          onClick: () => {},
-          icon: <SharePointIcon className="icon-md" />,
-          subItems: sharePointItems,
-        });
-      }
+      localItems.push({
+        label: localize('com_files_upload_sharepoint'),
+        onClick: () => {},
+        icon: <SharePointIcon className="icon-md" />,
+        subItems: sharePointItems,
+      });
+      
       return localItems;
     }
 
