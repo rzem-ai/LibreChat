@@ -17,17 +17,20 @@ jobs:
   live:
     # Self-hosted so the runner sits inside the network that can reach the
     # private dev host and the SSO provider.
-    runs-on: [self-hosted, linux]
+    runs-on:
+      group: AU ITS DevOps Build Servers
+      labels: [self-hosted, linux]
+
+    # Holds the test-account secrets and any required approvers.
+    environment: playwright-dev
+
+    timeout-minutes: 30
 
     env:
       E2E_BASE_URL: ${{ inputs.base_url }}
       # Dedicated test account — never a personal login.
       E2E_USER: ${{ secrets.E2E_LIVE_USER }}
       E2E_PASS: ${{ secrets.E2E_LIVE_PASS }}
-      # Optional corporate proxy for outbound SSO traffic.
-      HTTPS_PROXY: ${{ secrets.E2E_HTTPS_PROXY }}
-      HTTP_PROXY: ${{ secrets.E2E_HTTP_PROXY }}
-      NO_PROXY: ${{ secrets.E2E_NO_PROXY }}
 
     steps:
       - uses: actions/checkout@v4
@@ -58,3 +61,10 @@ jobs:
           name: playwright-live-report
           path: e2e/playwright-report/**
           retention-days: 30
+          if-no-files-found: ignore
+
+      # Self-hosted runners keep their working directory, so the live session
+      # file must not survive the job.
+      - name: Remove captured session
+        if: always()
+        run: rm -f e2e/live-auth.json
