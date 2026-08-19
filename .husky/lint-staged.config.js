@@ -5,5 +5,6 @@ module.exports = {
     'eslint --fix',
     'eslint',
   ],
+  '*.{py,pyi}': ['uvx black --quiet'],
   '*.json': ['prettier --write'],
 };

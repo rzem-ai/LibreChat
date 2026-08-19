@@ -9,18 +9,23 @@ interface:
     create: true
     share: false
     public: false
-  remoteAgents:
-    use: true
-    create: true
-  skills:
-    use: true
-    create: true
-    share: true # Enable share with other users
-    public: false # Disable share with everyone
 
   bookmarks: true
 
+  # Pin tools to the prompt bar by default for all users
+  defaultPinnedTools:
+    - 'file_search'
+    - 'skills'
+    - 'execute_code'
+    - 'mcp'
+
+  deloitteHeader:
+    enabled: true
+    title: "${APP_TITLE}"
+
   fileCitations: true
+
+  fileSearch: true
 
   marketplace:
     use: true
@@ -47,14 +52,15 @@ interface:
       - 'deloitte.com.au'
       - 'deloitte.co.nz'
 
-  # Pin tools to the prompt bar by default for all users
-  defaultPinnedTools:
-    - 'file_search'
-    - 'skills'
-    - 'execute_code'
-    - 'mcp'
+  remoteAgents:
+    use: true
+    create: true
 
-  fileSearch: true
+  skills:
+    use: true
+    create: true
+    share: true # Enable share with other users
+    public: false # Disable share with everyone
 
 fileConfig:
   endpoints:
