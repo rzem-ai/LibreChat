@@ -94,7 +94,10 @@ interface ChatsHeaderProps {
 const headerIconButtonClassName =
   'flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-secondary outline-none transition-colors hover:bg-surface-active-alt hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-black dark:focus-visible:ring-white';
 
-/** Collapsible header for the Chats section */
+/**
+ * Collapsible header for the ungrouped conversation list — "Recents", as distinct from
+ * the Favorites/Projects sections above it and the "Chats" side panel title itself.
+ */
 const ChatsHeader: FC<ChatsHeaderProps> = memo(({ isExpanded, onToggle }) => {
   const localize = useLocalize();
   const queryClient = useQueryClient();
@@ -115,7 +118,7 @@ const ChatsHeader: FC<ChatsHeaderProps> = memo(({ isExpanded, onToggle }) => {
         type="button"
         aria-expanded={isExpanded}
       >
-        <span className="select-none truncate">{localize('com_ui_chats')}</span>
+        <span className="select-none truncate">{localize('com_ui_recents')}</span>
         <ChevronDown
           className={cn(
             'h-3 w-3 shrink-0 transition-transform duration-200',

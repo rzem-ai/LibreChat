@@ -2,10 +2,10 @@ import { useState, useMemo } from 'react';
 import { Search, X } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
-import { useListSkillsQuery } from '~/data-provider';
 import { useDebounce, useHasAccess, useLocalize } from '~/hooks';
-import { CreateSkillMenu } from '../buttons';
+import { useListSkillsQuery } from '~/data-provider';
 import SkillListPanel from '../lists/SkillList';
+import { CreateSkillMenu } from '../buttons';
 import { cn } from '~/utils';
 
 interface SkillsSidePanelProps {
@@ -14,7 +14,8 @@ interface SkillsSidePanelProps {
 
 /**
  * Claude.ai–style skills sidebar panel.
- * Header: "Skills" title + search icon + create menu (+ dropdown).
+ * The "Skills" title is rendered by the shared `PanelHeader` in `SidePanel/Nav.tsx`.
+ * Header: search icon + create menu (+ dropdown).
  * Body: "My Skills" collapsible section with skill list.
  */
 export default function SkillsSidePanel({ className }: SkillsSidePanelProps) {
@@ -44,7 +45,7 @@ export default function SkillsSidePanel({ className }: SkillsSidePanelProps) {
         className,
       )}
     >
-      {/* Header — title+icons or inline search input */}
+      {/* Header — inline search input, or search+create actions */}
       <div className="flex items-center justify-between px-4 py-2">
         {searchOpen ? (
           <>
@@ -71,22 +72,17 @@ export default function SkillsSidePanel({ className }: SkillsSidePanelProps) {
             </button>
           </>
         ) : (
-          <>
-            <h2 className="truncate text-lg font-bold text-text-primary">
-              {localize('com_ui_skills')}
-            </h2>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setSearchOpen(true)}
-                className="inline-flex size-8 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
-                aria-label={localize('com_ui_search')}
-              >
-                <Search className="size-4" />
-              </button>
-              {hasCreateAccess && <CreateSkillMenu />}
-            </div>
-          </>
+          <div className="flex w-full items-center justify-end gap-1">
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="inline-flex size-8 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+              aria-label={localize('com_ui_search')}
+            >
+              <Search className="size-4" />
+            </button>
+            {hasCreateAccess && <CreateSkillMenu />}
+          </div>
         )}
       </div>
 
