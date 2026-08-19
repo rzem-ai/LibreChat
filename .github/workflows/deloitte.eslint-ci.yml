@@ -11,7 +11,7 @@ on:
       - 'api/**'
       - 'client/**'
       - 'packages/**'
-      - '.github/workflows/eslint-ci.yml'
+      - '.github/workflows/deloitte.eslint-ci.yml'
       - '!**.md'
 
 jobs:
