@@ -73,6 +73,67 @@ describe('MCP schemas', () => {
     });
   });
 
+  describe('unresolved env var query params are stripped, not forwarded', () => {
+    it('drops a query param whose env var is unset on streamable-http URLs', () => {
+      const result = StreamableHTTPOptionsSchema.safeParse({
+        type: 'streamable-http',
+        url: 'https://mcp-server.com/mcp?toolsets=${MCP_GATEWAY_TOOLSETS}',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.url).toBe('https://mcp-server.com/mcp');
+      }
+    });
+
+    it('drops a query param whose env var is unset on SSE URLs', () => {
+      const result = SSEOptionsSchema.safeParse({
+        type: 'sse',
+        url: 'https://mcp-server.com/sse?toolsets=${MCP_GATEWAY_TOOLSETS}',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.url).toBe('https://mcp-server.com/sse');
+      }
+    });
+
+    it('keeps a query param whose env var resolves successfully', () => {
+      process.env.MCP_GATEWAY_TOOLSETS = 'teams,research,news';
+      const result = StreamableHTTPOptionsSchema.safeParse({
+        type: 'streamable-http',
+        url: 'https://mcp-server.com/mcp?toolsets=${MCP_GATEWAY_TOOLSETS}',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.url).toBe('https://mcp-server.com/mcp?toolsets=teams,research,news');
+      }
+      delete process.env.MCP_GATEWAY_TOOLSETS;
+    });
+
+    it('only strips the unresolved param, keeping other resolved/static params intact', () => {
+      process.env.MCP_RESOLVED_PARAM = 'ok';
+      const result = StreamableHTTPOptionsSchema.safeParse({
+        type: 'streamable-http',
+        url: 'https://mcp-server.com/mcp?keep=${MCP_RESOLVED_PARAM}&drop=${MCP_UNSET_PARAM}&static=1',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.url).toBe('https://mcp-server.com/mcp?keep=ok&static=1');
+      }
+      delete process.env.MCP_RESOLVED_PARAM;
+    });
+
+    it('does not alter a bare-origin streamable-http URL when nothing needs stripping', () => {
+      const result = StreamableHTTPOptionsSchema.safeParse({
+        type: 'streamable-http',
+        url: 'https://mcp-server.com',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.url).toBe('https://mcp-server.com');
+      }
+    });
+  });
+
   describe('OAuth URL env variable resolution (admin schema)', () => {
     const OAUTH_AUTH_URL = 'https://auth.example.com/authorize';
     const OAUTH_TOKEN_URL = 'https://auth.example.com/token';
