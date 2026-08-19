@@ -15,8 +15,6 @@ interface SkillsSidePanelProps {
 /**
  * Claude.ai–style skills sidebar panel.
  * The "Skills" title is rendered by the shared `PanelHeader` in `SidePanel/Nav.tsx`.
- * Header: search icon + create menu (+ dropdown).
- * Body: "My Skills" collapsible section with skill list.
  */
 export default function SkillsSidePanel({ className }: SkillsSidePanelProps) {
   const localize = useLocalize();
@@ -45,7 +43,6 @@ export default function SkillsSidePanel({ className }: SkillsSidePanelProps) {
         className,
       )}
     >
-      {/* Header — inline search input, or search+create actions */}
       <div className="flex items-center justify-between px-4 py-2">
         {searchOpen ? (
           <>
@@ -86,7 +83,6 @@ export default function SkillsSidePanel({ className }: SkillsSidePanelProps) {
         )}
       </div>
 
-      {/* Skill list */}
       <div className="flex-1 overflow-y-auto px-4">
         <SkillListPanel
           skills={skills as unknown as import('librechat-data-provider').TSkill[]}
