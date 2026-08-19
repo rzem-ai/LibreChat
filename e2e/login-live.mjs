@@ -41,7 +41,11 @@ const args = localHost
   ? [`--host-resolver-rules=MAP ${localHost} 127.0.0.1`, '--ignore-certificate-errors']
   : [];
 
-const browser = await chromium.launch({ headless: true, args });
+const browser = await chromium.launch({
+  headless: true,
+  args,
+  ...(process.env.E2E_CHROMIUM_CHANNEL ? { channel: process.env.E2E_CHROMIUM_CHANNEL } : {}),
+});
 const context = await browser.newContext({ ignoreHTTPSErrors: true });
 const page = await context.newPage();
 
