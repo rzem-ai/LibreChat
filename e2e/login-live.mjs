@@ -53,7 +53,14 @@ try {
   console.log(`[login-live] signing in as ${email} at ${baseURL}`);
   await page.goto(appURL('login'), { waitUntil: 'domcontentloaded', timeout });
 
-  await page.getByLabel('Email').fill(email);
+  const emailField = page.getByLabel('Email');
+  if (!(await emailField.isVisible({ timeout: 10000 }).catch(() => false))) {
+    throw new Error(
+      'no email/password form on /login — target is SSO-only, so this script needs an SSO flow or ALLOW_EMAIL_LOGIN enabled on the environment',
+    );
+  }
+
+  await emailField.fill(email);
   await page.getByLabel('Password').fill(password);
   await page.getByTestId('login-button').click();
 
