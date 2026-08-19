@@ -70,7 +70,6 @@ jobs:
     # private dev host and the SSO provider.
     runs-on:
       group: AU ITS DevOps Build Servers
-      labels: [self-hosted, linux]
 
     # Holds the test-account secrets and any required approvers.
     environment: playwright-dev
