@@ -113,6 +113,17 @@ jobs:
           if (-not (Test-Path $edge)) { throw "Edge not found at $edge" }
           (Get-Item $edge).VersionInfo.ProductVersion
 
+      - name: Verify credentials are wired up
+        shell: pwsh
+        run: |
+          $missing = @()
+          if (-not $env:E2E_USER) { $missing += 'E2E_LIVE_USER' }
+          if (-not $env:E2E_PASS) { $missing += 'E2E_LIVE_PASS' }
+          if ($missing) {
+            throw "Empty secret(s): $($missing -join ', '). Check they are Environment *secrets* (not variables) under 'playwright-dev'."
+          }
+          Write-Host "Credentials present (user length: $($env:E2E_USER.Length), pass length: $($env:E2E_PASS.Length))"
+
       # Programmatic login instead of a hand-captured snapshot: a fresh session
       # every run, so nothing goes stale. Writes e2e/live-auth.json.
       - name: Capture live session
