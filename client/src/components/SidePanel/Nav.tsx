@@ -11,11 +11,14 @@ export default function Nav({ links }: { links: NavLink[] }) {
   const ActiveComponent = activeLink?.Component;
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden text-text-primary">
+    <div className="flex h-full min-h-0 flex-col text-text-primary">
       {activeLink && ActiveComponent && (
         <>
           <PanelHeader title={localize(activeLink.title)} />
-          <ActiveComponent />
+          {/* Only the panel body scrolls, so PanelHeader stays visible above it. */}
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+            <ActiveComponent />
+          </div>
         </>
       )}
     </div>
