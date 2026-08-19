@@ -45,7 +45,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:6227be8b32b94949066a75dbc7f8d23805a21d705f18745ea933bfcd2f62645e'
+          tag: 'develop@sha256:4ff323fe160d15bf83d87bf959cf21697d1dad33da4ba850fce595f558bc1298'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -164,7 +164,7 @@ pods:
       meilisearch:
         image:
           pullPolicy: Always
-          tag: 'develop@sha256:d498346507f22463b1a96162c4556346ca2cd6398c105ca31db31031d732116b'
+          tag: 'develop@sha256:499dc37a2dd24eaf5e8aa734a83bd92e84876a7ceb2c860164138d14bb39da23'
         env:
           MEILI_ENV: 'development'
         secrets:
