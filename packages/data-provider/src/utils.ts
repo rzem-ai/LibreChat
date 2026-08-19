@@ -79,11 +79,12 @@ export function extractEnvVariable(value: string) {
 const unresolvedPlaceholderPattern = /\$\{[^}]+\}/;
 
 /**
- * Drops query parameters whose value still contains an unresolved `${VAR}` placeholder
- * after `extractEnvVariable` has run. An unset optional env var used in a query string
- * (e.g. `?toolsets=${VAR}`) should mean "parameter omitted", not a literal placeholder
- * forwarded to the server as a meaningless filter value. Leaves the input untouched if
- * it isn't a parseable URL, so callers can surface the real validation error instead.
+ * Deloitte Custom Change: Drops query parameters whose value still contains an unresolved
+ * `${VAR}` placeholder after `extractEnvVariable` has run. An unset optional env var used
+ * in a query string (e.g. `?toolsets=${VAR}`) should mean "parameter omitted", not a
+ * literal placeholder forwarded to the server as a meaningless filter value. Leaves the
+ * input untouched if it isn't a parseable URL, so callers can surface the real validation
+ * error instead.
  */
 export function stripUnresolvedPlaceholderQueryParams(url: string): string {
   let parsed: URL;

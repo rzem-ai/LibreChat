@@ -51,12 +51,18 @@ export interface MCPResource {
   mimeType?: string;
 }
 
+/**
+ * Deloitte Custom Change: package-local alias so `packages/api/src/mcp/*` modules can
+ * import this type alongside their other local types (`MCPResource`, `MCPPrompt`, etc.)
+ * instead of reaching into `librechat-data-provider` directly. Same shape as
+ * `MCPToolsetCatalogEntry`, not a duplicate.
+ */
 export type ToolsetCatalogEntry = MCPToolsetCatalogEntry;
 
 export interface LCFunctionTool {
   type: 'function';
   ['function']: LCTool;
-  /** Capability-profile names this tool belongs to, from the MCP server's `_meta.toolsets`. */
+  /** Deloitte Custom Change: Capability-profile names this tool belongs to, from the MCP server's `_meta.toolsets`. */
   toolsets?: string[];
 }
 

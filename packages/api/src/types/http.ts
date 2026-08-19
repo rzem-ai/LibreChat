@@ -18,7 +18,11 @@ export type RequestBody = {
   endpointOption?: Partial<TEndpointOption>;
   /** Browser IANA timezone used to resolve local-time prompt variables (e.g. `{{current_datetime}}`). */
   timezone?: string;
-  /** Per-message tool/capability selection (MCP servers, web search, code execution, etc.) for a conversation not backed by a saved Agent document. */
+  /**
+   * Deloitte Custom Change: An "ephemeral agent" is a per-message bundle of tool/capability
+   * toggles (MCP servers, web search, code execution, etc.) attached directly to a
+   * conversation, as an alternative to selecting a saved Agent document.
+   */
   ephemeralAgent?: TEphemeralAgent;
 };
 

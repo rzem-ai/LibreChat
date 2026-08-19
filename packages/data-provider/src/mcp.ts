@@ -291,9 +291,10 @@ export const StdioOptionsSchema = BaseOptionsSchema.extend({
 });
 
 /**
- * Base URL schema shared by all remote MCP transports: resolves `${VAR}` placeholders,
- * drops any query param left with an unresolved placeholder, then validates as a URL.
- * Each transport schema below adds its own protocol `.refine(...)` on top of this.
+ * Deloitte Custom Change: Base URL schema shared by all remote MCP transports — resolves
+ * `${VAR}` placeholders, drops any query param left with an unresolved placeholder, then
+ * validates as a URL. Each transport schema below adds its own protocol `.refine(...)` on
+ * top of this.
  */
 const mcpTransportUrlSchema = z
   .string()

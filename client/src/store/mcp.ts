@@ -22,15 +22,15 @@ export const mcpValuesAtomFamily = atomFamily((conversationId: string | null) =>
 });
 
 /**
- * Tab-isolated storage for per-server MCP toolset selections, mirroring
- * `mcpTabIsolatedStorage` above for the same cross-tab isolation reasons.
+ * Deloitte Custom Change: Tab-isolated storage for per-server MCP toolset selections,
+ * mirroring `mcpTabIsolatedStorage` above for the same cross-tab isolation reasons.
  */
 const mcpToolsetsTabIsolatedStorage = createTabIsolatedStorage<Record<string, string[]>>();
 
 /**
- * Creates a storage atom for per-server MCP toolset selections per conversation.
- * Absent server key (not present in the record) means "all toolsets enabled" —
- * this is a hook-level convention (see `useMCPToolsetSelect`), not encoded here.
+ * Deloitte Custom Change: Creates a storage atom for per-server MCP toolset selections
+ * per conversation. Absent server key (not present in the record) means "all toolsets
+ * enabled" — this is a hook-level convention (see `useMCPToolsetSelect`), not encoded here.
  */
 export const mcpToolsetsAtomFamily = atomFamily((conversationId: string | null) => {
   const key = conversationId ?? Constants.NEW_CONVO;

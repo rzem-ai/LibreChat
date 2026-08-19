@@ -116,13 +116,13 @@ export type AllPromptGroupsResponse = t.TPromptGroup[];
 export type ConversationTagsResponse = s.TConversationTag[];
 
 /* MCP Types */
-/** Deloitte: A capability-profile grouping of an MCP server's tools, as returned by the server catalog. */
+/** Deloitte Custom Change: A capability-profile grouping of an MCP server's tools, as returned by the server catalog. */
 export type MCPToolsetCatalogEntry = {
   name: string;
   description?: string;
-  /** True when the server always serves this toolset's tools regardless of client-side toolset filtering. */
+  /** Deloitte Custom Change: True when the server always serves this toolset's tools regardless of client-side toolset filtering. */
   alwaysVisible?: boolean;
-  /** Discriminates a selectable server identity from an admin-facing category grouping. */
+  /** Deloitte Custom Change: Discriminates a selectable server identity from an admin-facing category grouping. */
   kind?: 'server' | 'category';
 };
 
@@ -213,7 +213,11 @@ export interface MCPServerStatus {
   requiresOAuth: boolean;
   connectionState: 'disconnected' | 'connecting' | 'connected' | 'error';
   authorizationState?:
-    'not_required' | 'authorizing' | 'authorized' | 'needs_authorization' | 'error';
+    | 'not_required'
+    | 'authorizing'
+    | 'authorized'
+    | 'needs_authorization'
+    | 'error';
 }
 
 export interface MCPConnectionStatusResponse {
