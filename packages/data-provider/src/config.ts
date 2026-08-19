@@ -1322,6 +1322,13 @@ const termsOfServiceSchema = z.object({
 
 export type TTermsOfService = z.infer<typeof termsOfServiceSchema>;
 
+const deloitteHeaderSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    title: z.string().optional(),
+  })
+  .optional();
+
 // Schema for localized string (either simple string or language-keyed object)
 const localizedStringSchema = z.union([z.string(), z.record(z.string())]);
 export type LocalizedString = z.infer<typeof localizedStringSchema>;
@@ -1359,6 +1366,7 @@ export const interfaceSchema = z
       })
       .optional(),
     termsOfService: termsOfServiceSchema.optional(),
+    deloitteHeader: deloitteHeaderSchema,
     customWelcome: z.string().optional(),
     mcpServers: mcpServersSchema.optional(),
     modelSelect: z.boolean().optional(),
