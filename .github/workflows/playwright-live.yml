@@ -1,0 +1,70 @@
+name: Playwright Live Smoke
+
+# Manual-only: post-deployment smoke against a real running environment.
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Target site to smoke test'
+        required: true
+        default: 'https://librechat-dev.ctk.au.deloitte.com'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    # Self-hosted so the runner sits inside the network that can reach the
+    # private dev host and the SSO provider.
+    runs-on:
+      group: AU ITS DevOps Build Servers
+      labels: [self-hosted, linux]
+
+    # Holds the test-account secrets and any required approvers.
+    environment: playwright-dev
+
+    timeout-minutes: 30
+
+    env:
+      E2E_BASE_URL: ${{ inputs.base_url }}
+      # Dedicated test account — never a personal login.
+      E2E_USER: ${{ secrets.E2E_LIVE_USER }}
+      E2E_PASS: ${{ secrets.E2E_LIVE_PASS }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 24.16.0
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.16.0'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      # Programmatic login instead of a hand-captured snapshot: a fresh session
+      # every run, so nothing goes stale. Writes e2e/live-auth.json.
+      - name: Capture live session
+        run: node e2e/login-live.mjs
+
+      - name: Run live smoke
+        run: npx playwright test --config=e2e/playwright.config.live.ts
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-live-report
+          path: e2e/playwright-report/**
+          retention-days: 30
+          if-no-files-found: ignore
+
+      # Self-hosted runners keep their working directory, so the live session
+      # file must not survive the job.
+      - name: Remove captured session
+        if: always()
+        run: rm -f e2e/live-auth.json
