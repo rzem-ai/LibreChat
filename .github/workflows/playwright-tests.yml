@@ -90,11 +90,20 @@ jobs:
         with:
           node-version: '24.16.0'
 
+      # The build server sits behind TLS inspection, so Node must be told to
+      # trust the interception CAs or every HTTPS download fails.
+      - name: Trust corporate root certificates
+        shell: pwsh
+        run: |
+          $bundle = Join-Path $env:RUNNER_TEMP 'corp-ca-bundle.pem'
+          Get-Content deloitte/certificates/*.crt | Set-Content -Path $bundle -Encoding ascii
+          "NODE_EXTRA_CA_CERTS=$bundle" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
       - name: Install dependencies
         run: npm ci
 
       - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       # Programmatic login instead of a hand-captured snapshot: a fresh session
       # every run, so nothing goes stale. Writes e2e/live-auth.json.
@@ -126,4 +135,5 @@ jobs:
       # file must not survive the job.
       - name: Remove captured session
         if: always()
-        run: rm -f e2e/live-auth.json
+        shell: pwsh
+        run: Remove-Item -Path e2e/live-auth.json -Force -ErrorAction SilentlyContinue
