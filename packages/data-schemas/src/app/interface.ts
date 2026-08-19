@@ -47,6 +47,7 @@ export async function loadDefaultInterface({
       (hasModelSpecs ? includesAddedEndpoints : defaults.modelSelect),
     parameters: interfaceConfig?.parameters ?? (hasModelSpecs ? false : defaults.parameters),
     presets: interfaceConfig?.presets ?? (hasModelSpecs ? false : defaults.presets),
+    exportChat: interfaceConfig?.exportChat,
     regenerate: interfaceConfig?.regenerate,
     fork: interfaceConfig?.fork,
     edit: interfaceConfig?.edit,

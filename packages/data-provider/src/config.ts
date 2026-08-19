@@ -1375,6 +1375,7 @@ export const interfaceSchema = z
     bookmarks: z.boolean().optional(),
     memories: z.boolean().optional(),
     presets: z.boolean().optional(),
+    exportChat: z.boolean().optional(),
     regenerate: z.boolean().optional(),
     fork: z.boolean().optional(),
     edit: z.boolean().optional(),

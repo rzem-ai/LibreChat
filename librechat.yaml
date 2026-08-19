@@ -33,7 +33,9 @@ interface:
 
   sharedLinks: false # Set to false to disable sharing conversations through links
 
-  regenerate: false # Set to false to disable regenerating assistant responses
+  exportChat: false # Set to false to disable exporting conversations
+
+  regenerate: true # Set to false to disable regenerating assistant responses
 
   fork: false # Set to false to disable branching conversations from earlier messages
 
@@ -41,9 +43,9 @@ interface:
 
   tools: false # Set to false to disable the chat tools menu
 
-  landingIcon: false # Set to false to hide the model or agent icon beside the landing greeting
+  landingIcon: true # Set to false to hide the model or agent icon beside the landing greeting
 
-  conversationIcon: false # Set to false to hide model or endpoint icons in conversation history
+  conversationIcon: true # Set to false to hide model or endpoint icons in conversation history
 
   prompts:
     use: true
@@ -74,14 +76,14 @@ interface:
     - "execute_code"
     - "mcp"
 
-  fileSearch: false # Set to false to disable searching uploaded files
+  fileSearch: true # Set to false to disable searching uploaded files
 
 fileConfig:
   endpoints:
     default:
-      fileLimit: 0 # Set to 0 to disable file uploads for standard conversations
+      fileLimit: 50
     agents:
-      fileLimit: 0 # Set to 0 to disable file uploads for agent conversations
+      fileLimit: 50
 
 endpoints:
   # ========================================
@@ -91,7 +93,7 @@ endpoints:
   agents:
     recursionLimit: 25
     maxRecursionLimit: 50
-    disableBuilder: true # Set to false to disable the agent builder interface
+    disableBuilder: false # Set to true to disable the agent builder interface
     maxCitations: 30
     maxCitationsPerFile: 7
     capabilities:
