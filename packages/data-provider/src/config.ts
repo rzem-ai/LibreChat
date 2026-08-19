@@ -1417,6 +1417,7 @@ export const interfaceSchema = z
         users: z.boolean().optional(),
         groups: z.boolean().optional(),
         roles: z.boolean().optional(),
+        allowedDomains: z.array(z.string()).optional(),
       })
       .optional(),
     marketplace: z
@@ -3177,7 +3178,7 @@ export type TSpecialVarLabel = `com_ui_special_var_${keyof typeof specialVariabl
  * Does not infer or default any endpoint type when absent.
  */
 export function getEndpointField<
-  K extends TConfig[keyof TConfig] extends never ? never : keyof TConfig,
+  K extends (TConfig[keyof TConfig] extends never ? never : keyof TConfig),
 >(
   endpointsConfig: TEndpointsConfig | undefined | null,
   endpoint: EModelEndpoint | string | null | undefined,
