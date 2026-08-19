@@ -7,8 +7,8 @@ import {
   ScraperProviders,
   SearchCategories,
 } from 'librechat-data-provider';
-import type { SearchApiKeyFormData } from '~/hooks/Plugins/useAuthSearchTool';
 import type { UseFormRegister, UseFormHandleSubmit } from 'react-hook-form';
+import type { SearchApiKeyFormData } from '~/hooks/Plugins/useAuthSearchTool';
 import InputSection, { type DropdownOption } from './InputSection';
 import { useGetStartupConfig } from '~/data-provider';
 import { useLocalize } from '~/hooks';
@@ -273,7 +273,7 @@ export default function ApiKeyDialog({
         }
         selection={{
           selectHandler: handleSubmit(onSubmit),
-          selectClasses: 'bg-green-500 hover:bg-green-600 text-white',
+          selectClasses: 'bg-surface-submit hover:bg-surface-submit-hover text-white',
           selectText: localize('com_ui_save'),
         }}
         buttons={
