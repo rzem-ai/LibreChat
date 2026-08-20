@@ -6,15 +6,21 @@ on:
   #   branches: [ develop ]
   workflow_dispatch:
     inputs:
-      test_mode:
-        description: 'Test mode'
+      run_ci:
+        description: 'Run e2e:ci'
         required: true
-        default: 'e2e:ci'
-        type: choice
-        options:
-          - e2e:ci
-          - e2e:mock
-          - live
+        default: true
+        type: boolean
+      run_mock:
+        description: 'Run e2e:mock'
+        required: true
+        default: true
+        type: boolean
+      run_live:
+        description: 'Run live smoke'
+        required: true
+        default: true
+        type: boolean
       base_url:
         description: 'Target site (live mode only)'
         required: false
@@ -24,8 +30,10 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    if: ${{ github.event.inputs.test_mode != 'live' }}
+  ci:
+    # Runs on push/PR (once enabled) and whenever the dispatch input isn't
+    # explicitly set to false.
+    if: ${{ github.event.inputs.run_ci != 'false' }}
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.56.1-noble
@@ -39,33 +47,49 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # - name: Install Playwright browsers
-      #   run: DEBUG=pw:install npx playwright install --with-deps chromium
-
-      # - name: Install Playwright browsers II
-      #   run: |
-      #     # 1. Update your local OS package definitions
-      #     sudo apt-get update
-
-      #     # 2. Install the system dependencies explicitly 
-      #     sudo npx playwright install-deps chromium
-
-      #     # 3. Download the specific Chromium binary
-      #     npx playwright install chromium
-
       - name: Run Playwright tests
-        run: npm run ${{ github.event.inputs.test_mode }}
+        run: npm run e2e:ci
 
       - name: Upload test report
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
-          name: playwright-report
+          name: playwright-report-ci
+          path: e2e/playwright-report/**
+          retention-days: 30
+
+  mock:
+    # Runs after ci regardless of whether ci ran or was skipped, but not if it failed.
+    needs: ci
+    if: ${{ !cancelled() && needs.ci.result != 'failure' && github.event.inputs.run_mock != 'false' }}
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 24.16.0
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.16.0'
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Playwright tests
+        run: npm run e2e:mock
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-mock
           path: e2e/playwright-report/**
           retention-days: 30
 
   live:
-    if: ${{ github.event.inputs.test_mode == 'live' }}
+    # Runs after mock regardless of whether ci/mock ran or were skipped, but not if mock failed.
+    needs: mock
+    if: ${{ !cancelled() && needs.mock.result != 'failure' && github.event.inputs.run_live != 'false' }}
     # Self-hosted so the runner sits inside the network that can reach the
     # private dev host and the SSO provider.
     runs-on:
