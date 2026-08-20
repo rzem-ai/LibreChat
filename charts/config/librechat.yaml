@@ -27,6 +27,23 @@ interface:
 
   fileSearch: true
 
+  # Mandatory terms acceptance dialog
+  termsOfService:
+    modalAcceptance: true
+    modalTitle: 'Terms and Conditions'
+    modalContent: |
+      This tool is designed to support your daily tasks using generative AI technology. Please spend some time understanding MyAssist's functionality and how it can assist you by visiting the [MyAssist page on DAIS](https://ausdeloitte.sharepoint.com/sites/DAISITS/SitePages/Generative-AI.aspx).
+      By using MyAssist you agree to the following:
+      - Have read and understand Deloitte Australia's [AI Usage Statement and AI Guidance](https://ausdeloitte.sharepoint.com/sites/DAIS/Shared%20Documents/Forms/AllItems.aspx?id=%2fsites%2fDAIS%2fShared+Documents%2fAI+Usage+Statement+and+AI+Guidance.pdf&parent=%2fsites%2fDAIS%2fShared+Documents&xsdata=MDV8MDJ8enNwdXJnZW9uQGRlbG9pdHRlLmNvbS5hdXw4NmNmNWRkN2FjNjE0YTNiMzFkYzA4ZGU3YWYzOWJkOHwzNmRhNDVmMWRkMmM0ZDFmYWYxMzVhYmU0NmI5OTkyMXwwfDB8NjM5MDgzMzg0MDk1NDUwNTYyfFVua25vd258VFdGcGJHWnNiM2Q4ZXlKRmJYQjBlVTFoY0draU9uUnlkV1VzSWxZaU9pSXdMakF1TURBd01DSXNJbEFpT2lKWGFXNHpNaUlzSWtGT0lqb2lUV0ZwYkNJc0lsZFVJam95ZlE9PXwwfHx8&sdata=UmRNR3M3eDB4d3RhT0N0YlloQmh5OUIrTFc5RGswR1NsNFhYV0xaSjc0TT0%3d);
+      These guidelines apply to all users. Users from other member firms with questions on compliance should contact their local Q&R team. New Zealand users: nzdataoffice@deloitte.co.nz.
+      - Understand that you are permitted to upload Deloitte or client confidential information to MyAssist, provided that you respect any client contractual obligations, including restrictions on the purpose for which client data may be used;
+      - Understand that if your client contract restricts Deloitte from processing client confidential information offshore, you must enable “AU-hosted models” via the toggle in any MyAssist app;
+      - Understand that you are NOT permitted to use personal information or high-risk confidential information (e.g. market sensitive information such as financials, acquisition details, strategic plans) in your prompts when the “Web Search” feature is enabled.
+      - Will review and fact check any outputs generated using MyAssist and be transparent with your team about how you have used MyAssist in your work;
+      - Will always act in accordance with your [Global Principles of Business Conduct](https://ausdeloitte.sharepoint.com/:b:/r/sites/DAISPolicies/QR%20Policies/Deloitte%20Global%20Principles%20of%20Business%20Conduct.pdf?csf=1&web=1&e=3qbMc1) when using MyAssist;
+      - Acknowledge that your use of MyAssist is monitored and that your prompts and usage data may be collected and analysed to understand how MyAssist is being used and to identify opportunities for improving the platform.
+      - Have read, understood, and will always comply with the [Third Party Content Guidelines](https://ausdeloitte.sharepoint.com/sites/DOL-c-DTTL-ResearchAUS/SitePages/Usage-guidelines.aspx#genai-third-party-content-guidelines).
+ 
   marketplace:
     use: true
 
