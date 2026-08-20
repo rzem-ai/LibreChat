@@ -53,7 +53,7 @@ type FileUploadType =
   | 'image_document_extended'
   | 'image_document_video_audio';
 
-  /** What each provider upload path can actually send, used to scope the picker filter to selectable files. */
+/** What each provider upload path can actually send, used to scope the picker filter to selectable files. */
 const fileTypeCapabilities: Record<FileUploadType, MimeUploadCapability> = {
   image: { categories: ['image'] },
   document: { categories: ['document'] },
