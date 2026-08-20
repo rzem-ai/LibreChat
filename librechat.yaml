@@ -67,6 +67,17 @@ fileConfig:
     agents:
       fileLimit: 50
 
+memory:
+  disabled: false
+  personalize: true
+  tokenLimit: 2000
+  maxInputTokens: 12000
+  messageWindowSize: 5
+  agent:
+    enabled: true
+    provider: "Azure AU"
+    model: "gpt-41-nano"
+
 endpoints:
   # ========================================
   # Built-in Anthropic (via nginx proxy)
