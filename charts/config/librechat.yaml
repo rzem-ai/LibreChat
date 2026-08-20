@@ -19,6 +19,10 @@ interface:
     - 'execute_code'
     - 'mcp'
 
+  deloitteHeader:
+    enabled: true
+    title: "${APP_TITLE}"
+
   fileCitations: true
 
   fileSearch: true
@@ -44,6 +48,14 @@ interface:
     create: true
     share: false # Enable share with other users
     public: false # Disable share with everyone
+
+  peoplePicker:
+    users: true
+    groups: false
+    roles: false
+    allowedDomains:
+      - 'deloitte.com.au'
+      - 'deloitte.co.nz'
 
   providerUpload: false
 

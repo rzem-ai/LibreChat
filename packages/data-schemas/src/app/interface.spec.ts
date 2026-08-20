@@ -200,6 +200,62 @@ describe('loadDefaultInterface', () => {
     expect(interfaceConfig?.defaultPinnedTools).toEqual(['artifacts', 'execute_code', 'mcp']);
   });
 
+  it('passes through the configured Deloitte header', async () => {
+    const config: Partial<TCustomConfig> = {
+      interface: {
+        deloitteHeader: { enabled: true, title: 'MyAssist NextGenV2' },
+      },
+    };
+
+    const interfaceConfig = await loadDefaultInterface({
+      config,
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.deloitteHeader).toEqual({
+      enabled: true,
+      title: 'MyAssist NextGenV2',
+    });
+  });
+
+  it('resolves environment variables in the configured Deloitte header title', async () => {
+    const originalAppTitle = process.env.APP_TITLE;
+    process.env.APP_TITLE = 'MyAssist NextGenV2';
+
+    try {
+      const config: Partial<TCustomConfig> = {
+        interface: {
+          deloitteHeader: { enabled: true, title: '${APP_TITLE}' },
+        },
+      };
+
+      const interfaceConfig = await loadDefaultInterface({
+        config,
+        configDefaults: getConfigDefaults(),
+      });
+
+      expect(interfaceConfig?.deloitteHeader).toEqual({
+        enabled: true,
+        title: 'MyAssist NextGenV2',
+      });
+    } finally {
+      if (originalAppTitle === undefined) {
+        delete process.env.APP_TITLE;
+      } else {
+        process.env.APP_TITLE = originalAppTitle;
+      }
+    }
+  });
+
+  it('omits the Deloitte header when it is not explicitly configured', async () => {
+    const interfaceConfig = await loadDefaultInterface({
+      config: {},
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig).not.toHaveProperty('deloitteHeader');
+  });
+
   it('omits default pinned tools when not explicitly configured', async () => {
     const interfaceConfig = await loadDefaultInterface({
       config: {},

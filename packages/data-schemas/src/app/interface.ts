@@ -1,4 +1,4 @@
-import { removeNullishValues } from 'librechat-data-provider';
+import { extractEnvVariable, removeNullishValues } from 'librechat-data-provider';
 import type { TCustomConfig, TConfigDefaults } from 'librechat-data-provider';
 import type { AppConfig } from '~/types/app';
 import { isMemoryEnabled } from './memory';
@@ -21,6 +21,19 @@ export async function loadDefaultInterface({
   const { interface: defaults } = configDefaults;
   const hasModelSpecs = (config?.modelSpecs?.list?.length ?? 0) > 0;
   const includesAddedEndpoints = (config?.modelSpecs?.addedEndpoints?.length ?? 0) > 0;
+
+  // Deloitte Custom Change: Parse header enablement and title (extract from ENV var)
+  let deloitteHeader: TCustomConfig['interface']['deloitteHeader'] | undefined;
+  if (interfaceConfig?.deloitteHeader) {
+    let { title } = interfaceConfig.deloitteHeader;
+    if (typeof title === 'string') {
+      const vars = title.match(/\${([^}]+)}/g) ?? [];
+      if (vars.length > 0 && vars.every((v) => v === '${APP_TITLE}')) {
+        title = extractEnvVariable(title);
+      }
+    }
+    deloitteHeader = { ...interfaceConfig.deloitteHeader, title };
+  }
 
   const memoryConfig = config?.memory;
   const memoryEnabled = isMemoryEnabled(memoryConfig);
@@ -59,6 +72,7 @@ export async function loadDefaultInterface({
     fileSearch: interfaceConfig?.fileSearch,
     providerUpload: interfaceConfig?.providerUpload,
     fileCitations: interfaceConfig?.fileCitations,
+    deloitteHeader,
     defaultPinnedTools: interfaceConfig?.defaultPinnedTools,
     peoplePicker: interfaceConfig?.peoplePicker,
     marketplace: interfaceConfig?.marketplace,
