@@ -116,6 +116,7 @@ jobs:
       targetBranch: ${{ ( github.event_name == 'pull_request' || github.event_name == 'pull_request_target' ) && github.head_ref || github.ref_name }} # If the event is a pull request, use the base branch of the pull request. Otherwise, use the current branch
       buildArgs: ${{ matrix.buildArgs }}
       customBuildSetupScript: |
+        ${{ matrix.customBuildSetupScript }}
         set -euo pipefail
         rm -f charts/config/librechat.yaml
         cp librechat.yaml charts/config/librechat.yaml
