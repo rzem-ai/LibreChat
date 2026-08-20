@@ -1,5 +1,6 @@
 import { Search, Terminal, Type } from 'lucide-react';
 import { EModelEndpoint, FileSources } from 'librechat-data-provider';
+import type React from 'react';
 import { MinimalIcon } from '~/components/Endpoints';
 import { cn } from '~/utils';
 
@@ -25,15 +26,19 @@ export default function SourceIcon({
   isCodeFile,
   isFileSearch,
   className = defaultClassName,
+  ...divProps
 }: {
   source?: FileSources;
   isCodeFile?: boolean;
   isFileSearch?: boolean;
   className?: string;
-}) {
+} & Omit<React.HTMLAttributes<HTMLDivElement>, 'className'>) {
   if (isCodeFile === true) {
     return (
-      <div className={cn(className, sourceToClassname[FileSources.execute_code] ?? '')}>
+      <div
+        className={cn(className, sourceToClassname[FileSources.execute_code] ?? '')}
+        {...divProps}
+      >
         <span className="flex items-center justify-center text-white" aria-hidden="true">
           <Terminal className="h-3 w-3 stroke-[2.5]" />
         </span>
@@ -41,21 +46,24 @@ export default function SourceIcon({
     );
   }
 
-  if (isFileSearch === true || source === FileSources.vectordb) {
+    if (source === FileSources.text) {
     return (
-      <div className={cn(className, sourceToClassname[FileSources.vectordb] ?? '')}>
-        <span className="flex items-center justify-center text-white" aria-hidden="true">
-          <Search className="h-3 w-3 stroke-[2.5]" />
+      <div className={cn(className, sourceToClassname[source] ?? '')} {...divProps}>
+        <span className="flex items-center justify-center">
+          <Type className="h-3 w-3" aria-hidden="true" />
         </span>
       </div>
     );
   }
 
-  if (source === FileSources.text) {
+  if (isFileSearch === true || source === FileSources.vectordb) {
     return (
-      <div className={cn(className, sourceToClassname[source] ?? '')}>
-        <span className="flex items-center justify-center">
-          <Type className="h-3 w-3" aria-hidden="true" />
+      <div
+        className={cn(className, sourceToClassname[FileSources.vectordb] ?? '')}
+        {...divProps}
+      >
+        <span className="flex items-center justify-center text-white" aria-hidden="true">
+          <Search className="h-3 w-3 stroke-[2.5]" />
         </span>
       </div>
     );
@@ -67,7 +75,7 @@ export default function SourceIcon({
     return null;
   }
   return (
-    <div className={cn(className, sourceToClassname[source ?? ''] ?? '')}>
+    <div className={cn(className, sourceToClassname[source ?? ''] ?? '')} {...divProps}>
       <span className="flex items-center justify-center">
         <MinimalIcon
           endpoint={endpoint}
