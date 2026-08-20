@@ -1417,6 +1417,7 @@ export const interfaceSchema = z
         users: z.boolean().optional(),
         groups: z.boolean().optional(),
         roles: z.boolean().optional(),
+        allowedDomains: z.array(z.string()).optional(),
       })
       .optional(),
     marketplace: z
@@ -3102,6 +3103,8 @@ export enum LocalStorageKeys {
   AUTO_EXPAND_TOOLS = 'autoExpandTools',
   /** Last selected MCP values per conversation ID */
   LAST_MCP_ = 'LAST_MCP_',
+  /** Last selected MCP toolsets per server, per conversation ID */
+  LAST_MCP_TOOLSETS_ = 'LAST_MCP_TOOLSETS_',
   /** Last checked toggle for Code Interpreter API per conversation ID */
   LAST_CODE_TOGGLE_ = 'LAST_CODE_TOGGLE_',
   /** Last checked toggle for Web Search per conversation ID */

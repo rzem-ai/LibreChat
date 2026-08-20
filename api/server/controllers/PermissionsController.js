@@ -402,6 +402,11 @@ const searchPrincipals = async (req, res) => {
   try {
     const { q: rawQuery, limit = 20, types } = req.query;
 
+    const configuredDomains = req.config?.interfaceConfig?.peoplePicker?.allowedDomains;
+    const allowedEmailDomains = Array.isArray(configuredDomains)
+      ? configuredDomains.map((d) => d.toLowerCase())
+      : [];
+
     if (typeof rawQuery !== 'string' || rawQuery.trim().length === 0) {
       return res.status(400).json({
         error: 'Query parameter "q" is required and must not be empty',
@@ -435,18 +440,22 @@ const searchPrincipals = async (req, res) => {
     if (useEntraId && localResults.length < searchLimit) {
       try {
         let graphType = 'all';
+
         if (typeFilters && typeFilters.length === 1) {
           const graphTypeMap = {
             [PrincipalType.USER]: 'users',
             [PrincipalType.GROUP]: 'groups',
           };
+
           const mappedType = graphTypeMap[typeFilters[0]];
+
           if (mappedType) {
             graphType = mappedType;
           }
         }
 
         const authHeader = req.headers.authorization;
+
         const accessToken =
           authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
 
@@ -462,6 +471,7 @@ const searchPrincipals = async (req, res) => {
           const localEmails = new Set(
             localResults.map((p) => p.email?.toLowerCase()).filter(Boolean),
           );
+
           const localGroupSourceIds = new Set(
             localResults.map((p) => p.idOnTheSource).filter(Boolean),
           );
@@ -469,6 +479,7 @@ const searchPrincipals = async (req, res) => {
           for (const principal of graphResults) {
             const isDuplicateByEmail =
               principal.email && localEmails.has(principal.email.toLowerCase());
+
             const isDuplicateBySourceId =
               principal.idOnTheSource && localGroupSourceIds.has(principal.idOnTheSource);
 
@@ -481,7 +492,14 @@ const searchPrincipals = async (req, res) => {
         logger.warn('Graph API search failed, falling back to local results:', graphError.message);
       }
     }
-    const scoredResults = allPrincipals.map((item) => ({
+
+    const domainFilteredPrincipals = allPrincipals.filter((principal) => {
+      const email = typeof principal.email === 'string' ? principal.email.trim().toLowerCase() : '';
+
+      return allowedEmailDomains.some((domain) => email.endsWith(`@${domain}`));
+    });
+
+    const scoredResults = domainFilteredPrincipals.map((item) => ({
       ...item,
       _searchScore: db.calculateRelevanceScore(item, query),
     }));
@@ -507,12 +525,12 @@ const searchPrincipals = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error searching principals:', error);
+
     res.status(500).json({
       error: 'Failed to search principals',
     });
   }
 };
-
 /**
  * Get user's effective permissions for all accessible resources of a type
  * @route GET /api/permissions/{resourceType}/effective/all
