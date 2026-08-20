@@ -40,6 +40,9 @@ interface:
     users: true # TODO: Restrict to deloitte.com.au emails
     groups: false
     roles: false
+        allowedDomains:
+      - 'deloitte.com.au'
+      - 'deloitte.co.nz'
 
   presets: true
 
@@ -48,15 +51,7 @@ interface:
     create: true
     share: false # Enable share with other users
     public: false # Disable share with everyone
-
-  peoplePicker:
-    users: true
-    groups: false
-    roles: false
-    allowedDomains:
-      - 'deloitte.com.au'
-      - 'deloitte.co.nz'
-
+    
   providerUpload: false
 
   remoteAgents:
