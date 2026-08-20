@@ -457,9 +457,7 @@ const searchPrincipals = async (req, res) => {
         const authHeader = req.headers.authorization;
 
         const accessToken =
-          authHeader && authHeader.startsWith('Bearer ')
-            ? authHeader.substring(7)
-            : null;
+          authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
 
         if (accessToken) {
           const graphResults = await searchEntraIdPrincipals(
@@ -480,12 +478,10 @@ const searchPrincipals = async (req, res) => {
 
           for (const principal of graphResults) {
             const isDuplicateByEmail =
-              principal.email &&
-              localEmails.has(principal.email.toLowerCase());
+              principal.email && localEmails.has(principal.email.toLowerCase());
 
             const isDuplicateBySourceId =
-              principal.idOnTheSource &&
-              localGroupSourceIds.has(principal.idOnTheSource);
+              principal.idOnTheSource && localGroupSourceIds.has(principal.idOnTheSource);
 
             if (!isDuplicateByEmail && !isDuplicateBySourceId) {
               allPrincipals.push(principal);
@@ -493,22 +489,14 @@ const searchPrincipals = async (req, res) => {
           }
         }
       } catch (graphError) {
-        logger.warn(
-          'Graph API search failed, falling back to local results:',
-          graphError.message,
-        );
+        logger.warn('Graph API search failed, falling back to local results:', graphError.message);
       }
     }
 
     const domainFilteredPrincipals = allPrincipals.filter((principal) => {
-      const email =
-        typeof principal.email === 'string'
-          ? principal.email.trim().toLowerCase()
-          : '';
+      const email = typeof principal.email === 'string' ? principal.email.trim().toLowerCase() : '';
 
-      return allowedEmailDomains.some((domain) =>
-        email.endsWith(`@${domain}`),
-      );
+      return allowedEmailDomains.some((domain) => email.endsWith(`@${domain}`));
     });
 
     const scoredResults = domainFilteredPrincipals.map((item) => ({
