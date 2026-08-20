@@ -46,7 +46,7 @@ export default function SourceIcon({
     );
   }
 
-    if (source === FileSources.text) {
+  if (source === FileSources.text) {
     return (
       <div className={cn(className, sourceToClassname[source] ?? '')} {...divProps}>
         <span className="flex items-center justify-center">
