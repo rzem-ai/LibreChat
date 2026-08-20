@@ -37,6 +37,7 @@ export default function MCPBuilderPanel() {
 
   return (
     <div className="flex h-auto w-full flex-col px-3 pb-3 pt-2">
+      {/* Deloitte Custom Change: `com_ui_mcp_servers` reads "Connectors" — less technical labeling for end users. */}
       <div role="region" aria-label={localize('com_ui_mcp_servers')} className="space-y-2">
         {/* Toolbar: Search + Add Button */}
         <div className="flex items-center gap-2">

@@ -1,0 +1,38 @@
+[project]
+name = "librechat-evals"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "aiohttp>=3.14.3,<4",
+    "deepeval>=3.9.6",
+    "pydantic",
+    "httpx",
+    "pyyaml",
+    "python-dotenv",
+    "rich",
+    "python-docx",
+    "markitdown[pdf,docx,pptx,xlsx]>=0.1.0",
+    "openai",
+    "langfuse>=4.5.1",
+    "plotly",
+    "pandas",
+    "ipykernel",
+    "kaleido",
+    "nbformat>=5.10.4",
+    "opentelemetry-api>=1.41.1",
+    "opentelemetry-sdk>=1.41.1",
+    "opentelemetry-exporter-otlp-proto-http>=1.41.1",
+    "opentelemetry-processor-baggage>=0.63b1",
+    "opentelemetry-instrumentation-openai-v2>=2.0b0",
+]
+
+[project.scripts]
+eval-run = "_eval.run_eval:main"
+eval-summary = "_eval.summarise_results:main"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["evals"]
