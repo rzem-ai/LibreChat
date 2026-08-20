@@ -28,8 +28,9 @@ const mockShowToast = jest.fn();
 const mockSetFilesLoading = jest.fn();
 const mockMutate = jest.fn();
 const mockUpdateFileById = jest.fn();
-let capturedUploadOpts: { onSuccess?: (data: TFileUpload) => void } | undefined;
-const mockProcessFileForUpload = jest.fn(
+let capturedUploadOpts:
+  | { onSuccess?: (data: TFileUpload, variables: FormData, context: unknown) => void }
+  | undefined;
   async (_file: File, _quality?: number, _onProgress?: (progress: number) => void) => _file,
 );
 const mockLocalize = jest.fn((key: string) => key);
