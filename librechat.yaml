@@ -27,17 +27,17 @@ interface:
 
   temporaryChat: false # Set to false to disable temporary chats
 
-  parameters: false # Set to false to disable adjustable model parameters
+  parameters: true # Set to false to disable adjustable model parameters
 
-  presets: false # Set to false to disable saved conversation presets
+  presets: true # Set to false to disable saved conversation presets
 
-  sharedLinks: false # Set to false to disable sharing conversations through links
+  sharedLinks: true # Set to false to disable sharing conversations through links
 
-  exportChat: false # Set to false to disable exporting conversations
+  exportChat: true # Set to false to disable exporting conversations
 
   regenerate: true # Set to false to disable regenerating assistant responses
 
-  fork: false # Set to false to disable branching conversations from earlier messages
+  fork: true # Set to false to disable branching conversations from earlier messages
 
   edit: false # Set to false to disable editing submitted messages
 
