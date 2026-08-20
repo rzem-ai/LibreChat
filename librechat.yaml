@@ -10,8 +10,16 @@ interface:
 
   bookmarks: true
 
+  # Pin tools to the prompt bar by default for all users
+  defaultPinnedTools:
+    - 'file_search'
+    - 'skills'
+    - 'execute_code'
+    - 'mcp'
+
   fileCitations: true
-  providerUpload: false
+
+  fileSearch: true
 
   marketplace:
     use: true
@@ -22,6 +30,11 @@ interface:
 
   parameters: true
 
+  peoplePicker:
+    users: true # TODO: Restrict to deloitte.com.au emails
+    groups: false
+    roles: false
+
   presets: true
 
   prompts:
@@ -30,19 +43,17 @@ interface:
     share: false # Enable share with other users
     public: false # Disable share with everyone
 
-  peoplePicker:
-    users: true # TODO: Restrict to deloitte.com.au emails
-    groups: false
-    roles: false
+  providerUpload: false
 
-  # Pin tools to the prompt bar by default for all users
-  defaultPinnedTools:
-    - 'file_search'
-    - 'skills'
-    - 'execute_code'
-    - 'mcp'
+  remoteAgents:
+    use: false
+    create: false
 
-  fileSearch: true
+  skills:
+    use: true
+    create: true
+    share: true # Enable share with other users
+    public: false # Disable share with everyone
 
 fileConfig:
   endpoints:

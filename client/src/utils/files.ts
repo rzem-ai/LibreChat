@@ -393,7 +393,7 @@ const isContextType = (type: string, fileConfig: FileConfig | null): boolean =>
 export const getViableUploadOptions = (
   fileList: File[],
   ctx: UploadOptionContext,
-): EToolResources[] => {
+): (EToolResources | undefined)[] => {
   if (fileList.length === 0) {
     return [];
   }
