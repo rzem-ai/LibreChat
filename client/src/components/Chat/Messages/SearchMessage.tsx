@@ -1,19 +1,29 @@
 import { memo, useMemo } from 'react';
 import { useAtomValue } from 'jotai';
 import { useRecoilValue } from 'recoil';
+import { getConfigDefaults } from 'librechat-data-provider';
 import type { TMessage } from 'librechat-data-provider';
 import type { TMessageProps, TMessageIcon } from '~/common';
+import {
+  cn,
+  getMessageBubbleClasses,
+  getMessageRowAlignmentClasses,
+  isRightAlignedTurn,
+  shouldShowAvatarAndName,
+} from '~/utils';
 import AuthorHeader from '~/components/Chat/Messages/Content/Parts/AuthorHeader';
 import MinimalHoverButtons from '~/components/Chat/Messages/MinimalHoverButtons';
 import MessageTimestamp from '~/components/Chat/Messages/ui/MessageTimestamp';
 import Icon from '~/components/Chat/Messages/MessageIcon';
 import { useAuthContext, useLocalize } from '~/hooks';
+import { useGetStartupConfig } from '~/data-provider';
 import SearchContent from './Content/SearchContent';
 import { fontSizeAtom } from '~/store/fontSize';
 import SearchButtons from './SearchButtons';
 import SubRow from './SubRow';
-import { cn } from '~/utils';
 import store from '~/store';
+
+const defaultInterface = getConfigDefaults().interface;
 
 const MessageAvatar = ({ iconData }: { iconData: TMessageIcon }) => (
   <div className="relative flex flex-shrink-0 flex-col items-end">
@@ -25,16 +35,32 @@ const MessageAvatar = ({ iconData }: { iconData: TMessageIcon }) => (
   </div>
 );
 
-const MessageBody = ({ message, messageLabel, fontSize, authorHeader }) => (
+const MessageBody = ({
+  message,
+  messageLabel,
+  fontSize,
+  authorHeader,
+  rightAligned,
+  showAvatarAndName,
+}) => (
   <div
     className={cn('relative flex w-11/12 flex-col', message.isCreatedByUser ? '' : 'agent-turn')}
   >
-    <div className={cn('select-none font-semibold', fontSize)}>
+    <div
+      className={cn(
+        'select-none font-semibold',
+        rightAligned && 'text-right',
+        !showAvatarAndName && 'sr-only',
+        fontSize,
+      )}
+    >
       {messageLabel}
       <MessageTimestamp value={message.createdAt ?? message.clientTimestamp} />
     </div>
-    <SearchContent message={message} authorHeader={authorHeader} />
-    <SubRow classes="text-xs">
+    <div className={getMessageBubbleClasses(rightAligned)}>
+      <SearchContent message={message} authorHeader={authorHeader} />
+    </div>
+    <SubRow classes={cn('text-xs', rightAligned && 'justify-end')}>
       <MinimalHoverButtons message={message} />
       <SearchButtons message={message} />
     </SubRow>
@@ -98,6 +124,16 @@ function SearchMessage({ message }: Pick<TMessageProps, 'message'>) {
   const UsernameDisplay = useRecoilValue<boolean>(store.UsernameDisplay);
   const { user } = useAuthContext();
   const localize = useLocalize();
+  const { data: startupConfig } = useGetStartupConfig();
+  const interfaceConfig = startupConfig?.interface ?? defaultInterface;
+  const rightAligned = isRightAlignedTurn(
+    message?.isCreatedByUser,
+    interfaceConfig.userMessageAlignment,
+  );
+  const showAvatarAndName = shouldShowAvatarAndName(
+    rightAligned,
+    interfaceConfig.showAvatarAndName,
+  );
 
   const iconData: TMessageIcon = useMemo(
     () => ({
@@ -140,13 +176,20 @@ function SearchMessage({ message }: Pick<TMessageProps, 'message'>) {
   return (
     <div className="text-token-text-primary w-full bg-transparent">
       <div className="m-auto p-4 py-2 md:gap-6">
-        <div className="final-completion group mx-auto flex flex-1 gap-3 md:max-w-3xl md:px-5 lg:max-w-[40rem] lg:px-1 xl:max-w-[48rem] xl:px-5">
-          <MessageAvatar iconData={iconData} />
+        <div
+          className={cn(
+            'final-completion group mx-auto flex flex-1 gap-3 md:max-w-3xl md:px-5 lg:max-w-[40rem] lg:px-1 xl:max-w-[48rem] xl:px-5',
+            getMessageRowAlignmentClasses(rightAligned),
+          )}
+        >
+          {showAvatarAndName && <MessageAvatar iconData={iconData} />}
           <MessageBody
             message={message}
             messageLabel={messageLabel}
             fontSize={fontSize}
             authorHeader={authorHeader}
+            rightAligned={rightAligned}
+            showAvatarAndName={showAvatarAndName}
           />
         </div>
       </div>

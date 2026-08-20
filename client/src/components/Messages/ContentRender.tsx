@@ -1,6 +1,7 @@
 import { useCallback, useMemo, memo } from 'react';
 import { useAtomValue } from 'jotai';
 import { useRecoilValue } from 'recoil';
+import { getConfigDefaults } from 'librechat-data-provider';
 import type { TMessage, TMessageContentParts } from 'librechat-data-provider';
 import type { TMessageProps, TMessageIcon, TMessageChatContext } from '~/common';
 import {
@@ -8,6 +9,10 @@ import {
   cn,
   getHeaderPrefixForScreenReader,
   getMessageAriaLabel,
+  getMessageBubbleClasses,
+  getMessageRowAlignmentClasses,
+  isRightAlignedTurn,
+  shouldShowAvatarAndName,
 } from '~/utils';
 import { useAttachments, useLocalize, useMessageActions, useContentMetadata } from '~/hooks';
 import AuthorHeader from '~/components/Chat/Messages/Content/Parts/AuthorHeader';
@@ -18,8 +23,11 @@ import SiblingSwitch from '~/components/Chat/Messages/SiblingSwitch';
 import HoverButtons from '~/components/Chat/Messages/HoverButtons';
 import MessageIcon from '~/components/Chat/Messages/MessageIcon';
 import SubRow from '~/components/Chat/Messages/SubRow';
+import { useGetStartupConfig } from '~/data-provider';
 import { fontSizeAtom } from '~/store/fontSize';
 import store from '~/store';
+
+const defaultInterface = getConfigDefaults().interface;
 
 type ContentRenderProps = {
   message?: TMessage;
@@ -104,6 +112,16 @@ const ContentRender = memo(function ContentRender({
   });
   const fontSize = useAtomValue(fontSizeAtom);
   const maximizeChatSpace = useRecoilValue(store.maximizeChatSpace);
+  const { data: startupConfig } = useGetStartupConfig();
+  const interfaceConfig = startupConfig?.interface ?? defaultInterface;
+  const rightAligned = isRightAlignedTurn(
+    msg?.isCreatedByUser,
+    interfaceConfig.userMessageAlignment,
+  );
+  const showAvatarAndName = shouldShowAvatarAndName(
+    rightAligned,
+    interfaceConfig.showAvatarAndName,
+  );
 
   const handleRegenerateMessage = useCallback(() => regenerateMessage(), [regenerateMessage]);
   const isLast = useMemo(
@@ -160,7 +178,10 @@ const ContentRender = memo(function ContentRender({
   };
 
   const baseClasses = {
-    common: 'group mx-auto flex flex-1 gap-3 transition-all duration-300 transform-gpu ',
+    common: cn(
+      'group mx-auto flex flex-1 gap-3 transition-all duration-300 transform-gpu',
+      getMessageRowAlignmentClasses(rightAligned),
+    ),
     chat: getChatWidthClass(),
   };
 
@@ -179,7 +200,7 @@ const ContentRender = memo(function ContentRender({
         'message-render',
       )}
     >
-      {!hasParallelContent && (
+      {!hasParallelContent && showAvatarAndName && (
         <div className="relative flex flex-shrink-0 flex-col items-center">
           <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full">
             <MessageIcon iconData={iconData} assistant={assistant} agent={agent} />
@@ -195,7 +216,14 @@ const ContentRender = memo(function ContentRender({
         )}
       >
         {!hasParallelContent && (
-          <h2 className={cn('select-none font-semibold', fontSize)}>
+          <h2
+            className={cn(
+              'select-none font-semibold',
+              rightAligned && 'text-right',
+              !showAvatarAndName && 'sr-only',
+              fontSize,
+            )}
+          >
             <span className="sr-only">{getHeaderPrefixForScreenReader(msg, localize)}</span>
             {messageLabel}
             <MessageTimestamp value={msg.createdAt ?? msg.clientTimestamp} />
@@ -203,7 +231,12 @@ const ContentRender = memo(function ContentRender({
         )}
 
         <div className="flex flex-col gap-1">
-          <div className="flex min-h-[20px] max-w-full flex-grow flex-col gap-0">
+          <div
+            className={cn(
+              'flex min-h-[20px] max-w-full flex-grow flex-col gap-0',
+              getMessageBubbleClasses(rightAligned),
+            )}
+          >
             <ContentParts
               edit={edit}
               isLast={isLast}
@@ -226,7 +259,7 @@ const ContentRender = memo(function ContentRender({
           {hasNoChildren && isSubmitting ? (
             <PlaceholderRow />
           ) : (
-            <SubRow classes="text-xs">
+            <SubRow classes={cn('text-xs', rightAligned && 'justify-end')}>
               <SiblingSwitch
                 siblingIdx={siblingIdx}
                 siblingCount={siblingCount}
