@@ -146,6 +146,7 @@ jobs:
           exit 1
         fi
         grep -q '^fileStrategy:' charts/config/librechat.yaml || { echo 'Unable to inject fileStrategy'; exit 1; }
+        rm -f librechat.yaml
       skipPromotionOnFail: false
       parentHelmValuesFile: 'values.yaml'
       helmFolderPath: 'charts'
