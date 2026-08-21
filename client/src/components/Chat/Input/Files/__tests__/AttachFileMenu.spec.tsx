@@ -93,6 +93,7 @@ const mockUseGetStartupConfig = jest.requireMock('~/data-provider').useGetStartu
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
+// Deloitte Custom Tests: # Visible icons for file uploads- PR #219
 function setupMocks(overrides: { provider?: string } = {}) {
   const translations: Record<string, string> = {
     com_files_upload_sharepoint: 'Upload from SharePoint',
@@ -156,6 +157,7 @@ function openMenu() {
   fireEvent.click(screen.getByRole('button', { name: /attach file options/i }));
 }
 
+// Deloitte Custom Tests: # Visible icons for file uploads- PR #219
 describe('AttachFileMenu', () => {
   beforeEach(jest.clearAllMocks);
 
@@ -293,6 +295,7 @@ describe('AttachFileMenu', () => {
       expect(screen.getByText('Upload to Code Environment')).toBeInTheDocument();
     });
 
+    // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
     it('shows provider upload option when providerUpload is enabled', () => {
       setupMocks();
       mockUseGetStartupConfig.mockReturnValue({

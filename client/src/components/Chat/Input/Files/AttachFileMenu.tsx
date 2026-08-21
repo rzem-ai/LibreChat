@@ -189,7 +189,7 @@ const AttachFileMenu = ({
           endpointType === EModelEndpoint.azureOpenAI) &&
         useResponsesApi === true;
 
-      // Deloitte Custom Change: Feature flagged "upload to provider"
+      // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
       if (providerUploadEnabled) {
         if (
           isDocumentSupportedProvider(endpointType) ||

@@ -78,6 +78,7 @@ const DragDropModal = () => {
 
   const options = useMemo(() => getOptions(files), [getOptions, files]);
 
+  // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
   // Auto-route to file search if it's the only viable option
   useEffect(() => {
     if (options.length === 1 && options[0] === EToolResources.file_search) {
@@ -91,6 +92,7 @@ const DragDropModal = () => {
     return null;
   }
 
+  // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
   // If no options available, show error
   if (options.length === 0) {
     return (
