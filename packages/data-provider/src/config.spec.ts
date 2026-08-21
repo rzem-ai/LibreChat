@@ -617,6 +617,8 @@ describe('webSearchSchema', () => {
   });
 });
 
+// Deloitte Custom Change: covers validation of the `interface.marketplace.categories` config
+// block added to support configurable Agent Marketplace categories.
 describe('configSchema — interface.marketplace.categories', () => {
   const withCategories = (categories: unknown) => ({
     version: '1.2.8',

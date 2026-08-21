@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const { createModels, runAsSystem } = require('@librechat/data-schemas');
 
+// Deloitte Custom Change: test suite for the `syncCategories` marketplace-category reconciler.
 /** `~/models` pulls in `getLogStores`, which builds Keyv/Mongo/Redis stores at module scope. */
 jest.mock('~/cache/getLogStores', () =>
   jest.fn(() => ({
@@ -30,6 +31,8 @@ async function categoriesByValue() {
   return new Map(rows.map((row) => [row.value, row]));
 }
 
+// Deloitte Custom Change: spin up a real in-memory MongoDB instance for `syncCategories`
+// to exercise actual Mongoose queries rather than mocked DB calls.
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
   await mongoose.connect(mongoServer.getUri());
@@ -48,6 +51,8 @@ beforeEach(async () => {
   await seedDefaults();
 });
 
+// Deloitte Custom Change: covers default-category toggling, custom-category label handling,
+// the `general` fallback invariant, and the custom-category lifecycle in `syncCategories`.
 describe('syncCategories', () => {
   it('seeds the expected default categories before each case', async () => {
     const categories = await categoriesByValue();
@@ -55,6 +60,7 @@ describe('syncCategories', () => {
     expect(categories.get('general').label).toBe('com_agents_category_general');
   });
 
+  // Deloitte Custom Change: verifies label/description fallback rules for custom categories.
   describe('custom category labels', () => {
     it('falls back to the value as typed when no label is given', async () => {
       await sync([{ value: '  Education  ' }], true);
@@ -93,6 +99,8 @@ describe('syncCategories', () => {
     });
   });
 
+  // Deloitte Custom Change: verifies the `general` category is never deactivated, since it's
+  // the fallback assigned to agents created without a category.
   describe('the general fallback category', () => {
     it('stays active when default categories are disabled', async () => {
       await sync(undefined, false);
@@ -124,6 +132,8 @@ describe('syncCategories', () => {
     });
   });
 
+  // Deloitte Custom Change: verifies declaring a default category in config overrides its label
+  // in place, without converting it into a custom category or losing it on removal from config.
   describe('overriding default categories', () => {
     it('applies the label without converting the row to a custom category', async () => {
       const before = (await categoriesByValue()).get('aftersales');
@@ -172,12 +182,17 @@ describe('syncCategories', () => {
     });
   });
 
+  // Deloitte Custom Change: verifies custom categories are deactivated (not deleted) when
+  // removed from config, and that missing/duplicate/invalid entries are skipped safely.
   describe('custom category lifecycle', () => {
-    it('deletes custom categories that are no longer in the config', async () => {
+    it('deactivates custom categories that are no longer in the config', async () => {
       await sync([{ value: 'education' }], true);
       await sync([], true);
 
-      expect((await categoriesByValue()).has('education')).toBe(false);
+      expect((await categoriesByValue()).get('education')).toMatchObject({
+        custom: true,
+        isActive: false,
+      });
     });
 
     it('leaves custom categories untouched when no list is provided', async () => {

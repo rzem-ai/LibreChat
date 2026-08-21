@@ -172,6 +172,8 @@ interface:
     #   - example.com
   marketplace:
     use: false
+    # Deloitte Custom Change: documents the `interface.marketplace.categories` config block,
+    # which lets a deployment declare its own Agent Marketplace categories in `librechat.yaml`.
     # categories is only applied when marketplace is enabled above
     categories:
       # When false, the built-in categories are hidden. `general` always stays

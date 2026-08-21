@@ -27,6 +27,8 @@ interface:
 
   marketplace:
     use: true
+    # Deloitte Custom Change: replace the hardcoded HR/R&D/Finance/IT/Sales/After Sales tabs
+    # with org-specific Agent Marketplace categories.
     categories:
       enableDefaultCategories: false
       list:

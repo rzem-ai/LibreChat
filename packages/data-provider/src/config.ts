@@ -1423,6 +1423,8 @@ export const interfaceSchema = z
     marketplace: z
       .object({
         use: z.boolean().optional(),
+        // Deloitte Custom Change: allow `librechat.yaml` to configure Agent Marketplace
+        // categories instead of relying solely on the hardcoded defaults.
         categories: z
           .object({
             enableDefaultCategories: z.boolean().optional(),

@@ -163,7 +163,8 @@ https://www.librechat.ai/docs/configuration/stt_tts`);
     }
   }
 
-  // Injecting custom marketplace categories
+  // Deloitte Custom Change: sync agent marketplace categories with the DB when configured in
+  // `librechat.yaml`, so deployments can declare their own categories instead of the hardcoded set.
   logger.info('Checking for custom marketplace categories to sync.');
   if (customConfig.interface?.marketplace?.use) {
     logger.info('Marketplace is enabled in config.');
@@ -183,7 +184,9 @@ https://www.librechat.ai/docs/configuration/stt_tts`);
           'No custom categories `list` provided; only default-category toggling will run.',
         );
       }
-      await runAsSystem(() => syncCategories(customCategoriesList, enableDefaultCategories));
+      // Deloitte Custom Change: `runAsSystem` requires an async callback for AsyncLocalStorage
+      // context to reliably propagate through the Mongoose operations inside `syncCategories`.
+      await runAsSystem(async () => syncCategories(customCategoriesList, enableDefaultCategories));
     }
   }
 

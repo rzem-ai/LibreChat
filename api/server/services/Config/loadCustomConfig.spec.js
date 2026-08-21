@@ -53,10 +53,12 @@ jest.mock('@librechat/data-schemas', () => {
       debug: jest.fn(),
       error: jest.fn(),
     },
+    // Deloitte Custom Change: mock `runAsSystem` so marketplace category sync can run in tests.
     runAsSystem: jest.fn((fn) => fn()),
   };
 });
 
+// Deloitte Custom Change: mock the marketplace category sync module invoked by `loadCustomConfig`.
 jest.mock('~/server/utils/agentCategory', () => ({
   syncCategories: jest.fn(),
 }));
@@ -127,6 +129,8 @@ describe('loadCustomConfig', () => {
     expect(result).toEqual(mockConfig);
   });
 
+  // Deloitte Custom Change: verifies marketplace category sync runs under `runAsSystem` when
+  // `interface.marketplace.categories` is configured.
   it('runs marketplace category sync within a system tenant context', async () => {
     runAsSystem.mockImplementation((fn) => fn());
     const config = {

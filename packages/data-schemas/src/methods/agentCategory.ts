@@ -51,7 +51,9 @@ export function createAgentCategoryMethods(mongoose: typeof import('mongoose')):
     ]);
 
     const countMap = new Map(categoryCounts.map((c) => [c._id, c.count]));
-    const categories = await runAsSystem(() => getActiveCategories());
+    // Deloitte Custom Change: `runAsSystem` requires an async callback for AsyncLocalStorage
+    // context to reliably propagate through the Mongoose query inside `getActiveCategories`.
+    const categories = await runAsSystem(async () => getActiveCategories());
 
     return categories.map((category) => ({
       ...category,
