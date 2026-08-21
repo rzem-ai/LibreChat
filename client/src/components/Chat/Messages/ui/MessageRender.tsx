@@ -1,18 +1,14 @@
 import React, { useCallback, useMemo, memo } from 'react';
 import { useAtomValue } from 'jotai';
 import { useRecoilValue } from 'recoil';
-import { getConfigDefaults } from 'librechat-data-provider';
 import type { TMessage } from 'librechat-data-provider';
 import type { TMessageProps, TMessageIcon, TMessageChatContext } from '~/common';
 import {
   areMessageFieldsEqual,
   cn,
+  MESSAGE_BUBBLE_CLASSES,
   getHeaderPrefixForScreenReader,
   getMessageAriaLabel,
-  getMessageBubbleClasses,
-  getMessageRowAlignmentClasses,
-  isRightAlignedTurn,
-  shouldShowAvatarAndName,
 } from '~/utils';
 import MessageContent from '~/components/Chat/Messages/Content/MessageContent';
 import MessageTimestamp from '~/components/Chat/Messages/ui/MessageTimestamp';
@@ -20,14 +16,11 @@ import { useLocalize, useMessageActions, useContentMetadata } from '~/hooks';
 import PlaceholderRow from '~/components/Chat/Messages/ui/PlaceholderRow';
 import SiblingSwitch from '~/components/Chat/Messages/SiblingSwitch';
 import HoverButtons from '~/components/Chat/Messages/HoverButtons';
+import { MessageContext, useMessageAlignment } from '~/Providers';
 import MessageIcon from '~/components/Chat/Messages/MessageIcon';
 import SubRow from '~/components/Chat/Messages/SubRow';
-import { useGetStartupConfig } from '~/data-provider';
 import { fontSizeAtom } from '~/store/fontSize';
-import { MessageContext } from '~/Providers';
 import store from '~/store';
-
-const defaultInterface = getConfigDefaults().interface;
 
 type MessageRenderProps = {
   message?: TMessage;
@@ -109,16 +102,7 @@ const MessageRender = memo(function MessageRender({
   });
   const fontSize = useAtomValue(fontSizeAtom);
   const maximizeChatSpace = useRecoilValue(store.maximizeChatSpace);
-  const { data: startupConfig } = useGetStartupConfig();
-  const interfaceConfig = startupConfig?.interface ?? defaultInterface;
-  const rightAligned = isRightAlignedTurn(
-    msg?.isCreatedByUser,
-    interfaceConfig.userMessageAlignment,
-  );
-  const showAvatarAndName = shouldShowAvatarAndName(
-    rightAligned,
-    interfaceConfig.showAvatarAndName,
-  );
+  const rightAligned = useMessageAlignment(msg?.isCreatedByUser);
 
   const handleRegenerateMessage = useCallback(() => regenerateMessage(), [regenerateMessage]);
   const hasNoChildren = !(msg?.children?.length ?? 0);
@@ -177,7 +161,7 @@ const MessageRender = memo(function MessageRender({
   const baseClasses = {
     common: cn(
       'group mx-auto flex flex-1 gap-3 transition-all duration-300 transform-gpu',
-      getMessageRowAlignmentClasses(rightAligned),
+      rightAligned && 'flex-row-reverse',
     ),
     chat: getChatWidthClass(),
   };
@@ -197,7 +181,7 @@ const MessageRender = memo(function MessageRender({
         'message-render',
       )}
     >
-      {!hasParallelContent && showAvatarAndName && (
+      {!hasParallelContent && !rightAligned && (
         <div className="relative flex flex-shrink-0 flex-col items-center">
           <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full">
             <MessageIcon iconData={iconData} assistant={assistant} agent={agent} />
@@ -217,7 +201,7 @@ const MessageRender = memo(function MessageRender({
             className={cn(
               'select-none font-semibold',
               rightAligned && 'text-right',
-              !showAvatarAndName && 'sr-only',
+              rightAligned && 'sr-only',
               fontSize,
             )}
           >
@@ -231,7 +215,7 @@ const MessageRender = memo(function MessageRender({
           <div
             className={cn(
               'flex min-h-[20px] max-w-full flex-grow flex-col gap-0',
-              getMessageBubbleClasses(rightAligned),
+              rightAligned && MESSAGE_BUBBLE_CLASSES,
             )}
           >
             <MessageContext.Provider value={messageContextValue}>

@@ -151,14 +151,9 @@ interface:
   parameters: true
   presets: true
   # Horizontal alignment of the current user's own chat turns: 'left' (default) or 'right'.
-  # 'right' right-aligns the user's messages (assistant/agent messages stay left-aligned),
-  # for a two-column, iMessage-style chat layout.
+  # 'right' right-aligns the user's messages as iMessage-style bubbles without an
+  # avatar/name header (assistant/agent messages stay left-aligned and unaffected).
   userMessageAlignment: left
-  # Only matters when userMessageAlignment is 'right'. By default, right-aligned messages
-  # don't show your avatar picture or name/timestamp above the bubble — the bubble
-  # being on the right already makes clear it's yours. Set to true to show them again,
-  # the same way they're always shown for assistant/agent messages. Default: false.
-  showAvatarAndName: false
   prompts:
     use: true
     create: true

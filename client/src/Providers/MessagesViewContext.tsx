@@ -1,5 +1,10 @@
 import React, { createContext, useContext, useMemo } from 'react';
+import { getConfigDefaults } from 'librechat-data-provider';
+import { useGetStartupConfig } from '~/data-provider';
 import { useChatContext } from './ChatContext';
+import { isRightAlignedTurn } from '~/utils';
+
+const defaultInterface = getConfigDefaults().interface;
 
 interface MessagesViewContextValue {
   /** Core conversation data */
@@ -22,6 +27,9 @@ interface MessagesViewContextValue {
   latestMessageDepth: ReturnType<typeof useChatContext>['latestMessageDepth'];
   getMessages: ReturnType<typeof useChatContext>['getMessages'];
   setMessages: ReturnType<typeof useChatContext>['setMessages'];
+
+  /** `interface.userMessageAlignment`, resolved once per message tree */
+  userMessageAlignment: 'left' | 'right' | undefined;
 }
 
 const MessagesViewContext = createContext<MessagesViewContextValue | undefined>(undefined);
@@ -32,6 +40,9 @@ export type { MessagesViewContextValue };
 
 export function MessagesViewProvider({ children }: { children: React.ReactNode }) {
   const chatContext = useChatContext();
+  const { data: startupConfig } = useGetStartupConfig();
+  const userMessageAlignment =
+    startupConfig?.interface?.userMessageAlignment ?? defaultInterface.userMessageAlignment;
 
   const {
     ask,
@@ -96,8 +107,9 @@ export function MessagesViewProvider({ children }: { children: React.ReactNode }
       ...submissionStates,
       ...messageOperations,
       ...messageState,
+      userMessageAlignment,
     }),
-    [conversationValues, submissionStates, messageOperations, messageState],
+    [conversationValues, submissionStates, messageOperations, messageState, userMessageAlignment],
   );
 
   return (
@@ -192,5 +204,14 @@ export function useMessagesState() {
   return useMemo(
     () => ({ index, latestMessageId, latestMessageDepth }),
     [index, latestMessageId, latestMessageDepth],
+  );
+}
+
+/** Whether a turn renders as a right-aligned bubble, per `MessagesViewProvider`'s resolved config. */
+export function useMessageAlignment(isCreatedByUser: boolean | null | undefined): boolean {
+  const { userMessageAlignment } = useMessagesViewContext();
+  return useMemo(
+    () => isRightAlignedTurn(isCreatedByUser, userMessageAlignment),
+    [isCreatedByUser, userMessageAlignment],
   );
 }

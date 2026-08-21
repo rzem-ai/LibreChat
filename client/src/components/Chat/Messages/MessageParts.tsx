@@ -1,32 +1,26 @@
 import React, { useMemo } from 'react';
 import { useAtomValue } from 'jotai';
 import { useRecoilValue } from 'recoil';
-import { getConfigDefaults } from 'librechat-data-provider';
 import type { TMessageContentParts } from 'librechat-data-provider';
 import type { TMessageProps, TMessageIcon } from '~/common';
 import {
   cn,
   getMessageAriaLabel,
   areMessageRowPropsEqual,
+  MESSAGE_BUBBLE_CLASSES,
   getHeaderPrefixForScreenReader,
-  getMessageBubbleClasses,
-  getMessageRowAlignmentClasses,
-  isRightAlignedTurn,
-  shouldShowAvatarAndName,
 } from '~/utils';
 import { useMessageHelpers, useLocalize, useAttachments, useContentMetadata } from '~/hooks';
 import AuthorHeader from '~/components/Chat/Messages/Content/Parts/AuthorHeader';
 import MessageTimestamp from '~/components/Chat/Messages/ui/MessageTimestamp';
 import MessageIcon from '~/components/Chat/Messages/MessageIcon';
-import { useGetStartupConfig } from '~/data-provider';
+import { useMessageAlignment } from '~/Providers';
 import ContentParts from './Content/ContentParts';
 import { fontSizeAtom } from '~/store/fontSize';
 import SiblingSwitch from './SiblingSwitch';
 import HoverButtons from './HoverButtons';
 import SubRow from './SubRow';
 import store from '~/store';
-
-const defaultInterface = getConfigDefaults().interface;
 
 function MessageParts(props: TMessageProps) {
   const localize = useLocalize();
@@ -53,14 +47,8 @@ function MessageParts(props: TMessageProps) {
 
   const fontSize = useAtomValue(fontSizeAtom);
   const maximizeChatSpace = useRecoilValue(store.maximizeChatSpace);
-  const { data: startupConfig } = useGetStartupConfig();
-  const interfaceConfig = startupConfig?.interface ?? defaultInterface;
   const { messageId = null, isCreatedByUser } = message ?? {};
-  const rightAligned = isRightAlignedTurn(isCreatedByUser, interfaceConfig.userMessageAlignment);
-  const showAvatarAndName = shouldShowAvatarAndName(
-    rightAligned,
-    interfaceConfig.showAvatarAndName,
-  );
+  const rightAligned = useMessageAlignment(isCreatedByUser);
 
   const name = useMemo(() => {
     let result = '';
@@ -125,7 +113,7 @@ function MessageParts(props: TMessageProps) {
   const baseClasses = {
     common: cn(
       'group mx-auto flex flex-1 gap-3 transition-all duration-300 transform-gpu',
-      getMessageRowAlignmentClasses(rightAligned),
+      rightAligned && 'flex-row-reverse',
     ),
     chat: getChatWidthClass(),
   };
@@ -148,7 +136,7 @@ function MessageParts(props: TMessageProps) {
               'message-render',
             )}
           >
-            {!hasParallelContent && showAvatarAndName && (
+            {!hasParallelContent && !rightAligned && (
               <div className="relative flex flex-shrink-0 flex-col items-center">
                 <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full pt-0.5">
                   <MessageIcon iconData={iconData} assistant={assistant} agent={agent} />
@@ -167,7 +155,7 @@ function MessageParts(props: TMessageProps) {
                   className={cn(
                     'select-none font-semibold text-text-primary',
                     rightAligned && 'text-right',
-                    !showAvatarAndName && 'sr-only',
+                    rightAligned && 'sr-only',
                     fontSize,
                   )}
                 >
@@ -182,7 +170,7 @@ function MessageParts(props: TMessageProps) {
                 <div
                   className={cn(
                     'flex min-h-[20px] max-w-full flex-grow flex-col gap-0',
-                    getMessageBubbleClasses(rightAligned),
+                    rightAligned && MESSAGE_BUBBLE_CLASSES,
                   )}
                 >
                   <ContentParts

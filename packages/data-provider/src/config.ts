@@ -1427,14 +1427,9 @@ export const interfaceSchema = z
     fileSearch: z.boolean().optional(),
     fileCitations: z.boolean().optional(),
     /** Horizontal alignment of the current user's own chat turns. `'right'` right-aligns
-     * the user's messages (assistant/agent messages remain left-aligned), iMessage-style. */
+     * the user's messages as iMessage-style bubbles without an avatar/name header
+     * (assistant/agent messages remain left-aligned and unaffected). */
     userMessageAlignment: z.enum(['left', 'right']).optional(),
-    /** Whether the current user's own right-aligned turns (`userMessageAlignment: 'right'`) show
-     * an avatar picture and name/timestamp label above the message, same as assistant turns
-     * always do. Right-aligned turns hide these by default, since the bubble's position
-     * already shows who sent it — set to `true` to show them again. Has no effect on the
-     * default `'left'` layout, where they're always shown. */
-    showAvatarAndName: z.boolean().optional(),
     /** Tool keys (and `'mcp'` or an MCP server name) pinned to the prompt bar by default */
     defaultPinnedTools: z.array(z.string()).optional(),
     buildInfo: z.boolean().optional(),
@@ -1512,7 +1507,6 @@ export const interfaceSchema = z
     fileSearch: true,
     fileCitations: true,
     userMessageAlignment: 'left',
-    showAvatarAndName: false,
     buildInfo: true,
     remoteAgents: {
       use: false,

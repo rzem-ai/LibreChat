@@ -1,18 +1,14 @@
 import { useCallback, useMemo, memo } from 'react';
 import { useAtomValue } from 'jotai';
 import { useRecoilValue } from 'recoil';
-import { getConfigDefaults } from 'librechat-data-provider';
 import type { TMessage, TMessageContentParts } from 'librechat-data-provider';
 import type { TMessageProps, TMessageIcon, TMessageChatContext } from '~/common';
 import {
   areMessageFieldsEqual,
   cn,
+  MESSAGE_BUBBLE_CLASSES,
   getHeaderPrefixForScreenReader,
   getMessageAriaLabel,
-  getMessageBubbleClasses,
-  getMessageRowAlignmentClasses,
-  isRightAlignedTurn,
-  shouldShowAvatarAndName,
 } from '~/utils';
 import { useAttachments, useLocalize, useMessageActions, useContentMetadata } from '~/hooks';
 import AuthorHeader from '~/components/Chat/Messages/Content/Parts/AuthorHeader';
@@ -23,11 +19,9 @@ import SiblingSwitch from '~/components/Chat/Messages/SiblingSwitch';
 import HoverButtons from '~/components/Chat/Messages/HoverButtons';
 import MessageIcon from '~/components/Chat/Messages/MessageIcon';
 import SubRow from '~/components/Chat/Messages/SubRow';
-import { useGetStartupConfig } from '~/data-provider';
+import { useMessageAlignment } from '~/Providers';
 import { fontSizeAtom } from '~/store/fontSize';
 import store from '~/store';
-
-const defaultInterface = getConfigDefaults().interface;
 
 type ContentRenderProps = {
   message?: TMessage;
@@ -112,16 +106,7 @@ const ContentRender = memo(function ContentRender({
   });
   const fontSize = useAtomValue(fontSizeAtom);
   const maximizeChatSpace = useRecoilValue(store.maximizeChatSpace);
-  const { data: startupConfig } = useGetStartupConfig();
-  const interfaceConfig = startupConfig?.interface ?? defaultInterface;
-  const rightAligned = isRightAlignedTurn(
-    msg?.isCreatedByUser,
-    interfaceConfig.userMessageAlignment,
-  );
-  const showAvatarAndName = shouldShowAvatarAndName(
-    rightAligned,
-    interfaceConfig.showAvatarAndName,
-  );
+  const rightAligned = useMessageAlignment(msg?.isCreatedByUser);
 
   const handleRegenerateMessage = useCallback(() => regenerateMessage(), [regenerateMessage]);
   const isLast = useMemo(
@@ -180,7 +165,7 @@ const ContentRender = memo(function ContentRender({
   const baseClasses = {
     common: cn(
       'group mx-auto flex flex-1 gap-3 transition-all duration-300 transform-gpu',
-      getMessageRowAlignmentClasses(rightAligned),
+      rightAligned && 'flex-row-reverse',
     ),
     chat: getChatWidthClass(),
   };
@@ -200,7 +185,7 @@ const ContentRender = memo(function ContentRender({
         'message-render',
       )}
     >
-      {!hasParallelContent && showAvatarAndName && (
+      {!hasParallelContent && !rightAligned && (
         <div className="relative flex flex-shrink-0 flex-col items-center">
           <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full">
             <MessageIcon iconData={iconData} assistant={assistant} agent={agent} />
@@ -220,7 +205,7 @@ const ContentRender = memo(function ContentRender({
             className={cn(
               'select-none font-semibold',
               rightAligned && 'text-right',
-              !showAvatarAndName && 'sr-only',
+              rightAligned && 'sr-only',
               fontSize,
             )}
           >
@@ -234,7 +219,7 @@ const ContentRender = memo(function ContentRender({
           <div
             className={cn(
               'flex min-h-[20px] max-w-full flex-grow flex-col gap-0',
-              getMessageBubbleClasses(rightAligned),
+              rightAligned && MESSAGE_BUBBLE_CLASSES,
             )}
           >
             <ContentParts

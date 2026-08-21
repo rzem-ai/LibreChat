@@ -625,52 +625,14 @@ export function areMessageRowPropsEqual(prev: TMessageProps, next: TMessageProps
   );
 }
 
-/**
- * Whether a message row should be right-aligned per `interface.userMessageAlignment: 'right'`.
- * Only the current user's own turns flip side — assistant/agent turns always stay left-aligned.
- */
+/** Bubble classes for a right-aligned (user) message turn's content. */
+export const MESSAGE_BUBBLE_CLASSES =
+  'self-end w-fit max-w-[85%] rounded-2xl bg-surface-secondary px-4 py-2.5';
+
+/** Whether a turn renders right-aligned per `interface.userMessageAlignment: 'right'`. */
 export function isRightAlignedTurn(
   isCreatedByUser: boolean | null | undefined,
   userMessageAlignment: 'left' | 'right' | undefined,
 ): boolean {
   return isCreatedByUser === true && userMessageAlignment === 'right';
-}
-
-/**
- * Row-level classes for a message turn's icon + content flex row. Right-aligned turns
- * reverse the row so the (small, intrinsic-width) icon lands on the right, directly
- * beside the message bubble — the content column itself keeps filling the rest of the
- * row's width either way, but only its bubble/header/sub-row *contents* self-align to
- * the right within it (see `getMessageBubbleClasses`), so the column's empty space
- * reads as transparent gutter rather than a block being shoved sideways.
- */
-export function getMessageRowAlignmentClasses(rightAligned: boolean): string {
-  return rightAligned ? 'flex-row-reverse' : '';
-}
-
-/**
- * Classes for the bubble wrapping a message turn's content. Right-aligned (user) turns
- * get `self-end` (so the bubble hugs the right edge of its full-width column instead of
- * stretching across it) plus a capped width and a filled, rounded background — the
- * actual "chat bubble" look. Left-aligned (assistant) turns stay borderless and full
- * width, as before.
- */
-export function getMessageBubbleClasses(rightAligned: boolean): string {
-  return rightAligned
-    ? 'self-end w-fit max-w-[85%] rounded-2xl bg-surface-secondary px-4 py-2.5'
-    : '';
-}
-
-/**
- * Whether a message turn's avatar picture and name/timestamp label (shown above the
- * message) should be displayed. Right-aligned (user) turns hide these by default —
- * the bubble's position alone already shows who sent it — unless
- * `interface.showAvatarAndName` turns them back on. Left-aligned turns (including
- * the default `'left'` layout) always show them.
- */
-export function shouldShowAvatarAndName(
-  rightAligned: boolean,
-  showAvatarAndName: boolean | undefined,
-): boolean {
-  return !rightAligned || showAvatarAndName === true;
 }
