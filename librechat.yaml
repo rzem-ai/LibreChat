@@ -13,6 +13,7 @@ interface:
   # Pin tools to the prompt bar by default for all users
   defaultPinnedTools:
     - 'file_search'
+    - 'artifacts'
     - 'skills'
     - 'execute_code'
     - 'mcp'
