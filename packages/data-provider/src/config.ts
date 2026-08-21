@@ -1375,13 +1375,20 @@ export const interfaceSchema = z
     bookmarks: z.boolean().optional(),
     memories: z.boolean().optional(),
     presets: z.boolean().optional(),
-    exportChat: z.boolean().optional(),
-    regenerate: z.boolean().optional(),
-    fork: z.boolean().optional(),
-    edit: z.boolean().optional(),
-    tools: z.boolean().optional(),
-    landingIcon: z.boolean().optional(),
-    conversationIcon: z.boolean().optional(),
+    customDeloitteFeatureFlags: z
+      .object({
+        exportChat: z.boolean().optional(),
+        regenerate: z.boolean().optional(),
+        forkChat: z.boolean().optional(),
+        editChat: z.boolean().optional(),
+        toolsBadge: z.boolean().optional(),
+        landingIcon: z.boolean().optional(),
+        conversationIcon: z.boolean().optional(),
+        memories: z.boolean().optional(),
+        temporaryChat: z.boolean().optional(),
+        sharedLinks: z.boolean().optional(),
+      })
+      .optional(),
     prompts: z
       .union([
         z.boolean(),

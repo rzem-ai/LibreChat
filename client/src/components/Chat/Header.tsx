@@ -23,6 +23,7 @@ function Header() {
     () => startupConfig?.interface ?? defaultInterface,
     [startupConfig],
   );
+  const customFlags = interfaceConfig.customDeloitteFeatureFlags;
 
   const hasAccessToBookmarks = useHasAccess({
     permissionType: PermissionTypes.BOOKMARKS,
@@ -42,7 +43,7 @@ function Header() {
   const isSmallScreen = useMediaQuery('(max-width: 768px)');
 
   return (
-    <div className="absolute top-0 z-10 flex h-[52px] w-full items-center justify-between bg-gradient-to-b from-presentation via-presentation/70 to-transparent p-2 font-semibold text-text-primary md:from-presentation/80 md:via-presentation/50 2xl:from-presentation/0 2xl:via-transparent">
+    <div className="absolute top-0 z-10 flex h-[52px] w-full items-center justify-between bg-gradient-to-b from-presentation via-presentation/70 to-transparent p-2 font-semibold text-text-primary md:from-presentation/80 md:via-presentation/50 2xl:from-presentation/0">
       <div className="hide-scrollbar flex w-full items-center justify-between gap-2 overflow-x-auto">
         <div className="mx-1 flex items-center">
           {isSmallScreen ? <OpenSidebar /> : null}
@@ -59,7 +60,7 @@ function Header() {
               {hasAccessToMultiConvo === true && <AddMultiConvo />}
               {isSmallScreen && (
                 <>
-                  {interfaceConfig.exportChat === true && (
+                  {customFlags?.exportChat === true && (
                     <ExportAndShareMenu
                       isSharedButtonEnabled={startupConfig?.sharedLinksEnabled ?? false}
                     />
@@ -73,7 +74,7 @@ function Header() {
 
         {!isSmallScreen && (
           <div className="flex items-center gap-2">
-            {interfaceConfig.exportChat === true && (
+            {customFlags?.exportChat === true && (
               <ExportAndShareMenu
                 isSharedButtonEnabled={startupConfig?.sharedLinksEnabled ?? false}
               />

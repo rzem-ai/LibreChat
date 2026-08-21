@@ -22,13 +22,19 @@ function hasExplicitConfig(
     case PermissionTypes.BOOKMARKS:
       return interfaceConfig?.bookmarks !== undefined;
     case PermissionTypes.MEMORIES:
-      return interfaceConfig?.memories !== undefined;
+      return (
+        interfaceConfig?.memories !== undefined ||
+        interfaceConfig?.customDeloitteFeatureFlags?.memories !== undefined
+      );
     case PermissionTypes.MULTI_CONVO:
       return interfaceConfig?.multiConvo !== undefined;
     case PermissionTypes.AGENTS:
       return interfaceConfig?.agents !== undefined;
     case PermissionTypes.TEMPORARY_CHAT:
-      return interfaceConfig?.temporaryChat !== undefined;
+      return (
+        interfaceConfig?.temporaryChat !== undefined ||
+        interfaceConfig?.customDeloitteFeatureFlags?.temporaryChat !== undefined
+      );
     case PermissionTypes.RUN_CODE:
       return interfaceConfig?.runCode !== undefined;
     case PermissionTypes.WEB_SEARCH:
@@ -48,7 +54,10 @@ function hasExplicitConfig(
     case PermissionTypes.SKILLS:
       return interfaceConfig?.skills !== undefined;
     case PermissionTypes.SHARED_LINKS:
-      return interfaceConfig?.sharedLinks !== undefined;
+      return (
+        interfaceConfig?.sharedLinks !== undefined ||
+        interfaceConfig?.customDeloitteFeatureFlags?.sharedLinks !== undefined
+      );
     default:
       return false;
   }
@@ -87,6 +96,8 @@ export async function updateInterfacePermissions({
   }
   /** Configured values for interface object structure */
   const interfaceConfig = appConfig?.config?.interface;
+  const configuredSharedLinks =
+    interfaceConfig?.customDeloitteFeatureFlags?.sharedLinks ?? interfaceConfig?.sharedLinks;
   const memoryConfig = appConfig?.config?.memory;
   const memoryEnabled = isMemoryEnabled(memoryConfig);
   /** Check if memory is explicitly disabled (memory.disabled === true) */
@@ -252,9 +263,9 @@ export async function updateInterfacePermissions({
           if (isMemoryExplicitlyDisabled) return false;
           if (shouldEnableMemory) return true;
           return getPermissionValue(
-            loadedInterface.memories,
+            loadedInterface.customDeloitteFeatureFlags?.memories ?? loadedInterface.memories,
             defaultPerms[PermissionTypes.MEMORIES]?.[Permissions.USE],
-            defaults.memories,
+            true,
           );
         })(),
         ...(defaultPerms[PermissionTypes.MEMORIES]?.[Permissions.CREATE] !== undefined && {
@@ -318,7 +329,8 @@ export async function updateInterfacePermissions({
       },
       [PermissionTypes.TEMPORARY_CHAT]: {
         [Permissions.USE]: getPermissionValue(
-          loadedInterface.temporaryChat,
+          loadedInterface.customDeloitteFeatureFlags?.temporaryChat ??
+            loadedInterface.temporaryChat,
           defaultPerms[PermissionTypes.TEMPORARY_CHAT]?.[Permissions.USE],
           defaults.temporaryChat,
         ),
@@ -492,9 +504,8 @@ export async function updateInterfacePermissions({
           : {}),
       },
       [PermissionTypes.SHARED_LINKS]: {
-        ...(typeof interfaceConfig?.sharedLinks === 'boolean' ||
-        (typeof interfaceConfig?.sharedLinks === 'object' &&
-          'create' in interfaceConfig.sharedLinks) ||
+        ...(typeof configuredSharedLinks === 'boolean' ||
+        (typeof configuredSharedLinks === 'object' && 'create' in configuredSharedLinks) ||
         !existingPermissions?.[PermissionTypes.SHARED_LINKS]
           ? {
               [Permissions.CREATE]: getPermissionValue(
@@ -506,9 +517,9 @@ export async function updateInterfacePermissions({
               ),
             }
           : {}),
-        ...(typeof interfaceConfig?.sharedLinks === 'boolean' ||
-        (typeof interfaceConfig?.sharedLinks === 'object' &&
-          ('share' in interfaceConfig.sharedLinks || 'public' in interfaceConfig.sharedLinks)) ||
+        ...(typeof configuredSharedLinks === 'boolean' ||
+        (typeof configuredSharedLinks === 'object' &&
+          ('share' in configuredSharedLinks || 'public' in configuredSharedLinks)) ||
         !existingPermissions?.[PermissionTypes.SHARED_LINKS]
           ? {
               [Permissions.SHARE]: getPermissionValue(

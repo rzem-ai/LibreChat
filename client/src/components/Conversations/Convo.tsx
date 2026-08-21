@@ -273,7 +273,7 @@ function Conversation({
           isSmallScreen={isSmallScreen}
           localize={localize}
         >
-          {startupConfig?.interface?.conversationIcon === true && (
+          {startupConfig?.interface?.customDeloitteFeatureFlags?.conversationIcon === true && (
             <ConversationEndpointIcon conversation={conversation} size={20} context="menu-item" />
           )}
         </ConvoLink>

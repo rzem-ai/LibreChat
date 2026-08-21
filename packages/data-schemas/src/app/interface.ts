@@ -21,24 +21,33 @@ export async function loadDefaultInterface({
   const { interface: defaults } = configDefaults;
   const hasModelSpecs = (config?.modelSpecs?.list?.length ?? 0) > 0;
   const includesAddedEndpoints = (config?.modelSpecs?.addedEndpoints?.length ?? 0) > 0;
+  const interfaceWithDeloitteHeader = interfaceConfig as
+    | (NonNullable<typeof interfaceConfig> & {
+        deloitteHeader?: {
+          enabled?: boolean;
+          title?: string;
+        };
+      })
+    | undefined;
 
   // Deloitte Custom Change: Parse header enablement and title (extract from ENV var)
-  let deloitteHeader: TCustomConfig['interface']['deloitteHeader'] | undefined;
-  if (interfaceConfig?.deloitteHeader) {
-    let { title } = interfaceConfig.deloitteHeader;
+  let deloitteHeader = interfaceWithDeloitteHeader?.deloitteHeader;
+  if (interfaceWithDeloitteHeader?.deloitteHeader) {
+    let { title } = interfaceWithDeloitteHeader.deloitteHeader;
     if (typeof title === 'string') {
       const vars = title.match(/\${([^}]+)}/g) ?? [];
       if (vars.length > 0 && vars.every((v) => v === '${APP_TITLE}')) {
         title = extractEnvVariable(title);
       }
     }
-    deloitteHeader = { ...interfaceConfig.deloitteHeader, title };
+    deloitteHeader = { ...interfaceWithDeloitteHeader.deloitteHeader, title };
   }
 
   const memoryConfig = config?.memory;
   const memoryEnabled = isMemoryEnabled(memoryConfig);
   /** Only disable memories if memory config is present and explicitly disabled */
   const shouldDisableMemories = memoryConfig && !memoryEnabled;
+  const customFlags = interfaceConfig?.customDeloitteFeatureFlags;
 
   const loadedInterface: AppConfig['interfaceConfig'] = removeNullishValues({
     // UI elements - use schema defaults
@@ -47,13 +56,7 @@ export async function loadDefaultInterface({
       (hasModelSpecs ? includesAddedEndpoints : defaults.modelSelect),
     parameters: interfaceConfig?.parameters ?? (hasModelSpecs ? false : defaults.parameters),
     presets: interfaceConfig?.presets ?? (hasModelSpecs ? false : defaults.presets),
-    exportChat: interfaceConfig?.exportChat,
-    regenerate: interfaceConfig?.regenerate,
-    fork: interfaceConfig?.fork,
-    edit: interfaceConfig?.edit,
-    tools: interfaceConfig?.tools,
-    landingIcon: interfaceConfig?.landingIcon,
-    conversationIcon: interfaceConfig?.conversationIcon,
+    customDeloitteFeatureFlags: interfaceConfig?.customDeloitteFeatureFlags,
     privacyPolicy: interfaceConfig?.privacyPolicy ?? defaults.privacyPolicy,
     termsOfService: interfaceConfig?.termsOfService ?? defaults.termsOfService,
     mcpServers: interfaceConfig?.mcpServers ?? defaults.mcpServers,
@@ -66,11 +69,11 @@ export async function loadDefaultInterface({
 
     // Permissions and related settings - only include if explicitly configured
     bookmarks: interfaceConfig?.bookmarks,
-    memories: shouldDisableMemories ? false : interfaceConfig?.memories,
+    memories: shouldDisableMemories ? false : (customFlags?.memories ?? interfaceConfig?.memories),
     prompts: interfaceConfig?.prompts,
     multiConvo: interfaceConfig?.multiConvo,
     agents: interfaceConfig?.agents,
-    temporaryChat: interfaceConfig?.temporaryChat,
+    temporaryChat: customFlags?.temporaryChat ?? interfaceConfig?.temporaryChat,
     temporaryChatRetention: interfaceConfig?.temporaryChatRetention,
     retentionMode: interfaceConfig?.retentionMode,
     retainAgentFiles: interfaceConfig?.retainAgentFiles,
@@ -84,7 +87,7 @@ export async function loadDefaultInterface({
     marketplace: interfaceConfig?.marketplace,
     remoteAgents: interfaceConfig?.remoteAgents,
     skills: interfaceConfig?.skills,
-    sharedLinks: interfaceConfig?.sharedLinks,
+    sharedLinks: customFlags?.sharedLinks ?? interfaceConfig?.sharedLinks,
   });
 
   return loadedInterface;

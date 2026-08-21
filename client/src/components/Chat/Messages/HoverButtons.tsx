@@ -160,6 +160,7 @@ const HoverButtons = ({
     isEditableEndpoint,
   } = generationCapabilities;
   const interfaceConfig = startupConfig?.interface;
+  const customFlags = interfaceConfig?.customDeloitteFeatureFlags;
 
   if (!conversation) {
     return null;
@@ -170,7 +171,7 @@ const HoverButtons = ({
   if (error === true) {
     return (
       <div className="visible flex justify-center self-end lg:justify-start">
-        {regenerateEnabled && interfaceConfig?.regenerate === true && (
+        {regenerateEnabled && customFlags?.regenerate === true && (
           <HoverButton
             onClick={regenerate}
             title={localize('com_ui_regenerate')}
@@ -232,7 +233,7 @@ const HoverButtons = ({
       />
 
       {/* Edit Button */}
-      {isEditableEndpoint && interfaceConfig?.edit === true && (
+      {isCreatedByUser && isEditableEndpoint && customFlags?.editChat === true && (
         <HoverButton
           id={`edit-${message.messageId}`}
           onClick={onEdit}
@@ -250,7 +251,7 @@ const HoverButtons = ({
       <Fork
         messageId={message.messageId}
         conversationId={conversation.conversationId}
-        forkingSupported={forkingSupported && interfaceConfig?.fork === true}
+        forkingSupported={forkingSupported && customFlags?.forkChat === true}
         latestMessageId={latestMessageId}
         isLast={isLast}
       />
@@ -261,7 +262,7 @@ const HoverButtons = ({
       )}
 
       {/* Regenerate Button */}
-      {regenerateEnabled && interfaceConfig?.regenerate === true && (
+      {regenerateEnabled && customFlags?.regenerate === true && (
         <HoverButton
           onClick={regenerate}
           title={localize('com_ui_regenerate')}
