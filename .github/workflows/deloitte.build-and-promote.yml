@@ -42,6 +42,7 @@ on:
       - uat
       - develop
     paths:
+      - librechat.yaml
       - api/**
       - client/**
       - packages/**

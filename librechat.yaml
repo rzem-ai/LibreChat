@@ -85,7 +85,6 @@ endpoints:
     endpoint: "Azure AU"
 
   anthropic:
-    userProvide: false
     streamRate: 25
     titleConvo: true
     titleModel: "claude-haiku-4-5"
