@@ -170,6 +170,10 @@ interface:
     users: true
     groups: true
     roles: true
+    # Optional: restrict people picker results to specific email domains.
+    # If omitted, all matching results are returned.
+    # allowedDomains:
+    #   - example.com
   marketplace:
     use: false
   fileCitations: true
