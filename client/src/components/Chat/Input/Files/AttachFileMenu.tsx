@@ -83,6 +83,7 @@ interface AttachFileMenuProps {
   conversation: TConversation | null;
 }
 
+// Deloitte Custom Tests: # Visible icons for file uploads- PR #219
 const AttachFileMenu = ({
   agentId,
   endpoint,
@@ -121,6 +122,7 @@ const AttachFileMenu = ({
   const { agentsConfig } = useGetAgentsConfig();
   const { data: startupConfig } = useGetStartupConfig();
   const sharePointEnabled = startupConfig?.sharePointFilePickerEnabled;
+  // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
   const providerUploadEnabled = startupConfig?.interface?.providerUpload === true;
 
   const [isSharePointDialogOpen, setIsSharePointDialogOpen] = useState(false);

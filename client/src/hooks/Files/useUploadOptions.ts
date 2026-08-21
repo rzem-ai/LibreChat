@@ -34,6 +34,7 @@ export default function useUploadOptions() {
   const { data: fileConfig = null } = useGetFileConfig({
     select: (data) => mergeFileConfig(data),
   });
+  // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
   const providerUploadEnabled = startupConfig?.interface?.providerUpload === true;
 
   /**
@@ -60,6 +61,7 @@ export default function useUploadOptions() {
         contextEnabled: capabilities.contextEnabled,
         fileSearchAllowedByAgent,
         codeAllowedByAgent,
+        // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
         providerUploadEnabled,
         fileConfig,
         endpointSupportedMimeTypes,

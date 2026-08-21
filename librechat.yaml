@@ -34,6 +34,7 @@ interface:
 
   parameters: true
 
+  # Deloitte Custom Tests: # Visible icons for file uploads- PR #219
   peoplePicker:
     users: true # TODO: Restrict to deloitte.com.au emails
     groups: false
@@ -55,9 +56,11 @@ interface:
       - 'deloitte.com.au'
       - 'deloitte.co.nz'
 
+    # Deloitte Custom Tests: # Visible icons for file uploads- PR #219
   providerUpload: false
 
   remoteAgents:
+    # Deloitte Custom Tests: # Visible icons for file uploads- PR #219
     use: false
     create: false
 

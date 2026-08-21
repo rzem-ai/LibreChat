@@ -130,6 +130,7 @@ function setupMocks(overrides: { provider?: string } = {}) {
   });
 }
 
+// Deloitte Custom Tests: # Visible icons for file uploads- PR #219
 function enableProviderUpload() {
   mockUseGetStartupConfig.mockReturnValue({
     data: { sharePointFilePickerEnabled: false, interface: { providerUpload: true } },

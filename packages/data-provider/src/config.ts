@@ -1426,6 +1426,7 @@ export const interfaceSchema = z
       })
       .optional(),
     fileSearch: z.boolean().optional(),
+    // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
     providerUpload: z.boolean().optional(),
     fileCitations: z.boolean().optional(),
     /** Tool keys (and `'mcp'` or an MCP server name) pinned to the prompt bar by default */
@@ -1503,6 +1504,7 @@ export const interfaceSchema = z
       public: false,
     },
     fileSearch: true,
+    // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
     providerUpload: false,
     fileCitations: true,
     buildInfo: true,

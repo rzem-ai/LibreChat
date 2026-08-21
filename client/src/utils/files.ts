@@ -330,6 +330,7 @@ export type UploadOptionContext = {
   endpoint?: string | null;
   endpointType?: string | null;
   useResponsesApi?: boolean;
+  // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
   providerUploadEnabled?: boolean;
   fileSearchEnabled: boolean;
   codeEnabled: boolean;
@@ -405,6 +406,7 @@ export const getViableUploadOptions = (
     types.every((type) => predicate(type as string));
 
   const options: (EToolResources | undefined)[] = [];
+  // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
   if (ctx.providerUploadEnabled === true && every((type) => isProviderAttachType(type, ctx))) {
     options.push(undefined);
   }

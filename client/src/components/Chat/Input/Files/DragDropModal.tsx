@@ -30,6 +30,7 @@ const DragDropModal = () => {
   const { getOptions } = useUploadOptions();
   const routeFiles = useFileUploadRouter();
 
+  // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
   const isProviderDocSupported = useMemo(() => {
     let currentProvider = (provider || endpoint) ?? '';
     if (currentProvider.toLowerCase() === Providers.OPENROUTER) {
