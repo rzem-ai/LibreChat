@@ -152,6 +152,7 @@ const useFileHandlingCore = (params: UseFileHandling | undefined, fileState: Fil
               filename: data.filename,
               source: data.source,
               embedded: data.embedded,
+              // Deloitte Custom Change: # Visible icons for file uploads- PR #402
               metadata: data.metadata,
             },
             assistant_id ? true : false,

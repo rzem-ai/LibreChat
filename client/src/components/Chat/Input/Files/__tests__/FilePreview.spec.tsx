@@ -5,6 +5,7 @@ import { FileSources } from 'librechat-data-provider';
 import type { CodeEnvRef } from 'librechat-data-provider';
 import FilePreview from '../FilePreview';
 
+// Deloitte Custom Change: # Visible icons for file uploads- PR #402
 jest.mock('@librechat/client', () => ({
   Spinner: () => <span data-testid="spinner" />,
   FileIcon: () => <span data-testid="file-icon" />,

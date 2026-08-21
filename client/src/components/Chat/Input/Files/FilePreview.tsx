@@ -20,6 +20,7 @@ const FilePreview = ({
   return (
     <div className={cn('relative size-10 shrink-0 overflow-hidden rounded-xl', className)}>
       <FileIcon file={file} fileType={fileType} />
+      {/* Deloitte Custom Change: # Visible icons for file uploads- PR #402 */}
       <SourceIcon
         source={file?.source}
         isCodeFile={

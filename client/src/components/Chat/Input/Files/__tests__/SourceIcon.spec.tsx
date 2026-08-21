@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react';
 import { FileSources } from 'librechat-data-provider';
 import SourceIcon from '../SourceIcon';
 
+// Deloitte Custom Change: # Visible icons for file uploads- PR #402
 jest.mock('~/components/Endpoints', () => ({
   MinimalIcon: () => <span data-testid="minimal-icon" />,
 }));

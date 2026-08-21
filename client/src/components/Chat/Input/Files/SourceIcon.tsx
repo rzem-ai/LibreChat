@@ -21,6 +21,7 @@ const sourceToClassname = {
 const defaultClassName =
   'absolute right-0 bottom-0 rounded-full p-[0.15rem] text-gray-600 transition-colors';
 
+// Deloitte Custom Change: # Visible icons for file uploads- PR #402
 export default function SourceIcon({
   source,
   isCodeFile,
@@ -56,6 +57,7 @@ export default function SourceIcon({
     );
   }
 
+  // Deloitte Custom Change: # Visible icons for file uploads- PR #402
   if (isFileSearch === true || source === FileSources.vectordb) {
     return (
       <div

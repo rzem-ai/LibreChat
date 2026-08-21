@@ -7,6 +7,7 @@ import {
 } from 'librechat-data-provider';
 import type { TFileUpload } from 'librechat-data-provider';
 
+// Deloitte Custom Change: # Visible icons for file uploads- PR #402
 beforeAll(() => {
   global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
   global.URL.revokeObjectURL = jest.fn();
@@ -28,11 +29,12 @@ const mockShowToast = jest.fn();
 const mockSetFilesLoading = jest.fn();
 const mockMutate = jest.fn();
 const mockUpdateFileById = jest.fn();
+const mockProcessFileForUpload = jest.fn(
+  async (_file: File, _quality?: number, _onProgress?: (progress: number) => void) => _file,
+);
 let capturedUploadOpts:
   | { onSuccess?: (data: TFileUpload, variables: FormData, context: unknown) => void }
   | undefined;
-  async (_file: File, _quality?: number, _onProgress?: (progress: number) => void) => _file,
-);
 const mockLocalize = jest.fn((key: string) => key);
 
 let mockConversation: Record<string, string | null | undefined> = {};
@@ -446,6 +448,7 @@ describe('useFileHandling', () => {
     });
   });
 
+  // Deloitte Custom Change: # Visible icons for file uploads- PR #402
   describe('upload success', () => {
     it('forwards file metadata to updateFileById', async () => {
       const useFileHandling = await loadHook();
