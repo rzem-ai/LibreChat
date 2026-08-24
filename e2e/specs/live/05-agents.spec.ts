@@ -144,19 +144,29 @@ test.describe.serial('live agents', { tag: ['@live'] }, () => {
       // The selected agent's fields hydrate asynchronously after the
       // combobox selection — possibly more than once (e.g. a cached value
       // followed by a fresh refetch) — and each hydration resets the
-      // textarea, silently clobbering a fill that lands in between. Retry
-      // the fill until the value actually holds still, same idiom as
-      // setSkillActive in helpers.ts for the identical class of bug.
+      // textarea, silently clobbering a fill that lands in between. A later
+      // wave can even reset the whole form back to "Create New Agent"
+      // between the fill settling and Save persisting, so retry the entire
+      // reselect-fill-save-confirm sequence, not just the fill, same idiom
+      // as setSkillActive in helpers.ts for the identical class of bug.
       const instructionsField = form.getByLabel('Instructions');
       const editedInstructions = canaryInstructions(EDITED_CANARY);
+      const agentCombobox = form.getByRole('combobox', { name: 'Agent', exact: true });
       await expect(async () => {
+        const stillSelected = await agentCombobox
+          .getByText(agentName, { exact: true })
+          .isVisible()
+          .catch(() => false);
+        if (!stillSelected) {
+          await selectExistingAgent(page, agentName);
+        }
         await instructionsField.fill(editedInstructions);
         expect(await instructionsField.inputValue()).toBe(editedInstructions);
-      }).toPass({ timeout: 15000 });
-      await form.getByRole('button', { name: 'Save' }).click();
-      await expect(
-        page.getByText(`Successfully updated ${agentName}`, { exact: true }),
-      ).toBeVisible({ timeout: 15000 });
+        await form.getByRole('button', { name: 'Save' }).click();
+        await expect(
+          page.getByText(`Successfully updated ${agentName}`, { exact: true }),
+        ).toBeVisible({ timeout: 5000 });
+      }).toPass({ timeout: 30000 });
 
       await form.getByRole('button', { name: 'Select Agent' }).click();
 
