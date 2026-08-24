@@ -1,5 +1,4 @@
 import { expect, test } from '@playwright/test';
-import type { Locator, Page } from '@playwright/test';
 import {
   attachSkillToAgent,
   createAgent,
@@ -10,7 +9,14 @@ import {
   sweepStaleAgents,
   uniqueAgentName,
 } from './agents.helpers';
-import { deleteCurrentConversation, sendMessage, setSkillActive } from './helpers';
+import {
+  CANARY,
+  canaryInstructions,
+  deleteCurrentConversation,
+  expectCanaryReply,
+  sendMessage,
+  setSkillActive,
+} from './helpers';
 
 /**
  * Live end-to-end checks that the Agent feature works against a real,
@@ -27,40 +33,6 @@ const ENDPOINT = process.env.LIVE_ENDPOINT?.trim() || 'Azure US';
 const MODEL = process.env.LIVE_MODEL?.trim() || 'gpt-5-nano';
 const SKILL = process.env.LIVE_SKILL_USAGE?.trim() || 'capability-builder';
 
-// Append-style canary marker (OWASP LLM guidance / LangChain4j's guardrail
-// pattern): ask the model to answer normally, then append a fixed marker on
-// its own line. This is followed far more reliably by small/nano models than
-// a replace-style "respond with exactly one word" instruction, which reads as
-// a stranger, higher-risk instruction and can trigger a clarifying question
-// instead of compliance.
-function canaryInstructions(word: string) {
-  return (
-    "Answer the user's question in one short sentence, nothing longer. Then, on a new line " +
-    `at the very end of your reply, add exactly this text and nothing else on that line: ${word}`
-  );
-}
-
-// Even an append-style marker has a small non-zero miss rate on weaker
-// models; tolerate exactly one miss with a nudge before failing the test.
-function canaryNudge(word: string) {
-  return (
-    `You forgot to include the required marker on its own line: ${word}. Please resend your ` +
-    'prior answer with it included.'
-  );
-}
-
-async function expectCanaryReply(page: Page, reply: Locator, word: string) {
-  const hasCanary = await reply
-    .getByText(new RegExp(word, 'i'))
-    .isVisible({ timeout: 30000 })
-    .catch(() => false);
-  if (!hasCanary) {
-    await sendMessage(page, canaryNudge(word));
-    await expect(reply).toContainText(new RegExp(word, 'i'), { timeout: 30000 });
-  }
-}
-
-const CANARY = 'PINEAPPLE';
 const EDITED_CANARY = 'MANGO';
 const QUESTION = "What's the capital of France?";
 

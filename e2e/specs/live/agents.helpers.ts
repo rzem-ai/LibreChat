@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
+import { escapeRegExp } from './helpers';
 
 /**
  * Agent-specific helpers for live specs. UI-only, end to end — no direct API
@@ -111,7 +112,7 @@ export async function deleteAgentViaUI(page: Page) {
 export async function sweepStaleAgents(page: Page, prefix = AGENT_NAME_PREFIX) {
   const form = await openAgentBuilder(page);
   const agentCombobox = form.getByRole('combobox', { name: 'Agent', exact: true });
-  const prefixPattern = new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
+  const prefixPattern = new RegExp(`^${escapeRegExp(prefix)}`);
 
   for (let guard = 0; guard < 25; guard++) {
     await agentCombobox.click();
