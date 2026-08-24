@@ -22,6 +22,26 @@ export const mcpValuesAtomFamily = atomFamily((conversationId: string | null) =>
 });
 
 /**
+ * Deloitte Custom Change: Tab-isolated storage for per-server MCP toolset selections,
+ * mirroring `mcpTabIsolatedStorage` above for the same cross-tab isolation reasons.
+ */
+const mcpToolsetsTabIsolatedStorage = createTabIsolatedStorage<Record<string, string[]>>();
+
+/**
+ * Deloitte Custom Change: Creates a storage atom for per-server MCP toolset selections
+ * per conversation. Absent server key (not present in the record) means "all toolsets
+ * enabled" — this is a hook-level convention (see `useMCPToolsetSelect`), not encoded here.
+ */
+export const mcpToolsetsAtomFamily = atomFamily((conversationId: string | null) => {
+  const key = conversationId ?? Constants.NEW_CONVO;
+  const storageKey = `${LocalStorageKeys.LAST_MCP_TOOLSETS_}${key}`;
+
+  return atomWithStorage<Record<string, string[]>>(storageKey, {}, mcpToolsetsTabIsolatedStorage, {
+    getOnInit: true,
+  });
+});
+
+/**
  * Global storage atom for MCP pinned state (shared across all conversations)
  */
 export const mcpPinnedAtom = atomWithStorage<boolean>(LocalStorageKeys.PIN_MCP_, true, undefined, {

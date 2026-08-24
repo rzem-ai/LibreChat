@@ -212,7 +212,6 @@ export type SupportContact = {
 
 export type AgentOwnerContact = {
   name?: string;
-  email?: string;
 };
 
 /**
@@ -246,6 +245,14 @@ export type ToolOptions = {
    * @default false
    */
   run_in_background?: boolean;
+  /**
+   * If true (and the `tool_intents` capability is enabled), the tool's schema
+   * gains an `intent` string as its FIRST property — one model-authored
+   * sentence per call, rendered as the call's live status label. Native host
+   * tools default on while the capability is enabled; `false` opts one out.
+   * @default false
+   */
+  describe_intent?: boolean;
 };
 
 /**
@@ -597,6 +604,8 @@ export type SteerContentPart = {
   type: ContentTypes.STEER;
   steer: string;
   steerId?: string;
+  /** Stable optimistic-client id used to settle a POST whose response was lost. */
+  clientSteerId?: string;
   createdAt?: number;
   /** Attachments steered with the message; re-encoded per turn on replay
    *  like any other user-message media (refs only, never encoded data). */
@@ -629,6 +638,16 @@ export type TMessageContentParts =
     } & ContentMetadata)
   | ({ type: ContentTypes.IMAGE_FILE; image_file: ImageFile & PartMetadata } & ContentMetadata)
   | (SummaryContentPart & ContentMetadata)
+  | ({
+      /** One-line LLM-generated note describing a completed tool batch. UI-only:
+       *  never sent to the model (stripped before payload formatting). */
+      type: ContentTypes.ACTIVITY_LABEL;
+      activity_label?: string;
+      tool_call_ids?: string[];
+      /** ok = all tools succeeded, failed = all failed, partial = mixed. */
+      status?: 'ok' | 'partial' | 'failed';
+      pending?: boolean;
+    } & ContentMetadata)
   | (Agents.AgentUpdate & ContentMetadata)
   | (Agents.MessageContentImageUrl & ContentMetadata)
   | (Agents.MessageContentVideoUrl & ContentMetadata)

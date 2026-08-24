@@ -84,7 +84,6 @@ function makeFakeRequest() {
   return { req, headers, writes, finished };
 }
 
-
 describe('OTLP HTTP transport — Content-Length regression', () => {
   it('keeps the patch-package regression fix checked in', () => {
     const patch = fs.readFileSync(findPatchPath(), 'utf8');

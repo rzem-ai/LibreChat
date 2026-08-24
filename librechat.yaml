@@ -5,12 +5,26 @@ interface:
   agents:
     use: true
     create: true
-    share: true # Enable share with other users
-    public: false # Disable share with everyone
+    share: false
+    public: false
 
   bookmarks: true
 
+  # Pin tools to the prompt bar by default for all users
+  defaultPinnedTools:
+    - 'file_search'
+    - 'skills'
+    - 'mcp'
+    - 'execute_code'
+    - 'artifacts'
+
+  deloitteHeader:
+    enabled: true
+    title: "${APP_TITLE}"
+
   fileCitations: true
+
+  fileSearch: true
 
   marketplace:
     use: true
@@ -30,18 +44,22 @@ interface:
     public: false # Disable share with everyone
 
   peoplePicker:
-    users: true # TODO: Restrict to deloitte.com.au emails
+    users: true
     groups: false
     roles: false
+    allowedDomains:
+      - 'deloitte.com.au'
+      - 'deloitte.co.nz'
 
-  # Pin tools to the prompt bar by default for all users
-  defaultPinnedTools:
-    - 'file_search'
-    - 'skills'
-    - 'execute_code'
-    - 'mcp'
+  remoteAgents:
+    use: true
+    create: true
 
-  fileSearch: true
+  skills:
+    use: true
+    create: true
+    share: true # Enable share with other users
+    public: false # Disable share with everyone
 
 fileConfig:
   endpoints:
@@ -68,7 +86,6 @@ endpoints:
     endpoint: "Azure AU"
 
   anthropic:
-    userProvide: false
     streamRate: 25
     titleConvo: true
     titleModel: "claude-haiku-4-5"
