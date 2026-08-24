@@ -18,6 +18,9 @@ import { getE2EBaseURL } from './setup/env';
 const baseURL = getE2EBaseURL();
 const authFile = path.resolve(process.cwd(), 'e2e/live-auth.json');
 const hasAuth = fs.existsSync(authFile);
+// Lets locked-down runners drive a preinstalled browser (e.g. msedge) instead
+// of Playwright's bundled Chromium download.
+const channel = process.env.E2E_CHROMIUM_CHANNEL || undefined;
 
 // Chromium ignores macOS mDNS, so map any `.local` host to loopback itself.
 const localHost = baseURL.match(/^https?:\/\/([^/:]+\.local)/)?.[1];
@@ -55,6 +58,7 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
+        ...(channel ? { channel } : {}),
         launchOptions: { args: resolverArgs },
       },
     },
