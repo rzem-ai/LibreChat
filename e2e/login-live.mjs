@@ -80,13 +80,15 @@ try {
   await page.goto(appURL('login'), { waitUntil: 'domcontentloaded', timeout });
 
   const emailField = page.getByLabel('Email');
-  const ssoButton = page.getByRole('button', { name: /sso/i }).or(page.getByRole('link', { name: /sso/i }));
+  // data-testid is set by the client regardless of the button's configured
+  // label text (OPENID_BUTTON_LABEL), so match on that rather than wording.
+  const ssoButton = page.getByTestId('openid');
 
   if (await emailField.isVisible({ timeout: 10000 }).catch(() => false)) {
     await emailField.fill(email);
     await page.getByLabel('Password').fill(password);
     await page.getByTestId('login-button').click();
-  } else if (await ssoButton.isVisible({ timeout: 10000 }).catch(() => false)) {
+  } else if (await ssoButton.isVisible({ timeout }).catch(() => false)) {
     console.log('[login-live] no email/password form — driving SSO redirect');
     await ssoButton.click();
     await page.waitForURL(/login\.microsoftonline\.com/, { timeout });
