@@ -172,6 +172,13 @@ https://www.librechat.ai/docs/configuration/stt_tts`);
     customConfig.modelSpecs = result.data.modelSpecs;
   }
 
+  // Deloitte Custom Change: mirrors the modelSpecs copy above. Without this, mcpServers keeps
+  // the raw, untransformed YAML (e.g. unresolved `${VAR}` placeholders in MCP server URLs)
+  // instead of the zod-validated/resolved values already computed in `result.data`.
+  if (result.data.mcpServers) {
+    customConfig.mcpServers = result.data.mcpServers;
+  }
+
   return customConfig;
 }
 
