@@ -80,21 +80,20 @@ try {
   await page.goto(appURL('login'), { waitUntil: 'domcontentloaded', timeout });
 
   const emailField = page.getByLabel('Email');
-  // data-testid is set by the client regardless of the button's configured
-  // label text (OPENID_BUTTON_LABEL), so match on that rather than wording.
-  const ssoButton = page.getByTestId('openid');
 
   if (await emailField.isVisible({ timeout: 10000 }).catch(() => false)) {
     await emailField.fill(email);
     await page.getByLabel('Password').fill(password);
     await page.getByTestId('login-button').click();
-  } else if (await ssoButton.isVisible({ timeout }).catch(() => false)) {
-    console.log('[login-live] no email/password form — driving SSO redirect');
-    await ssoButton.click();
+  } else {
+    // This deployment has OPENID_AUTO_REDIRECT enabled: the app leaves
+    // /login for /oauth/openid within a fraction of a second via
+    // window.location.href, so waiting for and clicking the SSO button is a
+    // race we can lose. Go straight to the endpoint it redirects to instead.
+    console.log('[login-live] no email/password form — going to SSO endpoint directly');
+    await page.goto(appURL('oauth/openid'), { waitUntil: 'domcontentloaded', timeout });
     await page.waitForURL(/login\.microsoftonline\.com/, { timeout });
     await loginViaMicrosoftSSO(page, email, password);
-  } else {
-    throw new Error('neither an email/password form nor an SSO button was found on /login');
   }
 
   await page.waitForURL((url) => !/\/login(\?|$)/.test(url.pathname + url.search), { timeout });
