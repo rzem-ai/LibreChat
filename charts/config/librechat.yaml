@@ -38,6 +38,7 @@ interface:
       These guidelines apply to all users. Users from other member firms with questions on compliance should contact their local Q&R team. New Zealand users: nzdataoffice@deloitte.co.nz.
       - Understand that you are permitted to upload Deloitte or client confidential information to MyAssist, provided that you respect any client contractual obligations, including restrictions on the purpose for which client data may be used.
       - Understand that if your client contract restricts Deloitte from processing client confidential information offshore, you must enable “AU-hosted models” via the toggle in any MyAssist app;
+      - Understand that if your client contract restricts Deloitte from processing client confidential information offshore, you must use must select and "Azure AU" model which can be selected in the model dropdown list.
       - Understand that you are NOT permitted to use personal information or high-risk confidential information (e.g. market sensitive information such as financials, acquisition details, strategic plans) in your prompts when the “Web Search” feature is enabled.
       - Will review and fact check any outputs generated using MyAssist and be transparent with your team about how you have used MyAssist in your work;
       - Will always act in accordance with your [Global Principles of Business Conduct](https://ausdeloitte.sharepoint.com/:b:/r/sites/DAISPolicies/QR%20Policies/Deloitte%20Global%20Principles%20of%20Business%20Conduct.pdf?csf=1&web=1&e=3qbMc1) when using MyAssist;
