@@ -27,17 +27,21 @@ interface:
 
   presets: true # Set to false to disable saved conversation presets
 
+  memories: true # Set to false to disable persistent user memories
+
+  temporaryChat: false # Set to false to disable temporary chats
+
+  sharedLinks: true # Set to false to disable sharing conversations through links
+
   customDeloitteFeatureFlags:
     exportChat: true # Set to false to disable exporting conversations
     regenerate: true # Set to false to disable regenerating assistant responses
     forkChat: true # Set to false to disable branching conversations from earlier messages
+    simplifyFork: true # Set to true to skip the fork options popover and always fork with default settings
     editChat: true # Set to false to disable editing submitted messages
-    toolsBadge: false # Set to false to disable the chat tools menu
+    showToolsDropdown: false # Set to false to disable the chat tools menu
     landingIcon: true # Set to false to hide the model or agent icon beside the landing greeting
     conversationIcon: true # Set to false to hide model or endpoint icons in conversation history
-    memories: false # Set to false to disable persistent user memories
-    temporaryChat: false # Set to false to disable temporary chats
-    sharedLinks: true # Set to false to disable sharing conversations through links
 
   prompts:
     use: true
@@ -67,6 +71,7 @@ interface:
     - 'skills'
     - 'execute_code'
     - 'mcp'
+    - 'artifacts'
 
   fileSearch: true # Set to false to disable searching uploaded files
 

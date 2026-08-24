@@ -22,19 +22,13 @@ function hasExplicitConfig(
     case PermissionTypes.BOOKMARKS:
       return interfaceConfig?.bookmarks !== undefined;
     case PermissionTypes.MEMORIES:
-      return (
-        interfaceConfig?.memories !== undefined ||
-        interfaceConfig?.customDeloitteFeatureFlags?.memories !== undefined
-      );
+      return interfaceConfig?.memories !== undefined;
     case PermissionTypes.MULTI_CONVO:
       return interfaceConfig?.multiConvo !== undefined;
     case PermissionTypes.AGENTS:
       return interfaceConfig?.agents !== undefined;
     case PermissionTypes.TEMPORARY_CHAT:
-      return (
-        interfaceConfig?.temporaryChat !== undefined ||
-        interfaceConfig?.customDeloitteFeatureFlags?.temporaryChat !== undefined
-      );
+      return interfaceConfig?.temporaryChat !== undefined;
     case PermissionTypes.RUN_CODE:
       return interfaceConfig?.runCode !== undefined;
     case PermissionTypes.WEB_SEARCH:
@@ -54,10 +48,7 @@ function hasExplicitConfig(
     case PermissionTypes.SKILLS:
       return interfaceConfig?.skills !== undefined;
     case PermissionTypes.SHARED_LINKS:
-      return (
-        interfaceConfig?.sharedLinks !== undefined ||
-        interfaceConfig?.customDeloitteFeatureFlags?.sharedLinks !== undefined
-      );
+      return interfaceConfig?.sharedLinks !== undefined;
     default:
       return false;
   }
@@ -96,8 +87,7 @@ export async function updateInterfacePermissions({
   }
   /** Configured values for interface object structure */
   const interfaceConfig = appConfig?.config?.interface;
-  const configuredSharedLinks =
-    interfaceConfig?.customDeloitteFeatureFlags?.sharedLinks ?? interfaceConfig?.sharedLinks;
+  const configuredSharedLinks = interfaceConfig?.sharedLinks;
   const memoryConfig = appConfig?.config?.memory;
   const memoryEnabled = isMemoryEnabled(memoryConfig);
   /** Check if memory is explicitly disabled (memory.disabled === true) */
@@ -263,7 +253,7 @@ export async function updateInterfacePermissions({
           if (isMemoryExplicitlyDisabled) return false;
           if (shouldEnableMemory) return true;
           return getPermissionValue(
-            loadedInterface.customDeloitteFeatureFlags?.memories ?? loadedInterface.memories,
+            loadedInterface.memories,
             defaultPerms[PermissionTypes.MEMORIES]?.[Permissions.USE],
             true,
           );
@@ -329,8 +319,7 @@ export async function updateInterfacePermissions({
       },
       [PermissionTypes.TEMPORARY_CHAT]: {
         [Permissions.USE]: getPermissionValue(
-          loadedInterface.customDeloitteFeatureFlags?.temporaryChat ??
-            loadedInterface.temporaryChat,
+          loadedInterface.temporaryChat,
           defaultPerms[PermissionTypes.TEMPORARY_CHAT]?.[Permissions.USE],
           defaults.temporaryChat,
         ),

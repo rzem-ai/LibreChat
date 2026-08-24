@@ -1380,13 +1380,11 @@ export const interfaceSchema = z
         exportChat: z.boolean().optional(),
         regenerate: z.boolean().optional(),
         forkChat: z.boolean().optional(),
+        simplifyFork: z.boolean().optional(),
         editChat: z.boolean().optional(),
-        toolsBadge: z.boolean().optional(),
+        showToolsDropdown: z.boolean().optional(),
         landingIcon: z.boolean().optional(),
         conversationIcon: z.boolean().optional(),
-        memories: z.boolean().optional(),
-        temporaryChat: z.boolean().optional(),
-        sharedLinks: z.boolean().optional(),
       })
       .optional(),
     prompts: z
@@ -3194,7 +3192,7 @@ export type TSpecialVarLabel = `com_ui_special_var_${keyof typeof specialVariabl
  * Does not infer or default any endpoint type when absent.
  */
 export function getEndpointField<
-  K extends (TConfig[keyof TConfig] extends never ? never : keyof TConfig),
+  K extends TConfig[keyof TConfig] extends never ? never : keyof TConfig,
 >(
   endpointsConfig: TEndpointsConfig | undefined | null,
   endpoint: EModelEndpoint | string | null | undefined,

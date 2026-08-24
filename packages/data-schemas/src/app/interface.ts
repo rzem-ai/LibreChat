@@ -47,7 +47,6 @@ export async function loadDefaultInterface({
   const memoryEnabled = isMemoryEnabled(memoryConfig);
   /** Only disable memories if memory config is present and explicitly disabled */
   const shouldDisableMemories = memoryConfig && !memoryEnabled;
-  const customFlags = interfaceConfig?.customDeloitteFeatureFlags;
 
   const loadedInterface: AppConfig['interfaceConfig'] = removeNullishValues({
     // UI elements - use schema defaults
@@ -69,11 +68,11 @@ export async function loadDefaultInterface({
 
     // Permissions and related settings - only include if explicitly configured
     bookmarks: interfaceConfig?.bookmarks,
-    memories: shouldDisableMemories ? false : (customFlags?.memories ?? interfaceConfig?.memories),
+    memories: shouldDisableMemories ? false : interfaceConfig?.memories,
     prompts: interfaceConfig?.prompts,
     multiConvo: interfaceConfig?.multiConvo,
     agents: interfaceConfig?.agents,
-    temporaryChat: customFlags?.temporaryChat ?? interfaceConfig?.temporaryChat,
+    temporaryChat: interfaceConfig?.temporaryChat,
     temporaryChatRetention: interfaceConfig?.temporaryChatRetention,
     retentionMode: interfaceConfig?.retentionMode,
     retainAgentFiles: interfaceConfig?.retainAgentFiles,
@@ -87,7 +86,7 @@ export async function loadDefaultInterface({
     marketplace: interfaceConfig?.marketplace,
     remoteAgents: interfaceConfig?.remoteAgents,
     skills: interfaceConfig?.skills,
-    sharedLinks: customFlags?.sharedLinks ?? interfaceConfig?.sharedLinks,
+    sharedLinks: interfaceConfig?.sharedLinks,
   });
 
   return loadedInterface;
