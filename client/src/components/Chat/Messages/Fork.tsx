@@ -274,6 +274,7 @@ export default function Fork({
     return null;
   }
 
+  /** Deloitte Custom Change: skip the fork options popover and always fork with default settings */
   if (simplifyFork) {
     const onSimpleClick = () => {
       forkConvo.mutate({

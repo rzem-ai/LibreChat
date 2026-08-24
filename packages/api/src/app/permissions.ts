@@ -255,7 +255,7 @@ export async function updateInterfacePermissions({
           return getPermissionValue(
             loadedInterface.memories,
             defaultPerms[PermissionTypes.MEMORIES]?.[Permissions.USE],
-            true,
+            defaults.memories,
           );
         })(),
         ...(defaultPerms[PermissionTypes.MEMORIES]?.[Permissions.CREATE] !== undefined && {
