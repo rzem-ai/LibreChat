@@ -17,7 +17,7 @@ interface:
 
   bookmarks: false # Set to false to disable saving conversations as bookmarks
 
-  # Pin tools to the prompt bar by default for all users (order here = UI order)
+  # Pin tools to the prompt bar by default for all users
   defaultPinnedTools:
     - 'file_search'
     - 'skills'
