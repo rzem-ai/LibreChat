@@ -537,8 +537,7 @@ export type TConfig = {
 };
 
 export type TEndpointsConfig =
-  | Record<EModelEndpoint | string, TConfig | null | undefined>
-  | undefined;
+  Record<EModelEndpoint | string, TConfig | null | undefined> | undefined;
 
 export type TModelsConfig = Record<string, string[]>;
 
@@ -936,5 +935,4 @@ export type TLangfuseConnectionTestErrorCode =
   | 'unexpected_response';
 
 export type TLangfuseConnectionTestResponse =
-  | { success: true }
-  | { success: false; errorCode: TLangfuseConnectionTestErrorCode };
+  { success: true } | { success: false; errorCode: TLangfuseConnectionTestErrorCode };

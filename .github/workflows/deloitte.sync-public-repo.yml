@@ -143,7 +143,7 @@ jobs:
       - name: Preserve sync orchestration workflow only
         run: |
           DESTINATION_BRANCH="${{ vars.SYNC_DESTINATION_BRANCH || 'main' }}"
-          SYNC_WORKFLOW_FILE=".github/workflows/sync-public-repo.yml"
+          SYNC_WORKFLOW_FILE=".github/workflows/deloitte.sync-public-repo.yml"
 
           git checkout "$DESTINATION_BRANCH" -- "$SYNC_WORKFLOW_FILE" || true
 

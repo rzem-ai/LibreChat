@@ -186,7 +186,7 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 29. `MCP_GATEWAY_TOOLSETS=teams,research,news`
 
 
-> Items 26–27 supply OAuth credentials for the **ClearTrack MCP Gateway** app registration referenced by the `mcpServers` block in `librechat.yaml` (repo root) and `charts/config/librechat.yaml` (Helm). The client ID is an identifier and is safe to commit; the client secret must be obtained from another team member and kept out of source control.
+> Items 26–27 supply OAuth credentials for the **ClearTrack MCP Gateway** app registration referenced by the `mcpServers` block in `librechat.yaml` (repo root). Helm reuses this config via `charts/config/librechat.yaml`.
 
 ### Evaluation framework variables
 
@@ -238,19 +238,18 @@ LibreChat configuration includes:
 - ClearTrack MCP integration
 - And more!
 
-There are now **two** `librechat.yaml` files on purpose:
+There is now **one source of truth** for LibreChat config:
 
-1. `librechat.yaml` (repo root) - **local development config**
+1. `librechat.yaml` (repo root)
    - Used by local Docker runs.
-   - Sends `x-id-token` headers for custom endpoints using `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION` from `.env`.
+   - Includes local gateway identity headers (`x-id-token`) for custom endpoints.
 
-2. `charts/config/librechat.yaml` - **Kubernetes/Helm deploy config**
-   - Packaged into the chart ConfigMap for DEV/UAT/PROD deployments.
-   - Does **not** send `x-id-token` for custom model calls.
+2. `charts/config/librechat.yaml` (symlink)
+   - Points to the root file to keep local and deployment config in sync.
+   - During `build-and-promote`, CI materializes a deployment copy by:
+     - removing local-only `x-id-token` headers, and
+     - ensuring `fileStrategy: "azure_blob"` is present for Kubernetes.
    - In deployed environments, auth is injected by `llm-gateway-proxy` as `x-sa-token` using the pod service account token.
-
-Why this split exists:
-- Local and deployed auth mechanisms are different (`x-id-token` locally vs `x-sa-token` in Kubernetes).
 
 ---
 

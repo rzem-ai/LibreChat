@@ -14,8 +14,9 @@ interface:
   defaultPinnedTools:
     - 'file_search'
     - 'skills'
-    - 'execute_code'
     - 'mcp'
+    - 'execute_code'
+    - 'artifacts'
 
   deloitteHeader:
     enabled: true
@@ -102,7 +103,6 @@ endpoints:
     endpoint: "Azure AU"
 
   anthropic:
-    userProvide: false
     streamRate: 25
     titleConvo: true
     titleModel: "claude-haiku-4-5"
