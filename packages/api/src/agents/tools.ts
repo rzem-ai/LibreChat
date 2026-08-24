@@ -139,7 +139,7 @@ export interface RegisterFileAuthoringToolsParams {
  */
 
 // Deloitte Custom Change: Add a hint to explain how to read Office files.
-const OFFICE_BINARY_HINT = `Never use read_file on Office formats (.docx, .xlsx, .pptx) -- they are binary. To verify an Office file, use bash_tool with officecli: \`officecli validate /mnt/data/file.docx --json\` or \`officecli view /mnt/data/file.docx text --json\`.`;
+const OFFICE_BINARY_HINT = `Never use \`read_file\` on Office formats (.docx, .xlsx, .pptx) — they are binary. If \`bash_tool\` is available, verify a sandbox Office file (e.g. under /mnt/data) with OfficeCLI: \`officecli validate /mnt/data/file.docx --json\` or \`officecli view /mnt/data/file.docx text --json\`.`;
 
 const SKILL_READ_FILE_DESCRIPTION = `${ReadFileToolDefinition.description}
 
