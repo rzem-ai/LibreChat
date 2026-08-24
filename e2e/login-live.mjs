@@ -105,9 +105,14 @@ try {
 } catch (error) {
   console.error('[login-live] login failed:', error.message);
   console.error(`[login-live] landed on: ${page.url()}`);
-  await page
-    .screenshot({ path: 'e2e/specs/.test-results/login-live-failure.png', fullPage: true })
-    .catch(() => {});
+  const screenshotPath = path.resolve(process.cwd(), 'e2e/specs/.test-results/login-live-failure.png');
+  try {
+    fs.mkdirSync(path.dirname(screenshotPath), { recursive: true });
+    await page.screenshot({ path: screenshotPath, fullPage: true, timeout: 10000 });
+    console.error(`[login-live] failure screenshot saved to ${screenshotPath}`);
+  } catch (screenshotError) {
+    console.error('[login-live] could not save failure screenshot:', screenshotError.message);
+  }
   process.exitCode = 1;
 } finally {
   await browser.close();
