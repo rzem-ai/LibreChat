@@ -23,7 +23,7 @@ import {
  * non-deterministic LLM: creating an agent is usable immediately, its
  * configured instructions are actually honored by the model, and a skill
  * attached to an agent (not the ephemeral composer toggle covered by
- * skill-usage.spec.ts) actually runs. Cleanup is UI-only — delete the
+ * 04-skill-usage.spec.ts) actually runs. Cleanup is UI-only — delete the
  * conversation and the agent through the app itself — since live/dev can't
  * be hit via internal APIs for setup or teardown.
  *
@@ -174,7 +174,7 @@ test.describe.serial('live agents', { tag: ['@live'] }, () => {
 
       // Each test gets a fresh, unnavigated page — setSkillActive interacts
       // with the sidebar directly with no navigation of its own, so it must
-      // be navigated into the app first (see skill-usage.spec.ts).
+      // be navigated into the app first (see 04-skill-usage.spec.ts).
       await page.goto('/c/new', { timeout: 15000 });
 
       // The skill must be globally active (Skills panel) for an agent to
@@ -201,7 +201,7 @@ test.describe.serial('live agents', { tag: ['@live'] }, () => {
       conversationCreated = true;
 
       // The skill actually executed via the agent path (not the ephemeral
-      // composer toggle already covered by skill-usage.spec.ts).
+      // composer toggle already covered by 04-skill-usage.spec.ts).
       const runButton = page.getByRole('button', { name: `Ran ${SKILL}` });
       await expect(runButton).toBeVisible({ timeout: 60000 });
 
