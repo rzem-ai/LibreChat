@@ -7,6 +7,10 @@ description: Create, analyze, proofread, validate, and modify Office documents (
 
 OfficeCLI is the document CLI for `.docx`, `.xlsx`, and `.pptx`. It is available in the code-execution sandbox. Use it through the existing Bash tool only.
 
+## Pre-requisites
+
+This skill will only run successfully if the user has "Run Code" enabled. If the AI encounters issues with this skill, please ask the user to enable "Run Code", so the AI can access the code sandbox. 
+
 ## Sandbox Rules
 
 - Work only under `/mnt/data`.
