@@ -10,28 +10,64 @@ interface:
 
   bookmarks: false # Set to false to disable saving conversations as bookmarks
 
+  # Pin tools to the prompt bar by default for all users (order here = UI order)
+  defaultPinnedTools:
+    - 'file_search'
+    - 'skills'
+    - 'mcp'
+    - 'execute_code'
+    - 'artifacts'
+
   deloitteHeader:
     enabled: true
     title: '${APP_TITLE}'
 
   fileCitations: true
+  
+  
+  fileSearch: true # Set to true to enable searching uploaded files
 
   marketplace:
     use: true
 
+  memories: true # Set to true to enable users to edit mermories via UI
+  
   modelSelect: true
 
   multiConvo: false # Set to false to disable multiple conversations in the chat interface
 
-  parameters: true # Set to false to disable adjustable model parameters
+  parameters: true # Set to true to enable adjustable model parameters
 
-  presets: true # Set to false to disable saved conversation presets
+  peoplePicker:
+    users: true
+    groups: false
+    roles: false
+    allowedDomains:
+      - 'deloitte.com.au'
+      - 'deloitte.co.nz'
+      
+  presets: true # Set to true to enable saved conversation presets
+  
+  prompts:
+    use: true
+    create: true
+    share: true # Enable share with other users
+    public: false # Disable share with everyone
 
-  memories: true # Set to false to disable persistent user memories
+
+  remoteAgents:
+    use: true
+    create: true
+    
+  sharedLinks: true # Set to false to disable sharing conversations through links
+
+  skills:
+    use: true
+    create: true
+    share: true # Enable share with other users
+    public: false # Disable share with everyone
 
   temporaryChat: false # Set to false to disable temporary chats
-
-  sharedLinks: true # Set to false to disable sharing conversations through links
 
   customDeloitteFeatureFlags:
     exportChat: true # Set to false to disable exporting conversations
@@ -42,39 +78,7 @@ interface:
     showToolsDropdown: false # Set to false to disable the chat tools menu
     landingIcon: true # Set to false to hide the model or agent icon beside the landing greeting
     conversationIcon: true # Set to false to hide model or endpoint icons in conversation history
-
-  prompts:
-    use: true
-    create: true
-    share: false # Enable share with other users
-    public: false # Disable share with everyone
-
-  peoplePicker:
-    users: true
-    groups: false
-    roles: false
-    allowedDomains:
-      - 'deloitte.com.au'
-      - 'deloitte.co.nz'
-
-  remoteAgents:
-    use: true
-    create: true
-
-  skills:
-    use: true
-    create: true
-    share: true # Enable share with other users
-    public: false # Disable share with everyone
-  # Pin tools to the prompt bar by default for all users
-  defaultPinnedTools:
-    - 'skills'
-    - 'execute_code'
-    - 'mcp'
-    - 'artifacts'
-
-  fileSearch: true # Set to false to disable searching uploaded files
-
+    
 fileConfig:
   endpoints:
     default:
