@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { TokenExchangeMethodEnum } from './types/agents';
 import { extractEnvVariable, stripUnresolvedPlaceholderQueryParams } from './utils';
+import { TokenExchangeMethodEnum } from './types/agents';
 
 const validateOAuthClientCredentials = (
   oauth: {
