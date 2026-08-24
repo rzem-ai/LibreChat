@@ -42,7 +42,7 @@ interface:
       - Will always act in accordance with your [Global Principles of Business Conduct](https://ausdeloitte.sharepoint.com/:b:/r/sites/DAISPolicies/QR%20Policies/Deloitte%20Global%20Principles%20of%20Business%20Conduct.pdf?csf=1&web=1&e=3qbMc1) when using MyAssist;
       - Acknowledge that your use of MyAssist is monitored and that your prompts and usage data may be collected and analysed to understand how MyAssist is being used and to identify opportunities for improving the platform.
       - Have read, understood, and will always comply with the [Third Party Content Guidelines](https://ausdeloitte.sharepoint.com/sites/DOL-c-DTTL-ResearchAUS/SitePages/Usage-guidelines.aspx#genai-third-party-content-guidelines).
- 
+
   marketplace:
     use: true
 
