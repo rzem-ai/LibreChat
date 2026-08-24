@@ -1,12 +1,26 @@
 import { XMLParser } from 'fast-xml-parser';
-import type { MCPResultSource } from 'librechat-data-provider';
-
+import type { MCPResultSource, MCPSourcesResult } from 'librechat-data-provider';
+import { buildEntitySources } from './entities';
 import { buildReportSources } from './report';
+import { buildAfrSearchSources } from './afr';
+import { stripHtmlTags } from './html';
+import { buildKxSources } from './kx';
 
 /** Upper bound on articles extracted from a single feed (feeds are already newest-first). */
 const MAX_FEED_ITEMS = 30;
 
 const FEED_ROOT_PATTERN = /^\s*(<\?xml[^>]*\?>\s*)?<(rss|feed)[\s>]/i;
+
+/**
+ * Tool name prefixes with a dedicated shape-detector above. For these, an
+ * unparsable or empty result (e.g. a REST error payload) yields no citation
+ * at all rather than a raw-JSON-dump chip with no useful title or link.
+ */
+const KNOWN_MCP_TOOLSET_PREFIXES = ['afr_', 'ibisworld_', 'desc_', 'gims_', 'kx_'];
+
+function isKnownMcpToolset(toolName: string): boolean {
+  return KNOWN_MCP_TOOLSET_PREFIXES.some((prefix) => toolName.startsWith(prefix));
+}
 
 type XMLValue = string | number | boolean | XMLNode | XMLValue[];
 type XMLNode = { [key: string]: XMLValue | undefined };
@@ -28,19 +42,6 @@ function toText(value: XMLValue | undefined): string {
     return toText(value['#text']);
   }
   return '';
-}
-
-function stripHtmlTags(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#0?39;/gi, "'")
-    .replace(/\s+/g, ' ')
-    .trim();
 }
 
 function asArray(value: XMLValue | undefined): XMLNode[] {
@@ -141,8 +142,10 @@ export function buildMCPResultSources({
   toolName: string;
   serverName: string;
   content: string;
-}): MCPResultSource[] {
-  const fallback: MCPResultSource[] = [{ toolName, serverName, content }];
+}): MCPSourcesResult {
+  const fallback: MCPSourcesResult = {
+    sources: isKnownMcpToolset(toolName) ? [] : [{ toolName, serverName, content }],
+  };
 
   if (FEED_ROOT_PATTERN.test(content)) {
     try {
@@ -152,13 +155,13 @@ export function buildMCPResultSources({
       const rssChannel = asArray((parsed.rss as XMLNode | undefined)?.channel)[0];
       if (rssChannel) {
         const sources = parseRssItems(toolName, serverName, rssChannel);
-        return sources.length > 0 ? sources : fallback;
+        return sources.length > 0 ? { sources } : fallback;
       }
 
       const atomFeed = parsed.feed as XMLNode | undefined;
       if (atomFeed) {
         const sources = parseAtomEntries(toolName, serverName, atomFeed);
-        return sources.length > 0 ? sources : fallback;
+        return sources.length > 0 ? { sources } : fallback;
       }
 
       return fallback;
@@ -168,5 +171,20 @@ export function buildMCPResultSources({
   }
 
   const reportSources = buildReportSources({ toolName, serverName, content });
-  return reportSources ?? fallback;
+  if (reportSources) {
+    return reportSources;
+  }
+
+  const afrSearchSources = buildAfrSearchSources({ toolName, serverName, content });
+  if (afrSearchSources) {
+    return afrSearchSources;
+  }
+
+  const kxSources = buildKxSources({ toolName, serverName, content });
+  if (kxSources) {
+    return kxSources;
+  }
+
+  const entitySources = buildEntitySources({ toolName, serverName, content });
+  return entitySources ?? fallback;
 }
