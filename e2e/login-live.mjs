@@ -35,6 +35,32 @@ function appURL(pathname) {
   return new URL(pathname.replace(/^\/+/, ''), normalized).toString();
 }
 
+/**
+ * Drives the Microsoft Entra ID login pages. This is inherently the most
+ * fragile part of the script — Microsoft changes this markup periodically —
+ * so every step waits for its own element rather than assuming a fixed
+ * number of pages, and optional prompts (KMSI, consent) are best-effort.
+ */
+async function loginViaMicrosoftSSO(page, user, pass) {
+  await page.locator('input[type="email"]').fill(user, { timeout });
+  await page.locator('#idSIButton9').click();
+
+  // Some tenants show a "Working... redirecting" interstitial between the
+  // email and password screens; wait for the password field rather than a
+  // fixed delay.
+  await page.locator('input[type="password"]').waitFor({ state: 'visible', timeout });
+  await page.locator('input[type="password"]').fill(pass);
+  await page.locator('#idSIButton9').click();
+
+  // "Stay signed in?" (KMSI) prompt — only appears sometimes. Accepting it
+  // gives a longer-lived session, which is what we want for a captured
+  // storageState. Best-effort: don't fail the run if it never appears.
+  await page
+    .locator('#idSIButton9')
+    .click({ timeout: 10000 })
+    .catch(() => {});
+}
+
 // Chromium ignores macOS mDNS, so map any `.local` host to loopback itself.
 const localHost = baseURL.match(/^https?:\/\/([^/:]+\.local)/)?.[1];
 const args = localHost
@@ -54,15 +80,20 @@ try {
   await page.goto(appURL('login'), { waitUntil: 'domcontentloaded', timeout });
 
   const emailField = page.getByLabel('Email');
-  if (!(await emailField.isVisible({ timeout: 10000 }).catch(() => false))) {
-    throw new Error(
-      'no email/password form on /login — target is SSO-only, so this script needs an SSO flow or ALLOW_EMAIL_LOGIN enabled on the environment',
-    );
-  }
+  const ssoButton = page.getByRole('button', { name: /sso/i }).or(page.getByRole('link', { name: /sso/i }));
 
-  await emailField.fill(email);
-  await page.getByLabel('Password').fill(password);
-  await page.getByTestId('login-button').click();
+  if (await emailField.isVisible({ timeout: 10000 }).catch(() => false)) {
+    await emailField.fill(email);
+    await page.getByLabel('Password').fill(password);
+    await page.getByTestId('login-button').click();
+  } else if (await ssoButton.isVisible({ timeout: 10000 }).catch(() => false)) {
+    console.log('[login-live] no email/password form — driving SSO redirect');
+    await ssoButton.click();
+    await page.waitForURL(/login\.microsoftonline\.com/, { timeout });
+    await loginViaMicrosoftSSO(page, email, password);
+  } else {
+    throw new Error('neither an email/password form nor an SSO button was found on /login');
+  }
 
   await page.waitForURL((url) => !/\/login(\?|$)/.test(url.pathname + url.search), { timeout });
   await page.getByTestId('text-input').waitFor({ state: 'visible', timeout });
