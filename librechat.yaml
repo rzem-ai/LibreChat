@@ -30,7 +30,7 @@ interface:
   marketplace:
     use: true
 
-  memories: true # Set to true to enable users to edit mermories via UI
+  memories: true # Set to true to enable users to edit memories via UI
 
   modelSelect: true
 
