@@ -318,6 +318,22 @@ async function handleZip(
   } catch {
     return res.status(400).json({ error: 'Invalid or corrupt archive' });
   }
+
+  // Deloitte Custom Change: Fix to Strip macOS metadata folders injected by Finder's "Compress" before any processing.
+  // This prevents __MACOSX/ resource fork sidecars and .DS_Store files from being stored as skill files or counted toward entry limits.
+  for (const entryPath of Object.keys(zip.files)) {
+    const normalized = entryPath.replace(/\\/g, '/');
+    const basename = path.posix.basename(normalized);
+    if (
+      normalized === '__MACOSX' ||
+      normalized.startsWith('__MACOSX/') ||
+      basename === '.DS_Store' ||
+      basename.startsWith('._')
+    ) {
+      zip.remove(entryPath);
+    }
+  }
+
   const entries = Object.keys(zip.files);
 
   if (entries.length > limits.maxEntries) {
