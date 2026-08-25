@@ -61,7 +61,7 @@ After cloning, initialize and clone the submodules:
 git submodule update --init --recursive
 ```
 
-This will populate the `rag_api/` folder with the contents from the tt-librechat-rag repository on the `develop` branch and the `admin_panel/` folder with the contents from the ea-libreadmin repository on the `develop` branch.
+This will populate the `rag_api/` folder with the contents from the tt-librechat-rag repository on the `develop` branch and the `admin_panel/` folder with the contents from the ea-libreadmin repository on the `develop` branch. CI can override that per superproject branch.
 
 ### Updating the Submodule
 
@@ -90,7 +90,7 @@ git submodule status
 A submodule is a Git repository embedded inside another Git repository. It allows us to:
 - Keep the RAG API code in a separate repository with its own version control
 - Update the RAG API independently of the main LibreChat codebase
-- Pin to specific commits or track a branch (we track `develop` by default)
+- Pin to specific commits or track a branch. Locally we default to `develop`; CI can switch to `main` or `uat` when needed.
 
 The submodule appears as a folder (`rag_api/`) in this repository, but Git treats it as a pointer to a specific commit in the external repository.
 
