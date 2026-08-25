@@ -12,7 +12,7 @@ interface:
   agents:
     use: true
     create: true
-    share: false
+    share: true
     public: false
 
   bookmarks: false # Set to false to disable saving conversations as bookmarks
