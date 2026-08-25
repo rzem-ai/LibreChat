@@ -245,6 +245,8 @@ describe('registerCodeExecutionTools', () => {
       expect(readFile?.description).not.toContain('{skillName}');
       expect(readFile?.description).not.toContain('SKILL.md');
       expect(JSON.stringify(readFile?.parameters)).not.toContain('{skillName}');
+      expect(readFile?.description).toContain('.docx');
+      expect(readFile?.description).toContain('officecli validate');
     });
 
     it('upgrades a code-only read_file definition when skills are enabled later in the run', () => {
@@ -267,6 +269,8 @@ describe('registerCodeExecutionTools', () => {
       expect(readFile?.description).toContain('{skillName}/{filePath}');
       expect(readFile?.description).toContain('skills/{skillName}/');
       expect(readFile?.description).toContain('SKILL.md');
+      expect(readFile?.description).toContain('.docx');
+      expect(readFile?.description).toContain('officecli validate');
       expect(toolRegistry.get('read_file')?.description).toBe(readFile?.description);
     });
 
