@@ -40,6 +40,16 @@ function Header() {
     permission: Permissions.USE,
   });
 
+  const hasAccessToSharedLinks = useHasAccess({
+    permissionType: PermissionTypes.SHARED_LINKS,
+    permission: Permissions.CREATE,
+  });
+
+  const isExportEnabled = customFlags?.exportChat === true;
+  const isSharedButtonEnabled =
+    (startupConfig?.sharedLinksEnabled ?? false) && hasAccessToSharedLinks;
+  const showExportAndShareMenu = isExportEnabled || isSharedButtonEnabled;
+
   const isSmallScreen = useMediaQuery('(max-width: 768px)');
 
   return (
@@ -60,9 +70,10 @@ function Header() {
               {hasAccessToMultiConvo === true && <AddMultiConvo />}
               {isSmallScreen && (
                 <>
-                  {customFlags?.exportChat === true && (
+                  {showExportAndShareMenu && (
                     <ExportAndShareMenu
-                      isSharedButtonEnabled={startupConfig?.sharedLinksEnabled ?? false}
+                      isExportEnabled={isExportEnabled}
+                      isSharedButtonEnabled={isSharedButtonEnabled}
                     />
                   )}
                   {hasAccessToTemporaryChat === true && <TemporaryChat />}
@@ -74,9 +85,10 @@ function Header() {
 
         {!isSmallScreen && (
           <div className="flex items-center gap-2">
-            {customFlags?.exportChat === true && (
+            {showExportAndShareMenu && (
               <ExportAndShareMenu
-                isSharedButtonEnabled={startupConfig?.sharedLinksEnabled ?? false}
+                isExportEnabled={isExportEnabled}
+                isSharedButtonEnabled={isSharedButtonEnabled}
               />
             )}
             {hasAccessToTemporaryChat === true && <TemporaryChat />}
