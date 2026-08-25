@@ -20,7 +20,14 @@ const FilePreview = ({
   return (
     <div className={cn('relative size-10 shrink-0 overflow-hidden rounded-xl', className)}>
       <FileIcon file={file} fileType={fileType} />
-      <SourceIcon source={file?.source} isCodeFile={!!file?.['metadata']?.fileIdentifier} />
+      {/* Deloitte Custom Change: # Visible icons for file uploads- PR #402 */}
+      <SourceIcon
+        source={file?.source}
+        isCodeFile={
+          file?.metadata?.codeEnvRef != null || file?.metadata?.fileIdentifier != null
+        }
+        isFileSearch={file?.embedded === true}
+      />
       {typeof file?.['progress'] === 'number' && file?.['progress'] < 1 && (
         <Spinner
           bgOpacity={0.2}

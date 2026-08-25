@@ -10,44 +10,33 @@ interface:
 
   bookmarks: false # Set to false to disable saving conversations as bookmarks
 
+  # Pin tools to the prompt bar by default for all users
+  defaultPinnedTools:
+    - 'file_search'
+    - 'skills'
+    - 'mcp'
+    - 'execute_code'
+    - 'artifacts'
+
   deloitteHeader:
     enabled: true
     title: '${APP_TITLE}'
 
   fileCitations: true
+  
+  
+  fileSearch: true # Set to true to enable searching uploaded files
 
   marketplace:
     use: true
 
+  memories: true # Set to true to enable users to edit mermories via UI
+  
   modelSelect: true
 
   multiConvo: false # Set to false to disable multiple conversations in the chat interface
 
-  parameters: true # Set to false to disable adjustable model parameters
-
-  presets: true # Set to false to disable saved conversation presets
-
-  memories: true # Set to false to disable persistent user memories
-
-  temporaryChat: false # Set to false to disable temporary chats
-
-  sharedLinks: true # Set to false to disable sharing conversations through links
-
-  customDeloitteFeatureFlags:
-    exportChat: true # Set to false to disable exporting conversations
-    regenerate: true # Set to false to disable regenerating assistant responses
-    forkChat: true # Set to false to disable branching conversations from earlier messages
-    simplifyFork: true # Set to true to skip the fork options popover and always fork with default settings
-    editChat: true # Set to false to disable editing submitted messages
-    showToolsDropdown: false # Set to false to disable the chat tools menu
-    landingIcon: true # Set to false to hide the model or agent icon beside the landing greeting
-    conversationIcon: true # Set to false to hide model or endpoint icons in conversation history
-
-  prompts:
-    use: true
-    create: true
-    share: false # Enable share with other users
-    public: false # Disable share with everyone
+  parameters: true # Set to true to enable adjustable model parameters
 
   peoplePicker:
     users: true
@@ -56,25 +45,40 @@ interface:
     allowedDomains:
       - 'deloitte.com.au'
       - 'deloitte.co.nz'
+      
+  presets: true # Set to true to enable saved conversation presets
+  
+  prompts:
+    use: true
+    create: true
+    share: true # Enable share with other users
+    public: false # Disable share with everyone
+
 
   remoteAgents:
     use: true
     create: true
+    
+  sharedLinks: false # Set to false to disable sharing conversations through links
 
   skills:
     use: true
     create: true
     share: true # Enable share with other users
     public: false # Disable share with everyone
-  # Pin tools to the prompt bar by default for all users
-  defaultPinnedTools:
-    - 'skills'
-    - 'execute_code'
-    - 'mcp'
-    - 'artifacts'
 
-  fileSearch: true # Set to false to disable searching uploaded files
+  temporaryChat: false # Set to false to disable temporary chats
 
+  customDeloitteFeatureFlags:
+    exportChat: false # Set to false to disable exporting conversations
+    regenerate: true # Set to false to disable regenerating assistant responses
+    forkChat: true # Set to false to disable branching conversations from earlier messages
+    simplifyFork: true # Set to true to skip the fork options popover and always fork with default settings
+    editChat: true # Set to false to disable editing submitted messages
+    showToolsDropdown: false # Set to false to disable the chat tools menu
+    landingIcon: true # Set to false to hide the model or agent icon beside the landing greeting
+    conversationIcon: true # Set to false to hide model or endpoint icons in conversation history
+    
 fileConfig:
   endpoints:
     default:
