@@ -599,11 +599,14 @@ async function readZipEntry(
   zipEntry: JSZip.JSZipObject,
   effectiveLimit: number,
 ): Promise<{ buffer: Buffer | null; bytesRead: number }> {
+  if (effectiveLimit <= 0) {
+    return { buffer: null, bytesRead: 0 };
+  }
+
   const chunks: Buffer[] = [];
   let bytesRead = 0;
   let exceededLimit = false;
   const entryStream = zipEntry.nodeStream('nodebuffer');
-
   await new Promise<void>((resolve, reject) => {
     entryStream.on('data', (chunk: Buffer) => {
       if (exceededLimit) {
