@@ -58,6 +58,9 @@ services:
       - AZURE_OPENAI_HOST=${AZURE_OPENAI_HOST:-au-openai-exp.ctk.au.deloitte.com}
     volumes:
       - ./nginx-gateway-proxy.conf.template:/etc/nginx/templates/default.conf.template:ro
+  mongodb:
+    ports:
+      - "27017:27017"
   rag_api:
     image: librechat-rag-api
     build:
