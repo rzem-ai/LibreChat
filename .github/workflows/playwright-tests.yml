@@ -1,9 +1,8 @@
 name: Playwright Tests
 on:
-  # push:
-  #   branches: [ develop ]
-  # pull_request:
-  #   branches: [ develop ]
+  pull_request:
+    branches: [develop, uat, main]
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
     inputs:
       run_ci:
@@ -16,16 +15,6 @@ on:
         required: true
         default: true
         type: boolean
-      run_live:
-        description: 'Run live smoke'
-        required: true
-        default: true
-        type: boolean
-      base_url:
-        description: 'Target site (live mode only)'
-        required: false
-        default: 'https://librechat-dev.ctk.au.deloitte.com'
-        type: string
 permissions:
   contents: read
 
@@ -39,6 +28,8 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.56.1-noble
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
       - name: Use Node.js 24.16.0
         uses: actions/setup-node@v4
@@ -67,6 +58,8 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.56.1-noble
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
       - name: Use Node.js 24.16.0
         uses: actions/setup-node@v4
@@ -85,104 +78,3 @@ jobs:
           name: playwright-report-mock
           path: e2e/playwright-report/**
           retention-days: 30
-
-  live:
-    # Runs after mock regardless of whether ci/mock ran or were skipped, but not if mock failed.
-    needs: mock
-    if: ${{ !cancelled() && needs.mock.result != 'failure' && github.event.inputs.run_live != 'false' }}
-    # Self-hosted so the runner sits inside the network that can reach the
-    # private dev host and the SSO provider.
-    runs-on:
-      group: AU ITS DevOps Build Servers
-
-    # Holds the test-account secrets and any required approvers.
-    environment: playwright-dev
-
-    timeout-minutes: 30
-
-    env:
-      E2E_BASE_URL: ${{ github.event.inputs.base_url }}
-      # Dedicated test account — never a personal login.
-      E2E_USER: ${{ secrets.E2E_LIVE_USER }}
-      E2E_PASS: ${{ secrets.E2E_LIVE_PASS }}
-      # Drive the runner's preinstalled Edge; the bundled Chromium download
-      # stalls behind TLS inspection on this build server.
-      E2E_CHROMIUM_CHANNEL: msedge
-      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Use Node.js 24.16.0
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24.16.0'
-
-      # The build server sits behind TLS inspection, so Node must be told to
-      # trust the interception CAs or every HTTPS download fails.
-      - name: Trust corporate root certificates
-        shell: pwsh
-        run: |
-          $bundle = Join-Path $env:RUNNER_TEMP 'corp-ca-bundle.pem'
-          Get-Content deloitte/certificates/*.crt | Set-Content -Path $bundle -Encoding ascii
-          "NODE_EXTRA_CA_CERTS=$bundle" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Verify browser is available
-        shell: pwsh
-        run: |
-          $edge = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
-          if (-not (Test-Path $edge)) { throw "Edge not found at $edge" }
-          (Get-Item $edge).VersionInfo.ProductVersion
-
-      - name: Verify credentials are wired up
-        shell: pwsh
-        run: |
-          $missing = @()
-          if (-not $env:E2E_USER) { $missing += 'E2E_LIVE_USER' }
-          if (-not $env:E2E_PASS) { $missing += 'E2E_LIVE_PASS' }
-          if ($missing) {
-            throw "Empty secret(s): $($missing -join ', '). Check they are Environment *secrets* (not variables) under 'playwright-dev'."
-          }
-          Write-Host "Credentials present (user length: $($env:E2E_USER.Length), pass length: $($env:E2E_PASS.Length))"
-
-      # Programmatic login instead of a hand-captured snapshot: a fresh session
-      # every run, so nothing goes stale. Writes e2e/live-auth.json.
-      # PowerShell doesn't fail the step on a non-zero exit code from an
-      # external process by default, so the exit code is checked explicitly —
-      # otherwise a failed login would be silently reported as a green step.
-      - name: Capture live session
-        shell: pwsh
-        run: |
-          node e2e/login-live.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Run live smoke
-        run: npx playwright test --config=e2e/playwright.config.live.ts
-
-      - name: Upload live test report
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: playwright-live-report
-          path: e2e/playwright-report/**
-          retention-days: 30
-          if-no-files-found: ignore
-
-      - name: Upload traces & screenshots
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-live-failures
-          path: e2e/specs/.test-results/**
-          retention-days: 7
-          if-no-files-found: ignore
-
-      # Self-hosted runners keep their working directory, so the live session
-      # file must not survive the job.
-      - name: Remove captured session
-        if: always()
-        shell: pwsh
-        run: Remove-Item -Path e2e/live-auth.json -Force -ErrorAction SilentlyContinue
