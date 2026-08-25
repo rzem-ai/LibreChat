@@ -21,26 +21,18 @@ export async function loadDefaultInterface({
   const { interface: defaults } = configDefaults;
   const hasModelSpecs = (config?.modelSpecs?.list?.length ?? 0) > 0;
   const includesAddedEndpoints = (config?.modelSpecs?.addedEndpoints?.length ?? 0) > 0;
-  const interfaceWithDeloitteHeader = interfaceConfig as
-    | (NonNullable<typeof interfaceConfig> & {
-        deloitteHeader?: {
-          enabled?: boolean;
-          title?: string;
-        };
-      })
-    | undefined;
 
   // Deloitte Custom Change: Parse header enablement and title (extract from ENV var)
-  let deloitteHeader = interfaceWithDeloitteHeader?.deloitteHeader;
-  if (interfaceWithDeloitteHeader?.deloitteHeader) {
-    let { title } = interfaceWithDeloitteHeader.deloitteHeader;
+  let deloitteHeader = interfaceConfig?.deloitteHeader;
+  if (interfaceConfig?.deloitteHeader) {
+    let { title } = interfaceConfig.deloitteHeader;
     if (typeof title === 'string') {
       const vars = title.match(/\${([^}]+)}/g) ?? [];
       if (vars.length > 0 && vars.every((v) => v === '${APP_TITLE}')) {
         title = extractEnvVariable(title);
       }
     }
-    deloitteHeader = { ...interfaceWithDeloitteHeader.deloitteHeader, title };
+    deloitteHeader = { ...interfaceConfig.deloitteHeader, title };
   }
 
   const memoryConfig = config?.memory;

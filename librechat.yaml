@@ -39,7 +39,7 @@ interface:
   mcpServers:
     create: false # Set to false to disable creating new MCP servers via the Agent Builder
 
-  memories: true # Set to true to enable users to edit mermories via UI
+  memories: true # Set to true to enable users to edit memories via UI
   
   modelSelect: true
 
@@ -54,9 +54,9 @@ interface:
     allowedDomains:
       - 'deloitte.com.au'
       - 'deloitte.co.nz'
-      
+
   presets: true # Set to true to enable saved conversation presets
-  
+
   prompts:
     use: true
     create: true
@@ -66,8 +66,8 @@ interface:
   remoteAgents:
     use: true
     create: true
-    
-  sharedLinks: true # Set to false to disable sharing conversations through links
+
+  sharedLinks: false # Set to false to disable sharing conversations through links
 
   skills:
     use: true
@@ -78,7 +78,7 @@ interface:
   temporaryChat: false # Set to false to disable temporary chats
 
   customDeloitteFeatureFlags:
-    exportChat: true # Set to false to disable exporting conversations
+    exportChat: false # Set to false to disable exporting conversations
     regenerate: true # Set to false to disable regenerating assistant responses
     forkChat: true # Set to false to disable branching conversations from earlier messages
     simplifyFork: true # Set to true to skip the fork options popover and always fork with default settings
@@ -87,13 +87,24 @@ interface:
     createActions: false # Set to false to hide action creation in the marketplace
     landingIcon: true # Set to false to hide the model or agent icon beside the landing greeting
     conversationIcon: true # Set to false to hide model or endpoint icons in conversation history
-    
+
 fileConfig:
   endpoints:
     default:
       fileLimit: 50
     agents:
       fileLimit: 50
+
+memory:
+  disabled: false # Set to true to completely disable memory
+  personalize: true # Gives users the ability to toggle memory on/off, true by default
+  tokenLimit: 2000 # Maximum tokens for memory storage
+  maxInputTokens: 12000 # Maximum recent-chat tokens sent to the memory agent
+  messageWindowSize: 5 # Number of recent messages to consider
+  agent:
+    enabled: true
+    provider: "Azure AU"
+    model: "gpt-41-nano"
 
 endpoints:
   # ========================================
@@ -149,7 +160,7 @@ endpoints:
       modelDisplayLabel: 'Azure AU'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
-        x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
+        x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
         Content-Type: 'application/json'
 
     # --- Azure US (eastus) ---
@@ -167,7 +178,7 @@ endpoints:
       modelDisplayLabel: 'Azure US'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
-        x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
+        x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
         Content-Type: 'application/json'
 
     # --- VertexAI / Google (us-central1) ---
@@ -185,7 +196,7 @@ endpoints:
       modelDisplayLabel: 'VertexAI US'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
-        x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
+        x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
         Content-Type: 'application/json'
 
 modelSpecs:
@@ -347,14 +358,9 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
   cleartrack-mcp-gateway:
     # See documentation: https://github.com/Deloitte-Australia/ea-mcp-gateway/blob/feature/prototype/docs/MCP_Gateway_Wiki.md
     type: streamable-http
-    url: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp?toolsets=${MCP_GATEWAY_TOOLSETS}'
-    oauth:
-      authorization_url: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/authorize
-      token_url: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/token
-      client_id: '${CLEARTRACK_MCP_GATEWAY_CLIENT_ID}'
-      client_secret: '${CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET}'
-      #redirect_uri: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/callback
-      scope: 'Channel.ReadBasic.All ChannelMember.Read.All Group.Read.All Team.ReadBasic.All User.Read.All Files.Read.All'
+    url: "${MCP_GATEWAY_URL}?toolsets=${MCP_GATEWAY_TOOLSETS}"
+    obo:
+      scopes: "${MCP_GATEWAY_OBO_SCOPE}"
 #    oauth_headers:
 #      X-Custom-Header: "custom_value"
 
