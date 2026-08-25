@@ -1,4 +1,4 @@
-services:
+ervices:
   caddy:
     container_name: caddy
     image: caddy:2.11
@@ -73,3 +73,4 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+ 
