@@ -41,10 +41,6 @@ jest.mock('~/hooks', () => ({
   },
   useHasAccess: () => true,
   useAuthContext: () => ({ user: { id: 'user-1' } }),
-  useToolFavorites: () => ({
-    favoriteKeys: new Set<string>(),
-    toggle: jest.fn(),
-  }),
 }));
 
 jest.mock('~/data-provider', () => ({
@@ -94,7 +90,21 @@ jest.mock('@librechat/client', () => ({
     </button>
   ),
   Input: (props: React.ComponentProps<'input'>) => <input {...props} />,
-  Radio: () => null,
+  Radio: ({
+    options,
+    onChange,
+  }: {
+    options: Array<{ value: string; label: string }>;
+    onChange?: (value: string) => void;
+  }) => (
+    <div>
+      {options.map((option) => (
+        <button key={option.value} type="button" onClick={() => onChange?.(option.value)}>
+          {option.label}
+        </button>
+      ))}
+    </div>
+  ),
   OGDialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
     open ? <div>{children}</div> : null,
   OGDialogContent: ({ children }: { children: React.ReactNode }) => (
@@ -104,7 +114,11 @@ jest.mock('@librechat/client', () => ({
   OGDialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
 }));
 
-function makeSkill(id: string, name: string): TSkillSummary {
+function makeSkill(
+  id: string,
+  name: string,
+  overrides: Partial<Pick<TSkillSummary, 'isPublic' | 'author' | 'authorName'>> = {},
+): TSkillSummary {
   return {
     _id: id,
     name,
@@ -116,6 +130,7 @@ function makeSkill(id: string, name: string): TSkillSummary {
     fileCount: 0,
     createdAt: '2026-07-24T00:00:00.000Z',
     updatedAt: '2026-07-24T00:00:00.000Z',
+    ...overrides,
   };
 }
 
@@ -245,5 +260,59 @@ describe('SkillsDialog pagination', () => {
 
     expect(mockFetchNextPage).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('SkillsDialog view grouping', () => {
+  test('Public/Shared/Mine tabs narrow the list per the locked precedence rule (public wins)', () => {
+    mockInfiniteResult = {
+      ...mockInfiniteResult,
+      data: {
+        pages: [
+          {
+            skills: [
+              makeSkill('public-and-shared', 'public-and-shared-skill', {
+                isPublic: true,
+                author: 'other-user',
+                authorName: 'Other',
+              }),
+              makeSkill('shared-only', 'shared-only-skill', {
+                author: 'other-user',
+                authorName: 'Other',
+              }),
+              makeSkill('mine', 'my-skill', { author: 'user-1' }),
+            ],
+          },
+        ],
+      },
+      hasNextPage: false,
+    };
+
+    render(<SkillsDialog open onOpenChange={jest.fn()} agentId="agent-1" />);
+
+    // All (default view): everything shows.
+    expect(screen.getByText('public-and-shared-skill')).toBeInTheDocument();
+    expect(screen.getByText('shared-only-skill')).toBeInTheDocument();
+    expect(screen.getByText('my-skill')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_skills_view_public' }));
+    expect(screen.getByText('public-and-shared-skill')).toBeInTheDocument();
+    expect(screen.queryByText('shared-only-skill')).toBeNull();
+    expect(screen.queryByText('my-skill')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_skills_view_shared' }));
+    expect(screen.queryByText('public-and-shared-skill')).toBeNull();
+    expect(screen.getByText('shared-only-skill')).toBeInTheDocument();
+    expect(screen.queryByText('my-skill')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_skills_view_mine' }));
+    expect(screen.queryByText('public-and-shared-skill')).toBeNull();
+    expect(screen.queryByText('shared-only-skill')).toBeNull();
+    expect(screen.getByText('my-skill')).toBeInTheDocument();
+  });
+
+  test('no Favorites tab is offered', () => {
+    render(<SkillsDialog open onOpenChange={jest.fn()} agentId="agent-1" />);
+    expect(screen.queryByRole('button', { name: 'com_ui_tools_view_favorites' })).toBeNull();
   });
 });
