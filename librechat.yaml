@@ -59,7 +59,7 @@ interface:
     use: true
     create: true
     
-  sharedLinks: true # Set to false to disable sharing conversations through links
+  sharedLinks: false # Set to false to disable sharing conversations through links
 
   skills:
     use: true
@@ -70,7 +70,7 @@ interface:
   temporaryChat: false # Set to false to disable temporary chats
 
   customDeloitteFeatureFlags:
-    exportChat: true # Set to false to disable exporting conversations
+    exportChat: false # Set to false to disable exporting conversations
     regenerate: true # Set to false to disable regenerating assistant responses
     forkChat: true # Set to false to disable branching conversations from earlier messages
     simplifyFork: true # Set to true to skip the fork options popover and always fork with default settings
