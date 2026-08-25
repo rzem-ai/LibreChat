@@ -1375,6 +1375,18 @@ export const interfaceSchema = z
     bookmarks: z.boolean().optional(),
     memories: z.boolean().optional(),
     presets: z.boolean().optional(),
+    customDeloitteFeatureFlags: z
+      .object({
+        exportChat: z.boolean().optional(),
+        regenerate: z.boolean().optional(),
+        forkChat: z.boolean().optional(),
+        simplifyFork: z.boolean().optional(),
+        editChat: z.boolean().optional(),
+        showToolsDropdown: z.boolean().optional(),
+        landingIcon: z.boolean().optional(),
+        conversationIcon: z.boolean().optional(),
+      })
+      .optional(),
     prompts: z
       .union([
         z.boolean(),
@@ -3180,7 +3192,7 @@ export type TSpecialVarLabel = `com_ui_special_var_${keyof typeof specialVariabl
  * Does not infer or default any endpoint type when absent.
  */
 export function getEndpointField<
-  K extends (TConfig[keyof TConfig] extends never ? never : keyof TConfig),
+  K extends TConfig[keyof TConfig] extends never ? never : keyof TConfig,
 >(
   endpointsConfig: TEndpointsConfig | undefined | null,
   endpoint: EModelEndpoint | string | null | undefined,

@@ -8,7 +8,7 @@ interface:
     share: false
     public: false
 
-  bookmarks: true
+  bookmarks: false # Set to false to disable saving conversations as bookmarks
 
   # Pin tools to the prompt bar by default for all users
   defaultPinnedTools:
@@ -20,28 +20,23 @@ interface:
 
   deloitteHeader:
     enabled: true
-    title: "${APP_TITLE}"
+    title: '${APP_TITLE}'
 
   fileCitations: true
 
-  fileSearch: true
+
+  fileSearch: true # Set to true to enable searching uploaded files
 
   marketplace:
     use: true
 
+  memories: true # Set to true to enable users to edit memories via UI
+
   modelSelect: true
 
-  multiConvo: true
+  multiConvo: false # Set to false to disable multiple conversations in the chat interface
 
-  parameters: true
-
-  presets: true
-
-  prompts:
-    use: true
-    create: true
-    share: false # Enable share with other users
-    public: false # Disable share with everyone
+  parameters: true # Set to true to enable adjustable model parameters
 
   peoplePicker:
     users: true
@@ -51,15 +46,38 @@ interface:
       - 'deloitte.com.au'
       - 'deloitte.co.nz'
 
+  presets: true # Set to true to enable saved conversation presets
+
+  prompts:
+    use: true
+    create: true
+    share: true # Enable share with other users
+    public: false # Disable share with everyone
+
+
   remoteAgents:
     use: true
     create: true
+
+  sharedLinks: false # Set to false to disable sharing conversations through links
 
   skills:
     use: true
     create: true
     share: true # Enable share with other users
     public: false # Disable share with everyone
+
+  temporaryChat: false # Set to false to disable temporary chats
+
+  customDeloitteFeatureFlags:
+    exportChat: false # Set to false to disable exporting conversations
+    regenerate: true # Set to false to disable regenerating assistant responses
+    forkChat: true # Set to false to disable branching conversations from earlier messages
+    simplifyFork: true # Set to true to skip the fork options popover and always fork with default settings
+    editChat: true # Set to false to disable editing submitted messages
+    showToolsDropdown: false # Set to false to disable the chat tools menu
+    landingIcon: true # Set to false to hide the model or agent icon beside the landing greeting
+    conversationIcon: true # Set to false to hide model or endpoint icons in conversation history
 
 fileConfig:
   endpoints:
@@ -87,80 +105,90 @@ endpoints:
   agents:
     recursionLimit: 25
     maxRecursionLimit: 50
-    disableBuilder: false
+    disableBuilder: false # Set to true to disable the agent builder interface
     maxCitations: 30
     maxCitationsPerFile: 7
-    capabilities: ["actions", "artifacts", "context", "deferred_tools", "execute_code", "file_search", "skills", "tools"]
+    capabilities:
+      [
+        'actions',
+        'artifacts',
+        'context',
+        'deferred_tools',
+        'execute_code',
+        'file_search',
+        'skills',
+        'tools',
+      ]
     minRelevanceScore: 0.3
     # Default model for new agents — uses Azure AU custom endpoint (confirmed working)
-    model: "gpt-4o-mini"
-    endpoint: "Azure AU"
+    model: 'gpt-4o-mini'
+    endpoint: 'Azure AU'
 
   anthropic:
     streamRate: 25
     titleConvo: true
-    titleModel: "claude-haiku-4-5"
-    titleMethod: "completion"
+    titleModel: 'claude-haiku-4-5'
+    titleMethod: 'completion'
 
   # ========================================
   # Custom endpoints (OpenAI-compatible format)
   # ========================================
   custom:
     # --- Azure AU (aus-east) ---
-    - name: "Azure AU"
-      apiKey: "dummy"
-      baseURL: "${BASE_URL_AZURE_AU}"
+    - name: 'Azure AU'
+      apiKey: 'dummy'
+      baseURL: '${BASE_URL_AZURE_AU}'
       models:
         default:
-          - "gpt-4o-mini"
-          - "gpt-4o"
-          - "gpt-41"
-          - "gpt-41-nano"
-          - "gpt-41-mini"
+          - 'gpt-4o-mini'
+          - 'gpt-4o'
+          - 'gpt-41'
+          - 'gpt-41-nano'
+          - 'gpt-41-mini'
         fetch: false
       titleConvo: true
-      titleModel: "gpt-4o-mini"
-      modelDisplayLabel: "Azure AU"
-      dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
+      titleModel: 'gpt-4o-mini'
+      modelDisplayLabel: 'Azure AU'
+      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
-        Content-Type: "application/json"
+        Content-Type: 'application/json'
 
     # --- Azure US (eastus) ---
-    - name: "Azure US"
-      apiKey: "dummy"
-      baseURL: "${BASE_URL_AZURE_US}"
+    - name: 'Azure US'
+      apiKey: 'dummy'
+      baseURL: '${BASE_URL_AZURE_US}'
       models:
         default:
-          - "gpt-5-chat"
-          - "gpt-5-mini"
-          - "gpt-5-nano"
+          - 'gpt-5-chat'
+          - 'gpt-5-mini'
+          - 'gpt-5-nano'
         fetch: false
       titleConvo: true
-      titleModel: "gpt-5-nano"
-      modelDisplayLabel: "Azure US"
-      dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
+      titleModel: 'gpt-5-nano'
+      modelDisplayLabel: 'Azure US'
+      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
-        Content-Type: "application/json"
+        Content-Type: 'application/json'
 
     # --- VertexAI / Google (us-central1) ---
     # OpenAI-compatible endpoint, model names use google/ prefix
-    - name: "VertexAI US"
-      apiKey: "dummy"
-      baseURL: "${BASE_URL_VERTEXAI}"
+    - name: 'VertexAI US'
+      apiKey: 'dummy'
+      baseURL: '${BASE_URL_VERTEXAI}'
       models:
         default:
-          - "google/gemini-2.5-flash"
-          - "google/gemini-2.5-pro"
+          - 'google/gemini-2.5-flash'
+          - 'google/gemini-2.5-pro'
         fetch: false
       titleConvo: true
-      titleModel: "google/gemini-2.5-flash"
-      modelDisplayLabel: "VertexAI US"
-      dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
+      titleModel: 'google/gemini-2.5-flash'
+      modelDisplayLabel: 'VertexAI US'
+      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
-        Content-Type: "application/json"
+        Content-Type: 'application/json'
 
 modelSpecs:
   # enforce: true would block requests without a spec name — this breaks the Agents endpoint
@@ -174,12 +202,12 @@ modelSpecs:
   addedEndpoints:
     - agents
   list:
-    - name: "azure-au-gpt-4o-mini"
-      label: "Azure AU gpt-4o-mini"
-      group: "Azure AU"
+    - name: 'azure-au-gpt-4o-mini'
+      label: 'Azure AU gpt-4o-mini'
+      group: 'Azure AU'
       preset:
-        endpoint: "Azure AU"
-        model: "gpt-4o-mini"
+        endpoint: 'Azure AU'
+        model: 'gpt-4o-mini'
         # promptPrefix is a private field — stripped before the config is sent to the
         # browser. It becomes the system message for ephemeral (general-chat) requests.
         # User-created agents use their own stored instructions and bypass this field.
@@ -219,100 +247,100 @@ modelSpecs:
           - If file_search returns nothing relevant, say so plainly and ask for the file or source rather than answering from assumption.
           - Preserve factual fidelity to the provided content and avoid adding unstated claims.
 
-    - name: "azure-au-gpt-4o"
-      label: "Azure AU gpt-4o"
-      group: "Azure AU"
+    - name: 'azure-au-gpt-4o'
+      label: 'Azure AU gpt-4o'
+      group: 'Azure AU'
       preset:
-        endpoint: "Azure AU"
-        model: "gpt-4o"
+        endpoint: 'Azure AU'
+        model: 'gpt-4o'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "azure-au-gpt-41"
-      label: "Azure AU gpt-41"
-      group: "Azure AU"
+    - name: 'azure-au-gpt-41'
+      label: 'Azure AU gpt-41'
+      group: 'Azure AU'
       preset:
-        endpoint: "Azure AU"
-        model: "gpt-41"
+        endpoint: 'Azure AU'
+        model: 'gpt-41'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "azure-au-gpt-41-nano"
-      label: "Azure AU gpt-41-nano"
-      group: "Azure AU"
+    - name: 'azure-au-gpt-41-nano'
+      label: 'Azure AU gpt-41-nano'
+      group: 'Azure AU'
       preset:
-        endpoint: "Azure AU"
-        model: "gpt-41-nano"
+        endpoint: 'Azure AU'
+        model: 'gpt-41-nano'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "azure-au-gpt-41-mini"
-      label: "Azure AU gpt-41-mini"
-      group: "Azure AU"
+    - name: 'azure-au-gpt-41-mini'
+      label: 'Azure AU gpt-41-mini'
+      group: 'Azure AU'
       preset:
-        endpoint: "Azure AU"
-        model: "gpt-41-mini"
+        endpoint: 'Azure AU'
+        model: 'gpt-41-mini'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "azure-us-gpt-41"
-      label: "Azure US gpt-41"
-      group: "Azure US"
+    - name: 'azure-us-gpt-41'
+      label: 'Azure US gpt-41'
+      group: 'Azure US'
       preset:
-        endpoint: "Azure US"
-        model: "gpt-41"
+        endpoint: 'Azure US'
+        model: 'gpt-41'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "azure-us-gpt-41-nano"
-      label: "Azure US gpt-41-nano"
-      group: "Azure US"
+    - name: 'azure-us-gpt-41-nano'
+      label: 'Azure US gpt-41-nano'
+      group: 'Azure US'
       preset:
-        endpoint: "Azure US"
-        model: "gpt-41-nano"
+        endpoint: 'Azure US'
+        model: 'gpt-41-nano'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "azure-us-gpt-41-mini"
-      label: "Azure US gpt-41-mini"
-      group: "Azure US"
+    - name: 'azure-us-gpt-41-mini'
+      label: 'Azure US gpt-41-mini'
+      group: 'Azure US'
       preset:
-        endpoint: "Azure US"
-        model: "gpt-41-mini"
+        endpoint: 'Azure US'
+        model: 'gpt-41-mini'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "azure-us-gpt-5-chat"
-      label: "Azure US gpt-5-chat"
-      group: "Azure US"
+    - name: 'azure-us-gpt-5-chat'
+      label: 'Azure US gpt-5-chat'
+      group: 'Azure US'
       preset:
-        endpoint: "Azure US"
-        model: "gpt-5-chat"
+        endpoint: 'Azure US'
+        model: 'gpt-5-chat'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "azure-us-gpt-5-mini"
-      label: "Azure US gpt-5-mini"
-      group: "Azure US"
+    - name: 'azure-us-gpt-5-mini'
+      label: 'Azure US gpt-5-mini'
+      group: 'Azure US'
       preset:
-        endpoint: "Azure US"
-        model: "gpt-5-mini"
+        endpoint: 'Azure US'
+        model: 'gpt-5-mini'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "azure-us-gpt-5-nano"
-      label: "Azure US gpt-5-nano"
-      group: "Azure US"
+    - name: 'azure-us-gpt-5-nano'
+      label: 'Azure US gpt-5-nano'
+      group: 'Azure US'
       preset:
-        endpoint: "Azure US"
-        model: "gpt-5-nano"
+        endpoint: 'Azure US'
+        model: 'gpt-5-nano'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "vertexai-us-gemini-2-5-flash"
-      label: "VertexAI US gemini-2.5-flash"
-      group: "VertexAI US"
+    - name: 'vertexai-us-gemini-2-5-flash'
+      label: 'VertexAI US gemini-2.5-flash'
+      group: 'VertexAI US'
       preset:
-        endpoint: "VertexAI US"
-        model: "google/gemini-2.5-flash"
+        endpoint: 'VertexAI US'
+        model: 'google/gemini-2.5-flash'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "vertexai-us-gemini-2-5-pro"
-      label: "VertexAI US gemini-2.5-pro"
-      group: "VertexAI US"
+    - name: 'vertexai-us-gemini-2-5-pro'
+      label: 'VertexAI US gemini-2.5-pro'
+      group: 'VertexAI US'
       preset:
-        endpoint: "VertexAI US"
-        model: "google/gemini-2.5-pro"
+        endpoint: 'VertexAI US'
+        model: 'google/gemini-2.5-pro'
         promptPrefix: *deloitteSystemPrompt
 
 # MCP Servers configuration
@@ -325,7 +353,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     obo:
       scopes: "${MCP_GATEWAY_OBO_SCOPE}"
 #    oauth_headers:
-#      X-Custom-Header: 'custom_value'
+#      X-Custom-Header: "custom_value"
 
 mcpSettings:
   allowedDomains:
@@ -349,6 +377,6 @@ speech: # https://www.librechat.ai/docs/configuration/librechat_yaml/object_stru
       apiKey: '${TTS_API_KEY}'
       model: 'eleven_multilingual_v2'
       voices:
-        - '5GZaeOOG7yqLdoTRsaa6'  # Rachel
-        - 'DTLT09E2cxHF0DqjKVbc'  # Paul
-        - 'aGkVQvWUZi16EH8aZJvT'  # Steve
+        - '5GZaeOOG7yqLdoTRsaa6' # Rachel
+        - 'DTLT09E2cxHF0DqjKVbc' # Paul
+        - 'aGkVQvWUZi16EH8aZJvT' # Steve
