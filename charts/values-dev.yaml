@@ -26,7 +26,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'develop@sha256:4ad97427e07711d62c7077e9e6a3bfcaca9bd700c0f395f9e4aa2f12fec73ed0'
+          tag: 'develop@sha256:4d276c04e0d7409fe94f451565461cd3cd9184c4ad0a53b85848d32b93b550e2'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -45,7 +45,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:076581b31a335a1ef239c53a238ee4c561dc5f5137f615638c1975429a56388a'
+          tag: 'develop@sha256:afe84a73cd801f5ae4b6ce1032c0df8f7ffbbafa8cb3571db9b7b71c67d17959'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -62,7 +62,9 @@ pods:
           EMBEDDINGS_PROVIDER: 'azure'
           ENDPOINTS: 'agents,anthropic,custom'
           KEY_VAULT_NAME: 'kv-int-librechat-dev'
+          MCP_GATEWAY_OBO_SCOPE: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
           MCP_GATEWAY_TOOLSETS: 'teams,research,news'
+          MCP_GATEWAY_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
           MONGO_DB: 'mdb-librechat-database-dev'
           NODE_ENV: 'development'
           NODE_TLS_REJECT_UNAUTHORIZED: '0'
@@ -71,6 +73,7 @@ pods:
           OPENID_ON_BEHALF_FLOW_FOR_USERINFO_REQUIRED: 'true'
           OPENID_ON_BEHALF_FLOW_USERINFO_SCOPE: 'user.read'
           OPENID_REQUIRED_ROLE: ''
+          OPENID_REUSE_TOKENS: 'true'
           OPENID_SCOPE: 'openid profile email offline_access https://librechat-dev.ctk.au.deloitte.com/access_user'
           RAG_API_URL: 'http://127.0.0.1:8000'
           RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
@@ -93,8 +96,6 @@ pods:
           AZURE_STORAGE_ACCOUNT_NAME: 'stctspokenpdshared'
           AZURE_STORAGE_PUBLIC_ACCESS: 'false'
           AZURE_CONTAINER_NAME: 'stc-librechat-app-dev'
-          # ClearTrack MCP Gateway
-          CLEARTRACK_MCP_GATEWAY_CLIENT_ID: '3e5d28f1-91a3-4748-ad73-5fa544f1d3e2'
           #Langfuse Observability
           LANGFUSE_BASE_URL: 'https://langfuse-dev.ctk.au.deloitte.com'
           # OpenTelemetry Tracing
@@ -122,8 +123,6 @@ pods:
           OPENID_SESSION_SECRET: librechat-openid-session-secret-dev
           RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
           MEILI_MASTER_KEY: librechat-meili-master-key-dev
-          # ClearTrack MCP Gateway
-          CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET: librechat-cleartrack-mcp-gateway-client-secret-dev
           # ClearTrack Code Interpreter (ea-code-runtime) — JWK signing key
           CODEAPI_JWT_PRIVATE_JWK_JSON: librechat-codeapi-jwt-private-jwk-dev
           #Langfuse Observability
@@ -133,7 +132,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:2a774d7e2e76414beb1e8987a9d5f8d63fe867f113dbd3ffa4138fefde84117e'
+          tag: 'develop@sha256:e03c6cfee3603ca0dac0884eeeca5c3cbe54b9a45b6e18837ec3deeb06623064'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -164,8 +163,16 @@ pods:
       meilisearch:
         image:
           pullPolicy: Always
-          tag: 'develop@sha256:b5d53c92a926c37875b6cb309f77c65e274d61a40b2883d7b7e5a8737c1d5e0c'
+          tag: 'develop@sha256:84ac41429282e23f18034d378e130ba8799452a2be58a93092b711df52ba637d'
         env:
           MEILI_ENV: 'development'
         secrets:
           MEILI_MASTER_KEY: librechat-meili-master-key-dev
+        persistence:
+          enabled: true
+          size: 10Gi
+          accessModes:
+            - ReadWriteOnce
+          name: "meilisearch-data"
+          mountPath: /meili_data
+          storageClass: "managed-csi-standard-private"

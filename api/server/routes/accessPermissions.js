@@ -20,6 +20,7 @@ const {
 } = require('~/server/middleware/checkSharePublicAccess');
 const { requireJwtAuth, checkBan, uaParser, canAccessResource } = require('~/server/middleware');
 const { checkPeoplePickerAccess } = require('~/server/middleware/checkPeoplePickerAccess');
+const configMiddleware = require('~/server/middleware/config/app');
 const { findMCPServerByObjectId, getSkillById } = require('~/models');
 
 const router = express.Router();
@@ -38,7 +39,7 @@ router.use(uaParser);
  * GET /api/permissions/search-principals
  * Search for users and groups to grant permissions
  */
-router.get('/search-principals', checkPeoplePickerAccess, searchPrincipals);
+router.get('/search-principals', configMiddleware, checkPeoplePickerAccess, searchPrincipals);
 
 /**
  * GET /api/permissions/{resourceType}/roles
