@@ -24,6 +24,7 @@ export interface TelemetryController {
 const WARNING_CODE = 'LIBRECHAT_OTEL';
 const REDACTED_QUERY_VALUE = '[REDACTED]';
 const SIGNAL_SHUTDOWN_TIMEOUT_MS = 5_000;
+const AZURE_MONITOR_SCOPE = 'https://monitor.azure.com/.default';
 
 interface RequestUrlParts {
   href?: string;
@@ -38,6 +39,14 @@ interface AgentProtocol {
 interface UndiciRequestInfo {
   path?: string;
   origin?: string;
+}
+
+interface AzureAccessToken {
+  token: string;
+}
+
+interface AzureTokenCredential {
+  getToken: (scope: string) => Promise<AzureAccessToken | null>;
 }
 
 let activeSdk: NodeSDK | undefined;
@@ -296,6 +305,56 @@ function getResourceAttributes(config: TelemetryConfig): Attributes {
   return attributes;
 }
 
+function getAzureMonitorTraceExporter(
+  config: TelemetryConfig,
+): NodeSDKConfiguration['traceExporter'] | undefined {
+  if (!config.azureMonitorAuthEnabled) {
+    return undefined;
+  }
+
+  if (!config.tracesEndpoint) {
+    emitWarning('Azure Monitor auth enabled but OTEL_EXPORTER_OTLP_TRACES_ENDPOINT is missing');
+    return undefined;
+  }
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-proto') as {
+      OTLPTraceExporter: new (options: {
+        url: string;
+        headers: () => Promise<Record<string, string>>;
+      }) => NonNullable<NodeSDKConfiguration['traceExporter']>;
+    };
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { DefaultAzureCredential } = require('@azure/identity') as {
+      DefaultAzureCredential: new (options?: {
+        managedIdentityClientId?: string;
+      }) => AzureTokenCredential;
+    };
+
+    const credential = new DefaultAzureCredential(
+      config.azureMonitorClientId
+        ? { managedIdentityClientId: config.azureMonitorClientId }
+        : undefined,
+    );
+
+    return new OTLPTraceExporter({
+      url: config.tracesEndpoint,
+      headers: async () => {
+        const token = await credential.getToken(AZURE_MONITOR_SCOPE);
+        if (!token?.token) {
+          throw new Error('Azure Monitor credential returned no token');
+        }
+
+        return { Authorization: 'Bearer ' + token.token };
+      },
+    });
+  } catch (error) {
+    emitWarning(`Azure Monitor exporter unavailable: ${getErrorMessage(error)}`);
+    return undefined;
+  }
+}
+
 function createSdk(config: TelemetryConfig): NodeSDK {
   const instrumentations: NodeSDKConfiguration['instrumentations'] = [
     new HttpInstrumentation({
@@ -331,6 +390,11 @@ function createSdk(config: TelemetryConfig): NodeSDK {
     resource: resourceFromAttributes(getResourceAttributes(config)),
     instrumentations,
   };
+
+  const traceExporter = getAzureMonitorTraceExporter(config);
+  if (traceExporter) {
+    sdkConfig.traceExporter = traceExporter;
+  }
 
   return new NodeSDK(sdkConfig);
 }
@@ -382,10 +446,14 @@ function ensureShutdownTaskRegistered(): void {
   // by Node, so a separate signal handler can let the coordinator
   // exit before the async OpenTelemetry flush completes, dropping
   // final spans during pod shutdowns.
-  registerShutdownTask('telemetry', () =>
-    withTimeout(shutdownTelemetry(), SIGNAL_SHUTDOWN_TIMEOUT_MS).catch((error) => {
-      emitWarning(`OpenTelemetry shutdown failed: ${getErrorMessage(error)}`);
-    }),
+  registerShutdownTask(
+    'telemetry',
+    () =>
+      withTimeout(shutdownTelemetry(), SIGNAL_SHUTDOWN_TIMEOUT_MS).catch((error) => {
+        emitWarning(`OpenTelemetry shutdown failed: ${getErrorMessage(error)}`);
+      }),
+    // Exporters close after instrumented modules have emitted their final shutdown spans.
+    { priority: -100 },
   );
 }
 

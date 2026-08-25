@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 /**
  * Standardized helpers for live specs that interact with the real dev
@@ -8,6 +8,48 @@ import type { Page } from '@playwright/test';
  */
 
 const SKILL_ACTIVE_SWITCH = 'Toggle skill active state';
+
+/**
+ * Append-style canary marker (OWASP LLM guidance / LangChain4j's guardrail
+ * pattern): ask the model to answer normally, then append a fixed marker on
+ * its own line. This is followed far more reliably by small/nano models than
+ * a replace-style "respond with exactly one word" instruction, which reads as
+ * a stranger, higher-risk instruction and can trigger a clarifying question
+ * instead of compliance.
+ */
+export const CANARY = 'PINEAPPLE';
+
+/** Escape regex special characters so a literal string can be used inside `new RegExp()`. */
+export function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function canaryInstructions(word: string) {
+  return (
+    "Answer the user's question in one short sentence, nothing longer. Then, on a new line " +
+    `at the very end of your reply, add exactly this text and nothing else on that line: ${word}`
+  );
+}
+
+// Even an append-style marker has a small non-zero miss rate on weaker
+// models; tolerate exactly one miss with a nudge before failing the test.
+function canaryNudge(word: string) {
+  return (
+    `You forgot to include the required marker on its own line: ${word}. Please resend your ` +
+    'prior answer with it included.'
+  );
+}
+
+export async function expectCanaryReply(page: Page, reply: Locator, word: string) {
+  const hasCanary = await reply
+    .getByText(new RegExp(word, 'i'))
+    .isVisible({ timeout: 30000 })
+    .catch(() => false);
+  if (!hasCanary) {
+    await sendMessage(page, canaryNudge(word));
+    await expect(reply).toContainText(new RegExp(word, 'i'), { timeout: 30000 });
+  }
+}
 
 /** Open a skill's detail page from the Skills side panel. */
 export async function openSkillDetail(page: Page, skillName: string) {
@@ -58,28 +100,46 @@ export async function setSkillActive(
 export async function selectModel(page: Page, endpoint: string, model: string) {
   await page.getByTestId('new-chat-button').click();
   await page.getByTestId('model-selector-button').click();
-  // Endpoints are hover-activated submenus; the model only mounts once open.
-  await page.getByRole('option', { name: endpoint }).hover();
-  // Substring match: the option's name also includes a multiplier + "Pin".
-  await page.getByRole('option', { name: model }).first().click();
+  // Skip the hover-activated submenu tree entirely: type into the picker's
+  // search box, which flattens results and renders the matching model option
+  // at the top level (see renderSearchResults in ModelSelector.tsx).
+  const search = page.locator('#model-search');
+  // The modelSpec label for VertexAI strips the provider prefix
+  // (e.g. "google/gemini-2.5-flash" is labelled "gemini-2.5-flash"), so
+  // searching the raw id returns nothing.
+  const searchTerm = model.includes('/') ? model.split('/').pop()! : model;
+  await search.fill(searchTerm);
+  const escapedSearch = escapeRegExp(searchTerm);
+  const namePattern = new RegExp(`^(${escapeRegExp(endpoint)} )?${escapedSearch}(\\s|$)`);
+  await page.getByRole('option', { name: namePattern }).first().click();
 }
 
 /**
  * Toggle a composer tool (e.g. "Skills", "Run Code", "File Search", "Web
- * Search", "Artifacts", "Memory") by its visible label. Idempotent: reads the
- * composer badge and only opens the menu when a change is needed.
+ * Search", "Artifacts", "Memory") by its visible label. Idempotent: reads
+ * the badge's `aria-checked` and only opens the menu when a change is
+ * needed. Visibility is NOT a reliable state signal — pinned tools stay
+ * mounted regardless of their toggle state and just change colour when
+ * checked (green submit surface vs neutral).
  */
 export async function setToolEnabled(page: Page, toolLabel: string, enabled: boolean) {
   const badge = page.getByRole('checkbox', { name: toolLabel });
-  if ((await badge.isVisible().catch(() => false)) === enabled) {
+  const isCurrentlyEnabled = async () => {
+    if ((await badge.count()) === 0) {
+      // Badge isn't in the DOM at all — the tool is off and unpinned.
+      return false;
+    }
+    return (await badge.first().getAttribute('aria-checked')) === 'true';
+  };
+  if ((await isCurrentlyEnabled()) === enabled) {
     return;
   }
   await page.locator('#tools-dropdown-button').click();
   await page.getByRole('menuitem', { name: toolLabel }).click();
   await page.keyboard.press('Escape');
-  await (enabled
-    ? expect(badge).toBeVisible({ timeout: 10000 })
-    : expect(badge).toBeHidden({ timeout: 10000 }));
+  await expect(async () => {
+    expect(await isCurrentlyEnabled()).toBe(enabled);
+  }).toPass({ timeout: 10000 });
 }
 
 /** Type a prompt into the composer and send it. */

@@ -3,6 +3,7 @@ const express = require('express');
 const { logger, SystemCapabilities } = require('@librechat/data-schemas');
 const {
   logAxiosError,
+  getApprovalTtlMs,
   refreshS3FileUrls,
   handleFilesUsageRequest,
   shouldUseUploadSse,
@@ -15,6 +16,7 @@ const {
   isUUID,
   CacheKeys,
   FileSources,
+  FileContext,
   ResourceType,
   EModelEndpoint,
   EToolResources,
@@ -144,15 +146,19 @@ router.get('/config', async (req, res) => {
 /**
  * POST /files/usage
  *
- * Owner-scoped TTL touch for uploads held in a client-side queue (mid-run
+ * Owner-scoped TTL hold for uploads sitting in a client-side queue (mid-run
  * queued messages), so the upload-window TTL cannot reap them before drain.
- * Thin wrapper: validation, cap, and best-effort semantics live in
- * `@librechat/api` (`handleFilesUsageRequest`).
+ * Extends the deadline rather than clearing it; the real release happens at
+ * send. The approval window is passed through so a queue waiting on a paused
+ * run outlives that pause. Thin wrapper: validation, cap, hold window, and
+ * best-effort semantics live in `@librechat/api` (`handleFilesUsageRequest`).
  */
 router.post('/usage', async (req, res) => {
   try {
+    const checkpointerCfg = req.config?.endpoints?.[EModelEndpoint.agents]?.checkpointer;
     const { status, body } = await handleFilesUsageRequest(req.user ?? {}, req.body ?? {}, {
-      updateFilesUsage: db.updateFilesUsage,
+      extendFilesTTL: db.extendFilesTTL,
+      approvalTtlMs: getApprovalTtlMs(checkpointerCfg),
     });
     return res.status(status).json(body);
   } catch (error) {
@@ -547,6 +553,11 @@ router.get('/download/:userId/:file_id', fileAccess, async (req, res) => {
 
     // Access already validated by fileAccess middleware
     const file = req.fileAccess.file;
+    logger.debug(
+      `[DOWNLOAD ROUTE] file_id=${file.file_id} source=${file.source} ` +
+        `context=${file.context} hasCodeEnvRef=${!!file.metadata?.codeEnvRef} ` +
+        `filepath=${(file.filepath || '').slice(0, 100)}`,
+    );
 
     if (checkOpenAIStorage(file.source) && !file.model) {
       logger.warn(`File download requested by user ${userId} has no associated model: ${file_id}`);
@@ -593,6 +604,31 @@ router.get('/download/:userId/:file_id', fileAccess, async (req, res) => {
           : passThrough.body;
 
       stream.pipe(res);
+    } else if (file.context === FileContext.execute_code) {
+      const ref = file.metadata?.codeEnvRef;
+      if (!ref || !ref.storage_session_id || !ref.file_id || !ref.kind || !ref.id) {
+        logger.error(
+          `File download requested by user ${userId}: execute_code file ${file_id} is missing metadata.codeEnvRef fields`,
+        );
+        return res.status(500).send('Missing code environment reference');
+      }
+      const identity =
+        ref.kind === 'skill'
+          ? { kind: ref.kind, id: ref.id, version: ref.version }
+          : { kind: ref.kind, id: ref.id };
+      logger.debug(
+        `[DOWNLOAD ROUTE] routing CI file to ea-code-runtime session=${ref.storage_session_id} fileId=${ref.file_id}`,
+      );
+      // Use code strategy explicitly — outer getStrategyFunctions(file.source)
+      // returns getAzureFileStream for azure_blob source, wrong signature for CI.
+      const { getDownloadStream: getCodeStream } = getStrategyFunctions(FileSources.execute_code);
+      const response = await getCodeStream(
+        `${ref.storage_session_id}/${ref.file_id}`,
+        identity,
+        req,
+      );
+      setHeaders();
+      response.data.pipe(res);
     } else {
       if (getDownloadURL && req.query.direct === 'true') {
         try {

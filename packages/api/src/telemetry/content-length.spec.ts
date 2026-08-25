@@ -37,6 +37,22 @@ function findTransportUtilsPath(): string {
   }
 }
 
+function findPatchPath(): string {
+  let dir = __dirname;
+  while (true) {
+    const candidate = path.join(dir, 'patches/@opentelemetry+otlp-exporter-base+0.218.0.patch');
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      throw new Error('Could not locate @opentelemetry/otlp-exporter-base patch file');
+    }
+    dir = parent;
+  }
+}
+
 const { compressAndSend } = require(findTransportUtilsPath()) as {
   compressAndSend: (
     req: any,
@@ -68,8 +84,14 @@ function makeFakeRequest() {
   return { req, headers, writes, finished };
 }
 
-
 describe('OTLP HTTP transport — Content-Length regression', () => {
+  it('keeps the patch-package regression fix checked in', () => {
+    const patch = fs.readFileSync(findPatchPath(), 'utf8');
+
+    expect(patch).toContain("req.setHeader('Content-Length', payload.length)");
+    expect(patch).toContain('zlib.gzipSync(data)');
+  });
+
   it('sets Content-Length matching the raw payload byte length when compression is disabled', async () => {
     const { req, headers, writes, finished } = makeFakeRequest();
     const payload = Buffer.from('hello world otlp payload');

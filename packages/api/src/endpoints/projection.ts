@@ -1,6 +1,6 @@
 import { HumanMessage, AIMessage } from '@langchain/core/messages';
 import { Providers, createTokenCounter, projectAgentContextUsage } from '@librechat/agents';
-import type { TContextProjectionRequest, TContextUsageEvent } from 'librechat-data-provider';
+import type { TContextUsageEvent } from 'librechat-data-provider';
 import type { BaseMessage } from '@langchain/core/messages';
 import { QUOTE_MAX_COUNT, mergeQuotedText } from '~/utils/quotes';
 
@@ -48,6 +48,16 @@ interface ProjectionMessageTextStatsOptions {
   limit?: number;
 }
 
+export interface ContextProjectionRequest {
+  conversationId: string;
+  messageId: string;
+  maxContextTokens?: number;
+  model?: string;
+  endpoint?: string;
+  agentId?: string;
+  calibrationRatio?: number;
+}
+
 export interface ContextProjectionDeps {
   /** Authenticated requester — branch lookups are scoped to this user. */
   userId?: string;
@@ -86,7 +96,7 @@ function resolveBranch(messages: ProjectionMessage[], tailId: string): Projectio
   return branch.reverse();
 }
 
-function hasValidProjectionIds(params: TContextProjectionRequest): boolean {
+function hasValidProjectionIds(params: ContextProjectionRequest): boolean {
   return typeof params.conversationId === 'string' && typeof params.messageId === 'string';
 }
 
@@ -237,7 +247,7 @@ async function getBranchMessages(
  */
 export async function resolveContextProjection(
   deps: ContextProjectionDeps,
-  params: TContextProjectionRequest,
+  params: ContextProjectionRequest,
 ): Promise<TContextUsageEvent | null> {
   if (!hasValidProjectionIds(params)) {
     return null;
