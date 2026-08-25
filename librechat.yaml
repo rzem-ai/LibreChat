@@ -86,6 +86,17 @@ fileConfig:
     agents:
       fileLimit: 50
 
+memory:
+  disabled: false # Set to true to completely disable memory
+  personalize: true # Gives users the ability to toggle memory on/off, true by default
+  tokenLimit: 2000 # Maximum tokens for memory storage
+  maxInputTokens: 12000 # Maximum recent-chat tokens sent to the memory agent
+  messageWindowSize: 5 # Number of recent messages to consider
+  agent:
+    enabled: true
+    provider: "Azure AU"
+    model: "gpt-41-nano"
+
 endpoints:
   # ========================================
   # Built-in Anthropic (via nginx proxy)
@@ -338,14 +349,9 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
   cleartrack-mcp-gateway:
     # See documentation: https://github.com/Deloitte-Australia/ea-mcp-gateway/blob/feature/prototype/docs/MCP_Gateway_Wiki.md
     type: streamable-http
-    url: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp?toolsets=${MCP_GATEWAY_TOOLSETS}'
-    oauth:
-      authorization_url: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/authorize
-      token_url: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/token
-      client_id: '${CLEARTRACK_MCP_GATEWAY_CLIENT_ID}'
-      client_secret: '${CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET}'
-      #redirect_uri: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/callback
-      scope: 'Channel.ReadBasic.All ChannelMember.Read.All Group.Read.All Team.ReadBasic.All User.Read.All Files.Read.All'
+    url: "${MCP_GATEWAY_URL}?toolsets=${MCP_GATEWAY_TOOLSETS}"
+    obo:
+      scopes: "${MCP_GATEWAY_OBO_SCOPE}"
 #    oauth_headers:
 #      X-Custom-Header: "custom_value"
 
