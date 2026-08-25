@@ -23,15 +23,15 @@ interface:
     title: '${APP_TITLE}'
 
   fileCitations: true
-  
-  
+
+
   fileSearch: true # Set to true to enable searching uploaded files
 
   marketplace:
     use: true
 
   memories: true # Set to true to enable users to edit mermories via UI
-  
+
   modelSelect: true
 
   multiConvo: false # Set to false to disable multiple conversations in the chat interface
@@ -45,9 +45,9 @@ interface:
     allowedDomains:
       - 'deloitte.com.au'
       - 'deloitte.co.nz'
-      
+
   presets: true # Set to true to enable saved conversation presets
-  
+
   prompts:
     use: true
     create: true
@@ -58,7 +58,7 @@ interface:
   remoteAgents:
     use: true
     create: true
-    
+
   sharedLinks: false # Set to false to disable sharing conversations through links
 
   skills:
@@ -78,7 +78,7 @@ interface:
     showToolsDropdown: false # Set to false to disable the chat tools menu
     landingIcon: true # Set to false to hide the model or agent icon beside the landing greeting
     conversationIcon: true # Set to false to hide model or endpoint icons in conversation history
-    
+
 fileConfig:
   endpoints:
     default:
