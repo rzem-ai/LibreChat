@@ -2,11 +2,12 @@ REBUILD.md
 dtt-librechat-setup/
 
 ### node etc ###
-
+plans/
 # Logs
 data-node
 meili_data*
 data/
+
 logs
 *.log
 

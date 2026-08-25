@@ -136,6 +136,7 @@ export default function SkillDetail({ skill, onEdit, onDelete }: SkillDetailProp
             enabled={skillEnabled}
             onChange={() => toggle(skill)}
             ariaLabel={localize('com_ui_skill_toggle_active')}
+            label={localize(skillEnabled ? 'com_ui_active' : 'com_ui_disabled')}
           />
           <ShareSkill skill={skill} />
           {permissions.canEdit && onEdit && (
