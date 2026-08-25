@@ -68,6 +68,17 @@ fileConfig:
     agents:
       fileLimit: 50
 
+memory:
+  disabled: false # Set to true to completely disable memory
+  personalize: true # Gives users the ability to toggle memory on/off, true by default
+  tokenLimit: 2000 # Maximum tokens for memory storage
+  maxInputTokens: 12000 # Maximum recent-chat tokens sent to the memory agent
+  messageWindowSize: 5 # Number of recent messages to consider
+  agent:
+    enabled: true
+    provider: "Azure AU"
+    model: "gpt-41-nano"
+
 endpoints:
   # ========================================
   # Built-in Anthropic (via nginx proxy)
