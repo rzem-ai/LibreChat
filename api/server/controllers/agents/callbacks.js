@@ -856,7 +856,7 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null, jo
         const [toolName, serverName] = (output.name ?? '').split(Constants.mcp_delimiter);
         artifactPromises.push(
           (async () => {
-            const { sources } = buildMCPResultSources({
+            const { sources, disclaimer } = buildMCPResultSources({
               toolName,
               serverName,
               content: rawContent,
@@ -866,9 +866,7 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null, jo
               messageId: metadata.run_id,
               toolCallId: output.tool_call_id,
               conversationId: metadata.thread_id,
-              [Tools.mcp_results]: {
-                sources,
-              },
+              [Tools.mcp_results]: disclaimer ? { sources, disclaimer } : { sources },
             };
             if (!streamId && !res.headersSent) {
               return attachment;
@@ -1204,7 +1202,7 @@ function createResponsesToolEndCallback({ req, res, tracker, artifactPromises })
         const [toolName, serverName] = (output.name ?? '').split(Constants.mcp_delimiter);
         artifactPromises.push(
           (async () => {
-            const { sources } = buildMCPResultSources({
+            const { sources, disclaimer } = buildMCPResultSources({
               toolName,
               serverName,
               content: rawContent,
@@ -1212,9 +1210,7 @@ function createResponsesToolEndCallback({ req, res, tracker, artifactPromises })
             const attachment = {
               type: Tools.mcp_results,
               toolCallId: output.tool_call_id,
-              [Tools.mcp_results]: {
-                sources,
-              },
+              [Tools.mcp_results]: disclaimer ? { sources, disclaimer } : { sources },
             };
             if (res.headersSent && !res.writableEnded) {
               writeResponsesAttachment(res, tracker, attachment, metadata);

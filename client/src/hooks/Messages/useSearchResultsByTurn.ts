@@ -135,28 +135,36 @@ export function useSearchResultsByTurn(attachments?: TAttachment[]) {
         agentFileSearchTurn++;
       }
 
-      // Handle MCP tool result attachments — turns are offset by file_search count
+      // Handle MCP tool result attachments — turns are offset by file_search count.
+      // The backend (buildMCPPassages) advances its turn counter for every MCP
+      // attachment whose `sources` array is present — even an empty one, e.g. a
+      // suppressed error response — so this must advance on the exact same
+      // condition, not just when there happen to be refs to render. Otherwise a
+      // failed call ahead of a successful one desyncs the turn index and the
+      // successful call's citations point at a turn the client never populated.
       if (attachment.type === Tools.mcp_results && attachment[Tools.mcp_results]) {
         const payload = attachment[Tools.mcp_results] as MCPAttachmentPayload;
-        const sources = payload?.sources ?? [];
-        const mcpRefs: MCPResultReference[] = sources.map((source) => ({
-          toolName: source.toolName,
-          serverName: source.serverName,
-          title: source.title || `${source.serverName}: ${source.toolName}`,
-          attribution: source.serverName,
-          snippet: getMCPSnippet(source),
-          link: source.link || `#mcp-${source.serverName}-${source.toolName}`,
-          type: 'mcp' as const,
-        }));
+        if (payload?.sources) {
+          const mcpRefs: MCPResultReference[] = payload.sources.map((source) => ({
+            toolName: source.toolName,
+            serverName: source.serverName,
+            title: source.title || `${source.serverName}: ${source.toolName}`,
+            attribution: source.serverName,
+            snippet: getMCPSnippet(source),
+            link: source.link || `#mcp-${source.serverName}-${source.toolName}`,
+            type: 'mcp' as const,
+            usageRestriction: source.usageRestriction,
+          }));
 
-        if (mcpRefs.length > 0) {
-          // The backend sets MCP turn = fileSearchTotal + mcpTurn, so mirror that here
-          const turnKey = (fileSearchTotal + mcpTurn).toString();
-          const existing = turnMap[turnKey];
-          if (existing) {
-            existing.mcp_results = [...(existing.mcp_results ?? []), ...mcpRefs];
-          } else {
-            turnMap[turnKey] = { turn: fileSearchTotal + mcpTurn, mcp_results: mcpRefs };
+          if (mcpRefs.length > 0) {
+            // The backend sets MCP turn = fileSearchTotal + mcpTurn, so mirror that here
+            const turnKey = (fileSearchTotal + mcpTurn).toString();
+            const existing = turnMap[turnKey];
+            if (existing) {
+              existing.mcp_results = [...(existing.mcp_results ?? []), ...mcpRefs];
+            } else {
+              turnMap[turnKey] = { turn: fileSearchTotal + mcpTurn, mcp_results: mcpRefs };
+            }
           }
           mcpTurn++;
         }

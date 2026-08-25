@@ -890,6 +890,7 @@ export type MCPResultSource = {
   content: string;
   title?: string;
   link?: string;
+  usageRestriction?: boolean;
 };
 
 /** Sources extracted from a single MCP tool result, plus an optional disclaimer the tool wants surfaced verbatim (e.g. KX usage restrictions). */

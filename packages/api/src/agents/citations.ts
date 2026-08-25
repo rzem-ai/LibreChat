@@ -311,7 +311,9 @@ function containment(sentenceTokens: Set<string>, passageTokens: Set<string>): n
  * `containment`, weak matches (< `threshold`) are dropped, and the
  * remaining passages are deduped to the best score per source. The result is the
  * top `MAX_ANCHORS_PER_SENTENCE` — the distinct sources whose best passage most
- * strongly overlaps the sentence.
+ * strongly overlaps the sentence. `coords` are `"turn:fileIndex"` keys — the same
+ * coordinates used elsewhere to track which MCP sources a lexical match already
+ * covered (see `appendGuaranteedMCPCitations`).
  */
 function anchorsForSentence(
   sentence: string,
@@ -321,11 +323,11 @@ function anchorsForSentence(
     tokenizeFn?: (text: string) => string[];
     anchorTag?: string;
   } = {},
-): string[] {
+): { anchors: string[]; coords: string[] } {
   const { threshold = SIMILARITY_THRESHOLD, tokenizeFn = tokenize, anchorTag = 'file' } = options;
   const sentenceTokens = new Set(tokenizeFn(sentence));
   if (sentenceTokens.size < MIN_SENTENCE_CONTENT_WORDS) {
-    return [];
+    return { anchors: [], coords: [] };
   }
 
   const bestByCoord = new Map<string, { turn: number; fileIndex: number; score: number }>();
@@ -341,10 +343,16 @@ function anchorsForSentence(
     }
   }
 
-  return Array.from(bestByCoord.values())
-    .sort((a, b) => b.score - a.score)
-    .slice(0, MAX_ANCHORS_PER_SENTENCE)
-    .map(({ turn, fileIndex }) => `${ANCHOR_MARKER}turn${turn}${anchorTag}${fileIndex}`);
+  const top = Array.from(bestByCoord.entries())
+    .sort((a, b) => b[1].score - a[1].score)
+    .slice(0, MAX_ANCHORS_PER_SENTENCE);
+
+  return {
+    anchors: top.map(
+      ([, { turn, fileIndex }]) => `${ANCHOR_MARKER}turn${turn}${anchorTag}${fileIndex}`,
+    ),
+    coords: top.map(([key]) => key),
+  };
 }
 
 function withAnchors(sentence: string, anchors: string[]): string {
@@ -354,6 +362,16 @@ function withAnchors(sentence: string, anchors: string[]): string {
   const trimmed = sentence.replace(/\s+$/, '');
   const trailing = sentence.slice(trimmed.length);
   return `${trimmed} ${anchors.join(' ')}${trailing}`;
+}
+
+function findLastTextPart(contentParts: TMessageContentParts[]): TMessageContentParts | undefined {
+  for (let i = contentParts.length - 1; i >= 0; i--) {
+    const text = readText(contentParts[i]);
+    if (text != null && text.length > 0) {
+      return contentParts[i];
+    }
+  }
+  return undefined;
 }
 
 function readText(part: TMessageContentParts): string | null {
@@ -405,7 +423,7 @@ export function insertFileCitations(
 
     const sentences = splitIntoSentences(text);
     const rebuilt = sentences
-      .map((sentence) => withAnchors(sentence, anchorsForSentence(sentence, passages)))
+      .map((sentence) => withAnchors(sentence, anchorsForSentence(sentence, passages).anchors))
       .join('');
 
     if (rebuilt !== text) {
@@ -440,16 +458,19 @@ function buildMCPPassages(mcpAttachments: TAttachment[], turnOffset: number): Pa
 /**
  * Inserts MCP citation anchors (`turn{N}mcp0`) into assistant text parts by
  * matching each sentence against the MCP tool result content, using the more
- * lenient `MCP_SIMILARITY_THRESHOLD`. Mutates in place.
+ * lenient `MCP_SIMILARITY_THRESHOLD`. Mutates in place. Returns the
+ * `"turn:fileIndex"` coordinates that received an anchor, so callers can
+ * detect sources the lexical pass missed (see `appendGuaranteedMCPCitations`).
  */
 export function insertMCPCitations(
   contentParts: TMessageContentParts[],
   mcpAttachments: TAttachment[],
   turnOffset: number,
-): void {
+): Set<string> {
+  const usedCoords = new Set<string>();
   const passages = buildMCPPassages(mcpAttachments, turnOffset);
   if (passages.length === 0) {
-    return;
+    return usedCoords;
   }
 
   for (const part of contentParts) {
@@ -461,11 +482,12 @@ export function insertMCPCitations(
     const sentences = splitIntoSentences(text);
     const rebuilt = sentences
       .map((sentence) => {
-        const anchors = anchorsForSentence(sentence, passages, {
+        const { anchors, coords } = anchorsForSentence(sentence, passages, {
           threshold: MCP_SIMILARITY_THRESHOLD,
           tokenizeFn: tokenizeStemmed,
           anchorTag: 'mcp',
         });
+        coords.forEach((coord) => usedCoords.add(coord));
         return withAnchors(sentence, anchors);
       })
       .join('');
@@ -474,6 +496,103 @@ export function insertMCPCitations(
       writeText(part, rebuilt);
     }
   }
+
+  return usedCoords;
+}
+
+/**
+ * Force-appends a citation anchor for every MCP source that carries a
+ * disclaimer (e.g. KX usage restrictions) but wasn't already anchored by the
+ * lexical `insertMCPCitations` pass — so a qual with real usage restrictions
+ * is always cited, not only when the model's phrasing happened to overlap.
+ * Mirrors the exact turn-advancement rule `useSearchResultsByTurn` depends on:
+ * the turn counter advances for every attachment whose `sources` array is
+ * present, even an empty one.
+ */
+export function appendGuaranteedMCPCitations(
+  contentParts: TMessageContentParts[],
+  mcpAttachments: TAttachment[],
+  turnOffset: number,
+  usedCoords: Set<string>,
+): void {
+  const missingAnchors: string[] = [];
+  let turn = turnOffset;
+  for (const attachment of mcpAttachments) {
+    const payload = attachment[Tools.mcp_results] as
+      | { sources?: MCPResultSource[]; disclaimer?: string }
+      | undefined;
+    if (!payload?.sources) {
+      continue;
+    }
+    if (payload.disclaimer) {
+      payload.sources.forEach((_source, fileIndex) => {
+        const coord = `${turn}:${fileIndex}`;
+        if (!usedCoords.has(coord)) {
+          missingAnchors.push(`${ANCHOR_MARKER}turn${turn}mcp${fileIndex}`);
+        }
+      });
+    }
+    turn += 1;
+  }
+
+  if (missingAnchors.length === 0) {
+    return;
+  }
+
+  const targetPart = findLastTextPart(contentParts);
+  if (!targetPart) {
+    return;
+  }
+  const text = readText(targetPart) ?? '';
+  writeText(targetPart, withAnchors(text, missingAnchors));
+}
+
+/**
+ * Appends a single deterministic trailing disclaimer paragraph when any MCP
+ * attachment carries one (e.g. KX's `usage_guidelines`), plus a link to the
+ * static usage-guidelines page when configured — unless the disclaimer text
+ * already references "usage guidelines" itself (KX's own boilerplate already
+ * links to this page), in which case the extra link would just repeat the
+ * same sentence. Only the first disclaimer found is used — a turn with
+ * multiple KX calls (e.g. a refined follow-up search) tends to repeat the
+ * same boilerplate warning with minor wording differences (not exact
+ * matches), so appending every distinct-looking one would repeat the same
+ * warning rather than surface new information. Always appends to an existing
+ * text part — never creates a new one — so downstream content-part filtering
+ * can't drop it.
+ */
+export function appendMCPDisclaimers(
+  contentParts: TMessageContentParts[],
+  mcpAttachments: TAttachment[],
+  mcpUsageGuidelinesUrl?: string,
+): void {
+  let disclaimer: string | undefined;
+  for (const attachment of mcpAttachments) {
+    const payload = attachment[Tools.mcp_results] as { disclaimer?: string } | undefined;
+    if (payload?.disclaimer) {
+      disclaimer = payload.disclaimer;
+      break;
+    }
+  }
+
+  if (!disclaimer) {
+    return;
+  }
+
+  const targetPart = findLastTextPart(contentParts);
+  if (!targetPart) {
+    return;
+  }
+
+  const alreadyMentionsGuidelines = /usage guidelines/i.test(disclaimer);
+  const guidelinesLink =
+    mcpUsageGuidelinesUrl && !alreadyMentionsGuidelines
+      ? ` See [usage guidelines](${mcpUsageGuidelinesUrl}).`
+      : '';
+  const disclaimerText = `${disclaimer}${guidelinesLink}`;
+
+  const text = readText(targetPart) ?? '';
+  writeText(targetPart, `${text}\n\n${disclaimerText}`);
 }
 
 /**
@@ -485,11 +604,13 @@ export async function applyEndOfTraceCitations({
   contentParts,
   artifactPromises,
   fileCitations,
+  mcpUsageGuidelinesUrl,
   logger,
 }: {
   contentParts?: TMessageContentParts[];
   artifactPromises?: Array<Promise<TAttachment | null> | undefined>;
   fileCitations?: boolean;
+  mcpUsageGuidelinesUrl?: string;
   logger?: Logger;
 }): Promise<void> {
   if (fileCitations === false) {
@@ -517,7 +638,10 @@ export async function applyEndOfTraceCitations({
       insertFileCitations(contentParts, fileSearchAttachments);
     }
     if (mcpAttachments.length > 0) {
-      insertMCPCitations(contentParts, mcpAttachments, fileSearchAttachments.length);
+      const turnOffset = fileSearchAttachments.length;
+      const usedCoords = insertMCPCitations(contentParts, mcpAttachments, turnOffset);
+      appendGuaranteedMCPCitations(contentParts, mcpAttachments, turnOffset, usedCoords);
+      appendMCPDisclaimers(contentParts, mcpAttachments, mcpUsageGuidelinesUrl);
     }
   } catch (error) {
     logger?.error('[applyEndOfTraceCitations] Failed to insert citations:', error);
