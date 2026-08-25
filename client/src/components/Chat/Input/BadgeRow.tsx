@@ -12,6 +12,7 @@ import { Badge } from '@librechat/client';
 import { useRecoilValue, useRecoilCallback } from 'recoil';
 import type { LucideIcon } from 'lucide-react';
 import type { BadgeItem } from '~/common';
+import { useGetStartupConfig } from '~/data-provider';
 import CodeInterpreter from './CodeInterpreter';
 import { BadgeRowProvider } from '~/Providers';
 import ToolsDropdown from './ToolsDropdown';
@@ -151,6 +152,7 @@ function BadgeRow({
   onToggle,
   isInChat,
 }: BadgeRowProps) {
+  const { data: startupConfig } = useGetStartupConfig();
   const [orderedBadges, setOrderedBadges] = useState<BadgeItem[]>([]);
   const [dragState, dispatch] = useReducer(dragReducer, {
     draggedBadge: null,
@@ -330,7 +332,10 @@ function BadgeRow({
       isSubmitting={isSubmitting}
     >
       <div ref={containerRef} className="relative flex flex-wrap items-center gap-2">
-        {showEphemeralBadges === true && <ToolsDropdown />}
+        {showEphemeralBadges === true &&
+          startupConfig?.interface?.customDeloitteFeatureFlags?.showToolsDropdown === true && (
+            <ToolsDropdown />
+          )}
         {tempBadges.map((badge, index) => (
           <React.Fragment key={badge.id}>
             {dragState.draggedBadge && dragState.insertIndex === index && ghostBadge && (
