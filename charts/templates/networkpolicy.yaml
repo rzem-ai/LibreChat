@@ -1,0 +1,383 @@
+{{- $enabled := true -}}
+{{- $llmGatewayNamespace := "llm-gateway-ctnp" -}}
+{{- if and (hasKey .Values "llmGateway") (hasKey .Values.llmGateway "namespace") -}}
+  {{- $llmGatewayNamespace = .Values.llmGateway.namespace -}}
+{{- end -}}
+{{- if and (hasKey .Values "networkPolicy") (eq (toString .Values.networkPolicy.enabled) "false") -}}
+  {{- $enabled = false -}}
+{{- end -}}
+{{- if $enabled }}
+# =======================================================================
+# CiliumNetworkPolicy — Complete pod-to-pod security boundary
+# =======================================================================
+# When enabled, Cilium enforces default-deny on the namespace. Every pod
+# MUST have explicit egress AND ingress rules or traffic is dropped.
+#
+# Pod communication map:
+#
+#   Internet (Cilium Ingress)
+#       ├── / ───────────→ librechat:3080
+#
+#   librechat ────────→ llm-gateway-proxy:8081 
+#           ────────→ rag-api:8000
+#           ────────→ melisearch:7700#          
+#
+# =======================================================================
+
+# ─────────────────────────────────────────────────────────────────────
+# SHARED EGRESS HELPERS (referenced in comments below)
+# ─────────────────────────────────────────────────────────────────────
+# DNS:           kube-system/kube-dns on UDP+TCP 53
+# Azure AD:      login.microsoftonline.com, sts.windows.net,
+# MS Graph:      graph.microsoft.com :443
+# Blob Storage:  *.blob.core.windows.net :443
+# Mongo DB:      
+
+
+# =====================================================================
+# 1. librechat — Egress
+# =====================================================================
+# The librechat pod is the central gateway. This is the pod that provides the public API and web interface. 
+# It needs to reach all other pods in the namespace, plus DNS and Azure AD endpoints.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "helm.fullname" . }}-service-librechat-egress
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+    component: service
+spec:
+  endpointSelector:
+    matchLabels:
+      component: service
+
+  egress:
+    # ── llm-gateway-proxy ───────
+    - toEndpoints:
+        - matchLabels:
+            component: llm-gateway-proxy
+      toPorts:
+        - ports:
+            - port: "8081"
+              protocol: TCP
+
+    # ── rag-api ───────
+    - toEndpoints:
+        - matchLabels:
+            component: rag-api
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
+
+    # ── melisearch ───────
+    - toEndpoints:
+        - matchLabels:
+            component: melisearch
+      toPorts:
+        - ports:
+            - port: "7700"
+              protocol: TCP
+
+    # ── DNS ────────────────────────────────────────────────────────
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+
+
+    # ── Azure Blob Storage (HTTPS) ─────────────────────────────────
+    - toFQDNs:
+        - matchPattern: "*.blob.core.windows.net"
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+
+    # ── Azure AD / Entra ID (for DefaultAzureCredential) ───────────
+    - toFQDNs:
+        - matchPattern: "login.microsoftonline.com"
+        - matchPattern: "*.login.microsoftonline.com"
+        - matchPattern: "sts.windows.net"
+        - matchPattern: "*.sts.windows.net"
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP              
+
+    # ── MongoDB ───────────
+    - toFQDNs:
+        - matchPattern: "mongodb.net"
+        - matchPattern: "*.mongodb.net"
+      toPorts:
+        - ports:
+            - port: "27017"
+              protocol: TCP              
+
+    # ── MCP Gateway ───────────
+    - toFQDNs:
+        - matchName: "mcp-gw-dev.ctk.au.deloitte.com"
+        - matchName: "mcp-gw-uat.ctk.au.deloitte.com"
+        - matchName: "mcp-gw.ctk.au.deloitte.com"
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP              
+
+    # ── Langfuse───────────
+    - toFQDNs:
+        - matchName: "langfuse-dev.ctk.au.deloitte.com"
+        - matchName: "langfuse-uat.ctk.au.deloitte.com"
+        - matchName: "langfuse.ctk.au.deloitte.com"
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP              
+
+    # ── OTEL Exporter───────────
+    - toFQDNs:
+        - matchName: "managed-ai-ctspoke-npd-dce-95rn.australiaeast-1.ingest.monitor.azure.com"
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP              
+
+
+---
+# =====================================================================
+# 2. Librechat — Ingress
+# =====================================================================
+# Accepts traffic from the Cilium ingress controller (external / route)
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "helm.fullname" . }}-librechat-ingress
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+    component: service
+spec:
+  endpointSelector:
+    matchLabels:
+      component: service
+
+  ingress:
+    # ── Cilium ingress controller (external traffic → /svc) ────────
+    - fromEntities:
+        - ingress
+      toPorts:
+        - ports:
+            - port: "3080"
+              protocol: TCP
+
+---
+# =====================================================================
+# 3. llm-gateway-proxy — Egress (TO DO: Cilium ingress controller)
+# Not sure where the llm-gateway-proxy pod needs to reach outside of the namespace. 
+# =====================================================================
+# llm-gateway-proxy is an internal-only service. It does not accept any external traffic.
+# accepts traffic only from the service pod.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "helm.fullname" . }}-llm-gateway-proxy-egress
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+    component: llm-gateway-proxy
+spec:
+  endpointSelector:
+    matchLabels:
+      component: llm-gateway-proxy
+
+  egress:
+    # ── LLM Gateway (in-cluster, cross-namespace) ──────────────────
+    # session.py patches OpenCode to use in-cluster URLs when SA token
+    # is mounted: http://{provider}-{region}.{{ $llmGatewayNamespace }}.svc.cluster.local:8080
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: {{ $llmGatewayNamespace | quote }}
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+
+  # ── DNS ────────────────────────────────────────────────────────
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP    
+---
+# =====================================================================
+# 4. llm-gateway-proxy — Ingress
+# =====================================================================
+# llm-gateway-proxy is an internal-only service. It does not accept any external traffic.
+# accepts traffic only from the service pod.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "helm.fullname" . }}-llm-gateway-proxy-ingress
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+    component: llm-gateway-proxy
+spec:
+  endpointSelector:
+    matchLabels:
+      component: llm-gateway-proxy
+
+  ingress:
+    # ── librechat pod ──────────────
+    - fromEndpoints:
+        - matchLabels:
+            component: librechat
+      toPorts:
+        - ports:
+            - port: "8081"
+              protocol: TCP
+
+---
+# =====================================================================
+# 5. RAG API — Egress
+# =====================================================================
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "helm.fullname" . }}-rag-api-egress
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+    component: rag-api
+spec:
+  endpointSelector:
+    matchLabels:
+      component: rag-api
+
+  egress:
+    # ── DNS ────────────────────────────────────────────────────────
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+
+    # ── llm-gateway-proxy ───────
+    - toEndpoints:
+        - matchLabels:
+            component: llm-gateway-proxy
+      toPorts:
+        - ports:
+            - port: "8081"
+              protocol: TCP
+
+    # ── RAG Endpoint ───────────
+    - toFQDNs:
+        - matchName: "dttau-myassist-uat-models-openai-aueast.openai.azure.com"
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP    
+
+    # ── Azure Postgres (managed, external FQDN) ───────────────────
+    - toFQDNs:
+        - matchPattern: "*.postgres.database.azure.com"
+      toPorts:
+        - ports:
+            - port: "5432"
+              protocol: TCP                        
+
+---
+# =====================================================================
+# 6. RAG API — Ingress
+# =====================================================================
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "helm.fullname" . }}-rag-api-ingress
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+    component: rag-api
+spec:
+  endpointSelector:
+    matchLabels:
+      component: rag-api
+
+  ingress:
+    # ── librechat pod ──────────────────────────────
+    - fromEndpoints:
+        - matchLabels:
+            component: librechat
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
+
+---
+# =====================================================================
+# 7. melisearch — Egress
+# =====================================================================
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "helm.fullname" . }}-melisearch-egress
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+    component: melisearch
+spec:
+  endpointSelector:
+    matchLabels:
+      component: melisearch
+
+  egress:
+    # ── DNS ────────────────────────────────────────────────────────
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+
+---
+# =====================================================================
+# 8. melisearch — Ingress
+# =====================================================================
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "helm.fullname" . }}-melisearch-ingress
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+    component: melisearch
+spec:
+  endpointSelector:
+    matchLabels:
+      component: melisearch
+
+  ingress:
+    # ── librechat pod ──────────────
+    - fromEndpoints:
+        - matchLabels:
+            component: librechat
+      toPorts:
+        - ports:
+            - port: "7700"
+              protocol: TCP
+
+{{- end }}
