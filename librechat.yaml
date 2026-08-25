@@ -151,7 +151,7 @@ endpoints:
       modelDisplayLabel: 'Azure AU'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
-        x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
+        x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
         Content-Type: 'application/json'
 
     # --- Azure US (eastus) ---
@@ -169,7 +169,7 @@ endpoints:
       modelDisplayLabel: 'Azure US'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
-        x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
+        x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
         Content-Type: 'application/json'
 
     # --- VertexAI / Google (us-central1) ---
@@ -187,7 +187,7 @@ endpoints:
       modelDisplayLabel: 'VertexAI US'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
-        x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
+        x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
         Content-Type: 'application/json'
 
 modelSpecs:
