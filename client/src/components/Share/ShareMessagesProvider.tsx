@@ -33,8 +33,6 @@ export function ShareMessagesProvider({ messages, children }: ShareMessagesProvi
       index: 0,
       getMessages: () => messages,
       setMessages: () => {},
-      // Share view renders its own Message.tsx, which doesn't read alignment from context.
-      userMessageAlignment: 'left',
     }),
     [messages],
   );

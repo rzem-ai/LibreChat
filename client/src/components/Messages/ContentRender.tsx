@@ -6,7 +6,7 @@ import type { TMessageProps, TMessageIcon, TMessageChatContext } from '~/common'
 import {
   areMessageFieldsEqual,
   cn,
-  MESSAGE_BUBBLE_CLASSES,
+  getMessageAlignmentClasses,
   getHeaderPrefixForScreenReader,
   getMessageAriaLabel,
 } from '~/utils';
@@ -107,6 +107,7 @@ const ContentRender = memo(function ContentRender({
   const fontSize = useAtomValue(fontSizeAtom);
   const maximizeChatSpace = useRecoilValue(store.maximizeChatSpace);
   const rightAligned = useMessageAlignment(msg?.isCreatedByUser);
+  const align = getMessageAlignmentClasses(rightAligned);
 
   const handleRegenerateMessage = useCallback(() => regenerateMessage(), [regenerateMessage]);
   const isLast = useMemo(
@@ -165,7 +166,7 @@ const ContentRender = memo(function ContentRender({
   const baseClasses = {
     common: cn(
       'group mx-auto flex flex-1 gap-3 transition-all duration-300 transform-gpu',
-      rightAligned && 'flex-row-reverse',
+      align.row,
     ),
     chat: getChatWidthClass(),
   };
@@ -185,7 +186,7 @@ const ContentRender = memo(function ContentRender({
         'message-render',
       )}
     >
-      {!hasParallelContent && !rightAligned && (
+      {!hasParallelContent && !align.hideAvatar && (
         <div className="relative flex flex-shrink-0 flex-col items-center">
           <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full">
             <MessageIcon iconData={iconData} assistant={assistant} agent={agent} />
@@ -201,14 +202,7 @@ const ContentRender = memo(function ContentRender({
         )}
       >
         {!hasParallelContent && (
-          <h2
-            className={cn(
-              'select-none font-semibold',
-              rightAligned && 'text-right',
-              rightAligned && 'sr-only',
-              fontSize,
-            )}
-          >
+          <h2 className={cn('select-none font-semibold', align.header, fontSize)}>
             <span className="sr-only">{getHeaderPrefixForScreenReader(msg, localize)}</span>
             {messageLabel}
             <MessageTimestamp value={msg.createdAt ?? msg.clientTimestamp} />
@@ -217,10 +211,7 @@ const ContentRender = memo(function ContentRender({
 
         <div className="flex flex-col gap-1">
           <div
-            className={cn(
-              'flex min-h-[20px] max-w-full flex-grow flex-col gap-0',
-              rightAligned && MESSAGE_BUBBLE_CLASSES,
-            )}
+            className={cn('flex min-h-[20px] max-w-full flex-grow flex-col gap-0', align.content)}
           >
             <ContentParts
               edit={edit}
@@ -244,7 +235,7 @@ const ContentRender = memo(function ContentRender({
           {hasNoChildren && isSubmitting ? (
             <PlaceholderRow />
           ) : (
-            <SubRow classes={cn('text-xs', rightAligned && 'justify-end')}>
+            <SubRow classes={cn('text-xs', align.subRow)}>
               <SiblingSwitch
                 siblingIdx={siblingIdx}
                 siblingCount={siblingCount}

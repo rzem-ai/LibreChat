@@ -15,6 +15,7 @@ import type {
 } from 'librechat-data-provider';
 import type { QueryClient } from '@tanstack/react-query';
 import type { LocalizeFunction, TMessageProps } from '~/common';
+import cn from './cn';
 
 export const TEXT_KEY_DIVIDER = '|||';
 export const STREAM_START_FAILED_METADATA_KEY = 'streamStartFailed';
@@ -625,14 +626,49 @@ export function areMessageRowPropsEqual(prev: TMessageProps, next: TMessageProps
   );
 }
 
-/** Bubble classes for a right-aligned (user) message turn's content. */
-export const MESSAGE_BUBBLE_CLASSES =
-  'self-end w-fit max-w-[85%] rounded-2xl bg-surface-secondary px-4 py-2.5';
-
 /** Whether a turn renders right-aligned per `interface.userMessageAlignment: 'right'`. */
 export function isRightAlignedTurn(
   isCreatedByUser: boolean | null | undefined,
   userMessageAlignment: 'left' | 'right' | undefined,
 ): boolean {
   return isCreatedByUser === true && userMessageAlignment === 'right';
+}
+
+/**
+ * `self-end`/`rtl:self-start` pins the bubble to the physical right regardless of
+ * document direction — `self-end` alone resolves to the inline-end side, which
+ * flips to the visual left under `dir="rtl"` (e.g. Arabic/Hebrew UI locales).
+ * Matches WhatsApp/Telegram convention: sent-message placement is a fixed screen
+ * side, not something that mirrors with reading direction.
+ */
+const MESSAGE_BUBBLE_CLASSES =
+  'self-end rtl:self-start w-fit max-w-[85%] rounded-2xl bg-surface-secondary px-4 py-2.5';
+
+export interface MessageAlignmentClasses {
+  /** Applied to the row's outer flex container. */
+  row: string;
+  /** Whether the row's avatar column should be omitted entirely. */
+  hideAvatar: boolean;
+  /** Applied to the row's `<h2>` name/timestamp header. */
+  header: string;
+  /** Applied to the row's content wrapper. */
+  content: string;
+  /** Applied to the row's `SubRow` (sibling switch + hover buttons). */
+  subRow: string;
+}
+
+/**
+ * Single source of truth for what right-alignment looks like on a message row.
+ * Shared by `MessageParts`, `MessageRender`, and `ContentRender`, which each render
+ * one row for a distinct message shape but need identical alignment treatment.
+ */
+export function getMessageAlignmentClasses(rightAligned: boolean): MessageAlignmentClasses {
+  return {
+    row: cn(rightAligned && 'flex-row-reverse'),
+    hideAvatar: rightAligned,
+    header: cn(rightAligned && 'text-right sr-only'),
+    content: cn(rightAligned && MESSAGE_BUBBLE_CLASSES),
+    /** `rtl:justify-start` pins `SubRow` to the same fixed side as the bubble; see MESSAGE_BUBBLE_CLASSES. */
+    subRow: cn(rightAligned && 'justify-end rtl:justify-start'),
+  };
 }

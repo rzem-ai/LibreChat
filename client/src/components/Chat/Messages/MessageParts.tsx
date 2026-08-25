@@ -7,7 +7,7 @@ import {
   cn,
   getMessageAriaLabel,
   areMessageRowPropsEqual,
-  MESSAGE_BUBBLE_CLASSES,
+  getMessageAlignmentClasses,
   getHeaderPrefixForScreenReader,
 } from '~/utils';
 import { useMessageHelpers, useLocalize, useAttachments, useContentMetadata } from '~/hooks';
@@ -49,6 +49,7 @@ function MessageParts(props: TMessageProps) {
   const maximizeChatSpace = useRecoilValue(store.maximizeChatSpace);
   const { messageId = null, isCreatedByUser } = message ?? {};
   const rightAligned = useMessageAlignment(isCreatedByUser);
+  const align = getMessageAlignmentClasses(rightAligned);
 
   const name = useMemo(() => {
     let result = '';
@@ -113,7 +114,7 @@ function MessageParts(props: TMessageProps) {
   const baseClasses = {
     common: cn(
       'group mx-auto flex flex-1 gap-3 transition-all duration-300 transform-gpu',
-      rightAligned && 'flex-row-reverse',
+      align.row,
     ),
     chat: getChatWidthClass(),
   };
@@ -136,7 +137,7 @@ function MessageParts(props: TMessageProps) {
               'message-render',
             )}
           >
-            {!hasParallelContent && !rightAligned && (
+            {!hasParallelContent && !align.hideAvatar && (
               <div className="relative flex flex-shrink-0 flex-col items-center">
                 <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full pt-0.5">
                   <MessageIcon iconData={iconData} assistant={assistant} agent={agent} />
@@ -154,8 +155,7 @@ function MessageParts(props: TMessageProps) {
                 <h2
                   className={cn(
                     'select-none font-semibold text-text-primary',
-                    rightAligned && 'text-right',
-                    rightAligned && 'sr-only',
+                    align.header,
                     fontSize,
                   )}
                 >
@@ -170,7 +170,7 @@ function MessageParts(props: TMessageProps) {
                 <div
                   className={cn(
                     'flex min-h-[20px] max-w-full flex-grow flex-col gap-0',
-                    rightAligned && MESSAGE_BUBBLE_CLASSES,
+                    align.content,
                   )}
                 >
                   <ContentParts
@@ -194,7 +194,7 @@ function MessageParts(props: TMessageProps) {
                 {isLast && isSubmitting ? (
                   <div className="mt-1 h-[31px] bg-transparent" />
                 ) : (
-                  <SubRow classes={cn('text-xs', rightAligned && 'justify-end')}>
+                  <SubRow classes={cn('text-xs', align.subRow)}>
                     <SiblingSwitch
                       siblingIdx={siblingIdx}
                       siblingCount={siblingCount}

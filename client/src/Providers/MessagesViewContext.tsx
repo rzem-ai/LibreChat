@@ -28,8 +28,9 @@ interface MessagesViewContextValue {
   getMessages: ReturnType<typeof useChatContext>['getMessages'];
   setMessages: ReturnType<typeof useChatContext>['setMessages'];
 
-  /** `interface.userMessageAlignment`, resolved once per message tree */
-  userMessageAlignment: 'left' | 'right' | undefined;
+  /** `interface.userMessageAlignment`, resolved once per message tree. Omitted (e.g. by
+   *  `ShareMessagesProvider`) means the default, 'left'. */
+  userMessageAlignment?: 'left' | 'right';
 }
 
 const MessagesViewContext = createContext<MessagesViewContextValue | undefined>(undefined);
