@@ -4,7 +4,7 @@ cache: true
 # 'includedTools' restricts the list of tools available in the Agent Builder.
 includedTools:
   - 'file_search'
-  - 'run_code'
+  - 'execute_code'
   - 'artifacts'
   - 'cleartrack-mcp-gateway'
 

@@ -106,15 +106,17 @@ describe('POST /actions/:agent_id – createActions feature flag', () => {
 
     const { planAgentActionUpdate } = require('@librechat/api');
     planAgentActionUpdate.mockReturnValue({
+      actionId: 'test-action-id',
+      actions: [],
+      tools: [],
+      metadata: { domain: 'example.com', auth: {} },
+      targetChanged: false,
       requiresCredentialRefresh: false,
       deleteOAuthTokens: false,
-      metadata: { domain: 'example.com', auth: {} },
-      action: { action_id: 'test-action-id' },
-      agentTools: [],
     });
 
     const db = require('~/models');
-    db.updateAction = jest.fn().mockResolvedValue({ action_id: 'test-action-id' });
+    db.updateAction = jest.fn().mockResolvedValue({ action_id: 'test-action-id', metadata: {} });
     db.updateAgent = jest.fn().mockResolvedValue({ id: 'agent-1' });
 
     const app = buildApp({
