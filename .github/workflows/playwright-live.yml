@@ -1,4 +1,4 @@
-name: Playwright Live Smoke
+name: Playwright Live Tests
 
 on:
   pull_request:

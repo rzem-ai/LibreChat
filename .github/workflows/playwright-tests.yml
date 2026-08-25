@@ -1,4 +1,4 @@
-name: Playwright Tests
+name: Playwright CI/Smoke
 on:
   pull_request:
     branches: [develop, uat, main]
