@@ -34,3 +34,10 @@ pods:
       rag-api:
         image:
           tag: 'main'
+
+valkey:
+  image:
+    tag: 'main'
+  persistence:
+    storageClass: 'managed-csi-standard-private'
+  passwordSecretName: 'librechat-valkey-password-prd'
