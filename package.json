@@ -179,6 +179,7 @@
     "langsmith": "^0.6.0",
     "postcss": "^8.5.18",
     "tslib": "^2.8.1",
+    "fast-uri": "3.1.6",
     "fast-xml-parser": "5.7.2",
     "serialize-javascript": "7.0.5",
     "mdast-util-gfm-autolink-literal": "2.0.0",
