@@ -400,6 +400,22 @@ modelSpecs:
         model: 'claude-opus-4-7'
         promptPrefix: *deloitteSystemPrompt
 
+    - name: 'anthropic-claude-sonnet-5'
+      label: 'Anthropic claude-sonnet-5'
+      group: 'Anthropic'
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-sonnet-5'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'anthropic-claude-opus-4-8'
+      label: 'Anthropic claude-opus-4-8'
+      group: 'Anthropic'
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-opus-4-8'
+        promptPrefix: *deloitteSystemPrompt
+
 # MCP Servers configuration
 # Filter restricts tools to: teams (Teams), research (IBISWorld), news (AFR)
 mcpServers: # https://www.librechat.ai/docs/features/mcp
