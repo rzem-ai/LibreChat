@@ -45,6 +45,37 @@ describe('MCPOptionsSchema', () => {
       expect(result.success).toBe(false);
     });
   });
+
+  describe('OBO scope env var expansion', () => {
+    const ENV_VAR = 'MCP_TEST_OBO_SCOPE';
+
+    afterEach(() => {
+      delete process.env[ENV_VAR];
+    });
+
+    it('should resolve a `${VAR}` placeholder when the env var is set', () => {
+      process.env[ENV_VAR] = 'api://mcp-server-id/Mcp.Tools.ReadWrite';
+      const result = MCPOptionsSchema.safeParse({
+        type: 'streamable-http',
+        url: 'https://mcp-server.com/http',
+        obo: { scopes: `\${${ENV_VAR}}` },
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.obo).toEqual({ scopes: 'api://mcp-server-id/Mcp.Tools.ReadWrite' });
+      }
+    });
+
+    it('should reject a `${VAR}` placeholder left unresolved when the env var is unset', () => {
+      delete process.env[ENV_VAR];
+      const result = MCPOptionsSchema.safeParse({
+        type: 'streamable-http',
+        url: 'https://mcp-server.com/http',
+        obo: { scopes: `\${${ENV_VAR}}` },
+      });
+      expect(result.success).toBe(false);
+    });
+  });
 });
 
 describe('MCP schemas', () => {

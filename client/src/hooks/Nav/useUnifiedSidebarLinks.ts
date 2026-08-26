@@ -52,7 +52,7 @@ export default function useUnifiedSidebarLinks() {
 
   const links = useMemo(() => {
     const conversationLink: NavLink = {
-      title: 'com_ui_chat_history',
+      title: 'com_ui_chats',
       label: '',
       icon: MessagesSquare,
       id: 'conversations',
