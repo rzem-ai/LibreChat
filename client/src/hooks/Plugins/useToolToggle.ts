@@ -109,17 +109,29 @@ export function useToolToggle({
    *  and gets eagerly persisted. Once config arrives, apply the real default for users who
    *  have neither a stored preference nor an in-session pin click — runs once.
    *  When `showToolsDropdown` is disabled the user has no way to pin tools manually, so
-   *  `defaultPinnedTools` is treated as a forced value that overrides stored preferences. */
+   *  `defaultPinnedTools` is treated as a forced value. The forced path re-runs until stable
+   *  rather than marking itself done on first pass — this handles the race where
+   *  useLocalStorage reads a stale "false" from storage after the initial render already
+   *  computed defaultPinned = true from a cached startupConfig. */
   const appliedDefaultPin = useRef(false);
   useEffect(() => {
-    if (appliedDefaultPin.current || startupConfig == null) {
+    if (startupConfig == null) {
       return;
     }
-    appliedDefaultPin.current = true;
     // Deloitte Custom Change: Force pin the tool if tools dropdown is hidden
     const toolsDropdownHidden =
       startupConfig.interface?.customDeloitteFeatureFlags?.showToolsDropdown === false;
-    if (!toolsDropdownHidden && (hadStoredPin || userSetPin.current)) {
+    if (toolsDropdownHidden) {
+      if (isPinned !== defaultPinned) {
+        setIsPinnedRaw(defaultPinned);
+      }
+      return;
+    }
+    if (appliedDefaultPin.current) {
+      return;
+    }
+    appliedDefaultPin.current = true;
+    if (hadStoredPin || userSetPin.current) {
       return;
     }
     if (defaultPinned !== isPinned) {
