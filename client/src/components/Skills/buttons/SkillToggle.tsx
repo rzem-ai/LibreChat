@@ -5,14 +5,7 @@ interface SkillToggleProps {
   enabled: boolean;
   onChange: () => void;
   ariaLabel: string;
-  /**
-   * Visible text label rendered next to the switch (e.g. "Active" /
-   * "Disabled"). The switch previously relied solely on `aria-label`,
-   * leaving sighted users with an icon-only control and no indication of
-   * what "on" vs "off" means. Purely decorative for assistive tech —
-   * `aria-label` already fully determines the accessible name — so it's
-   * hidden from the accessibility tree to avoid announcing it twice.
-   */
+  /** Visible label next to the switch (e.g. "Active"/"Disabled"); hidden from assistive tech since `aria-label` already covers it. */
   label?: string;
 }
 
