@@ -115,6 +115,7 @@ export function useToolToggle({
    *  computed defaultPinned = true from a cached startupConfig. */
   const appliedDefaultPin = useRef(false);
   useEffect(() => {
+    // Deloitte Custom Change: check startupConfig exists
     if (startupConfig == null) {
       return;
     }
