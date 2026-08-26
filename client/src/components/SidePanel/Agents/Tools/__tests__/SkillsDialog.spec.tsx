@@ -8,6 +8,8 @@ const mockFetchNextPage = jest.fn();
 const mockRefetch = jest.fn();
 const mockUseListSkillsQuery = jest.fn();
 const mockUseSkillsInfiniteQuery = jest.fn();
+const mockToggleFavorite = jest.fn();
+let mockFavoriteKeys = new Set<string>();
 
 let mockInfiniteResult: {
   data?: { pages: Array<{ skills: TSkillSummary[] }> };
@@ -41,6 +43,7 @@ jest.mock('~/hooks', () => ({
   },
   useHasAccess: () => true,
   useAuthContext: () => ({ user: { id: 'user-1' } }),
+  useToolFavorites: () => ({ favoriteKeys: mockFavoriteKeys, toggle: mockToggleFavorite }),
 }));
 
 jest.mock('~/data-provider', () => ({
@@ -153,6 +156,8 @@ beforeEach(() => {
   });
   mockUseSkillsInfiniteQuery.mockReset();
   mockUseSkillsInfiniteQuery.mockImplementation(() => mockInfiniteResult);
+  mockToggleFavorite.mockReset();
+  mockFavoriteKeys = new Set<string>();
 });
 
 describe('SkillsDialog pagination', () => {
@@ -311,8 +316,27 @@ describe('SkillsDialog view grouping', () => {
     expect(screen.getByText('my-skill')).toBeInTheDocument();
   });
 
-  test('no Favorites tab is offered', () => {
+  test('Favorites tab narrows the list to favorited skills, alongside Public/Shared/Mine', () => {
+    mockInfiniteResult = {
+      ...mockInfiniteResult,
+      data: {
+        pages: [
+          {
+            skills: [
+              makeSkill('favorited', 'favorited-skill', { author: 'user-1' }),
+              makeSkill('not-favorited', 'not-favorited-skill', { author: 'user-1' }),
+            ],
+          },
+        ],
+      },
+      hasNextPage: false,
+    };
+    mockFavoriteKeys = new Set(['skill:favorited']);
+
     render(<SkillsDialog open onOpenChange={jest.fn()} agentId="agent-1" />);
-    expect(screen.queryByRole('button', { name: 'com_ui_tools_view_favorites' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_tools_view_favorites' }));
+    expect(screen.getByText('favorited-skill')).toBeInTheDocument();
+    expect(screen.queryByText('not-favorited-skill')).toBeNull();
   });
 });

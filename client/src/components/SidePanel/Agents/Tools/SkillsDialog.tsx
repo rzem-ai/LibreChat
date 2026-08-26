@@ -16,7 +16,7 @@ import type { TranslationKeys } from '~/hooks/useLocalize';
 import type { CategoryOption } from './CategoryFilter';
 import type { AgentForm, SkillGroup } from '~/common';
 import type { AgentItem } from './items/types';
-import { useLocalize, useHasAccess, useAuthContext } from '~/hooks';
+import { useLocalize, useHasAccess, useAuthContext, useToolFavorites } from '~/hooks';
 import { CreateSkillDialog } from '~/components/Skills/dialogs';
 import { skillsEnabledTransition } from './items/mutations';
 import { useSkillsInfiniteQuery } from '~/data-provider';
@@ -35,13 +35,14 @@ interface SkillsDialogProps {
   agentId: string;
 }
 
-type SkillView = 'marketplace' | SkillGroup;
+type SkillView = 'marketplace' | SkillGroup | 'favorites';
 
 const VIEWS: Array<{ value: SkillView; labelKey: TranslationKeys }> = [
   { value: 'marketplace', labelKey: 'com_ui_all_proper' },
   { value: 'public', labelKey: 'com_ui_skills_view_public' },
   { value: 'shared', labelKey: 'com_ui_skills_view_shared' },
   { value: 'mine', labelKey: 'com_ui_skills_view_mine' },
+  { value: 'favorites', labelKey: 'com_ui_tools_view_favorites' },
 ];
 
 const EMPTY_KEY_BY_VIEW: Record<SkillView, TranslationKeys> = {
@@ -49,6 +50,7 @@ const EMPTY_KEY_BY_VIEW: Record<SkillView, TranslationKeys> = {
   public: 'com_ui_skills_view_public_empty',
   shared: 'com_ui_skills_view_shared_empty',
   mine: 'com_ui_tools_view_mine_empty',
+  favorites: 'com_ui_tools_view_favorites_empty',
 };
 
 export default function SkillsDialog({ open, onOpenChange, agentId }: SkillsDialogProps) {
@@ -73,6 +75,7 @@ export default function SkillsDialog({ open, onOpenChange, agentId }: SkillsDial
     hasNextPage,
     isFetchingNextPage,
   } = useSkillsInfiniteQuery({ limit: 100 }, { enabled: hasSkillsAccess });
+  const { favoriteKeys, toggle: toggleFavorite } = useToolFavorites();
 
   useEffect(() => {
     if (isSkillsError) {
@@ -142,10 +145,13 @@ export default function SkillsDialog({ open, onOpenChange, agentId }: SkillsDial
     if (view === 'marketplace') {
       return base;
     }
+    if (view === 'favorites') {
+      return base.filter((item) => favoriteKeys?.has(itemKey(item)) === true);
+    }
     return base.filter(
       (item) => item.kind === 'skill' && resolveSkillGroup(item.skill, user?.id) === view,
     );
-  }, [catalog, search, category, view, user?.id]);
+  }, [catalog, search, category, view, user?.id, favoriteKeys]);
 
   const applySkillsSelection = useCallback(
     (next: string[]) => {
@@ -266,6 +272,8 @@ export default function SkillsDialog({ open, onOpenChange, agentId }: SkillsDial
               onConfigure={setDetailItem}
               isLoadingSkills={isLoadingSkills || isFetchingNextPage}
               skillsInView={view !== 'mine'}
+              favoriteKeys={favoriteKeys}
+              onToggleFavorite={toggleFavorite}
               emptyKey={emptyKey}
               ariaLabel={localize('com_ui_skills')}
             />
