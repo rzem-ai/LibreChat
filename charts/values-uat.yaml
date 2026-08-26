@@ -176,3 +176,10 @@ pods:
           name: "meilisearch-data"
           mountPath: /meili_data
           storageClass: "managed-csi-standard-private"
+
+valkey:
+  image:
+    tag: 'uat'
+  persistence:
+    storageClass: 'managed-csi-standard-private'
+  passwordSecretName: 'librechat-valkey-password-uat'
