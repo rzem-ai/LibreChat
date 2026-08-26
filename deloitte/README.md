@@ -61,7 +61,7 @@ After cloning, initialize and clone the submodules:
 git submodule update --init --recursive
 ```
 
-This will populate the `rag_api/` folder and the `admin_panel/` folder at the commits pinned by this repository (tracked on `develop` by default). CI can override the tracking branch per superproject branch when using `git submodule update --remote`.
+This will populate the `rag_api/` folder and the `admin_panel/` folder at the commits pinned by this repository. By default, `git submodule update --remote` follows the `develop` branch; CI can override the tracking branch per superproject branch.
 
 ### Updating the Submodule
 
