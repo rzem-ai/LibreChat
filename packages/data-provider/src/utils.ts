@@ -1,4 +1,10 @@
-export const envVarRegex = /^\${(.+)}$/;
+/**
+ * Deloitte Custom Change: Use `[^}]+` instead of a greedy `.+`. A greedy match treats a
+ * value with two or more `${VAR}` placeholders (e.g. `${A}?x=${B}`) as one long variable
+ * name spanning from the first `${` to the last `}`, fails the env lookup, and returns the
+ * string unresolved — silently skipping the multi-placeholder loop in `extractEnvVariable`.
+ */
+export const envVarRegex = /^\${([^}]+)}$/;
 
 /**
  * Infrastructure env vars that must never be resolved via placeholder expansion.
@@ -74,6 +80,38 @@ export function extractEnvVariable(value: string) {
   }
 
   return result;
+}
+
+const unresolvedPlaceholderPattern = /\$\{[^}]+\}/;
+
+/**
+ * Deloitte Custom Change: Drops query parameters whose value still contains an unresolved
+ * `${VAR}` placeholder after `extractEnvVariable` has run. An unset optional env var used
+ * in a query string (e.g. `?toolsets=${VAR}`) should mean "parameter omitted", not a
+ * literal placeholder forwarded to the server as a meaningless filter value. Leaves the
+ * input untouched if it isn't a parseable URL, so callers can surface the real validation
+ * error instead.
+ */
+export function stripUnresolvedPlaceholderQueryParams(url: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return url;
+  }
+
+  const staleKeys: string[] = [];
+  parsed.searchParams.forEach((value, key) => {
+    if (unresolvedPlaceholderPattern.test(value)) {
+      staleKeys.push(key);
+    }
+  });
+  if (staleKeys.length === 0) {
+    return url;
+  }
+  staleKeys.forEach((key) => parsed.searchParams.delete(key));
+
+  return parsed.toString();
 }
 
 /**

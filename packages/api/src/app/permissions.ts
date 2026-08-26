@@ -87,6 +87,7 @@ export async function updateInterfacePermissions({
   }
   /** Configured values for interface object structure */
   const interfaceConfig = appConfig?.config?.interface;
+  const configuredSharedLinks = interfaceConfig?.sharedLinks;
   const memoryConfig = appConfig?.config?.memory;
   const memoryEnabled = isMemoryEnabled(memoryConfig);
   /** Check if memory is explicitly disabled (memory.disabled === true) */
@@ -492,9 +493,8 @@ export async function updateInterfacePermissions({
           : {}),
       },
       [PermissionTypes.SHARED_LINKS]: {
-        ...(typeof interfaceConfig?.sharedLinks === 'boolean' ||
-        (typeof interfaceConfig?.sharedLinks === 'object' &&
-          'create' in interfaceConfig.sharedLinks) ||
+        ...(typeof configuredSharedLinks === 'boolean' ||
+        (typeof configuredSharedLinks === 'object' && 'create' in configuredSharedLinks) ||
         !existingPermissions?.[PermissionTypes.SHARED_LINKS]
           ? {
               [Permissions.CREATE]: getPermissionValue(
@@ -506,9 +506,9 @@ export async function updateInterfacePermissions({
               ),
             }
           : {}),
-        ...(typeof interfaceConfig?.sharedLinks === 'boolean' ||
-        (typeof interfaceConfig?.sharedLinks === 'object' &&
-          ('share' in interfaceConfig.sharedLinks || 'public' in interfaceConfig.sharedLinks)) ||
+        ...(typeof configuredSharedLinks === 'boolean' ||
+        (typeof configuredSharedLinks === 'object' &&
+          ('share' in configuredSharedLinks || 'public' in configuredSharedLinks)) ||
         !existingPermissions?.[PermissionTypes.SHARED_LINKS]
           ? {
               [Permissions.SHARE]: getPermissionValue(

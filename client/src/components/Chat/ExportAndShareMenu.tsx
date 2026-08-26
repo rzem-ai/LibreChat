@@ -11,8 +11,10 @@ import { useHasAccess, useLocalize } from '~/hooks';
 import store from '~/store';
 
 export default function ExportAndShareMenu({
+  isExportEnabled,
   isSharedButtonEnabled,
 }: {
+  isExportEnabled: boolean;
   isSharedButtonEnabled: boolean;
 }) {
   const localize = useLocalize();
@@ -63,6 +65,7 @@ export default function ExportAndShareMenu({
       label: localize('com_endpoint_export'),
       onClick: exportHandler,
       icon: <Upload className="icon-md mr-2 text-text-secondary" />,
+      show: isExportEnabled,
       /** NOTE: THE FOLLOWING PROPS ARE REQUIRED FOR MENU ITEMS THAT OPEN DIALOGS */
       hideOnClick: false,
       ref: exportButtonRef,

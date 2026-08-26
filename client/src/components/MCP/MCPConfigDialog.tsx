@@ -132,7 +132,7 @@ export default function MCPConfigDialog({
     if (connectionState === 'connected') {
       return (
         <div className="flex items-center gap-2 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-600 dark:bg-green-950 dark:text-green-400">
-          <div className="size-1.5 rounded-full bg-green-500" />
+          <div className="size-1.5 rounded-full bg-surface-submit" />
           <span>{localize('com_ui_active')}</span>
         </div>
       );

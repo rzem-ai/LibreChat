@@ -1,4 +1,6 @@
 export * from './app';
+/* Config */
+export * from './config';
 /* Artifacts */
 export * from './artifacts';
 /* Admin */
@@ -22,6 +24,7 @@ export * from './mcp/tools';
 export * from './mcp/request';
 /* Utilities */
 export * from './mcp/utils';
+export * from './mcp/context';
 export * from './utils';
 export { default as Tokenizer, countTokens } from './utils/tokenizer';
 export type { EncodingName } from './utils/tokenizer';
@@ -72,6 +75,8 @@ export * from './shared-links/service';
 export * from './shared-links/config';
 /* Stream */
 export * from './stream';
+/* Feedback */
+export * from './feedback';
 /* Diagnostics */
 export { memoryDiagnostics } from './utils/memory';
 /* RUM */

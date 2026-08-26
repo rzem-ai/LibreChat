@@ -1,6 +1,8 @@
 const express = require('express');
 const {
   isEnabled,
+  isLangfuseConnectionAvailable,
+  isLangfuseFanoutEnabled,
   getBalanceConfig,
   getCloudFrontConfig,
   getAppConfigOptionsFromUser,
@@ -12,10 +14,11 @@ const {
 } = require('@librechat/api');
 const { EModelEndpoint, defaultSocialLogins } = require('librechat-data-provider');
 const { logger, getTenantId, SystemCapabilities } = require('@librechat/data-schemas');
-const { hasCapability } = require('~/server/middleware/roles/capabilities');
+const { hasCapability, hasConfigCapability } = require('~/server/middleware/roles/capabilities');
 const { getLdapConfig } = require('~/server/services/Config/ldap');
 const { getRumConfig } = require('~/server/services/Config/rum');
 const { getAppConfig } = require('~/server/services/Config/app');
+const { getEndpointCostConfig, getModelPricing } = require('~/server/services/Config/modelPricing');
 
 const router = express.Router();
 const emailLoginEnabled =
@@ -249,6 +252,36 @@ router.get('/', async function (req, res) {
 
     const balanceConfig = getBalanceConfig(appConfig);
     const cloudFront = buildCloudFrontStartupConfig();
+    const langfuseFanoutEnabled = isLangfuseFanoutEnabled();
+    const langfuseConnectionAvailable = isLangfuseConnectionAvailable();
+    let langfuseConnectionAccess = false;
+
+    // Deloitte Custom Change: model pricing
+    const modelPricing = getModelPricing();
+    const endpointCostConfig = getEndpointCostConfig();
+
+    if (langfuseConnectionAvailable) {
+      try {
+        const userId = req.user.id ?? req.user._id?.toString();
+        if (userId) {
+          const capabilityUser = {
+            id: userId,
+            role: req.user.role ?? '',
+            tenantId: req.user.tenantId,
+            idOnTheSource: req.user.idOnTheSource ?? null,
+          };
+          const hasAdminAccess = await hasCapability(
+            capabilityUser,
+            SystemCapabilities.ACCESS_ADMIN,
+          );
+          if (hasAdminAccess) {
+            langfuseConnectionAccess = await hasConfigCapability(capabilityUser, 'langfuse');
+          }
+        }
+      } catch (err) {
+        logger.warn(`[config] Langfuse capability check failed: ${err.message}`);
+      }
+    }
 
     /** @type {TStartupConfig} */
     const payload = {
@@ -264,6 +297,8 @@ router.get('/', async function (req, res) {
       }),
       turnstile: appConfig?.turnstileConfig,
       modelSpecs: sanitizeModelSpecs(excludeHiddenModelSpecs(appConfig?.modelSpecs)),
+      ...(Object.keys(modelPricing).length ? { modelPricing } : {}),
+      endpointCostConfig,
       balance: balanceConfig,
       bundlerURL: process.env.SANDPACK_BUNDLER_URL,
       staticBundlerURL: process.env.SANDPACK_STATIC_BUNDLER_URL,
@@ -274,6 +309,8 @@ router.get('/', async function (req, res) {
       conversationImportMaxFileSize: process.env.CONVERSATION_IMPORT_MAX_FILE_SIZE_BYTES
         ? parseInt(process.env.CONVERSATION_IMPORT_MAX_FILE_SIZE_BYTES, 10)
         : 0,
+      langfuseFanoutEnabled,
+      langfuseConnectionAccess,
       ...(cloudFront ? { cloudFront } : {}),
       ...(rum ? { rum } : {}),
       fileUploadSseEnabled: isEnabled(process.env.FILE_UPLOAD_SSE_ENABLED),

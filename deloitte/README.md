@@ -37,6 +37,18 @@ git clone https://github.com/Deloitte-Australia/tt-librechat.git
 cd tt-librechat
 ```
 
+### Check out the `develop` branch:
+
+```zsh
+git checkout origin/develop
+```
+
+### Enable `husky` pre-commit hooks
+
+```zsh
+npm run prepare
+```
+
 ## 2. Initialize Submodules
 
 This repository uses Git submodules to include external dependencies. The `rag_api` submodule contains the RAG (Retrieval-Augmented Generation) API code from the [tt-librechat-rag](https://github.com/Deloitte-Australia/tt-librechat-rag) repository. The `admin_panel` submodule contains the admin panel code from the [ea-libreadmin](https://github.com/Deloitte-Australia/ea-libreadmin). 
@@ -154,27 +166,50 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 9. `OPENID_CLIENT_SECRET=<update with the provided secret from another team member>`
 10. `OPENID_ISSUER=<update with the provided issuer URL from another team member>`
 11. `OPENID_SESSION_SECRET=<update with the provided secret from another team member>`
-12. `OPENID_SCOPE="openid profile email"`
+12. `OPENID_SCOPE="openid profile email offline_access https://librechat-dev.ctk.au.deloitte.com/access_user"` (the `access_user` scope audiences the login token to LibreChat itself; required for the ClearTrack MCP Gateway's OBO exchange — see the note below)
 13. `OPENID_CALLBACK_URL=/oauth/openid/callback`
-14. `OPENID_REQUIRED_ROLE=`
-15. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
-16. `OPENID_BUTTON_LABEL="Login with SSO"`
-17. `OPENID_IMAGE_URL=/assets/favicon.svg`
-18. `ALLOW_EMAIL_LOGIN=false`
-19. `ALLOW_REGISTRATION=false`
-20. `ALLOW_SOCIAL_REGISTRATION=false`
-21. Comment out `OPENAI_API_KEY=`
-22. Comment out `ASSISTANTS_API_KEY=`
-23. BASE_URL_AZURE_AU=https://au-openai-exp.ctk.au.deloitte.com/openai/v1
-24. BASE_URL_AZURE_US=https://us-openai-exp.ctk.au.deloitte.com/openai/v1
-25. BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com
-26. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
-27. `CLEARTRACK_MCP_GATEWAY_CLIENT_ID=3e5d28f1-91a3-4748-ad73-5fa544f1d3e2`
-28. `CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET=<update with the provided secret from another team member>`
-29. `MCP_GATEWAY_TOOLSETS=teams,research,news`
+14. `OPENID_REUSE_TOKENS=true`
+15. `OPENID_REQUIRED_ROLE=`
+16. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
+17. `OPENID_BUTTON_LABEL="Login with SSO"`
+18. `OPENID_IMAGE_URL=/assets/favicon.svg`
+19. `ALLOW_EMAIL_LOGIN=false`
+20. `ALLOW_REGISTRATION=false`
+21. `ALLOW_SOCIAL_REGISTRATION=false`
+22. Comment out `OPENAI_API_KEY=`
+23. Comment out `ASSISTANTS_API_KEY=`
+24. BASE_URL_AZURE_AU=https://au-openai-exp.ctk.au.deloitte.com/openai/v1
+25. BASE_URL_AZURE_US=https://us-openai-exp.ctk.au.deloitte.com/openai/v1
+26. BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com
+27. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
+28. `MCP_GATEWAY_URL=https://mcp-gw-dev.ctk.au.deloitte.com/mcp`
+29. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims`
+30. `MCP_GATEWAY_OBO_SCOPE=api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user`
+> The **ClearTrack MCP Gateway** connection (`mcpServers` block in `librechat.yaml` at repo root and `charts/config/librechat.yaml` for Helm) uses On-Behalf-Of (OBO) auth, not a dedicated OAuth client — it reuses `OPENID_CLIENT_ID`/`OPENID_CLIENT_SECRET` from item 8–9 to exchange the user's login token for one scoped to the gateway. There are no gateway-specific client credentials to set; the only requirement is that `OPENID_SCOPE` (item 12) includes the gateway's audience scope.
 
+### Evaluation framework variables
 
-> Items 26–27 supply OAuth credentials for the **ClearTrack MCP Gateway** app registration referenced by the `mcpServers` block in `librechat.yaml` (repo root) and `charts/config/librechat.yaml` (Helm). The client ID is an identifier and is safe to commit; the client secret must be obtained from another team member and kept out of source control.
+The optional Python evaluation framework reads the following variables from the repository `.env` file:
+
+| Variable | Purpose |
+|---|---|
+| `LIBRECHAT_BASE_URL` | LibreChat instance to evaluate; defaults to `http://localhost:3080`. |
+| `LIBRECHAT_API_KEY` | Agent API key from LibreChat Settings → Data. Required for agent evals. |
+| `LIBRECHAT_AGENT_ID` | Default agent ID. A config-specific variable such as `EXPENSE_ASSIST_AGENT_ID` can be referenced by `agent_id: ${VAR}` instead. |
+| `LIBRECHAT_TIMEOUT` | LibreChat request timeout in seconds; defaults to `300`. |
+| `LIBRECHAT_MAX_RETRIES` | Maximum LibreChat request retries; defaults to `3`. |
+| `LIBRECHAT_RETRY_BACKOFF` | Retry backoff in seconds; defaults to `5`. |
+| `EVAL_JUDGE_ENDPOINT` | Optional custom endpoint name from `librechat.yaml` for DeepEval judge calls. |
+| `EVAL_JUDGE_MODEL` | Optional judge model override. |
+| `EVAL_JUDGE_DISABLE_TLS_VERIFY` | Set to `1` only for local judge endpoints with untrusted certificates. |
+| `EVAL_ROOT` | Optional override for the eval workspace root. |
+| `EVAL_LANGFUSE_BASE_URL` | Optional Langfuse URL used by eval dataset and telemetry integrations. |
+| `EVAL_PUSH_LANGFUSE` | Set to `1` to export eval telemetry without passing `--langfuse`. |
+| `EVAL_LANGFUSE_ENVIRONMENT` | Langfuse environment tag; defaults to `development`. |
+| `LANGFUSE_SSL_VERIFY` | Set to `false` only for local development with an untrusted Langfuse certificate. |
+| `LANGFUSE_SSL_CERT_FILE` | Optional CA bundle used to verify Langfuse OTLP TLS. |
+
+The existing `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`, `OTEL_EXPORTER_OTLP_ENDPOINT`, and `OTEL_EXPORTER_OTLP_HEADERS` variables are also reused when Langfuse export is enabled. See `evals/_eval/README.md` for commands and examples.
 
 #### How to obtain the JWT token
 ⚠️ As of May 2026, tokens expire after ~8 hours. If models suddenly stop working, reissue the token.
@@ -202,19 +237,18 @@ LibreChat configuration includes:
 - ClearTrack MCP integration
 - And more!
 
-There are now **two** `librechat.yaml` files on purpose:
+There is now **one source of truth** for LibreChat config:
 
-1. `librechat.yaml` (repo root) - **local development config**
+1. `librechat.yaml` (repo root)
    - Used by local Docker runs.
-   - Sends `x-id-token` headers for custom endpoints using `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION` from `.env`.
+   - Includes local gateway identity headers (`x-id-token`) for custom endpoints.
 
-2. `charts/config/librechat.yaml` - **Kubernetes/Helm deploy config**
-   - Packaged into the chart ConfigMap for DEV/UAT/PROD deployments.
-   - Does **not** send `x-id-token` for custom model calls.
+2. `charts/config/librechat.yaml` (symlink)
+   - Points to the root file to keep local and deployment config in sync.
+   - During `build-and-promote`, CI materializes a deployment copy by:
+     - removing local-only `x-id-token` headers, and
+     - ensuring `fileStrategy: "azure_blob"` is present for Kubernetes.
    - In deployed environments, auth is injected by `llm-gateway-proxy` as `x-sa-token` using the pod service account token.
-
-Why this split exists:
-- Local and deployed auth mechanisms are different (`x-id-token` locally vs `x-sa-token` in Kubernetes).
 
 ---
 
@@ -345,7 +379,11 @@ If models fail with gateway or MCP errors, this is almost always the cause. If b
 
 ---
 
-## Common fixes
+## Troubleshooting
+
+### Build succeeds but SSO says "An unknown error occurred"
+
+Ensure that the `OPENID_ISSUER`, `OPENID_CLIENT_ID`, and `OPENID_CLIENT_SECRET` values in your `.env` are populated. Get these values from another team member if you don't have them.
 
 ### Build fails with "context" or "Dockerfile" errors
 

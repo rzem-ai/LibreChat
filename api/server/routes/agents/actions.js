@@ -93,6 +93,12 @@ router.post(
     try {
       const { agent_id } = req.params;
 
+      // Deloitte Custom Change
+      const appConfig = req.config;
+      if (appConfig?.interface?.customDeloitteFeatureFlags?.createActions === false) {
+        return res.status(403).json({ message: 'Action creation is disabled' });
+      }
+
       /** @type {{ functions: FunctionTool[], action_id: string, metadata: ActionMetadata }} */
       const { functions, action_id: _action_id, metadata: _metadata } = req.body;
       if (!functions.length) {
@@ -100,7 +106,6 @@ router.post(
       }
 
       const metadata = await encryptMetadata(removeNullishValues(_metadata, true));
-      const appConfig = req.config;
 
       // SECURITY: Validate the OpenAPI spec and extract the server URL
       if (metadata.raw_spec) {
