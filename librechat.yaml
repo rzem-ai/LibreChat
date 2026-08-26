@@ -40,7 +40,7 @@ interface:
     create: false # Set to false to disable creating new MCP servers via the Agent Builder
 
   memories: true # Set to true to enable users to edit memories via UI
-  
+
   modelSelect: true
 
   multiConvo: false # Set to false to disable multiple conversations in the chat interface
@@ -103,8 +103,8 @@ memory:
   messageWindowSize: 5 # Number of recent messages to consider
   agent:
     enabled: true
-    provider: "Azure AU"
-    model: "gpt-41-nano"
+    provider: 'Azure AU'
+    model: 'gpt-41-nano'
 
 endpoints:
   # ========================================
@@ -160,7 +160,7 @@ endpoints:
       modelDisplayLabel: 'Azure AU'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
-        x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
+        x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
 
     # --- Azure US (eastus) ---
@@ -178,7 +178,7 @@ endpoints:
       modelDisplayLabel: 'Azure US'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
-        x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
+        x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
 
     # --- VertexAI / Google (us-central1) ---
@@ -196,7 +196,7 @@ endpoints:
       modelDisplayLabel: 'VertexAI US'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
-        x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
+        x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
 
 modelSpecs:
@@ -353,14 +353,15 @@ modelSpecs:
         promptPrefix: *deloitteSystemPrompt
 
 # MCP Servers configuration
-# Filter restricts tools to: teams (Teams), research (IBISWorld), news (AFR)
+# Filter restricts tools to the toolsets provided via MCP_GATEWAY_TOOLSETS (e.g. teams,research,news,kx,desc,gims)
 mcpServers: # https://www.librechat.ai/docs/features/mcp
   cleartrack-mcp-gateway:
+    title: 'ClearTrack Connector'
     # See documentation: https://github.com/Deloitte-Australia/ea-mcp-gateway/blob/feature/prototype/docs/MCP_Gateway_Wiki.md
     type: streamable-http
-    url: "${MCP_GATEWAY_URL}?toolsets=${MCP_GATEWAY_TOOLSETS}"
+    url: '${MCP_GATEWAY_URL}?toolsets=${MCP_GATEWAY_TOOLSETS}'
     obo:
-      scopes: "${MCP_GATEWAY_OBO_SCOPE}"
+      scopes: '${MCP_GATEWAY_OBO_SCOPE}'
 #    oauth_headers:
 #      X-Custom-Header: "custom_value"
 
