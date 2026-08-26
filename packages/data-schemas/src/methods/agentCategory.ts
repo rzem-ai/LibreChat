@@ -1,7 +1,6 @@
 import type { Model, Types } from 'mongoose';
 import type { IAgentCategory } from '~/types';
 import { tenantSafeBulkWrite } from '~/utils/tenantBulkWrite';
-import { runAsSystem } from '~/config/tenantContext';
 
 export function createAgentCategoryMethods(mongoose: typeof import('mongoose')): {
   getActiveCategories: () => Promise<IAgentCategory[]>;
@@ -51,9 +50,10 @@ export function createAgentCategoryMethods(mongoose: typeof import('mongoose')):
     ]);
 
     const countMap = new Map(categoryCounts.map((c) => [c._id, c.count]));
-    // Deloitte Custom Change: `runAsSystem` requires an async callback for AsyncLocalStorage
-    // context to reliably propagate through the Mongoose query inside `getActiveCategories`.
-    const categories = await runAsSystem(async () => getActiveCategories());
+    // Deloitte Custom Change: intentionally runs in the caller's ambient tenant context (like the
+    // `Agent.aggregate` above) rather than `runAsSystem`, which would bypass tenant isolation and
+    // return every tenant's categories — mismatched against counts computed for this tenant only.
+    const categories = await getActiveCategories();
 
     return categories.map((category) => ({
       ...category,
