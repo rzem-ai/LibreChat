@@ -134,7 +134,7 @@ jobs:
         path = Path("librechat.yaml")
         content = path.read_text()
         content = re.sub(
-          r'(?m)^[ \t]*(?:#\s*Local-only identity token header; build-and-promote strips this from deployment chart config\.\s*\n[ \t]*)?x-id-token:\s*"?\$\{LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION\}"?[ \t]*\n?',
+          r'(?m)^[ \t]*x-id-token:\s*[\'"]?\$\{LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION\}[\'"]?[ \t]*\n?',
           '',
           content,
         )
@@ -143,7 +143,7 @@ jobs:
           match = re.search(r"^cache:\s*true(?:\s*#.*)?$", content, flags=re.MULTILINE)
           if match is None:
             raise SystemExit("Unable to inject fileStrategy: cache:true entry not found")
-          content = content[:match.end()] + '\n\nfileStrategy: "azure_blob"' + content[match.end():]
+          content = content[:match.end()] + "\n\nfileStrategy: 'azure_blob'" + content[match.end():]
 
         path.write_text(content)
         PY
