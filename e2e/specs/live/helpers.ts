@@ -117,10 +117,14 @@ export async function selectModel(page: Page, endpoint: string, model: string) {
 /**
  * Toggle a composer tool (e.g. "Skills", "Run Code", "File Search", "Web
  * Search", "Artifacts", "Memory") by its visible label. Idempotent: reads
- * the badge's `aria-checked` and only opens the menu when a change is
- * needed. Visibility is NOT a reliable state signal — pinned tools stay
- * mounted regardless of their toggle state and just change colour when
- * checked (green submit surface vs neutral).
+ * the badge's `aria-checked` and only clicks when a change is needed.
+ * Visibility is NOT a reliable state signal — pinned tools (see
+ * `interface.defaultPinnedTools` in librechat.yaml) stay mounted below the
+ * composer regardless of their toggle state and just change colour when
+ * checked (green submit surface vs neutral). Clicks the badge itself
+ * directly rather than going through the `#tools-dropdown-button` menu —
+ * only works for tools pinned by default or already enabled, since an
+ * unpinned/disabled tool's badge isn't in the DOM at all.
  */
 export async function setToolEnabled(page: Page, toolLabel: string, enabled: boolean) {
   const badge = page.getByRole('checkbox', { name: toolLabel });
@@ -134,9 +138,8 @@ export async function setToolEnabled(page: Page, toolLabel: string, enabled: boo
   if ((await isCurrentlyEnabled()) === enabled) {
     return;
   }
-  await page.locator('#tools-dropdown-button').click();
-  await page.getByRole('menuitem', { name: toolLabel }).click();
-  await page.keyboard.press('Escape');
+  await expect(badge.first()).toBeVisible({ timeout: 10000 });
+  await badge.first().click();
   await expect(async () => {
     expect(await isCurrentlyEnabled()).toBe(enabled);
   }).toPass({ timeout: 10000 });
