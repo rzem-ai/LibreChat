@@ -69,7 +69,7 @@ async function waitForPersistedSkill(
   return latestSkill!;
 }
 
-test.describe('skill file authoring tools', () => {
+test.describe('skill file authoring tools', { tag: ['@mock', '@skills'] }, () => {
   test('creates and edits a skill without enabling code execution', async ({ page }) => {
     test.setTimeout(120000);
     const skillName = uniqueSkillName();

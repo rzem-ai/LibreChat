@@ -31,7 +31,7 @@ const NO_PARENT = '00000000-0000-0000-0000-000000000000';
 const unique = (p: string) => `${p}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 const escapeRe = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-test.describe('issue #13916 — code-exec attachment preview', () => {
+test.describe('issue #13916 — code-exec attachment preview', { tag: ['@mock', '@chat'] }, () => {
   test('loading a conversation with a pending >1MB doc attachment does not crash (React #185)', async ({
     page,
   }) => {

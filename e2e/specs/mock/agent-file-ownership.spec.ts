@@ -233,7 +233,7 @@ async function cleanupSeededRecords({
   });
 }
 
-test.describe('agent file ownership', () => {
+test.describe('agent file ownership', { tag: ['@mock', '@agents'] }, () => {
   test('allows an agent author to list, preview, and use attached files owned by another user', async ({
     page,
     request,

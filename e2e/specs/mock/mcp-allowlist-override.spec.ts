@@ -32,7 +32,7 @@ async function reinitialize(
   return { status: res.status(), success: body.success === true };
 }
 
-test.describe('MCP admin-panel allowlist override', () => {
+test.describe('MCP admin-panel allowlist override', { tag: ['@mock', '@mcp'] }, () => {
   test('honors an admin mcpSettings.allowedDomains override so a blocked server reinitializes', async ({
     request,
   }) => {

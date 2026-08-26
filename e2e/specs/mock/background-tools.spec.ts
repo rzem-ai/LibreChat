@@ -39,7 +39,7 @@ async function waitForBackgroundTool(page: Page) {
   ).toEqual(expect.arrayContaining([expect.objectContaining({ pluginKey: BACKGROUND_TOOL_ID })]));
 }
 
-test.describe('background tool calls', () => {
+test.describe('background tool calls', { tag: ['@mock', '@agents'] }, () => {
   test('dispatches a tool in the background and collects its result on a later turn', async ({
     page,
   }) => {

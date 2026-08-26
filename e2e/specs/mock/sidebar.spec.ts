@@ -44,7 +44,7 @@ const settledSizes = async (page: Page) => {
   throw new Error(`Sidebar chat list never settled: ${JSON.stringify(prev)}`);
 };
 
-test.describe('sidebar chat list', () => {
+test.describe('sidebar chat list', { tag: ['@mock', '@conversations'] }, () => {
   test('chat list width tracks the sidebar through resize and collapse cycles', async ({
     page,
   }) => {
@@ -130,7 +130,7 @@ const heading = (page: Page, label: string) =>
 const headerRow = (page: Page, label: string) =>
   page.getByTestId('convo-list-row').filter({ has: heading(page, label) });
 
-test.describe('sidebar conversation grouping', () => {
+test.describe('sidebar conversation grouping', { tag: ['@mock', '@conversations'] }, () => {
   let seeded: SeedConvo[] = [];
 
   test.afterEach(async () => {

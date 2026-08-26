@@ -7,7 +7,7 @@ import {
   sendMessage,
 } from './helpers';
 
-test.describe('endpoint switching', () => {
+test.describe('endpoint switching', { tag: ['@mock', '@model-specs'] }, () => {
   for (const endpoint of MOCK_ENDPOINTS) {
     test(`"${endpoint.label}" returns a streamed response`, async ({ page }) => {
       test.setTimeout(60000);

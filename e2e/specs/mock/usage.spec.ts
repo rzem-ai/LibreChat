@@ -45,7 +45,7 @@ async function sendAndAwaitReply(page: Page, text: string) {
   await expect(page).toHaveURL(/\/c\/(?!new)/, { timeout: 15000 });
 }
 
-test.describe('context usage gauge', () => {
+test.describe('context usage gauge', { tag: ['@mock', '@chat'] }, () => {
   test('tracks usage from live SSE events and survives reload', async ({ page }) => {
     test.setTimeout(120000);
     await page.goto(NEW_CHAT_PATH, { timeout: 10000 });

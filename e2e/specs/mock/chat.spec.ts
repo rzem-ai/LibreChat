@@ -84,7 +84,7 @@ async function uploadProviderFile(page: Page, fixture: UploadFixture) {
   return uploadResponse;
 }
 
-test.describe('core chat loop', () => {
+test.describe('core chat loop', { tag: ['@mock', '@chat'] }, () => {
   test('streams a response, saves the conversation, and persists across reload', async ({
     page,
   }) => {

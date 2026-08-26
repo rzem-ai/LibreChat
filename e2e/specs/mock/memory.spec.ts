@@ -14,7 +14,7 @@ import {
  * it from the tools menu, then confirm the toggle reaches the backend payload as
  * `ephemeralAgent.memory === true` on the next send.
  */
-test.describe('memory badge', () => {
+test.describe('memory badge', { tag: ['@mock', '@chat'] }, () => {
   test('toggles on from the tools menu and is sent with the request', async ({ page }) => {
     test.setTimeout(120000);
     await page.goto('/c/new', { timeout: 10000 });
