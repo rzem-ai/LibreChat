@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       base_url:
-        description: 'Target site to smoke test'
-        required: true
-        default: 'https://librechat-dev.ctk.au.deloitte.com'
+        description: 'Optional override URL (default comes from selected environment var E2E_BASE_URL)'
+        required: false
+        default: ''
         type: string
       target_ref:
         description: 'Git ref to test (manual runs only)'
@@ -28,8 +28,8 @@ jobs:
     runs-on:
       group: AU ITS DevOps Build Servers
 
-    # Holds the test-account secrets and any required approvers.
-    environment: playwright-dev
+    # Select environment by destination branch (PR) or target_ref (manual).
+    environment: ${{ github.event_name == 'pull_request' && (github.event.pull_request.base.ref == 'develop' && 'playwright-dev' || github.event.pull_request.base.ref == 'uat' && 'playwright-uat' || github.event.pull_request.base.ref == 'main' && 'playwright-prod' || 'playwright-dev') || (github.event.inputs.target_ref == 'develop' && 'playwright-dev' || github.event.inputs.target_ref == 'uat' && 'playwright-uat' || github.event.inputs.target_ref == 'main' && 'playwright-prod' || 'playwright-dev') }}
 
     concurrency:
       group: playwright-live-${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || github.event.inputs.target_ref }}
@@ -38,7 +38,7 @@ jobs:
     timeout-minutes: 30
 
     env:
-      E2E_BASE_URL: ${{ github.event.inputs.base_url || 'https://librechat-dev.ctk.au.deloitte.com' }}
+      E2E_BASE_URL: ${{ github.event.inputs.base_url || vars.E2E_BASE_URL }}
       # Dedicated test account — never a personal login.
       E2E_USER: ${{ secrets.E2E_LIVE_USER }}
       E2E_PASS: ${{ secrets.E2E_LIVE_PASS }}
@@ -81,12 +81,13 @@ jobs:
         shell: pwsh
         run: |
           $missing = @()
+          if (-not $env:E2E_BASE_URL) { $missing += 'E2E_BASE_URL (environment variable)' }
           if (-not $env:E2E_USER) { $missing += 'E2E_LIVE_USER' }
           if (-not $env:E2E_PASS) { $missing += 'E2E_LIVE_PASS' }
           if ($missing) {
-            throw "Empty secret(s): $($missing -join ', '). Check they are Environment *secrets* (not variables) under 'playwright-dev'."
+            throw "Missing environment config: $($missing -join ', '). Ensure each environment has secrets E2E_LIVE_USER/E2E_LIVE_PASS and variable E2E_BASE_URL."
           }
-          Write-Host "Credentials present (user length: $($env:E2E_USER.Length), pass length: $($env:E2E_PASS.Length))"
+          Write-Host "Config present (base URL: $env:E2E_BASE_URL, user length: $($env:E2E_USER.Length), pass length: $($env:E2E_PASS.Length))"
 
       # Programmatic login instead of a hand-captured snapshot: a fresh session
       # every run, so nothing goes stale. Writes e2e/live-auth.json.

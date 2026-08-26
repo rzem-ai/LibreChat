@@ -1,4 +1,4 @@
-name: Playwright CI/Smoke
+name: Playwright CI/Mock
 on:
   pull_request:
     branches: [develop, uat, main]
