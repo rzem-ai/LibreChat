@@ -51,6 +51,7 @@ on:
       - rag_api/**
       - Dockerfile
       - Dockerfile.meilisearch
+      - src/redis/**
       - package.json
 # Limit to one concurrent workflow run per workflow, event, and ref
 concurrency:
@@ -107,6 +108,12 @@ jobs:
             #   ARG1=value
             # unitTestScript: |
             #   echo "Running unit tests"
+          # Valkey image — in-cluster Redis-compatible store (StatefulSet, AOF persistence)
+          - imageNameAlias: valkey
+            buildContext: src/redis
+            dockerFilePath: src/redis/Dockerfile
+            yamlKeyPath: '.valkey.image'
+            submodule: false
         #####################################################################################
     uses: Deloitte-Australia/ct-devops-resources/.github/workflows/build-and-promote.yml@V2
     secrets: inherit
