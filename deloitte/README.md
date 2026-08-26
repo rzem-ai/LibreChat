@@ -61,7 +61,7 @@ After cloning, initialize and clone the submodules:
 git submodule update --init --recursive
 ```
 
-This will populate the `rag_api/` folder with the contents from the tt-librechat-rag repository on the `develop` branch and the `admin_panel/` folder with the contents from the ea-libreadmin repository on the `develop` branch. CI can override that per superproject branch.
+This will populate the `rag_api/` folder and the `admin_panel/` folder at the commits pinned by this repository (tracked on `develop` by default). CI can override the tracking branch per superproject branch when using `git submodule update --remote`.
 
 ### Updating the Submodule
 
