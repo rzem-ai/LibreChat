@@ -6,7 +6,7 @@ interface SkillToggleProps {
   onChange: () => void;
   ariaLabel: string;
   /** Visible label next to the switch (e.g. "Active"/"Disabled"); hidden from assistive tech since `aria-label` already covers it. */
-  label?: string;
+  label: string;
 }
 
 function SkillToggle({ enabled, onChange, ariaLabel, label }: SkillToggleProps) {
@@ -22,11 +22,9 @@ function SkillToggle({ enabled, onChange, ariaLabel, label }: SkillToggleProps) 
       }}
       className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md px-1 transition-colors hover:bg-surface-hover"
     >
-      {label && (
-        <span className="text-xs font-medium text-text-secondary" aria-hidden="true">
-          {label}
-        </span>
-      )}
+      <span className="text-xs font-medium text-text-secondary" aria-hidden="true">
+        {label}
+      </span>
       <span
         className={cn(
           'relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors duration-200',
