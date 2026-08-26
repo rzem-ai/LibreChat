@@ -1,11 +1,8 @@
 import React, { memo, useMemo, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Spinner, TooltipAnchor, useToastContext } from '@librechat/client';
+import { ArrowLeft, Check, Code, Copy, Eye, FileQuestion, FileText } from 'lucide-react';
 import { useGetSkillFileContentQuery, useSkillFileBlobUrl } from '~/data-provider';
-import { apiBaseUrl } from 'librechat-data-provider';
-import { Spinner, TooltipAnchor, useToastContext } from '@librechat/client';
-import { ArrowLeft, Eye, Code, Copy, Check, FileText, FileQuestion } from 'lucide-react';
-import { useGetSkillFileContentQuery } from '~/data-provider';
 import SkillMarkdownRenderer from './SkillMarkdownRenderer';
 import { parseFrontmatter } from '../utils';
 import { useLocalize } from '~/hooks';

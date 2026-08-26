@@ -88,7 +88,7 @@ const getContentDisposition = (fileName, disposition = 'attachment') => {
 };
 
 /**
- * MIME types safe to serve inline (no Content-Disposition: attachment).
+ * Deloitte Custom Change: MIME types safe to serve inline (no Content-Disposition: attachment).
  * SVG, HTML, JS and other active content are excluded to prevent stored-XSS
  * via uploaded files served under the app origin. Used by both the file
  * download route and the share route.
