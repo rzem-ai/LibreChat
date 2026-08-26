@@ -171,6 +171,7 @@ spec:
     # ── In-cluster Valkey ──────────────────────────────────────────
     - toEndpoints:
         - matchLabels:
+            app: librechat-valkey
             component: redis
       toPorts:
         - ports:
