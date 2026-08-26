@@ -59,6 +59,9 @@ jest.mock('~/models', () => ({
 
 jest.mock('~/server/middleware', () => ({
   canAccessAgentResource: jest.fn(() => (req, res, next) => next()),
+  // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+  rejectDisabledActions: jest.requireActual('~/server/middleware/rejectDisabledActions')
+    .rejectDisabledActions,
 }));
 
 jest.mock('nanoid', () => ({ nanoid: jest.fn(() => 'test-action-id') }));
@@ -131,16 +134,18 @@ describe('POST /actions/:agent_id – createActions feature flag', () => {
       .post('/actions/agent-1')
       .send({ functions: [{ name: 'fn' }], metadata: { domain: 'example.com' } });
 
-    expect(res.status).not.toBe(403);
+    // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+    expect(res.status).toBe(200);
   });
 
   it('does not block when createActions flag is absent', async () => {
     const app = buildApp({});
 
-    const res = await request(app)
-      .post('/actions/agent-1')
-      .send({ functions: [{ name: 'fn' }], metadata: { domain: 'example.com' } });
+    // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+    const res = await request(app).post('/actions/agent-1').send({ functions: [] });
 
-    expect(res.status).not.toBe(403);
+    // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('No functions provided');
   });
 });

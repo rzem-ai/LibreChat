@@ -25,6 +25,8 @@ const uaParser = require('./uaParser');
 const checkBan = require('./checkBan');
 const noIndex = require('./noIndex');
 const roles = require('./roles');
+// Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+const { rejectDisabledActions } = require('./rejectDisabledActions');
 
 module.exports = {
   ...abortMiddleware,
@@ -34,6 +36,8 @@ module.exports = {
   ...accessResources,
   noIndex,
   checkBan,
+  // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+  rejectDisabledActions,
   uaParser,
   setHeaders,
   logHeaders,
