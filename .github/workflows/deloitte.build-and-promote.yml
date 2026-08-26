@@ -135,9 +135,9 @@ jobs:
         git config submodule.admin_panel.branch "${SUBMODULE_BRANCH}"
         git submodule sync --recursive
 
-if [ "${{ matrix.submodule }}" = "true" ]; then
-  git submodule update --init --recursive --remote "${{ matrix.buildContext }}"
-fi
+        if [ "${{ matrix.submodule }}" = "true" ]; then
+          git submodule update --init --remote --checkout "${{ matrix.buildContext }}"
+        fi
         
         python3 - <<'PY'
         import re
