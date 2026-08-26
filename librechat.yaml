@@ -352,6 +352,54 @@ modelSpecs:
         model: 'google/gemini-2.5-pro'
         promptPrefix: *deloitteSystemPrompt
 
+    - name: 'anthropic-claude-sonnet-4-5'
+      label: 'Anthropic claude-sonnet-4-5'
+      group: 'Anthropic'
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-sonnet-4-5'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'anthropic-claude-opus-4-5'
+      label: 'Anthropic claude-opus-4-5'
+      group: 'Anthropic'
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-opus-4-5'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'anthropic-claude-haiku-4-5'
+      label: 'Anthropic claude-haiku-4-5'
+      group: 'Anthropic'
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-haiku-4-5'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'anthropic-claude-sonnet-4-6'
+      label: 'Anthropic claude-sonnet-4-6'
+      group: 'Anthropic'
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-sonnet-4-6'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'anthropic-claude-opus-4-6'
+      label: 'Anthropic claude-opus-4-6'
+      group: 'Anthropic'
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-opus-4-6'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'anthropic-claude-opus-4-7'
+      label: 'Anthropic claude-opus-4-7'
+      group: 'Anthropic'
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-opus-4-7'
+        promptPrefix: *deloitteSystemPrompt
+
 # MCP Servers configuration
 # Filter restricts tools to: teams (Teams), research (IBISWorld), news (AFR)
 mcpServers: # https://www.librechat.ai/docs/features/mcp
