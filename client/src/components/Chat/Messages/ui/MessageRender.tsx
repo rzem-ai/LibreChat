@@ -16,8 +16,8 @@ import { useLocalize, useMessageActions, useContentMetadata } from '~/hooks';
 import PlaceholderRow from '~/components/Chat/Messages/ui/PlaceholderRow';
 import SiblingSwitch from '~/components/Chat/Messages/SiblingSwitch';
 import HoverButtons from '~/components/Chat/Messages/HoverButtons';
-import { MessageContext, useMessageAlignment } from '~/Providers';
 import MessageIcon from '~/components/Chat/Messages/MessageIcon';
+import { MessageContext, useIsRightAligned } from '~/Providers';
 import SubRow from '~/components/Chat/Messages/SubRow';
 import { fontSizeAtom } from '~/store/fontSize';
 import store from '~/store';
@@ -102,7 +102,7 @@ const MessageRender = memo(function MessageRender({
   });
   const fontSize = useAtomValue(fontSizeAtom);
   const maximizeChatSpace = useRecoilValue(store.maximizeChatSpace);
-  const rightAligned = useMessageAlignment(msg?.isCreatedByUser);
+  const rightAligned = useIsRightAligned(msg?.isCreatedByUser);
   const align = getMessageAlignmentClasses(rightAligned);
 
   const handleRegenerateMessage = useCallback(() => regenerateMessage(), [regenerateMessage]);

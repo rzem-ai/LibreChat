@@ -209,7 +209,7 @@ export function useMessagesState() {
 }
 
 /** Whether a turn renders as a right-aligned bubble, per `MessagesViewProvider`'s resolved config. */
-export function useMessageAlignment(isCreatedByUser: boolean | null | undefined): boolean {
+export function useIsRightAligned(isCreatedByUser: boolean | null | undefined): boolean {
   const { userMessageAlignment } = useMessagesViewContext();
   return useMemo(
     () => isRightAlignedTurn(isCreatedByUser, userMessageAlignment),

@@ -19,7 +19,7 @@ import SiblingSwitch from '~/components/Chat/Messages/SiblingSwitch';
 import HoverButtons from '~/components/Chat/Messages/HoverButtons';
 import MessageIcon from '~/components/Chat/Messages/MessageIcon';
 import SubRow from '~/components/Chat/Messages/SubRow';
-import { useMessageAlignment } from '~/Providers';
+import { useIsRightAligned } from '~/Providers';
 import { fontSizeAtom } from '~/store/fontSize';
 import store from '~/store';
 
@@ -106,7 +106,7 @@ const ContentRender = memo(function ContentRender({
   });
   const fontSize = useAtomValue(fontSizeAtom);
   const maximizeChatSpace = useRecoilValue(store.maximizeChatSpace);
-  const rightAligned = useMessageAlignment(msg?.isCreatedByUser);
+  const rightAligned = useIsRightAligned(msg?.isCreatedByUser);
   const align = getMessageAlignmentClasses(rightAligned);
 
   const handleRegenerateMessage = useCallback(() => regenerateMessage(), [regenerateMessage]);

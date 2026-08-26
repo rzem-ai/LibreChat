@@ -14,8 +14,8 @@ import { useMessageHelpers, useLocalize, useAttachments, useContentMetadata } fr
 import AuthorHeader from '~/components/Chat/Messages/Content/Parts/AuthorHeader';
 import MessageTimestamp from '~/components/Chat/Messages/ui/MessageTimestamp';
 import MessageIcon from '~/components/Chat/Messages/MessageIcon';
-import { useMessageAlignment } from '~/Providers';
 import ContentParts from './Content/ContentParts';
+import { useIsRightAligned } from '~/Providers';
 import { fontSizeAtom } from '~/store/fontSize';
 import SiblingSwitch from './SiblingSwitch';
 import HoverButtons from './HoverButtons';
@@ -48,7 +48,7 @@ function MessageParts(props: TMessageProps) {
   const fontSize = useAtomValue(fontSizeAtom);
   const maximizeChatSpace = useRecoilValue(store.maximizeChatSpace);
   const { messageId = null, isCreatedByUser } = message ?? {};
-  const rightAligned = useMessageAlignment(isCreatedByUser);
+  const rightAligned = useIsRightAligned(isCreatedByUser);
   const align = getMessageAlignmentClasses(rightAligned);
 
   const name = useMemo(() => {
