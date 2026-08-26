@@ -120,17 +120,19 @@ jobs:
         ${{ matrix.customBuildSetupScript }}
         set -euo pipefail
 
-        case "${GITHUB_REF_NAME}" in
+        BRANCH="${GITHUB_BASE_REF:-${GITHUB_REF_NAME}}"
+
+        case "${BRANCH}" in
           main|uat|develop)
-            SUBMODULE_BRANCH="${GITHUB_REF_NAME}"
+            SUBMODULE_BRANCH="${BRANCH}"
             ;;
           *)
             SUBMODULE_BRANCH="develop"
             ;;
         esac
 
-        git config -f .gitmodules submodule.rag_api.branch "${SUBMODULE_BRANCH}"
-        git config -f .gitmodules submodule.admin_panel.branch "${SUBMODULE_BRANCH}"
+        git config submodule.rag_api.branch "${SUBMODULE_BRANCH}"
+        git config submodule.admin_panel.branch "${SUBMODULE_BRANCH}"
         git submodule sync --recursive
         
         python3 - <<'PY'
