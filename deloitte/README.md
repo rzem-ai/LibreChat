@@ -166,27 +166,26 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 9. `OPENID_CLIENT_SECRET=<update with the provided secret from another team member>`
 10. `OPENID_ISSUER=<update with the provided issuer URL from another team member>`
 11. `OPENID_SESSION_SECRET=<update with the provided secret from another team member>`
-12. `OPENID_SCOPE="openid profile email"`
+12. `OPENID_SCOPE="openid profile email offline_access https://librechat-dev.ctk.au.deloitte.com/access_user"` (the `access_user` scope audiences the login token to LibreChat itself; required for the ClearTrack MCP Gateway's OBO exchange — see the note below)
 13. `OPENID_CALLBACK_URL=/oauth/openid/callback`
-14. `OPENID_REQUIRED_ROLE=`
-15. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
-16. `OPENID_BUTTON_LABEL="Login with SSO"`
-17. `OPENID_IMAGE_URL=/assets/favicon.svg`
-18. `ALLOW_EMAIL_LOGIN=false`
-19. `ALLOW_REGISTRATION=false`
-20. `ALLOW_SOCIAL_REGISTRATION=false`
-21. Comment out `OPENAI_API_KEY=`
-22. Comment out `ASSISTANTS_API_KEY=`
-23. BASE_URL_AZURE_AU=https://au-openai-exp.ctk.au.deloitte.com/openai/v1
-24. BASE_URL_AZURE_US=https://us-openai-exp.ctk.au.deloitte.com/openai/v1
-25. BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com
-26. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
-27. `CLEARTRACK_MCP_GATEWAY_CLIENT_ID=3e5d28f1-91a3-4748-ad73-5fa544f1d3e2`
-28. `CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET=<update with the provided secret from another team member>`
+14. `OPENID_REUSE_TOKENS=true`
+15. `OPENID_REQUIRED_ROLE=`
+16. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
+17. `OPENID_BUTTON_LABEL="Login with SSO"`
+18. `OPENID_IMAGE_URL=/assets/favicon.svg`
+19. `ALLOW_EMAIL_LOGIN=false`
+20. `ALLOW_REGISTRATION=false`
+21. `ALLOW_SOCIAL_REGISTRATION=false`
+22. Comment out `OPENAI_API_KEY=`
+23. Comment out `ASSISTANTS_API_KEY=`
+24. BASE_URL_AZURE_AU=https://au-openai-exp.ctk.au.deloitte.com/openai/v1
+25. BASE_URL_AZURE_US=https://us-openai-exp.ctk.au.deloitte.com/openai/v1
+26. BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com
+27. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
+28. `MCP_GATEWAY_URL=https://mcp-gw-dev.ctk.au.deloitte.com/mcp`
 29. `MCP_GATEWAY_TOOLSETS=teams,research,news`
-
-
-> Items 26–27 supply OAuth credentials for the **ClearTrack MCP Gateway** app registration referenced by the `mcpServers` block in `librechat.yaml` (repo root). Helm reuses this config via `charts/config/librechat.yaml`.
+30. `MCP_GATEWAY_OBO_SCOPE=api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user`
+> The **ClearTrack MCP Gateway** connection (`mcpServers` block in `librechat.yaml` at repo root and `charts/config/librechat.yaml` for Helm) uses On-Behalf-Of (OBO) auth, not a dedicated OAuth client — it reuses `OPENID_CLIENT_ID`/`OPENID_CLIENT_SECRET` from item 8–9 to exchange the user's login token for one scoped to the gateway. There are no gateway-specific client credentials to set; the only requirement is that `OPENID_SCOPE` (item 12) includes the gateway's audience scope.
 
 ### Evaluation framework variables
 

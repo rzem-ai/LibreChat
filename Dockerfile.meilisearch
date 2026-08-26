@@ -1,7 +1,12 @@
 # Dockerfile.meilisearch
 # Derived from upstream Meilisearch image for publishing into Azure ACR.
 # Prefer pinning UPSTREAM_IMAGE to a digest for reproducible builds.
-ARG UPSTREAM_IMAGE=getmeili/meilisearch:v1.13
+ARG UPSTREAM_IMAGE=getmeili/meilisearch:v1.35.1
 FROM ${UPSTREAM_IMAGE}
 
 # Derived image intentionally adds local metadata/layer in our registry pipeline.
+
+# Upstream image runs as root by default; add a non-root user to own the data dir
+RUN addgroup -S meili && adduser -S -G meili meili \
+    && chown -R meili:meili /meili_data
+USER meili
