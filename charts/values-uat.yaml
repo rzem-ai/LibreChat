@@ -28,7 +28,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'uat'
+          tag: 'uat@sha256:142992cca882db8f069991b840cd7406ccdab0c3283feb5578f48460b90aa8b6'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -47,7 +47,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'uat'
+          tag: 'uat@sha256:f5b7be6952946c8aabffe73c76b6a991b5fc141ea0a9ed014dcb132e27b94372'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-uat.ctk.au.deloitte.com'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -134,7 +134,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'uat'
+          tag: 'uat@sha256:be3615f0a0badd0f0161ba00610e713db0c5838c08c3df4e56b3a7c494b1362a'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -165,7 +165,7 @@ pods:
       meilisearch:
         image:
           pullPolicy: Always
-          tag: 'uat'
+          tag: 'uat@sha256:cc50c71683cd3ea936c785c544491346e630d755fea223469f2b29d110e7c428'
         env:
           MEILI_ENV: 'production' # Use production to mimic PROD environment behaviour
         secrets:
