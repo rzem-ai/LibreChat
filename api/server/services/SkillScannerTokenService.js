@@ -1,7 +1,9 @@
 const { logger } = require('@librechat/data-schemas');
 const { exchangeOboToken } = require('./OboTokenService');
 
-const SKILL_SCANNER_OBO_SCOPE = 'api://4aeebbdc-56f5-4329-b40e-3d0a243bf74a/access_as_user';
+function getSkillScannerOboScope() {
+  return `api://${process.env.AI_REGISTRY_CLIENT_ID}/access_as_user`;
+}
 
 async function getSkillScannerToken(user, accessToken, scopes, fromCache = true) {
   try {
@@ -26,7 +28,11 @@ async function resolveSkillScannerToken(user) {
     return undefined;
   }
   try {
-    const { access_token } = await getSkillScannerToken(user, accessToken, SKILL_SCANNER_OBO_SCOPE);
+    const { access_token } = await getSkillScannerToken(
+      user,
+      accessToken,
+      getSkillScannerOboScope(),
+    );
     return access_token;
   } catch (error) {
     logger.warn('[resolveSkillScannerToken] OBO exchange failed', error);
