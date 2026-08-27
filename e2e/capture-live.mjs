@@ -1,16 +1,17 @@
 import { chromium } from '@playwright/test';
 
-const URL = process.env.E2E_BASE_URL || 'https://AU-KT4L64D3JW.local';
+// Set E2E_BASE_URL to the dev or UAT site you want to capture an SSO session for
+// (e.g. https://dev.example.com or https://uat.example.com).
+// command to run: E2E_BASE_URL=https://dev.example.com node e2e/capture-live.mjs
+const URL = process.env.E2E_BASE_URL;
+if (!URL) {
+  console.error('E2E_BASE_URL is required (e.g. https://dev.example.com)');
+  process.exit(1);
+}
 
-const browser = await chromium.launch({
-  headless: false,
-  args: [
-    '--host-resolver-rules=MAP AU-KT4L64D3JW.local 127.0.0.1',
-    '--ignore-certificate-errors',
-  ],
-});
+const browser = await chromium.launch({ headless: false });
 
-const context = await browser.newContext({ ignoreHTTPSErrors: true });
+const context = await browser.newContext();
 const page = await context.newPage();
 await page.goto(URL);
 
