@@ -169,8 +169,10 @@ export function createImportHandler(deps: ImportSkillDeps) {
     const ext = path.extname(file.originalname).toLowerCase();
 
     try {
-      const scannerToken = await deps.resolveScannerToken(req.user);
       if (ext === '.md') {
+        const scannerToken = process.env.SKILL_SCANNER_URL
+          ? await deps.resolveScannerToken(req.user)
+          : undefined;
         // Deloitte custom feature: scan skills
         await scanSkillMarkdown({
           content: file.buffer.toString('utf-8'),
@@ -180,6 +182,9 @@ export function createImportHandler(deps: ImportSkillDeps) {
         return await handleMarkdown(req, res, deps, file);
       }
       if (ext === '.zip' || ext === '.skill') {
+        const scannerToken = process.env.SKILL_SCANNER_URL
+          ? await deps.resolveScannerToken(req.user)
+          : undefined;
         // Deloitte custom feature: scan skills
         await scanSkillUpload({
           archive: file.buffer,
