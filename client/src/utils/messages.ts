@@ -642,7 +642,7 @@ export function isRightAlignedTurn(
  * side, not something that mirrors with reading direction.
  */
 const MESSAGE_BUBBLE_CLASSES =
-  'self-end rtl:self-start w-fit max-w-[85%] rounded-2xl bg-surface-secondary px-4 py-2.5';
+  'self-end rtl:self-start w-fit flex-grow-0 max-w-[85%] rounded-2xl bg-surface-secondary px-4 py-2.5';
 
 export interface MessageAlignmentClasses {
   /** Applied to the row's outer flex container. */
