@@ -39,9 +39,6 @@ jobs:
 
     env:
       E2E_BASE_URL: ${{ github.event.inputs.base_url || vars.E2E_BASE_URL }}
-      # Dedicated test account — never a personal login.
-      E2E_USER: ${{ secrets.E2E_LIVE_USER }}
-      E2E_PASS: ${{ secrets.E2E_LIVE_PASS }}
       # Drive the runner's preinstalled Edge; the bundled Chromium download
       # stalls behind TLS inspection on this build server.
       E2E_CHROMIUM_CHANNEL: msedge
@@ -79,6 +76,9 @@ jobs:
 
       - name: Verify credentials are wired up
         shell: pwsh
+        env:
+          E2E_USER: ${{ secrets.E2E_LIVE_USER }}
+          E2E_PASS: ${{ secrets.E2E_LIVE_PASS }}
         run: |
           $missing = @()
           if (-not $env:E2E_BASE_URL) { $missing += 'E2E_BASE_URL (environment variable)' }
@@ -93,6 +93,9 @@ jobs:
       # every run, so nothing goes stale. Writes e2e/live-auth.json.
       - name: Capture live session
         shell: pwsh
+        env:
+          E2E_USER: ${{ secrets.E2E_LIVE_USER }}
+          E2E_PASS: ${{ secrets.E2E_LIVE_PASS }}
         run: |
           node e2e/login-live.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
