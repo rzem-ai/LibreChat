@@ -1,5 +1,7 @@
+import JSZip from 'jszip';
 import {
   scanSkillUpload,
+  scanSkillMarkdown,
   scanSkillFileUpload,
   isSkillScanError,
   type SkillScanError,
@@ -179,6 +181,22 @@ describe('skill scanner', () => {
     });
   });
 
+  it('surfaces the scanner-provided reason for a flat { detail } rejection (e.g. its zip-bomb guard)', async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(
+        jsonResponse(
+          { detail: "Archive entry 'SKILL.md' has a suspicious compression ratio (>100x)" },
+          422,
+        ),
+      ) as unknown as typeof fetch;
+
+    await expect(upload()).rejects.toMatchObject({
+      statusCode: 422,
+      issues: [{ message: "Archive entry 'SKILL.md' has a suspicious compression ratio (>100x)" }],
+    });
+  });
+
   it('blocks a 2xx response with a non-JSON (or empty) body instead of failing open', async () => {
     global.fetch = jest.fn().mockResolvedValue(nonJsonResponse(200)) as unknown as typeof fetch;
 
@@ -267,6 +285,102 @@ describe('skill scanner', () => {
 
       const [, init] = fetchSpy.mock.calls[0];
       expect(init.headers.Authorization).toBe('Bearer static-fallback-token');
+    });
+  });
+
+  describe('LibreChat-internal frontmatter fields on upload', () => {
+    function passingResponse(): Response {
+      return jsonResponse({
+        validation: { passed: true, problems: [] },
+        scan: { is_safe: true, findings: [] },
+      });
+    }
+
+    async function scannedArchiveFrom(call: unknown[]): Promise<JSZip> {
+      const [, init] = call as [string, { body: FormData }];
+      const blob = init.body.get('file') as unknown as Blob;
+      const buffer = Buffer.from(await blob.arrayBuffer());
+      return JSZip.loadAsync(buffer);
+    }
+
+    it('strips always-apply out of a markdown upload before the manifest scan, and re-submits it separately', async () => {
+      const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
+      global.fetch = fetchSpy as unknown as typeof fetch;
+
+      const content = [
+        '---',
+        'name: fixture-skill',
+        'description: A fixture that always applies.',
+        'always-apply: true',
+        '---',
+        '',
+        '# Body',
+      ].join('\n');
+
+      await scanSkillMarkdown({ content, fileName: 'skill.zip' });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      const manifestZip = await scannedArchiveFrom(fetchSpy.mock.calls[0]);
+      const manifestSkillMd = await manifestZip.file('SKILL.md')?.async('string');
+      expect(manifestSkillMd).not.toMatch(/^always-apply\s*:/im);
+      expect(manifestSkillMd).toContain('name:');
+      expect(manifestSkillMd).toContain('description:');
+
+      const frontmatterZip = await scannedArchiveFrom(fetchSpy.mock.calls[1]);
+      const frontmatterFile = Object.keys(frontmatterZip.files)[0];
+      const frontmatterText = await frontmatterZip.file(frontmatterFile)?.async('string');
+      expect(frontmatterText).toMatch(/alwaysApply/);
+    });
+
+    it('strips always-apply out of a zip upload while preserving companion files', async () => {
+      const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
+      global.fetch = fetchSpy as unknown as typeof fetch;
+
+      const zip = new JSZip();
+      zip.file(
+        'SKILL.md',
+        [
+          '---',
+          'name: fixture-skill',
+          'description: A fixture that always applies.',
+          'always-apply: true',
+          '---',
+          '',
+          '# Body',
+        ].join('\n'),
+      );
+      zip.file('scripts/helper.py', 'print("hello")\n');
+      const archive = await zip.generateAsync({ type: 'uint8array' });
+
+      await scanSkillUpload({ archive, fileName: 'skill.zip' });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      const manifestZip = await scannedArchiveFrom(fetchSpy.mock.calls[0]);
+      const manifestSkillMd = await manifestZip.file('SKILL.md')?.async('string');
+      expect(manifestSkillMd).not.toMatch(/^always-apply\s*:/im);
+      const companionFile = await manifestZip.file('scripts/helper.py')?.async('string');
+      expect(companionFile).toBe('print("hello")\n');
+
+      const frontmatterZip = await scannedArchiveFrom(fetchSpy.mock.calls[1]);
+      const frontmatterFile = Object.keys(frontmatterZip.files)[0];
+      const frontmatterText = await frontmatterZip.file(frontmatterFile)?.async('string');
+      expect(frontmatterText).toMatch(/alwaysApply/);
+    });
+
+    it('falls back to scanning the raw archive when SKILL.md has invalid YAML frontmatter', async () => {
+      const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
+      global.fetch = fetchSpy as unknown as typeof fetch;
+
+      const zip = new JSZip();
+      zip.file('SKILL.md', ['---', 'name: [unterminated', '---', '', '# Body'].join('\n'));
+      const archive = await zip.generateAsync({ type: 'uint8array' });
+
+      await scanSkillUpload({ archive, fileName: 'skill.zip' });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      const scannedZip = await scannedArchiveFrom(fetchSpy.mock.calls[0]);
+      const scannedSkillMd = await scannedZip.file('SKILL.md')?.async('string');
+      expect(scannedSkillMd).toContain('name: [unterminated');
     });
   });
 });

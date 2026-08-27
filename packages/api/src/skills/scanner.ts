@@ -18,6 +18,7 @@
 import JSZip from 'jszip';
 import { logger } from '@librechat/data-schemas';
 import { SKILL_SEVERITY_LEVELS } from 'librechat-data-provider';
+import { parseSkillMarkdown, extractSkillBody } from './parse';
 
 const SKILL_MD = 'SKILL.md';
 const DEFAULT_TIMEOUT_MS = 15000;
@@ -84,6 +85,11 @@ type SkillScanResult = {
     message?: string;
   };
   message?: string;
+  // Some scanner-level rejections (e.g. its own zip-bomb / compression-ratio
+  // guard) short-circuit before manifest validation or security scanning even
+  // run, and come back as a flat `{ detail: string }` body instead of the
+  // usual `{ validation, scan }` shape.
+  detail?: string;
 };
 
 function severityRank(severity: string | undefined): number {
@@ -175,7 +181,10 @@ function toIssues(result: SkillScanResult | undefined): SkillScanIssue[] {
   }
 
   const fallbackMessage =
-    result?.message ?? result?.error?.message ?? 'Skill scan failed due to validation issues';
+    result?.message ??
+    result?.error?.message ??
+    result?.detail ??
+    'Skill scan failed due to validation issues';
   return [{ message: fallbackMessage }];
 }
 
@@ -433,9 +442,121 @@ export async function scanSkillOnUpdate(params: {
 }
 
 /**
+ * Drop the fields `buildSkillMarkdown` already carries as first-class manifest
+ * columns (`name`/`description`) plus `always-apply`/`alwaysApply` (surfaced
+ * separately via the parser's own `alwaysApply` field) from a parsed
+ * frontmatter bag, leaving only the extra fields that still need a
+ * security-only pass through `scanFrontmatter`.
+ */
+function extraFrontmatterFields(
+  frontmatter: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+  if (!frontmatter) {
+    return undefined;
+  }
+  const excluded = new Set(['name', 'description', 'always-apply', 'alwaysapply']);
+  const entries = Object.entries(frontmatter).filter(([key]) => !excluded.has(key.toLowerCase()));
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
+/**
+ * Unlike the Write-Skill flow — which sends `always-apply` etc. as a
+ * structured field never embedded in the scanned manifest — an uploaded
+ * SKILL.md carries every frontmatter key inline in its YAML block. The
+ * external registry's manifest schema only recognizes name/description, so
+ * without this rewrite any upload using a real, LibreChat-supported field
+ * like `always-apply` would always be rejected as an "unexpected field",
+ * regardless of its value. Parses the uploaded SKILL.md, rebuilds a
+ * scanner-safe manifest (name/description + body only, matching
+ * `buildSkillMarkdown`), and returns the fields that were stripped out so the
+ * caller can still run them through the security-only `scanFrontmatter` pass.
+ * Returns `null` when the content can't be parsed (invalid YAML, no
+ * frontmatter block) — the caller falls back to scanning the content as-is.
+ */
+function stripInternalFrontmatterForScan(content: string): {
+  skillMd: string;
+  frontmatter?: Record<string, unknown>;
+  alwaysApply?: boolean;
+  name: string;
+} | null {
+  const parsed = parseSkillMarkdown(content);
+  if (parsed.parseError) {
+    return null;
+  }
+  const body = extractSkillBody(content);
+  return {
+    skillMd: buildSkillMarkdown({ name: parsed.name, description: parsed.description, body }),
+    frontmatter: parsed.frontmatter,
+    alwaysApply: parsed.alwaysApply,
+    name: parsed.name,
+  };
+}
+
+/**
+ * Locate a `SKILL.md` entry at the archive root or one level deep — mirrors
+ * the discovery rule `handleZip` (import.ts) uses when it later reads the
+ * real archive, so the entry we rewrite here is the same one that flow will
+ * treat as the manifest.
+ */
+function findSkillMdPath(zip: JSZip): string | null {
+  for (const entryPath of Object.keys(zip.files)) {
+    const segments = entryPath.replace(/\\/g, '/').split('/').filter(Boolean);
+    const basename = segments[segments.length - 1];
+    if (basename?.toUpperCase() === SKILL_MD.toUpperCase() && segments.length <= 2) {
+      return entryPath;
+    }
+  }
+  return null;
+}
+
+/**
+ * Rewrite an uploaded archive's SKILL.md to a scanner-safe manifest before
+ * scanning, preserving every other entry (companion scripts, references,
+ * etc.) byte-for-byte so their content still gets fully security-scanned.
+ * Returns `null` when there's no readable/parseable SKILL.md — the caller
+ * falls back to scanning the original archive unchanged.
+ */
+async function stripInternalFrontmatterFromZip(bytes: Uint8Array): Promise<{
+  archive: Uint8Array;
+  frontmatter?: Record<string, unknown>;
+  alwaysApply?: boolean;
+  name: string;
+} | null> {
+  let zip: JSZip;
+  try {
+    zip = await JSZip.loadAsync(bytes);
+  } catch {
+    return null;
+  }
+  const skillMdPath = findSkillMdPath(zip);
+  if (!skillMdPath) {
+    return null;
+  }
+  const content = await zip.file(skillMdPath)?.async('string');
+  if (!content) {
+    return null;
+  }
+  const stripped = stripInternalFrontmatterForScan(content);
+  if (!stripped) {
+    return null;
+  }
+  zip.file(skillMdPath, stripped.skillMd);
+  const archive = await zip.generateAsync({ type: 'uint8array' });
+  return {
+    archive,
+    frontmatter: stripped.frontmatter,
+    alwaysApply: stripped.alwaysApply,
+    name: stripped.name,
+  };
+}
+
+/**
  * Scan an already-built skill archive (the raw zip/.skill a user uploaded on
  * the import flow). Validation gating stays on — an uploaded skill must have a
- * valid SKILL.md manifest.
+ * valid SKILL.md manifest. LibreChat-internal frontmatter fields embedded in
+ * the uploaded SKILL.md (e.g. `always-apply`) are stripped from the scanned
+ * manifest and re-submitted separately as a security-only pass — see
+ * `stripInternalFrontmatterFromZip`.
  */
 export async function scanSkillUpload(params: {
   archive: Uint8Array | Buffer;
@@ -447,12 +568,27 @@ export async function scanSkillUpload(params: {
   }
   const bytes = new Uint8Array(params.archive.length);
   bytes.set(params.archive);
-  await scanArchive(bytes, params.fileName, { token: params.token });
+
+  const stripped = await stripInternalFrontmatterFromZip(bytes);
+  if (!stripped) {
+    await scanArchive(bytes, params.fileName, { token: params.token });
+    return;
+  }
+  await scanArchive(stripped.archive, params.fileName, { token: params.token });
+  await scanFrontmatter(
+    extraFrontmatterFields(stripped.frontmatter),
+    stripped.alwaysApply,
+    stripped.name || params.fileName,
+    params.token,
+  );
 }
 
 /**
  * Scan a raw SKILL.md upload by zipping its content as SKILL.md before sending
- * it to the archive scanner. Validation gating stays on.
+ * it to the archive scanner. Validation gating stays on. LibreChat-internal
+ * frontmatter fields (e.g. `always-apply`) are stripped from the scanned
+ * manifest and re-submitted separately as a security-only pass — see
+ * `stripInternalFrontmatterForScan`.
  */
 export async function scanSkillMarkdown(params: {
   content: string;
@@ -462,8 +598,21 @@ export async function scanSkillMarkdown(params: {
   if (!isSkillScanEnabled()) {
     return;
   }
-  const archive = await buildSkillArchive(params.content);
-  await scanArchive(archive, params.fileName ?? 'SKILL.md.zip', { token: params.token });
+  const fileName = params.fileName ?? 'SKILL.md.zip';
+  const stripped = stripInternalFrontmatterForScan(params.content);
+  if (!stripped) {
+    const archive = await buildSkillArchive(params.content);
+    await scanArchive(archive, fileName, { token: params.token });
+    return;
+  }
+  const archive = await buildSkillArchive(stripped.skillMd);
+  await scanArchive(archive, fileName, { token: params.token });
+  await scanFrontmatter(
+    extraFrontmatterFields(stripped.frontmatter),
+    stripped.alwaysApply,
+    stripped.name || fileName,
+    params.token,
+  );
 }
 
 /**

@@ -7,6 +7,7 @@ import {
   mergeFileConfig,
   fileConfig as defaultFileConfig,
 } from 'librechat-data-provider';
+import type { TSkillWarning } from 'librechat-data-provider';
 import { useGetFileConfig, useImportSkillMutation } from '~/data-provider';
 import { cn, formatSkillScanError } from '~/utils';
 import { useLocalize } from '~/hooks';
@@ -45,7 +46,14 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
 
   const importMutation = useImportSkillMutation({
     onSuccess: (skill) => {
-      showToast({ status: 'success', message: localize('com_ui_skill_created') });
+      const warnings: TSkillWarning[] | undefined = skill.warnings;
+      showToast({
+        status: warnings && warnings.length > 0 ? 'warning' : 'success',
+        message:
+          warnings && warnings.length > 0
+            ? warnings.map((w) => w.message).join('\n')
+            : localize('com_ui_skill_created'),
+      });
       setIsOpen(false);
       navigate(`/skills/${skill._id}`);
     },

@@ -162,7 +162,7 @@ export function validateSkillDescription(description: unknown): ValidationIssue[
       code: 'TOO_SHORT',
       severity: 'warning',
       message:
-        'Short descriptions may cause Claude to miss triggering opportunities — aim for a concrete "when to use this skill" sentence.',
+        'Short descriptions may cause the assistant to miss triggering opportunities — aim for a concrete "when to use this skill" sentence.',
     });
   }
   return issues;

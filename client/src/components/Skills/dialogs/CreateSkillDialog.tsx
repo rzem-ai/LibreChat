@@ -12,7 +12,7 @@ import {
   SKILL_NAME_MAX_LENGTH,
   SKILL_DESCRIPTION_MAX_LENGTH,
 } from 'librechat-data-provider';
-import type { TSkill } from 'librechat-data-provider';
+import type { TSkill, TSkillWarning } from 'librechat-data-provider';
 import { useCreateSkillMutation } from '~/data-provider';
 import { cn, formatSkillScanError } from '~/utils';
 import { useLocalize } from '~/hooks';
@@ -65,7 +65,14 @@ export default function CreateSkillDialog({
 
   const createSkill = useCreateSkillMutation({
     onSuccess: (skill) => {
-      showToast({ status: 'success', message: localize('com_ui_skill_created') });
+      const warnings: TSkillWarning[] | undefined = skill.warnings;
+      showToast({
+        status: warnings && warnings.length > 0 ? 'warning' : 'success',
+        message:
+          warnings && warnings.length > 0
+            ? warnings.map((w) => w.message).join('\n')
+            : localize('com_ui_skill_created'),
+      });
       setIsOpen(false);
       reset();
       if (onCreated) {
