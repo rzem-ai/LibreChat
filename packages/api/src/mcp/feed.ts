@@ -3,7 +3,7 @@ import type { MCPResultSource, MCPSourcesResult } from 'librechat-data-provider'
 import { buildEntitySources } from './entities';
 import { buildReportSources } from './report';
 import { buildAfrSearchSources } from './afr';
-import { stripHtmlTags } from './html';
+import { stripHtmlTags } from './format';
 import { buildKxSources } from './kx';
 
 /** Upper bound on articles extracted from a single feed (feeds are already newest-first). */

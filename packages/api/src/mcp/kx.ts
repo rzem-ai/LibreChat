@@ -1,6 +1,6 @@
 import type { MCPResultSource, MCPSourcesResult } from 'librechat-data-provider';
 
-import { stripHtmlTags, htmlToMarkdownText } from './html';
+import { stripHtmlTags, htmlToMarkdownText } from './format';
 
 /** Upper bound on results extracted from a single KX query response. */
 const MAX_KX_RESULTS = 30;
