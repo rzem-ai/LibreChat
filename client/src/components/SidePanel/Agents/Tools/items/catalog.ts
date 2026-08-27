@@ -156,10 +156,15 @@ export function buildCatalog(inputs: BuildCatalogInputs): AgentItem[] {
       if (server.consumeOnly === true) {
         continue;
       }
+      // Deloitte Custom Change: Display MCPs with name and parent
+      const displayName = server.metadata?.name ?? name;
+      const nameWithParent = server.parentGroup
+        ? `${displayName} - ${server.parentGroup}`
+        : displayName;
       items.push({
         kind: 'mcp',
         id: name,
-        name,
+        name: nameWithParent,
         description: server.metadata?.description ?? '',
         iconKey: 'mcp',
         server,

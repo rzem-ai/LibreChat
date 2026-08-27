@@ -347,6 +347,22 @@ async function handleZip(
   } catch {
     return res.status(400).json({ error: 'Invalid or corrupt archive' });
   }
+
+  // Deloitte Custom Change: Fix to Strip macOS metadata folders injected by Finder's "Compress" before any processing.
+  // This prevents __MACOSX/ resource fork sidecars and .DS_Store files from being stored as skill files or counted toward entry limits.
+  for (const entryPath of Object.keys(zip.files)) {
+    const normalized = entryPath.replace(/\\/g, '/');
+    const basename = path.posix.basename(normalized);
+    if (
+      normalized === '__MACOSX' ||
+      normalized.startsWith('__MACOSX/') ||
+      basename === '.DS_Store' ||
+      basename.startsWith('._')
+    ) {
+      zip.remove(entryPath);
+    }
+  }
+
   const entries = Object.keys(zip.files);
 
   if (entries.length > limits.maxEntries) {
@@ -374,6 +390,10 @@ async function handleZip(
   }
 
   const skillMdEntry = zip.file(skillMdPath);
+  if (skillMdEntry == null) {
+    return res.status(400).json({ error: 'Could not read SKILL.md from archive' });
+  }
+
   const declaredSize =
     (skillMdEntry as unknown as { _data?: { uncompressedSize?: number } })?._data
       ?.uncompressedSize ?? 0;
@@ -382,7 +402,17 @@ async function handleZip(
       .status(400)
       .json({ error: `SKILL.md too large (${Math.round(declaredSize / 1024 / 1024)}MB)` });
   }
-  const skillMdContent = await skillMdEntry?.async('string');
+
+  //Deloitte added readZipEntry to read the SKILL.md file with a hard limit on bytes read,
+  //to prevent zip bombs and other malicious archives from causing memory exhaustion.
+  // This is a security measure to ensure that even if the declared size is small, we don't read more than the allowed limit.
+  const skillMdLimit = Math.min(limits.maxSingleFileBytes, limits.maxDecompressedBytes);
+  const { buffer: skillMdBuffer } = await readZipEntry(skillMdEntry, skillMdLimit);
+  if (skillMdBuffer == null) {
+    return res.status(400).json({ error: 'SKILL.md exceeds maximum file size' });
+  }
+
+  const skillMdContent = skillMdBuffer.toString('utf-8');
   if (!skillMdContent) {
     return res.status(400).json({ error: 'Could not read SKILL.md from archive' });
   }
@@ -608,6 +638,44 @@ async function handleZip(
       errors,
     },
   });
+}
+
+async function readZipEntry(
+  zipEntry: JSZip.JSZipObject,
+  effectiveLimit: number,
+): Promise<{ buffer: Buffer | null; bytesRead: number }> {
+  if (effectiveLimit <= 0) {
+    return { buffer: null, bytesRead: 0 };
+  }
+
+  const chunks: Buffer[] = [];
+  let bytesRead = 0;
+  let exceededLimit = false;
+  const entryStream = zipEntry.nodeStream('nodebuffer');
+  await new Promise<void>((resolve, reject) => {
+    entryStream.on('data', (chunk: Buffer) => {
+      if (exceededLimit) {
+        return;
+      }
+      bytesRead += chunk.length;
+      if (bytesRead > effectiveLimit) {
+        exceededLimit = true;
+        if ('destroy' in entryStream && typeof entryStream.destroy === 'function') {
+          entryStream.destroy();
+        }
+        resolve();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    entryStream.on('end', resolve);
+    entryStream.on('error', reject);
+  });
+
+  return {
+    buffer: exceededLimit ? null : Buffer.concat(chunks),
+    bytesRead,
+  };
 }
 
 const MIME_MAP: Record<string, string> = {

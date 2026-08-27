@@ -4,6 +4,15 @@ branch: 'main'
 serviceAccount:
   name: sa-librechat-prd
 
+nodeSelector:
+  app: myassist
+
+tolerations:
+  - key: sku
+    operator: Equal
+    value: myassist
+    effect: NoSchedule
+
 ingress:
   className: cilium
   host: 'librechat.ctk.au.deloitte.com'
@@ -34,3 +43,10 @@ pods:
       rag-api:
         image:
           tag: 'main'
+
+valkey:
+  image:
+    tag: 'main'
+  persistence:
+    storageClass: 'managed-csi-standard-private'
+  passwordSecretName: 'librechat-valkey-password-prd'

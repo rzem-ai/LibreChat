@@ -416,4 +416,60 @@ describe('createImportHandler', () => {
     );
     expect(deps.createSkill).not.toHaveBeenCalled();
   });
+
+  it('strips __MACOSX, ._* and .DS_Store entries from macOS Finder zips', async () => {
+    const deps = mockImportDeps();
+    const handler = createImportHandler(deps);
+    const res = mockResponse();
+
+    const zip = new JSZip();
+
+    // Level 3 skill: SKILL.md + reference doc + subfolders for scripts, references, and assets
+    zip.file(
+      'skill-name/SKILL.md',
+      '---\nname: mac-skill\ndescription: A macOS-created skill.\n---\n# Body',
+    );
+    zip.file('skill-name/FORMS.md', '# Form-filling guide');
+    zip.file('skill-name/scripts/fill_form.py', 'print("hello")');
+    zip.file('skill-name/references/api-schema.json', '{"api": "schema"}');
+    zip.file('skill-name/assets/template.txt', 'template');
+
+    // .DS_Store files at multiple depths — Finder writes one per folder it opens
+    zip.file('skill-name/.DS_Store', '');
+    zip.file('skill-name/scripts/.DS_Store', '');
+    zip.file('.DS_Store', '');
+
+    // __MACOSX/ mirror — Finder injects one sidecar per file with extended attributes
+    zip.file('__MACOSX/skill-name/._SKILL.md', '');
+    zip.file('__MACOSX/skill-name/._FORMS.md', '');
+    zip.file('__MACOSX/skill-name/scripts/._fill_form.py', '');
+    zip.file('__MACOSX/skill-name/references/._api-schema.json', '');
+    zip.file('__MACOSX/skill-name/assets/._template.txt', '');
+
+    const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+    await handler(mockZipRequest(buffer), res);
+
+    // Import succeeds and only the 4 real Level 3 files are stored (SKILL.md is consumed as body)
+    expect(res.status).toHaveBeenCalledWith(201);
+    const summary = importSummary(res.body);
+    expect(summary.filesProcessed).toBe(4);
+    expect(summary.filesSucceeded).toBe(4);
+    expect(summary.filesFailed).toBe(0);
+
+    // None of the macOS entries should have reached storage
+    expect(deps.upsertSkillFile).toHaveBeenCalledTimes(4);
+    expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+      expect.objectContaining({ relativePath: 'FORMS.md' }),
+    );
+    expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+      expect.objectContaining({ relativePath: 'scripts/fill_form.py' }),
+    );
+    expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+      expect.objectContaining({ relativePath: 'references/api-schema.json' }),
+    );
+    expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+      expect.objectContaining({ relativePath: 'assets/template.txt' }),
+    );
+  });
 });

@@ -1,4 +1,4 @@
-import { removeNullishValues } from 'librechat-data-provider';
+import { extractEnvVariable, removeNullishValues } from 'librechat-data-provider';
 import type { TCustomConfig, TConfigDefaults } from 'librechat-data-provider';
 import type { AppConfig } from '~/types/app';
 import { isMemoryEnabled } from './memory';
@@ -22,6 +22,19 @@ export async function loadDefaultInterface({
   const hasModelSpecs = (config?.modelSpecs?.list?.length ?? 0) > 0;
   const includesAddedEndpoints = (config?.modelSpecs?.addedEndpoints?.length ?? 0) > 0;
 
+  // Deloitte Custom Change: Parse header enablement and title (extract from ENV var)
+  let deloitteHeader = interfaceConfig?.deloitteHeader;
+  if (interfaceConfig?.deloitteHeader) {
+    let { title } = interfaceConfig.deloitteHeader;
+    if (typeof title === 'string') {
+      const vars = title.match(/\${([^}]+)}/g) ?? [];
+      if (vars.length > 0 && vars.every((v) => v === '${APP_TITLE}')) {
+        title = extractEnvVariable(title);
+      }
+    }
+    deloitteHeader = { ...interfaceConfig.deloitteHeader, title };
+  }
+
   const memoryConfig = config?.memory;
   const memoryEnabled = isMemoryEnabled(memoryConfig);
   /** Only disable memories if memory config is present and explicitly disabled */
@@ -34,6 +47,7 @@ export async function loadDefaultInterface({
       (hasModelSpecs ? includesAddedEndpoints : defaults.modelSelect),
     parameters: interfaceConfig?.parameters ?? (hasModelSpecs ? false : defaults.parameters),
     presets: interfaceConfig?.presets ?? (hasModelSpecs ? false : defaults.presets),
+    customDeloitteFeatureFlags: interfaceConfig?.customDeloitteFeatureFlags,
     privacyPolicy: interfaceConfig?.privacyPolicy ?? defaults.privacyPolicy,
     termsOfService: interfaceConfig?.termsOfService ?? defaults.termsOfService,
     mcpServers: interfaceConfig?.mcpServers ?? defaults.mcpServers,
@@ -58,6 +72,7 @@ export async function loadDefaultInterface({
     webSearch: interfaceConfig?.webSearch,
     fileSearch: interfaceConfig?.fileSearch,
     fileCitations: interfaceConfig?.fileCitations,
+    deloitteHeader,
     defaultPinnedTools: interfaceConfig?.defaultPinnedTools,
     peoplePicker: interfaceConfig?.peoplePicker,
     marketplace: interfaceConfig?.marketplace,
