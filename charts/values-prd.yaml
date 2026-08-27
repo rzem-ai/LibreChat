@@ -142,7 +142,7 @@ pods:
           POSTGRES_DB: 'pgdb_librechat_app_prd'
           POSTGRES_USER: 'id-int-librechat-prd'
           POSTGRES_AUTH_TYPE: 'ActiveDirectoryMsi'
-          MANAGED_IDENTITY_CLIENT_ID: '1e6fa20b-2e41-4ae9-9357-171d834bb3b7' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-uat # TODO: Confirm
+          MANAGED_IDENTITY_CLIENT_ID: '1e6fa20b-2e41-4ae9-9357-171d834bb3b7' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-prd
           DB_HOST: 'psql-ctspoke-prd.postgres.database.azure.com'
           DB_PORT: '5432'
           RAG_HOST: '0.0.0.0'
@@ -167,7 +167,7 @@ pods:
           pullPolicy: Always
           tag: 'main'
         env:
-          MEILI_ENV: 'production' # Use production to mimic PROD environment behaviour
+          MEILI_ENV: 'production'
         secrets:
           MEILI_MASTER_KEY: librechat-meili-master-key
         persistence:
