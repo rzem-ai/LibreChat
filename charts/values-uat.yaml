@@ -20,6 +20,8 @@ ingress:
 pods:
   librechat:
     replicas: 1
+    securityContext:
+      fsGroup: 1000
     initContainers:
       llm-gateway-proxy:
         restartPolicy: Always
@@ -73,7 +75,7 @@ pods:
           ENDPOINTS: 'agents,anthropic,bedrock,custom'
           KEY_VAULT_NAME: 'kv-int-librechat-uat'
           MCP_GATEWAY_OBO_SCOPE: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
-          MCP_GATEWAY_TOOLSETS: 'teams,research,news'
+          MCP_GATEWAY_TOOLSETS: 'teams,research,news,kx,desc,gims'
           MCP_GATEWAY_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
           MONGO_DB: 'mdb-librechat-database-uat'
           NODE_ENV: 'production' # Use production to mimic PROD environment behaviour
@@ -85,9 +87,10 @@ pods:
           OPENID_REQUIRED_ROLE: ''
           OPENID_REUSE_TOKENS: 'true'
           OPENID_SCOPE: 'openid profile email offline_access https://myassist-uat.ctk.au.deloitte.com/access_user'
+          # RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
+          # RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
           RAG_API_URL: 'http://127.0.0.1:8000'
-          RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
-          RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
+          RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
           RAG_PORT: '8000'
           RAG_USE_FULL_CONTEXT: 'true'
@@ -123,7 +126,7 @@ pods:
           DEBUG_CONSOLE: 'true'
           AGENT_DEBUG_LOGGING: 'true'
         secrets:
-          AZURE_API_KEY: librechat-azure-api-key
+          # AZURE_API_KEY: librechat-azure-api-key
           MONGO_URI: librechat-uat-mdb-connection-string
           JWT_SECRET: librechat-jwt-secret-uat
           JWT_REFRESH_SECRET: librechat-jwt-refresh-secret-uat
@@ -131,7 +134,7 @@ pods:
           CREDS_IV: librechat-creds-iv-uat
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-uat
           OPENID_SESSION_SECRET: librechat-openid-session-secret-uat
-          RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          # RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
           MEILI_MASTER_KEY: librechat-meili-master-key-uat
           # ClearTrack Code Interpreter (ea-code-runtime) — JWK signing key
           CODEAPI_JWT_PRIVATE_JWK_JSON: librechat-codeapi-jwt-private-jwk-uat
@@ -155,13 +158,14 @@ pods:
           DB_PORT: '5432'
           RAG_HOST: '0.0.0.0'
           RAG_PORT: '8000'
-          EMBEDDINGS_PROVIDER: 'azure'
-          RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
-          RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
+          EMBEDDINGS_PROVIDER: 'openai'
+          # RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
+          # RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
+          RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
         secrets:
-          AZURE_OPENAI_API_KEY: librechat-azure-api-key
-          RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          # AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          # RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
           JWT_SECRET: librechat-jwt-secret-uat
         service:
           enabled: true
@@ -183,9 +187,9 @@ pods:
           size: 10Gi
           accessModes:
             - ReadWriteOnce
-          name: "meilisearch-data"
+          name: 'meilisearch-data'
           mountPath: /meili_data
-          storageClass: "managed-csi-standard-private"
+          storageClass: 'managed-csi-standard-private'
 
 valkey:
   image:
