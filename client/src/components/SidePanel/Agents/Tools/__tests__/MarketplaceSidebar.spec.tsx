@@ -5,6 +5,7 @@ import MarketplaceSidebar from '../MarketplaceSidebar';
 
 let mockHasMcpCreateAccess = true;
 let mockCapabilities: string[] = ['actions'];
+let mockCreateActionsFlag: boolean | undefined;
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string) => key,
@@ -12,7 +13,19 @@ jest.mock('~/hooks', () => ({
 }));
 
 jest.mock('~/Providers', () => ({
-  useAgentPanelContext: () => ({ agentsConfig: { capabilities: mockCapabilities } }),
+  useAgentPanelContext: () => ({
+    agentsConfig: { capabilities: mockCapabilities },
+    startupConfig:
+      mockCreateActionsFlag === undefined
+        ? undefined
+        : {
+            interface: {
+              customDeloitteFeatureFlags: {
+                createActions: mockCreateActionsFlag,
+              },
+            },
+          },
+  }),
 }));
 
 jest.mock('@ariakit/react/menu', () => ({
@@ -64,6 +77,7 @@ describe('MarketplaceSidebar', () => {
   beforeEach(() => {
     mockHasMcpCreateAccess = true;
     mockCapabilities = ['actions'];
+    mockCreateActionsFlag = undefined;
   });
 
   test('shows the All entry with total count', () => {
@@ -134,6 +148,14 @@ describe('MarketplaceSidebar', () => {
 
     test('hides the Actions entry when the actions capability is disabled', () => {
       mockCapabilities = [];
+      render(<MarketplaceSidebar {...defaultProps} onCreateNew={jest.fn()} />);
+      expect(screen.getAllByTestId('create-item').map((el) => el.textContent)).toEqual([
+        'com_ui_tools_kind_mcp',
+      ]);
+    });
+
+    test('hides the Actions entry when createActions is disabled', () => {
+      mockCreateActionsFlag = false;
       render(<MarketplaceSidebar {...defaultProps} onCreateNew={jest.fn()} />);
       expect(screen.getAllByTestId('create-item').map((el) => el.textContent)).toEqual([
         'com_ui_tools_kind_mcp',
