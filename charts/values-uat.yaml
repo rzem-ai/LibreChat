@@ -20,13 +20,15 @@ ingress:
 pods:
   librechat:
     replicas: 1
+    securityContext:
+      fsGroup: 1000
     initContainers:
       llm-gateway-proxy:
         restartPolicy: Always
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'uat@sha256:142992cca882db8f069991b840cd7406ccdab0c3283feb5578f48460b90aa8b6'
+          tag: 'uat'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -45,11 +47,11 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'uat@sha256:f5b7be6952946c8aabffe73c76b6a991b5fc141ea0a9ed014dcb132e27b94372'
+          tag: 'uat'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-uat.ctk.au.deloitte.com'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
-          ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7'
+          ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7,claude-sonnet-5,claude-opus-4-8'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
           APP_TITLE: 'MyAssist 2.0 (UAT)'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
@@ -59,11 +61,11 @@ pods:
           DOMAIN_CLIENT: 'https://myassist-uat.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://myassist-uat.ctk.au.deloitte.com'
           EMBEDDINGS_MODEL: 'text-embedding-3-small'
-          EMBEDDINGS_PROVIDER: 'azure'
+          EMBEDDINGS_PROVIDER: 'openai'
           ENDPOINTS: 'agents,anthropic,custom'
           KEY_VAULT_NAME: 'kv-int-librechat-uat'
           MCP_GATEWAY_OBO_SCOPE: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
-          MCP_GATEWAY_TOOLSETS: 'teams,research,news'
+          MCP_GATEWAY_TOOLSETS: 'teams,research,news,kx,desc,gims'
           MCP_GATEWAY_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
           MONGO_DB: 'mdb-librechat-database-uat'
           NODE_ENV: 'production' # Use production to mimic PROD environment behaviour
@@ -75,9 +77,10 @@ pods:
           OPENID_REQUIRED_ROLE: ''
           OPENID_REUSE_TOKENS: 'true'
           OPENID_SCOPE: 'openid profile email offline_access https://myassist-uat.ctk.au.deloitte.com/access_user'
+          # RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
+          # RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
           RAG_API_URL: 'http://127.0.0.1:8000'
-          RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
-          RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
+          RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
           RAG_PORT: '8000'
           RAG_USE_FULL_CONTEXT: 'true'
@@ -113,7 +116,7 @@ pods:
           DEBUG_CONSOLE: 'true'
           AGENT_DEBUG_LOGGING: 'true'
         secrets:
-          AZURE_API_KEY: librechat-azure-api-key
+          # AZURE_API_KEY: librechat-azure-api-key
           MONGO_URI: librechat-uat-mdb-connection-string
           JWT_SECRET: librechat-jwt-secret-uat
           JWT_REFRESH_SECRET: librechat-jwt-refresh-secret-uat
@@ -121,7 +124,7 @@ pods:
           CREDS_IV: librechat-creds-iv-uat
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-uat
           OPENID_SESSION_SECRET: librechat-openid-session-secret-uat
-          RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          # RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
           MEILI_MASTER_KEY: librechat-meili-master-key-uat
           # ClearTrack Code Interpreter (ea-code-runtime) — JWK signing key
           CODEAPI_JWT_PRIVATE_JWK_JSON: librechat-codeapi-jwt-private-jwk-uat
@@ -132,7 +135,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'uat@sha256:be3615f0a0badd0f0161ba00610e713db0c5838c08c3df4e56b3a7c494b1362a'
+          tag: 'uat'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -145,13 +148,14 @@ pods:
           DB_PORT: '5432'
           RAG_HOST: '0.0.0.0'
           RAG_PORT: '8000'
-          EMBEDDINGS_PROVIDER: 'azure'
-          RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
-          RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
+          EMBEDDINGS_PROVIDER: 'openai'
+          # RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
+          # RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
+          RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
         secrets:
-          AZURE_OPENAI_API_KEY: librechat-azure-api-key
-          RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          # AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          # RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
           JWT_SECRET: librechat-jwt-secret-uat
         service:
           enabled: true
@@ -163,7 +167,7 @@ pods:
       meilisearch:
         image:
           pullPolicy: Always
-          tag: 'uat@sha256:cc50c71683cd3ea936c785c544491346e630d755fea223469f2b29d110e7c428'
+          tag: 'uat'
         env:
           MEILI_ENV: 'production' # Use production to mimic PROD environment behaviour
         secrets:
@@ -173,6 +177,13 @@ pods:
           size: 10Gi
           accessModes:
             - ReadWriteOnce
-          name: "meilisearch-data"
+          name: 'meilisearch-data'
           mountPath: /meili_data
-          storageClass: "managed-csi-standard-private"
+          storageClass: 'managed-csi-standard-private'
+
+valkey:
+  image:
+    tag: 'uat'
+  persistence:
+    storageClass: 'managed-csi-standard-private'
+  passwordSecretName: 'librechat-valkey-password-uat'

@@ -185,7 +185,10 @@ const startServer = async () => {
     });
     res.vary(QUERY_DEVTOOLS_HEADER);
 
-    const lang = req.cookies.lang || req.headers['accept-language']?.split(',')[0] || 'en-US';
+    // Deloitte - very quick fix to prevent XSS, seperate issue will be created for the long term fix
+    // e.g only enumerate the languages we support and use that instead of the raw value from the header or cookie
+    // const lang = req.cookies.lang || req.headers['accept-language']?.split(',')[0] || 'en-US';
+    const lang = 'en-US';
     const saneLang = lang.replace(/"/g, '&quot;');
     let updatedIndexHtml = indexHTML.replace(/lang="en-US"/g, `lang="${saneLang}"`);
     updatedIndexHtml = maybeInjectQueryDevtoolsBootstrap(updatedIndexHtml, req);

@@ -168,6 +168,16 @@ spec:
             - port: "443"
               protocol: TCP
 
+    # ── In-cluster Valkey ──────────────────────────────────────────
+    - toEndpoints:
+        - matchLabels:
+            app: librechat-valkey
+            component: redis
+      toPorts:
+        - ports:
+            - port: "{{ .Values.valkey.port }}"
+              protocol: TCP
+
 
 ---
 # =====================================================================
