@@ -4,7 +4,7 @@ serviceAccount:
   name: sa-librechat-prd
 ingress:
   className: cilium
-  host: 'librechat.ctk.au.deloitte.com'
+  host: 'myassist.ctk.au.deloitte.com'
   annotations:
     ingress.cilium.io/loadbalancer-mode: "shared"
     ingress.cilium.io/force-https: "true"
@@ -13,7 +13,7 @@ ingress:
     - secretName: ctk-au-deloitte-com
       secretStoreName: external-secret-store
       hosts:
-        - 'librechat.ctk.au.deloitte.com'
+        - 'myassist.ctk.au.deloitte.com'
 pods:
   frontend:
     replicas: 1
