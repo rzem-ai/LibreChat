@@ -172,10 +172,49 @@ endpoints:
           - 'gpt-5-chat'
           - 'gpt-5-mini'
           - 'gpt-5-nano'
+          - 'gpt-56-luna'
+          - 'gpt-56-terra'
+          - 'gpt-56-sol'
         fetch: false
       titleConvo: true
       titleModel: 'gpt-5-nano'
       modelDisplayLabel: 'Azure US'
+      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
+      headers:
+        x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
+        Content-Type: 'application/json'
+
+    # --- Azure Global (Foundry) ---
+    - name: 'Azure Global'
+      apiKey: 'dummy'
+      baseURL: '${BASE_URL_AZURE_GLOBAL}'
+      models:
+        default:
+          - 'gpt-56-luna'
+          - 'gpt-56-terra'
+          - 'gpt-56-sol'
+        fetch: false
+      titleConvo: true
+      titleModel: 'gpt-56-luna'
+      modelDisplayLabel: 'Azure Global'
+      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
+      headers:
+        x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
+        Content-Type: 'application/json'
+
+    # --- Azure Foundry AU ---
+    - name: 'Azure Foundry AU'
+      apiKey: 'dummy'
+      baseURL: '${BASE_URL_AZURE_FOUNDRY_AU}'
+      models:
+        default:
+          - 'gpt-56-luna'
+          - 'gpt-56-terra'
+          - 'gpt-56-sol'
+        fetch: false
+      titleConvo: true
+      titleModel: 'gpt-56-luna'
+      modelDisplayLabel: 'Azure Foundry AU'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
@@ -198,6 +237,13 @@ endpoints:
       headers:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
         Content-Type: 'application/json'
+
+
+  # Anthropic AU models use Bedrock's native API and inference-profile IDs.
+  bedrock:
+    models:
+      - 'au.anthropic.claude-sonnet-4-6'
+      - 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
 
 modelSpecs:
   # enforce: true would block requests without a spec name — this breaks the Agents endpoint
@@ -336,6 +382,78 @@ modelSpecs:
         model: 'gpt-5-nano'
         promptPrefix: *deloitteSystemPrompt
 
+    - name: 'azure-us-gpt-56-luna'
+      label: 'Azure US gpt-56-luna'
+      group: 'Azure US'
+      preset:
+        endpoint: 'Azure US'
+        model: 'gpt-56-luna'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'azure-us-gpt-56-terra'
+      label: 'Azure US gpt-56-terra'
+      group: 'Azure US'
+      preset:
+        endpoint: 'Azure US'
+        model: 'gpt-56-terra'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'azure-us-gpt-56-sol'
+      label: 'Azure US gpt-56-sol'
+      group: 'Azure US'
+      preset:
+        endpoint: 'Azure US'
+        model: 'gpt-56-sol'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'azure-global-gpt-56-luna'
+      label: 'Azure Global gpt-56-luna'
+      group: 'Azure Global'
+      preset:
+        endpoint: 'Azure Global'
+        model: 'gpt-56-luna'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'azure-global-gpt-56-terra'
+      label: 'Azure Global gpt-56-terra'
+      group: 'Azure Global'
+      preset:
+        endpoint: 'Azure Global'
+        model: 'gpt-56-terra'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'azure-global-gpt-56-sol'
+      label: 'Azure Global gpt-56-sol'
+      group: 'Azure Global'
+      preset:
+        endpoint: 'Azure Global'
+        model: 'gpt-56-sol'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'azure-foundry-au-gpt-56-luna'
+      label: 'Azure Foundry AU gpt-56-luna'
+      group: 'Azure Foundry AU'
+      preset:
+        endpoint: 'Azure Foundry AU'
+        model: 'gpt-56-luna'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'azure-foundry-au-gpt-56-terra'
+      label: 'Azure Foundry AU gpt-56-terra'
+      group: 'Azure Foundry AU'
+      preset:
+        endpoint: 'Azure Foundry AU'
+        model: 'gpt-56-terra'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'azure-foundry-au-gpt-56-sol'
+      label: 'Azure Foundry AU gpt-56-sol'
+      group: 'Azure Foundry AU'
+      preset:
+        endpoint: 'Azure Foundry AU'
+        model: 'gpt-56-sol'
+        promptPrefix: *deloitteSystemPrompt
+
     - name: 'vertexai-us-gemini-2-5-flash'
       label: 'VertexAI US gemini-2.5-flash'
       group: 'VertexAI US'
@@ -414,6 +532,22 @@ modelSpecs:
       preset:
         endpoint: 'anthropic'
         model: 'claude-opus-4-8'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'anthropic-au-claude-sonnet-4-6'
+      label: 'Anthropic AU claude-sonnet-4-6'
+      group: 'Anthropic AU'
+      preset:
+        endpoint: 'bedrock'
+        model: 'au.anthropic.claude-sonnet-4-6'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'anthropic-au-claude-haiku-4-5'
+      label: 'Anthropic AU claude-haiku-4-5'
+      group: 'Anthropic AU'
+      preset:
+        endpoint: 'bedrock'
+        model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
         promptPrefix: *deloitteSystemPrompt
 
 # MCP Servers configuration

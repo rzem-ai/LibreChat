@@ -30,7 +30,11 @@ type ParsedBedrockUserCredentials = Partial<Record<UserCredentialKey, UserCreden
 
 function getBedrockProxyTarget(region?: string, reverseProxy?: string): string | undefined {
   const trimmedReverseProxy = reverseProxy?.trim();
-  if (trimmedReverseProxy) return `https://${trimmedReverseProxy}`;
+  if (trimmedReverseProxy) {
+    return /^https?:\/\//.test(trimmedReverseProxy)
+      ? trimmedReverseProxy
+      : `https://${trimmedReverseProxy}`;
+  }
 
   const trimmedRegion = region?.trim();
   if (!trimmedRegion) return undefined;
@@ -126,7 +130,9 @@ export async function initializeBedrock({
     BEDROCK_AWS_PROFILE,
     BEDROCK_AWS_BEARER_TOKEN,
     BEDROCK_REVERSE_PROXY,
+    BEDROCK_GATEWAY_URL,
     BEDROCK_AWS_DEFAULT_REGION,
+    LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION,
   } = process.env;
 
   const { key: expiresAt } = req.body;
@@ -268,7 +274,12 @@ export async function initializeBedrock({
   const proxyAgent = getHttpsProxyAgent(
     getBedrockProxyTarget(bedrockRegion, BEDROCK_REVERSE_PROXY),
   );
-  if (proxyAgent || hasBearerToken) {
+  if (
+    proxyAgent ||
+    hasBearerToken ||
+    BEDROCK_GATEWAY_URL ||
+    (LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION && BEDROCK_REVERSE_PROXY)
+  ) {
     const credentialProvider =
       !hasCompleteCredentials && !hasBearerToken && BEDROCK_AWS_PROFILE
         ? fromNodeProviderChain({ profile: BEDROCK_AWS_PROFILE })
@@ -302,11 +313,22 @@ export async function initializeBedrock({
       });
     }
 
-    if (BEDROCK_REVERSE_PROXY) {
-      customClientConfig.endpoint = `https://${BEDROCK_REVERSE_PROXY}`;
+    if (BEDROCK_GATEWAY_URL) {
+      customClientConfig.endpoint = BEDROCK_GATEWAY_URL;
+    } else if (BEDROCK_REVERSE_PROXY) {
+      customClientConfig.endpoint = getBedrockProxyTarget(undefined, BEDROCK_REVERSE_PROXY);
     }
 
     const customClient = new BedrockRuntimeClient(customClientConfig);
+    if (LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION) {
+      customClient.middlewareStack.add(
+        (next) => async (args) => {
+          args.request.headers['x-id-token'] = LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION;
+          return next(args);
+        },
+        { step: 'build', name: 'llmGatewayIdentityToken' },
+      );
+    }
 
     llmConfig.client = customClient;
   } else {
