@@ -1341,6 +1341,8 @@ const mcpServersSchema = z
     share: z.boolean().optional(),
     public: z.boolean().optional(),
     configureObo: z.boolean().optional(),
+    /** Parent brand/grouping name shown as `${title} - ${parentGroup}` in the Tool Library, e.g. 'ClearTrack MCP'. */
+    parentGroup: z.string().optional(),
     trustCheckbox: z
       .object({
         label: localizedStringSchema.optional(),

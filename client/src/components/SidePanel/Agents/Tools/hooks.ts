@@ -15,7 +15,7 @@ import {
 import type { TSkillSummary } from 'librechat-data-provider';
 import type { AgentForm, ExtendedFile } from '~/common';
 import type { AgentItem } from './items/types';
-import { useVerifyAgentToolAuth, useGetAgentFiles } from '~/data-provider';
+import { useVerifyAgentToolAuth, useGetAgentFiles, useGetStartupConfig } from '~/data-provider';
 import { useLocalize, useHasAccess, useHasMemoryAccess } from '~/hooks';
 import { useFileMapContext, useAgentPanelContext } from '~/Providers';
 import { deriveSelectedItems } from './items/selectors';
@@ -166,6 +166,8 @@ export function useAgentItems({
   const showMemory = useShowMemory();
   const webSearchUserProvided = useWebSearchUserProvided();
   const builtinAuthMap = useBuiltinAuthMap();
+  const { data: startupConfig } = useGetStartupConfig();
+  const mcpParentGroup = startupConfig?.interface?.mcpServers?.parentGroup;
 
   const toolsField = useWatch({ control, name: 'tools' });
   const skillsWatch = useWatch({ control, name: 'skills' });
@@ -195,6 +197,7 @@ export function useAgentItems({
         showMemory,
         webSearchUserProvided,
         builtinAuthMap,
+        mcpParentGroup,
       }),
     [
       agentsConfig,
@@ -207,6 +210,7 @@ export function useAgentItems({
       showMemory,
       webSearchUserProvided,
       builtinAuthMap,
+      mcpParentGroup,
     ],
   );
 

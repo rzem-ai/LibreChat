@@ -6,7 +6,6 @@ includedTools:
   - 'file_search'
   - 'execute_code'
   - 'artifacts'
-  - 'cleartrack-mcp-gateway-teams'
   - 'cleartrack-mcp-gateway-research'
   - 'cleartrack-mcp-gateway-news'
   - 'cleartrack-mcp-gateway-kx'
@@ -44,6 +43,7 @@ interface:
 
   mcpServers:
     create: false # Set to false to disable creating new MCP servers via the Agent Builder
+    parentGroup: 'ClearTrack MCP' # Shown as "<title> - ClearTrack MCP" in the Tool Library
 
   memories: true # Set to true to enable users to edit memories via UI
 
