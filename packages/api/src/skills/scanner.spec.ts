@@ -122,7 +122,11 @@ describe('skill scanner', () => {
         scan: {
           is_safe: true,
           findings: [
-            { severity: 'critical', description: 'exec() call detected', rule_id: 'DANGEROUS_EXEC' },
+            {
+              severity: 'critical',
+              description: 'exec() call detected',
+              rule_id: 'DANGEROUS_EXEC',
+            },
           ],
         },
       }),
@@ -198,7 +202,9 @@ describe('skill scanner', () => {
   });
 
   it('blocks with a generic message on a network failure', async () => {
-    global.fetch = jest.fn().mockRejectedValue(new Error('ECONNREFUSED')) as unknown as typeof fetch;
+    global.fetch = jest
+      .fn()
+      .mockRejectedValue(new Error('ECONNREFUSED')) as unknown as typeof fetch;
 
     await expect(upload()).rejects.toMatchObject({
       statusCode: 422,
@@ -217,5 +223,50 @@ describe('skill scanner', () => {
     await expect(
       scanSkillFileUpload({ fileName: 'script.sh', content: Buffer.from('echo hi') }),
     ).resolves.toBeUndefined();
+  });
+
+  describe('Authorization header', () => {
+    function passingResponse(): Response {
+      return jsonResponse({
+        validation: { passed: true, problems: [] },
+        scan: { is_safe: true, findings: [] },
+      });
+    }
+
+    it('omits Authorization when neither a token param nor the env var is set', async () => {
+      const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
+      global.fetch = fetchSpy as unknown as typeof fetch;
+
+      await upload();
+
+      const [, init] = fetchSpy.mock.calls[0];
+      expect(init.headers.Authorization).toBeUndefined();
+    });
+
+    it('uses the OBO-derived token param when present', async () => {
+      const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
+      global.fetch = fetchSpy as unknown as typeof fetch;
+      process.env.SKILL_SCANNER_BEARER_TOKEN = 'static-fallback-token';
+
+      await scanSkillUpload({
+        archive: new Uint8Array([1, 2, 3]),
+        fileName: 'skill.zip',
+        token: 'obo-token',
+      });
+
+      const [, init] = fetchSpy.mock.calls[0];
+      expect(init.headers.Authorization).toBe('Bearer obo-token');
+    });
+
+    it('falls back to SKILL_SCANNER_BEARER_TOKEN when no token param is passed', async () => {
+      const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
+      global.fetch = fetchSpy as unknown as typeof fetch;
+      process.env.SKILL_SCANNER_BEARER_TOKEN = 'static-fallback-token';
+
+      await upload();
+
+      const [, init] = fetchSpy.mock.calls[0];
+      expect(init.headers.Authorization).toBe('Bearer static-fallback-token');
+    });
   });
 });

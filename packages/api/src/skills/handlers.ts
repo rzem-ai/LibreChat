@@ -113,6 +113,12 @@ export interface SkillsHandlersDeps {
 
   /** ObjectId validation helper from data-schemas. */
   isValidObjectIdString: (value: unknown) => boolean;
+
+  /**
+   * Resolves an OBO-derived skill scanner token for the requesting user, or
+   * `undefined` to fall back to the static `SKILL_SCANNER_BEARER_TOKEN` env var.
+   */
+  resolveScannerToken: (user: ServerRequest['user']) => Promise<string | undefined>;
 }
 
 /**
@@ -297,6 +303,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
     hasPublicPermission,
     grantPermission,
     isValidObjectIdString,
+    resolveScannerToken,
   } = deps;
 
   /** O(1) public check for a single skill (avoids fetching all public IDs). */
@@ -385,12 +392,14 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       const authorName = user.name ?? user.username ?? 'Unknown';
 
       try {
+        const scannerToken = await resolveScannerToken(user);
         await scanSkillOnCreate({
           name: body.name,
           description: body.description,
           body: body.body,
           frontmatter: body.frontmatter as Record<string, unknown> | undefined,
           alwaysApply: body.alwaysApply,
+          token: scannerToken,
         });
       } catch (error) {
         if (isSkillScanError(error)) {
@@ -534,6 +543,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       }
 
       try {
+        const scannerToken = await resolveScannerToken(req.user);
         await scanSkillOnUpdate({
           name: update.name ?? currentSkill.name,
           description: update.description ?? currentSkill.description,
@@ -542,6 +552,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
             | Record<string, unknown>
             | undefined,
           alwaysApply: update.alwaysApply ?? currentSkill.alwaysApply,
+          token: scannerToken,
         });
       } catch (error) {
         if (isSkillScanError(error)) {

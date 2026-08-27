@@ -179,11 +179,7 @@ function toIssues(result: SkillScanResult | undefined): SkillScanIssue[] {
   return [{ message: fallbackMessage }];
 }
 
-function buildSkillMarkdown(params: {
-  name: string;
-  description: string;
-  body?: string;
-}): string {
+function buildSkillMarkdown(params: { name: string; description: string; body?: string }): string {
   // Only include fields the external registry allows in its frontmatter schema.
   // LibreChat-internal fields (e.g. always-apply) must be omitted or the
   // scanner will reject the content with an "Unexpected fields" error — they're
@@ -247,13 +243,17 @@ async function scanFrontmatter(
   frontmatter: Record<string, unknown> | undefined,
   alwaysApply: boolean | undefined,
   fileNamePrefix: string,
+  token: string | undefined,
 ): Promise<void> {
   const text = serializeFrontmatterForScan(frontmatter, alwaysApply);
   if (!text) {
     return;
   }
   const archive = await buildSingleFileArchive('frontmatter.txt', Buffer.from(text, 'utf8'));
-  await scanArchive(archive, `${fileNamePrefix}.frontmatter.zip`, { requireValidation: false });
+  await scanArchive(archive, `${fileNamePrefix}.frontmatter.zip`, {
+    requireValidation: false,
+    token,
+  });
 }
 
 export function isSkillScanError(error: unknown): error is SkillScanError {
@@ -262,8 +262,7 @@ export function isSkillScanError(error: unknown): error is SkillScanError {
 
 export function isSkillScanEnabled(): boolean {
   return (
-    typeof process.env.SKILL_SCANNER_URL === 'string' &&
-    process.env.SKILL_SCANNER_URL.length > 0
+    typeof process.env.SKILL_SCANNER_URL === 'string' && process.env.SKILL_SCANNER_URL.length > 0
   );
 }
 
@@ -274,6 +273,12 @@ type ScanArchiveOptions = {
    * findings gate the request.
    */
   requireValidation?: boolean;
+  /**
+   * Bearer token to send with the scan request. Callers pass an OBO-derived,
+   * user-scoped token when available; falls back to `SKILL_SCANNER_BEARER_TOKEN`
+   * when omitted (e.g. non-OpenID users, or before OBO admin consent is granted).
+   */
+  token?: string;
 };
 
 /**
@@ -292,7 +297,7 @@ async function scanArchive(
   }
 
   const requireValidation = options.requireValidation ?? true;
-  const token = process.env.SKILL_SCANNER_BEARER_TOKEN;
+  const token = options.token ?? process.env.SKILL_SCANNER_BEARER_TOKEN;
   const timeoutMs = parseTimeout(process.env.SKILL_SCANNER_TIMEOUT_MS);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -347,11 +352,7 @@ async function scanArchive(
     // Block if any gate trips: HTTP error, a failed manifest validation (only
     // when we require one AND the scanner reported problems), an explicit unsafe
     // verdict, or a finding at/above the configured severity threshold.
-    const failed =
-      !response.ok ||
-      validationFailed ||
-      isSafe === false ||
-      findings.length > 0;
+    const failed = !response.ok || validationFailed || isSafe === false || findings.length > 0;
 
     logger.info(
       `[skillScanner] "${fileName}" -> http=${response.status} validationPassed=${validationPassed} ` +
@@ -399,14 +400,15 @@ export async function scanSkillOnCreate(params: {
   body?: string;
   frontmatter?: Record<string, unknown>;
   alwaysApply?: boolean;
+  token?: string;
 }): Promise<void> {
   if (!isSkillScanEnabled()) {
     return;
   }
   const skillMd = buildSkillMarkdown(params);
   const archive = await buildSkillArchive(skillMd);
-  await scanArchive(archive, `${params.name}.skill`);
-  await scanFrontmatter(params.frontmatter, params.alwaysApply, params.name);
+  await scanArchive(archive, `${params.name}.skill`, { token: params.token });
+  await scanFrontmatter(params.frontmatter, params.alwaysApply, params.name, params.token);
 }
 
 /**
@@ -419,14 +421,15 @@ export async function scanSkillOnUpdate(params: {
   body?: string;
   frontmatter?: Record<string, unknown>;
   alwaysApply?: boolean;
+  token?: string;
 }): Promise<void> {
   if (!isSkillScanEnabled()) {
     return;
   }
   const skillMd = buildSkillMarkdown(params);
   const archive = await buildSkillArchive(skillMd);
-  await scanArchive(archive, `${params.name}.skill`);
-  await scanFrontmatter(params.frontmatter, params.alwaysApply, params.name);
+  await scanArchive(archive, `${params.name}.skill`, { token: params.token });
+  await scanFrontmatter(params.frontmatter, params.alwaysApply, params.name, params.token);
 }
 
 /**
@@ -437,13 +440,14 @@ export async function scanSkillOnUpdate(params: {
 export async function scanSkillUpload(params: {
   archive: Uint8Array | Buffer;
   fileName: string;
+  token?: string;
 }): Promise<void> {
   if (!isSkillScanEnabled()) {
     return;
   }
   const bytes = new Uint8Array(params.archive.length);
   bytes.set(params.archive);
-  await scanArchive(bytes, params.fileName);
+  await scanArchive(bytes, params.fileName, { token: params.token });
 }
 
 /**
@@ -453,12 +457,13 @@ export async function scanSkillUpload(params: {
 export async function scanSkillMarkdown(params: {
   content: string;
   fileName?: string;
+  token?: string;
 }): Promise<void> {
   if (!isSkillScanEnabled()) {
     return;
   }
   const archive = await buildSkillArchive(params.content);
-  await scanArchive(archive, params.fileName ?? 'SKILL.md.zip');
+  await scanArchive(archive, params.fileName ?? 'SKILL.md.zip', { token: params.token });
 }
 
 /**
@@ -469,10 +474,14 @@ export async function scanSkillMarkdown(params: {
 export async function scanSkillFileUpload(params: {
   fileName: string;
   content: Uint8Array | Buffer;
+  token?: string;
 }): Promise<void> {
   if (!isSkillScanEnabled()) {
     return;
   }
   const archive = await buildSingleFileArchive(params.fileName, params.content);
-  await scanArchive(archive, `${params.fileName}.zip`, { requireValidation: false });
+  await scanArchive(archive, `${params.fileName}.zip`, {
+    requireValidation: false,
+    token: params.token,
+  });
 }

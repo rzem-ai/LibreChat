@@ -38,6 +38,7 @@ const {
   grantPermission,
 } = require('~/server/services/PermissionService');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
+const { resolveSkillScannerToken } = require('~/server/services/SkillScannerTokenService');
 const { createFileLimiters } = require('~/server/middleware/limiters/uploadLimiters');
 const { maybeRunGitHubSkillSyncForRequest } = require('~/server/services/Skills/sync');
 const configMiddleware = require('~/server/middleware/config/app');
@@ -140,6 +141,7 @@ const handlers = createSkillsHandlers({
       : hasPublicPermission(params),
   grantPermission,
   isValidObjectIdString,
+  resolveScannerToken: resolveSkillScannerToken,
 });
 
 // ---------------------------------------------------------------------------
@@ -184,6 +186,7 @@ const importHandler = createImportHandler({
     return Promise.resolve();
   },
   grantPermission,
+  resolveScannerToken: resolveSkillScannerToken,
 });
 
 // ---------------------------------------------------------------------------
@@ -219,7 +222,12 @@ async function uploadFileHandler(req, res) {
     // Look up existing file before saving — needed to clean up old blob on replace
     const existingFile = await getSkillFileByPath(skillId, relativePath);
 
-    await scanSkillFileUpload({ fileName: file.originalname, content: file.buffer });
+    const scannerToken = await resolveSkillScannerToken(req.user);
+    await scanSkillFileUpload({
+      fileName: file.originalname,
+      content: file.buffer,
+      token: scannerToken,
+    });
 
     const fileId = crypto.randomUUID();
     const filename = file.originalname;

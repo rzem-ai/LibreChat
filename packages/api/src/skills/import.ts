@@ -130,6 +130,12 @@ export interface ImportSkillDeps {
     accessRoleId: string;
     grantedBy: string;
   }) => Promise<unknown>;
+
+  /**
+   * Resolves an OBO-derived skill scanner token for the requesting user, or
+   * `undefined` to fall back to the static `SKILL_SCANNER_BEARER_TOKEN` env var.
+   */
+  resolveScannerToken: (user: ServerRequest['user']) => Promise<string | undefined>;
 }
 
 interface ServerRequest extends Request {
@@ -140,6 +146,8 @@ interface ServerRequest extends Request {
     name?: string;
     username?: string;
     tenantId?: string;
+    openidId?: string;
+    federatedTokens?: { access_token?: string };
   };
   file?: Express.Multer.File;
 }
@@ -161,17 +169,23 @@ export function createImportHandler(deps: ImportSkillDeps) {
     const ext = path.extname(file.originalname).toLowerCase();
 
     try {
+      const scannerToken = await deps.resolveScannerToken(req.user);
       if (ext === '.md') {
         // Deloitte custom feature: scan skills
         await scanSkillMarkdown({
           content: file.buffer.toString('utf-8'),
           fileName: `${file.originalname}.zip`,
+          token: scannerToken,
         });
         return await handleMarkdown(req, res, deps, file);
       }
       if (ext === '.zip' || ext === '.skill') {
         // Deloitte custom feature: scan skills
-        await scanSkillUpload({ archive: file.buffer, fileName: file.originalname });
+        await scanSkillUpload({
+          archive: file.buffer,
+          fileName: file.originalname,
+          token: scannerToken,
+        });
         return await handleZip(req, res, deps, file);
       }
       return res.status(400).json({ error: `Unsupported file type: ${ext}` });
