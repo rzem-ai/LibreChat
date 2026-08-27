@@ -89,7 +89,7 @@ const Menu: React.FC<MenuProps> = ({
       unmountOnHide={unmountOnHide}
       preserveTabOrder={preserveTabOrder}
       style={{ zIndex, ...style }}
-      className={cn('popover-ui [pointer-events:auto]', className)}
+      className={cn('popover-ui [pointer-events:auto]', className)} // Deloitte Custom Change: Add pointer-events override
       {...props}
     >
       {items
