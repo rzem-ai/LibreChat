@@ -79,7 +79,7 @@ pods:
           OPENID_SCOPE: 'openid profile email offline_access https://librechat-dev.ctk.au.deloitte.com/access_user'
           RAG_API_URL: 'http://127.0.0.1:8000'
           #RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
-          #RAG_AZURE_OPENAI_ENDPOINT: 'http://127.0.0.1:8081/azure-au'
+          #RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com'
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
           RAG_PORT: '8000'
           RAG_USE_FULL_CONTEXT: 'true'
