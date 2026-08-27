@@ -53,7 +53,7 @@ interface:
     roles: false
     allowedDomains:
       - 'deloitte.com.au'
-      - 'deloitte.co.nz'
+      - 'deloitte.co.nz' # TODO: confirm if working
 
   presets: true # Set to true to enable saved conversation presets
 
