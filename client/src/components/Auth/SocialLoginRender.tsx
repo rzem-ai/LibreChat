@@ -87,10 +87,10 @@ function SocialLoginRender({
         serverDomain={startupConfig.serverDomain}
         oauthPath="openid"
         Icon={() => (
-          <>
-            <img src="/assets/fav-dark.svg" alt="SSO Logo" className="h-5 w-5 hidden dark:block" />
-            <img src="/assets/fav-light.svg" alt="SSO Logo" className="h-5 w-5 block dark:hidden" />
-          </>
+          <span className="relative h-5 w-5">
+            <img src="/assets/fav-dark.svg" alt="SSO Logo" className="absolute hidden h-5 w-5 dark:block" />
+            <img src="/assets/fav-light.svg" alt="SSO Logo" className="absolute block h-5 w-5 dark:hidden" />
+          </span>
         )}
         label={startupConfig.openidLabel}
         id="openid"

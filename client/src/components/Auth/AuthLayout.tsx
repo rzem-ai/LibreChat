@@ -1,6 +1,5 @@
-import { useContext } from 'react';
 import { TStartupConfig } from 'librechat-data-provider';
-import { ThemeSelector, ThemeContext, isDark } from '@librechat/client';
+import { ThemeSelector } from '@librechat/client';
 import { DeloitteLogo } from '~/components/DeloitteComponents/DeloitteLogo';
 import { ErrorMessage } from '~/components/Auth/ErrorMessage';
 import { TranslationKeys, useLocalize } from '~/hooks';
@@ -26,12 +25,6 @@ function AuthLayout({
   error: TranslationKeys | null;
 }) {
   const localize = useLocalize();
-  const { theme } = useContext(ThemeContext);
-
-  const bgImage = isDark(theme)
-    ? 'url(/assets/AI-Secondary-dark.jpg)'
-    : 'url(/assets/AI-Secondary-light.jpg)';
-  const bgColor = isDark(theme) ? '#000000' : undefined;
 
   const hasStartupConfigError = startupConfigError !== null && startupConfigError !== undefined;
   const DisplayError = () => {
@@ -64,15 +57,7 @@ function AuthLayout({
   };
 
   return (
-    <div
-      className="relative flex min-h-screen flex-col bg-left bg-no-repeat"
-      style={{
-        backgroundImage: bgImage,
-        backgroundSize: 'auto 180vh',
-        backgroundPosition: 'left -37.5vh top -47.7vh',
-        backgroundColor: bgColor,
-      }}
-    >
+    <div className="relative flex min-h-screen flex-col bg-[url('/assets/AI-Secondary-light.jpg')] bg-[length:auto_180vh] bg-[position:left_-37.5vh_top_-47.7vh] bg-no-repeat dark:bg-[url('/assets/AI-Secondary-dark.jpg')] dark:bg-black">
       <Banner />
 
       <DisplayError />
@@ -82,11 +67,7 @@ function AuthLayout({
 
       <main className="flex flex-grow items-center justify-center">
         <div
-          className="w-authPageWidth overflow-hidden border border-border-light p-6 sm:max-w-md"
-          style={{
-            backgroundColor: 'var(--card)',
-            borderRadius: 'var(--radius-rounded-xl, 14.4px)',
-          }}
+          className="w-authPageWidth rounded-xl overflow-hidden border border-border-light bg-card p-6 sm:max-w-md"
         >
           {!hasStartupConfigError && !isFetching && (
             <div className="mb-3 flex justify-center">
@@ -97,8 +78,7 @@ function AuthLayout({
           )}
           {!hasStartupConfigError && !isFetching && header && (
             <h1
-              className="mb-4 text-center text-xl font-medium leading-none text-text-primary"
-              style={{ userSelect: 'none', letterSpacing: '-0.6px' }}
+              className="mb-4 select-none text-center text-xl font-medium leading-none tracking-tight text-text-primary"
             >
               {header}
             </h1>
