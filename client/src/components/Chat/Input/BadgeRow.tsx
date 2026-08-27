@@ -333,7 +333,7 @@ function BadgeRow({
     >
       <div ref={containerRef} className="relative flex flex-wrap items-center gap-2">
         {showEphemeralBadges === true &&
-          startupConfig?.interface?.customDeloitteFeatureFlags?.showToolsDropdown === true && (
+          startupConfig?.interface?.customDeloitteFeatureFlags?.showToolsDropdown !== false && (
             <ToolsDropdown />
           )}
         {tempBadges.map((badge, index) => (
