@@ -24,7 +24,8 @@ const { encryptMetadata, domainParser } = require('~/server/services/ActionServi
 const { findAccessibleResources } = require('~/server/services/PermissionService');
 const { attachOwnerContacts } = require('~/server/services/Agents/ownerContact');
 const db = require('~/models');
-const { canAccessAgentResource } = require('~/server/middleware');
+// Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+const { canAccessAgentResource, rejectDisabledActions } = require('~/server/middleware');
 
 const router = express.Router();
 
@@ -84,6 +85,8 @@ router.get('/', async (req, res) => {
  */
 router.post(
   '/:agent_id',
+  // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+  rejectDisabledActions,
   canAccessAgentResource({
     requiredPermission: PermissionBits.EDIT,
     resourceIdParam: 'agent_id',
@@ -92,12 +95,7 @@ router.post(
   async (req, res) => {
     try {
       const { agent_id } = req.params;
-
-      // Deloitte Custom Change
       const appConfig = req.config;
-      if (appConfig?.interface?.customDeloitteFeatureFlags?.createActions === false) {
-        return res.status(403).json({ message: 'Action creation is disabled' });
-      }
 
       /** @type {{ functions: FunctionTool[], action_id: string, metadata: ActionMetadata }} */
       const { functions, action_id: _action_id, metadata: _metadata } = req.body;
