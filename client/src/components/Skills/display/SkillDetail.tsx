@@ -132,6 +132,7 @@ export default function SkillDetail({ skill, onEdit, onDelete }: SkillDetailProp
 
         {/* Actions */}
         <div className="flex shrink-0 items-center gap-2">
+          {/* Deloitte Custom Change add visible active/disable label to skill toggle */}
           <SkillToggle
             enabled={skillEnabled}
             onChange={() => toggle(skill)}
