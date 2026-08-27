@@ -664,7 +664,7 @@ export interface MessageAlignmentClasses {
  */
 export function getMessageAlignmentClasses(rightAligned: boolean): MessageAlignmentClasses {
   return {
-    row: cn(rightAligned && 'flex-row-reverse'),
+row: cn(rightAligned && 'flex-row-reverse rtl:flex-row'),
     hideAvatar: rightAligned,
     header: cn(rightAligned && 'text-right sr-only'),
     content: cn(rightAligned && MESSAGE_BUBBLE_CLASSES),
