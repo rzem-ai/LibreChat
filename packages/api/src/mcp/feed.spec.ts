@@ -34,41 +34,41 @@ const ATOM_FEED = `<?xml version="1.0" encoding="UTF-8"?>
 
 describe('buildMCPResultSources', () => {
   it('splits an RSS feed into one source per article with title, link, and clean content', () => {
-    const sources = buildMCPResultSources({
+    const result = buildMCPResultSources({
       toolName: 'afr_get_latest_news',
       serverName: 'afr',
       content: RSS_FEED,
     });
 
-    expect(sources).toHaveLength(2);
-    expect(sources[0]).toMatchObject({
+    expect(result.sources).toHaveLength(2);
+    expect(result.sources[0]).toMatchObject({
       toolName: 'afr_get_latest_news',
       serverName: 'afr',
       title: 'RBA holds cash rate steady',
       link: 'https://www.afr.com/rba-holds-rate',
     });
-    expect(sources[0].content).toContain('RBA holds cash rate steady');
-    expect(sources[0].content).toContain('stable');
-    expect(sources[0].content).not.toContain('<b>');
-    expect(sources[1]).toMatchObject({
+    expect(result.sources[0].content).toContain('RBA holds cash rate steady');
+    expect(result.sources[0].content).toContain('stable');
+    expect(result.sources[0].content).not.toContain('<b>');
+    expect(result.sources[1]).toMatchObject({
       title: 'Iron ore prices jump',
       link: 'https://www.afr.com/iron-ore-jump',
     });
   });
 
   it('splits an Atom feed into one source per entry, preferring the alternate link', () => {
-    const sources = buildMCPResultSources({
+    const result = buildMCPResultSources({
       toolName: 'get_feed',
       serverName: 'example',
       content: ATOM_FEED,
     });
 
-    expect(sources).toHaveLength(2);
-    expect(sources[0]).toMatchObject({
+    expect(result.sources).toHaveLength(2);
+    expect(result.sources[0]).toMatchObject({
       title: 'First entry',
       link: 'https://example.com/first',
     });
-    expect(sources[1]).toMatchObject({
+    expect(result.sources[1]).toMatchObject({
       title: 'Second entry',
       link: 'https://example.com/second',
     });
@@ -76,31 +76,31 @@ describe('buildMCPResultSources', () => {
 
   it('falls back to a single source for plain-text content', () => {
     const content = 'The current weather in Sydney is sunny with a high of 24C.';
-    const sources = buildMCPResultSources({
+    const result = buildMCPResultSources({
       toolName: 'get_weather',
       serverName: 'weather',
       content,
     });
 
-    expect(sources).toEqual([{ toolName: 'get_weather', serverName: 'weather', content }]);
+    expect(result.sources).toEqual([{ toolName: 'get_weather', serverName: 'weather', content }]);
   });
 
   it('falls back to a single source for malformed XML that merely looks like a feed', () => {
     const content = '<rss><channel><item><title>Unterminated';
-    const sources = buildMCPResultSources({
+    const result = buildMCPResultSources({
       toolName: 'broken_feed',
       serverName: 'broken',
       content,
     });
 
-    expect(sources).toEqual([{ toolName: 'broken_feed', serverName: 'broken', content }]);
+    expect(result.sources).toEqual([{ toolName: 'broken_feed', serverName: 'broken', content }]);
   });
 
   it('falls back to a single source when the feed has no usable items', () => {
     const content = '<rss version="2.0"><channel><title>Empty</title></channel></rss>';
-    const sources = buildMCPResultSources({ toolName: 'empty_feed', serverName: 'empty', content });
+    const result = buildMCPResultSources({ toolName: 'empty_feed', serverName: 'empty', content });
 
-    expect(sources).toEqual([{ toolName: 'empty_feed', serverName: 'empty', content }]);
+    expect(result.sources).toEqual([{ toolName: 'empty_feed', serverName: 'empty', content }]);
   });
 
   it('splits a Sections report payload (e.g. IBISWorld) into one source per section', () => {
@@ -113,18 +113,74 @@ describe('buildMCPResultSources', () => {
         },
       ],
     });
-    const sources = buildMCPResultSources({
+    const result = buildMCPResultSources({
       toolName: 'ibisworld_report_sections',
       serverName: 'cleartrack-mcp-gateway',
       content,
     });
 
-    expect(sources).toHaveLength(1);
-    expect(sources[0]).toMatchObject({
+    expect(result.sources).toHaveLength(1);
+    expect(result.sources[0]).toMatchObject({
       toolName: 'ibisworld_report_sections',
       serverName: 'cleartrack-mcp-gateway',
       title: 'Executive Summary Analysis',
     });
-    expect(sources[0].content).toContain('Gold prices have risen sharply.');
+    expect(result.sources[0].content).toContain('Gold prices have risen sharply.');
+  });
+
+  it('surfaces the KX disclaimer alongside its sources', () => {
+    const content = JSON.stringify({
+      usage_guidelines: 'Please review accuracy of all the responses before reusing them.',
+      actualresults: [
+        {
+          title: 'Assistance with AI Governance and Responsible AI Ecosystem',
+          description: 'Deloitte helped establish an AI Governance practice.',
+          appurl: 'https://stagequals.deloitteresources.com/quals/view/139514/description/',
+        },
+      ],
+    });
+    const result = buildMCPResultSources({
+      toolName: 'kx_query',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+    });
+
+    expect(result.sources).toHaveLength(1);
+    expect(result.disclaimer).toBe(
+      'Please review accuracy of all the responses before reusing them.',
+    );
+  });
+
+  it('suppresses citation entirely for a known-toolset error response instead of dumping raw text', () => {
+    const content =
+      'REST API returned 422: {"detail":[{"type":"bool_type","loc":["body","overridesettings","only_searchresults"]}]}';
+    const result = buildMCPResultSources({
+      toolName: 'kx_query',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+    });
+
+    expect(result.sources).toEqual([]);
+  });
+
+  it('suppresses citation entirely for unrecognized JSON from a known toolset (e.g. DESC/GIMS)', () => {
+    const result = buildMCPResultSources({
+      toolName: 'desc_search_entities',
+      serverName: 'cleartrack-mcp-gateway',
+      content: JSON.stringify({ statusCode: 500, message: 'Internal error' }),
+    });
+
+    expect(result.sources).toEqual([]);
+  });
+
+  it('suppresses citation entirely for malformed feed XML from the AFR toolset', () => {
+    const content = '<rss><channel><item><title>Unterminated';
+    const result = buildMCPResultSources({
+      toolName: 'afr_get_latest_news',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+    });
+
+    expect(result.sources).toEqual([]);
   });
 });
