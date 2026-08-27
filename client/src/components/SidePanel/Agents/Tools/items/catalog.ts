@@ -51,13 +51,6 @@ export interface BuildCatalogInputs {
    * user key exists; SYSTEM_DEFINED deployments have nothing to configure.
    */
   webSearchUserProvided?: boolean;
-  /**
-   * Name of the parent brand/grouping each MCP server belongs to, shown in the catalog
-   * as `${displayName} - ${mcpParentGroup}` (e.g. displayName "AFR News" + group
-   * "ClearTrack MCP" -> "AFR News - ClearTrack MCP"). Sourced from
-   * `interface.mcpServers.parentGroup` in librechat.yaml. Absent means no suffix.
-   */
-  mcpParentGroup?: string;
 }
 
 interface BuiltinDef {
@@ -163,11 +156,15 @@ export function buildCatalog(inputs: BuildCatalogInputs): AgentItem[] {
       if (server.consumeOnly === true) {
         continue;
       }
+      // Deloitte Custom Change: Display MCPs with name and parent
       const displayName = server.metadata?.name ?? name;
+      const nameWithParent = server.parentGroup
+        ? `${displayName} - ${server.parentGroup}`
+        : displayName;
       items.push({
         kind: 'mcp',
         id: name,
-        name: inputs.mcpParentGroup ? `${displayName} - ${inputs.mcpParentGroup}` : displayName,
+        name: nameWithParent,
         description: server.metadata?.description ?? '',
         iconKey: 'mcp',
         server,

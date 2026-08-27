@@ -43,7 +43,6 @@ interface:
 
   mcpServers:
     create: false # Set to false to disable creating new MCP servers via the Agent Builder
-    parentGroup: 'ClearTrack MCP' # Shown as "<title> - ClearTrack MCP" in the Tool Library
 
   memories: true # Set to true to enable users to edit memories via UI
 
@@ -428,6 +427,7 @@ modelSpecs:
 mcpServers: # https://www.librechat.ai/docs/features/mcp
   cleartrack-mcp-gateway-research:
     title: 'IBISWorld'
+    parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=research'
     obo:
@@ -435,6 +435,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
 
   cleartrack-mcp-gateway-news:
     title: 'AFR News'
+    parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=news'
     obo:
@@ -442,6 +443,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
 
   cleartrack-mcp-gateway-kx:
     title: 'KX'
+    parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=kx'
     obo:
@@ -449,6 +451,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
 
   cleartrack-mcp-gateway-desc:
     title: 'DESC'
+    parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=desc'
     obo:
@@ -456,6 +459,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
 
   cleartrack-mcp-gateway-gims:
     title: 'GIMS'
+    parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=gims'
     obo:
@@ -463,6 +467,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
 
   cleartrack-mcp-gateway-sharepoint:
     title: 'SharePoint'
+    parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=sharepoint'
     obo:
