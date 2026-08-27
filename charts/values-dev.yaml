@@ -61,7 +61,7 @@ pods:
           DOMAIN_CLIENT: 'https://librechat-dev.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://librechat-dev.ctk.au.deloitte.com'
           EMBEDDINGS_MODEL: 'text-embedding-3-small'
-          EMBEDDINGS_PROVIDER: 'azure'
+          EMBEDDINGS_PROVIDER: 'openid'
           ENDPOINTS: 'agents,anthropic,custom'
           KEY_VAULT_NAME: 'kv-int-librechat-dev'
           MCP_GATEWAY_OBO_SCOPE: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
@@ -78,8 +78,8 @@ pods:
           OPENID_REUSE_TOKENS: 'true'
           OPENID_SCOPE: 'openid profile email offline_access https://librechat-dev.ctk.au.deloitte.com/access_user'
           RAG_API_URL: 'http://127.0.0.1:8000'
-          RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
-          RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
+          #RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
+          #RAG_AZURE_OPENAI_ENDPOINT: 'http://127.0.0.1:8081/azure-au'
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
           RAG_PORT: '8000'
           RAG_USE_FULL_CONTEXT: 'true'
@@ -122,7 +122,7 @@ pods:
           REDIS_PING_INTERVAL: '300'
           STREAM_DELTA_COALESCE_MS: '25'
         secrets:
-          AZURE_API_KEY: librechat-azure-api-key
+          # AZURE_API_KEY: librechat-azure-api-key
           MONGO_URI: librechat-dev-mdb-connection-string
           JWT_SECRET: librechat-jwt-secret-dev
           JWT_REFRESH_SECRET: librechat-jwt-refresh-secret-dev
@@ -130,7 +130,7 @@ pods:
           CREDS_IV: librechat-creds-iv-dev
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-dev
           OPENID_SESSION_SECRET: librechat-openid-session-secret-dev
-          RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          # RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
           MEILI_MASTER_KEY: librechat-meili-master-key-dev
           # ClearTrack Code Interpreter (ea-code-runtime) — JWK signing key
           CODEAPI_JWT_PRIVATE_JWK_JSON: librechat-codeapi-jwt-private-jwk-dev
@@ -156,13 +156,13 @@ pods:
           DB_PORT: '5432'
           RAG_HOST: '0.0.0.0'
           RAG_PORT: '8000'
-          EMBEDDINGS_PROVIDER: 'azure'
-          RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
-          RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
+          EMBEDDINGS_PROVIDER: 'openid'
+          # RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
+          # RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
         secrets:
-          AZURE_OPENAI_API_KEY: librechat-azure-api-key
-          RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          # AZURE_OPENAI_API_KEY: librechat-azure-api-key
+          # RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
           JWT_SECRET: librechat-jwt-secret-dev
         service:
           enabled: true
