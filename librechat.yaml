@@ -149,11 +149,11 @@ endpoints:
       baseURL: '${BASE_URL_AZURE_AU}'
       models:
         default:
-          - 'gpt-4o-mini'
-          - 'gpt-4o'
-          - 'gpt-41'
           - 'gpt-41-nano'
+          - 'gpt-4o-mini'
           - 'gpt-41-mini'
+          - 'gpt-41'
+          - 'gpt-4o'
         fetch: false
       titleConvo: true
       titleModel: 'gpt-4o-mini'
@@ -169,9 +169,9 @@ endpoints:
       baseURL: '${BASE_URL_AZURE_US}'
       models:
         default:
-          - 'gpt-5-chat'
-          - 'gpt-5-mini'
           - 'gpt-5-nano'
+          - 'gpt-5-mini'
+          - 'gpt-5-chat'
         fetch: false
       titleConvo: true
       titleModel: 'gpt-5-nano'
@@ -211,12 +211,12 @@ modelSpecs:
   addedEndpoints:
     - agents
   list:
-    - name: 'azure-au-gpt-4o-mini'
-      label: 'Azure AU gpt-4o-mini'
+    - name: 'azure-au-gpt-41-nano'
+      label: 'Azure AU gpt-41-nano'
       group: 'Azure AU'
       preset:
         endpoint: 'Azure AU'
-        model: 'gpt-4o-mini'
+        model: 'gpt-41-nano'
         # promptPrefix is a private field — stripped before the config is sent to the
         # browser. It becomes the system message for ephemeral (general-chat) requests.
         # User-created agents use their own stored instructions and bypass this field.
@@ -256,28 +256,12 @@ modelSpecs:
           - If file_search returns nothing relevant, say so plainly and ask for the file or source rather than answering from assumption.
           - Preserve factual fidelity to the provided content and avoid adding unstated claims.
 
-    - name: 'azure-au-gpt-4o'
-      label: 'Azure AU gpt-4o'
+    - name: 'azure-au-gpt-4o-mini'
+      label: 'Azure AU gpt-4o-mini'
       group: 'Azure AU'
       preset:
         endpoint: 'Azure AU'
-        model: 'gpt-4o'
-        promptPrefix: *deloitteSystemPrompt
-
-    - name: 'azure-au-gpt-41'
-      label: 'Azure AU gpt-41'
-      group: 'Azure AU'
-      preset:
-        endpoint: 'Azure AU'
-        model: 'gpt-41'
-        promptPrefix: *deloitteSystemPrompt
-
-    - name: 'azure-au-gpt-41-nano'
-      label: 'Azure AU gpt-41-nano'
-      group: 'Azure AU'
-      preset:
-        endpoint: 'Azure AU'
-        model: 'gpt-41-nano'
+        model: 'gpt-4o-mini'
         promptPrefix: *deloitteSystemPrompt
 
     - name: 'azure-au-gpt-41-mini'
@@ -288,12 +272,20 @@ modelSpecs:
         model: 'gpt-41-mini'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: 'azure-us-gpt-41'
-      label: 'Azure US gpt-41'
-      group: 'Azure US'
+    - name: 'azure-au-gpt-41'
+      label: 'Azure AU gpt-41'
+      group: 'Azure AU'
       preset:
-        endpoint: 'Azure US'
+        endpoint: 'Azure AU'
         model: 'gpt-41'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'azure-au-gpt-4o'
+      label: 'Azure AU gpt-4o'
+      group: 'Azure AU'
+      preset:
+        endpoint: 'Azure AU'
+        model: 'gpt-4o'
         promptPrefix: *deloitteSystemPrompt
 
     - name: 'azure-us-gpt-41-nano'
@@ -304,20 +296,20 @@ modelSpecs:
         model: 'gpt-41-nano'
         promptPrefix: *deloitteSystemPrompt
 
+    - name: 'azure-us-gpt-5-nano'
+      label: 'Azure US gpt-5-nano'
+      group: 'Azure US'
+      preset:
+        endpoint: 'Azure US'
+        model: 'gpt-5-nano'
+        promptPrefix: *deloitteSystemPrompt
+
     - name: 'azure-us-gpt-41-mini'
       label: 'Azure US gpt-41-mini'
       group: 'Azure US'
       preset:
         endpoint: 'Azure US'
         model: 'gpt-41-mini'
-        promptPrefix: *deloitteSystemPrompt
-
-    - name: 'azure-us-gpt-5-chat'
-      label: 'Azure US gpt-5-chat'
-      group: 'Azure US'
-      preset:
-        endpoint: 'Azure US'
-        model: 'gpt-5-chat'
         promptPrefix: *deloitteSystemPrompt
 
     - name: 'azure-us-gpt-5-mini'
@@ -328,12 +320,20 @@ modelSpecs:
         model: 'gpt-5-mini'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: 'azure-us-gpt-5-nano'
-      label: 'Azure US gpt-5-nano'
+    - name: 'azure-us-gpt-41'
+      label: 'Azure US gpt-41'
       group: 'Azure US'
       preset:
         endpoint: 'Azure US'
-        model: 'gpt-5-nano'
+        model: 'gpt-41'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'azure-us-gpt-5-chat'
+      label: 'Azure US gpt-5-chat'
+      group: 'Azure US'
+      preset:
+        endpoint: 'Azure US'
+        model: 'gpt-5-chat'
         promptPrefix: *deloitteSystemPrompt
 
     - name: 'vertexai-us-gemini-2-5-flash'
@@ -350,6 +350,70 @@ modelSpecs:
       preset:
         endpoint: 'VertexAI US'
         model: 'google/gemini-2.5-pro'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'anthropic-claude-haiku-4-5'
+      label: 'Anthropic claude-haiku-4-5'
+      group: 'Anthropic'
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-haiku-4-5'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'anthropic-claude-sonnet-5'
+      label: 'Anthropic claude-sonnet-5'
+      group: 'Anthropic'
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-sonnet-5'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'anthropic-claude-sonnet-4-5'
+      label: 'Anthropic claude-sonnet-4-5'
+      group: 'Anthropic'
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-sonnet-4-5'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'anthropic-claude-sonnet-4-6'
+      label: 'Anthropic claude-sonnet-4-6'
+      group: 'Anthropic'
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-sonnet-4-6'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'anthropic-claude-opus-4-5'
+      label: 'Anthropic claude-opus-4-5'
+      group: 'Anthropic'
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-opus-4-5'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'anthropic-claude-opus-4-6'
+      label: 'Anthropic claude-opus-4-6'
+      group: 'Anthropic'
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-opus-4-6'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'anthropic-claude-opus-4-7'
+      label: 'Anthropic claude-opus-4-7'
+      group: 'Anthropic'
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-opus-4-7'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'anthropic-claude-opus-4-8'
+      label: 'Anthropic claude-opus-4-8'
+      group: 'Anthropic'
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-opus-4-8'
         promptPrefix: *deloitteSystemPrompt
 
 # MCP Servers configuration
