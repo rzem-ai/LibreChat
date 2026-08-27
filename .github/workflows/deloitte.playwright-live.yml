@@ -100,27 +100,11 @@ jobs:
       - name: Run live smoke
         run: npx playwright test --config=e2e/playwright.config.live.ts
 
-      - name: Upload live test report
-        uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
-        with:
-          name: playwright-live-report
-          path: e2e/playwright-report/**
-          retention-days: 30
-          if-no-files-found: ignore
-
-      - name: Upload traces & screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-live-failures
-          path: e2e/specs/.test-results/**
-          retention-days: 7
-          if-no-files-found: ignore
-
       # Self-hosted runners keep their working directory, so the live session
-      # file must not survive the job.
+      # files must not survive the job.
       - name: Remove captured session
         if: always()
         shell: pwsh
-        run: Remove-Item -Path e2e/live-auth.json -Force -ErrorAction SilentlyContinue
+        run: |
+          Remove-Item -Path e2e/live-auth.json -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path e2e/specs/.test-results, e2e/playwright-report -Recurse -Force -ErrorAction SilentlyContinue
