@@ -75,9 +75,7 @@ const browser = await chromium.launch({
 const context = await browser.newContext({ ignoreHTTPSErrors: true });
 const page = await context.newPage();
 
-try {
-  console.log(`[login-live] signing in as ${email} at ${baseURL}`);
-  await page.goto(appURL('login'), { waitUntil: 'domcontentloaded', timeout });
+  console.log(`[login-live] signing in at ${baseURL}`);
 
   const emailField = page.getByLabel('Email');
 
