@@ -1,6 +1,6 @@
 // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
 function areCustomActionsEnabled(config) {
-  return config?.config?.interface?.customDeloitteFeatureFlags?.createActions !== false;
+  return config?.interfaceConfig?.customDeloitteFeatureFlags?.createActions !== false;
 }
 
 // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.

@@ -289,7 +289,7 @@ describe('ToolService - Action Capability Gating', () => {
     it('keeps regular tools when createActions is false', async () => {
       const capabilities = [AgentCapabilities.tools, AgentCapabilities.actions];
       const req = createMockReq(capabilities);
-      req.config.config = { interface: { customDeloitteFeatureFlags: { createActions: false } } };
+      req.config.interfaceConfig = { customDeloitteFeatureFlags: { createActions: false } };
       mockGetEndpointsConfig.mockResolvedValue(createEndpointsConfig(capabilities));
 
       await loadAgentTools({
@@ -1498,7 +1498,7 @@ describe('ToolService - Action Capability Gating', () => {
     // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
     it('does not load action tools when createActions is false despite actionsEnabled=true', async () => {
       const req = createMockReq([AgentCapabilities.actions]);
-      req.config = { config: { interface: { customDeloitteFeatureFlags: { createActions: false } } } };
+      req.config = { interfaceConfig: { customDeloitteFeatureFlags: { createActions: false } } };
 
       await loadToolsForExecution({
         req,
@@ -1932,7 +1932,7 @@ describe('ToolService - Action Capability Gating', () => {
         req: {
           user: { id: 'user_123' },
           body: { assistant_id: 'assistant_disabled', model: 'gpt-4o-mini', endpoint: 'openAI' },
-          config: { config: { interface: { customDeloitteFeatureFlags: { createActions: false } } } },
+          config: { interfaceConfig: { customDeloitteFeatureFlags: { createActions: false } } },
         },
         res: {},
         apiKey: 'sk-test',
@@ -1967,7 +1967,7 @@ describe('ToolService - Action Capability Gating', () => {
         req: {
           user: { id: 'user_123' },
           body: { assistant_id: 'assistant_disabled', model: 'gpt-4o-mini', endpoint: 'openAI' },
-          config: { config: { interface: { customDeloitteFeatureFlags: { createActions: false } } } },
+          config: { interfaceConfig: { customDeloitteFeatureFlags: { createActions: false } } },
         },
         res: {},
         apiKey: 'sk-test',

@@ -83,11 +83,9 @@ function buildApp(configOverrides = {}) {
 describe('POST /actions/:agent_id – createActions feature flag', () => {
   it('returns 403 when createActions is false', async () => {
     const app = buildApp({
-      config: {
-        interface: {
-          customDeloitteFeatureFlags: {
-            createActions: false,
-          },
+      interfaceConfig: {
+        customDeloitteFeatureFlags: {
+          createActions: false,
         },
       },
     });
@@ -125,11 +123,9 @@ describe('POST /actions/:agent_id – createActions feature flag', () => {
     db.updateAgent = jest.fn().mockResolvedValue({ id: 'agent-1' });
 
     const app = buildApp({
-      config: {
-        interface: {
-          customDeloitteFeatureFlags: {
-            createActions: true,
-          },
+      interfaceConfig: {
+        customDeloitteFeatureFlags: {
+          createActions: true,
         },
       },
     });

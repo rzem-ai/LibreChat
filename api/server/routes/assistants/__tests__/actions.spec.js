@@ -62,11 +62,9 @@ describe('POST /actions/:assistant_id - createActions feature flag', () => {
     async (_, router, route) => {
       const app = buildApp(
         {
-          config: {
-            interface: {
-              customDeloitteFeatureFlags: {
-                createActions: false,
-              },
+          interfaceConfig: {
+            customDeloitteFeatureFlags: {
+              createActions: false,
             },
           },
         },
