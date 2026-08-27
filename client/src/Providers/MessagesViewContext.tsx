@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { getConfigDefaults } from 'librechat-data-provider';
-import { useGetStartupConfig } from '~/data-provider';
+import { useGetStartupConfig } from '~/data-provider/Endpoints/queries';
 import { useChatContext } from './ChatContext';
 import { isRightAlignedTurn } from '~/utils';
 
