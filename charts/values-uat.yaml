@@ -47,7 +47,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'uat'
+          tag: 'uat@sha256:5920937e3b952d66fed2587d325914922cf3c66e65b2132abbf39ed9e391d8fc'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-uat.ctk.au.deloitte.com'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -167,7 +167,7 @@ pods:
       meilisearch:
         image:
           pullPolicy: Always
-          tag: 'uat'
+          tag: 'uat@sha256:fa1d77aa230a8778fcabafd2825f9318f4f649c7e67641227f5bf3346afda3aa'
         env:
           MEILI_ENV: 'production' # Use production to mimic PROD environment behaviour
         secrets:
@@ -183,7 +183,7 @@ pods:
 
 valkey:
   image:
-    tag: 'uat'
+    tag: 'uat@sha256:8eb9d4d81b89218546e6e371c9925803e6f5bbabd522bfee3865cba08e0df6a1'
   persistence:
     storageClass: 'managed-csi-standard-private'
   passwordSecretName: 'librechat-valkey-password-uat'
