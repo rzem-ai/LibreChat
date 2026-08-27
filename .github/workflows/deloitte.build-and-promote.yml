@@ -119,7 +119,7 @@ jobs:
           - imageNameAlias: admin-panel
             buildContext: admin_panel
             dockerFilePath: admin_panel/Dockerfile
-            yamlKeyPath: '.admin-panel.containers.admin-panel.image'
+            yamlKeyPath: '.pods.admin-panel.containers.admin-panel.image'
             buildArgs: VITE_BASE_PATH=/admin
             submodule: true
         #####################################################################################
