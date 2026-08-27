@@ -1,6 +1,6 @@
 # End-to-end tests
 
-We drive the LibreChat app the way a real user would — clicking buttons, typing into forms, waiting for streamed responses — and assert that the app behaves correctly at every layer from the browser down to MongoDB. Built with [Playwright](https://playwright.dev/), the suite is split into **three lanes**, each with a distinct job and a distinct set of tradeoffs.
+We drive the LibreChat app the way a real user would — clicking buttons, typing into forms, waiting for streamed responses — and assert that the app behaves correctly at every layer from the browser down to MongoDB. Built with [Playwright](https://playwright.dev/), the suite is split into **three primary lanes** (CI/Smoke, Mock, Real) plus a separate **Live** suite that targets an already-running environment.
 
 ## Design principles
 
@@ -10,7 +10,7 @@ We drive the LibreChat app the way a real user would — clicking buttons, typin
 >
 > **3. Every test earns its slot.** Bug regressions cite their ticket. Feature acceptance tests survive after the feature ships. Anything else gets deleted or moved to `deprecated/`.
 
-## The three lanes at a glance
+## The three primary lanes at a glance
 
 ```
            ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
