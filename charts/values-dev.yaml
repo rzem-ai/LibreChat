@@ -200,6 +200,7 @@ pods:
           tag: 'develop'
         env:
           PORT: '3000'
+          ADMIN_SSO_ONLY: 'true'
           VITE_API_BASE_URL: 'https://librechat-dev.ctk.au.deloitte.com'
           API_SERVER_URL: 'https://librechat-dev.ctk.au.deloitte.com'
           SESSION_COOKIE_SECURE: 'true'
