@@ -61,7 +61,25 @@ jest.mock('~/components/Skills/dialogs', () => ({
 
 jest.mock('../CategoryFilter', () => ({
   __esModule: true,
-  default: () => null,
+  default: ({
+    options,
+    onChange,
+  }: {
+    options: Array<{ value: string; label: string }>;
+    onChange: (value: string) => void;
+  }) => (
+    <div>
+      {/* eslint-disable-next-line i18next/no-literal-string */}
+      <button type="button" onClick={() => onChange('all')}>
+        all categories
+      </button>
+      {options.map((option) => (
+        <button key={option.value} type="button" onClick={() => onChange(option.value)}>
+          {option.label}
+        </button>
+      ))}
+    </div>
+  ),
 }));
 
 jest.mock('../ItemDialog/ItemDialog', () => ({
@@ -120,7 +138,7 @@ jest.mock('@librechat/client', () => ({
 function makeSkill(
   id: string,
   name: string,
-  overrides: Partial<Pick<TSkillSummary, 'isPublic' | 'author' | 'authorName'>> = {},
+  overrides: Partial<Pick<TSkillSummary, 'isPublic' | 'author' | 'authorName' | 'category'>> = {},
 ): TSkillSummary {
   return {
     _id: id,
@@ -338,5 +356,54 @@ describe('SkillsDialog view grouping', () => {
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_tools_view_favorites' }));
     expect(screen.getByText('favorited-skill')).toBeInTheDocument();
     expect(screen.queryByText('not-favorited-skill')).toBeNull();
+  });
+
+  test('category filter narrows the list and still combines with a group view', () => {
+    mockInfiniteResult = {
+      ...mockInfiniteResult,
+      data: {
+        pages: [
+          {
+            skills: [
+              makeSkill('writing-mine', 'writing-mine-skill', {
+                category: 'writing',
+                author: 'user-1',
+              }),
+              makeSkill('coding-mine', 'coding-mine-skill', {
+                category: 'coding',
+                author: 'user-1',
+              }),
+              makeSkill('writing-shared', 'writing-shared-skill', {
+                category: 'writing',
+                author: 'other-user',
+                authorName: 'Other',
+              }),
+            ],
+          },
+        ],
+      },
+      hasNextPage: false,
+    };
+
+    render(<SkillsDialog open onOpenChange={jest.fn()} agentId="agent-1" />);
+
+    // Category alone, no view narrowing: only "writing" skills remain, across owners.
+    fireEvent.click(screen.getByRole('button', { name: 'writing' }));
+    expect(screen.getByText('writing-mine-skill')).toBeInTheDocument();
+    expect(screen.getByText('writing-shared-skill')).toBeInTheDocument();
+    expect(screen.queryByText('coding-mine-skill')).toBeNull();
+
+    /* Switching the view tab resets the category filter (pre-existing
+       behavior, unchanged by grouping) — select the view first, then the
+       category, to see the two axes actually compose. */
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_skills_view_mine' }));
+    expect(screen.getByText('writing-mine-skill')).toBeInTheDocument();
+    expect(screen.getByText('coding-mine-skill')).toBeInTheDocument();
+    expect(screen.queryByText('writing-shared-skill')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'writing' }));
+    expect(screen.getByText('writing-mine-skill')).toBeInTheDocument();
+    expect(screen.queryByText('coding-mine-skill')).toBeNull();
+    expect(screen.queryByText('writing-shared-skill')).toBeNull();
   });
 });

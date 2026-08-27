@@ -39,10 +39,10 @@ type SkillView = 'marketplace' | SkillGroup | 'favorites';
 
 const VIEWS: Array<{ value: SkillView; labelKey: TranslationKeys }> = [
   { value: 'marketplace', labelKey: 'com_ui_all_proper' },
+  { value: 'favorites', labelKey: 'com_ui_tools_view_favorites' },
   { value: 'public', labelKey: 'com_ui_skills_view_public' },
   { value: 'shared', labelKey: 'com_ui_skills_view_shared' },
   { value: 'mine', labelKey: 'com_ui_skills_view_mine' },
-  { value: 'favorites', labelKey: 'com_ui_tools_view_favorites' },
 ];
 
 const EMPTY_KEY_BY_VIEW: Record<SkillView, TranslationKeys> = {
@@ -205,7 +205,7 @@ export default function SkillsDialog({ open, onOpenChange, agentId }: SkillsDial
           <div className="flex flex-col gap-3 border-b border-border-light px-6 pb-4 pt-5">
             <div className="flex items-center gap-2 pr-10">
               <OGDialogTitle className="text-base font-semibold text-text-primary">
-                {localize('com_ui_skills')}
+                {localize('com_ui_skills_dialog_title')}
               </OGDialogTitle>
             </div>
 
