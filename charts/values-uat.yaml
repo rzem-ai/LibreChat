@@ -133,8 +133,6 @@ pods:
           OPENID_SESSION_SECRET: librechat-openid-session-secret-uat
           # RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
           MEILI_MASTER_KEY: librechat-meili-master-key-uat
-          # Skill Security Scanner
-          # SKILL_SCANNER_BEARER_TOKEN: librechat-skill-scanner-bearer-token-uat
           # ClearTrack Code Interpreter (ea-code-runtime) — JWK signing key
           CODEAPI_JWT_PRIVATE_JWK_JSON: librechat-codeapi-jwt-private-jwk-uat
           #Langfuse Observability

@@ -283,9 +283,9 @@ type ScanArchiveOptions = {
    */
   requireValidation?: boolean;
   /**
-   * Bearer token to send with the scan request. Callers pass an OBO-derived,
-   * user-scoped token when available; falls back to `SKILL_SCANNER_BEARER_TOKEN`
-   * when omitted (e.g. non-OpenID users, or before OBO admin consent is granted).
+   * OBO-derived, user-scoped bearer token to send with the scan request.
+   * Omitted when the caller has no OBO token (e.g. non-OpenID users, or
+   * before OBO admin consent is granted) — the request then goes unauthenticated.
    */
   token?: string;
 };
@@ -306,7 +306,7 @@ async function scanArchive(
   }
 
   const requireValidation = options.requireValidation ?? true;
-  const token = options.token ?? process.env.SKILL_SCANNER_BEARER_TOKEN;
+  const token = options.token;
   const timeoutMs = parseTimeout(process.env.SKILL_SCANNER_TIMEOUT_MS);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);

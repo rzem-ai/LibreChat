@@ -9,7 +9,6 @@ import {
 
 const ENV_KEYS = [
   'SKILL_SCANNER_URL',
-  'SKILL_SCANNER_BEARER_TOKEN',
   'SKILL_SCANNER_TIMEOUT_MS',
   'SKILL_SCANNER_MIN_SEVERITY',
 ] as const;
@@ -251,7 +250,7 @@ describe('skill scanner', () => {
       });
     }
 
-    it('omits Authorization when neither a token param nor the env var is set', async () => {
+    it('omits Authorization when no token param is set', async () => {
       const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
       global.fetch = fetchSpy as unknown as typeof fetch;
 
@@ -264,7 +263,6 @@ describe('skill scanner', () => {
     it('uses the OBO-derived token param when present', async () => {
       const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
       global.fetch = fetchSpy as unknown as typeof fetch;
-      process.env.SKILL_SCANNER_BEARER_TOKEN = 'static-fallback-token';
 
       await scanSkillUpload({
         archive: new Uint8Array([1, 2, 3]),
@@ -274,17 +272,6 @@ describe('skill scanner', () => {
 
       const [, init] = fetchSpy.mock.calls[0];
       expect(init.headers.Authorization).toBe('Bearer obo-token');
-    });
-
-    it('falls back to SKILL_SCANNER_BEARER_TOKEN when no token param is passed', async () => {
-      const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
-      global.fetch = fetchSpy as unknown as typeof fetch;
-      process.env.SKILL_SCANNER_BEARER_TOKEN = 'static-fallback-token';
-
-      await upload();
-
-      const [, init] = fetchSpy.mock.calls[0];
-      expect(init.headers.Authorization).toBe('Bearer static-fallback-token');
     });
   });
 

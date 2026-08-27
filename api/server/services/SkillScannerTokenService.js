@@ -16,9 +16,9 @@ async function getSkillScannerToken(user, accessToken, scopes, fromCache = true)
 }
 
 /**
- * Resolves an OBO-derived skill scanner token for the given user, or `undefined` to let
- * callers fall back to the static `SKILL_SCANNER_BEARER_TOKEN` env var (e.g. non-OpenID
- * users, or before admin consent is granted on the AI Registry scope).
+ * Resolves an OBO-derived skill scanner token for the given user, or `undefined` if none
+ * can be obtained (e.g. non-OpenID users, or before admin consent is granted on the
+ * AI Registry scope) — the scan request is then sent unauthenticated.
  */
 async function resolveSkillScannerToken(user) {
   const accessToken = user?.federatedTokens?.access_token;
@@ -29,10 +29,7 @@ async function resolveSkillScannerToken(user) {
     const { access_token } = await getSkillScannerToken(user, accessToken, SKILL_SCANNER_OBO_SCOPE);
     return access_token;
   } catch (error) {
-    logger.warn(
-      '[resolveSkillScannerToken] OBO exchange failed, falling back to static token',
-      error,
-    );
+    logger.warn('[resolveSkillScannerToken] OBO exchange failed', error);
     return undefined;
   }
 }

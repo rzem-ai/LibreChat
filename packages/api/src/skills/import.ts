@@ -133,7 +133,8 @@ export interface ImportSkillDeps {
 
   /**
    * Resolves an OBO-derived skill scanner token for the requesting user, or
-   * `undefined` to fall back to the static `SKILL_SCANNER_BEARER_TOKEN` env var.
+   * `undefined` if none can be obtained (e.g. non-OpenID users, or before
+   * OBO admin consent is granted).
    */
   resolveScannerToken: (user: ServerRequest['user']) => Promise<string | undefined>;
 }
