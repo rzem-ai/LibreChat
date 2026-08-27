@@ -96,6 +96,7 @@ const setup = ({
       error={null}
       startupConfigError={null}
       header={'Welcome back'}
+      pathname="login"
     >
       <Login />
     </AuthLayout>,
