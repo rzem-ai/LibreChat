@@ -49,7 +49,7 @@ pods:
         image:
           tag: 'uat'
         env:
-          ADMIN_PANEL_URL: 'https://libre-admin-panel-uat.ctk.au.deloitte.com'
+           ADMIN_PANEL_URL: 'https://myassist-uat.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
           ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
@@ -178,6 +178,35 @@ pods:
           name: 'meilisearch-data'
           mountPath: /meili_data
           storageClass: 'managed-csi-standard-private'
+  admin-panel:
+    replicas: 1
+    containers:
+      admin-panel:
+        # Image must be built with --build-arg VITE_BASE_PATH=/admin
+        # The admin panel is a Vite SPA where the base path is baked in at build time.
+        # CI must build this image with the VITE_BASE_PATH arg; otherwise asset paths
+        # will be incorrect when routed through nginx at /admin.
+        image:
+          repository: 'tt-librechat/admin-panel'
+          pullPolicy: Always
+          tag: 'uat'
+        env:
+          PORT: '3000'
+          VITE_API_BASE_URL: 'https://myassist-uat.ctk.au.deloitte.com'
+          API_SERVER_URL: 'https://myassist-uat.ctk.au.deloitte.com'
+          SESSION_COOKIE_SECURE: 'true'
+        secrets:
+          SESSION_SECRET: librechat-admin-panel-session-secret-uat
+        service:
+          enabled: true
+          type: ClusterIP
+          port: 3000
+          targetPort: 3000
+        ingress:
+          enabled: true
+          paths:
+            - path: /admin
+              pathType: Prefix
 
 valkey:
   image:

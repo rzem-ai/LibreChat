@@ -114,6 +114,14 @@ jobs:
             dockerFilePath: src/redis/Dockerfile
             yamlKeyPath: '.valkey.image'
             submodule: false
+          # Admin Panel image — built from admin_panel submodule Dockerfile with VITE_BASE_PATH=/admin
+          # The admin panel is a Vite SPA where the base path must be baked in at build time.
+          - imageNameAlias: admin-panel
+            buildContext: admin_panel
+            dockerFilePath: admin_panel/Dockerfile
+            yamlKeyPath: '.admin-panel.containers.admin-panel.image'
+            buildArgs: VITE_BASE_PATH=/admin
+            submodule: true
         #####################################################################################
     uses: Deloitte-Australia/ct-devops-resources/.github/workflows/build-and-promote.yml@V2
     secrets: inherit
