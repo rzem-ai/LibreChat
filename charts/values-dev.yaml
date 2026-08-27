@@ -47,7 +47,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:cb110861c64102a33b6aafafeb56ae2324feb16701aa664ddf6626e3b1d64040'
+          tag: 'develop@sha256:91c09f49bc6a1e3a2b36d285c71255eb7aab1c74385e127600f4c490660b4d53'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -177,7 +177,7 @@ pods:
       meilisearch:
         image:
           pullPolicy: Always
-          tag: 'develop@sha256:43c383ddcefb58ecd27afcf60189f35e865f6a3f7a4141d1a9383a9036e312b7'
+          tag: 'develop@sha256:e8fa8431b0fda69bf21371eb57f7b8853a50958d6da4475d67d916a65e3ed65e'
         env:
           MEILI_ENV: 'development'
         secrets:
@@ -193,7 +193,7 @@ pods:
 
 valkey:
   image:
-    tag: 'develop@sha256:b1fe6726d88cb8756bd3523d3ebaedcb8890bfeea5759bb523152d4e1ea4422b'
+    tag: 'develop@sha256:d87c83c9a60af2b6cd2cde8feb82ec24ccb057b3a04b7363da10434b3db0530a'
   persistence:
     storageClass: 'managed-csi-standard-private'
   passwordSecretName: 'librechat-valkey-password-dev'
