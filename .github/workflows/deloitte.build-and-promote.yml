@@ -136,7 +136,7 @@ jobs:
         git submodule sync --recursive
 
         if [ "${{ matrix.submodule }}" = "true" ]; then
-          git submodule update --init --remote --checkout "${{ matrix.buildContext }}"
+          git submodule update --init --remote --checkout --recursive -- "${{ matrix.buildContext }}"
         fi
         
         python3 - <<'PY'
