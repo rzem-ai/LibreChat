@@ -8,7 +8,7 @@ Companion doc: [why we use Edge instead of bundled Chromium](e2e-runner-browser-
 
 ## 1. Where we got to
 
-The `live` job in [.github/workflows/playwright-tests.yml](../../.github/workflows/playwright-tests.yml)
+The `live` job in [.github/workflows/deloitte.playwright-tests.yml](../../.github/workflows/deloitte.playwright-tests.yml)
 runs on a **borrowed, temporary** Windows build server and is currently blocked
 on network access to the target site. Everything upstream of that works.
 
