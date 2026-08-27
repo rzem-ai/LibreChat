@@ -186,6 +186,7 @@ jobs:
       actionType: ${{ github.event.inputs.actionType }}
       yamlKeyPath: ${{ matrix.yamlKeyPath }}
       submodule: ${{ matrix.submodule }}
+      ignoreCommitCheck: ${{ matrix.imageNameAlias == 'admin-panel' }}
   UpdateValues:
     needs: [CI]
     if: ${{ github.event_name != 'pull_request' && github.event_name != 'pull_request_target' }}
