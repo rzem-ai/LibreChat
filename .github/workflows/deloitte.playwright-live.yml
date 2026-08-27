@@ -32,7 +32,7 @@ jobs:
     environment: ${{ github.event_name == 'pull_request' && (github.event.pull_request.base.ref == 'develop' && 'playwright-dev' || github.event.pull_request.base.ref == 'uat' && 'playwright-uat' || github.event.pull_request.base.ref == 'main' && 'playwright-prod' || 'playwright-dev') || (github.event.inputs.target_ref == 'develop' && 'playwright-dev' || github.event.inputs.target_ref == 'uat' && 'playwright-uat' || github.event.inputs.target_ref == 'main' && 'playwright-prod' || 'playwright-dev') }}
 
     concurrency:
-      group: playwright-live-${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || github.event.inputs.target_ref }}
+      group: playwright-live-${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || (github.event.inputs.target_ref == 'uat' && 'uat' || github.event.inputs.target_ref == 'main' && 'main' || 'develop') }}
       cancel-in-progress: false
 
     timeout-minutes: 30
