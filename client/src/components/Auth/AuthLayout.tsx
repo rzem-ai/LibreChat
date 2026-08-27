@@ -1,9 +1,8 @@
-import { ThemeSelector } from '@librechat/client';
+import { useContext } from 'react';
 import { TStartupConfig } from 'librechat-data-provider';
+import { ThemeSelector, ThemeContext, isDark } from '@librechat/client';
 import { ErrorMessage } from '~/components/Auth/ErrorMessage';
 import { TranslationKeys, useLocalize } from '~/hooks';
-import SocialLoginRender from './SocialLoginRender';
-import { BlinkAnimation } from './BlinkAnimation';
 import { Banner } from '../Banners';
 import Footer from './Footer';
 
@@ -13,7 +12,6 @@ function AuthLayout({
   isFetching,
   startupConfig,
   startupConfigError,
-  pathname,
   error,
 }: {
   children: React.ReactNode;
@@ -21,10 +19,16 @@ function AuthLayout({
   isFetching: boolean;
   startupConfig: TStartupConfig | null | undefined;
   startupConfigError: unknown | null | undefined;
-  pathname: string;
   error: TranslationKeys | null;
 }) {
   const localize = useLocalize();
+  const { theme } = useContext(ThemeContext);
+  const logoSrc = isDark(theme) ? 'assets/Logo-dark.svg' : 'assets/Logo-light.svg';
+
+  const bgImage = isDark(theme)
+    ? 'url(/assets/AI-Secondary-dark.jpg)'
+    : 'url(/assets/AI-Secondary-light.jpg)';
+  const bgColor = isDark(theme) ? '#000000' : undefined;
 
   const hasStartupConfigError = startupConfigError !== null && startupConfigError !== undefined;
   const DisplayError = () => {
@@ -57,37 +61,50 @@ function AuthLayout({
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-surface-primary">
+    <div
+      className="relative flex min-h-screen flex-col bg-left bg-no-repeat"
+      style={{
+        backgroundImage: bgImage,
+        backgroundSize: 'auto 180vh',
+        backgroundPosition: 'left -37.5vh top -47.7vh',
+        backgroundColor: bgColor,
+      }}
+    >
       <Banner />
-      <BlinkAnimation active={isFetching}>
-        <div className="mt-6 h-10 w-full bg-cover">
-          <img
-            src="assets/logo.svg"
-            className="h-full w-full object-contain"
-            alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'LibreChat' })}
-          />
-        </div>
-      </BlinkAnimation>
+
       <DisplayError />
       <div className="absolute bottom-0 left-0 md:m-4">
         <ThemeSelector />
       </div>
 
       <main className="flex flex-grow items-center justify-center">
-        <div className="w-authPageWidth overflow-hidden bg-surface-primary px-6 py-4 sm:max-w-md sm:rounded-lg">
+        <div
+          className="w-authPageWidth overflow-hidden border border-border-light p-6 sm:max-w-md"
+          style={{
+            backgroundColor: 'var(--card)',
+            borderRadius: 'var(--radius-rounded-xl, 14.4px)',
+          }}
+        >
+          {!hasStartupConfigError && !isFetching && (
+            <div className="mb-3 flex justify-center">
+              <div className="h-6 w-24 bg-cover">
+                <img
+                  src={logoSrc}
+                  className="h-full w-full object-contain"
+                  alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'LibreChat' })}
+                />
+              </div>
+            </div>
+          )}
           {!hasStartupConfigError && !isFetching && header && (
             <h1
-              className="mb-4 text-center text-3xl font-medium text-text-primary"
-              style={{ userSelect: 'none' }}
+              className="mb-4 text-center text-xl font-medium leading-none text-text-primary"
+              style={{ userSelect: 'none', letterSpacing: '-0.6px' }}
             >
               {header}
             </h1>
           )}
           {children}
-          {!pathname.includes('2fa') &&
-            (pathname.includes('login') || pathname.includes('register')) && (
-              <SocialLoginRender startupConfig={startupConfig} />
-            )}
         </div>
       </main>
       <Footer startupConfig={startupConfig} />

@@ -68,7 +68,6 @@ export default function StartupLayout({ isAuthenticated }: { isAuthenticated?: b
       isFetching={isFetching}
       startupConfig={startupConfig}
       startupConfigError={startupConfigError}
-      pathname={location.pathname}
       error={error}
     >
       <Outlet context={contextValue} />

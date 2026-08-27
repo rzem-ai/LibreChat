@@ -94,7 +94,6 @@ const setup = ({
       error={null}
       startupConfigError={null}
       header={'Create your account'}
-      pathname="register"
     >
       <Registration />
     </AuthLayout>,

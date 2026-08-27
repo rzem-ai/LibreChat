@@ -1,14 +1,10 @@
-import { useEffect, useState } from 'react';
-import { ErrorTypes, registerPage } from 'librechat-data-provider';
-import { OpenIDIcon, useToastContext } from '@librechat/client';
+import { useEffect, useState, useContext } from 'react';
+import { ErrorTypes } from 'librechat-data-provider';
+import { useToastContext, ThemeContext, isDark } from '@librechat/client';
 import { useOutletContext, useSearchParams, useLocation } from 'react-router-dom';
 import type { TLoginLayoutContext } from '~/common';
-import { getLoginError, persistRedirectToSession } from '~/utils';
-import { ErrorMessage } from '~/components/Auth/ErrorMessage';
-import SocialButton from '~/components/Auth/SocialButton';
-import { useAuthContext } from '~/hooks/AuthContext';
+import { persistRedirectToSession } from '~/utils';
 import { useLocalize } from '~/hooks';
-import LoginForm from './LoginForm';
 
 interface LoginLocationState {
   redirect_to?: string;
@@ -17,8 +13,9 @@ interface LoginLocationState {
 function Login() {
   const localize = useLocalize();
   const { showToast } = useToastContext();
-  const { error, setError, login } = useAuthContext();
   const { startupConfig } = useOutletContext<TLoginLayoutContext>();
+  const { theme } = useContext(ThemeContext);
+  const darkMode = isDark(theme);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
@@ -77,50 +74,28 @@ function Login() {
         <p className="text-lg font-semibold">
           {localize('com_ui_redirecting_to_provider', { 0: startupConfig.openidLabel })}
         </p>
-        <div className="mt-4">
-          <SocialButton
-            key="openid"
-            enabled={startupConfig.openidLoginEnabled}
-            serverDomain={startupConfig.serverDomain}
-            oauthPath="openid"
-            Icon={() =>
-              startupConfig.openidImageUrl ? (
-                <img src={startupConfig.openidImageUrl} alt="OpenID Logo" className="h-5 w-5" />
-              ) : (
-                <OpenIDIcon />
-              )
-            }
-            label={startupConfig.openidLabel}
-            id="openid"
-          />
-        </div>
       </div>
     );
   }
 
   return (
     <>
-      {error != null && <ErrorMessage>{localize(getLoginError(error))}</ErrorMessage>}
-      {startupConfig?.emailLoginEnabled === true && (
-        <LoginForm
-          onSubmit={login}
-          startupConfig={startupConfig}
-          error={error}
-          setError={setError}
-        />
-      )}
-      {startupConfig?.registrationEnabled === true && (
-        <p className="my-4 text-center text-sm font-light text-gray-700 dark:text-white">
-          {' '}
-          {localize('com_auth_no_account')}{' '}
-          <a
-            href={registerPage()}
-            className="inline-flex p-1 text-sm font-medium text-green-600 underline decoration-transparent transition-all duration-200 hover:text-green-700 hover:decoration-green-700 focus:text-green-700 focus:decoration-green-700 dark:text-green-500 dark:hover:text-green-400 dark:hover:decoration-green-400 dark:focus:text-green-400 dark:focus:decoration-green-400"
-          >
-            {localize('com_auth_sign_up')}
-          </a>
-        </p>
-      )}
+      <div className="mt-6 flex justify-center">
+        <a
+          aria-label="Continue with SSO"
+          className="flex h-10 w-fit items-center justify-center space-x-2 rounded-md bg-[#0A0A0A] px-8 text-white transition-colors duration-200 hover:bg-[#1A1A1A] dark:bg-white dark:text-[#0A0A0A] dark:hover:bg-gray-200"
+          style={{ border: 'var(--border-width-w-100, 1px) solid var(--input, #D4D4D4)' }}
+          href={`${startupConfig?.serverDomain}/oauth/openid`}
+          data-testid="sso-login-button"
+        >
+          <img
+            src={darkMode ? 'assets/fav-dark.svg' : 'assets/fav-light.svg'}
+            alt="Deloitte"
+            className="h-5 w-5"
+          />
+          <p className="text-sm">{localize('com_auth_continue_with_sso')}</p>
+        </a>
+      </div>
     </>
   );
 }

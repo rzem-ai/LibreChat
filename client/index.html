@@ -12,8 +12,8 @@
       content="LibreChat - An open source chat application with support for multiple AI models"
     />
     <title>LibreChat</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16x16.png" />
+    <link id="favicon-light" rel="icon" type="image/svg+xml" href="assets/fav-light.svg" />
+    <link id="favicon-dark" rel="icon" type="image/svg+xml" href="assets/fav-dark.svg" />
     <link rel="apple-touch-icon" href="assets/apple-touch-icon-180x180.png" />
     <meta
       name="viewport"
@@ -32,15 +32,28 @@
       const loadingContainerStyle = document.createElement('style');
       let backgroundColor;
 
+      let isDarkTheme;
       if (theme === 'dark') {
         backgroundColor = '#0d0d0d';
+        isDarkTheme = true;
       } else if (theme === 'light') {
         backgroundColor = '#ffffff';
+        isDarkTheme = false;
       } else if (theme === 'system') {
         const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
         backgroundColor = prefersDarkScheme ? '#0d0d0d' : '#ffffff';
+        isDarkTheme = prefersDarkScheme;
       } else {
         backgroundColor = '#ffffff';
+        isDarkTheme = false;
+      }
+
+      const faviconLight = document.getElementById('favicon-light');
+      const faviconDark = document.getElementById('favicon-dark');
+      if (isDarkTheme) {
+        faviconLight.parentNode.removeChild(faviconLight);
+      } else {
+        faviconDark.parentNode.removeChild(faviconDark);
       }
 
       loadingContainerStyle.innerHTML = `
