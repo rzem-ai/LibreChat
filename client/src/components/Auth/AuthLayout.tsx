@@ -1,8 +1,10 @@
 import { useContext } from 'react';
 import { TStartupConfig } from 'librechat-data-provider';
 import { ThemeSelector, ThemeContext, isDark } from '@librechat/client';
+import { DeloitteLogo } from '~/components/DeloitteComponents/DeloitteLogo';
 import { ErrorMessage } from '~/components/Auth/ErrorMessage';
 import { TranslationKeys, useLocalize } from '~/hooks';
+import SocialLoginRender from './SocialLoginRender';
 import { Banner } from '../Banners';
 import Footer from './Footer';
 
@@ -12,6 +14,7 @@ function AuthLayout({
   isFetching,
   startupConfig,
   startupConfigError,
+  pathname,
   error,
 }: {
   children: React.ReactNode;
@@ -19,11 +22,11 @@ function AuthLayout({
   isFetching: boolean;
   startupConfig: TStartupConfig | null | undefined;
   startupConfigError: unknown | null | undefined;
+  pathname: string;
   error: TranslationKeys | null;
 }) {
   const localize = useLocalize();
   const { theme } = useContext(ThemeContext);
-  const logoSrc = isDark(theme) ? 'assets/Logo-dark.svg' : 'assets/Logo-light.svg';
 
   const bgImage = isDark(theme)
     ? 'url(/assets/AI-Secondary-dark.jpg)'
@@ -88,11 +91,7 @@ function AuthLayout({
           {!hasStartupConfigError && !isFetching && (
             <div className="mb-3 flex justify-center">
               <div className="h-6 w-24 bg-cover">
-                <img
-                  src={logoSrc}
-                  className="h-full w-full object-contain"
-                  alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'LibreChat' })}
-                />
+                <DeloitteLogo className="h-full w-full text-foreground" />
               </div>
             </div>
           )}
@@ -105,6 +104,10 @@ function AuthLayout({
             </h1>
           )}
           {children}
+          {!pathname.includes('2fa') &&
+            (pathname.includes('login') || pathname.includes('register')) && (
+              <SocialLoginRender startupConfig={startupConfig} />
+            )}
         </div>
       </main>
       <Footer startupConfig={startupConfig} />

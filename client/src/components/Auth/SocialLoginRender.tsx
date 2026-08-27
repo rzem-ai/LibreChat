@@ -1,7 +1,6 @@
 import {
   GoogleIcon,
   FacebookIcon,
-  OpenIDIcon,
   GithubIcon,
   DiscordIcon,
   AppleIcon,
@@ -87,13 +86,12 @@ function SocialLoginRender({
         enabled={startupConfig.openidLoginEnabled}
         serverDomain={startupConfig.serverDomain}
         oauthPath="openid"
-        Icon={() =>
-          startupConfig.openidImageUrl ? (
-            <img src={startupConfig.openidImageUrl} alt="OpenID Logo" className="h-5 w-5" />
-          ) : (
-            <OpenIDIcon />
-          )
-        }
+        Icon={() => (
+          <>
+            <img src="/assets/fav-dark.svg" alt="SSO Logo" className="h-5 w-5 hidden dark:block" />
+            <img src="/assets/fav-light.svg" alt="SSO Logo" className="h-5 w-5 block dark:hidden" />
+          </>
+        )}
         label={startupConfig.openidLabel}
         id="openid"
       />
