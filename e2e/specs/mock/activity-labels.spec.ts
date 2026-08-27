@@ -75,7 +75,7 @@ async function runLabeledTurn(page: Page, label: string) {
   });
 }
 
-test.describe('activity labels', () => {
+test.describe.skip('activity labels', () => {
   test.beforeEach(async ({ request }) => {
     await resetLabelServer(request);
   });

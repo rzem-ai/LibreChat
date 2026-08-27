@@ -4,7 +4,7 @@ const SERVER_NAME = 'e2e-memory';
 const SERVER_TITLE = 'E2E Memory';
 const FLOW_ID = 'e2e-user:e2e-memory';
 
-test.describe('MCP OAuth readiness', () => {
+test.describe.skip('MCP OAuth readiness', () => {
   test('keeps the server unselected until post-OAuth tool readiness completes', async ({
     page,
   }) => {

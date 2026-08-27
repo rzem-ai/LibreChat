@@ -75,9 +75,7 @@ const browser = await chromium.launch({
 const context = await browser.newContext({ ignoreHTTPSErrors: true });
 const page = await context.newPage();
 
-try {
-  console.log(`[login-live] signing in as ${email} at ${baseURL}`);
-  await page.goto(appURL('login'), { waitUntil: 'domcontentloaded', timeout });
+  console.log(`[login-live] signing in at ${baseURL}`);
 
   const emailField = page.getByLabel('Email');
 
@@ -92,7 +90,7 @@ try {
     // race we can lose. Go straight to the endpoint it redirects to instead.
     console.log('[login-live] no email/password form — going to SSO endpoint directly');
     await page.goto(appURL('oauth/openid'), { waitUntil: 'domcontentloaded', timeout });
-    await page.waitForURL(/login\.microsoftonline\.com/, { timeout });
+    await page.waitForURL((url) => url.hostname === 'login.microsoftonline.com', { timeout });
     await loginViaMicrosoftSSO(page, email, password);
   }
 

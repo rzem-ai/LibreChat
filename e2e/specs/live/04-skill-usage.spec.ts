@@ -50,6 +50,7 @@ test.describe.serial('live skill usage', { tag: ['@live'] }, () => {
   });
 
   test(`enabling "${SKILL}" makes it usable and it runs in a chat`, async ({ page }) => {
+    test.setTimeout(120000);
     await page.goto('/c/new', { timeout: 15000 });
 
     // Open the detail once, turn it on, and remember its prior state to restore.

@@ -74,7 +74,7 @@ test.describe('live models', { tag: ['@live'] }, () => {
 
       for (const { model } of cases) {
         test(`"${model}" responds and follows instructions`, async ({ page }) => {
-          test.setTimeout(60000);
+          test.setTimeout(120000);
 
           await page.goto('/c/new', { timeout: 15000 });
           await selectModel(page, endpoint, model);

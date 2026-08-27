@@ -11,7 +11,7 @@ import { getE2EBaseURL } from './setup/env';
  *
  * Capture the session once (log in by hand, incl. SSO), then run:
  *   npx playwright codegen --save-storage=e2e/live-auth.json http://localhost:3333
- *   E2E_BASE_URL=http://localhost:3333 npm run e2e:live -- --headed
+ *   E2E_BASE_URL=http://localhost:3333 npx playwright test --config=e2e/playwright.config.live.ts --headed
  *
  * Swap to dev by re-capturing against the dev URL and changing E2E_BASE_URL.
  */
