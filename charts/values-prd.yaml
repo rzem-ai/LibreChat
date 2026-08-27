@@ -30,11 +30,11 @@ pods:
           pullPolicy: Always
           tag: 'main'
         env:
-          TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080' # TODO: update
-          TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080' # TODO: update
-          TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080' # TODO: update
-          TOKEN_PROXY_ANTHROPIC_URL: 'http://anthropic-eastus2.llm-gateway-ctnp.svc.cluster.local:8080' # TODO: update
-          TOKEN_PROXY_MCP_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp' # TODO: update
+          TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-prd.svc.cluster.local:8080'
+          TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-prd.svc.cluster.local:8080'
+          TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-prd.svc.cluster.local:8080'
+          TOKEN_PROXY_ANTHROPIC_URL: 'http://anthropic-eastus2.llm-gateway-prd.svc.cluster.local:8080'
+          TOKEN_PROXY_MCP_URL: 'https://mcp-gateway.ctk.au.deloitte.com/mcp'
     containers:
       librechat:
         command:
@@ -63,15 +63,15 @@ pods:
           EMBEDDINGS_MODEL: 'text-embedding-3-small'
           EMBEDDINGS_PROVIDER: 'azure'
           ENDPOINTS: 'agents,anthropic,custom'
-          KEY_VAULT_NAME: 'kv-int-librechat-uat' # TODO: Confirm
-          MCP_GATEWAY_OBO_SCOPE: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user' # TODO: Confirm
+          KEY_VAULT_NAME: 'kv-int-librechat-prd'
+          MCP_GATEWAY_OBO_SCOPE: 'api://32e2a3a5-ad52-446e-8a61-5a7ad6103099/access_as_user'
           MCP_GATEWAY_TOOLSETS: 'teams,research,news,kx,desc,gims'
-          MCP_GATEWAY_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp' # TODO: Confirm
-          MONGO_DB: 'mdb-librechat-database-uat' # TODO: Confirm
+          MCP_GATEWAY_URL: 'https://mcp-gateway.ctk.au.deloitte.com/mcp'
+          MONGO_DB: 'mdb-librechat-database-prd'
           NODE_ENV: 'production'
           NODE_TLS_REJECT_UNAUTHORIZED: '0' # TODO: Review Node TLS setup. See: https://github.com/Deloitte-Australia/tt-librechat/issues/159
-          OPENID_CLIENT_ID: '66cc6e2e-670a-47c9-a362-94c86c46782a' # This is the Azure Client ID in Deloitte App Reg # TODO: Confirm
-          OPENID_ISSUER: 'https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/v2.0/' # TODO: Confirm
+          OPENID_CLIENT_ID: 'b5494d82-9ae5-449e-8867-6804ccc2f5ef' # This is the Azure Client ID in Deloitte App Reg
+          OPENID_ISSUER: 'https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/v2.0/'
           OPENID_ON_BEHALF_FLOW_FOR_USERINFO_REQUIRED: 'true'
           OPENID_ON_BEHALF_FLOW_USERINFO_SCOPE: 'user.read'
           OPENID_REQUIRED_ROLE: ''
@@ -79,25 +79,25 @@ pods:
           OPENID_SCOPE: 'openid profile email offline_access https://myassist.ctk.au.deloitte.com/access_user'
           RAG_API_URL: 'http://127.0.0.1:8000'
           RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
-          RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/' # TODO: Confirm
+          RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-prd-models-openai-aueast.openai.azure.com/' # TODO: Confirm in use
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
           RAG_PORT: '8000'
           RAG_USE_FULL_CONTEXT: 'true'
           # ClearTrack Code Interpreter (ea-code-runtime)
-          LIBRECHAT_CODE_BASEURL: 'https://code-runtime-uat.ctk.au.deloitte.com/v1' # TODO: Confirm
+          LIBRECHAT_CODE_BASEURL: 'https://code-runtime.ctk.au.deloitte.com/v1' # TODO: Confirm
           CODEAPI_AUTH_PROVIDER: 'librechat-jwt'
           CODEAPI_JWT_ALGORITHM: 'EdDSA'
-          CODEAPI_JWT_KID: 'lc-codeapi-uat-2026-05' # TODO: Confirm
+          CODEAPI_JWT_KID: 'lc-codeapi-prd-2026-05' # TODO: Confirm
           CODEAPI_JWT_ISSUER: 'librechat'
           CODEAPI_JWT_AUDIENCE: 'codeapi'
           CODEAPI_JWT_TTL_SECONDS: '300'
           CODEAPI_JWT_MINT_CACHE_SECONDS: '30'
           CODEAPI_JWT_SINGLE_TENANT_ID: 'legacy'
           # Azure Storage Container
-          AZURE_CLIENT_ID: '6fbe2a73-4566-43e3-a7f3-66276353afc3' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-uat # TODO: Confirm
-          AZURE_STORAGE_ACCOUNT_NAME: 'stctspokenpdshared' # TODO: Confirm
+          AZURE_CLIENT_ID: '1e6fa20b-2e41-4ae9-9357-171d834bb3b7' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-prd
+          AZURE_STORAGE_ACCOUNT_NAME: 'stctspokeprdshared'
           AZURE_STORAGE_PUBLIC_ACCESS: 'false'
-          AZURE_CONTAINER_NAME: 'stc-librechat-app-uat' # TODO: Confirm
+          AZURE_CONTAINER_NAME: 'stc-librechat-app-prd'
           #Langfuse Observability
           LANGFUSE_BASE_URL: 'https://langfuse.ctk.au.deloitte.com'
           # OpenTelemetry Tracing
@@ -114,47 +114,47 @@ pods:
           DEBUG_LOGGING: 'true'
           DEBUG_CONSOLE: 'true'
           AGENT_DEBUG_LOGGING: 'true'
-        secrets: # TODO: Create all secrets
-          AZURE_API_KEY: librechat-azure-api-key
-          MONGO_URI: librechat-uat-mdb-connection-string
-          JWT_SECRET: librechat-jwt-secret-uat
-          JWT_REFRESH_SECRET: librechat-jwt-refresh-secret-uat
-          CREDS_KEY: librechat-creds-key-uat
-          CREDS_IV: librechat-creds-iv-uat
-          OPENID_CLIENT_SECRET: librechat-openid-client-secret-uat
-          OPENID_SESSION_SECRET: librechat-openid-session-secret-uat
-          RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
-          MEILI_MASTER_KEY: librechat-meili-master-key-uat
+        secrets:
+          AZURE_API_KEY: librechat-azure-api-key # TODO: Can we delete?
+          MONGO_URI: librechat-mdb-connection-string # TODO: Update this value when returned by Biplab
+          JWT_SECRET: librechat-jwt-secret # Use LibreChat Credentials Generator
+          JWT_REFRESH_SECRET: librechat-jwt-refresh-secret # Use LibreChat Credentials Generator
+          CREDS_KEY: librechat-creds-key # Use LibreChat Credentials Generator
+          CREDS_IV: librechat-creds-iv # Use LibreChat Credentials Generator
+          OPENID_CLIENT_SECRET: librechat-openid-client-secret # Generate a secret in App Reg and store the "hint" here
+          OPENID_SESSION_SECRET: librechat-openid-session-secret # Generate a random string
+          RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key # TODO: Can we delete?
+          MEILI_MASTER_KEY: librechat-meili-master-key # Use LibreChat Credentials Generator
           # ClearTrack Code Interpreter (ea-code-runtime) — JWK signing key
-          CODEAPI_JWT_PRIVATE_JWK_JSON: librechat-codeapi-jwt-private-jwk-uat
+          CODEAPI_JWT_PRIVATE_JWK_JSON: librechat-codeapi-jwt-private-jwk
           #Langfuse Observability
-          LANGFUSE_PUBLIC_KEY: librechat-langfuse-public-key-uat
-          LANGFUSE_SECRET_KEY: librechat-langfuse-secret-key-uat
+          LANGFUSE_PUBLIC_KEY: librechat-langfuse-public-key # TODO: Need to deploy to langfuse to prod first, then create an API in the frontend.
+          LANGFUSE_SECRET_KEY: librechat-langfuse-secret-key # TODO: Need to deploy to langfuse to prod first, then create an API in the frontend.
       rag-api:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'uat'
+          tag: 'main'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
           POSTGRES_USE_UNIX_SOCKET: 'False'
-          POSTGRES_DB: 'pgdb_librechat_app_uat' # TODO: Confirm
-          POSTGRES_USER: 'id-int-librechat-uat' # TODO: Confirm
+          POSTGRES_DB: 'pgdb_librechat_app_prd'
+          POSTGRES_USER: 'id-int-librechat-prd'
           POSTGRES_AUTH_TYPE: 'ActiveDirectoryMsi'
-          MANAGED_IDENTITY_CLIENT_ID: '6fbe2a73-4566-43e3-a7f3-66276353afc3' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-uat # TODO: Confirm
-          DB_HOST: 'psql-ctspoke-npd.postgres.database.azure.com' # TODO: Confirm
+          MANAGED_IDENTITY_CLIENT_ID: '1e6fa20b-2e41-4ae9-9357-171d834bb3b7' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-uat # TODO: Confirm
+          DB_HOST: 'psql-ctspoke-prd.postgres.database.azure.com'
           DB_PORT: '5432'
           RAG_HOST: '0.0.0.0'
           RAG_PORT: '8000'
           EMBEDDINGS_PROVIDER: 'azure'
           RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
-          RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/' # TODO: Confirm
+          RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/' # TODO: Confirm in use
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
-        secrets: # TODO: Create all secrets
-          AZURE_OPENAI_API_KEY: librechat-azure-api-key
-          RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
-          JWT_SECRET: librechat-jwt-secret-uat
+        secrets:
+          AZURE_OPENAI_API_KEY: librechat-azure-api-key # TODO: Can we delete?
+          RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key # TODO: Can we delete?
+          JWT_SECRET: librechat-jwt-secret
         service:
           enabled: true
           type: ClusterIP
@@ -165,11 +165,11 @@ pods:
       meilisearch:
         image:
           pullPolicy: Always
-          tag: 'uat'
+          tag: 'main'
         env:
           MEILI_ENV: 'production' # Use production to mimic PROD environment behaviour
         secrets:
-          MEILI_MASTER_KEY: librechat-meili-master-key-uat # TODO: Create all secrets
+          MEILI_MASTER_KEY: librechat-meili-master-key
         persistence:
           enabled: true
           size: 10Gi
@@ -184,4 +184,4 @@ valkey:
     tag: 'main'
   persistence:
     storageClass: 'managed-csi-standard-private'
-  passwordSecretName: 'librechat-valkey-password-main'# TODO: Create all secrets
+  passwordSecretName: 'librechat-valkey-password'
