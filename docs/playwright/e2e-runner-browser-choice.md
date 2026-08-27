@@ -1,7 +1,7 @@
 # Why the live E2E job uses Edge instead of bundled Chromium
 
 Status: temporary workaround, tied to the shared build server.
-Applies to: the `live` job in [.github/workflows/deloitte.playwright-tests.yml](../../.github/workflows/deloitte.playwright-tests.yml).
+Applies to: the `live` job in [.github/workflows/deloitte.playwright-live.yml](../../.github/workflows/deloitte.playwright-live.yml).
 
 ## Summary
 

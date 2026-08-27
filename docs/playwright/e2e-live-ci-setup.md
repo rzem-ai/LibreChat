@@ -1,6 +1,6 @@
-# Live E2E on CI — status, blockers, and runner requirements
+# Live E2E on CI — setup, status, and runner requirements
 
-Last updated: 2026-08-20.
+Last updated: 2026-08-28.
 
 Companion doc: [why we use Edge instead of bundled Chromium](e2e-runner-browser-choice.md).
 
@@ -8,9 +8,10 @@ Companion doc: [why we use Edge instead of bundled Chromium](e2e-runner-browser-
 
 ## 1. Where we got to
 
-The `live` job in [.github/workflows/deloitte.playwright-tests.yml](../../.github/workflows/deloitte.playwright-tests.yml)
-runs on a **borrowed, temporary** Windows build server and is currently blocked
-on network access to the target site. Everything upstream of that works.
+Live tests run from [.github/workflows/deloitte.playwright-live.yml](../../.github/workflows/deloitte.playwright-live.yml)
+on a **borrowed, temporary** Windows build server. CI and Mock tests run
+separately from [.github/workflows/deloitte.playwright-tests.yml](../../.github/workflows/deloitte.playwright-tests.yml)
+on GitHub-hosted Linux runners.
 
 | Stage | Status |
 |---|---|
@@ -18,9 +19,11 @@ on network access to the target site. Everything upstream of that works.
 | Corporate CA trust for Node (`npm ci`) | Working |
 | Browser available (Edge) | Working |
 | Credentials delivered from GitHub environment | Working |
-| Reach `librechat-dev.ctk.au.deloitte.com` from runner | **Blocked** |
-| Log the test account in | **Blocked** (SSO-only + no access) |
-| Run the live specs | Not yet reached |
+| Reach target environment from runner | Working (Infra Cloud whitelist applied) |
+| Service account delivered by GitHub Environment | Working |
+| Service account access to SSO application | Working |
+| Log the test account in | Working through Microsoft SSO |
+| Run the live specs | Working |
 
 ---
 
@@ -49,66 +52,89 @@ is Windows.
 Environment secrets under `playwright-dev`. A preflight step now fails fast and
 names the missing secret rather than failing obscurely inside the login script.
 
+**Service account was blocked by Entra ID.**
+The service account was granted access to the SSO application and the Live
+workflow now completes authentication. The account must remain a direct member
+of the assigned access group and must remain exempt from MFA/interactive
+Conditional Access requirements.
+
 ---
 
 ## 3. Current blockers
 
-### 3.1 Network — the runner cannot reach the site
+### 3.1 Network — resolved for the temporary runner
 
-```
-Test-NetConnection librechat-dev.ctk.au.deloitte.com -Port 443
-TcpTestSucceeded: False
-```
+Infra Cloud whitelisted the target site on the server's NSX Firewall. The
+temporary runner can now reach the development site and the Live workflow has
+passed the network stage.
 
-Edge on the server also cannot load the URL, confirming this is infrastructure,
-not tooling. Note the site loads fine from a **laptop on VPN** — the VPN pool and
-the datacentre segment hosting the build server have different egress rules.
+For the future dedicated runner, the network team still needs to confirm the
+same outbound access for each target environment and verify DNS resolution from
+the runner's network segment.
 
-**Ask the network team:**
+### 3.2 Identity — resolved for the current service account
 
-- Can `AUSYDIP60269` reach `librechat-dev.ctk.au.deloitte.com` on TCP 443, and if
-  not, what is required to allow it?
-- Does that host resolve in DNS from the build server's network segment?
-- Is outbound traffic from that segment expected to go through an explicit proxy?
-  If so, what is the proxy URL and any no-proxy list? (The workflow can set
-  `HTTPS_PROXY` / `NO_PROXY` if needed.)
-- Is the restriction segment-wide, or specific to this destination?
-
-### 3.2 Identity — SSO-only, and the account lacks access
-
-The dev site presents a single **"Login with SSO"** button; there is no
-email/password form. Signing in with a personal Deloitte account returns:
+The target site presents a single **"Login with SSO"** button; there is no
+email/password form. The service account was initially rejected with:
 
 > The signed in user '…' is blocked because they are not a direct member of a
 > group with access
 
-**Ask the identity team:**
+The identity team then granted the service account access. It is now used by
+the automated SSO flow. Keep the access grant, direct group membership, MFA
+exemption, and password rotation process documented when moving to UAT and
+production.
 
-- Please create a service/test account for automated E2E (currently a personal
-  account is used as a placeholder).
-- It must be a **direct** member of the group granted access to the LibreChat dev
-  app registration. Entra does not honour nested group membership for app
-  assignment — this is the exact cause of the error above.
-- It must be exempt from MFA, or excluded via a scoped Conditional Access policy.
-  Automation cannot satisfy an interactive MFA prompt.
-- Confirm the password does not expire, or tell us the rotation period so the
-  GitHub secret can be updated on schedule.
+### 3.3 Application — SSO is intentional
 
-### 3.3 Application — is there a non-SSO path on dev?
+The environments intentionally use their real SSO process, so
+`ALLOW_EMAIL_LOGIN` is not required. [login-live.mjs](../../e2e/login-live.mjs)
+follows the SSO redirect, enters the service-account credentials on Microsoft
+Entra ID, handles the optional "Stay signed in?" prompt, and captures the
+resulting authenticated browser state.
 
-**Ask the app/dev team:**
+The SSO page is an external dependency. If Microsoft changes its login markup or
+Conditional Access introduces another prompt, the login helper may need an
+update.
 
-- Can `ALLOW_EMAIL_LOGIN` be enabled on the **dev** environment for a seeded test
-  account?
+### 3.4 Environment configuration
 
-This is the highest-leverage question in this document. If yes, the existing
-[login-live.mjs](../../e2e/login-live.mjs) works as written and the entire SSO
-automation problem disappears. If no, the script must drive Microsoft's sign-in
-pages, which is materially more fragile and hard-depends on the MFA exemption.
+The Live workflow selects a GitHub Environment from the PR destination branch
+or the manual `target_ref`:
+
+| Branch/ref | GitHub Environment | `E2E_BASE_URL` |
+|---|---|---|
+| `develop` | `playwright-dev` | `https://librechat-dev.ctk.au.deloitte.com` |
+| `uat` | `playwright-uat` | `https://myassist-uat.ctk.au.deloitte.com` |
+| `main` | `playwright-prod` | Production URL to be supplied |
+
+Each environment needs:
+
+- Secrets: `E2E_LIVE_USER`, `E2E_LIVE_PASS`
+- Variable: `E2E_BASE_URL`
+
+The manual `base_url` input is an optional override for controlled testing.
 
 ---
 
-## 4. Requirements for the future dedicated runner
+## 4. Workflow behavior
+
+### Pull requests
+
+[deloitte.playwright-tests.yml](../../.github/workflows/deloitte.playwright-tests.yml)
+runs CI and Mock for pull requests targeting `develop`, `uat`, or `main`. Both
+jobs check out `github.event.pull_request.head.sha`, so they test the PR source
+commit. Mock runs after CI and stops if CI fails.
+
+### Merged pull requests
+
+[deloitte.playwright-live.yml](../../.github/workflows/deloitte.playwright-live.yml)
+runs only when a pull request targeting `develop`, `uat`, or `main` is closed and
+merged. It checks out `github.event.pull_request.merge_commit_sha`, so it tests
+the merged destination-side code. Live can also be run manually with a target
+ref and optional URL override.
+
+## 5. Requirements for the future dedicated runner
 
 The current server is borrowed and shared — one job at a time, shared with other
 teams, and not provisioned for browser automation. When the team builds a
@@ -142,7 +168,7 @@ dedicated runner, these are the requirements gathered from this exercise.
 
 ---
 
-## 5. Interim workarounds if unblocking takes time
+## 6. Interim workarounds if unblocking takes time
 
 - Keep the mock suite as the everyday signal — it needs no network, no accounts,
   and no VPN, and it already runs on GitHub-hosted machines.
@@ -152,12 +178,14 @@ dedicated runner, these are the requirements gathered from this exercise.
 
 ---
 
-## 6. Open questions for the developer
+## 7. Open questions for the developer
 
-1. Was the live suite ever run against the SSO-only dev site, or only against a
-   local instance? This determines whether the specs themselves are known-good.
+1. Should the Live workflow run immediately after merge, or be scheduled after
+  deployment has completed in each environment?
 2. Do any live specs mutate shared state on dev (skills toggled, conversations
-   deleted)? If several people share the environment, this needs coordination.
-3. Should the live suite be a post-deployment gate, or a scheduled nightly?
+  deleted)? If several people share the environment, this needs coordination.
+3. Should the service-account password rotate on a fixed schedule, and who owns
+  updating the GitHub Environment secrets?
 4. `capture-live.mjs` is interactive and cannot run in CI. Once
-   `login-live.mjs` works, should it be removed to avoid confusion?
+  `login-live.mjs` is the accepted path, it can be removed or retained only as
+  a local debugging utility.
