@@ -126,6 +126,26 @@ jobs:
       customBuildSetupScript: |
         ${{ matrix.customBuildSetupScript }}
         set -euo pipefail
+
+        BRANCH="${GITHUB_BASE_REF:-${GITHUB_REF_NAME}}"
+
+        case "${BRANCH}" in
+          main|uat|develop)
+            SUBMODULE_BRANCH="${BRANCH}"
+            ;;
+          *)
+            SUBMODULE_BRANCH="develop"
+            ;;
+        esac
+
+        git config submodule.rag_api.branch "${SUBMODULE_BRANCH}"
+        git config submodule.admin_panel.branch "${SUBMODULE_BRANCH}"
+        git submodule sync --recursive
+
+        if [ "${{ matrix.submodule }}" = "true" ]; then
+          git submodule update --init --remote --recursive -- "${{ matrix.buildContext }}"
+          git -C "${{ matrix.buildContext }}" checkout -B "${SUBMODULE_BRANCH}" "origin/${SUBMODULE_BRANCH}"
+        fi
         
         python3 - <<'PY'
         import re
