@@ -39,10 +39,10 @@ type SkillView = 'marketplace' | SkillGroup | 'favorites';
 
 const VIEWS: Array<{ value: SkillView; labelKey: TranslationKeys }> = [
   { value: 'marketplace', labelKey: 'com_ui_all_proper' },
-  { value: 'favorites', labelKey: 'com_ui_tools_view_favorites' },
   { value: 'public', labelKey: 'com_ui_skills_view_public' },
   { value: 'shared', labelKey: 'com_ui_skills_view_shared' },
   { value: 'mine', labelKey: 'com_ui_skills_view_mine' },
+  { value: 'favorites', labelKey: 'com_ui_tools_view_favorites' },
 ];
 
 const EMPTY_KEY_BY_VIEW: Record<SkillView, TranslationKeys> = {
