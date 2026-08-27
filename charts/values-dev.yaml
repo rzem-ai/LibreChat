@@ -20,6 +20,8 @@ ingress:
 pods:
   librechat:
     replicas: 1
+    securityContext:
+      fsGroup: 1000
     initContainers:
       llm-gateway-proxy:
         restartPolicy: Always
@@ -45,7 +47,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:b090e425d9813c1e1df1417414409f7d685e29d829378595e998afc4ebd6b110'
+          tag: 'develop@sha256:070c66abf04541618bd940b8dc026c522456ea761382f61d2d1f5147d8c7d301'
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -63,7 +65,7 @@ pods:
           ENDPOINTS: 'agents,anthropic,custom'
           KEY_VAULT_NAME: 'kv-int-librechat-dev'
           MCP_GATEWAY_OBO_SCOPE: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
-          MCP_GATEWAY_TOOLSETS: 'teams,research,news'
+          MCP_GATEWAY_TOOLSETS: 'teams,research,news,kx,desc,gims'
           MCP_GATEWAY_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
           MONGO_DB: 'mdb-librechat-database-dev'
           NODE_ENV: 'development'
@@ -112,6 +114,13 @@ pods:
           DEBUG_LOGGING: 'true'
           DEBUG_CONSOLE: 'true'
           AGENT_DEBUG_LOGGING: 'true'
+          # In-cluster Valkey -- StatefulSet from charts/templates/valkey.yaml
+          USE_REDIS: 'true'
+          USE_REDIS_STREAMS: 'true'
+          REDIS_URI: 'redis://librechat-valkey:6379'
+          REDIS_KEY_PREFIX: 'librechat'
+          REDIS_PING_INTERVAL: '300'
+          STREAM_DELTA_COALESCE_MS: '25'
         secrets:
           AZURE_API_KEY: librechat-azure-api-key
           MONGO_URI: librechat-dev-mdb-connection-string
@@ -128,6 +137,8 @@ pods:
           #Langfuse Observability
           LANGFUSE_PUBLIC_KEY: librechat-langfuse-public-key-dev
           LANGFUSE_SECRET_KEY: librechat-langfuse-secret-key-dev
+          # Valkey auth
+          REDIS_PASSWORD: librechat-valkey-password-dev
       rag-api:
         image:
           repository: 'tt-librechat/rag-api'
@@ -163,7 +174,7 @@ pods:
       meilisearch:
         image:
           pullPolicy: Always
-          tag: 'develop@sha256:23fcf4528c931a6e6a66ec2a6abfe0a435a97a257c3a4f09cd32b3ef214bd104'
+          tag: 'develop@sha256:e80e3e04ff49ba3dfbee714717db57df0d3a77a804f3476bf7d85cba728adf61'
         env:
           MEILI_ENV: 'development'
         secrets:
@@ -173,6 +184,13 @@ pods:
           size: 10Gi
           accessModes:
             - ReadWriteOnce
-          name: "meilisearch-data"
+          name: 'meilisearch-data'
           mountPath: /meili_data
-          storageClass: "managed-csi-standard-private"
+          storageClass: 'managed-csi-standard-private'
+
+valkey:
+  image:
+    tag: 'develop@sha256:b1fe6726d88cb8756bd3523d3ebaedcb8890bfeea5759bb523152d4e1ea4422b'
+  persistence:
+    storageClass: 'managed-csi-standard-private'
+  passwordSecretName: 'librechat-valkey-password-dev'

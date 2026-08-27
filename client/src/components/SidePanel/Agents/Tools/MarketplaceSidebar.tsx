@@ -63,7 +63,7 @@ export default function MarketplaceSidebar({
 }: MarketplaceSidebarProps) {
   const localize = useLocalize();
   const [createOpen, setCreateOpen] = useState(false);
-  const { agentsConfig } = useAgentPanelContext();
+  const { agentsConfig, startupConfig } = useAgentPanelContext();
   const hasMcpCreateAccess = useHasAccess({
     permissionType: PermissionTypes.MCP_SERVERS,
     permission: Permissions.CREATE,
@@ -72,6 +72,8 @@ export default function MarketplaceSidebar({
     () => agentsConfig?.capabilities?.includes(AgentCapabilities.actions) ?? false,
     [agentsConfig],
   );
+  const createActionsEnabled =
+    startupConfig?.interface?.customDeloitteFeatureFlags?.createActions !== false;
 
   const createItems = useMemo(() => {
     const items: Array<{ label: string; icon: ReactNode; onClick: () => void }> = [];
@@ -82,7 +84,7 @@ export default function MarketplaceSidebar({
         onClick: () => onCreateNew?.('mcp'),
       });
     }
-    if (actionsEnabled) {
+    if (createActionsEnabled && actionsEnabled) {
       items.push({
         label: localize('com_ui_tools_kind_actions'),
         icon: <Workflow className="size-4" aria-hidden="true" />,
@@ -90,7 +92,7 @@ export default function MarketplaceSidebar({
       });
     }
     return items;
-  }, [localize, onCreateNew, hasMcpCreateAccess, actionsEnabled]);
+  }, [localize, onCreateNew, hasMcpCreateAccess, actionsEnabled, createActionsEnabled]);
 
   return (
     <aside className="flex w-56 shrink-0 flex-col gap-0.5 border-r border-border-light bg-surface-primary-alt p-3">

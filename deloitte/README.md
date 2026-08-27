@@ -183,7 +183,7 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 26. BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com
 27. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
 28. `MCP_GATEWAY_URL=https://mcp-gw-dev.ctk.au.deloitte.com/mcp`
-29. `MCP_GATEWAY_TOOLSETS=teams,research,news`
+29. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims`
 30. `MCP_GATEWAY_OBO_SCOPE=api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user`
 > The **ClearTrack MCP Gateway** connection (`mcpServers` block in `librechat.yaml` at repo root and `charts/config/librechat.yaml` for Helm) uses On-Behalf-Of (OBO) auth, not a dedicated OAuth client — it reuses `OPENID_CLIENT_ID`/`OPENID_CLIENT_SECRET` from item 8–9 to exchange the user's login token for one scoped to the gateway. There are no gateway-specific client credentials to set; the only requirement is that `OPENID_SCOPE` (item 12) includes the gateway's audience scope.
 
