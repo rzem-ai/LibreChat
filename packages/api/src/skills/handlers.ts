@@ -393,7 +393,9 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       const authorName = user.name ?? user.username ?? 'Unknown';
 
       try {
-        const scannerToken = await resolveScannerToken(user);
+        const scannerToken = process.env.SKILL_SCANNER_URL
+          ? await resolveScannerToken(user)
+          : undefined;
         await scanSkillOnCreate({
           name: body.name,
           description: body.description,

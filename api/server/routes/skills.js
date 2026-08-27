@@ -222,13 +222,14 @@ async function uploadFileHandler(req, res) {
     // Look up existing file before saving — needed to clean up old blob on replace
     const existingFile = await getSkillFileByPath(skillId, relativePath);
 
-    const scannerToken = await resolveSkillScannerToken(req.user);
+    const scannerToken = process.env.SKILL_SCANNER_URL
+      ? await resolveSkillScannerToken(req.user)
+      : undefined;
     await scanSkillFileUpload({
       fileName: file.originalname,
       content: file.buffer,
       token: scannerToken,
     });
-
     const fileId = crypto.randomUUID();
     const filename = file.originalname;
     const storageFileName = `${fileId}__${filename}`;

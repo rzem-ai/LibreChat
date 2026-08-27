@@ -358,11 +358,13 @@ async function scanArchive(
     const validationFailed =
       requireValidation && validationPassed === false && validationProblems.length > 0;
 
-    // Block if any gate trips: HTTP error, a failed manifest validation (only
-    // when we require one AND the scanner reported problems), an explicit unsafe
-    // verdict, or a finding at/above the configured severity threshold.
-    const failed = !response.ok || validationFailed || isSafe === false || findings.length > 0;
+    // Fail-safe: require an explicit `scan.is_safe === true` from the scanner.
+    const scanPassed = isSafe === true;
 
+    // Block if any gate trips: HTTP error, a failed manifest validation (only
+    // when we require one AND the scanner reported problems), a missing/unsafe
+    // scan verdict, or a finding at/above the configured severity threshold.
+    const failed = !response.ok || validationFailed || !scanPassed || findings.length > 0;
     logger.info(
       `[skillScanner] "${fileName}" -> http=${response.status} validationPassed=${validationPassed} ` +
         `validationProblems=${validationProblems.length} isSafe=${isSafe} blockingFindings=${findings.length} verdict=${failed ? 'BLOCK' : 'PASS'}`,
