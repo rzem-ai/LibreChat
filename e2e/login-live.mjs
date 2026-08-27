@@ -90,7 +90,7 @@ const page = await context.newPage();
     // race we can lose. Go straight to the endpoint it redirects to instead.
     console.log('[login-live] no email/password form — going to SSO endpoint directly');
     await page.goto(appURL('oauth/openid'), { waitUntil: 'domcontentloaded', timeout });
-    await page.waitForURL(/login\.microsoftonline\.com/, { timeout });
+    await page.waitForURL((url) => url.hostname === 'login.microsoftonline.com', { timeout });
     await loginViaMicrosoftSSO(page, email, password);
   }
 
