@@ -157,7 +157,8 @@ function pickEndpointField<K extends keyof TEndpoint>(
   publicEndpoint?: string,
 ): TEndpoint[K] | undefined {
   const endpoints = appConfig?.endpoints as
-    (Record<string, TEndpoint | undefined> & { all?: TEndpoint }) | undefined;
+    | (Record<string, TEndpoint | undefined> & { all?: TEndpoint })
+    | undefined;
   const all = endpoints?.all as Partial<TEndpoint> | undefined;
   /** The PUBLIC endpoint the request came in on, when it differs from the
    *  backing provider. `initializeAgent` rewrites `agent.endpoint` to the

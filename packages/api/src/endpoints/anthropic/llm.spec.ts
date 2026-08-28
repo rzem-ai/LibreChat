@@ -43,7 +43,8 @@ describe('getLLMConfig', () => {
     });
 
     const fetchOptions = result.llmConfig.clientOptions?.fetchOptions as
-      { dispatcher?: unknown; redirect?: string } | undefined;
+      | { dispatcher?: unknown; redirect?: string }
+      | undefined;
     expect(fetchOptions).toEqual(
       expect.objectContaining({
         dispatcher: expect.any(Object),
@@ -61,7 +62,8 @@ describe('getLLMConfig', () => {
     });
 
     const fetchOptions = result.llmConfig.clientOptions?.fetchOptions as
-      { dispatcher?: { constructor: { name: string } }; redirect?: string } | undefined;
+      | { dispatcher?: { constructor: { name: string } }; redirect?: string }
+      | undefined;
     expect(fetchOptions?.dispatcher?.constructor.name).toBe('Agent');
     expect(fetchOptions).toEqual(expect.objectContaining({ redirect: 'error' }));
   });
