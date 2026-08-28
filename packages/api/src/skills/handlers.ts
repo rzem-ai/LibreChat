@@ -546,7 +546,9 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       }
 
       try {
-        const scannerToken = await resolveScannerToken(req.user);
+        const scannerToken = process.env.SKILL_SCANNER_URL
+          ? await resolveScannerToken(req.user)
+          : undefined;
         await scanSkillOnUpdate({
           name: update.name ?? currentSkill.name,
           description: update.description ?? currentSkill.description,
