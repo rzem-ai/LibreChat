@@ -16,7 +16,6 @@
 	path = rag_api
 	url = https://github.com/Deloitte-Australia/tt-librechat-rag.git
 	branch = develop
-# 	ignore = all
 
 # The 'admin_panel' submodule links to the ea-libre-admin repository, which provides
 # Admin Panel functionality for LibreChat.
@@ -28,4 +27,3 @@
 	path = admin_panel
 	url = https://github.com/Deloitte-Australia/ea-libreadmin.git
 	branch = develop
-	#	ignore = all
