@@ -425,6 +425,7 @@ export function redactServerSecrets(
     type: config.type,
     url: config.url,
     title: config.title,
+    parentGroup: config.parentGroup, // Deloitte Custom Change: parent group
     description: config.description,
     iconPath: config.iconPath,
     chatMenu: config.chatMenu,

@@ -1,4 +1,10 @@
-export const envVarRegex = /^\${(.+)}$/;
+/**
+ * Deloitte Custom Change: Use `[^}]+` instead of a greedy `.+`. A greedy match treats a
+ * value with two or more `${VAR}` placeholders (e.g. `${A}?x=${B}`) as one long variable
+ * name spanning from the first `${` to the last `}`, fails the env lookup, and returns the
+ * string unresolved — silently skipping the multi-placeholder loop in `extractEnvVariable`.
+ */
+export const envVarRegex = /^\${([^}]+)}$/;
 
 /**
  * Infrastructure env vars that must never be resolved via placeholder expansion.

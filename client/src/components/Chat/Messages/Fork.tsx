@@ -6,8 +6,8 @@ import { GitFork, InfoIcon } from 'lucide-react';
 import { useToastContext } from '@librechat/client';
 import { ForkOptions } from 'librechat-data-provider';
 import { GitCommit, GitBranchPlus, ListTree } from 'lucide-react';
+import { useForkConvoMutation, useGetStartupConfig } from '~/data-provider';
 import { TranslationKeys, useLocalize, useNavigateToConvo } from '~/hooks';
-import { useForkConvoMutation } from '~/data-provider';
 import { cn } from '~/utils';
 import store from '~/store';
 
@@ -225,6 +225,9 @@ export default function Fork({
   const popoverStore = Ariakit.usePopoverStore({
     placement: 'bottom',
   });
+  const { data: startupConfig } = useGetStartupConfig();
+  /** Deloitte Custom Change: skip the fork options popover and always fork with default settings */
+  const simplifyFork = startupConfig?.interface?.customDeloitteFeatureFlags?.simplifyFork === true;
 
   const buttonStyle = cn(
     'hover-button rounded-lg p-1.5 text-text-secondary-alt',
@@ -269,6 +272,30 @@ export default function Fork({
   const conversationId = _convoId ?? '';
   if (!forkingSupported || !conversationId || !messageId) {
     return null;
+  }
+
+  /** Deloitte Custom Change: skip the fork options popover and always fork with default settings */
+  if (simplifyFork) {
+    const onSimpleClick = () => {
+      forkConvo.mutate({
+        messageId,
+        conversationId,
+        option: ForkOptions.TARGET_LEVEL,
+        splitAtTarget: false,
+        latestMessageId,
+      });
+    };
+
+    return (
+      <button
+        className={buttonStyle}
+        onClick={onSimpleClick}
+        type="button"
+        aria-label={localize('com_ui_fork_all_target')}
+      >
+        <GitFork size="19" aria-hidden="true" />
+      </button>
+    );
   }
 
   const onClick = (option: string) => {

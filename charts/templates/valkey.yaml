@@ -1,0 +1,139 @@
+---
+# ExternalSecret: pulls Valkey auth password from Azure Key Vault.
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: librechat-valkey-secret
+spec:
+  secretStoreRef:
+    name: app-secret-store
+    kind: SecretStore
+  target:
+    name: librechat-valkey-secret
+    template:
+      type: Opaque
+      engineVersion: v2
+  data:
+    - secretKey: REDIS_PASSWORD
+      remoteRef:
+        key: {{ .Values.valkey.passwordSecretName | quote }}
+---
+# StatefulSet: single-node Valkey (Redis-compatible) for LibreChat.
+# Provides USE_REDIS features: cross-replica concurrency, leader election,
+# MCP OAuth state sharing, and stream resumption across pod restarts.
+#
+# Recovery notes (no kubectl required):
+# 1. podManagementPolicy: Parallel removes the OrderedReady barrier.
+# 2. argocd.argoproj.io/sync-options: Replace=true lets ArgoCD force-recreate
+#    the StatefulSet via the UI (Sync -> Replace + Force) without needing kubectl.
+# 3. The PVC survives a StatefulSet replace -- data on /data is unaffected.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: librechat-valkey
+  annotations:
+    argocd.argoproj.io/sync-options: Replace=true
+  labels:
+    app: librechat-valkey
+    component: redis
+spec:
+  serviceName: librechat-valkey
+  podManagementPolicy: Parallel
+  replicas: 1
+  selector:
+    matchLabels:
+      app: librechat-valkey
+      component: redis
+  template:
+    metadata:
+      labels:
+        app: librechat-valkey
+        component: redis
+    spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: Always
+      containers:
+        - name: redis
+          image: "{{ .Values.imageRegistry }}/{{ .Values.valkey.image.repository }}:{{ .Values.valkey.image.tag }}"
+          imagePullPolicy: {{ .Values.valkey.image.pullPolicy | default "Always" }}
+          args:
+            - "valkey-server"
+            - "--requirepass"
+            - "$(REDIS_PASSWORD)"
+            - "--appendonly"
+            - "yes"
+          ports:
+            - containerPort: {{ .Values.valkey.port }}
+              name: redis
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: librechat-valkey-secret
+                  key: REDIS_PASSWORD
+            # REDISCLI_AUTH is read by valkey-cli automatically, allowing liveness
+            # and readiness probes to authenticate without passing -a on the command
+            # line (which would expose the password in the process list).
+            - name: REDISCLI_AUTH
+              valueFrom:
+                secretKeyRef:
+                  name: librechat-valkey-secret
+                  key: REDIS_PASSWORD
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            exec:
+              command: ["valkey-cli", "ping"]
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          readinessProbe:
+            exec:
+              command: ["valkey-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "512Mi"
+              cpu: "250m"
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .Values.valkey.persistence.size }}
+        {{- with .Values.valkey.persistence.storageClass }}
+        storageClassName: {{ . }}
+        {{- end }}
+---
+# Service: ClusterIP -- name MUST be librechat-valkey to match REDIS_URI env var.
+apiVersion: v1
+kind: Service
+metadata:
+  name: librechat-valkey
+  labels:
+    app: librechat-valkey
+spec:
+  type: ClusterIP
+  selector:
+    app: librechat-valkey
+  ports:
+    - name: redis
+      port: {{ .Values.valkey.port }}
+      targetPort: {{ .Values.valkey.port }}

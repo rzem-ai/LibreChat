@@ -23,7 +23,7 @@ export async function loadDefaultInterface({
   const includesAddedEndpoints = (config?.modelSpecs?.addedEndpoints?.length ?? 0) > 0;
 
   // Deloitte Custom Change: Parse header enablement and title (extract from ENV var)
-  let deloitteHeader: TCustomConfig['interface']['deloitteHeader'] | undefined;
+  let deloitteHeader = interfaceConfig?.deloitteHeader;
   if (interfaceConfig?.deloitteHeader) {
     let { title } = interfaceConfig.deloitteHeader;
     if (typeof title === 'string') {
@@ -47,6 +47,7 @@ export async function loadDefaultInterface({
       (hasModelSpecs ? includesAddedEndpoints : defaults.modelSelect),
     parameters: interfaceConfig?.parameters ?? (hasModelSpecs ? false : defaults.parameters),
     presets: interfaceConfig?.presets ?? (hasModelSpecs ? false : defaults.presets),
+    customDeloitteFeatureFlags: interfaceConfig?.customDeloitteFeatureFlags,
     privacyPolicy: interfaceConfig?.privacyPolicy ?? defaults.privacyPolicy,
     termsOfService: interfaceConfig?.termsOfService ?? defaults.termsOfService,
     mcpServers: interfaceConfig?.mcpServers ?? defaults.mcpServers,

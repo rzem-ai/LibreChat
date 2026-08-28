@@ -51,6 +51,7 @@ on:
       - rag_api/**
       - Dockerfile
       - Dockerfile.meilisearch
+      - src/redis/**
       - package.json
 # Limit to one concurrent workflow run per workflow, event, and ref
 concurrency:
@@ -107,6 +108,12 @@ jobs:
             #   ARG1=value
             # unitTestScript: |
             #   echo "Running unit tests"
+          # Valkey image — in-cluster Redis-compatible store (StatefulSet, AOF persistence)
+          - imageNameAlias: valkey
+            buildContext: src/redis
+            dockerFilePath: src/redis/Dockerfile
+            yamlKeyPath: '.valkey.image'
+            submodule: false
         #####################################################################################
     uses: Deloitte-Australia/ct-devops-resources/.github/workflows/build-and-promote.yml@V2
     secrets: inherit
@@ -119,6 +126,29 @@ jobs:
       customBuildSetupScript: |
         ${{ matrix.customBuildSetupScript }}
         set -euo pipefail
+
+        BRANCH="${GITHUB_BASE_REF:-${GITHUB_REF_NAME}}"
+
+        echo "BRANCH - ${BRANCH}"
+
+        case "${BRANCH}" in
+          main|uat|develop)
+            SUBMODULE_BRANCH="${BRANCH}"
+            ;;
+          *)
+            SUBMODULE_BRANCH="main"
+            ;;
+        esac
+
+        echo "SUBMODULE BRANCH - ${SUBMODULE_BRANCH}"
+        git config submodule.rag_api.branch "${SUBMODULE_BRANCH}"
+        git config submodule.admin_panel.branch "${SUBMODULE_BRANCH}"
+        git submodule sync --recursive
+
+        if [ "${{ matrix.submodule }}" = "true" ]; then
+          git submodule update --init --remote --recursive -- "${{ matrix.buildContext }}"
+          git -C "${{ matrix.buildContext }}" checkout -B "${SUBMODULE_BRANCH}" "origin/${SUBMODULE_BRANCH}"
+        fi
         
         python3 - <<'PY'
         import re
@@ -127,7 +157,7 @@ jobs:
         path = Path("librechat.yaml")
         content = path.read_text()
         content = re.sub(
-          r'(?m)^[ \t]*(?:#\s*Local-only identity token header; build-and-promote strips this from deployment chart config\.\s*\n[ \t]*)?x-id-token:\s*"?\$\{LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION\}"?[ \t]*\n?',
+          r'(?m)^[ \t]*x-id-token:\s*[\'"]?\$\{LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION\}[\'"]?[ \t]*\n?',
           '',
           content,
         )
@@ -136,7 +166,7 @@ jobs:
           match = re.search(r"^cache:\s*true(?:\s*#.*)?$", content, flags=re.MULTILINE)
           if match is None:
             raise SystemExit("Unable to inject fileStrategy: cache:true entry not found")
-          content = content[:match.end()] + '\n\nfileStrategy: "azure_blob"' + content[match.end():]
+          content = content[:match.end()] + "\n\nfileStrategy: 'azure_blob'" + content[match.end():]
 
         path.write_text(content)
         PY
