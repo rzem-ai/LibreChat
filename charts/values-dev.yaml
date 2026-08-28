@@ -198,7 +198,7 @@ pods:
         # CI must build this image with the VITE_BASE_PATH arg; otherwise asset paths
         # will be incorrect when routed through nginx at /admin.
         image:
-          repository: 'tt-librechat/admin-panel'
+          repository: 'tt-librechat/admin'
           pullPolicy: Always
           tag: 'develop'
         env:
