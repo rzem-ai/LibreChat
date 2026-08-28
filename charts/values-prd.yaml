@@ -108,7 +108,7 @@ pods:
           #Langfuse Observability
           LANGFUSE_BASE_URL: 'https://langfuse.ctk.au.deloitte.com'
           # OpenTelemetry Tracing
-          OTEL_TRACING_ENABLED: 'true'
+          OTEL_TRACING_ENABLED: 'false'
           OTEL_TRACES_SAMPLER_ARG: '1.0'
           OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: 'https://managed-ai-ctspoke-prd-dce-8row.australiaeast-1.ingest.monitor.azure.com/dataCollectionRules/dcr-4d5bdfd0b21f48ee8af60e6c2681f9c6/streams/Microsoft-OTLP-Traces/otlp/v1/traces'
           # Azure Monitor DCR only accepts OTLP/HTTP+protobuf
@@ -116,8 +116,8 @@ pods:
           # Wrap the OTLP exporter with an Azure AD bearer-token headers factory (managed identity via AZURE_CLIENT_ID)
           AZURE_MONITOR_AUTH_ENABLED: 'true'
           # Logging for debugging
-          OTEL_LOG_LEVEL: 'DEBUG'
-          OTEL_IOREDIS_TRACING_ENABLED: 'true'
+          OTEL_LOG_LEVEL: 'INFO'
+          OTEL_IOREDIS_TRACING_ENABLED: 'false'
           DEBUG_LOGGING: 'true'
           DEBUG_CONSOLE: 'true'
           AGENT_DEBUG_LOGGING: 'true'
