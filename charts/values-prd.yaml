@@ -113,7 +113,7 @@ pods:
           # OpenTelemetry Tracing
           OTEL_TRACING_ENABLED: 'true'
           OTEL_TRACES_SAMPLER_ARG: '1.0'
-          OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: 'https://managed-ai-ctspoke-npd-dce-95rn.australiaeast-1.ingest.monitor.azure.com/dataCollectionRules/dcr-3991725585f24a5eabd0d6aa283d0e18/streams/Microsoft-OTLP-Traces/otlp/v1/traces' # TODO: Confirm
+          OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: 'https://managed-ai-ctspoke-prd-dce-8row.australiaeast-1.ingest.monitor.azure.com/dataCollectionRules/dcr-4d5bdfd0b21f48ee8af60e6c2681f9c6/streams/Microsoft-OTLP-Traces/otlp/v1/traces'
           # Azure Monitor DCR only accepts OTLP/HTTP+protobuf
           OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf'
           # Wrap the OTLP exporter with an Azure AD bearer-token headers factory (managed identity via AZURE_CLIENT_ID)
@@ -189,6 +189,37 @@ pods:
           name: 'meilisearch-data'
           mountPath: /meili_data
           storageClass: 'managed-csi-standard-private'
+  admin:
+    replicas: 1
+    containers:
+      admin:
+        # Image must be built with --build-arg VITE_BASE_PATH=/admin
+        # The admin panel is a Vite SPA where the base path is baked in at build time.
+        # CI must build this image with the VITE_BASE_PATH arg; otherwise asset paths
+        # will be incorrect when routed through nginx at /admin.
+        image:
+          repository: 'tt-librechat/admin'
+          pullPolicy: Always
+          tag: 'main'
+        env:
+          PORT: '3000'
+          ADMIN_SSO_ONLY: 'true'
+          VITE_BASE_PATH: '/admin'
+          VITE_API_BASE_URL: 'https://myassist.ctk.au.deloitte.com'
+          API_SERVER_URL: 'https://myassist.ctk.au.deloitte.com'
+          SESSION_COOKIE_SECURE: 'true'
+        secrets:
+          SESSION_SECRET: librechat-admin-panel-session-secret
+        service:
+          enabled: true
+          type: ClusterIP
+          port: 3000
+          targetPort: 3000
+        ingress:
+          enabled: true
+          paths:
+            - path: /admin
+              pathType: Prefix
 
 valkey:
   image:
