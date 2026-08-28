@@ -49,7 +49,7 @@ pods:
         image:
           tag: 'develop@sha256:851839fc8ee874d2e3ebffdf253c3fcc7a0b260ed242320052b16a567fcbc59e'
         env:
-          ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
+          ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
           ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7,claude-sonnet-5,claude-opus-4-8'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
@@ -138,7 +138,6 @@ pods:
           #Langfuse Observability
           LANGFUSE_PUBLIC_KEY: librechat-langfuse-public-key-dev
           LANGFUSE_SECRET_KEY: librechat-langfuse-secret-key-dev
-          # Valkey auth
           REDIS_PASSWORD: librechat-valkey-password-dev
       rag-api:
         image:
@@ -190,6 +189,36 @@ pods:
           name: 'meilisearch-data'
           mountPath: /meili_data
           storageClass: 'managed-csi-standard-private'
+  admin-panel:
+    replicas: 1
+    containers:
+      admin-panel:
+        # Image must be built with --build-arg VITE_BASE_PATH=/admin
+        # The admin panel is a Vite SPA where the base path is baked in at build time.
+        # CI must build this image with the VITE_BASE_PATH arg; otherwise asset paths
+        # will be incorrect when routed through nginx at /admin.
+        image:
+          repository: 'tt-librechat/admin-panel'
+          pullPolicy: Always
+          tag: 'develop'
+        env:
+          PORT: '3000'
+          ADMIN_SSO_ONLY: 'true'
+          VITE_API_BASE_URL: 'https://librechat-dev.ctk.au.deloitte.com'
+          API_SERVER_URL: 'https://librechat-dev.ctk.au.deloitte.com'
+          SESSION_COOKIE_SECURE: 'true'
+        secrets:
+          SESSION_SECRET: librechat-admin-panel-session-secret-dev
+        service:
+          enabled: true
+          type: ClusterIP
+          port: 3000
+          targetPort: 3000
+        ingress:
+          enabled: true
+          paths:
+            - path: /admin
+              pathType: Prefix
 
 valkey:
   image:

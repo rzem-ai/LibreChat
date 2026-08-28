@@ -129,8 +129,8 @@ auth.json
 /images
 
 # Deloitte Submodules
-admin_panel/
-rag_api/
+#admin_panel/
+#rag_api/
 
 !client/src/components/Nav/SettingsTabs/Data/
 
