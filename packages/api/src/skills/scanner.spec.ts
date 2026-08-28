@@ -380,5 +380,60 @@ describe('skill scanner', () => {
       const scannedSkillMd = await scannedZip.file('SKILL.md')?.async('string');
       expect(scannedSkillMd).toContain('name: [unterminated');
     });
+
+    it('falls back to scanning the raw archive instead of rewriting it when the entry count exceeds the import limit', async () => {
+      const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
+      global.fetch = fetchSpy as unknown as typeof fetch;
+
+      const zip = new JSZip();
+      zip.file(
+        'SKILL.md',
+        [
+          '---',
+          'name: fixture-skill',
+          'description: A fixture.',
+          'always-apply: true',
+          '---',
+          '',
+          '# Body',
+        ].join('\n'),
+      );
+      for (let i = 0; i < 500; i++) {
+        zip.file(`extra-${i}.txt`, 'x');
+      }
+      const archive = await zip.generateAsync({ type: 'uint8array' });
+
+      await scanSkillUpload({ archive, fileName: 'skill.zip' });
+
+      // No separate frontmatter-only scan call — the rewrite (and the
+      // always-apply extraction that rides on it) never ran.
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      const scannedZip = await scannedArchiveFrom(fetchSpy.mock.calls[0]);
+      expect(Object.keys(scannedZip.files).length).toBe(501);
+      const scannedSkillMd = await scannedZip.file('SKILL.md')?.async('string');
+      expect(scannedSkillMd).toMatch(/^always-apply\s*:/im);
+    });
+
+    it('falls back to scanning the raw archive instead of buffering an oversized SKILL.md entry', async () => {
+      const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
+      global.fetch = fetchSpy as unknown as typeof fetch;
+
+      const oversizedBody = 'a'.repeat(11 * 1024 * 1024);
+      const zip = new JSZip();
+      zip.file(
+        'SKILL.md',
+        ['---', 'name: fixture-skill', 'description: A fixture.', '---', '', oversizedBody].join(
+          '\n',
+        ),
+      );
+      const archive = await zip.generateAsync({ type: 'uint8array' });
+
+      await scanSkillUpload({ archive, fileName: 'skill.zip' });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      const scannedZip = await scannedArchiveFrom(fetchSpy.mock.calls[0]);
+      const scannedSkillMd = await scannedZip.file('SKILL.md')?.async('string');
+      expect(scannedSkillMd?.length).toBeGreaterThan(11 * 1024 * 1024);
+    }, 20000);
   });
 });

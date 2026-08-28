@@ -18,6 +18,7 @@ import { resolveRequestTenantId } from '~/middleware/tenant';
 import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
 import { isSafeSkillFilePath } from './path';
 import { parseSkillMarkdown } from './parse';
+import { readZipEntry } from './zip';
 
 const SKILL_MD = 'SKILL.md';
 
@@ -644,44 +645,6 @@ async function handleZip(
       errors,
     },
   });
-}
-
-async function readZipEntry(
-  zipEntry: JSZip.JSZipObject,
-  effectiveLimit: number,
-): Promise<{ buffer: Buffer | null; bytesRead: number }> {
-  if (effectiveLimit <= 0) {
-    return { buffer: null, bytesRead: 0 };
-  }
-
-  const chunks: Buffer[] = [];
-  let bytesRead = 0;
-  let exceededLimit = false;
-  const entryStream = zipEntry.nodeStream('nodebuffer');
-  await new Promise<void>((resolve, reject) => {
-    entryStream.on('data', (chunk: Buffer) => {
-      if (exceededLimit) {
-        return;
-      }
-      bytesRead += chunk.length;
-      if (bytesRead > effectiveLimit) {
-        exceededLimit = true;
-        if ('destroy' in entryStream && typeof entryStream.destroy === 'function') {
-          entryStream.destroy();
-        }
-        resolve();
-        return;
-      }
-      chunks.push(chunk);
-    });
-    entryStream.on('end', resolve);
-    entryStream.on('error', reject);
-  });
-
-  return {
-    buffer: exceededLimit ? null : Buffer.concat(chunks),
-    bytesRead,
-  };
 }
 
 const MIME_MAP: Record<string, string> = {

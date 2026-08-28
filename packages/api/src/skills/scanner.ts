@@ -19,6 +19,8 @@ import JSZip from 'jszip';
 import { logger } from '@librechat/data-schemas';
 import { SKILL_SEVERITY_LEVELS } from 'librechat-data-provider';
 import { parseSkillMarkdown, extractSkillBody } from './parse';
+import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
+import { readZipEntry } from './zip';
 
 const SKILL_MD = 'SKILL.md';
 const DEFAULT_TIMEOUT_MS = 15000;
@@ -514,8 +516,11 @@ function findSkillMdPath(zip: JSZip): string | null {
  * Rewrite an uploaded archive's SKILL.md to a scanner-safe manifest before
  * scanning, preserving every other entry (companion scripts, references,
  * etc.) byte-for-byte so their content still gets fully security-scanned.
- * Returns `null` when there's no readable/parseable SKILL.md — the caller
- * falls back to scanning the original archive unchanged.
+ * Returns `null` when there's no readable/parseable SKILL.md, or when the
+ * archive exceeds the same entry-count/decompressed-size bounds `handleZip`
+ * (import.ts) enforces — the caller falls back to scanning the original
+ * archive unchanged, so a zip-bomb SKILL.md entry can't be used to force an
+ * unbounded local decompression ahead of those guards.
  */
 async function stripInternalFrontmatterFromZip(bytes: Uint8Array): Promise<{
   archive: Uint8Array;
@@ -529,15 +534,26 @@ async function stripInternalFrontmatterFromZip(bytes: Uint8Array): Promise<{
   } catch {
     return null;
   }
+  if (Object.keys(zip.files).length > DEFAULT_SKILL_IMPORT_LIMITS.maxEntries) {
+    return null;
+  }
   const skillMdPath = findSkillMdPath(zip);
   if (!skillMdPath) {
     return null;
   }
-  const content = await zip.file(skillMdPath)?.async('string');
-  if (!content) {
+  const skillMdEntry = zip.file(skillMdPath);
+  if (!skillMdEntry) {
     return null;
   }
-  const stripped = stripInternalFrontmatterForScan(content);
+  const skillMdLimit = Math.min(
+    DEFAULT_SKILL_IMPORT_LIMITS.maxSingleFileBytes,
+    DEFAULT_SKILL_IMPORT_LIMITS.maxDecompressedBytes,
+  );
+  const { buffer: skillMdBuffer } = await readZipEntry(skillMdEntry, skillMdLimit);
+  if (!skillMdBuffer) {
+    return null;
+  }
+  const stripped = stripInternalFrontmatterForScan(skillMdBuffer.toString('utf-8'));
   if (!stripped) {
     return null;
   }
