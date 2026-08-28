@@ -25,7 +25,6 @@ ingress:
       secretStoreName: external-secret-store
       hosts:
         - 'myassist.ctk.au.deloitte.com'
-
 pods:
   librechat:
     replicas: 3
