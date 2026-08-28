@@ -1,6 +1,7 @@
 apiVersion: v2
 name: charts
 description: A Helm chart for Kubernetes
+kubeVersion: ">=1.34.0"
 
 # A chart can be either an 'application' or a 'library' chart.
 #

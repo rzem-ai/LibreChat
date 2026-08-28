@@ -1,20 +1,22 @@
-*.md
-!README.md
-./github
-**/node_modules/
-**/dist
-.git
-npm-debug.log
-.coverage
-.coverage.*
-.env
-.aws
-__pycache__
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.log
-nosetests.xml
-coverage.xml
-*.cover
+**/.circleci
+**/.editorconfig
+**/.dockerignore
+**/.git
+**/.DS_Store
+**/.vscode
+**/node_modules
+
+# Specific patterns to ignore
+data-node
+meili_data*
+# librechat*
+Dockerfile*
+docs
+logs
+uploads
+e2e
+evals
+untested_skills
+
+# Ignore all hidden files
+.?*

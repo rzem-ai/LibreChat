@@ -1,0 +1,108 @@
+diff --git a/node_modules/@opentelemetry/otlp-exporter-base/build/esm/transport/http-transport-utils.js b/node_modules/@opentelemetry/otlp-exporter-base/build/esm/transport/http-transport-utils.js
+index 82173be..2cfabc2 100644
+--- a/node_modules/@opentelemetry/otlp-exporter-base/build/esm/transport/http-transport-utils.js
++++ b/node_modules/@opentelemetry/otlp-exporter-base/build/esm/transport/http-transport-utils.js
+@@ -132,15 +132,25 @@ export function sendWithHttp(request, url, headers, compression, userAgent, agen
+     });
+ }
+ export function compressAndSend(req, compression, data, onError) {
+-    let dataStream = readableFromUint8Array(data);
++    // Explicit Content-Length required by Azure Monitor DCR OTLP endpoint
++    // (rejects chunked encoding with 400 MissingContentLengthHeader).
++    let payload;
+     if (compression === 'gzip') {
+         req.setHeader('Content-Encoding', 'gzip');
+-        dataStream = dataStream
+-            .on('error', onError)
+-            .pipe(zlib.createGzip())
+-            .on('error', onError);
++        try {
++            payload = zlib.gzipSync(data);
++        }
++        catch (error) {
++            onError(error);
++            return;
++        }
++    }
++    else {
++        payload = Buffer.isBuffer(data) ? data : Buffer.from(data);
+     }
+-    dataStream.pipe(req).on('error', onError);
++    req.setHeader('Content-Length', payload.length);
++    const dataStream = readableFromUint8Array(payload);
++    dataStream.on('error', onError).pipe(req).on('error', onError);
+ }
+ function readableFromUint8Array(buff) {
+     const readable = new Readable();
+diff --git a/node_modules/@opentelemetry/otlp-exporter-base/build/esnext/transport/http-transport-utils.js b/node_modules/@opentelemetry/otlp-exporter-base/build/esnext/transport/http-transport-utils.js
+index 82173be..2cfabc2 100644
+--- a/node_modules/@opentelemetry/otlp-exporter-base/build/esnext/transport/http-transport-utils.js
++++ b/node_modules/@opentelemetry/otlp-exporter-base/build/esnext/transport/http-transport-utils.js
+@@ -132,15 +132,25 @@ export function sendWithHttp(request, url, headers, compression, userAgent, agen
+     });
+ }
+ export function compressAndSend(req, compression, data, onError) {
+-    let dataStream = readableFromUint8Array(data);
++    // Explicit Content-Length required by Azure Monitor DCR OTLP endpoint
++    // (rejects chunked encoding with 400 MissingContentLengthHeader).
++    let payload;
+     if (compression === 'gzip') {
+         req.setHeader('Content-Encoding', 'gzip');
+-        dataStream = dataStream
+-            .on('error', onError)
+-            .pipe(zlib.createGzip())
+-            .on('error', onError);
++        try {
++            payload = zlib.gzipSync(data);
++        }
++        catch (error) {
++            onError(error);
++            return;
++        }
++    }
++    else {
++        payload = Buffer.isBuffer(data) ? data : Buffer.from(data);
+     }
+-    dataStream.pipe(req).on('error', onError);
++    req.setHeader('Content-Length', payload.length);
++    const dataStream = readableFromUint8Array(payload);
++    dataStream.on('error', onError).pipe(req).on('error', onError);
+ }
+ function readableFromUint8Array(buff) {
+     const readable = new Readable();
+diff --git a/node_modules/@opentelemetry/otlp-exporter-base/build/src/transport/http-transport-utils.js b/node_modules/@opentelemetry/otlp-exporter-base/build/src/transport/http-transport-utils.js
+index 924ef29..27d4369 100644
+--- a/node_modules/@opentelemetry/otlp-exporter-base/build/src/transport/http-transport-utils.js
++++ b/node_modules/@opentelemetry/otlp-exporter-base/build/src/transport/http-transport-utils.js
+@@ -136,15 +136,25 @@ function sendWithHttp(request, url, headers, compression, userAgent, agent, data
+ }
+ exports.sendWithHttp = sendWithHttp;
+ function compressAndSend(req, compression, data, onError) {
+-    let dataStream = readableFromUint8Array(data);
++    // Explicit Content-Length required by Azure Monitor DCR OTLP endpoint
++    // (rejects chunked encoding with 400 MissingContentLengthHeader).
++    let payload;
+     if (compression === 'gzip') {
+         req.setHeader('Content-Encoding', 'gzip');
+-        dataStream = dataStream
+-            .on('error', onError)
+-            .pipe(zlib.createGzip())
+-            .on('error', onError);
++        try {
++            payload = zlib.gzipSync(data);
++        }
++        catch (error) {
++            onError(error);
++            return;
++        }
++    }
++    else {
++        payload = Buffer.isBuffer(data) ? data : Buffer.from(data);
+     }
+-    dataStream.pipe(req).on('error', onError);
++    req.setHeader('Content-Length', payload.length);
++    const dataStream = readableFromUint8Array(payload);
++    dataStream.on('error', onError).pipe(req).on('error', onError);
+ }
+ exports.compressAndSend = compressAndSend;
+ function readableFromUint8Array(buff) {

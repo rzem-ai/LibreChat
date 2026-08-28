@@ -1,0 +1,209 @@
+# Template: Advisory or Drafting
+#
+# Use this template for skills that produce professional written deliverables
+# or researched answers from provided documents:
+#   - Summaries, case studies, reports, RFP responses, briefings
+#   - Document Q&A, sourced research, draft generation
+#   - KB-backed RAG agents (Pattern B below)
+#
+# Two invocation patterns:
+#   PATTERN A — Document-backed: user supplies source material alongside query.
+#               Use invoke_text (single-turn) or invoke_sequential with attach_source: true.
+#   PATTERN B — KB-backed RAG: user asks a question; the agent retrieves from
+#               a pre-loaded knowledge base. No source_material, no attach_source.
+#               Always use invoke_sequential.
+#
+# Copy this file to: evals/skills/<Skill Name>/eval_cases.yaml
+# Then customise the cases below.
+#
+# Run with:
+#   uv run eval-run --config "evals/skills/<Skill Name>/eval_cases.yaml" --case case_1
+
+adapter: _eval.adapters.librechat_adapter.LibreChatAdapter
+invoke_method: invoke_text  # override per-case with invoke_sequential for multi-turn
+num_runs: 3
+
+cases:
+
+  # -----------------------------------------------------------------------
+  # PATTERN A — Single-turn, document-backed
+  # -----------------------------------------------------------------------
+
+  case_1:
+    name: "TODO: Describe this test case"
+    category: "Advisory or Drafting"
+    source_material: "documents/TODO_sample_input.md"
+    chatbot_role: "TODO: Describe the agent's role"
+    user_query: >-
+      TODO: Write the user prompt that triggers this skill.
+    expected_output: >-
+      TODO: Describe the expected output structure and content.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "TODO: skill-name"
+
+    metrics:
+      - faithfulness
+      - hallucination
+      - task_completion
+
+    thresholds:
+      faithfulness: 0.7
+      hallucination: 0.3
+      task_completion: 0.7
+
+    leading_questions:
+      - name: "Structural Template"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Does the output follow the required structural template for its
+          content type (e.g., required sections, headings, format)?
+
+      - name: "Claim Traceability"
+        question: >-
+          Are all claims traceable to a specific passage in the source material?
+
+      - name: "No Invented Content"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Is the output free from claims not present in the source material?
+
+      - name: "Audience Tone"
+        question: >-
+          Does the output adapt its register and tone for the stated audience?
+
+      - name: "Conciseness"
+        question: >-
+          Is the output concise — not merely copy-pasting from the source?
+
+  # -----------------------------------------------------------------------
+  # PATTERN A — Multi-turn, document-backed
+  # -----------------------------------------------------------------------
+
+  case_2:
+    name: "TODO: Describe the multi-turn variant"
+    category: "Advisory or Drafting"
+    invoke_method: invoke_sequential
+    source_material: "documents/TODO_sample_input.md"
+    chatbot_role: "TODO: Describe the agent's role"
+    expected_output: >-
+      TODO: Describe the expected multi-turn output.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "TODO: skill-name"
+
+    turns:
+      - content: >-
+          TODO: First user message (usually the main request).
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Skill tool called"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "TODO: skill-name"
+          - type: contains_any
+            name: "TODO: Check for expected content"
+            phrases: ["TODO: phrase1", "TODO: phrase2"]
+
+      - content: >-
+          TODO: Follow-up user message (refinement, clarification, or extension).
+        turn_assertions:
+          - type: leading_question
+            name: "TODO: Verify follow-up response"
+            question: >-
+              TODO: Does the response address the follow-up appropriately?
+
+    metrics:
+      - faithfulness
+      - hallucination
+      - conversation_completeness
+
+    thresholds:
+      faithfulness: 0.7
+      hallucination: 0.3
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "Structural Template"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Does the final output follow the required structural template?
+
+      - name: "No Invented Content"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Is all content grounded in the source material?
+
+      - name: "Follow-up Incorporation"
+        question: >-
+          Does the agent correctly incorporate the follow-up request without
+          losing context from the initial response?
+
+  # -----------------------------------------------------------------------
+  # PATTERN B — KB-backed RAG (agent retrieves from knowledge base)
+  # No source_material — the agent owns its retrieval context.
+  # retrieval_context is populated automatically via include_retrieval: true.
+  # -----------------------------------------------------------------------
+
+  case_3:
+    name: "TODO: KB Q&A — single-turn RAG"
+    category: "Advisory or Drafting"
+    invoke_method: invoke_sequential
+    # No source_material — agent retrieves from its knowledge base
+    chatbot_role: "TODO: Describe the agent's role"
+    expected_output: >-
+      TODO: Describe the expected answer — specific facts, figures, or
+      policy details the response must contain.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "TODO: skill-name"
+
+    turns:
+      - content: >-
+          TODO: Write the question the user would ask.
+        # No attach_source — the agent retrieves its own context
+
+    metrics:
+      - faithfulness
+      - answer_relevancy
+      - contextual_recall
+      - contextual_precision
+
+    thresholds:
+      faithfulness: 0.7
+      answer_relevancy: 0.5
+      contextual_recall: 0.5
+      contextual_precision: 0.5
+
+    diagnostic_metrics:
+      - contextual_relevancy
+
+    diagnostic_thresholds:
+      contextual_relevancy: 0.5
+
+    leading_questions:
+      - name: "Answer Grounded in KB"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Is the answer grounded in specific content from the knowledge base
+          rather than general model knowledge?
+
+      - name: "Specific Facts Present"
+        question: >-
+          Does the response include the specific TODO: [figure/policy/detail]
+          from the knowledge base?
+
+      - name: "Correct Refusal"
+        question: >-
+          For out-of-scope questions, does the agent refuse and redirect
+          rather than fabricating an answer?
