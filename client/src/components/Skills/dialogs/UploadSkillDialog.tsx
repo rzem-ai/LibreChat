@@ -44,6 +44,8 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
       ? `${configuredSizeLimitMb}`
       : formatMegabytes(skillImportSizeLimit);
 
+  const [scanError, setScanError] = useState<string | null>(null);
+
   const importMutation = useImportSkillMutation({
     onSuccess: (skill) => {
       const warnings: TSkillWarning[] | undefined = skill.warnings;
@@ -54,15 +56,14 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
             ? warnings.map((w) => w.message).join('\n')
             : localize('com_ui_skill_created'),
       });
+      setScanError(null);
       setIsOpen(false);
       navigate(`/skills/${skill._id}`);
     },
     onError: (error: unknown) => {
-      // Show the scanner's validation error (if present), otherwise fall back to the generic skill creation error.
-      showToast({
-        status: 'error',
-        message: formatSkillScanError(error, localize('com_ui_create_skill_upload_error')),
-      });
+      // Surface the scanner's validation error inline so it stays on screen
+      // until the user retries, instead of an auto-dismissing toast.
+      setScanError(formatSkillScanError(error, localize('com_ui_create_skill_upload_error')));
     },
   });
 
@@ -71,6 +72,7 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
       if (importMutation.isLoading) {
         return;
       }
+      setScanError(null);
       if (file.size > skillImportSizeLimit) {
         showToast({
           status: 'error',
@@ -108,8 +110,15 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
     [handleFile],
   );
 
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setScanError(null);
+    }
+    setIsOpen(open);
+  };
+
   return (
-    <OGDialog open={isOpen} onOpenChange={setIsOpen}>
+    <OGDialog open={isOpen} onOpenChange={handleOpenChange}>
       <OGDialogContent className="w-11/12 max-w-lg overflow-hidden">
         <div className="flex flex-col gap-6 p-1 sm:p-2">
           <h2 className="text-lg font-bold text-text-primary">
@@ -153,6 +162,8 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
                 </ul>
               </div>
             </div>
+
+            {scanError && <p className="whitespace-pre-line text-xs text-red-500">{scanError}</p>}
           </div>
 
           <input

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -53,6 +54,7 @@ export default function CreateSkillDialog({
   const localize = useLocalize();
   const navigate = useNavigate();
   const { showToast } = useToastContext();
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const {
     register,
@@ -75,6 +77,7 @@ export default function CreateSkillDialog({
             ? warnings.map((w) => w.message).join('\n')
             : localize('com_ui_skill_created'),
       });
+      setScanError(null);
       setIsOpen(false);
       reset();
       if (onCreated) {
@@ -84,11 +87,9 @@ export default function CreateSkillDialog({
       navigate(`/skills/${skill._id}`);
     },
     onError: (error: unknown) => {
-      // Deloitte Custom Change: Show the scanner's validation error (if present), otherwise fall back to the generic skill creation error.
-      showToast({
-        status: 'error',
-        message: formatSkillScanError(error, localize('com_ui_skill_create_error')),
-      });
+      // Deloitte Custom Change: Surface the scanner's validation error inline so it
+      // stays on screen until the user retries, instead of an auto-dismissing toast.
+      setScanError(formatSkillScanError(error, localize('com_ui_skill_create_error')));
     },
   });
 
@@ -96,6 +97,7 @@ export default function CreateSkillDialog({
     if (createSkill.isLoading) {
       return;
     }
+    setScanError(null);
     createSkill.mutate({
       name: data.name.trim(),
       description: data.description.trim(),
@@ -105,6 +107,7 @@ export default function CreateSkillDialog({
 
   const handleClose = () => {
     setIsOpen(false);
+    setScanError(null);
     reset();
   };
 
@@ -201,6 +204,8 @@ export default function CreateSkillDialog({
               {...register('body')}
             />
           </div>
+
+          {scanError && <p className="whitespace-pre-line text-xs text-red-500">{scanError}</p>}
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-2 pt-2">
