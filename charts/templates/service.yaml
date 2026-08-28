@@ -14,7 +14,7 @@ spec:
     - port: {{ $config.service.port }}
       targetPort: {{ $config.service.targetPort }}
       protocol: TCP
-      name: {{ printf "http-%s" $container | trunc 15 | trimSuffix "-" }}
+      name: http-{{ $container }}
   selector:
     {{ include "helm.selectorLabels" . | nindent 4 }}
     component: {{ $pod }}

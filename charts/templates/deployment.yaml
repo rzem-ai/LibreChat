@@ -119,7 +119,7 @@ spec:
           {{- end }}
           {{- if $config.service.enabled }}
           ports:
-            - name: {{ printf "http-%s" $container | trunc 15 | trimSuffix "-" }}
+            - name: http-{{ $container }}
               containerPort: {{ $config.service.targetPort }}
           {{- end }}
           {{- with $config.livenessProbe }}
