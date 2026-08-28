@@ -28,7 +28,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'develop@sha256:5e48ae2578b7cdb928974e4400dfc4247b755daec9b2749b40c127d8d08984f8'
+          tag: 'develop@sha256:b94d643cbdda27dc77aebdcf5d9847fbf803508446e6305cf116840afb2ff871'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -47,7 +47,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:223398ae8024c70a404afef66bb195dc346308f3ad0c7c92bed0472312272f4a'
+          tag: 'develop@sha256:39fd030fe4bdcea3f3707a653a07d1b45d48dc1038197e12f24462c0f091d2f8'
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -149,7 +149,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:09fd468e27139cdbc43b1deb08ab9686f07cfe9d5a0dd0d6ff309d082d00274e'
+          tag: 'develop@sha256:03cc4e862451f4372a60a9ee731fbd5b91bd2545bc8ff7bb12cdc2a0292d7fd1'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -182,7 +182,7 @@ pods:
       meilisearch:
         image:
           pullPolicy: Always
-          tag: 'develop@sha256:d75f24d11f7b364fe3ad465403bdc936f77978bdf9f2a9223b50f28806221ff6'
+          tag: 'develop@sha256:27d48440504d77dbaad66d0c35f9f80a7d287626478106ce2b5c8b2baf33a94f'
         env:
           MEILI_ENV: 'development'
         secrets:
@@ -206,7 +206,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:58e07c1b0f340b6a611537bfc0dbd289fef5c23a2ed47f91f0fb739b74a5b4d5'
+          tag: 'develop@sha256:d471036758f89c2bb56fc8ee3021750e34fcb46f318cfefdecf9ad8dd63b91c0'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
