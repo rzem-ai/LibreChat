@@ -168,9 +168,10 @@ jobs:
         if [ "${{ matrix.submodule }}" = "true" ]; then
           git submodule update --init --remote --recursive
           git -C rag_api checkout -B "${SUBMODULE_BRANCH}" "origin/${SUBMODULE_BRANCH}"
+          git -C admin_panel checkout -B "${SUBMODULE_BRANCH}" "origin/${SUBMODULE_BRANCH}"
         fi
         
-        echo "4. Submodule rag api updated to the latest commit"
+        echo "5. Both submodules rag_api and admin_panel updated the chosen SUBMODULE_BRANCH"
         
         python3 - <<'PY'
         import re
