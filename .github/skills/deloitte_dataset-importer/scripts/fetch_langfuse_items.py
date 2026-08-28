@@ -36,9 +36,13 @@ def main() -> int:
     args = build_argument_parser().parse_args()
 
     load_dotenv(override=True)
-    host = (os.getenv("EVAL_LANGFUSE_BASE_URL") or os.getenv("LANGFUSE_BASE_URL") or "").strip()
+    host = (
+        os.getenv("EVAL_LANGFUSE_BASE_URL") or os.getenv("LANGFUSE_BASE_URL") or ""
+    ).strip()
     if not host:
-        raise ValueError("Langfuse host is empty. Set EVAL_LANGFUSE_BASE_URL or LANGFUSE_BASE_URL.")
+        raise ValueError(
+            "Langfuse host is empty. Set EVAL_LANGFUSE_BASE_URL or LANGFUSE_BASE_URL."
+        )
     os.environ["LANGFUSE_BASE_URL"] = host
     os.environ["EVAL_LANGFUSE_BASE_URL"] = host
     langfuse = Langfuse(host=host)
