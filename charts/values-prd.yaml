@@ -56,22 +56,6 @@ pods:
             fi && exec npm run backend
         image:
           tag: 'main@sha256:ecc4acfc3d12f3718c237327eac4251e42da6501ca6059fbb930efa2b5fc9645'
-        livenessProbe:
-          httpGet:
-            path: /livez
-            port: 3080
-          initialDelaySeconds: 120
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 6
-        readinessProbe:
-          httpGet:
-            path: /readyz
-            port: 3080
-          initialDelaySeconds: 90
-          periodSeconds: 10
-          timeoutSeconds: 5
-          failureThreshold: 12
         env:
           ADMIN_PANEL_URL: 'https://myassist.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -92,7 +76,6 @@ pods:
           MCP_GATEWAY_TOOLSETS: 'teams,research,news,kx,desc,gims'
           MCP_GATEWAY_URL: 'https://mcp-gateway.ctk.au.deloitte.com/mcp'
           MONGO_DB: 'mdb-librechat-database-prd'
-          HOST: '0.0.0.0'
           NODE_ENV: 'production'
           NODE_TLS_REJECT_UNAUTHORIZED: '0' # TODO: Review Node TLS setup. See: https://github.com/Deloitte-Australia/tt-librechat/issues/159
           OPENID_CLIENT_ID: 'b5494d82-9ae5-449e-8867-6804ccc2f5ef' # This is the Azure Client ID in Deloitte App Reg
