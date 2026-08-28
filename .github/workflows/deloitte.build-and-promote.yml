@@ -178,7 +178,7 @@ jobs:
           git -C "${{ matrix.buildContext }}" checkout -B "${SUBMODULE_BRANCH}" "origin/${SUBMODULE_BRANCH}"
         fi
         
-        echo "4. Submodule rag api ${matrix.buildContext} updated to the latest commit on branch ${SUBMODULE_BRANCH}"
+        echo "4. Submodule rag api updated to the latest commit"
         
         python3 - <<'PY'
         import re
