@@ -47,7 +47,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:d0911a8f9e879d57709ff325a4513bdb328efc85c3a968db11cdba220d02769f'
+          tag: 'develop@sha256:a8e0a5c421907966b6afae45356661e4b3030a21ad3d4643129adf096e708cad'
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -143,7 +143,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:b9f8db336eae6f16872266ce8c7b583b22824470151128da546b0b8332e7eb30'
+          tag: 'develop@sha256:613e13439e992c670d0210c5e975308e219a1f2b8e2b860b247a49275bf0d76d'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -176,7 +176,7 @@ pods:
       meilisearch:
         image:
           pullPolicy: Always
-          tag: 'develop@sha256:ec4e7d09071c4907811a226d6b262886d2d6b028d54d4232f88ba83ec968ace9'
+          tag: 'develop@sha256:89dfc866b1e7400e771c3b4b629b0c784db17565d2e37e018459183c5380edaa'
         env:
           MEILI_ENV: 'development'
         secrets:
@@ -200,7 +200,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:362a68b7e605155ad63c39ad47edf1cffbb4736b42cbe94394e0a0e2a0e0941c'
+          tag: 'develop@sha256:7925c17e3a58eabc8da68ff1340b69bb2bf8a226f30e5c816e40343ad0014871'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
