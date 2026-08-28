@@ -174,8 +174,8 @@ jobs:
         echo "3. Submodules synchronized with the latest configuration"
 
         if [ "${{ matrix.submodule }}" = "true" ]; then
-          git submodule update --init --remote --recursive -- ."
-          git -C . checkout -B "${SUBMODULE_BRANCH}" "origin/${SUBMODULE_BRANCH}"
+          git submodule update --init --remote --recursive
+          git -C checkout -B "${SUBMODULE_BRANCH}" "origin/${SUBMODULE_BRANCH}"
         fi
         
         echo "4. Submodule rag api updated to the latest commit"
