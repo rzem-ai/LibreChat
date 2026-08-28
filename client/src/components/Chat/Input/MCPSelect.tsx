@@ -1,7 +1,7 @@
 import React, { memo, useMemo } from 'react';
 import * as Ariakit from '@ariakit/react';
-import { ChevronDown } from 'lucide-react';
 import { TooltipAnchor } from '@librechat/client';
+import { Check, ChevronDown, Minus } from 'lucide-react';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import MCPServerMenuItem from '~/components/MCP/MCPServerMenuItem';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
@@ -37,7 +37,7 @@ function MCPSelectContent() {
       );
       return server?.config?.title || manager?.mcpValues?.[0];
     }
-    return localize('com_ui_x_selected', { 0: selectedCount });
+    return localize('com_ui_x_connected', { 0: selectedCount });
   }, [manager?.selectableServers, manager?.mcpValues, localize]);
 
   if (!manager) {
@@ -53,6 +53,7 @@ function MCPSelectContent() {
     selectableServers,
     getConfigDialogProps,
     toggleServerSelection,
+    toggleSelectAll,
     getServerStatusIconProps,
   } = manager;
 
@@ -61,6 +62,9 @@ function MCPSelectContent() {
   }
 
   const configDialogProps = getConfigDialogProps();
+  const selectedCount = mcpValues?.length ?? 0;
+  const allSelected = selectableServers.length > 0 && selectedCount >= selectableServers.length;
+  const someSelected = selectedCount > 0 && !allSelected;
 
   return (
     <>
@@ -108,6 +112,32 @@ function MCPSelectContent() {
             'scale-95 data-[leave]:scale-95 data-[leave]:opacity-0',
           )}
         >
+          <Ariakit.MenuItem
+            hideOnClick={false}
+            onClick={toggleSelectAll}
+            aria-label={localize(allSelected ? 'com_ui_disconnect_all' : 'com_ui_connect_all')}
+            className={cn(
+              'group mb-1 flex w-full cursor-pointer items-center justify-between gap-3',
+              'rounded-lg border-b border-border-light px-2.5 py-2 outline-none transition-all duration-150',
+              'hover:bg-surface-hover data-[active-item]:bg-surface-hover',
+            )}
+          >
+            <span className="text-sm font-medium text-text-primary">
+              {localize(allSelected ? 'com_ui_disconnect_all' : 'com_ui_connect_all')}
+            </span>
+            <span
+              aria-hidden="true"
+              className={cn(
+                'flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-sm border',
+                allSelected || someSelected
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border-xheavy bg-transparent',
+              )}
+            >
+              {allSelected && <Check className="h-4 w-4" />}
+              {someSelected && <Minus className="h-4 w-4" />}
+            </span>
+          </Ariakit.MenuItem>
           <div className="flex max-h-[320px] flex-col gap-1 overflow-y-auto">
             {selectableServers.map((server) => (
               <MCPServerMenuItem

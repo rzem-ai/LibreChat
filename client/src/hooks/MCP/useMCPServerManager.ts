@@ -471,7 +471,7 @@ export function useMCPServerManager({
             status: 'success',
           });
 
-          const currentValues = mcpValues ?? [];
+          const currentValues = mcpValuesRef.current ?? [];
           if (!currentValues.includes(serverName)) {
             setMCPValues([...currentValues, serverName]);
           }
@@ -495,7 +495,6 @@ export function useMCPServerManager({
       queryClient,
       showToast,
       localize,
-      mcpValues,
       cleanupServerState,
       setMCPValues,
     ],
@@ -591,6 +590,34 @@ export function useMCPServerManager({
     },
     [mcpValues, setMCPValues, isInitializing],
   );
+
+  /** Selects every selectable server, or clears the selection if all are already selected. */
+  const toggleSelectAll = useCallback(() => {
+    // Get all selectable server names
+    const allSelectableNames = selectableServers.map((server) => server.serverName);
+    const currentValues = mcpValues ?? [];
+    const allSelected =
+      allSelectableNames.length > 0 &&
+      allSelectableNames.every((name) => currentValues.includes(name));
+
+    // Select/deselect all servers
+    setMCPValues(allSelected ? [] : allSelectableNames);
+
+    // When selecting all servers, also authenticate/initialize those that need it
+    if (!allSelected) {
+      allSelectableNames.forEach((serverName) => {
+        const status = connectionStatus?.[serverName];
+        // Initialize servers that are disconnected, have errors, or need auth
+        if (
+          status?.connectionState === 'disconnected' ||
+          status?.connectionState === 'error' ||
+          (status?.requiresOAuth && status?.connectionState !== 'connected')
+        ) {
+          initializeServer(serverName, false);
+        }
+      });
+    }
+  }, [selectableServers, mcpValues, setMCPValues, connectionStatus, initializeServer]);
 
   const handleConfigSave = useCallback(
     (targetName: string, authData: Record<string, string>) => {
@@ -793,6 +820,7 @@ export function useMCPServerManager({
     setIsPinned,
     placeholderText,
     toggleServerSelection,
+    toggleSelectAll,
     localize,
 
     isConfigModalOpen,
