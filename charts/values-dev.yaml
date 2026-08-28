@@ -121,7 +121,6 @@ pods:
           SKILL_SCANNER_MIN_SEVERITY: 'high'
           # AI Registry
           AI_REGISTRY_CLIENT_ID: "4aeebbdc-56f5-4329-b40e-3d0a243bf74a" # AI Registry DEV & UAT
-          AI_REGISTRY_CALLBACK_URL: "https://ai-registry-dev.ctk.au.deloitte.com/mcp/oauth/callback"
           # In-cluster Valkey -- StatefulSet from charts/templates/valkey.yaml
           USE_REDIS: 'true'
           USE_REDIS_STREAMS: 'true'
