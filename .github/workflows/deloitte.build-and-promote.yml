@@ -129,7 +129,7 @@ jobs:
 
         BRANCH="${GITHUB_BASE_REF:-${GITHUB_REF_NAME}}"
 
-        echo "We're here - ${GITHUB_SHA}"
+        echo "BRANCH - ${BRANCH}"
 
         case "${BRANCH}" in
           main|uat|develop)
@@ -140,6 +140,7 @@ jobs:
             ;;
         esac
 
+        echo "SUBMODULE BRANCH - ${SUBMODULE_BRANCH}"
         git config submodule.rag_api.branch "${SUBMODULE_BRANCH}"
         git config submodule.admin_panel.branch "${SUBMODULE_BRANCH}"
         git submodule sync --recursive
