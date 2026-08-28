@@ -54,7 +54,8 @@ pods:
         env:
           ADMIN_PANEL_URL: 'https://libre-admin-panel-uat.ctk.au.deloitte.com'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
-          ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7,claude-sonnet-5,claude-opus-4-8'
+          # ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7,claude-sonnet-5,claude-opus-4-8'
+          ANTHROPIC_MODELS: 'claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-sonnet-5,claude-opus-4-8'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
           APP_TITLE: 'MyAssist 2.0 (UAT)'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
@@ -71,7 +72,7 @@ pods:
           DOMAIN_CLIENT: 'https://myassist-uat.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://myassist-uat.ctk.au.deloitte.com'
           EMBEDDINGS_MODEL: 'text-embedding-3-small'
-          EMBEDDINGS_PROVIDER: 'azure'
+          EMBEDDINGS_PROVIDER: 'openai'
           ENDPOINTS: 'agents,anthropic,bedrock,custom'
           KEY_VAULT_NAME: 'kv-int-librechat-uat'
           MCP_GATEWAY_OBO_SCOPE: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'

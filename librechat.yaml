@@ -151,9 +151,14 @@ endpoints:
         'tools',
       ]
     minRelevanceScore: 0.3
-    # Default model for new agents — uses Azure AU custom endpoint (confirmed working)
-    model: 'gpt-4o-mini'
-    endpoint: 'Azure AU'
+    # Restrict Agent Builder to the providers supported by the curated model catalog.
+    allowedProviders:
+      - 'Azure Foundry AU'
+      - 'VertexAI US'
+      - anthropic
+      - bedrock
+    model: 'gpt-56-luna'
+    endpoint: 'Azure Foundry AU'
 
   anthropic:
     streamRate: 25
