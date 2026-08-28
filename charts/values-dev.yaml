@@ -189,10 +189,10 @@ pods:
           name: 'meilisearch-data'
           mountPath: /meili_data
           storageClass: 'managed-csi-standard-private'
-  admin-panel:
+  admin:
     replicas: 1
     containers:
-      admin-panel:
+      admin:
         # Image must be built with --build-arg VITE_BASE_PATH=/admin
         # The admin panel is a Vite SPA where the base path is baked in at build time.
         # CI must build this image with the VITE_BASE_PATH arg; otherwise asset paths
