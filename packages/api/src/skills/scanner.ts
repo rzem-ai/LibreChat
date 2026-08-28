@@ -350,20 +350,19 @@ async function scanArchive(
     const isSafe = payload?.scan?.is_safe;
     const findings = blockingFindings(payload);
 
-    // Only treat a failed validation as a block when the scanner also reports
-    // specific problems. A bare `passed=false` with no problems is a scanner
-    // quirk (common with `verbose=false` mode) and should not block — genuine
-    // invalidity always comes with at least one problem entry.
+    // Fail-safe: treat `validation.passed === false` as a block regardless of
+    // whether the scanner also reported specific problems. `verbose=false`
+    // (the only mode any deployed SKILL_SCANNER_URL uses) can omit problem
+    // detail, but a missing explanation is not evidence the manifest is valid.
     const validationProblems = payload?.validation?.problems ?? [];
-    const validationFailed =
-      requireValidation && validationPassed === false && validationProblems.length > 0;
+    const validationFailed = requireValidation && validationPassed === false;
 
     // Fail-safe: require an explicit `scan.is_safe === true` from the scanner.
     const scanPassed = isSafe === true;
 
     // Block if any gate trips: HTTP error, a failed manifest validation (only
-    // when we require one AND the scanner reported problems), a missing/unsafe
-    // scan verdict, or a finding at/above the configured severity threshold.
+    // when we require one), a missing/unsafe scan verdict, or a finding at/above
+    // the configured severity threshold.
     const failed = !response.ok || validationFailed || !scanPassed || findings.length > 0;
     logger.info(
       `[skillScanner] "${fileName}" -> http=${response.status} validationPassed=${validationPassed} ` +

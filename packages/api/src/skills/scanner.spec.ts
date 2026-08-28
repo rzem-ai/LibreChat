@@ -64,7 +64,7 @@ describe('skill scanner', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('does not block when validation.passed is false but problems is empty (scanner quirk)', async () => {
+  it('blocks with a generic message when validation.passed is false but problems is empty', async () => {
     global.fetch = jest.fn().mockResolvedValue(
       jsonResponse({
         validation: { passed: false, problems: [] },
@@ -72,7 +72,18 @@ describe('skill scanner', () => {
       }),
     ) as unknown as typeof fetch;
 
-    await expect(upload()).resolves.toBeUndefined();
+    let caught: unknown;
+    try {
+      await upload();
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(isSkillScanError(caught)).toBe(true);
+    expect((caught as SkillScanError).statusCode).toBe(422);
+    expect((caught as SkillScanError).issues).toEqual([
+      { message: 'Skill scan failed due to validation issues' },
+    ]);
   });
 
   it('blocks and surfaces issues when validation.passed is false with problems', async () => {
