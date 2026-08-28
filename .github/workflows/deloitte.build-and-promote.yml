@@ -135,7 +135,7 @@ jobs:
         ${{ matrix.customBuildSetupScript }}
         set -euo pipefail
         
-        git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+        git config --global url."https://x-access-token:${SUBMODULE_GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
  
         echo "Preparing to switch branch in submodules"
         
