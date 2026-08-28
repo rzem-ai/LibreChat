@@ -115,7 +115,7 @@ jobs:
             yamlKeyPath: '.valkey.image'
             submodule: false
         #####################################################################################
-    uses: Deloitte-Australia/ct-devops-resources/.github/workflows/build-and-promote.yml@V2
+    uses: Deloitte-Australia/ct-devops-resources/.github/workflows/build-and-promote.yml@feature/commit_validation_librechat
     secrets: inherit
     with:
       imageNameSuffix: ${{ matrix.imageNameAlias }}
@@ -127,6 +127,26 @@ jobs:
         ${{ matrix.customBuildSetupScript }}
         set -euo pipefail
 
+        echo "Preparing to rename gitmodules file to .gitmodules"
+        python3 - <<'PY'
+        import subprocess
+        from pathlib import Path
+
+        source = Path("gitmodules")
+        target = Path(".gitmodules")
+
+        if target.exists():
+            print(".gitmodules already present; skipping rename")
+        elif not source.exists():
+            print("gitmodules file not present; skipping rename")
+        else:
+            try:
+                subprocess.run(["git", "mv", str(source), str(target)], check=True)
+            except subprocess.CalledProcessError as exc:
+                raise SystemExit(f"Unable to rename gitmodules file: {exc}") from exc
+        PY
+        
+        
         BRANCH="${GITHUB_BASE_REF:-${GITHUB_REF_NAME}}"
 
         echo "BRANCH - ${BRANCH}"
