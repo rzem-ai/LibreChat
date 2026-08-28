@@ -162,13 +162,23 @@ jobs:
 
         echo "SUBMODULE BRANCH - ${SUBMODULE_BRANCH}"
         git config submodule.rag_api.branch "${SUBMODULE_BRANCH}"
+        
+        echo "1. Submodule branch for rag_api set to ${SUBMODULE_BRANCH}"
+        
         git config submodule.admin_panel.branch "${SUBMODULE_BRANCH}"
+        
+        echo "2. Submodule branch for admin_panel set to ${SUBMODULE_BRANCH}"
+        
         git submodule sync --recursive
+        
+        echo "3. Submodules synchronized with the latest configuration"
 
         if [ "${{ matrix.submodule }}" = "true" ]; then
           git submodule update --init --remote --recursive -- "${{ matrix.buildContext }}"
           git -C "${{ matrix.buildContext }}" checkout -B "${SUBMODULE_BRANCH}" "origin/${SUBMODULE_BRANCH}"
         fi
+        
+        echo "4. Submodule rag api ${matrix.buildContext} updated to the latest commit on branch ${SUBMODULE_BRANCH}"
         
         python3 - <<'PY'
         import re
