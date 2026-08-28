@@ -3,7 +3,7 @@ name: dpn-resume-entry-drafter
 description: Generate formatted DPN resume entries for project work using the DPN Resume Entry Drafter app (plugin 111). Use when someone wants to write a DPN resume entry, update their DPN profile with a project, draft a project summary for DPN, or create a career record entry. Trigger phrases include "DPN resume", "resume entry", "DPN entry", "project entry for DPN", "update DPN profile".
 ---
 
-# DPN Resume Entry Drafter Test
+# DPN Resume Entry Drafter
 
 Generates polished, consistently formatted project resume entries for Deloitte People Network (DPN) profiles. Acts as an HR reviewer that transforms raw project notes into concise, third-person, paragraph-style entries suitable for internal career records.
 
