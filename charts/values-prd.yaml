@@ -58,7 +58,7 @@ pods:
         image:
           tag: 'main'
         env:
-          ADMIN_PANEL_URL: 'https://myassist-admin-panel.ctk.au.deloitte.com'
+          ADMIN_PANEL_URL: 'https://myassist.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
           ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
