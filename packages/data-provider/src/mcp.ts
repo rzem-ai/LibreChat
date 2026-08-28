@@ -173,6 +173,8 @@ const BaseOptionsSchema = z.object({
     .optional(),
   /** Description of the MCP server */
   description: z.string().optional(),
+  /** Deloitte Custom Change: parent brand/grouping name shown as `${title} - ${parentGroup}` in the Tool Library. */
+  parentGroup: z.string().optional(),
   /**
    * Controls whether the MCP server is initialized during application startup.
    * - true (default): Server is initialized during app startup and included in app-level connections

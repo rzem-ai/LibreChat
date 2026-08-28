@@ -9,6 +9,8 @@ const {
   domainParser,
 } = require('~/server/services/ActionService');
 const { getOpenAIClient } = require('~/server/controllers/assistants/helpers');
+// Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+const { rejectDisabledActions } = require('~/server/middleware');
 const db = require('~/models');
 
 const router = express.Router();
@@ -22,7 +24,8 @@ const router = express.Router();
  * @param {ActionMetadata} req.body.metadata - Metadata for the action.
  * @returns {Object} 200 - success response - application/json
  */
-router.post('/:assistant_id', async (req, res) => {
+// Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+router.post('/:assistant_id', rejectDisabledActions, async (req, res) => {
   try {
     const appConfig = req.config;
     const { assistant_id } = req.params;
