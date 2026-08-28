@@ -47,9 +47,9 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:851839fc8ee874d2e3ebffdf253c3fcc7a0b260ed242320052b16a567fcbc59e'
+          tag: 'develop@sha256:d99e84b7abe42768abe1b534efa9bbe229b2de3f0ba8ce2260ff13c6ab943ff7'
         env:
-          ADMIN_PANEL_URL: 'https://libre-admin-panel-dev.ctk.au.deloitte.com'
+          ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
           ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7,claude-sonnet-5,claude-opus-4-8'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
@@ -138,13 +138,12 @@ pods:
           #Langfuse Observability
           LANGFUSE_PUBLIC_KEY: librechat-langfuse-public-key-dev
           LANGFUSE_SECRET_KEY: librechat-langfuse-secret-key-dev
-          # Valkey auth
           REDIS_PASSWORD: librechat-valkey-password-dev
       rag-api:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:e03c6cfee3603ca0dac0884eeeca5c3cbe54b9a45b6e18837ec3deeb06623064'
+          tag: 'develop@sha256:1d296ec9048651f30de4d2711c553e002f90dde3e2867b4cfecb8719634616b0'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -177,7 +176,7 @@ pods:
       meilisearch:
         image:
           pullPolicy: Always
-          tag: 'develop@sha256:7cd8a2d5148aef640c51bf2a69ad46b61adf9b8ab94ac914afeb710ccb9500b8'
+          tag: 'develop@sha256:d9619b6aeaa3597aa3730d745f31448a6f43af2af40f40314fb5dbac32e22e62'
         env:
           MEILI_ENV: 'development'
         secrets:
@@ -190,6 +189,36 @@ pods:
           name: 'meilisearch-data'
           mountPath: /meili_data
           storageClass: 'managed-csi-standard-private'
+  admin-panel:
+    replicas: 1
+    containers:
+      admin-panel:
+        # Image must be built with --build-arg VITE_BASE_PATH=/admin
+        # The admin panel is a Vite SPA where the base path is baked in at build time.
+        # CI must build this image with the VITE_BASE_PATH arg; otherwise asset paths
+        # will be incorrect when routed through nginx at /admin.
+        image:
+          repository: 'tt-librechat/admin-panel'
+          pullPolicy: Always
+          tag: 'develop@sha256:333b38f923532e4ba8dd246b2417b1d0f1a7ff09378ea363f83f24bdfa5d0a45'
+        env:
+          PORT: '3000'
+          ADMIN_SSO_ONLY: 'true'
+          VITE_API_BASE_URL: 'https://librechat-dev.ctk.au.deloitte.com'
+          API_SERVER_URL: 'https://librechat-dev.ctk.au.deloitte.com'
+          SESSION_COOKIE_SECURE: 'true'
+        secrets:
+          SESSION_SECRET: librechat-admin-panel-session-secret-dev
+        service:
+          enabled: true
+          type: ClusterIP
+          port: 3000
+          targetPort: 3000
+        ingress:
+          enabled: true
+          paths:
+            - path: /admin
+              pathType: Prefix
 
 valkey:
   image:

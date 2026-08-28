@@ -12,3 +12,18 @@
 #
 # To update to latest: git submodule update --remote rag_api
 
+[submodule "rag_api"]
+	path = rag_api
+	url = https://github.com/Deloitte-Australia/tt-librechat-rag.git
+	branch = develop
+
+# The 'admin_panel' submodule links to the ea-libre-admin repository, which provides
+# Admin Panel functionality for LibreChat.
+# It defaults to the 'develop' branch locally, while CI can override it per
+# superproject branch.
+#
+# To update to latest: git submodule update --remote admin_panel
+[submodule "admin_panel"]
+	path = admin_panel
+	url = https://github.com/Deloitte-Australia/ea-libreadmin.git
+	branch = develop

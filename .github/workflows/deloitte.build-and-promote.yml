@@ -114,8 +114,16 @@ jobs:
             dockerFilePath: src/redis/Dockerfile
             yamlKeyPath: '.valkey.image'
             submodule: false
+          # Admin Panel image — built from admin_panel submodule Dockerfile with VITE_BASE_PATH=/admin
+          # The admin panel is a Vite SPA where the base path must be baked in at build time.
+          - imageNameAlias: admin-panel
+            buildContext: admin_panel
+            dockerFilePath: admin_panel/Dockerfile
+            yamlKeyPath: '.pods.admin-panel.containers.admin-panel.image'
+            buildArgs: VITE_BASE_PATH=/admin
+            submodule: true
         #####################################################################################
-    uses: Deloitte-Australia/ct-devops-resources/.github/workflows/build-and-promote.yml@V2
+    uses: Deloitte-Australia/ct-devops-resources/.github/workflows/build-and-promote.yml@feature/commit_validation_librechat
     secrets: inherit
     with:
       imageNameSuffix: ${{ matrix.imageNameAlias }}
@@ -126,7 +134,11 @@ jobs:
       customBuildSetupScript: |
         ${{ matrix.customBuildSetupScript }}
         set -euo pipefail
-
+        
+        git config --global url."https://x-access-token:${SUBMODULE_GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+ 
+        echo "Preparing to switch branch in submodules"
+        
         BRANCH="${GITHUB_BASE_REF:-${GITHUB_REF_NAME}}"
 
         echo "BRANCH - ${BRANCH}"
@@ -142,13 +154,24 @@ jobs:
 
         echo "SUBMODULE BRANCH - ${SUBMODULE_BRANCH}"
         git config submodule.rag_api.branch "${SUBMODULE_BRANCH}"
+        
+        echo "1. Submodule branch for rag_api set to ${SUBMODULE_BRANCH}"
+        
         git config submodule.admin_panel.branch "${SUBMODULE_BRANCH}"
+        
+        echo "2. Submodule branch for admin_panel set to ${SUBMODULE_BRANCH}"
+        
         git submodule sync --recursive
+        
+        echo "3. Submodules synchronized with the latest configuration"
 
         if [ "${{ matrix.submodule }}" = "true" ]; then
-          git submodule update --init --remote --recursive -- "${{ matrix.buildContext }}"
-          git -C "${{ matrix.buildContext }}" checkout -B "${SUBMODULE_BRANCH}" "origin/${SUBMODULE_BRANCH}"
+          git submodule update --init --remote --recursive
+          git -C rag_api checkout -B "${SUBMODULE_BRANCH}" "origin/${SUBMODULE_BRANCH}"
+          git -C admin_panel checkout -B "${SUBMODULE_BRANCH}" "origin/${SUBMODULE_BRANCH}"
         fi
+        
+        echo "5. Both submodules rag_api and admin_panel updated the chosen SUBMODULE_BRANCH"
         
         python3 - <<'PY'
         import re
