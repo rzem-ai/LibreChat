@@ -108,7 +108,7 @@ pods:
           #Langfuse Observability
           LANGFUSE_BASE_URL: 'https://langfuse.ctk.au.deloitte.com'
           # OpenTelemetry Tracing
-          OTEL_TRACING_ENABLED: 'true'
+          OTEL_TRACING_ENABLED: 'false'
           OTEL_TRACES_SAMPLER_ARG: '1.0'
           OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: 'https://managed-ai-ctspoke-prd-dce-8row.australiaeast-1.ingest.monitor.azure.com/dataCollectionRules/dcr-4d5bdfd0b21f48ee8af60e6c2681f9c6/streams/Microsoft-OTLP-Traces/otlp/v1/traces'
           # Azure Monitor DCR only accepts OTLP/HTTP+protobuf
