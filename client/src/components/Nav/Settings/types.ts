@@ -47,6 +47,9 @@ export interface SettingsContextValue {
   twoFactorEnabled: boolean;
   allowAccountDeletion: boolean;
   aboutEnabled: boolean;
+  accountsTabEnabled: boolean;
+  dataApiKeysEnabled: boolean;
+  dataDangerZoneEnabled: boolean;
   engineTTS: string;
   langfuseConnectionAccess: boolean;
 }
@@ -153,6 +156,7 @@ export const TABS: TabMeta[] = [
       { id: 'billing', labelKey: 'com_ui_settings_section_billing' },
       { id: 'danger', labelKey: 'com_ui_settings_section_danger_zone', danger: true },
     ],
+    show: (ctx) => ctx.accountsTabEnabled,
   },
   {
     id: SettingsTabValues.ABOUT,

@@ -496,7 +496,7 @@ export const registry: SettingEntry[] = [
     section: 'apiKeys',
     labelKey: 'com_ui_settings_label_provider_api_keys',
     keywords: ['api', 'key', 'keys', 'provider', 'endpoint', 'credentials'],
-    show: (ctx) => ctx.hasUserProvidedEndpoints,
+    show: (ctx) => ctx.dataApiKeysEnabled && ctx.hasUserProvidedEndpoints,
     Component: ProviderKeys,
   },
   {
@@ -504,7 +504,7 @@ export const registry: SettingEntry[] = [
     tab: DATA,
     section: 'apiKeys',
     labelKey: 'com_ui_settings_label_agent_api_keys',
-    show: (ctx) => ctx.hasRemoteAgents,
+    show: (ctx) => ctx.dataApiKeysEnabled && ctx.hasRemoteAgents,
     Component: ApiKeys,
   },
   {
@@ -512,6 +512,7 @@ export const registry: SettingEntry[] = [
     tab: DATA,
     section: 'apiKeys',
     labelKey: 'com_ui_settings_label_revoke_keys',
+    show: (ctx) => ctx.dataApiKeysEnabled,
     Component: RevokeKeys,
   },
   // Langfuse
@@ -530,6 +531,7 @@ export const registry: SettingEntry[] = [
     tab: DATA,
     section: 'danger',
     labelKey: 'com_ui_settings_label_delete_cache',
+    show: (ctx) => ctx.dataDangerZoneEnabled,
     Component: DeleteCache,
   },
   {
@@ -537,6 +539,7 @@ export const registry: SettingEntry[] = [
     tab: DATA,
     section: 'danger',
     labelKey: 'com_ui_settings_label_clear_chats',
+    show: (ctx) => ctx.dataDangerZoneEnabled,
     Component: ClearChats,
   },
 
@@ -546,6 +549,7 @@ export const registry: SettingEntry[] = [
     tab: ACCOUNT,
     section: 'profile',
     labelKey: 'com_ui_settings_label_avatar',
+    show: (ctx) => ctx.accountsTabEnabled,
     Component: Avatar,
   },
   // Account · Security
@@ -554,7 +558,7 @@ export const registry: SettingEntry[] = [
     tab: ACCOUNT,
     section: 'security',
     labelKey: 'com_ui_settings_label_2fa',
-    show: (ctx) => ctx.isLocalProvider,
+    show: (ctx) => ctx.accountsTabEnabled && ctx.isLocalProvider,
     Component: EnableTwoFactorItem,
   },
   {
@@ -562,7 +566,7 @@ export const registry: SettingEntry[] = [
     tab: ACCOUNT,
     section: 'security',
     labelKey: 'com_ui_settings_label_backup_codes',
-    show: (ctx) => ctx.isLocalProvider && ctx.twoFactorEnabled,
+    show: (ctx) => ctx.accountsTabEnabled && ctx.isLocalProvider && ctx.twoFactorEnabled,
     Component: BackupCodesItem,
   },
   // Account · Billing
@@ -571,7 +575,7 @@ export const registry: SettingEntry[] = [
     tab: ACCOUNT,
     section: 'billing',
     labelKey: 'com_ui_settings_label_credits',
-    show: (ctx) => ctx.balanceEnabled,
+    show: (ctx) => ctx.accountsTabEnabled && ctx.balanceEnabled,
     Component: TokenCredits,
   },
   {
@@ -579,7 +583,7 @@ export const registry: SettingEntry[] = [
     tab: ACCOUNT,
     section: 'billing',
     labelKey: 'com_ui_settings_label_auto_refill',
-    show: (ctx) => ctx.balanceEnabled,
+    show: (ctx) => ctx.accountsTabEnabled && ctx.balanceEnabled,
     Component: AutoRefill,
   },
   // Account · Danger zone
@@ -588,7 +592,7 @@ export const registry: SettingEntry[] = [
     tab: ACCOUNT,
     section: 'danger',
     labelKey: 'com_ui_settings_label_delete_account',
-    show: (ctx) => ctx.allowAccountDeletion,
+    show: (ctx) => ctx.accountsTabEnabled && ctx.allowAccountDeletion,
     Component: DeleteAccount,
   },
 

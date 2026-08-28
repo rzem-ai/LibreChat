@@ -4,6 +4,7 @@ import { CheckboxButton } from '@librechat/client';
 import { WandSparkles, ChevronDown } from 'lucide-react';
 import { ArtifactModes, defaultAgentCapabilities } from 'librechat-data-provider';
 import { useLocalize, useAgentCapabilities } from '~/hooks';
+import { useGetStartupConfig } from '~/data-provider';
 import { useBadgeRowContext } from '~/Providers';
 import { cn } from '~/utils';
 
@@ -16,6 +17,9 @@ function Artifacts() {
   const localize = useLocalize();
   const context = useBadgeRowContext();
   const { toggleState, debouncedChange, isPinned } = context?.artifacts ?? {};
+  const { data: startupConfig } = useGetStartupConfig();
+  const shadcnOnly =
+    startupConfig?.interface?.customDeloitteFeatureFlags?.artifactsShadcnOnly === true;
 
   const { artifactsEnabled } = useAgentCapabilities(
     context?.agentsConfig?.capabilities ?? defaultAgentCapabilities,
@@ -41,9 +45,9 @@ function Artifacts() {
       debouncedChange({ value: '' });
       setIsButtonExpanded(false);
     } else {
-      debouncedChange({ value: ArtifactModes.DEFAULT });
+      debouncedChange({ value: shadcnOnly ? ArtifactModes.SHADCNUI : ArtifactModes.DEFAULT });
     }
-  }, [isEnabled, debouncedChange]);
+  }, [isEnabled, debouncedChange, shadcnOnly]);
 
   const handleMenuButtonClick = useCallback(
     (e: React.MouseEvent) => {
@@ -88,7 +92,7 @@ function Artifacts() {
   return (
     <div className="flex">
       <CheckboxButton
-        className={cn('max-w-fit', isEnabled && 'rounded-r-none border-r-0')}
+        className={cn('max-w-fit', isEnabled && !shadcnOnly && 'rounded-r-none border-r-0')}
         checked={isEnabled}
         setValue={handleToggle}
         label={localize('com_ui_artifacts')}
@@ -96,7 +100,7 @@ function Artifacts() {
         icon={<WandSparkles className="icon-md" aria-hidden="true" />}
       />
 
-      {isEnabled && (
+      {isEnabled && !shadcnOnly && (
         <Ariakit.MenuProvider open={isPopoverOpen} setOpen={setIsPopoverOpen}>
           <Ariakit.MenuButton
             className={cn(

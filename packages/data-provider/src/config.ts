@@ -1386,6 +1386,11 @@ export const interfaceSchema = z
         createActions: z.boolean().optional(),
         landingIcon: z.boolean().optional(),
         conversationIcon: z.boolean().optional(),
+        accountsTab: z.boolean().optional(),
+        dataApiKeys: z.boolean().optional(),
+        dataDangerZone: z.boolean().optional(),
+        externalVoiceProvider: z.boolean().optional(),
+        artifactsShadcnOnly: z.boolean().optional(),
       })
       .optional(),
     prompts: z

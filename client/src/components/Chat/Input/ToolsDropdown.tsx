@@ -42,6 +42,9 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     skillsEnabled,
   } = useAgentCapabilities(context?.agentsConfig?.capabilities ?? defaultAgentCapabilities);
 
+  const shadcnOnly =
+    startupConfig?.interface?.customDeloitteFeatureFlags?.artifactsShadcnOnly === true;
+
   const canUseWebSearch = useHasAccess({
     permissionType: PermissionTypes.WEB_SEARCH,
     permission: Permissions.USE,
@@ -120,11 +123,13 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
   const handleArtifactsToggle = useCallback(() => {
     const currentState = artifacts?.toggleState;
     if (!currentState || currentState === '') {
-      artifacts?.debouncedChange({ value: ArtifactModes.DEFAULT });
+      artifacts?.debouncedChange({
+        value: shadcnOnly ? ArtifactModes.SHADCNUI : ArtifactModes.DEFAULT,
+      });
     } else {
       artifacts?.debouncedChange({ value: '' });
     }
-  }, [artifacts]);
+  }, [artifacts, shadcnOnly]);
 
   const handleShadcnToggle = useCallback(() => {
     const currentState = artifacts?.toggleState;
@@ -354,6 +359,7 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
           handleArtifactsToggle={handleArtifactsToggle}
           handleShadcnToggle={handleShadcnToggle}
           handleCustomToggle={handleCustomToggle}
+          shadcnOnly={shadcnOnly}
         />
       ),
     });
