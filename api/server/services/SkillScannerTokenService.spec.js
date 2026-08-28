@@ -11,7 +11,8 @@ const { logger } = require('@librechat/data-schemas');
 const { exchangeOboToken } = require('./OboTokenService');
 const { getSkillScannerToken, resolveSkillScannerToken } = require('./SkillScannerTokenService');
 
-const SKILL_SCANNER_OBO_SCOPE = 'api://4aeebbdc-56f5-4329-b40e-3d0a243bf74a/access_as_user';
+// Set globally in test/jestSetup.js
+const SKILL_SCANNER_OBO_SCOPE = `api://${process.env.AI_REGISTRY_CLIENT_ID}/access_as_user`;
 
 describe('SkillScannerTokenService', () => {
   const mockUser = {
