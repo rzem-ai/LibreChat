@@ -127,25 +127,7 @@ jobs:
         ${{ matrix.customBuildSetupScript }}
         set -euo pipefail
 
-        echo "Preparing to rename gitmodules file to .gitmodules"
-        python3 - <<'PY'
-        import subprocess
-        from pathlib import Path
-
-        source = Path("gitmodules")
-        target = Path(".gitmodules")
-
-        if target.exists():
-            print(".gitmodules already present; skipping rename")
-        elif not source.exists():
-            print("gitmodules file not present; skipping rename")
-        else:
-            try:
-                subprocess.run(["git", "mv", str(source), str(target)], check=True)
-            except subprocess.CalledProcessError as exc:
-                raise SystemExit(f"Unable to rename gitmodules file: {exc}") from exc
-        PY
-        
+        echo "Preparing to switch branch in submodules"
         
         BRANCH="${GITHUB_BASE_REF:-${GITHUB_REF_NAME}}"
 
