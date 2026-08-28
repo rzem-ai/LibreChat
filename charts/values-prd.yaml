@@ -122,6 +122,12 @@ pods:
           DEBUG_LOGGING: 'true'
           DEBUG_CONSOLE: 'true'
           AGENT_DEBUG_LOGGING: 'true'
+          # Skill Security Scanner
+          SKILL_SCANNER_URL: 'https://ai-registry.ctk.au.deloitte.com/v1/scan?verbose=false'
+          SKILL_SCANNER_TIMEOUT_MS: '15000'
+          SKILL_SCANNER_MIN_SEVERITY: 'high'
+          # AI Registry
+          AI_REGISTRY_CLIENT_ID: "65dad51c-d3ca-4252-b97d-815cf8518d6a"
         secrets:
           MONGO_URI: librechat-mdb-connection-string
           JWT_SECRET: librechat-jwt-secret # Use LibreChat Credentials Generator
