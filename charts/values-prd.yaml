@@ -25,10 +25,9 @@ ingress:
       secretStoreName: external-secret-store
       hosts:
         - 'myassist.ctk.au.deloitte.com'
-
 pods:
   librechat:
-    replicas: 3
+    replicas: 1
     securityContext:
       fsGroup: 1000
     initContainers:
@@ -37,7 +36,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'main'
+          tag: 'main@sha256:2ab7ba3209eeed2730e8e1373a820f34dbc5e390e31af990cf21153997581aae'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-prd.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-prd.svc.cluster.local:8080'
@@ -56,7 +55,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'main'
+          tag: 'main@sha256:ecc4acfc3d12f3718c237327eac4251e42da6501ca6059fbb930efa2b5fc9645'
         env:
           ADMIN_PANEL_URL: 'https://myassist.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -66,7 +65,7 @@ pods:
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
           BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
-          CUSTOM_FOOTER: '💬 Feedback? Submit a bug report or feature request here: https://forms.cloud.microsoft/e/E9AyvN4Ayx'
+          CUSTOM_FOOTER: "\U0001F4AC Feedback? Submit a bug report or feature request here: https://forms.cloud.microsoft/e/E9AyvN4Ayx"
           DOMAIN_CLIENT: 'https://myassist.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://myassist.ctk.au.deloitte.com'
           EMBEDDINGS_MODEL: 'text-embedding-3-small'
@@ -102,7 +101,7 @@ pods:
           CODEAPI_JWT_MINT_CACHE_SECONDS: '30'
           CODEAPI_JWT_SINGLE_TENANT_ID: 'legacy'
           # Azure Storage Container
-          AZURE_CLIENT_ID: '1e6fa20b-2e41-4ae9-9357-171d834bb3b7' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-prd
+          AZURE_CLIENT_ID: 'e6da7f6e-8634-47df-be2f-7631d2f99822' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-prd
           AZURE_STORAGE_ACCOUNT_NAME: 'stctspokeprdshared'
           AZURE_STORAGE_PUBLIC_ACCESS: 'false'
           AZURE_CONTAINER_NAME: 'stc-librechat-app-prd'
@@ -146,7 +145,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'main'
+          tag: 'main@sha256:02fa6e357d06fe9f820571cb71f26228e12d264751b67fa33856011bbc641d29'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -154,7 +153,7 @@ pods:
           POSTGRES_DB: 'pgdb_librechat_app_prd'
           POSTGRES_USER: 'id-int-librechat-prd'
           POSTGRES_AUTH_TYPE: 'ActiveDirectoryMsi'
-          MANAGED_IDENTITY_CLIENT_ID: '1e6fa20b-2e41-4ae9-9357-171d834bb3b7' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-prd
+          MANAGED_IDENTITY_CLIENT_ID: 'e6da7f6e-8634-47df-be2f-7631d2f99822' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-prd
           DB_HOST: 'psql-ctspoke-prd.postgres.database.azure.com'
           DB_PORT: '5432'
           RAG_HOST: '0.0.0.0'
@@ -174,7 +173,7 @@ pods:
       meilisearch:
         image:
           pullPolicy: Always
-          tag: 'main'
+          tag: 'main@sha256:eb6669b0f5a896090eafe0b12d3a15ec30f2c96e5f7dca8824a895106ccc92d1'
         env:
           MEILI_ENV: 'production'
         secrets:
@@ -198,7 +197,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'main'
+          tag: 'main@sha256:0a8af18f7be7676f9b2bac29ee021e0ab40cbeb3f71af123276c6f4d53534ec0'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
@@ -221,7 +220,7 @@ pods:
 
 valkey:
   image:
-    tag: 'main'
+    tag: 'main@sha256:ec7ab07262c5ac3da2847ec47ca04ac706570c5ebf2d4e2ed63f44348eb25a28'
   persistence:
     storageClass: 'managed-csi-standard-private'
   passwordSecretName: 'librechat-valkey-password'

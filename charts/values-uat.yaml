@@ -28,7 +28,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'uat'
+          tag: 'uat@sha256:adb8e6ea1557c84c0ff0f44cade9b69d24a8ba8350df59db1575fb3692e94319'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -47,7 +47,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'uat'
+          tag: 'uat@sha256:195a888ef37d1eafcaada9413e8f7744dbd27925e6594f9219647b239a2bad39'
         env:
           ADMIN_PANEL_URL: 'https://myassist-uat.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -141,7 +141,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'uat'
+          tag: 'uat@sha256:495715246a46113723afd12ea34b63e813a64b80ea186771f11dfeafc0f9c263'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -173,7 +173,7 @@ pods:
       meilisearch:
         image:
           pullPolicy: Always
-          tag: 'uat'
+          tag: 'uat@sha256:333043792dcc3f9974abdf8497b2eb190f282e63c185a3fd9fd5b892277df75a'
         env:
           MEILI_ENV: 'production' # Use production to mimic PROD environment behaviour
         secrets:
@@ -197,7 +197,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'uat'
+          tag: 'uat@sha256:eab4bfeb2f35a5d6a5777376f62fe1074dd8820ba9fd7d2f599508df8ecf3d18'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
@@ -220,7 +220,7 @@ pods:
 
 valkey:
   image:
-    tag: 'uat'
+    tag: 'uat@sha256:8eb9d4d81b89218546e6e371c9925803e6f5bbabd522bfee3865cba08e0df6a1'
   persistence:
     storageClass: 'managed-csi-standard-private'
   passwordSecretName: 'librechat-valkey-password-uat'
