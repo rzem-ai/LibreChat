@@ -208,7 +208,3 @@ __pycache__/
 
 # Local untested skill drafts
 untested_skills/
-
-# Gitmodules - we rename "gitmodules" to ".gitmodules" locally and in the pipeline to activate it
-.gitmodules
-gitmodules
