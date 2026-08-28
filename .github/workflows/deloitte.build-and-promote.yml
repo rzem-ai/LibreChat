@@ -129,12 +129,14 @@ jobs:
 
         BRANCH="${GITHUB_BASE_REF:-${GITHUB_REF_NAME}}"
 
+        echo "We're here - ${GITHUB_SHA}"
+
         case "${BRANCH}" in
           main|uat|develop)
             SUBMODULE_BRANCH="${BRANCH}"
             ;;
           *)
-            SUBMODULE_BRANCH="develop"
+            SUBMODULE_BRANCH="main"
             ;;
         esac
 
