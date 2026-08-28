@@ -67,6 +67,7 @@ export default function CreateSkillDialog({
   const createSkill = useCreateSkillMutation({
     onSuccess: (skill) => {
       const warnings: TSkillWarning[] | undefined = skill.warnings;
+      // Deloitte Custom Change: Show the scanner's warnings (if present) alongside the success toast, instead of a plain success message.
       showToast({
         status: warnings && warnings.length > 0 ? 'warning' : 'success',
         message:
