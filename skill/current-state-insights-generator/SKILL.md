@@ -2,8 +2,9 @@
 name: current-state-insights-generator
 
 description: Summarise key client documentation and pin-point specific technology issues by producing a structured summary table pack and optional drilldown analysis tables. Use when a user wants technology-current-state synthesis from uploaded files, including risks, priorities, stakeholder groups, capability insights, and identified information gaps.
+---
 
-# Current State Insights Generator test
+# Current State Insights Generator
 
 This skill converts the original workflow app into a conversational process that a chat agent can run directly.
 
