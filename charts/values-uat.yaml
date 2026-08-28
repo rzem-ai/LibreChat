@@ -195,6 +195,7 @@ pods:
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
+          VITE_BASE_PATH: '/admin'
           VITE_API_BASE_URL: 'https://myassist-uat.ctk.au.deloitte.com'
           API_SERVER_URL: 'https://myassist-uat.ctk.au.deloitte.com'
           SESSION_COOKIE_SECURE: 'true'
