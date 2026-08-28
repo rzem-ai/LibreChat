@@ -88,7 +88,6 @@ pods:
           RAG_API_URL: 'http://127.0.0.1:8000'
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
-          PORT: '3080'
           RAG_PORT: '8000'
           RAG_USE_FULL_CONTEXT: 'true'
           # ClearTrack Code Interpreter (ea-code-runtime)
