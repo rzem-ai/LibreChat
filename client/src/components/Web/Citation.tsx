@@ -1,6 +1,15 @@
 import { memo, useState, useContext, useCallback } from 'react';
 import { Button } from '@librechat/client';
-import { ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Plug,
+  Newspaper,
+  Building2,
+  Users,
+  TriangleAlert,
+} from 'lucide-react';
 import type { SourceData } from '~/components/Web/SourceHovercard';
 import type { CitationProps } from './types';
 import { SourceHovercard, FaviconImage, getCleanDomain } from '~/components/Web/SourceHovercard';
@@ -25,13 +34,43 @@ interface FileCitationSource {
   relevance?: number;
   snippet?: string;
   title?: string;
+  /** MCP-specific fields */
+  toolName?: string;
+  serverName?: string;
+  usageRestriction?: boolean;
+}
+
+function isHttpLink(link?: string): link is string {
+  return typeof link === 'string' && (link.startsWith('http://') || link.startsWith('https://'));
+}
+
+/** Picks a citation chip icon based on the MCP tool that produced the source. */
+function getMCPIcon(toolName?: string) {
+  if (!toolName) {
+    return Plug;
+  }
+  if (toolName.startsWith('afr_')) {
+    return Newspaper;
+  }
+  if (toolName.startsWith('ibisworld_')) {
+    return FileText;
+  }
+  if (toolName.startsWith('desc_') || toolName.startsWith('gims_')) {
+    return Building2;
+  }
+  if (toolName.startsWith('kx_')) {
+    return Users;
+  }
+  return Plug;
 }
 
 function getFileCitationData(source?: FileCitationSource) {
   const isFileType = source?.refType === 'file' && source.fileId != null;
+  const isMCPType = source?.refType === 'mcp';
 
   return {
     isFileType,
+    isMCPType,
     fileId: isFileType ? source.fileId : undefined,
     fileMeta: isFileType ? source.metadata : undefined,
     fileName: isFileType ? source.fileName : undefined,
@@ -77,11 +116,16 @@ export function CompositeCitation(props: CompositeCitationProps) {
 
     const firstSource = sources[0] as FileCitationSource;
     const remainingCount = sources.length - 1;
-    const attribution =
-      firstSource.attribution ||
-      firstSource.title ||
-      getCleanDomain(firstSource.link || '') ||
-      localize('com_citation_source');
+    const isFirstMCP = firstSource.refType === 'mcp';
+    const attribution = isFirstMCP
+      ? firstSource.title ||
+        firstSource.attribution ||
+        getCleanDomain(firstSource.link || '') ||
+        localize('com_citation_source')
+      : firstSource.attribution ||
+        firstSource.title ||
+        getCleanDomain(firstSource.link || '') ||
+        localize('com_citation_source');
 
     return remainingCount > 0 ? `${attribution} +${remainingCount}` : attribution;
   };
@@ -103,8 +147,17 @@ export function CompositeCitation(props: CompositeCitationProps) {
   };
 
   const currentSource = sources[currentPage] as FileCitationSource;
-  const { isFileType, fileId, fileMeta, fileName, filePages, fileRelevance, filePageRelevance } =
-    getFileCitationData(currentSource);
+  const {
+    isFileType,
+    isMCPType,
+    fileId,
+    fileMeta,
+    fileName,
+    filePages,
+    fileRelevance,
+    filePageRelevance,
+  } = getFileCitationData(currentSource);
+  const MCPIcon = getMCPIcon(currentSource.toolName);
 
   const handleFileClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -112,6 +165,158 @@ export function CompositeCitation(props: CompositeCitationProps) {
     if (isFileType && fileId) {
       setShowPreview(true);
     }
+  };
+
+  const renderPageNav = () => {
+    if (totalPages <= 1) {
+      return null;
+    }
+    return (
+      <div className="mt-2 flex items-center gap-1 border-t border-border-light pt-2">
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={handlePrevPage}
+          disabled={currentPage === 0}
+          className="size-7"
+          aria-label="Previous source"
+        >
+          <ChevronLeft className="size-3.5" aria-hidden="true" />
+        </Button>
+        {sources.map((source, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setCurrentPage(i);
+            }}
+            className={`flex size-6 items-center justify-center rounded text-xs transition-colors ${
+              i === currentPage
+                ? 'bg-surface-hover font-medium text-text-primary'
+                : 'text-text-secondary hover:bg-surface-hover'
+            }`}
+            aria-label={`Source ${i + 1}`}
+            aria-current={i === currentPage ? 'true' : undefined}
+          >
+            {i + 1}
+          </button>
+        ))}
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={handleNextPage}
+          disabled={currentPage === totalPages - 1}
+          className="size-7"
+          aria-label="Next source"
+        >
+          <ChevronRight className="size-3.5" aria-hidden="true" />
+        </Button>
+      </div>
+    );
+  };
+
+  const renderSourceContent = () => {
+    if (isFileType) {
+      return (
+        <>
+          <div className="flex items-center gap-2">
+            <FileText className="size-4 shrink-0 text-text-secondary" aria-hidden="true" />
+            <button
+              onClick={handleFileClick}
+              className="min-w-0 truncate text-sm font-medium text-text-primary hover:underline"
+            >
+              {fileName || currentSource.title || localize('com_file_source')}
+            </button>
+          </div>
+          {(fileRelevance != null || (filePages && filePages.length > 0)) && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+              {fileRelevance != null && fileRelevance > 0 && (
+                <span className="text-xs text-text-secondary">
+                  {localize('com_ui_relevance')}: {Math.round(fileRelevance * 100)}%
+                </span>
+              )}
+              {filePages && filePages.length > 0 && (
+                <span className="text-xs text-text-secondary">
+                  {localize('com_file_pages', { pages: filePages.join(', ') })}
+                </span>
+              )}
+            </div>
+          )}
+          {currentSource.snippet && (
+            <p className="mt-1.5 line-clamp-3 break-words text-xs leading-relaxed text-text-secondary">
+              {currentSource.snippet}
+            </p>
+          )}
+          {renderPageNav()}
+        </>
+      );
+    }
+
+    if (isMCPType) {
+      return (
+        <>
+          <div className="flex items-center gap-2">
+            <MCPIcon className="size-4 shrink-0 text-text-secondary" aria-hidden="true" />
+            {isHttpLink(currentSource.link) ? (
+              <a
+                href={currentSource.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="min-w-0 truncate text-sm font-medium text-text-primary hover:underline"
+              >
+                {currentSource.title || getCitationLabel()}
+              </a>
+            ) : (
+              <span className="min-w-0 truncate text-sm font-medium text-text-primary">
+                {currentSource.title || getCitationLabel()}
+              </span>
+            )}
+          </div>
+          {currentSource.snippet && (
+            <p className="mt-1.5 line-clamp-3 break-words text-xs leading-relaxed text-text-secondary">
+              {currentSource.snippet}
+            </p>
+          )}
+          {currentSource.usageRestriction && (
+            <div className="mt-1.5 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500">
+              <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
+              <span>{localize('com_citation_usage_restriction')}</span>
+            </div>
+          )}
+          {renderPageNav()}
+        </>
+      );
+    }
+
+    return (
+      <>
+        <div className="mb-1.5 overflow-hidden text-sm">
+          <FaviconImage
+            domain={getCleanDomain(currentSource.link || '')}
+            className="float-left mr-2 mt-0.5"
+          />
+          <span className="float-right ml-2 max-w-[40%] truncate text-xs text-text-secondary">
+            {getCleanDomain(currentSource.link || '')}
+          </span>
+          <a
+            href={currentSource.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-text-primary hover:underline"
+          >
+            {currentSource.title}
+          </a>
+        </div>
+        {currentSource.snippet && (
+          <p className="line-clamp-4 break-words text-xs text-text-secondary md:text-sm">
+            {currentSource.snippet}
+          </p>
+        )}
+        {renderPageNav()}
+      </>
+    );
   };
 
   return (
@@ -122,155 +327,11 @@ export function CompositeCitation(props: CompositeCitationProps) {
         onMouseEnter={() => setHoveredCitationId(citationId || null)}
         onMouseLeave={() => setHoveredCitationId(null)}
         onClick={isFileType ? handleFileClick : undefined}
-        isFile={isFileType}
+        isFile={isFileType || isMCPType}
         filePages={filePages}
         fileRelevance={fileRelevance}
       >
-        {isFileType ? (
-          <>
-            <div className="flex items-center gap-2">
-              <FileText className="size-4 shrink-0 text-text-secondary" aria-hidden="true" />
-              <button
-                onClick={handleFileClick}
-                className="min-w-0 truncate text-sm font-medium text-text-primary hover:underline"
-              >
-                {fileName || currentSource.title || localize('com_file_source')}
-              </button>
-            </div>
-            {(fileRelevance != null || (filePages && filePages.length > 0)) && (
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                {fileRelevance != null && fileRelevance > 0 && (
-                  <span className="text-xs text-text-secondary">
-                    {localize('com_ui_relevance')}: {Math.round(fileRelevance * 100)}%
-                  </span>
-                )}
-                {filePages && filePages.length > 0 && (
-                  <span className="text-xs text-text-secondary">
-                    {localize('com_file_pages', { pages: filePages.join(', ') })}
-                  </span>
-                )}
-              </div>
-            )}
-            {currentSource.snippet && (
-              <p className="mt-1.5 line-clamp-3 break-words text-xs leading-relaxed text-text-secondary">
-                {currentSource.snippet}
-              </p>
-            )}
-            {totalPages > 1 && (
-              <div className="mt-2 flex items-center gap-1 border-t border-border-light pt-2">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={handlePrevPage}
-                  disabled={currentPage === 0}
-                  className="size-7"
-                  aria-label="Previous source"
-                >
-                  <ChevronLeft className="size-3.5" aria-hidden="true" />
-                </Button>
-                {sources.map((source, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setCurrentPage(i);
-                    }}
-                    className={`flex size-6 items-center justify-center rounded text-xs transition-colors ${
-                      i === currentPage
-                        ? 'bg-surface-hover font-medium text-text-primary'
-                        : 'text-text-secondary hover:bg-surface-hover'
-                    }`}
-                    aria-label={`Source ${i + 1}`}
-                    aria-current={i === currentPage ? 'true' : undefined}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={handleNextPage}
-                  disabled={currentPage === totalPages - 1}
-                  className="size-7"
-                  aria-label="Next source"
-                >
-                  <ChevronRight className="size-3.5" aria-hidden="true" />
-                </Button>
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            <div className="mb-1.5 overflow-hidden text-sm">
-              <FaviconImage
-                domain={getCleanDomain(currentSource.link || '')}
-                className="float-left mr-2 mt-0.5"
-              />
-              <span className="float-right ml-2 max-w-[40%] truncate text-xs text-text-secondary">
-                {getCleanDomain(currentSource.link || '')}
-              </span>
-              <a
-                href={currentSource.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-medium text-text-primary hover:underline"
-              >
-                {currentSource.title}
-              </a>
-            </div>
-            {currentSource.snippet && (
-              <p className="line-clamp-4 break-words text-xs text-text-secondary md:text-sm">
-                {currentSource.snippet}
-              </p>
-            )}
-            {totalPages > 1 && (
-              <div className="flex items-center gap-1 border-t border-border-light pt-2">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={handlePrevPage}
-                  disabled={currentPage === 0}
-                  className="size-7"
-                  aria-label="Previous source"
-                >
-                  <ChevronLeft className="size-3.5" aria-hidden="true" />
-                </Button>
-                {sources.map((source, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setCurrentPage(i);
-                    }}
-                    className={`flex size-6 items-center justify-center rounded text-xs transition-colors ${
-                      i === currentPage
-                        ? 'bg-surface-hover font-medium text-text-primary'
-                        : 'text-text-secondary hover:bg-surface-hover'
-                    }`}
-                    aria-label={`Source ${i + 1}`}
-                    aria-current={i === currentPage ? 'true' : undefined}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={handleNextPage}
-                  disabled={currentPage === totalPages - 1}
-                  className="size-7"
-                  aria-label="Next source"
-                >
-                  <ChevronRight className="size-3.5" aria-hidden="true" />
-                </Button>
-              </div>
-            )}
-          </>
-        )}
+        {renderSourceContent()}
       </SourceHovercard>
       {isFileType && fileId && (
         <FilePreviewDialog
@@ -307,8 +368,17 @@ export function Citation(props: CitationComponentProps) {
     index: citation?.index || 0,
   }) as FileCitationSource | undefined;
 
-  const { isFileType, fileId, fileMeta, fileName, filePages, fileRelevance, filePageRelevance } =
-    getFileCitationData(refData);
+  const {
+    isFileType,
+    isMCPType,
+    fileId,
+    fileMeta,
+    fileName,
+    filePages,
+    fileRelevance,
+    filePageRelevance,
+  } = getFileCitationData(refData);
+  const MCPIcon = getMCPIcon(refData?.toolName);
 
   const [showPreview, setShowPreview] = useState(false);
 
@@ -328,6 +398,14 @@ export function Citation(props: CitationComponentProps) {
   }
 
   const getCitationLabel = () => {
+    if (isMCPType) {
+      return (
+        refData.title ||
+        refData.attribution ||
+        getCleanDomain(refData.link || '') ||
+        localize('com_citation_source')
+      );
+    }
     return (
       refData.attribution ||
       refData.title ||
@@ -344,10 +422,43 @@ export function Citation(props: CitationComponentProps) {
         onMouseEnter={() => setHoveredCitationId(citationId || null)}
         onMouseLeave={() => setHoveredCitationId(null)}
         onClick={isFileType ? handleFileClick : undefined}
-        isFile={isFileType}
+        isFile={isFileType || isMCPType}
         filePages={filePages}
         fileRelevance={fileRelevance}
-      />
+      >
+        {isMCPType ? (
+          <>
+            <div className="flex items-center gap-2">
+              <MCPIcon className="size-4 shrink-0 text-text-secondary" aria-hidden="true" />
+              {isHttpLink(refData.link) ? (
+                <a
+                  href={refData.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="min-w-0 truncate text-sm font-medium text-text-primary hover:underline"
+                >
+                  {refData.title || getCitationLabel()}
+                </a>
+              ) : (
+                <span className="min-w-0 truncate text-sm font-medium text-text-primary">
+                  {refData.title || getCitationLabel()}
+                </span>
+              )}
+            </div>
+            {refData.snippet && (
+              <p className="mt-1.5 line-clamp-3 break-words text-xs leading-relaxed text-text-secondary">
+                {refData.snippet}
+              </p>
+            )}
+            {refData.usageRestriction && (
+              <div className="mt-1.5 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500">
+                <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
+                <span>{localize('com_citation_usage_restriction')}</span>
+              </div>
+            )}
+          </>
+        ) : null}
+      </SourceHovercard>
       {isFileType && fileId && (
         <FilePreviewDialog
           open={showPreview}

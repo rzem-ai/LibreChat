@@ -10,8 +10,8 @@ Run from the project root:
 import sys
 from pathlib import Path
 
-_PLAINTEXT = {'.md', '.txt'}
-_MARKITDOWN = {'.pdf', '.docx', '.pptx', '.xlsx'}
+_PLAINTEXT = {".md", ".txt"}
+_MARKITDOWN = {".pdf", ".docx", ".pptx", ".xlsx"}
 
 
 def read(path: str) -> str:
@@ -20,15 +20,16 @@ def read(path: str) -> str:
         raise FileNotFoundError(f"Document not found: {p}")
     ext = p.suffix.lower()
     if ext in _PLAINTEXT:
-        return p.read_text(encoding='utf-8')
+        return p.read_text(encoding="utf-8")
     if ext not in _MARKITDOWN:
         supported = sorted(_PLAINTEXT | _MARKITDOWN)
         raise ValueError(f"Unsupported file type '{ext}'. Supported: {supported}")
     from markitdown import MarkItDown
+
     return MarkItDown().convert(str(p)).text_content
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: read_document.py <file_path>", file=sys.stderr)
         sys.exit(1)
