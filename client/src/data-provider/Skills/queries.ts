@@ -1,5 +1,8 @@
+import { useCallback } from 'react';
 import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { QueryKeys, dataService } from 'librechat-data-provider';
+import { useBlobUrl } from '~/hooks/Files/useBlobUrl';
+import type { BlobUrlResult } from '~/hooks/Files/useBlobUrl';
 import type {
   QueryObserverResult,
   UseQueryOptions,
@@ -148,6 +151,23 @@ export const useGetSkillFileContentQuery = (
       ...config,
       enabled: enabled && (config?.enabled ?? true),
     },
+  );
+};
+
+// Deloitte: fetch skill file bytes via authenticated axios; expose object URL per hook instance.
+export const useSkillFileBlobUrl = (
+  skillId: string | null | undefined,
+  relativePath: string | null | undefined,
+  enabled: boolean = true,
+): BlobUrlResult => {
+  const fetchBlob = useCallback(async () => {
+    const response = await dataService.getSkillFileBlob(skillId as string, relativePath as string);
+    return response.data;
+  // skillId + relativePath are the resource key; recreate when either changes
+  }, [skillId, relativePath]); // eslint-disable-line react-hooks/exhaustive-deps
+  return useBlobUrl(
+    skillId && relativePath ? fetchBlob : null,
+    enabled && !!skillId && !!relativePath,
   );
 };
 
