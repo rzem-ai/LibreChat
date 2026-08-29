@@ -164,7 +164,7 @@ const Image = ({
         )}
         style={heightStyle}
       >
-        {(showSkeleton || (needsBlob && !blobUrl)) && (
+        {(showSkeleton || (needsBlob && !displayUrl)) && (
           <Skeleton className="absolute inset-0" aria-hidden="true" />
         )}
         {displayUrl && (
