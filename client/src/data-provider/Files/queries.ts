@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useRecoilValue } from 'recoil';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileSources, QueryKeys, DynamicQueryKeys, dataService, request } from 'librechat-data-provider';
@@ -129,6 +129,15 @@ export const useAuthenticatedBlobUrl = (
   url: string | null | undefined,
   enabled: boolean = true,
 ) => {
+  const isSameOrigin = useMemo(() => {
+    if (!url) return false;
+    try {
+      return new URL(url, window.location.origin).origin === window.location.origin;
+    } catch {
+      return false;
+    }
+  }, [url]);
+
   const fetchBlob = useCallback(async () => {
     const response = await request.getResponse<AxiosResponse<Blob>>(url as string, {
       responseType: 'blob',
@@ -137,7 +146,8 @@ export const useAuthenticatedBlobUrl = (
     return response.data;
   // url is the only meaningful dep; the function body is intentionally recreated when url changes
   }, [url]); // eslint-disable-line react-hooks/exhaustive-deps
-  return useBlobUrl(url ? fetchBlob : null, enabled && !!url);
+
+  return useBlobUrl(url ? fetchBlob : null, enabled && !!url && isSameOrigin);
 };
 
 /**
