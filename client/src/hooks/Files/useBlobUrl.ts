@@ -14,12 +14,19 @@ export function useBlobUrl(
 
   useEffect(() => {
     if (!enabled || !fetchBlob) {
+      setUrl(null);
+      setIsLoading(false);
+      setIsError(false);
       return;
     }
+
     let cancelled = false;
     let created: string | null = null;
+
+    setUrl(null);
     setIsLoading(true);
     setIsError(false);
+
     fetchBlob()
       .then((blob) => {
         if (cancelled) {
@@ -30,12 +37,12 @@ export function useBlobUrl(
       })
       .catch(() => !cancelled && setIsError(true))
       .finally(() => !cancelled && setIsLoading(false));
+
     return () => {
       cancelled = true;
       if (created) {
         window.URL.revokeObjectURL(created);
       }
-      setUrl(null);
     };
   }, [fetchBlob, enabled]);
 
