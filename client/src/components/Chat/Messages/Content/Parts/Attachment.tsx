@@ -426,7 +426,14 @@ const TextAttachment = memo(
 
 const ImageAttachment = memo(({ attachment }: { attachment: TAttachment }) => {
   const [isLoaded, setIsLoaded] = useState(false);
-  const { width, height, filepath = null } = attachment as TFile & TAttachmentMetadata;
+  const {
+    width,
+    height,
+    filepath = null,
+    source,
+    file_id,
+    user,
+  } = attachment as TFile & TAttachmentMetadata;
 
   useEffect(() => {
     setIsLoaded(false);
@@ -449,9 +456,14 @@ const ImageAttachment = memo(({ attachment }: { attachment: TAttachment }) => {
     >
       <Image
         altText={attachment.filename || 'attachment image'}
+        fileName={attachment.filename}
         imagePath={filepath ?? ''}
         width={width}
         height={height}
+        // Deloitte: source/fileId/userId enable authenticated proxy for private azure_blob.
+        source={source}
+        fileId={file_id}
+        userId={user}
         className="mb-4"
       />
     </div>

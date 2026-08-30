@@ -4,10 +4,7 @@ import { logger } from '@librechat/data-schemas';
 import type { TEndpointCostConfig, TModelPricing } from 'librechat-data-provider';
 
 const DEFAULT_PRICING_PATH = '/app/endpoint-costs.yaml';
-const LOCAL_CONFIGMAP_PATH = path.resolve(
-  process.cwd(),
-  'charts/config/endpoint-costs.yaml',
-);
+const LOCAL_CONFIGMAP_PATH = path.resolve(process.cwd(), 'charts/config/endpoint-costs.yaml');
 const DEFAULT_ENDPOINT_COST_CONFIG: TEndpointCostConfig = {
   REFERENCE_MODEL_ID: 'gpt-41',
   MULTIPLIER_ROUNDING_INCREMENT: 0.1,
@@ -15,8 +12,7 @@ const DEFAULT_ENDPOINT_COST_CONFIG: TEndpointCostConfig = {
 };
 
 let cachedEndpointCosts:
-  | { modelPricing: TModelPricing; endpointCostConfig: TEndpointCostConfig }
-  | undefined;
+  { modelPricing: TModelPricing; endpointCostConfig: TEndpointCostConfig } | undefined;
 
 function readFirstExisting(paths: Array<string | undefined>): string | null {
   for (const filePath of paths) {

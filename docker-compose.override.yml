@@ -68,6 +68,15 @@ services:
     build:
       context: ./admin_panel
       dockerfile: Dockerfile
+      args:
+        VITE_BASE_PATH: /admin
+    environment:
+      - PORT=3000
+      - SESSION_SECRET=${ADMIN_PANEL_SESSION_SECRET}
+      - API_SERVER_URL=http://api:3080
+      - VITE_API_BASE_URL=${DOMAIN_CLIENT:-http://localhost:3080}
+      - SESSION_COOKIE_SECURE=${ADMIN_PANEL_SESSION_COOKIE_SECURE}
+      - ADMIN_SSO_ONLY=${ADMIN_SSO_ONLY}
 volumes:
   caddy_data:
   caddy_config:

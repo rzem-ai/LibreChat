@@ -9,8 +9,8 @@ import { useModelSelectorContext } from '../ModelSelectorContext';
 import { CustomMenuItem as MenuItem } from '../CustomMenu';
 import { shouldRenderEndpointOption } from '../utils';
 import SpecDescription from './SpecDescription';
-import SpecIcon from './SpecIcon';
 import ModelCost from './ModelCost';
+import SpecIcon from './SpecIcon';
 import { cn } from '~/utils';
 
 interface SearchResultsProps {

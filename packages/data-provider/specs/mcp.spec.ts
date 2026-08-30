@@ -45,6 +45,37 @@ describe('MCPOptionsSchema', () => {
       expect(result.success).toBe(false);
     });
   });
+
+  describe('OBO scope env var expansion', () => {
+    const ENV_VAR = 'MCP_TEST_OBO_SCOPE';
+
+    afterEach(() => {
+      delete process.env[ENV_VAR];
+    });
+
+    it('should resolve a `${VAR}` placeholder when the env var is set', () => {
+      process.env[ENV_VAR] = 'api://mcp-server-id/Mcp.Tools.ReadWrite';
+      const result = MCPOptionsSchema.safeParse({
+        type: 'streamable-http',
+        url: 'https://mcp-server.com/http',
+        obo: { scopes: `\${${ENV_VAR}}` },
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.obo).toEqual({ scopes: 'api://mcp-server-id/Mcp.Tools.ReadWrite' });
+      }
+    });
+
+    it('should reject a `${VAR}` placeholder left unresolved when the env var is unset', () => {
+      delete process.env[ENV_VAR];
+      const result = MCPOptionsSchema.safeParse({
+        type: 'streamable-http',
+        url: 'https://mcp-server.com/http',
+        obo: { scopes: `\${${ENV_VAR}}` },
+      });
+      expect(result.success).toBe(false);
+    });
+  });
 });
 
 describe('MCP schemas', () => {
@@ -70,6 +101,67 @@ describe('MCP schemas', () => {
       });
       expect(userResult.success).toBe(false);
       delete process.env.FAKE_SECRET;
+    });
+  });
+
+  describe('unresolved env var query params are stripped, not forwarded', () => {
+    it('drops a query param whose env var is unset on streamable-http URLs', () => {
+      const result = StreamableHTTPOptionsSchema.safeParse({
+        type: 'streamable-http',
+        url: 'https://mcp-server.com/mcp?toolsets=${MCP_GATEWAY_TOOLSETS}',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.url).toBe('https://mcp-server.com/mcp');
+      }
+    });
+
+    it('drops a query param whose env var is unset on SSE URLs', () => {
+      const result = SSEOptionsSchema.safeParse({
+        type: 'sse',
+        url: 'https://mcp-server.com/sse?toolsets=${MCP_GATEWAY_TOOLSETS}',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.url).toBe('https://mcp-server.com/sse');
+      }
+    });
+
+    it('keeps a query param whose env var resolves successfully', () => {
+      process.env.MCP_GATEWAY_TOOLSETS = 'teams,research,news';
+      const result = StreamableHTTPOptionsSchema.safeParse({
+        type: 'streamable-http',
+        url: 'https://mcp-server.com/mcp?toolsets=${MCP_GATEWAY_TOOLSETS}',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.url).toBe('https://mcp-server.com/mcp?toolsets=teams,research,news');
+      }
+      delete process.env.MCP_GATEWAY_TOOLSETS;
+    });
+
+    it('only strips the unresolved param, keeping other resolved/static params intact', () => {
+      process.env.MCP_RESOLVED_PARAM = 'ok';
+      const result = StreamableHTTPOptionsSchema.safeParse({
+        type: 'streamable-http',
+        url: 'https://mcp-server.com/mcp?keep=${MCP_RESOLVED_PARAM}&drop=${MCP_UNSET_PARAM}&static=1',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.url).toBe('https://mcp-server.com/mcp?keep=ok&static=1');
+      }
+      delete process.env.MCP_RESOLVED_PARAM;
+    });
+
+    it('does not alter a bare-origin streamable-http URL when nothing needs stripping', () => {
+      const result = StreamableHTTPOptionsSchema.safeParse({
+        type: 'streamable-http',
+        url: 'https://mcp-server.com',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.url).toBe('https://mcp-server.com');
+      }
     });
   });
 
@@ -713,6 +805,7 @@ describe('MCP_USER_INPUT_FIELDS', () => {
     expect(MCP_USER_INPUT_FIELDS.has('type')).toBe(true);
     expect(MCP_USER_INPUT_FIELDS.has('url')).toBe(true);
     expect(MCP_USER_INPUT_FIELDS.has('title')).toBe(true);
+    expect(MCP_USER_INPUT_FIELDS.has('parentGroup')).toBe(true);
     expect(MCP_USER_INPUT_FIELDS.has('description')).toBe(true);
     expect(MCP_USER_INPUT_FIELDS.has('iconPath')).toBe(true);
     expect(MCP_USER_INPUT_FIELDS.has('oauth')).toBe(true);

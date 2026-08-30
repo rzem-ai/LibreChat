@@ -1,5 +1,5 @@
-import { Check, PlugZap } from 'lucide-react';
 import { Spinner } from '@librechat/client';
+import { Check, PlugZap } from 'lucide-react';
 import type { MCPServerStatus } from 'librechat-data-provider';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -163,7 +163,7 @@ export function getStatusDotColor(
   }
 
   if (connectionState === 'connected') {
-    return 'bg-green-500';
+    return 'bg-surface-submit';
   }
 
   if (connectionState === 'error') {

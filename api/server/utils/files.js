@@ -87,9 +87,28 @@ const getContentDisposition = (fileName, disposition = 'attachment') => {
   return `${disposition}; filename="${asciiFallback}"; filename*=UTF-8''${encodedFilename}`;
 };
 
+/**
+ * Deloitte Custom Change: MIME types safe to serve inline (no Content-Disposition: attachment).
+ * SVG, HTML, JS and other active content are excluded to prevent stored-XSS
+ * via uploaded files served under the app origin. Used by both the file
+ * download route and the share route.
+ */
+const SAFE_INLINE_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/gif',
+  'image/webp',
+  'image/bmp',
+  'image/avif',
+  'image/x-icon',
+  'application/pdf',
+]);
+
 module.exports = {
   determineFileType,
   getBufferMetadata,
   cleanFileName,
   getContentDisposition,
+  SAFE_INLINE_TYPES,
 };

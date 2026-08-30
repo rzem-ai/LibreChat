@@ -23,6 +23,19 @@ export const SKILL_BODY_MAX_LENGTH = 100_000;
 export const SKILL_NAME_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
 /**
+ * Canonical skill-scanner severity ladder, least to most severe. Single source
+ * of truth for the *set and order* of severities — consumers derive their own
+ * numeric rank from this list rather than sharing a rank number, since
+ * `packages/api/src/skills/scanner.ts` needs an ascending rank (for
+ * threshold gating: is this finding >= the configured minimum) while
+ * `client/src/utils/skills.ts` needs a descending rank (for sorting findings
+ * worst-first in the UI). Add new severities here so both stay in sync.
+ */
+export const SKILL_SEVERITY_LEVELS = ['info', 'low', 'medium', 'high', 'critical'] as const;
+
+export type SkillSeverity = (typeof SKILL_SEVERITY_LEVELS)[number];
+
+/**
  * Source of a skill — where its canonical definition came from.
  * `inline` means the skill was authored directly in LibreChat.
  * `deployment` means the skill was loaded from the server's configured

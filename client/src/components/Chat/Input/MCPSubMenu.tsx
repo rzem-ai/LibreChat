@@ -90,8 +90,9 @@ const MCPSubMenu = React.forwardRef<HTMLButtonElement, MCPSubMenuProps>(
             portal={true}
             unmountOnHide={true}
             aria-label={localize('com_ui_mcp_servers')}
+            // Deloitte Custom Change: Increase minimum width on MCP selector.
             className={cn(
-              'animate-popover-left z-40 ml-3 flex min-w-[260px] max-w-[320px] flex-col rounded-xl',
+              'animate-popover-left z-40 ml-3 flex min-w-[300px] max-w-[320px] flex-col rounded-xl',
               'border border-border-light bg-presentation p-1.5 shadow-lg',
             )}
           >

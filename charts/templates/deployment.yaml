@@ -1,5 +1,15 @@
 {{- range $pod, $podConfig := .Values.pods }}
 {{- with $ -}}
+{{- $persistenceEnabled := false }}
+{{- if and $podConfig.persistence (hasKey $podConfig.persistence "enabled") $podConfig.persistence.enabled }}
+  {{- $persistenceEnabled = true }}
+{{- else }}
+  {{- range $container, $config := $podConfig.containers }}
+    {{- if and $config.persistence (hasKey $config.persistence "enabled") $config.persistence.enabled }}
+      {{- $persistenceEnabled = true }}
+    {{- end }}
+  {{- end }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -9,6 +19,13 @@ metadata:
     component: {{ $pod }}
 spec:
   replicas: {{ $podConfig.replicas }}
+  {{- if $podConfig.strategy }}
+  strategy:
+    {{- toYaml $podConfig.strategy | nindent 4 }}
+  {{- else if $persistenceEnabled }}
+  strategy:
+    type: Recreate
+  {{- end }}
   selector:
     matchLabels:
       {{- include "helm.selectorLabels" . | nindent 6 }}
@@ -22,10 +39,32 @@ spec:
         component: {{ $pod }}
     spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with $podConfig.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
       volumes:
-        - name: librechat-config
+        - name: librechat-config-costs
           configMap:
             name: {{ include "helm.fullname" . }}-config
+        {{- range $container, $config := $podConfig.containers }}
+        {{- if and $config.persistence (hasKey $config.persistence "enabled") $config.persistence.enabled }}
+        - name: {{ $container }}-data
+          persistentVolumeClaim:
+            claimName: {{ $config.persistence.name | default (printf "%s-%s-data" $pod $container) }}
+        {{- end }}
+        {{- end }}
       {{- with $podConfig.initContainers }}
       initContainers:
         {{- range $container, $config := . }}
@@ -108,11 +147,11 @@ spec:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           volumeMounts:
-            - name: librechat-config
-              mountPath: /app/librechat.yaml
-              subPath: librechat.yaml
-              readOnly: true
-            - name: librechat-config
+            {{- if and $config.persistence (hasKey $config.persistence "enabled") $config.persistence.enabled }}
+            - name: {{ $container }}-data
+              mountPath: {{ $config.persistence.mountPath | default "/data" }}
+            {{- end }}
+            - name: librechat-config-costs
               mountPath: /app/endpoint-costs.yaml
               subPath: endpoint-costs.yaml
               readOnly: true

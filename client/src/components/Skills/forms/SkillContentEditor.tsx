@@ -66,7 +66,7 @@ const SkillContentEditor: React.FC<SkillContentEditorProps> = ({
       >
         <div className="absolute right-2 top-2 z-10">
           <TooltipAnchor
-            description={isEditing ? localize('com_ui_save') : localize('com_ui_edit')}
+            description={isEditing ? localize('com_ui_done') : localize('com_ui_edit')}
             render={
               <Button
                 type="button"
@@ -74,7 +74,7 @@ const SkillContentEditor: React.FC<SkillContentEditorProps> = ({
                 variant="ghost"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => setIsEditing((prev) => !prev)}
-                aria-label={isEditing ? localize('com_ui_save') : localize('com_ui_edit')}
+                aria-label={isEditing ? localize('com_ui_done') : localize('com_ui_edit')}
                 className="size-8 p-0 hover:bg-surface-tertiary"
               >
                 <EditorIcon className="size-4 text-text-secondary" aria-hidden="true" />

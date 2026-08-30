@@ -35,7 +35,7 @@ const {
   getRoleByName,
 } = require('~/models');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
-const { cleanFileName, getContentDisposition } = require('~/server/utils/files');
+const { cleanFileName, getContentDisposition, SAFE_INLINE_TYPES } = require('~/server/utils/files');
 const canAccessSharedLink = require('~/server/middleware/canAccessSharedLink');
 const { forkSharedConversation } = require('~/server/utils/import/fork');
 const { createForkLimiters } = require('~/server/middleware/limiters');
@@ -90,22 +90,6 @@ const getShareStartupPayload = async () => {
   return buildSharedLinkStartupPayload(appConfig);
 };
 
-/**
- * MIME types that are safe to render inline. Everything else (text/html, SVG,
- * and other active content) is served as an `attachment` so a public viewer
- * can't execute uploaded bytes under the app origin by opening the URL directly.
- */
-const SAFE_INLINE_TYPES = new Set([
-  'image/png',
-  'image/jpeg',
-  'image/jpg',
-  'image/gif',
-  'image/webp',
-  'image/bmp',
-  'image/avif',
-  'image/x-icon',
-  'application/pdf',
-]);
 
 /**
  * Resolve a snapshotted file for a shared link. A file_id absent from the

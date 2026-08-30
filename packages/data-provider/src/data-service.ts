@@ -16,6 +16,22 @@ import request from './request';
 import * as s from './schemas';
 import * as r from './roles';
 
+export function getLangfuseConnection(): Promise<t.TLangfuseConnectionStatus> {
+  return request.get(endpoints.adminLangfuseConnection());
+}
+
+export function updateLangfuseConnection(
+  payload: t.TUpdateLangfuseConnectionRequest,
+): Promise<t.TLangfuseConnectionStatus> {
+  return request.put(endpoints.adminLangfuseConnection(), payload);
+}
+
+export function testLangfuseConnection(
+  payload: t.TLangfuseConnectionTestRequest,
+): Promise<t.TLangfuseConnectionTestResponse> {
+  return request.post(endpoints.adminLangfuseConnectionTest(), payload);
+}
+
 export function revokeUserKey(name: string): Promise<unknown> {
   return request.delete(endpoints.revokeUserKey(name));
 }
@@ -205,7 +221,7 @@ export const updateUserPlugins = (payload: t.TUpdateUserPlugins) => {
   return request.post(endpoints.userPlugins(), payload);
 };
 
-export const reinitializeMCPServer = (serverName: string) => {
+export const reinitializeMCPServer = (serverName: string): Promise<mcp.MCPReinitializeResponse> => {
   return request.post(endpoints.mcpReinitialize(serverName));
 };
 
@@ -233,6 +249,10 @@ export const getMCPAuthValues = (serverName: string): Promise<q.MCPAuthValuesRes
 
 export function cancelMCPOAuth(serverName: string): Promise<m.CancelMCPOAuthResponse> {
   return request.post(endpoints.cancelMCPOAuth(serverName), {});
+}
+
+export function getMCPOAuthStatus(flowId: string): Promise<mcp.MCPOAuthStatusResponse> {
+  return request.get(endpoints.mcpOAuthStatus(flowId));
 }
 
 /* Config */
@@ -1063,6 +1083,20 @@ export function getSkillFileContent(
   relativePath: string,
 ): Promise<sk.TSkillFileContentResponse> {
   return request.get(endpoints.skillFile(skillId, relativePath));
+}
+
+// Deloitte: fetch skill file bytes as Blob via authenticated axios for binary previews/downloads.
+export function getSkillFileBlob(
+  skillId: string,
+  relativePath: string,
+): Promise<AxiosResponse<Blob>> {
+  return request.getResponse<AxiosResponse<Blob>>(
+    `${endpoints.skillFile(skillId, relativePath)}?raw=true`,
+    {
+      responseType: 'blob',
+      headers: { Accept: 'application/octet-stream' },
+    },
+  );
 }
 
 export function deleteSkillFile(

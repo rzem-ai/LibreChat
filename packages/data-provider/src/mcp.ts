@@ -1,6 +1,6 @@
 import { z } from 'zod';
+import { extractEnvVariable, stripUnresolvedPlaceholderQueryParams } from './utils';
 import { TokenExchangeMethodEnum } from './types/agents';
-import { extractEnvVariable } from './utils';
 
 const validateOAuthClientCredentials = (
   oauth: {
@@ -151,7 +151,18 @@ const UserOAuthOptionsSchema = OAuthOptionsBaseSchema.omit({
 
 const OboOptionsSchema = z.object({
   /** Scopes to request for the downstream MCP server (e.g., "api://<client-id>/Mcp.Tools.ReadWrite") */
-  scopes: z.string().min(1),
+  // Deloitte Custom Change: resolve `${VAR}` placeholders the same way the transport `url`
+  // schemas do — without this, an unset/templated scope is sent to the IdP literally
+  // (e.g. "${MCP_GATEWAY_OBO_SCOPE}"), and the OBO token exchange fails. The `refine` below
+  // fails config validation fast when the placeholder is still unresolved after expansion,
+  // instead of deferring to a less actionable IdP error at OBO exchange time.
+  scopes: z
+    .string()
+    .min(1)
+    .transform((val) => extractEnvVariable(val))
+    .refine((val) => !envVarPattern.test(val), {
+      message: 'MCP OBO scopes contains an unresolved environment variable placeholder',
+    }),
 });
 
 const BaseOptionsSchema = z.object({
@@ -162,6 +173,8 @@ const BaseOptionsSchema = z.object({
     .optional(),
   /** Description of the MCP server */
   description: z.string().optional(),
+  /** Deloitte Custom Change: parent brand/grouping name shown as `${title} - ${parentGroup}` in the Tool Library. */
+  parentGroup: z.string().optional(),
   /**
    * Controls whether the MCP server is initialized during application startup.
    * - true (default): Server is initialized during app startup and included in app-level connections
@@ -290,22 +303,30 @@ export const StdioOptionsSchema = BaseOptionsSchema.extend({
     .optional(),
 });
 
+/**
+ * Deloitte Custom Change: Base URL schema shared by all remote MCP transports — resolves
+ * `${VAR}` placeholders, drops any query param left with an unresolved placeholder, then
+ * validates as a URL. Each transport schema below adds its own protocol `.refine(...)` on
+ * top of this.
+ */
+const mcpTransportUrlSchema = z
+  .string()
+  .transform((val: string) => extractEnvVariable(val))
+  .transform((val: string) => stripUnresolvedPlaceholderQueryParams(val))
+  .pipe(z.string().url());
+
 export const WebSocketOptionsSchema = BaseOptionsSchema.extend({
   type: z.literal('websocket').default('websocket'),
   obo: z.undefined().optional(),
-  url: z
-    .string()
-    .transform((val: string) => extractEnvVariable(val))
-    .pipe(z.string().url())
-    .refine(
-      (val: string) => {
-        const protocol = new URL(val).protocol;
-        return protocol === 'ws:' || protocol === 'wss:';
-      },
-      {
-        message: 'WebSocket URL must start with ws:// or wss://',
-      },
-    ),
+  url: mcpTransportUrlSchema.refine(
+    (val: string) => {
+      const protocol = new URL(val).protocol;
+      return protocol === 'ws:' || protocol === 'wss:';
+    },
+    {
+      message: 'WebSocket URL must start with ws:// or wss://',
+    },
+  ),
 });
 
 export const SSEOptionsSchema = BaseOptionsSchema.extend({
@@ -321,19 +342,15 @@ export const SSEOptionsSchema = BaseOptionsSchema.extend({
   obo: OboOptionsSchema.optional(),
   /** Optional outbound proxy URL for this remote MCP transport */
   proxy: ProxyUrlSchema.optional(),
-  url: z
-    .string()
-    .transform((val: string) => extractEnvVariable(val))
-    .pipe(z.string().url())
-    .refine(
-      (val: string) => {
-        const protocol = new URL(val).protocol;
-        return protocol !== 'ws:' && protocol !== 'wss:';
-      },
-      {
-        message: 'SSE URL must not start with ws:// or wss://',
-      },
-    ),
+  url: mcpTransportUrlSchema.refine(
+    (val: string) => {
+      const protocol = new URL(val).protocol;
+      return protocol !== 'ws:' && protocol !== 'wss:';
+    },
+    {
+      message: 'SSE URL must not start with ws:// or wss://',
+    },
+  ),
 });
 
 export const StreamableHTTPOptionsSchema = BaseOptionsSchema.extend({
@@ -349,19 +366,15 @@ export const StreamableHTTPOptionsSchema = BaseOptionsSchema.extend({
   obo: OboOptionsSchema.optional(),
   /** Optional outbound proxy URL for this remote MCP transport */
   proxy: ProxyUrlSchema.optional(),
-  url: z
-    .string()
-    .transform((val: string) => extractEnvVariable(val))
-    .pipe(z.string().url())
-    .refine(
-      (val: string) => {
-        const protocol = new URL(val).protocol;
-        return protocol !== 'ws:' && protocol !== 'wss:';
-      },
-      {
-        message: 'Streamable HTTP URL must not start with ws:// or wss://',
-      },
-    ),
+  url: mcpTransportUrlSchema.refine(
+    (val: string) => {
+      const protocol = new URL(val).protocol;
+      return protocol !== 'ws:' && protocol !== 'wss:';
+    },
+    {
+      message: 'Streamable HTTP URL must not start with ws:// or wss://',
+    },
+  ),
 });
 
 export const MCPOptionsSchema = z.union([

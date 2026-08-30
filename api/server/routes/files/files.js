@@ -3,6 +3,7 @@ const express = require('express');
 const { logger, SystemCapabilities } = require('@librechat/data-schemas');
 const {
   logAxiosError,
+  getApprovalTtlMs,
   refreshS3FileUrls,
   handleFilesUsageRequest,
   shouldUseUploadSse,
@@ -34,7 +35,7 @@ const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { getOpenAIClient } = require('~/server/controllers/assistants/helpers');
 const { hasCapability } = require('~/server/middleware/roles/capabilities');
 const { checkPermission } = require('~/server/services/PermissionService');
-const { cleanFileName, getContentDisposition } = require('~/server/utils/files');
+const { cleanFileName, getContentDisposition, SAFE_INLINE_TYPES } = require('~/server/utils/files');
 const { getLogStores } = require('~/cache');
 const { Readable } = require('stream');
 const db = require('~/models');
@@ -67,7 +68,18 @@ router.get('/', async (req, res) => {
         logger.warn('[/files] Error refreshing S3 file URLs:', error);
       }
     }
-    res.status(200).send(files);
+    // Deloitte: rewrite azure_blob filepath to authenticated proxy for private containers.
+    const rewritten = files.map((file) => {
+      if (file.source === FileSources.azure_blob && file.file_id) {
+        const obj = file.toObject ? file.toObject() : file;
+        return {
+          ...obj,
+          filepath: `/api/files/download/${req.user.id}/${file.file_id}?inline=true`,
+        };
+      }
+      return file;
+    });
+    res.status(200).send(rewritten);
   } catch (error) {
     logger.error('[/files] Error getting files:', error);
     res.status(400).json({ message: 'Error in request', error: error.message });
@@ -125,7 +137,19 @@ router.get('/agent/:agent_id', async (req, res) => {
       text: 0,
     });
 
-    res.status(200).json(files);
+    // Deloitte: rewrite azure_blob filepath to authenticated proxy for private containers.
+    const rewritten = files.map((file) => {
+      if (file.source === FileSources.azure_blob && file.file_id) {
+        const obj = file.toObject ? file.toObject() : file;
+        return {
+          ...obj,
+          filepath: `/api/files/download/${userId}/${file.file_id}?inline=true`,
+        };
+      }
+      return file;
+    });
+
+    res.status(200).json(rewritten);
   } catch (error) {
     logger.error('[/files/agent/:agent_id] Error fetching agent files:', error);
     res.status(500).json({ error: 'Failed to fetch agent files' });
@@ -145,15 +169,19 @@ router.get('/config', async (req, res) => {
 /**
  * POST /files/usage
  *
- * Owner-scoped TTL touch for uploads held in a client-side queue (mid-run
+ * Owner-scoped TTL hold for uploads sitting in a client-side queue (mid-run
  * queued messages), so the upload-window TTL cannot reap them before drain.
- * Thin wrapper: validation, cap, and best-effort semantics live in
- * `@librechat/api` (`handleFilesUsageRequest`).
+ * Extends the deadline rather than clearing it; the real release happens at
+ * send. The approval window is passed through so a queue waiting on a paused
+ * run outlives that pause. Thin wrapper: validation, cap, hold window, and
+ * best-effort semantics live in `@librechat/api` (`handleFilesUsageRequest`).
  */
 router.post('/usage', async (req, res) => {
   try {
+    const checkpointerCfg = req.config?.endpoints?.[EModelEndpoint.agents]?.checkpointer;
     const { status, body } = await handleFilesUsageRequest(req.user ?? {}, req.body ?? {}, {
-      updateFilesUsage: db.updateFilesUsage,
+      extendFilesTTL: db.extendFilesTTL,
+      approvalTtlMs: getApprovalTtlMs(checkpointerCfg),
     });
     return res.status(status).json(body);
   } catch (error) {
@@ -567,9 +595,17 @@ router.get('/download/:userId/:file_id', fileAccess, async (req, res) => {
       return res.status(501).send('Not Implemented');
     }
 
+    const inline = req.query.inline === 'true' && SAFE_INLINE_TYPES.has(file.type);
     const setHeaders = () => {
-      res.setHeader('Content-Disposition', getContentDisposition(file.filename));
-      res.setHeader('Content-Type', 'application/octet-stream');
+      // Prevents browsers from sniffing the Content-Type and executing e.g. an
+      // SVG served as image/png as active script content under our origin.
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      if (inline) {
+        res.setHeader('Content-Type', file.type);
+      } else {
+        res.setHeader('Content-Disposition', getContentDisposition(file.filename));
+        res.setHeader('Content-Type', 'application/octet-stream');
+      }
       res.setHeader(
         'X-File-Metadata',
         encodeURIComponent(JSON.stringify(getDownloadFileMetadata(file))),
@@ -616,9 +652,7 @@ router.get('/download/:userId/:file_id', fileAccess, async (req, res) => {
       );
       // Use code strategy explicitly — outer getStrategyFunctions(file.source)
       // returns getAzureFileStream for azure_blob source, wrong signature for CI.
-      const { getDownloadStream: getCodeStream } = getStrategyFunctions(
-        FileSources.execute_code,
-      );
+      const { getDownloadStream: getCodeStream } = getStrategyFunctions(FileSources.execute_code);
       const response = await getCodeStream(
         `${ref.storage_session_id}/${ref.file_id}`,
         identity,
