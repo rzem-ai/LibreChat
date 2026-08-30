@@ -155,12 +155,12 @@ export default function AgentConfig() {
       {/* TOOLS — unified built-ins / tools / actions / mcp / skills */}
       <ToolsSection agentId={agent_id} />
 
-      {/* FILE CONTEXT — standalone section, separate from the tool library. Commented out because it's visually similar to file search but less reliable, causing user confusion */}
-      {/* {contextEnabled && (
+      {/* FILE CONTEXT — standalone section, separate from the tool library */}
+      {contextEnabled && (
         <div className="mb-3">
           <FileContext agent_id={agent_id} files={contextFiles} />
         </div>
-      )} */}
+      )}
 
       {/* SUPPORT CONTACT */}
       <div className="mb-3 flex flex-col">
