@@ -320,10 +320,17 @@ export async function initializeBedrock({
     }
 
     const customClient = new BedrockRuntimeClient(customClientConfig);
-    if (LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION) {
+    if (
+      LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION &&
+      (BEDROCK_GATEWAY_URL || BEDROCK_REVERSE_PROXY)
+    ) {
       customClient.middlewareStack.add(
         (next) => async (args) => {
-          args.request.headers['x-id-token'] = LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION;
+          const request = args.request as { headers?: Record<string, string> } | undefined;
+          if (request && typeof request === 'object') {
+            request.headers ??= {};
+            request.headers['x-id-token'] = LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION;
+          }
           return next(args);
         },
         { step: 'build', name: 'llmGatewayIdentityToken' },
