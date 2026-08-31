@@ -49,7 +49,10 @@ export type MCPServerDBObjectResponse = {
 export type MCPServersListResponse = Record<string, MCPServerDBObjectResponse>;
 
 export type MCPReinitializeFailureReason =
-  'unreachable' | 'missing_custom_user_vars' | 'oauth_required' | 'initialization_failed';
+  | 'unreachable'
+  | 'missing_custom_user_vars'
+  | 'oauth_required'
+  | 'initialization_failed';
 
 export interface MCPReinitializeResponse {
   success: boolean;

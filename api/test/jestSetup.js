@@ -32,6 +32,7 @@ process.env.JWT_REFRESH_SECRET = 'test';
 process.env.CREDS_KEY = 'test';
 process.env.CREDS_IV = 'test';
 process.env.ALLOW_EMAIL_LOGIN = 'true';
+process.env.AI_REGISTRY_CLIENT_ID = '4aeebbdc-56f5-4329-b40e-3d0a243bf74a';
 
 // Set global test timeout to 30 seconds
 // This can be overridden in individual tests if needed

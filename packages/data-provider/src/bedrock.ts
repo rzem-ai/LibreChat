@@ -523,7 +523,8 @@ export const bedrockInputParser = s.tConversationSchema
         /** Persisted AMRF is spread into the final request, so clearing only
          * `additionalFields` leaves a stale value from a prior selection. */
         const persistedAmrf = typedData.additionalModelRequestFields as
-          Record<string, unknown> | undefined;
+          | Record<string, unknown>
+          | undefined;
         const thinkingDisabled = additionalFields.thinking === false;
         const effort = additionalFields.effort;
         if (typeof effort === 'string' && effort !== '') {
@@ -571,7 +572,10 @@ export const bedrockInputParser = s.tConversationSchema
            * clobbered by the Opus 4.7+ auto → 'summarized' fallback.
            */
           const topLevelDisplay = additionalFields.thinkingDisplay as
-            s.ThinkingDisplay | string | null | undefined;
+            | s.ThinkingDisplay
+            | string
+            | null
+            | undefined;
           const persistedDisplay = extractPersistedDisplay(typedData.additionalModelRequestFields);
           const thinkingConfig: ThinkingConfig = { type: 'adaptive' };
           const display = resolveThinkingDisplay(
@@ -603,7 +607,8 @@ export const bedrockInputParser = s.tConversationSchema
          * not inherit an adaptive/disabled thinking object or `output_config`
          * persisted from another model; this branch's own fields are authoritative. */
         const persistedAmrf = typedData.additionalModelRequestFields as
-          Record<string, unknown> | undefined;
+          | Record<string, unknown>
+          | undefined;
         if (persistedAmrf) {
           delete persistedAmrf.thinking;
           delete persistedAmrf.output_config;

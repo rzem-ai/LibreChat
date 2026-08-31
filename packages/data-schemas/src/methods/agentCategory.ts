@@ -50,6 +50,9 @@ export function createAgentCategoryMethods(mongoose: typeof import('mongoose')):
     ]);
 
     const countMap = new Map(categoryCounts.map((c) => [c._id, c.count]));
+    // Deloitte Custom Change: intentionally runs in the caller's ambient tenant context (like the
+    // `Agent.aggregate` above) rather than `runAsSystem`, which would bypass tenant isolation and
+    // return every tenant's categories — mismatched against counts computed for this tenant only.
     const categories = await getActiveCategories();
 
     return categories.map((category) => ({

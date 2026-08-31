@@ -32,6 +32,7 @@ import type {
 import type { Response } from 'express';
 import type { Types } from 'mongoose';
 import type { ServerRequest, StrategyFunctions } from '~/types';
+import { isSkillScanError, scanSkillOnCreate, scanSkillOnUpdate } from './scanner';
 import { resolveSkillFilePathParam } from './path';
 import { isBinaryBuffer } from './binary';
 
@@ -112,6 +113,13 @@ export interface SkillsHandlersDeps {
 
   /** ObjectId validation helper from data-schemas. */
   isValidObjectIdString: (value: unknown) => boolean;
+
+  /**
+   * Resolves an OBO-derived skill scanner token for the requesting user, or
+   * `undefined` if none can be obtained (e.g. non-OpenID users, or before
+   * OBO admin consent is granted).
+   */
+  resolveScannerToken: (user: ServerRequest['user']) => Promise<string | undefined>;
 }
 
 /**
@@ -296,6 +304,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
     hasPublicPermission,
     grantPermission,
     isValidObjectIdString,
+    resolveScannerToken,
   } = deps;
 
   /** O(1) public check for a single skill (avoids fetching all public IDs). */
@@ -382,6 +391,29 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
 
       const authorId = (user._id ?? user.id) as unknown as Types.ObjectId;
       const authorName = user.name ?? user.username ?? 'Unknown';
+
+      try {
+        const scannerToken = process.env.SKILL_SCANNER_URL
+          ? await resolveScannerToken(user)
+          : undefined;
+        await scanSkillOnCreate({
+          name: body.name,
+          description: body.description,
+          body: body.body,
+          frontmatter: body.frontmatter as Record<string, unknown> | undefined,
+          alwaysApply: body.alwaysApply,
+          token: scannerToken,
+        });
+      } catch (error) {
+        if (isSkillScanError(error)) {
+          return res.status(error.statusCode).json({
+            error: 'Skill scan failed',
+            message: error.message,
+            issues: error.issues,
+          });
+        }
+        throw error;
+      }
 
       let createResult: CreateSkillResult;
       try {
@@ -501,6 +533,41 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
 
       if (Object.keys(update).length === 0) {
         return res.status(400).json({ error: 'At least one field must be provided for update' });
+      }
+
+      const resolved = (
+        req as ServerRequest & {
+          resourceAccess?: { resourceInfo?: ISkill & { _id: Types.ObjectId } };
+        }
+      ).resourceAccess?.resourceInfo;
+      const currentSkill = resolved ?? (await getSkillById(id));
+      if (!currentSkill) {
+        return res.status(404).json({ error: 'Skill not found' });
+      }
+
+      try {
+        const scannerToken = process.env.SKILL_SCANNER_URL
+          ? await resolveScannerToken(req.user)
+          : undefined;
+        await scanSkillOnUpdate({
+          name: update.name ?? currentSkill.name,
+          description: update.description ?? currentSkill.description,
+          body: update.body ?? currentSkill.body,
+          frontmatter: (update.frontmatter ?? currentSkill.frontmatter) as
+            | Record<string, unknown>
+            | undefined,
+          alwaysApply: update.alwaysApply ?? currentSkill.alwaysApply,
+          token: scannerToken,
+        });
+      } catch (error) {
+        if (isSkillScanError(error)) {
+          return res.status(error.statusCode).json({
+            error: 'Skill scan failed',
+            message: error.message,
+            issues: error.issues,
+          });
+        }
+        throw error;
       }
 
       let result: UpdateSkillResult;

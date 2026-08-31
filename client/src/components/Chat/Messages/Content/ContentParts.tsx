@@ -144,7 +144,9 @@ type ContentPartsProps = {
   enterEdit?: (cancel?: boolean) => void | null | undefined;
   siblingIdx?: number;
   setSiblingIdx?:
-    ((value: number) => void | React.Dispatch<React.SetStateAction<number>>) | null | undefined;
+    | ((value: number) => void | React.Dispatch<React.SetStateAction<number>>)
+    | null
+    | undefined;
 };
 
 /**

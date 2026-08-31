@@ -5,9 +5,11 @@ interface SkillToggleProps {
   enabled: boolean;
   onChange: () => void;
   ariaLabel: string;
+  // Deloitte Custom Change add visible active/disable label to skill toggle
+  label: string;
 }
 
-function SkillToggle({ enabled, onChange, ariaLabel }: SkillToggleProps) {
+function SkillToggle({ enabled, onChange, ariaLabel, label }: SkillToggleProps) {
   return (
     <button
       type="button"
@@ -18,8 +20,12 @@ function SkillToggle({ enabled, onChange, ariaLabel }: SkillToggleProps) {
         e.stopPropagation();
         onChange();
       }}
-      className="inline-flex h-9 items-center justify-center rounded-md px-1 transition-colors hover:bg-surface-hover"
+      className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md px-1 transition-colors hover:bg-surface-hover"
     >
+      {/* Deloitte Custom Change add visible active/disable label to skill toggle */}
+      <span className="text-xs font-medium text-text-secondary" aria-hidden="true">
+        {label}
+      </span>
       <span
         className={cn(
           'relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors duration-200',

@@ -1,7 +1,7 @@
 import React from 'react';
 import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/react';
 import { FileSources } from 'librechat-data-provider';
+import { render, screen } from '@testing-library/react';
 import type { CodeEnvRef } from 'librechat-data-provider';
 import FilePreview from '../FilePreview';
 
