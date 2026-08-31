@@ -165,6 +165,7 @@ function problemToIssue(problem: ValidationProblem): SkillScanIssue {
  * security findings, with progressively looser fallbacks so the user always
  * gets *some* reason rather than a generic failure.
  */
+// Deloitte Custom Change: Suppress manifest-validation noise for security-only scanner passes.
 function toIssues(
   result: SkillScanResult | undefined,
   requireValidation: boolean,
@@ -371,6 +372,7 @@ async function scanArchive(
     // nothing, not that it evaluated and found something unsafe), so treating
     // that as a block would mean a `requireValidation: false` scan can never
     // pass against the real scanner.
+    // Deloitte Custom Change: Allow non-manifest scans to pass when the scanner returns no verdict.
     const scanEvaluated = payload?.scan != null;
     const scanPassed = isSafe === true;
     const scanFailed = requireValidation ? !scanPassed : scanEvaluated && !scanPassed;
@@ -388,6 +390,7 @@ async function scanArchive(
       logger.debug(`[skillScanner] "${fileName}" raw response: ${JSON.stringify(payload)}`);
       // Join every issue into one message so callers that only read `.message`
       // still see all reasons; `.issues` carries the structured list for the UI.
+      // Deloitte Custom Change: Format issues according to whether manifest validation was required.
       const issues = toIssues(payload, requireValidation);
       const message =
         issues
@@ -433,6 +436,7 @@ export async function scanSkillOnCreate(params: {
   const skillMd = buildSkillMarkdown(params);
   const archive = await buildSkillArchive(skillMd);
   await scanArchive(archive, `${params.name}.skill`, { token: params.token });
+  // Deloitte Custom Change: Scan only extra frontmatter fields not already present in the generated manifest.
   await scanFrontmatter(
     extraFrontmatterFields(params.frontmatter),
     params.alwaysApply,
@@ -459,6 +463,7 @@ export async function scanSkillOnUpdate(params: {
   const skillMd = buildSkillMarkdown(params);
   const archive = await buildSkillArchive(skillMd);
   await scanArchive(archive, `${params.name}.skill`, { token: params.token });
+  // Deloitte Custom Change: Scan only extra frontmatter fields not already present in the generated manifest.
   await scanFrontmatter(
     extraFrontmatterFields(params.frontmatter),
     params.alwaysApply,
@@ -474,6 +479,7 @@ export async function scanSkillOnUpdate(params: {
  * frontmatter bag, leaving only the extra fields that still need a
  * security-only pass through `scanFrontmatter`.
  */
+// Deloitte Custom Change: Remove manifest-owned fields before the frontmatter-only scanner pass.
 function extraFrontmatterFields(
   frontmatter: Record<string, unknown> | undefined,
 ): Record<string, unknown> | undefined {

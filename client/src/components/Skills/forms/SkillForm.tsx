@@ -52,6 +52,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
   const navigate = useNavigate();
   const { showToast } = useToastContext();
   const [warnings, setWarnings] = useState<TSkillWarning[] | null>(null);
+  // Deloitte Custom Change: Keep scanner failures visible inline on the edit form.
   const [scanError, setScanError] = useState<string | null>(null);
 
   const skillQuery = useGetSkillQuery(skillId);
@@ -82,6 +83,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
 
   useEffect(() => {
     setWarnings(null);
+    // Deloitte Custom Change: Clear previous skill scanner output when navigating between skills.
     setScanError(null);
   }, [skillId]);
 
@@ -92,6 +94,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
         message: localize('com_ui_skill_updated'),
       });
       setWarnings(updated.warnings ?? null);
+      // Deloitte Custom Change: Clear any previous inline scanner failure after a successful save.
       setScanError(null);
       reset(toValues(updated));
     },
@@ -102,6 +105,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
         skillQuery.refetch();
         return;
       }
+      // Deloitte Custom Change: Surface the scanner's validation error inline instead of an auto-dismissing toast.
       setScanError(formatSkillScanError(error, localize('com_ui_skill_update_error')));
     },
   });
@@ -113,6 +117,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
     if (!skill || updateSkill.isLoading) {
       return;
     }
+    // Deloitte Custom Change: Clear stale scanner output before retrying save.
     setScanError(null);
     const trimmedName = data.name.trim();
     if (!SKILL_NAME_PATTERN.test(trimmedName)) {
@@ -265,6 +270,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
           </div>
         )}
 
+        {/* // Deloitte Custom Change: Render scanner failures inline near warning messages for readability. */}
         {scanError && (
           <p className="mt-4 whitespace-pre-line text-xs text-red-500" role="alert">
             {scanError}

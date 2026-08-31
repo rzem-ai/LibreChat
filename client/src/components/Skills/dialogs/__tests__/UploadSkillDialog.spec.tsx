@@ -13,11 +13,13 @@ let mockFileConfigInput: FileConfigInput | undefined = {
   },
 };
 
+// Deloitte Custom Change: Capture upload mutation callbacks so tests can simulate scanner results.
 interface MutationOptions {
   onSuccess?: (skill: { _id: string; warnings?: unknown[] }) => void;
   onError?: (error: unknown) => void;
 }
 
+// Deloitte Custom Change: Store mutation callbacks exercised by scanner error tests.
 let capturedMutationOptions: MutationOptions | undefined;
 
 jest.mock('react-router-dom', () => ({
@@ -47,6 +49,7 @@ jest.mock('~/data-provider', () => ({
   useGetFileConfig: ({ select }: { select?: (data: FileConfigInput | undefined) => unknown }) => ({
     data: select != null ? select(mockFileConfigInput) : mockFileConfigInput,
   }),
+  // Deloitte Custom Change: Capture import mutation options for inline scanner error tests.
   useImportSkillMutation: (options: MutationOptions) => {
     capturedMutationOptions = options;
     return {
@@ -78,6 +81,7 @@ jest.mock('~/hooks', () => ({
 
 jest.mock('~/utils', () => ({
   cn: (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' '),
+  // Deloitte Custom Change: Use the real scanner formatter so tests cover production message formatting.
   formatSkillScanError: jest.requireActual('~/utils/skills').formatSkillScanError,
 }));
 
@@ -89,6 +93,7 @@ function getFileInput(container: HTMLElement): HTMLInputElement {
   return input;
 }
 
+// Deloitte Custom Change: Build API-shaped scanner errors for inline upload display assertions.
 function scanErrorFromIssues(messages: string[]) {
   return {
     response: {
@@ -185,6 +190,7 @@ describe('UploadSkillDialog', () => {
     appendSpy.mockRestore();
   });
 
+  // Deloitte Custom Change: Verify upload scan failures render as persistent accessible inline text.
   it('renders the scanner error as an alert and preserves multi-line content', () => {
     render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
 
@@ -199,6 +205,7 @@ describe('UploadSkillDialog', () => {
     expect(alert.className).toContain('whitespace-pre-line');
   });
 
+  // Deloitte Custom Change: Verify retrying upload clears stale scanner output before success.
   it('clears the scanner error after a successful retry upload', () => {
     const { container } = render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
 

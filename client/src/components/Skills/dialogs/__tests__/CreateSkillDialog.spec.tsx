@@ -7,11 +7,13 @@ const mockNavigate = jest.fn();
 const mockSetIsOpen = jest.fn();
 const mockShowToast = jest.fn();
 
+// Deloitte Custom Change: Capture mutation callbacks so tests can simulate scanner results.
 interface MutationOptions {
   onSuccess?: (skill: { _id: string; warnings?: unknown[] }) => void;
   onError?: (error: unknown) => void;
 }
 
+// Deloitte Custom Change: Store dialog and mutation callbacks exercised by scanner error tests.
 let capturedMutationOptions: MutationOptions | undefined;
 let capturedOnOpenChange: ((open: boolean) => void) | undefined;
 
@@ -32,6 +34,7 @@ jest.mock(
         ...props
       }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string }) =>
         React.createElement('button', props, children),
+      // Deloitte Custom Change: Expose dialog close callbacks so scanner error reset paths can be tested.
       OGDialog: ({
         open,
         onOpenChange,
@@ -64,6 +67,7 @@ jest.mock(
 );
 
 jest.mock('~/data-provider', () => ({
+  // Deloitte Custom Change: Capture create mutation options for inline scanner error tests.
   useCreateSkillMutation: (options: MutationOptions) => {
     capturedMutationOptions = options;
     return {
@@ -81,6 +85,7 @@ jest.mock('~/hooks', () => ({
       com_ui_skill_instructions: 'Instructions',
       com_ui_cancel: 'Cancel',
       com_ui_create: 'Create',
+      // Deloitte Custom Change: Provide the create fallback message used by scan error formatting.
       com_ui_skill_create_error: 'Failed to create the skill',
     };
     return translations[key] ?? key;
@@ -89,9 +94,11 @@ jest.mock('~/hooks', () => ({
 
 jest.mock('~/utils', () => ({
   cn: (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' '),
+  // Deloitte Custom Change: Use the real scanner formatter so tests cover production message formatting.
   formatSkillScanError: jest.requireActual('~/utils/skills').formatSkillScanError,
 }));
 
+// Deloitte Custom Change: Build API-shaped scanner errors for inline display assertions.
 function scanErrorFromIssues(messages: string[]) {
   return {
     response: {
@@ -144,6 +151,7 @@ describe('CreateSkillDialog', () => {
     expect(handleAgentSubmit).not.toHaveBeenCalled();
   });
 
+  // Deloitte Custom Change: Verify create scan failures render as persistent accessible inline text.
   it('renders the scanner error as an alert and preserves multi-line content', () => {
     render(<CreateSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
 
@@ -158,6 +166,7 @@ describe('CreateSkillDialog', () => {
     expect(alert.className).toContain('whitespace-pre-line');
   });
 
+  // Deloitte Custom Change: Verify successful create retries remove stale scanner output.
   it('clears the scanner error on retry success', () => {
     render(<CreateSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
 
@@ -172,6 +181,7 @@ describe('CreateSkillDialog', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  // Deloitte Custom Change: Verify explicit cancel clears inline scanner output.
   it('clears the scanner error when the dialog is closed via the Cancel button', () => {
     render(<CreateSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
 
@@ -186,6 +196,7 @@ describe('CreateSkillDialog', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  // Deloitte Custom Change: Verify Escape-driven dialog closes clear inline scanner output.
   it('clears the scanner error when the dialog is closed via Escape', () => {
     // Radix's Dialog.Root funnels both the Escape key and an overlay click into a
     // single `onOpenChange(false)` call, which OGDialog forwards unchanged. Invoking
@@ -206,6 +217,7 @@ describe('CreateSkillDialog', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  // Deloitte Custom Change: Verify overlay-driven dialog closes clear inline scanner output.
   it('clears the scanner error when the dialog is closed via an overlay click', () => {
     render(<CreateSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
 

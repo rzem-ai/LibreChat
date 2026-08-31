@@ -255,6 +255,7 @@ describe('skill scanner', () => {
     ).resolves.toBeUndefined();
   });
 
+  // Deloitte Custom Change: Verify security-only scans omit manifest validation noise from failures.
   it('does not surface manifest validation problems as the reason a requireValidation:false scan failed', async () => {
     global.fetch = jest.fn().mockResolvedValue(
       jsonResponse({
@@ -271,6 +272,7 @@ describe('skill scanner', () => {
     });
   });
 
+  // Deloitte Custom Change: Verify manifest-less scans can pass when the scanner returns no verdict.
   it('does not block a requireValidation:false scan when the scanner returns scan: null (no manifest to evaluate)', async () => {
     // Mirrors the real scanner's response to a manifest-less archive: it
     // reports the manifest is missing but declines to run a security scan
@@ -290,6 +292,7 @@ describe('skill scanner', () => {
     ).resolves.toBeUndefined();
   });
 
+  // Deloitte Custom Change: Verify unsafe verdicts still block security-only scans.
   it('still blocks a requireValidation:false scan when the scanner does return an unsafe verdict', async () => {
     global.fetch = jest.fn().mockResolvedValue(
       jsonResponse({
@@ -315,6 +318,7 @@ describe('skill scanner', () => {
     });
   });
 
+  // Deloitte Custom Change: Verify manifest-required scans still require an explicit safe verdict.
   it('still blocks a requireValidation:true scan when the scanner returns scan: null', async () => {
     global.fetch = jest.fn().mockResolvedValue(
       jsonResponse({
@@ -326,6 +330,7 @@ describe('skill scanner', () => {
     await expect(upload()).rejects.toMatchObject({ statusCode: 422 });
   });
 
+  // Deloitte Custom Change: Cover frontmatter-only scanner pass behavior for create and update flows.
   describe('scanSkillOnCreate / scanSkillOnUpdate frontmatter scanning', () => {
     function passingResponse(): Response {
       return jsonResponse({
@@ -334,6 +339,7 @@ describe('skill scanner', () => {
       });
     }
 
+    // Deloitte Custom Change: Verify manifest-owned fields do not trigger an extra scan.
     it('runs a single scan (no frontmatter-only pass) when there is no frontmatter beyond name/description', async () => {
       const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
       global.fetch = fetchSpy as unknown as typeof fetch;
@@ -348,6 +354,7 @@ describe('skill scanner', () => {
       expect(fetchSpy).toHaveBeenCalledTimes(1);
     });
 
+    // Deloitte Custom Change: Verify missing optional frontmatter does not trigger an extra scan.
     it('runs a single scan when frontmatter is undefined and alwaysApply is undefined', async () => {
       const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
       global.fetch = fetchSpy as unknown as typeof fetch;
@@ -361,6 +368,7 @@ describe('skill scanner', () => {
       expect(fetchSpy).toHaveBeenCalledTimes(1);
     });
 
+    // Deloitte Custom Change: Verify extra frontmatter fields are scanned separately.
     it('runs a second frontmatter-only scan when frontmatter has fields beyond name/description', async () => {
       const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
       global.fetch = fetchSpy as unknown as typeof fetch;
@@ -375,6 +383,7 @@ describe('skill scanner', () => {
       expect(fetchSpy).toHaveBeenCalledTimes(2);
     });
 
+    // Deloitte Custom Change: Verify explicit alwaysApply values are scanned separately.
     it('runs a second frontmatter-only scan when alwaysApply is explicitly set, even with no extra frontmatter fields', async () => {
       const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
       global.fetch = fetchSpy as unknown as typeof fetch;

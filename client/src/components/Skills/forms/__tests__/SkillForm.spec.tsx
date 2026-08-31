@@ -8,11 +8,13 @@ const mockNavigate = jest.fn();
 const mockShowToast = jest.fn();
 const mockRefetch = jest.fn();
 
+// Deloitte Custom Change: Capture update mutation callbacks so tests can simulate scanner results.
 interface MutationOptions {
   onSuccess?: (skill: TSkill) => void;
   onError?: (error: unknown) => void;
 }
 
+// Deloitte Custom Change: Store the active skill and callbacks exercised by scanner error tests.
 let capturedMutationOptions: MutationOptions | undefined;
 let mockCurrentSkill: TSkill;
 
@@ -53,6 +55,7 @@ jest.mock('~/data-provider', () => ({
     isError: false,
     refetch: mockRefetch,
   }),
+  // Deloitte Custom Change: Capture update mutation options for inline scanner error tests.
   useUpdateSkillMutation: (options: MutationOptions) => {
     capturedMutationOptions = options;
     return {
@@ -112,9 +115,11 @@ jest.mock('../../buttons', () => ({
 
 jest.mock('~/utils', () => ({
   cn: (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' '),
+  // Deloitte Custom Change: Use the real scanner formatter so tests cover production message formatting.
   formatSkillScanError: jest.requireActual('~/utils/skills').formatSkillScanError,
 }));
 
+// Deloitte Custom Change: Build reusable skill fixtures for scanner error tests.
 function makeSkill(overrides: Partial<TSkill> = {}): TSkill {
   return {
     _id: 'skill-1',
@@ -134,6 +139,7 @@ function makeSkill(overrides: Partial<TSkill> = {}): TSkill {
   };
 }
 
+// Deloitte Custom Change: Build API-shaped scanner errors for inline edit display assertions.
 function scanErrorFromIssues(messages: string[]) {
   return {
     response: {
@@ -151,6 +157,7 @@ describe('SkillForm', () => {
     mockCurrentSkill = makeSkill();
   });
 
+  // Deloitte Custom Change: Verify edit scan failures render as persistent accessible inline text.
   it('renders the scanner error as an alert and preserves multi-line content', async () => {
     render(<SkillForm skillId="skill-1" />);
     await act(async () => {});
@@ -166,6 +173,7 @@ describe('SkillForm', () => {
     expect(alert.className).toContain('whitespace-pre-line');
   });
 
+  // Deloitte Custom Change: Verify switching skills clears stale inline scanner output.
   it('clears the scanner error when switching to a different skill', async () => {
     const { rerender } = render(<SkillForm skillId="skill-1" />);
     await act(async () => {});

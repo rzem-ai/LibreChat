@@ -54,6 +54,7 @@ export default function CreateSkillDialog({
   const localize = useLocalize();
   const navigate = useNavigate();
   const { showToast } = useToastContext();
+  // Deloitte Custom Change: Keep scanner failures visible inline while the create dialog remains open.
   const [scanError, setScanError] = useState<string | null>(null);
 
   const {
@@ -77,6 +78,7 @@ export default function CreateSkillDialog({
             ? warnings.map((w) => w.message).join('\n')
             : localize('com_ui_skill_created'),
       });
+      // Deloitte Custom Change: Clear any previous inline scanner failure after a successful create.
       setScanError(null);
       setIsOpen(false);
       reset();
@@ -97,6 +99,7 @@ export default function CreateSkillDialog({
     if (createSkill.isLoading) {
       return;
     }
+    // Deloitte Custom Change: Clear stale scanner output before retrying creation.
     setScanError(null);
     createSkill.mutate({
       name: data.name.trim(),
@@ -105,6 +108,7 @@ export default function CreateSkillDialog({
     });
   };
 
+  // Deloitte Custom Change: Reset inline scanner output when any dialog close path fires.
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       setScanError(null);
@@ -207,6 +211,7 @@ export default function CreateSkillDialog({
             />
           </div>
 
+          {/* // Deloitte Custom Change: Render scanner failures inline with preserved line breaks for readability. */}
           {scanError && (
             <p className="whitespace-pre-line text-xs text-red-500" role="alert">
               {scanError}
@@ -215,6 +220,7 @@ export default function CreateSkillDialog({
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-2 pt-2">
+            {/* // Deloitte Custom Change: Route Cancel through the shared close handler so inline scanner output resets. */}
             <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
               {localize('com_ui_cancel')}
             </Button>
