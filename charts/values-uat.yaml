@@ -31,9 +31,10 @@ pods:
           tag: 'uat@sha256:adb8e6ea1557c84c0ff0f44cade9b69d24a8ba8350df59db1575fb3692e94319'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
-          TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_ANTHROPIC_URL: 'http://anthropic-eastus2.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_BEDROCK_AU_URL: 'http://bedrock-ap-southeast-2.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_MCP_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
     containers:
       librechat:
@@ -51,18 +52,23 @@ pods:
         env:
           ADMIN_PANEL_URL: 'https://myassist-uat.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
-          ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7,claude-sonnet-5,claude-opus-4-8'
+          ANTHROPIC_MODELS: 'claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-sonnet-5,claude-opus-4-8'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
           APP_TITLE: 'MyAssist 2.0 (UAT)'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
-          BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
+          BASE_URL_AZURE_GLOBAL: 'http://127.0.0.1:8081/azure-global'
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
+          BEDROCK_AWS_ACCESS_KEY_ID: 'unused'
+          BEDROCK_AWS_DEFAULT_REGION: 'ap-southeast-2'
+          BEDROCK_AWS_SECRET_ACCESS_KEY: 'unused'
+          BEDROCK_AWS_MODELS: 'au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0'
+          BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081/bedrock-au'
           CUSTOM_FOOTER: '⚠️ WARNING: This is a User Acceptance Testing environment. Do not upload client or confidential data.'
           DOMAIN_CLIENT: 'https://myassist-uat.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://myassist-uat.ctk.au.deloitte.com'
           EMBEDDINGS_MODEL: 'text-embedding-3-small'
           EMBEDDINGS_PROVIDER: 'openai'
-          ENDPOINTS: 'agents,anthropic,custom'
+          ENDPOINTS: 'agents,anthropic,bedrock,custom'
           KEY_VAULT_NAME: 'kv-int-librechat-uat'
           MCP_GATEWAY_OBO_SCOPE: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
           MCP_GATEWAY_TOOLSETS: 'teams,research,news,kx,desc,gims'
@@ -84,6 +90,7 @@ pods:
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
           RAG_PORT: '8000'
           RAG_USE_FULL_CONTEXT: 'true'
+          REFRESH_TOKEN_EXPIRY: '86400000' # (ms) - 1 day refresh token expiration
           # ClearTrack Code Interpreter (ea-code-runtime)
           LIBRECHAT_CODE_BASEURL: 'https://code-runtime-uat.ctk.au.deloitte.com/v1'
           CODEAPI_AUTH_PROVIDER: 'librechat-jwt'
@@ -131,7 +138,7 @@ pods:
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-uat
           OPENID_SESSION_SECRET: librechat-openid-session-secret-uat
           # RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
-          MEILI_MASTER_KEY: librechat-meili-master-key-uat
+          # MEILI_MASTER_KEY: librechat-meili-master-key-uat
           # ClearTrack Code Interpreter (ea-code-runtime) — JWK signing key
           CODEAPI_JWT_PRIVATE_JWK_JSON: librechat-codeapi-jwt-private-jwk-uat
           #Langfuse Observability
@@ -170,22 +177,22 @@ pods:
           targetPort: 8000
         ingress:
           enabled: false
-      meilisearch:
-        image:
-          pullPolicy: Always
-          tag: 'uat@sha256:333043792dcc3f9974abdf8497b2eb190f282e63c185a3fd9fd5b892277df75a'
-        env:
-          MEILI_ENV: 'production' # Use production to mimic PROD environment behaviour
-        secrets:
-          MEILI_MASTER_KEY: librechat-meili-master-key-uat
-        persistence:
-          enabled: true
-          size: 10Gi
-          accessModes:
-            - ReadWriteOnce
-          name: 'meilisearch-data'
-          mountPath: /meili_data
-          storageClass: 'managed-csi-standard-private'
+      # meilisearch: # TODO: Enable meilisearch when we can have multi-container PVC
+      #   image:
+      #     pullPolicy: Always
+      #     tag: 'uat@sha256:333043792dcc3f9974abdf8497b2eb190f282e63c185a3fd9fd5b892277df75a'
+      #   env:
+      #     MEILI_ENV: 'production' # Use production to mimic PROD environment behaviour
+      #   secrets:
+      #     MEILI_MASTER_KEY: librechat-meili-master-key-uat
+      #   persistence:
+      #     enabled: true
+      #     size: 10Gi
+      #     accessModes:
+      #       - ReadWriteOnce
+      #     name: 'meilisearch-data'
+      #     mountPath: /meili_data
+      #     storageClass: 'managed-csi-standard-private'
   admin:
     replicas: 1
     containers:

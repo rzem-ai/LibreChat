@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -53,6 +54,8 @@ export default function CreateSkillDialog({
   const localize = useLocalize();
   const navigate = useNavigate();
   const { showToast } = useToastContext();
+  // Deloitte Custom Change: Keep scanner failures visible inline while the create dialog remains open.
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const {
     register,
@@ -75,6 +78,8 @@ export default function CreateSkillDialog({
             ? warnings.map((w) => w.message).join('\n')
             : localize('com_ui_skill_created'),
       });
+      // Deloitte Custom Change: Clear any previous inline scanner failure after a successful create.
+      setScanError(null);
       setIsOpen(false);
       reset();
       if (onCreated) {
@@ -84,11 +89,9 @@ export default function CreateSkillDialog({
       navigate(`/skills/${skill._id}`);
     },
     onError: (error: unknown) => {
-      // Deloitte Custom Change: Show the scanner's validation error (if present), otherwise fall back to the generic skill creation error.
-      showToast({
-        status: 'error',
-        message: formatSkillScanError(error, localize('com_ui_skill_create_error')),
-      });
+      // Deloitte Custom Change: Surface the scanner's validation error inline so it
+      // stays on screen until the user retries, instead of an auto-dismissing toast.
+      setScanError(formatSkillScanError(error, localize('com_ui_skill_create_error')));
     },
   });
 
@@ -96,6 +99,8 @@ export default function CreateSkillDialog({
     if (createSkill.isLoading) {
       return;
     }
+    // Deloitte Custom Change: Clear stale scanner output before retrying creation.
+    setScanError(null);
     createSkill.mutate({
       name: data.name.trim(),
       description: data.description.trim(),
@@ -103,9 +108,13 @@ export default function CreateSkillDialog({
     });
   };
 
-  const handleClose = () => {
-    setIsOpen(false);
-    reset();
+  // Deloitte Custom Change: Reset inline scanner output when any dialog close path fires.
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setScanError(null);
+      reset();
+    }
+    setIsOpen(open);
   };
 
   const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -119,9 +128,17 @@ export default function CreateSkillDialog({
   };
 
   const submitDisabled = !isValid || isSubmitting || createSkill.isLoading;
+  // Deloitte Custom Change: Render scanner failures inline with preserved line breaks for readability.
+  const scanErrorMessage = scanError ? (
+    <p className="whitespace-pre-line text-xs text-red-500" role="alert">
+      {scanError}
+    </p>
+  ) : null;
+  // Deloitte Custom Change: Route Cancel through the shared close handler so inline scanner output resets.
+  const handleCancel = () => handleOpenChange(false);
 
   return (
-    <OGDialog open={isOpen} onOpenChange={setIsOpen}>
+    <OGDialog open={isOpen} onOpenChange={handleOpenChange}>
       <OGDialogContent className="w-11/12 max-w-5xl overflow-hidden" showCloseButton={false}>
         <form
           onSubmit={handleFormSubmit}
@@ -202,9 +219,11 @@ export default function CreateSkillDialog({
             />
           </div>
 
+          {scanErrorMessage}
+
           {/* Actions */}
           <div className="flex items-center justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button type="button" variant="outline" onClick={handleCancel}>
               {localize('com_ui_cancel')}
             </Button>
             <Button
