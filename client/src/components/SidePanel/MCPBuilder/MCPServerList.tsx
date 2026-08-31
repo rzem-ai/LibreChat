@@ -8,6 +8,8 @@ import MCPServerCard from './MCPServerCard';
 interface MCPServerListProps {
   servers: MCPServerDefinition[];
   getServerStatusIconProps: (serverName: string) => MCPServerStatusIconProps;
+  connectOrConfigureServer: (serverName: string, autoOpenOAuth?: boolean) => void;
+  revokeOAuthForServer: (serverName: string) => void;
   isFiltered?: boolean;
 }
 
@@ -17,6 +19,8 @@ interface MCPServerListProps {
 export default function MCPServerList({
   servers,
   getServerStatusIconProps,
+  connectOrConfigureServer,
+  revokeOAuthForServer,
   isFiltered = false,
 }: MCPServerListProps) {
   const localize = useLocalize();
@@ -54,6 +58,8 @@ export default function MCPServerList({
           <MCPServerCard
             server={server}
             getServerStatusIconProps={getServerStatusIconProps}
+            connectOrConfigureServer={connectOrConfigureServer}
+            revokeOAuthForServer={revokeOAuthForServer}
             canCreateEditMCPs={canCreateEditMCPs}
           />
         </div>

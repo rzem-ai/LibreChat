@@ -3,7 +3,7 @@ import { MCPIcon } from '@librechat/client';
 import { PermissionBits, hasPermissions } from 'librechat-data-provider';
 import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusIcon';
 import type { MCPServerDefinition } from '~/hooks';
-import { useMCPServerManager, useLocalize } from '~/hooks';
+import { useLocalize } from '~/hooks';
 import { getStatusDotColor } from './MCPStatusBadge';
 import MCPServerDialog from './MCPServerDialog';
 import MCPCardActions from './MCPCardActions';
@@ -12,6 +12,12 @@ import { cn } from '~/utils';
 interface MCPServerCardProps {
   server: MCPServerDefinition;
   getServerStatusIconProps: (serverName: string) => MCPServerStatusIconProps;
+  // Deloitte Custom Change: Passed down from MCPBuilderPanel's single useMCPServerManager
+  // instance (the one that actually renders MCPConfigDialog) rather than called here —
+  // a second, separate hook instance would have its own unrendered dialog state, so
+  // connectOrConfigureServer's config-dialog branch would silently do nothing.
+  connectOrConfigureServer: (serverName: string, autoOpenOAuth?: boolean) => void;
+  revokeOAuthForServer: (serverName: string) => void;
   canCreateEditMCPs: boolean;
 }
 
@@ -26,11 +32,12 @@ interface MCPServerCardProps {
 export default function MCPServerCard({
   server,
   getServerStatusIconProps,
+  connectOrConfigureServer,
+  revokeOAuthForServer,
   canCreateEditMCPs,
 }: MCPServerCardProps) {
   const localize = useLocalize();
   const triggerRef = useRef<HTMLDivElement>(null);
-  const { connectOrConfigureServer, revokeOAuthForServer } = useMCPServerManager();
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const statusIconProps = getServerStatusIconProps(server.serverName);
