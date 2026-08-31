@@ -28,12 +28,13 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'develop@sha256:b94d643cbdda27dc77aebdcf5d9847fbf803508446e6305cf116840afb2ff871'
+          tag: 'develop@sha256:d4cded9e786b13f2123d219bd67b63b7c0a1fe69dacd27a9787b4cf435cbef0d'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
-          TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_ANTHROPIC_URL: 'http://anthropic-eastus2.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_BEDROCK_AU_URL: 'http://bedrock-ap-southeast-2.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_MCP_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
     containers:
       librechat:
@@ -47,22 +48,27 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:13f70ac4c721173ca7d892a1ec3d65cfdfcd6b6fc6ec776e3ac976f5dd3b34cc'
+          tag: 'develop@sha256:68a2aef15ca4eab7131280ef57e62cbbe5dd64738d37bf36347a867e1db6e4b1'
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
-          ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7,claude-sonnet-5,claude-opus-4-8'
+          ANTHROPIC_MODELS: 'claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-sonnet-5,claude-opus-4-8'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
           APP_TITLE: 'MyAssist 2.0 (DEV)'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
-          BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
+          BASE_URL_AZURE_GLOBAL: 'http://127.0.0.1:8081/azure-global'
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
+          BEDROCK_AWS_ACCESS_KEY_ID: 'unused'
+          BEDROCK_AWS_DEFAULT_REGION: 'ap-southeast-2'
+          BEDROCK_AWS_SECRET_ACCESS_KEY: 'unused'
+          BEDROCK_AWS_MODELS: 'au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0'
+          BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081/bedrock-au'
           CUSTOM_FOOTER: '⚠️ WARNING: This is a development environment. Do not upload client or confidential data.'
           DOMAIN_CLIENT: 'https://librechat-dev.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://librechat-dev.ctk.au.deloitte.com'
           EMBEDDINGS_MODEL: 'text-embedding-3-small'
           EMBEDDINGS_PROVIDER: 'openai'
-          ENDPOINTS: 'agents,anthropic,custom'
+          ENDPOINTS: 'agents,anthropic,bedrock,custom'
           KEY_VAULT_NAME: 'kv-int-librechat-dev'
           MCP_GATEWAY_OBO_SCOPE: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
           MCP_GATEWAY_TOOLSETS: 'teams,research,news,kx,desc,gims'
@@ -139,7 +145,7 @@ pods:
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-dev
           OPENID_SESSION_SECRET: librechat-openid-session-secret-dev
           # RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
-          MEILI_MASTER_KEY: librechat-meili-master-key-dev
+          # MEILI_MASTER_KEY: librechat-meili-master-key-dev
           # ClearTrack Code Interpreter (ea-code-runtime) — JWK signing key
           CODEAPI_JWT_PRIVATE_JWK_JSON: librechat-codeapi-jwt-private-jwk-dev
           #Langfuse Observability
@@ -150,7 +156,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:70d8d4bdfda5853d3f76d76a59024af4cf4d000a728513ebb1089d5edfc6301c'
+          tag: 'develop@sha256:d26e657c4bd96cb69d120caaa2b8a74d11b7744df323ad486bdac4be2f918a7f'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -168,7 +174,7 @@ pods:
           EMBEDDINGS_PROVIDER: 'openai'
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
-
+ 
         secrets:
           # AZURE_OPENAI_API_KEY: librechat-azure-api-key
           # RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
@@ -180,22 +186,22 @@ pods:
           targetPort: 8000
         ingress:
           enabled: false
-      meilisearch:
-        image:
-          pullPolicy: Always
-          tag: 'develop@sha256:d65eaa1f0d802a657271ed08daa0393681ddaf957f8df8cd689fd8ae7b88724d'
-        env:
-          MEILI_ENV: 'development'
-        secrets:
-          MEILI_MASTER_KEY: librechat-meili-master-key-dev
-        persistence:
-          enabled: true
-          size: 10Gi
-          accessModes:
-            - ReadWriteOnce
-          name: 'meilisearch-data'
-          mountPath: /meili_data
-          storageClass: 'managed-csi-standard-private'
+      # meilisearch: # TODO: Enable meilisearch when we can have multi-container PVC
+      #   image:
+      #     pullPolicy: Always
+      #     tag: 'develop@sha256:5cb7817994348e6ce9f2e0653199a75e501083ae32c80259dabbc656012bdb0f'
+      #   env:
+      #     MEILI_ENV: 'development'
+      #   secrets:
+      #     MEILI_MASTER_KEY: librechat-meili-master-key-dev
+      #   persistence:
+      #     enabled: true
+      #     size: 10Gi
+      #     accessModes:
+      #       - ReadWriteOnce
+      #     name: 'meilisearch-data'
+      #     mountPath: /meili_data
+      #     storageClass: 'managed-csi-standard-private'
   admin:
     replicas: 1
     containers:
@@ -207,7 +213,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:335542a725d4a2476591231564836c00676b1d6924c7e4584d08265abfb87304'
+          tag: 'develop@sha256:5bc1ffcb601896010e4b3d9bf99f8e2373e7d507f8e6a1f3b863dadc4d30413f'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'

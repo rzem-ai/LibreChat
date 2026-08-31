@@ -156,16 +156,23 @@ function problemToIssue(problem: ValidationProblem): SkillScanIssue {
   return { message: problem };
 }
 
+// Deloitte Custom Change: Suppress manifest-validation noise for security-only scanner passes.
 /**
  * Flatten a scanner response into the list of issues we surface to the user.
- * Collects manifest validation problems first, then blocking security findings,
- * with progressively looser fallbacks so the user always gets *some* reason
- * rather than a generic failure.
+ * Collects manifest validation problems first (only when the scan actually
+ * requires a manifest — a `requireValidation: false` scan, e.g. a bodyless
+ * frontmatter-only pass, has no SKILL.md by design, so its validation
+ * problems are expected noise, not a real reason to fail), then blocking
+ * security findings, with progressively looser fallbacks so the user always
+ * gets *some* reason rather than a generic failure.
  */
-function toIssues(result: SkillScanResult | undefined): SkillScanIssue[] {
+function toIssues(
+  result: SkillScanResult | undefined,
+  requireValidation: boolean,
+): SkillScanIssue[] {
   const issues: SkillScanIssue[] = [];
 
-  const validationProblems = result?.validation?.problems ?? [];
+  const validationProblems = requireValidation ? (result?.validation?.problems ?? []) : [];
   for (const problem of validationProblems) {
     issues.push(problemToIssue(problem));
   }
@@ -186,7 +193,7 @@ function toIssues(result: SkillScanResult | undefined): SkillScanIssue[] {
     result?.message ??
     result?.error?.message ??
     result?.detail ??
-    'Skill scan failed due to validation issues';
+    (requireValidation ? 'Skill scan failed due to validation issues' : 'Skill scan failed');
   return [{ message: fallbackMessage }];
 }
 
@@ -359,13 +366,21 @@ async function scanArchive(
     const validationProblems = payload?.validation?.problems ?? [];
     const validationFailed = requireValidation && validationPassed === false;
 
-    // Fail-safe: require an explicit `scan.is_safe === true` from the scanner.
+    // Fail-safe: require an explicit `scan.is_safe === true` from the scanner
+    // — but only when a manifest is required. Without a manifest to anchor a
+    // security scan against, the scanner reports `scan: null` (it evaluated
+    // nothing, not that it evaluated and found something unsafe), so treating
+    // that as a block would mean a `requireValidation: false` scan can never
+    // pass against the real scanner.
+    // Deloitte Custom Change: Allow non-manifest scans to pass when the scanner returns no verdict.
+    const scanEvaluated = payload?.scan != null;
     const scanPassed = isSafe === true;
+    const scanFailed = requireValidation ? !scanPassed : scanEvaluated && !scanPassed;
 
     // Block if any gate trips: HTTP error, a failed manifest validation (only
     // when we require one), a missing/unsafe scan verdict, or a finding at/above
     // the configured severity threshold.
-    const failed = !response.ok || validationFailed || !scanPassed || findings.length > 0;
+    const failed = !response.ok || validationFailed || scanFailed || findings.length > 0;
     logger.info(
       `[skillScanner] "${fileName}" -> http=${response.status} validationPassed=${validationPassed} ` +
         `validationProblems=${validationProblems.length} isSafe=${isSafe} blockingFindings=${findings.length} verdict=${failed ? 'BLOCK' : 'PASS'}`,
@@ -375,7 +390,8 @@ async function scanArchive(
       logger.debug(`[skillScanner] "${fileName}" raw response: ${JSON.stringify(payload)}`);
       // Join every issue into one message so callers that only read `.message`
       // still see all reasons; `.issues` carries the structured list for the UI.
-      const issues = toIssues(payload);
+      // Deloitte Custom Change: Format issues according to whether manifest validation was required.
+      const issues = toIssues(payload, requireValidation);
       const message =
         issues
           .map((issue) => issue.message)
@@ -420,7 +436,13 @@ export async function scanSkillOnCreate(params: {
   const skillMd = buildSkillMarkdown(params);
   const archive = await buildSkillArchive(skillMd);
   await scanArchive(archive, `${params.name}.skill`, { token: params.token });
-  await scanFrontmatter(params.frontmatter, params.alwaysApply, params.name, params.token);
+  // Deloitte Custom Change: Scan only extra frontmatter fields not already present in the generated manifest.
+  await scanFrontmatter(
+    extraFrontmatterFields(params.frontmatter),
+    params.alwaysApply,
+    params.name,
+    params.token,
+  );
 }
 
 /**
@@ -441,9 +463,16 @@ export async function scanSkillOnUpdate(params: {
   const skillMd = buildSkillMarkdown(params);
   const archive = await buildSkillArchive(skillMd);
   await scanArchive(archive, `${params.name}.skill`, { token: params.token });
-  await scanFrontmatter(params.frontmatter, params.alwaysApply, params.name, params.token);
+  // Deloitte Custom Change: Scan only extra frontmatter fields not already present in the generated manifest.
+  await scanFrontmatter(
+    extraFrontmatterFields(params.frontmatter),
+    params.alwaysApply,
+    params.name,
+    params.token,
+  );
 }
 
+// Deloitte Custom Change: Remove manifest-owned fields before the frontmatter-only scanner pass.
 /**
  * Drop the fields `buildSkillMarkdown` already carries as first-class manifest
  * columns (`name`/`description`) plus `always-apply`/`alwaysApply` (surfaced

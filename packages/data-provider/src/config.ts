@@ -609,6 +609,8 @@ export const baseEndpointSchema = z.object({
     .union([z.literal('completion'), z.literal('functions'), z.literal('structured')])
     .optional(),
   titleEndpoint: z.string().optional(),
+  /** Provider label displayed above assistant responses. */
+  modelDisplayLabel: z.string().optional(),
   titlePromptTemplate: z.string().optional(),
   /**
    * When conversation titles are generated. `immediate` (default) generates the
@@ -1011,7 +1013,6 @@ export const endpointSchema = baseEndpointSchema.merge(
       userIdQuery: z.boolean().optional(),
     }),
     iconURL: z.string().optional(),
-    modelDisplayLabel: z.string().optional(),
     /**
      * Forces the endpoint to use a provider's native client / request format
      * instead of the default OpenAI-compatible client. Currently supports
