@@ -30,7 +30,7 @@ export default function MCPServerCard({
 }: MCPServerCardProps) {
   const localize = useLocalize();
   const triggerRef = useRef<HTMLDivElement>(null);
-  const { initializeServer, revokeOAuthForServer } = useMCPServerManager();
+  const { connectOrConfigureServer, revokeOAuthForServer } = useMCPServerManager();
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const statusIconProps = getServerStatusIconProps(server.serverName);
@@ -49,16 +49,9 @@ export default function MCPServerCard({
   const statusDotColor = getStatusDotColor(serverStatus, isInitializing);
   const canEdit = canCreateEditMCPs && canEditThisServer;
 
-  const handleInitialize = () => {
-    // Deloitte Custom Change: If this connector has custom user vars and is not already
-    // connected, show config dialog first. The config button is only rendered once connected
-    // (see MCPCardActions), so this is the only route to enter required vars before initializing.
-    if (hasCustomUserVars && serverStatus?.connectionState !== 'connected') {
-      onConfigClick({ stopPropagation: () => {}, preventDefault: () => {} } as React.MouseEvent);
-      return;
-    }
-    initializeServer(server.serverName);
-  };
+  // Deloitte Custom Change: connectOrConfigureServer (shared with toggleSelectAll) decides
+  // whether to open the config dialog or initialize directly, based on hasCustomUserVars.
+  const handleInitialize = () => connectOrConfigureServer(server.serverName);
 
   const handleRevoke = () => {
     revokeOAuthForServer(server.serverName);
