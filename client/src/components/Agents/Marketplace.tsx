@@ -33,6 +33,7 @@ const AgentMarketplace: React.FC<AgentMarketplaceProps> = ({ className = '' }) =
   const navigate = useNavigate();
   const { category } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
+  // Deloitte Custom Change
   const { data: startupConfig } = useGetStartupConfig();
 
   const isSmallScreen = useMediaQuery('(max-width: 768px)');
@@ -52,6 +53,7 @@ const AgentMarketplace: React.FC<AgentMarketplaceProps> = ({ className = '' }) =
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Set page title
+  // Deloitte Custom Change
   useDocumentTitle(
     `${localize('com_agents_marketplace')} | ${startupConfig?.appTitle ?? 'MyAssist'}`,
   );
