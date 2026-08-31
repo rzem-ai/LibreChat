@@ -462,7 +462,7 @@ modelSpecs:
 
     - name: 'azure-foundry-au-gpt-56-luna'
       label: 'GPT 5.6 Luna'
-      group: 'Azure Global'
+      group: 'OpenAI Global'
       groupIcon: 'openAI'
       iconURL: 'openAI'
       preset:
@@ -472,7 +472,7 @@ modelSpecs:
 
     - name: 'azure-foundry-au-gpt-56-terra'
       label: 'GPT 5.6 Terra'
-      group: 'Azure Global'
+      group: 'OpenAI Global'
       iconURL: 'openAI'
       preset:
         endpoint: 'Azure Foundry AU'
@@ -481,7 +481,7 @@ modelSpecs:
 
     - name: 'azure-foundry-au-gpt-56-sol'
       label: 'GPT 5.6 Sol'
-      group: 'Azure Global'
+      group: 'OpenAI Global'
       iconURL: 'openAI'
       preset:
         endpoint: 'Azure Foundry AU'
