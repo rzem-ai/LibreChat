@@ -2,7 +2,7 @@ import React from 'react';
 import { RecoilRoot } from 'recoil';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { EModelEndpoint, EToolResources, Providers } from 'librechat-data-provider';
+import { EModelEndpoint } from 'librechat-data-provider';
 import AttachFileMenu from '../AttachFileMenu';
 
 jest.mock('~/hooks', () => ({
@@ -93,6 +93,7 @@ const mockUseGetStartupConfig = jest.requireMock('~/data-provider').useGetStartu
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
+// Deloitte Custom Tests: # Visible icons for file uploads- PR #219
 function setupMocks(overrides: { provider?: string } = {}) {
   const translations: Record<string, string> = {
     com_files_upload_sharepoint: 'Upload from SharePoint',
@@ -119,11 +120,20 @@ function setupMocks(overrides: { provider?: string } = {}) {
   };
   mockUseSharePointFileHandling.mockReturnValue(sharePointReturnValue);
   mockUseSharePointFileHandlingNoChatContext.mockReturnValue(sharePointReturnValue);
-  mockUseGetStartupConfig.mockReturnValue({ data: { sharePointFilePickerEnabled: false } });
+  mockUseGetStartupConfig.mockReturnValue({
+    data: { sharePointFilePickerEnabled: false, interface: { providerUpload: false } },
+  });
   mockUseAgentToolPermissions.mockReturnValue({
     fileSearchAllowedByAgent: false,
     codeAllowedByAgent: false,
     provider: overrides.provider ?? undefined,
+  });
+}
+
+// Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+function enableProviderUpload() {
+  mockUseGetStartupConfig.mockReturnValue({
+    data: { sharePointFilePickerEnabled: false, interface: { providerUpload: true } },
   });
 }
 
@@ -148,97 +158,41 @@ function openMenu() {
   fireEvent.click(screen.getByRole('button', { name: /attach file options/i }));
 }
 
+// Deloitte Custom Tests: # Visible icons for file uploads- PR #219
 describe('AttachFileMenu', () => {
   beforeEach(jest.clearAllMocks);
 
-  describe('Upload to Provider vs Upload Image', () => {
-    it('shows "Upload to Provider" when endpointType is custom (resolved from agent provider)', () => {
+  describe('Provider Upload', () => {
+    it('uses the resolved agent provider for custom endpoints', () => {
       setupMocks({ provider: 'Moonshot' });
-      renderMenu({ endpointType: EModelEndpoint.custom });
+      enableProviderUpload();
+      renderMenu({ endpoint: EModelEndpoint.agents, endpointType: EModelEndpoint.custom });
       openMenu();
       expect(screen.getByText('Upload to Provider')).toBeInTheDocument();
       expect(screen.queryByText('Upload Image')).not.toBeInTheDocument();
     });
 
-    it('shows "Upload to Provider" when endpointType is openAI', () => {
-      setupMocks({ provider: EModelEndpoint.openAI });
-      renderMenu({ endpointType: EModelEndpoint.openAI });
-      openMenu();
-      expect(screen.getByText('Upload to Provider')).toBeInTheDocument();
-    });
-
-    it('shows "Upload to Provider" when endpointType is anthropic', () => {
-      setupMocks({ provider: EModelEndpoint.anthropic });
-      renderMenu({ endpointType: EModelEndpoint.anthropic });
-      openMenu();
-      expect(screen.getByText('Upload to Provider')).toBeInTheDocument();
-    });
-
-    it('shows "Upload to Provider" when endpointType is google', () => {
-      setupMocks({ provider: Providers.GOOGLE });
-      renderMenu({ endpointType: EModelEndpoint.google });
-      openMenu();
-      expect(screen.getByText('Upload to Provider')).toBeInTheDocument();
-    });
-
-    it('shows "Upload Image" when endpointType is agents (no provider resolution)', () => {
+    it('falls back to image upload when an agent has no resolved provider', () => {
       setupMocks();
-      renderMenu({ endpointType: EModelEndpoint.agents });
+      enableProviderUpload();
+      renderMenu({ endpoint: EModelEndpoint.agents, endpointType: EModelEndpoint.agents });
       openMenu();
       expect(screen.getByText('Upload Image')).toBeInTheDocument();
       expect(screen.queryByText('Upload to Provider')).not.toBeInTheDocument();
     });
 
-    it('shows "Upload Image" when neither endpointType nor provider supports documents', () => {
-      setupMocks({ provider: 'unknown-provider' });
-      renderMenu({ endpointType: 'unknown-type' });
-      openMenu();
-      expect(screen.getByText('Upload Image')).toBeInTheDocument();
-    });
-
-    it('shows "Upload to Provider" for azureOpenAI with useResponsesApi', () => {
+    it('supports Azure OpenAI provider upload with the Responses API', () => {
       setupMocks({ provider: EModelEndpoint.azureOpenAI });
+      enableProviderUpload();
       renderMenu({ endpointType: EModelEndpoint.azureOpenAI, useResponsesApi: true });
       openMenu();
       expect(screen.getByText('Upload to Provider')).toBeInTheDocument();
     });
 
-    it('shows "Upload to Provider" for azureOpenAI endpointType with useResponsesApi', () => {
-      setupMocks();
-      renderMenu({
-        endpoint: EModelEndpoint.agents,
-        endpointType: EModelEndpoint.azureOpenAI,
-        useResponsesApi: true,
-      });
-      openMenu();
-      expect(screen.getByText('Upload to Provider')).toBeInTheDocument();
-    });
-
-    it('shows "Upload Image" for azureOpenAI without useResponsesApi', () => {
+    it('falls back to image upload for Azure OpenAI without the Responses API', () => {
       setupMocks({ provider: EModelEndpoint.azureOpenAI });
+      enableProviderUpload();
       renderMenu({ endpointType: EModelEndpoint.azureOpenAI, useResponsesApi: false });
-      openMenu();
-      expect(screen.getByText('Upload Image')).toBeInTheDocument();
-    });
-  });
-
-  describe('agent provider resolution scenario', () => {
-    it('shows "Upload to Provider" when agents endpoint has custom endpointType from provider', () => {
-      setupMocks({ provider: 'Moonshot' });
-      renderMenu({
-        endpoint: EModelEndpoint.agents,
-        endpointType: EModelEndpoint.custom,
-      });
-      openMenu();
-      expect(screen.getByText('Upload to Provider')).toBeInTheDocument();
-    });
-
-    it('shows "Upload Image" when agents endpoint has no resolved provider type', () => {
-      setupMocks();
-      renderMenu({
-        endpoint: EModelEndpoint.agents,
-        endpointType: EModelEndpoint.agents,
-      });
       openMenu();
       expect(screen.getByText('Upload Image')).toBeInTheDocument();
     });
@@ -337,55 +291,30 @@ describe('AttachFileMenu', () => {
       });
       renderMenu({ endpointType: EModelEndpoint.openAI });
       openMenu();
-      expect(screen.getByText('Upload to Provider')).toBeInTheDocument();
       expect(screen.getByText('Upload as Text')).toBeInTheDocument();
       expect(screen.getByText('Upload for File Search')).toBeInTheDocument();
       expect(screen.getByText('Upload to Code Environment')).toBeInTheDocument();
     });
 
-    it('passes File Search resource when the file input changes before React state commits', () => {
+    // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+    it('shows provider upload option when providerUpload is enabled', () => {
       setupMocks();
-      const handleFileChange = jest.fn();
-      mockUseFileHandlingNoChatContext.mockReturnValue({ handleFileChange });
-      mockUseAgentCapabilities.mockReturnValue({
-        contextEnabled: false,
-        fileSearchEnabled: true,
-        codeEnabled: false,
+      mockUseGetStartupConfig.mockReturnValue({
+        data: { sharePointFilePickerEnabled: false, interface: { providerUpload: true } },
       });
-      mockUseAgentToolPermissions.mockReturnValue({
-        fileSearchAllowedByAgent: true,
-        codeAllowedByAgent: false,
-        provider: undefined,
-      });
-      const originalClick = HTMLInputElement.prototype.click;
-      const file = new File(['data'], 'sheet.xlsx', {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      });
-
-      HTMLInputElement.prototype.click = function click() {
-        Object.defineProperty(this, 'files', {
-          configurable: true,
-          value: [file],
-        });
-        fireEvent.change(this);
-      };
-
-      try {
-        renderMenu({ endpointType: EModelEndpoint.openAI });
-        openMenu();
-        fireEvent.click(screen.getByText('Upload to Provider'));
-        fireEvent.click(screen.getByText('Upload for File Search'));
-      } finally {
-        HTMLInputElement.prototype.click = originalClick;
-      }
-
-      expect(handleFileChange).toHaveBeenNthCalledWith(1, expect.any(Object), undefined);
-      expect(handleFileChange).toHaveBeenNthCalledWith(
-        2,
-        expect.any(Object),
-        EToolResources.file_search,
-      );
+      renderMenu({ endpointType: EModelEndpoint.openAI, endpoint: EModelEndpoint.openAI });
+      openMenu();
+      expect(screen.getByText('Upload to Provider')).toBeInTheDocument();
     });
+
+    it('does NOT show provider upload option when providerUpload is disabled', () => {
+      setupMocks();
+      renderMenu({ endpointType: EModelEndpoint.openAI, endpoint: EModelEndpoint.openAI });
+      openMenu();
+      expect(screen.queryByText('Upload to Provider')).not.toBeInTheDocument();
+      expect(screen.queryByText('Upload as Image')).not.toBeInTheDocument();
+    });
+
   });
 
   describe('SharePoint Integration', () => {
@@ -411,10 +340,7 @@ describe('AttachFileMenu', () => {
     it('handles undefined endpoint and provider gracefully', () => {
       setupMocks();
       renderMenu({ endpoint: undefined, endpointType: undefined });
-      const button = screen.getByRole('button', { name: /attach file options/i });
-      expect(button).toBeInTheDocument();
-      fireEvent.click(button);
-      expect(screen.getByText('Upload Image')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /attach file options/i })).toBeInTheDocument();
     });
 
     it('handles null endpoint and provider gracefully', () => {

@@ -90,7 +90,6 @@ const getShareStartupPayload = async () => {
   return buildSharedLinkStartupPayload(appConfig);
 };
 
-
 /**
  * Resolve a snapshotted file for a shared link. A file_id absent from the
  * share's snapshot is denied (404) — this prevents a viewer from reaching files
