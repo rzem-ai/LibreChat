@@ -133,6 +133,35 @@ describe('useMCPServerManager toggleSelectAll', () => {
     expect(result.current.selectedToolForConfig?.name).toBe('a');
   });
 
+  it('opens the config dialog for only the first of several connectors requiring custom user vars', async () => {
+    mockLoadedServers = {
+      a: makeServer({ apiKey: { title: 'API Key' } }),
+      b: makeServer({ apiKey: { title: 'API Key' } }),
+    };
+    mockConnectionStatus = {
+      a: { connectionState: 'disconnected' },
+      b: { connectionState: 'disconnected' },
+    };
+
+    const { result, rerender } = renderManager();
+
+    await act(async () => {
+      result.current.toggleSelectAll();
+    });
+    rerender();
+
+    // Only one dialog can be shown at a time; opening it for both would have silently
+    // overwritten 'a' with 'b'. Confirms exactly one connector was prompted.
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+    expect(result.current.isConfigModalOpen).toBe(true);
+    expect(result.current.selectedToolForConfig?.name).toBe('a');
+    // 'b' was skipped rather than silently overwriting 'a' — surfaced via a toast so the
+    // user knows it still needs individual configuration.
+    expect(mockShowToast).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'com_ui_mcp_additional_config_required', status: 'info' }),
+    );
+  });
+
   it('continues initializing the remaining connectors when one fails (partial success)', async () => {
     mockLoadedServers = { a: makeServer(), b: makeServer() };
     mockConnectionStatus = {

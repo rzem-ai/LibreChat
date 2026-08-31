@@ -589,6 +589,22 @@ export function useMCPServerManager({
     [queryClient, loadedServers],
   );
 
+  /** Deloitte Custom Change: True when `serverName` has required custom user vars and
+   * isn't already connected — i.e. needs the config dialog rather than a direct
+   * initialize. Shared by connectOrConfigureServer and toggleSelectAll (which must know
+   * this per-connector before calling, to avoid opening the single-server config dialog
+   * for more than one connector in the same bulk pass). */
+  const needsCustomVarsConfig = useCallback(
+    (serverName: string) => {
+      const serverConfig = loadedServers?.[serverName];
+      const hasCustomUserVars =
+        serverConfig?.customUserVars && Object.keys(serverConfig.customUserVars).length > 0;
+      const connectionState = connectionStatus?.[serverName]?.connectionState;
+      return Boolean(hasCustomUserVars) && connectionState !== 'connected';
+    },
+    [loadedServers, connectionStatus],
+  );
+
   /**
    * Deloitte Custom Change: Canonical "connect this connector" action, mirroring
    * MCPServerCard's per-connector Connect button. If it has custom user vars and isn't
@@ -600,18 +616,14 @@ export function useMCPServerManager({
    */
   const connectOrConfigureServer = useCallback(
     (serverName: string, autoOpenOAuth: boolean = true) => {
-      const serverConfig = loadedServers?.[serverName];
-      const hasCustomUserVars =
-        serverConfig?.customUserVars && Object.keys(serverConfig.customUserVars).length > 0;
-      const connectionState = connectionStatus?.[serverName]?.connectionState;
-      if (hasCustomUserVars && connectionState !== 'connected') {
+      if (needsCustomVarsConfig(serverName)) {
         previousFocusRef.current = document.activeElement as HTMLElement;
         openConfigDialogForServer(serverName);
         return;
       }
       initializeServer(serverName, autoOpenOAuth);
     },
-    [loadedServers, connectionStatus, openConfigDialogForServer, initializeServer],
+    [needsCustomVarsConfig, openConfigDialogForServer, initializeServer],
   );
 
   const cancelOAuthFlow = useCallback(
@@ -734,23 +746,44 @@ export function useMCPServerManager({
     setSelection(allSelected ? [] : selectableConnectorNames);
 
     if (!allSelected) {
+      let hasOpenedConfigDialog = false;
+      let skippedConfigCount = 0;
       selectableConnectorNames.forEach((connectorName) => {
         const isConnected = connectionStatus?.[connectorName]?.connectionState === 'connected';
-        if (!isConnected && !isConnectorBusy(connectorName)) {
-          // Deloitte Custom Change: connectOrConfigureServer (not initializeServer
-          // directly) so a connector needing custom vars gets routed to the config
-          // dialog here the same way it would from an individual Connect click. Auto-open
-          // OAuth tabs — the chat dropdown has no UI to surface a pending oauthUrl the way
-          // the config dialog's "Continue OAuth" does.
-          connectOrConfigureServer(connectorName, true);
+        if (isConnected || isConnectorBusy(connectorName)) {
+          return;
         }
+        // Deloitte Custom Change: The config dialog holds a single selectedToolForConfig,
+        // so only the first connector needing it per Connect All click is allowed to open
+        // it — opening it for more than one in the same pass would silently overwrite
+        // each other, leaving only the last one visible. The rest are counted below so
+        // the user isn't left wondering why they're still disconnected.
+        if (needsCustomVarsConfig(connectorName)) {
+          if (hasOpenedConfigDialog) {
+            skippedConfigCount += 1;
+            return;
+          }
+          hasOpenedConfigDialog = true;
+        }
+        // Deloitte Custom Change: Auto-open OAuth tabs — the chat dropdown has no UI to
+        // surface a pending oauthUrl the way the config dialog's "Continue OAuth" does.
+        connectOrConfigureServer(connectorName, true);
       });
+      if (skippedConfigCount > 0) {
+        showToast({
+          message: localize('com_ui_mcp_additional_config_required', { 0: skippedConfigCount }),
+          status: 'info',
+        });
+      }
     }
   }, [
     selectableServers,
     setSelection,
     connectionStatus,
     isConnectorBusy,
+    needsCustomVarsConfig,
+    showToast,
+    localize,
     connectOrConfigureServer,
   ]);
 
