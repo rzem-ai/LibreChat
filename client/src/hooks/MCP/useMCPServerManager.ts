@@ -147,6 +147,28 @@ export function useMCPServerManager({
     mcpValuesRef.current = mcpValues;
   }, [mcpValues]);
 
+  /**
+   * Deloitte Custom Change: Adds a connector to the current selection, updating
+   * `mcpValuesRef` synchronously rather than waiting for the effect above to catch up.
+   * "Connect All" can have several connectors finish initializing (immediately, or via
+   * OAuth polling) within the same tick; without the synchronous ref update, each
+   * completion would read the same stale snapshot of `mcpValuesRef.current` and its
+   * `setMCPValues([...currentValues, connectorName])` call would clobber the others'
+   * additions instead of appending onto them, leaving only the last one connected.
+   */
+  const addConnectorToSelection = useCallback(
+    (connectorName: string) => {
+      const currentValues = mcpValuesRef.current ?? [];
+      if (currentValues.includes(connectorName)) {
+        return;
+      }
+      const nextValues = [...currentValues, connectorName];
+      mcpValuesRef.current = nextValues;
+      setMCPValues(nextValues);
+    },
+    [setMCPValues],
+  );
+
   // Deloitte Custom Change: Single source of truth for "Connect All" tri-state, shared by
   // toggleSelectAll below and exposed to consumers (e.g. the chat dropdown) so both agree
   // on whether every/some selectable connectors are currently selected.
@@ -363,10 +385,7 @@ export function useMCPServerManager({
               status: 'success',
             });
 
-            const currentValues = mcpValuesRef.current ?? [];
-            if (!currentValues.includes(serverName)) {
-              setMCPValues([...currentValues, serverName]);
-            }
+            addConnectorToSelection(serverName);
 
             await Promise.all([
               queryClient.invalidateQueries([QueryKeys.mcpServers]),
@@ -459,7 +478,14 @@ export function useMCPServerManager({
       timeoutId = setTimeout(pollOnce, getPollInterval(0));
       pollIntervalsRef.current[serverName] = timeoutId;
     },
-    [queryClient, showToast, localize, setMCPValues, cleanupServerState, reinitializeMutation],
+    [
+      queryClient,
+      showToast,
+      localize,
+      addConnectorToSelection,
+      cleanupServerState,
+      reinitializeMutation,
+    ],
   );
 
   const initializeServer = useCallback(
@@ -510,10 +536,7 @@ export function useMCPServerManager({
             status: 'success',
           });
 
-          const currentValues = mcpValuesRef.current ?? [];
-          if (!currentValues.includes(serverName)) {
-            setMCPValues([...currentValues, serverName]);
-          }
+          addConnectorToSelection(serverName);
 
           cleanupServerState(serverName);
         }
@@ -535,7 +558,7 @@ export function useMCPServerManager({
       showToast,
       localize,
       cleanupServerState,
-      setMCPValues,
+      addConnectorToSelection,
     ],
   );
 
