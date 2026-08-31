@@ -33,6 +33,7 @@ module.exports = {
       '<rootDir>/../node_modules/librechat-data-provider/src/react-query',
   },
   maxWorkers: '50%',
+  workerIdleMemoryLimit: '512MB',
   restoreMocks: true,
   testResultsProcessor: 'jest-junit',
   coverageReporters: ['text', 'cobertura', 'lcov'],
