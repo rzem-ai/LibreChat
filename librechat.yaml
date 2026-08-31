@@ -22,12 +22,6 @@ interface:
 
   bookmarks: false # Set to false to disable saving conversations as bookmarks
 
-  skills:
-    use: true
-    create: true
-    share: true # Enable share with other users
-    public: false # Disable share with everyone
-
   # Pin tools to the prompt bar by default for all users
   defaultPinnedTools:
     - 'file_search'
@@ -63,6 +57,21 @@ interface:
 
   marketplace:
     use: true
+    # Deloitte Custom Change: replace the hardcoded HR/R&D/Finance/IT/Sales/After Sales tabs
+    # with org-specific Agent Marketplace categories.
+    categories:
+      enableDefaultCategories: false
+      list:
+        - value: "pursue-shape"
+          label: "Pursue & Shape"
+        - value: "discover-define"
+          label: "Discover & Define"
+        - value: "build-deliver"
+          label: "Build & Deliver"
+        - value: "produce-assure"
+          label: "Produce & Assure"
+        - value: "resource-grow-people"
+          label: "Resource & Grow People"
 
   mcpServers:
     create: false # Set to false to disable creating new MCP servers via the Agent Builder
