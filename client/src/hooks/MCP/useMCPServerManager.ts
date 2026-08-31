@@ -677,15 +677,14 @@ export function useMCPServerManager({
     // When selecting all connectors, also authenticate/initialize those that need it
     if (!allConnectorsSelected) {
       selectableConnectorNames.forEach((connectorName) => {
-        const status = connectionStatus?.[connectorName];
-        // Deloitte Custom Change: Skip connectors already mid-OAuth (connectionState ===
-        // 'connecting') — re-initializing would restart an in-flight flow and open a
-        // duplicate OAuth tab. Only disconnected/errored/never-attempted connectors need it.
+        const connectionState = connectionStatus?.[connectorName]?.connectionState;
+        // Deloitte Custom Change: Initialize unless we can positively confirm the connector
+        // is already connected or mid-OAuth. `connectionState` is `undefined` until the
+        // connectionStatus query resolves (e.g. right after page load) — treating that as
+        // "already handled" would silently select connectors without ever initializing
+        // them, so only 'connected'/'connecting' are excluded here.
         const needsInitialization =
-          status?.connectionState !== 'connecting' &&
-          (status?.connectionState === 'disconnected' ||
-            status?.connectionState === 'error' ||
-            (status?.requiresOAuth && status?.connectionState !== 'connected'));
+          connectionState !== 'connected' && connectionState !== 'connecting';
         if (needsInitialization) {
           // Deloitte Custom Change: Auto-open OAuth tabs for this bulk action. The chat
           // dropdown has no UI to surface a pending oauthUrl (unlike the config dialog's
