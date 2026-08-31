@@ -192,7 +192,7 @@ function toIssues(
     result?.message ??
     result?.error?.message ??
     result?.detail ??
-    'Skill scan failed due to validation issues';
+    (requireValidation ? 'Skill scan failed due to validation issues' : 'Skill scan failed');
   return [{ message: fallbackMessage }];
 }
 

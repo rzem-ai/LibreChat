@@ -267,7 +267,7 @@ describe('skill scanner', () => {
       scanSkillFileUpload({ fileName: 'script.sh', content: Buffer.from('echo hi') }),
     ).rejects.toMatchObject({
       statusCode: 422,
-      issues: [{ message: 'Skill scan failed due to validation issues' }],
+      issues: [{ message: 'Skill scan failed' }],
     });
   });
 
