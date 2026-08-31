@@ -54,6 +54,8 @@ function MCPSelectContent() {
     getConfigDialogProps,
     toggleServerSelection,
     toggleSelectAll,
+    allConnectorsSelected,
+    someConnectorsSelected,
     getServerStatusIconProps,
   } = manager;
 
@@ -62,9 +64,6 @@ function MCPSelectContent() {
   }
 
   const configDialogProps = getConfigDialogProps();
-  const selectedCount = mcpValues?.length ?? 0;
-  const allSelected = selectableServers.length > 0 && selectedCount >= selectableServers.length;
-  const someSelected = selectedCount > 0 && !allSelected;
 
   return (
     <>
@@ -112,10 +111,19 @@ function MCPSelectContent() {
             'scale-95 data-[leave]:scale-95 data-[leave]:opacity-0',
           )}
         >
-          <Ariakit.MenuItem
+          {/* Deloitte Custom Change: Bulk "Connect All / Disconnect All" action. Uses
+              MenuItemCheckbox (matching MCPServerMenuItem) and an explicit aria-checked
+              override so assistive tech gets menuitemcheckbox semantics, including the
+              mixed (indeterminate) state, instead of a purely visual checkbox. */}
+          <Ariakit.MenuItemCheckbox
+            name="mcp-connect-all"
+            checked={allConnectorsSelected}
+            aria-checked={someConnectorsSelected ? 'mixed' : allConnectorsSelected}
             hideOnClick={false}
             onClick={toggleSelectAll}
-            aria-label={localize(allSelected ? 'com_ui_disconnect_all' : 'com_ui_connect_all')}
+            aria-label={localize(
+              allConnectorsSelected ? 'com_ui_disconnect_all' : 'com_ui_connect_all',
+            )}
             className={cn(
               'group mb-1 flex w-full cursor-pointer items-center justify-between gap-3',
               'rounded-lg border-b border-border-light px-2.5 py-2 outline-none transition-all duration-150',
@@ -123,21 +131,21 @@ function MCPSelectContent() {
             )}
           >
             <span className="text-sm font-medium text-text-primary">
-              {localize(allSelected ? 'com_ui_disconnect_all' : 'com_ui_connect_all')}
+              {localize(allConnectorsSelected ? 'com_ui_disconnect_all' : 'com_ui_connect_all')}
             </span>
             <span
               aria-hidden="true"
               className={cn(
                 'flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-sm border',
-                allSelected || someSelected
+                allConnectorsSelected || someConnectorsSelected
                   ? 'border-primary bg-primary text-primary-foreground'
                   : 'border-border-xheavy bg-transparent',
               )}
             >
-              {allSelected && <Check className="h-4 w-4" />}
-              {someSelected && <Minus className="h-4 w-4" />}
+              {allConnectorsSelected && <Check className="h-4 w-4" />}
+              {someConnectorsSelected && <Minus className="h-4 w-4" />}
             </span>
-          </Ariakit.MenuItem>
+          </Ariakit.MenuItemCheckbox>
           <div className="flex max-h-[320px] flex-col gap-1 overflow-y-auto">
             {selectableServers.map((server) => (
               <MCPServerMenuItem

@@ -4,6 +4,7 @@ import { render, screen, within } from '@testing-library/react';
 import MCPSelect from '../MCPSelect';
 
 const mockToggleServerSelection = jest.fn();
+const mockToggleSelectAll = jest.fn();
 
 const defaultMcpServerManager = {
   localize: (key: string) => key,
@@ -18,6 +19,11 @@ const defaultMcpServerManager = {
   isInitializing: () => false,
   getConfigDialogProps: () => null,
   toggleServerSelection: mockToggleServerSelection,
+  toggleSelectAll: mockToggleSelectAll,
+  // useMCPServerManager derives these via getSelectAllState; tests set them directly
+  // to match whichever mcpValues scenario they're exercising.
+  allConnectorsSelected: false,
+  someConnectorsSelected: false,
   getServerStatusIconProps: () => null,
 };
 
@@ -112,9 +118,11 @@ describe('MCPSelect', () => {
     render(<MCPSelect />);
 
     await user.click(screen.getByRole('button', { name: /MCP Servers/i }));
+    // Includes the "Connect All" item, which is also a menuitemcheckbox.
     const items = screen.getAllByRole('menuitemcheckbox');
-    expect(items).toHaveLength(2);
+    expect(items).toHaveLength(3);
 
+    await user.keyboard('{ArrowDown}');
     await user.keyboard('{ArrowDown}');
     await user.keyboard('{ArrowDown}');
     await user.keyboard('{ArrowDown}');
@@ -138,5 +146,59 @@ describe('MCPSelect', () => {
     mockMcpServerManager = { ...defaultMcpServerManager, isPinned: false, mcpValues: [] };
     const { container } = render(<MCPSelect />);
     expect(container.firstChild).toBeNull();
+  });
+
+  describe('Connect All / Disconnect All', () => {
+    it('shows unchecked state and "Connect All" label when no connectors are selected', async () => {
+      const user = userEvent.setup();
+      render(<MCPSelect />);
+
+      await user.click(screen.getByRole('button', { name: /MCP Servers/i }));
+      const selectAll = screen.getByRole('menuitemcheckbox', { name: /com_ui_connect_all/i });
+      expect(selectAll).toHaveAttribute('aria-checked', 'false');
+    });
+
+    it('shows mixed state when some but not all connectors are selected', async () => {
+      mockMcpServerManager = {
+        ...defaultMcpServerManager,
+        mcpValues: ['server-a'],
+        allConnectorsSelected: false,
+        someConnectorsSelected: true,
+      };
+      const user = userEvent.setup();
+      render(<MCPSelect />);
+
+      // A single selected connector changes the button's accessible name to its title,
+      // so look it up by role alone (there's only one button in this component).
+      await user.click(screen.getByRole('button'));
+      const selectAll = screen.getByRole('menuitemcheckbox', { name: /com_ui_connect_all/i });
+      expect(selectAll).toHaveAttribute('aria-checked', 'mixed');
+    });
+
+    it('shows checked state and "Disconnect All" label when every connector is selected', async () => {
+      mockMcpServerManager = {
+        ...defaultMcpServerManager,
+        mcpValues: ['server-a', 'server-b'],
+        allConnectorsSelected: true,
+        someConnectorsSelected: false,
+      };
+      const user = userEvent.setup();
+      render(<MCPSelect />);
+
+      await user.click(screen.getByRole('button'));
+      const selectAll = screen.getByRole('menuitemcheckbox', { name: /com_ui_disconnect_all/i });
+      expect(selectAll).toHaveAttribute('aria-checked', 'true');
+    });
+
+    it('calls toggleSelectAll when the Connect All item is clicked', async () => {
+      const user = userEvent.setup();
+      render(<MCPSelect />);
+
+      await user.click(screen.getByRole('button', { name: /MCP Servers/i }));
+      await user.click(screen.getByRole('menuitemcheckbox', { name: /com_ui_connect_all/i }));
+
+      expect(mockToggleSelectAll).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('menu', { name: /com_ui_mcp_servers/i })).toBeVisible();
+    });
   });
 });

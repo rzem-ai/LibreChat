@@ -47,6 +47,37 @@ export interface MCPServerDefinition {
   consumeOnly?: boolean;
 }
 
+export interface SelectAllState {
+  /** True when every selectable connector is currently selected. */
+  allSelected: boolean;
+  /** True when at least one, but not all, selectable connectors are currently selected. */
+  someSelected: boolean;
+}
+
+/**
+ * Deloitte Custom Change: Determines whether every selectable connector is currently
+ * selected, and whether some (but not all) are selected. Backs the tri-state
+ * "Connect All / Disconnect All" toggle shown in the chat dropdown (MCPSelect) and
+ * the {@link useMCPServerManager} `toggleSelectAll` action, so both stay in sync.
+ *
+ * Selection is checked by connector name membership rather than by comparing array
+ * lengths, so a stale or duplicate entry in `selectedConnectorNames` can't be mistaken
+ * for full selection.
+ */
+export function getSelectAllState(
+  selectableConnectors: MCPServerDefinition[],
+  selectedConnectorNames: string[] | undefined,
+): SelectAllState {
+  const selectedConnectorNameSet = new Set(selectedConnectorNames ?? []);
+  const allSelected =
+    selectableConnectors.length > 0 &&
+    selectableConnectors.every((connector) => selectedConnectorNameSet.has(connector.serverName));
+  const someSelected =
+    !allSelected &&
+    selectableConnectors.some((connector) => selectedConnectorNameSet.has(connector.serverName));
+  return { allSelected, someSelected };
+}
+
 // Poll intervals are kept local since they're timer references that can't be serialized
 // The init states (isInitializing, isCancellable, etc.) are stored in the global Jotai atom
 type PollIntervals = Record<string, NodeJS.Timeout | null>;
@@ -115,6 +146,14 @@ export function useMCPServerManager({
   useEffect(() => {
     mcpValuesRef.current = mcpValues;
   }, [mcpValues]);
+
+  // Deloitte Custom Change: Single source of truth for "Connect All" tri-state, shared by
+  // toggleSelectAll below and exposed to consumers (e.g. the chat dropdown) so both agree
+  // on whether every/some selectable connectors are currently selected.
+  const { allSelected: allConnectorsSelected, someSelected: someConnectorsSelected } = useMemo(
+    () => getSelectAllState(selectableServers, mcpValues),
+    [selectableServers, mcpValues],
+  );
 
   // Check if specific permission bit is set
   const checkEffectivePermission = useCallback(
@@ -591,33 +630,34 @@ export function useMCPServerManager({
     [mcpValues, setMCPValues, isInitializing],
   );
 
-  /** Selects every selectable server, or clears the selection if all are already selected. */
+  /** Deloitte Custom Change: Selects every selectable connector, or clears the selection if
+   * all are already selected. */
   const toggleSelectAll = useCallback(() => {
-    // Get all selectable server names
-    const allSelectableNames = selectableServers.map((server) => server.serverName);
-    const currentValues = mcpValues ?? [];
-    const allSelected =
-      allSelectableNames.length > 0 &&
-      allSelectableNames.every((name) => currentValues.includes(name));
+    // Get all selectable connector names
+    const selectableConnectorNames = selectableServers.map((server) => server.serverName);
 
-    // Select/deselect all servers
-    setMCPValues(allSelected ? [] : allSelectableNames);
+    // Select/deselect all connectors
+    setMCPValues(allConnectorsSelected ? [] : selectableConnectorNames);
 
-    // When selecting all servers, also authenticate/initialize those that need it
-    if (!allSelected) {
-      allSelectableNames.forEach((serverName) => {
-        const status = connectionStatus?.[serverName];
-        // Initialize servers that are disconnected, have errors, or need auth
+    // When selecting all connectors, also authenticate/initialize those that need it
+    if (!allConnectorsSelected) {
+      selectableConnectorNames.forEach((connectorName) => {
+        const status = connectionStatus?.[connectorName];
+        // Initialize connectors that are disconnected, have errors, or need auth
         if (
           status?.connectionState === 'disconnected' ||
           status?.connectionState === 'error' ||
           (status?.requiresOAuth && status?.connectionState !== 'connected')
         ) {
-          initializeServer(serverName, false);
+          // Deloitte Custom Change: Auto-open OAuth tabs for this bulk action. The chat
+          // dropdown has no UI to surface a pending oauthUrl (unlike the config dialog's
+          // "Continue OAuth" button), so suppressing auto-open here would strand
+          // OAuth-required connectors in a spinner the user can't resolve from this flow.
+          initializeServer(connectorName, true);
         }
       });
     }
-  }, [selectableServers, mcpValues, setMCPValues, connectionStatus, initializeServer]);
+  }, [selectableServers, allConnectorsSelected, setMCPValues, connectionStatus, initializeServer]);
 
   const handleConfigSave = useCallback(
     (targetName: string, authData: Record<string, string>) => {
@@ -821,6 +861,8 @@ export function useMCPServerManager({
     placeholderText,
     toggleServerSelection,
     toggleSelectAll,
+    allConnectorsSelected,
+    someConnectorsSelected,
     localize,
 
     isConfigModalOpen,
