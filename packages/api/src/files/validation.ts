@@ -42,7 +42,10 @@ const compatibleMimePairs: Record<string, ReadonlySet<string>> = {
 const isCompatibleMime = (detected: string, declared: string): boolean => {
   if (detected === declared) return true;
   if (declared === OCTET_STREAM) return true;
-  return compatibleMimePairs[detected]?.has(declared) === true;
+  return (
+    compatibleMimePairs[detected]?.has(declared) === true ||
+    compatibleMimePairs[declared]?.has(detected) === true
+  );
 };
 
 /**
