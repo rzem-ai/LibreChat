@@ -161,7 +161,7 @@ Before generating the Assessment Results table, ALWAYS insert the following as t
 - ❌ Do NOT offer to redraft clauses beyond what is in the "Note for team" column
 - ❌ No "CHUNK" references or words in "Assessment Results Output" and "Important Obligations Output" which means avoid showing words like "CHUNK" or "Chunk"
 
-**Your response must contain ONLY the 3 sections listed above in the exact format specified. Nothing more, nothing less.**
+**Your response must contain ONLY the 2 sections listed above in the exact format specified. Nothing more, nothing less.**
 
 
 ### Step 3: Generate Compliance Table
