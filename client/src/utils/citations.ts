@@ -45,7 +45,7 @@ export const COMPOSITE_REGEX = /((?:\\ue200|\ue200).*?(?:\\ue201|\ue201))/g;
  * rendering "6.82/7" as "6./7".
  */
 export const STANDALONE_PATTERN =
-  /(?:\\ue202|\ue202)turn(0|[1-9]\d*)(search|image|news|video|ref|file)(0|[1-9]\d*)/g;
+  /(?:\\ue202|\ue202)turn(0|[1-9]\d*)(search|image|news|video|ref|file|mcp)(0|[1-9]\d*)/g;
 
 /** Removes all citation marker characters from text for clean display */
 export const CLEANUP_REGEX =
@@ -57,4 +57,4 @@ export const CLEANUP_REGEX =
  * removal never consumes trailing digits that belong to adjacent text.
  */
 export const INVALID_CITATION_REGEX =
-  /\s*(?:\\ue202|\ue202)turn(?:0|[1-9]\d*)(search|news|image|video|ref|file)(?:0|[1-9]\d*)/g;
+  /\s*(?:\\ue202|\ue202)turn(?:0|[1-9]\d*)(search|news|image|video|ref|file|mcp)(?:0|[1-9]\d*)/g;

@@ -15,7 +15,7 @@ tolerations:
 
 ingress:
   className: cilium
-  host: 'librechat.ctk.au.deloitte.com'
+  host: 'myassist.ctk.au.deloitte.com'
   annotations:
     ingress.cilium.io/loadbalancer-mode: "shared"
     ingress.cilium.io/force-https: "true"
@@ -24,29 +24,203 @@ ingress:
     - secretName: ctk-au-deloitte-com
       secretStoreName: external-secret-store
       hosts:
-        - 'librechat.ctk.au.deloitte.com'
-
+        - 'myassist.ctk.au.deloitte.com'
 pods:
   librechat:
-    replicas: 2
+    replicas: 1
+    securityContext:
+      fsGroup: 1000
+    initContainers:
+      llm-gateway-proxy:
+        restartPolicy: Always
+        image:
+          repository: 'tt-librechat/llm-gateway-proxy'
+          pullPolicy: Always
+          tag: 'main@sha256:2ab7ba3209eeed2730e8e1373a820f34dbc5e390e31af990cf21153997581aae'
+        env:
+          TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-prd.svc.cluster.local:8080'
+          TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-prd.svc.cluster.local:8080'
+          TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-prd.svc.cluster.local:8080'
+          TOKEN_PROXY_ANTHROPIC_URL: 'http://anthropic-eastus2.llm-gateway-prd.svc.cluster.local:8080'
+          TOKEN_PROXY_MCP_URL: 'https://mcp-gateway.ctk.au.deloitte.com/mcp'
     containers:
       librechat:
+        command:
+          - /bin/sh
+          - -c
+          - >-
+            mkdir -p /app/client/dist/assets && if [ -d /app/deloitte/assets ]; then
+              cp -a /app/deloitte/assets/. /app/client/dist/assets/;
+            elif [ -d /app/deloitte-assets ]; then
+              cp -a /app/deloitte-assets/. /app/client/dist/assets/;
+            fi && exec npm run backend
         image:
-          tag: 'main'
-        resources:
-          requests:
-            memory: "1Gi"
-            cpu: "500m"
-          limits:
-            memory: "4Gi"
-            cpu: "2000m"
+          tag: 'main@sha256:ecc4acfc3d12f3718c237327eac4251e42da6501ca6059fbb930efa2b5fc9645'
+        env:
+          ADMIN_PANEL_URL: 'https://myassist.ctk.au.deloitte.com/admin'
+          ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
+          ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7'
+          ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
+          APP_TITLE: 'MyAssist 2.0'
+          BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
+          BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
+          BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
+          CUSTOM_FOOTER: "\U0001F4AC Feedback? Submit a bug report or feature request here: https://forms.cloud.microsoft/e/E9AyvN4Ayx"
+          DOMAIN_CLIENT: 'https://myassist.ctk.au.deloitte.com'
+          DOMAIN_SERVER: 'https://myassist.ctk.au.deloitte.com'
+          EMBEDDINGS_MODEL: 'text-embedding-3-small'
+          EMBEDDINGS_PROVIDER: 'openai'
+          ENDPOINTS: 'agents,anthropic,custom'
+          KEY_VAULT_NAME: 'kv-int-librechat-prd'
+          MCP_GATEWAY_OBO_SCOPE: 'api://32e2a3a5-ad52-446e-8a61-5a7ad6103099/access_as_user'
+          MCP_GATEWAY_TOOLSETS: 'teams,research,news,kx,desc,gims'
+          MCP_GATEWAY_URL: 'https://mcp-gateway.ctk.au.deloitte.com/mcp'
+          MONGO_DB: 'mdb-librechat-database-prd'
+          NODE_ENV: 'production'
+          NODE_TLS_REJECT_UNAUTHORIZED: '0' # TODO: Review Node TLS setup. See: https://github.com/Deloitte-Australia/tt-librechat/issues/159
+          OPENID_CLIENT_ID: 'b5494d82-9ae5-449e-8867-6804ccc2f5ef' # This is the Azure Client ID in Deloitte App Reg
+          OPENID_ISSUER: 'https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/v2.0/'
+          OPENID_ON_BEHALF_FLOW_FOR_USERINFO_REQUIRED: 'true'
+          OPENID_ON_BEHALF_FLOW_USERINFO_SCOPE: 'user.read'
+          OPENID_REQUIRED_ROLE: ''
+          OPENID_REUSE_TOKENS: 'true'
+          OPENID_SCOPE: 'openid profile email offline_access https://myassist.ctk.au.deloitte.com/access_user'
+          RAG_API_URL: 'http://127.0.0.1:8000'
+          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
+          RAG_PORT: '8000'
+          RAG_USE_FULL_CONTEXT: 'true'
+          # ClearTrack Code Interpreter (ea-code-runtime)
+          LIBRECHAT_CODE_BASEURL: 'https://code-runtime.ctk.au.deloitte.com/v1' # TODO: Confirm
+          CODEAPI_AUTH_PROVIDER: 'librechat-jwt'
+          CODEAPI_JWT_ALGORITHM: 'EdDSA'
+          CODEAPI_JWT_KID: 'lc-codeapi-prd-2026-05' # TODO: Confirm
+          CODEAPI_JWT_ISSUER: 'librechat'
+          CODEAPI_JWT_AUDIENCE: 'codeapi'
+          CODEAPI_JWT_TTL_SECONDS: '300'
+          CODEAPI_JWT_MINT_CACHE_SECONDS: '30'
+          CODEAPI_JWT_SINGLE_TENANT_ID: 'legacy'
+          # Azure Storage Container
+          AZURE_CLIENT_ID: 'e6da7f6e-8634-47df-be2f-7631d2f99822' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-prd
+          AZURE_STORAGE_ACCOUNT_NAME: 'stctspokeprdshared'
+          AZURE_STORAGE_PUBLIC_ACCESS: 'false'
+          AZURE_CONTAINER_NAME: 'stc-librechat-app-prd'
+          #Langfuse Observability
+          LANGFUSE_BASE_URL: 'https://langfuse.ctk.au.deloitte.com'
+          # OpenTelemetry Tracing
+          OTEL_TRACING_ENABLED: 'true'
+          OTEL_TRACES_SAMPLER_ARG: '1.0'
+          OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: 'https://managed-ai-ctspoke-prd-dce-8row.australiaeast-1.ingest.monitor.azure.com/dataCollectionRules/dcr-4d5bdfd0b21f48ee8af60e6c2681f9c6/streams/Microsoft-OTLP-Traces/otlp/v1/traces'
+          # Azure Monitor DCR only accepts OTLP/HTTP+protobuf
+          OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf'
+          # Wrap the OTLP exporter with an Azure AD bearer-token headers factory (managed identity via AZURE_CLIENT_ID)
+          AZURE_MONITOR_AUTH_ENABLED: 'true'
+          # Logging for debugging
+          OTEL_LOG_LEVEL: 'DEBUG'
+          OTEL_IOREDIS_TRACING_ENABLED: 'true'
+          DEBUG_LOGGING: 'true'
+          DEBUG_CONSOLE: 'true'
+          AGENT_DEBUG_LOGGING: 'true'
+          # Skill Security Scanner
+          SKILL_SCANNER_URL: 'https://ai-registry.ctk.au.deloitte.com/v1/scan?verbose=false'
+          SKILL_SCANNER_TIMEOUT_MS: '15000'
+          SKILL_SCANNER_MIN_SEVERITY: 'high'
+          # AI Registry
+          AI_REGISTRY_CLIENT_ID: "65dad51c-d3ca-4252-b97d-815cf8518d6a"
+        secrets:
+          MONGO_URI: librechat-mdb-connection-string
+          JWT_SECRET: librechat-jwt-secret # Use LibreChat Credentials Generator
+          JWT_REFRESH_SECRET: librechat-jwt-refresh-secret # Use LibreChat Credentials Generator
+          CREDS_KEY: librechat-creds-key # Use LibreChat Credentials Generator
+          CREDS_IV: librechat-creds-iv # Use LibreChat Credentials Generator
+          OPENID_CLIENT_SECRET: librechat-openid-client-secret # Generate a secret in App Reg and store the "hint" here
+          OPENID_SESSION_SECRET: librechat-openid-session-secret # Generate a random string
+          MEILI_MASTER_KEY: librechat-meili-master-key # Use LibreChat Credentials Generator
+          # ClearTrack Code Interpreter (ea-code-runtime) — JWK signing key
+          CODEAPI_JWT_PRIVATE_JWK_JSON: librechat-codeapi-jwt-private-jwk
+          #Langfuse Observability
+          LANGFUSE_PUBLIC_KEY: librechat-langfuse-public-key # TODO: Need to deploy to langfuse to prod first, then create an API in the frontend.
+          LANGFUSE_SECRET_KEY: librechat-langfuse-secret-key # TODO: Need to deploy to langfuse to prod first, then create an API in the frontend.
       rag-api:
         image:
-          tag: 'main'
+          repository: 'tt-librechat/rag-api'
+          pullPolicy: Always
+          tag: 'main@sha256:02fa6e357d06fe9f820571cb71f26228e12d264751b67fa33856011bbc641d29'
+        env:
+          PGVECTOR_CREATE_EXTENSION: 'False'
+          VECTOR_DB_TYPE: 'pgvector'
+          POSTGRES_USE_UNIX_SOCKET: 'False'
+          POSTGRES_DB: 'pgdb_librechat_app_prd'
+          POSTGRES_USER: 'id-int-librechat-prd'
+          POSTGRES_AUTH_TYPE: 'ActiveDirectoryMsi'
+          MANAGED_IDENTITY_CLIENT_ID: 'e6da7f6e-8634-47df-be2f-7631d2f99822' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-prd
+          DB_HOST: 'psql-ctspoke-prd.postgres.database.azure.com'
+          DB_PORT: '5432'
+          RAG_HOST: '0.0.0.0'
+          RAG_PORT: '8000'
+          EMBEDDINGS_PROVIDER: 'openai'
+          RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
+          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
+        secrets:
+          JWT_SECRET: librechat-jwt-secret
+        service:
+          enabled: true
+          type: ClusterIP
+          port: 8000
+          targetPort: 8000
+        ingress:
+          enabled: false
+      meilisearch:
+        image:
+          pullPolicy: Always
+          tag: 'main@sha256:eb6669b0f5a896090eafe0b12d3a15ec30f2c96e5f7dca8824a895106ccc92d1'
+        env:
+          MEILI_ENV: 'production'
+        secrets:
+          MEILI_MASTER_KEY: librechat-meili-master-key
+        persistence:
+          enabled: true
+          size: 10Gi
+          accessModes:
+            - ReadWriteOnce
+          name: 'meilisearch-data'
+          mountPath: /meili_data
+          storageClass: 'managed-csi-standard-private'
+  admin:
+    replicas: 1
+    containers:
+      admin:
+        # Image must be built with --build-arg VITE_BASE_PATH=/admin
+        # The admin panel is a Vite SPA where the base path is baked in at build time.
+        # CI must build this image with the VITE_BASE_PATH arg; otherwise asset paths
+        # will be incorrect when routed through nginx at /admin.
+        image:
+          repository: 'tt-librechat/admin'
+          pullPolicy: Always
+          tag: 'main@sha256:0a8af18f7be7676f9b2bac29ee021e0ab40cbeb3f71af123276c6f4d53534ec0'
+        env:
+          PORT: '3000'
+          ADMIN_SSO_ONLY: 'true'
+          VITE_BASE_PATH: '/admin'
+          VITE_API_BASE_URL: 'https://myassist.ctk.au.deloitte.com'
+          API_SERVER_URL: 'https://myassist.ctk.au.deloitte.com'
+          SESSION_COOKIE_SECURE: 'true'
+        secrets:
+          SESSION_SECRET: librechat-admin-panel-session-secret
+        service:
+          enabled: true
+          type: ClusterIP
+          port: 3000
+          targetPort: 3000
+        ingress:
+          enabled: true
+          paths:
+            - path: /admin
+              pathType: Prefix
 
 valkey:
   image:
-    tag: 'main'
+    tag: 'main@sha256:ec7ab07262c5ac3da2847ec47ca04ac706570c5ebf2d4e2ed63f44348eb25a28'
   persistence:
     storageClass: 'managed-csi-standard-private'
-  passwordSecretName: 'librechat-valkey-password-prd'
+  passwordSecretName: 'librechat-valkey-password'

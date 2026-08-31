@@ -26,6 +26,10 @@ lib-cov
 # Coverage directory used by tools like istanbul
 coverage
 
+# Python compiled bytecode
+__pycache__/
+*.py[cod]
+
 # Grunt intermediate storage (http://gruntjs.com/creating-plugins#storing-task-files)
 .grunt
 
@@ -129,8 +133,8 @@ auth.json
 /images
 
 # Deloitte Submodules
-admin_panel/
-rag_api/
+#admin_panel/
+#rag_api/
 
 !client/src/components/Nav/SettingsTabs/Data/
 
