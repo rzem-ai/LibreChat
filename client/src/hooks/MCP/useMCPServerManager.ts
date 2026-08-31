@@ -47,27 +47,16 @@ export interface MCPServerDefinition {
   consumeOnly?: boolean;
 }
 
-export interface SelectAllState {
-  /** True when every selectable connector is currently selected. */
-  allSelected: boolean;
-  /** True when at least one, but not all, selectable connectors are currently selected. */
-  someSelected: boolean;
-}
-
 /**
- * Deloitte Custom Change: Determines whether every selectable connector is currently
- * selected, and whether some (but not all) are selected. Backs the tri-state
- * "Connect All / Disconnect All" toggle shown in the chat dropdown (MCPSelect) and
- * the {@link useMCPServerManager} `toggleSelectAll` action, so both stay in sync.
- *
- * Selection is checked by connector name membership rather than by comparing array
- * lengths, so a stale or duplicate entry in `selectedConnectorNames` can't be mistaken
- * for full selection.
+ * Deloitte Custom Change: Backs the tri-state "Connect All / Disconnect All" toggle.
+ * Checks selection by connector name membership rather than comparing array lengths, so
+ * a stale or duplicate entry in `selectedConnectorNames` can't be mistaken for full
+ * selection.
  */
 export function getSelectAllState(
   selectableConnectors: MCPServerDefinition[],
   selectedConnectorNames: string[] | undefined,
-): SelectAllState {
+): { allSelected: boolean; someSelected: boolean } {
   const selectedConnectorNameSet = new Set(selectedConnectorNames ?? []);
   const allSelected =
     selectableConnectors.length > 0 &&
@@ -148,12 +137,11 @@ export function useMCPServerManager({
   }, [mcpValues]);
 
   /**
-   * Deloitte Custom Change: Updates the connector selection, keeping `mcpValuesRef`
-   * synchronously in sync rather than waiting for the effect above to catch up on the
-   * next render. "Connect All" can have several connectors finish initializing
-   * (immediately, or via OAuth polling) within the same tick; every place that changes
-   * the selection must go through this so each one reads the truly-latest value instead
-   * of a stale snapshot of `mcpValuesRef.current` and clobbering another's change.
+   * Deloitte Custom Change: Every write to the connector selection must go through this
+   * (not `setMCPValues` directly) — it keeps `mcpValuesRef` synchronously current instead
+   * of waiting for the effect above, so concurrent completions (e.g. "Connect All"
+   * triggering several OAuth flows) read the truly-latest value instead of a stale
+   * snapshot and clobbering each other.
    */
   const setSelection = useCallback(
     (nextValues: string[]) => {
@@ -642,20 +630,15 @@ export function useMCPServerManager({
 
   const toggleServerSelection = useCallback(
     (serverName: string) => {
-      // Deloitte Custom Change: Also block toggling while the connector is reported
-      // mid-OAuth (connectionState === 'connecting') by the backend, not just while this
-      // hook's own initializeServer call is in flight, so selection can't thrash during an
-      // in-progress connection started from elsewhere (e.g. another tab).
+      // Deloitte Custom Change: Also block while mid-OAuth (connectionState === 'connecting'),
+      // not just while this hook's own initializeServer call is active, so selection can't
+      // thrash during a connection started elsewhere (e.g. another tab).
       const isConnecting = connectionStatus?.[serverName]?.connectionState === 'connecting';
       if (isInitializing(serverName) || isConnecting) {
         return;
       }
 
-      // Deloitte Custom Change: Read from mcpValuesRef, not the mcpValues state variable —
-      // otherwise a concurrent async path (e.g. an OAuth polling completion via
-      // addConnectorToSelection) that updated the ref this tick but hasn't yet reached a
-      // re-render would be invisible here, and this write would clobber it with a stale
-      // snapshot.
+      // Deloitte Custom Change: Read via mcpValuesRef, not mcpValues (see setSelection above).
       const currentValues = mcpValuesRef.current ?? [];
       const isCurrentlySelected = currentValues.includes(serverName);
 
@@ -671,35 +654,38 @@ export function useMCPServerManager({
   /** Deloitte Custom Change: Selects every selectable connector, or clears the selection if
    * all are already selected. */
   const toggleSelectAll = useCallback(() => {
-    // Get all selectable connector names
     const selectableConnectorNames = selectableServers.map((server) => server.serverName);
 
-    // Select/deselect all connectors. Goes through setSelection (not setMCPValues directly)
-    // so mcpValuesRef reflects this bulk selection before any of the initializeServer calls
-    // below can complete and read it via addConnectorToSelection.
+    // Deloitte Custom Change: setSelection (not setMCPValues) so mcpValuesRef already
+    // reflects this bulk selection before any initializeServer call below can complete.
     setSelection(allConnectorsSelected ? [] : selectableConnectorNames);
 
-    // When selecting all connectors, also authenticate/initialize those that need it
     if (!allConnectorsSelected) {
       selectableConnectorNames.forEach((connectorName) => {
         const connectionState = connectionStatus?.[connectorName]?.connectionState;
-        // Deloitte Custom Change: Initialize unless we can positively confirm the connector
-        // is already connected or mid-OAuth. `connectionState` is `undefined` until the
-        // connectionStatus query resolves (e.g. right after page load) — treating that as
-        // "already handled" would silently select connectors without ever initializing
-        // them, so only 'connected'/'connecting' are excluded here.
+        // Deloitte Custom Change: `connectionState` is undefined until the connectionStatus
+        // query resolves, so only exclude the states we can positively confirm don't need it.
+        // Also check isInitializing — the local flag flips synchronously when initializeServer
+        // starts, before the backend-reported connectionState catches up to 'connecting'.
         const needsInitialization =
-          connectionState !== 'connected' && connectionState !== 'connecting';
+          !isInitializing(connectorName) &&
+          connectionState !== 'connected' &&
+          connectionState !== 'connecting';
         if (needsInitialization) {
-          // Deloitte Custom Change: Auto-open OAuth tabs for this bulk action. The chat
-          // dropdown has no UI to surface a pending oauthUrl (unlike the config dialog's
-          // "Continue OAuth" button), so suppressing auto-open here would strand
-          // OAuth-required connectors in a spinner the user can't resolve from this flow.
+          // Deloitte Custom Change: Auto-open OAuth tabs — the chat dropdown has no UI to
+          // surface a pending oauthUrl the way the config dialog's "Continue OAuth" does.
           initializeServer(connectorName, true);
         }
       });
     }
-  }, [selectableServers, allConnectorsSelected, setSelection, connectionStatus, initializeServer]);
+  }, [
+    selectableServers,
+    allConnectorsSelected,
+    setSelection,
+    connectionStatus,
+    isInitializing,
+    initializeServer,
+  ]);
 
   const handleConfigSave = useCallback(
     (targetName: string, authData: Record<string, string>) => {
