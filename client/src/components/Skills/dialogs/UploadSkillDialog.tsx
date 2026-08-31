@@ -163,7 +163,11 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
               </div>
             </div>
 
-            {scanError && <p className="whitespace-pre-line text-xs text-red-500">{scanError}</p>}
+            {scanError && (
+              <p className="whitespace-pre-line text-xs text-red-500" role="alert">
+                {scanError}
+              </p>
+            )}
           </div>
 
           <input

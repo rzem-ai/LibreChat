@@ -105,10 +105,12 @@ export default function CreateSkillDialog({
     });
   };
 
-  const handleClose = () => {
-    setIsOpen(false);
-    setScanError(null);
-    reset();
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setScanError(null);
+      reset();
+    }
+    setIsOpen(open);
   };
 
   const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -124,7 +126,7 @@ export default function CreateSkillDialog({
   const submitDisabled = !isValid || isSubmitting || createSkill.isLoading;
 
   return (
-    <OGDialog open={isOpen} onOpenChange={setIsOpen}>
+    <OGDialog open={isOpen} onOpenChange={handleOpenChange}>
       <OGDialogContent className="w-11/12 max-w-5xl overflow-hidden" showCloseButton={false}>
         <form
           onSubmit={handleFormSubmit}
@@ -205,11 +207,15 @@ export default function CreateSkillDialog({
             />
           </div>
 
-          {scanError && <p className="whitespace-pre-line text-xs text-red-500">{scanError}</p>}
+          {scanError && (
+            <p className="whitespace-pre-line text-xs text-red-500" role="alert">
+              {scanError}
+            </p>
+          )}
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
               {localize('com_ui_cancel')}
             </Button>
             <Button

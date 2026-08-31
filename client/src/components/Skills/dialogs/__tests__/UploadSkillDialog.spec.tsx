@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { FileConfigInput } from 'librechat-data-provider';
+import type { ReactNode } from 'react';
 import UploadSkillDialog from '../UploadSkillDialog';
 
 const mockMutate = jest.fn();
@@ -12,6 +12,13 @@ let mockFileConfigInput: FileConfigInput | undefined = {
     fileSizeLimit: 1,
   },
 };
+
+interface MutationOptions {
+  onSuccess?: (skill: { _id: string; warnings?: unknown[] }) => void;
+  onError?: (error: unknown) => void;
+}
+
+let capturedMutationOptions: MutationOptions | undefined;
 
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
@@ -40,10 +47,13 @@ jest.mock('~/data-provider', () => ({
   useGetFileConfig: ({ select }: { select?: (data: FileConfigInput | undefined) => unknown }) => ({
     data: select != null ? select(mockFileConfigInput) : mockFileConfigInput,
   }),
-  useImportSkillMutation: () => ({
-    mutate: mockMutate,
-    isLoading: false,
-  }),
+  useImportSkillMutation: (options: MutationOptions) => {
+    capturedMutationOptions = options;
+    return {
+      mutate: mockMutate,
+      isLoading: false,
+    };
+  },
 }));
 
 jest.mock('~/hooks', () => ({
@@ -68,6 +78,7 @@ jest.mock('~/hooks', () => ({
 
 jest.mock('~/utils', () => ({
   cn: (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' '),
+  formatSkillScanError: jest.requireActual('~/utils/skills').formatSkillScanError,
 }));
 
 function getFileInput(container: HTMLElement): HTMLInputElement {
@@ -78,9 +89,20 @@ function getFileInput(container: HTMLElement): HTMLInputElement {
   return input;
 }
 
+function scanErrorFromIssues(messages: string[]) {
+  return {
+    response: {
+      data: {
+        issues: messages.map((message) => ({ message })),
+      },
+    },
+  };
+}
+
 describe('UploadSkillDialog', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    capturedMutationOptions = undefined;
     mockFileConfigInput = {
       skills: {
         fileSizeLimit: 1,
@@ -161,5 +183,41 @@ describe('UploadSkillDialog', () => {
     expect(appendSpy).toHaveBeenCalledWith('file', file, file.name);
     expect(mockMutate).toHaveBeenCalledWith(expect.any(FormData));
     appendSpy.mockRestore();
+  });
+
+  it('renders the scanner error as an alert and preserves multi-line content', () => {
+    render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    act(() => {
+      capturedMutationOptions?.onError?.(scanErrorFromIssues(['first issue', 'second issue']));
+    });
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('first issue');
+    expect(alert).toHaveTextContent('second issue');
+    expect(alert.textContent).toBe('first issue\nsecond issue');
+    expect(alert.className).toContain('whitespace-pre-line');
+  });
+
+  it('clears the scanner error after a successful retry upload', () => {
+    const { container } = render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    act(() => {
+      capturedMutationOptions?.onError?.(scanErrorFromIssues(['bad skill']));
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent('bad skill');
+
+    const file = new File([new Uint8Array(1024)], 'retry.skill', {
+      type: 'application/zip',
+    });
+    fireEvent.change(getFileInput(container), {
+      target: { files: [file] },
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    act(() => {
+      capturedMutationOptions?.onSuccess?.({ _id: 'skill-1' });
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
