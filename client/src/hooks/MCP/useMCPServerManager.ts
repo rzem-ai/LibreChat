@@ -651,7 +651,12 @@ export function useMCPServerManager({
         return;
       }
 
-      const currentValues = mcpValues ?? [];
+      // Deloitte Custom Change: Read from mcpValuesRef, not the mcpValues state variable —
+      // otherwise a concurrent async path (e.g. an OAuth polling completion via
+      // addConnectorToSelection) that updated the ref this tick but hasn't yet reached a
+      // re-render would be invisible here, and this write would clobber it with a stale
+      // snapshot.
+      const currentValues = mcpValuesRef.current ?? [];
       const isCurrentlySelected = currentValues.includes(serverName);
 
       if (isCurrentlySelected) {
@@ -660,7 +665,7 @@ export function useMCPServerManager({
         setSelection([...currentValues, serverName]);
       }
     },
-    [mcpValues, setSelection, isInitializing, connectionStatus],
+    [setSelection, isInitializing, connectionStatus],
   );
 
   /** Deloitte Custom Change: Selects every selectable connector, or clears the selection if
