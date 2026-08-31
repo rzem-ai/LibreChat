@@ -805,6 +805,7 @@ describe('MCP_USER_INPUT_FIELDS', () => {
     expect(MCP_USER_INPUT_FIELDS.has('type')).toBe(true);
     expect(MCP_USER_INPUT_FIELDS.has('url')).toBe(true);
     expect(MCP_USER_INPUT_FIELDS.has('title')).toBe(true);
+    expect(MCP_USER_INPUT_FIELDS.has('parentGroup')).toBe(true);
     expect(MCP_USER_INPUT_FIELDS.has('description')).toBe(true);
     expect(MCP_USER_INPUT_FIELDS.has('iconPath')).toBe(true);
     expect(MCP_USER_INPUT_FIELDS.has('oauth')).toBe(true);

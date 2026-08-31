@@ -113,6 +113,34 @@ describe('buildCatalog', () => {
     }
   });
 
+  // Deloitte Custom Change: Parent group tests
+  test('appends parentGroup to each MCP display name when configured per server', () => {
+    const map = new Map();
+    map.set('grouped', {
+      serverName: 'grouped',
+      isConfigured: true,
+      tools: [],
+      parentGroup: 'ClearTrack MCP',
+      metadata: { name: 'AFR News' },
+    });
+    const items = buildCatalog({ ...emptyInputs, mcpServersMap: map });
+    const mcp = items.find((i) => i.kind === 'mcp');
+    expect(mcp?.name).toBe('AFR News - ClearTrack MCP');
+  });
+
+  test('leaves MCP display name unchanged when parentGroup is not configured', () => {
+    const map = new Map();
+    map.set('ungrouped', {
+      serverName: 'ungrouped',
+      isConfigured: true,
+      tools: [],
+      metadata: { name: 'IBISWorld' },
+    });
+    const items = buildCatalog({ ...emptyInputs, mcpServersMap: map });
+    const mcp = items.find((i) => i.kind === 'mcp');
+    expect(mcp?.name).toBe('IBISWorld');
+  });
+
   test('excludes consume-only MCP servers from the catalog', () => {
     const map = new Map();
     map.set('attachable', { serverName: 'attachable', isConfigured: true, tools: [] });

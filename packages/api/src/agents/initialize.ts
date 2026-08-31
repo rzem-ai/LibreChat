@@ -102,7 +102,8 @@ function appendAdditionalInstructions(agent: Agent, text?: string | null): void 
 
 function getMaxCatalogSkills(req: ServerRequest): number | undefined {
   const endpoints = req.config?.endpoints as
-    Record<string, { skills?: { maxCatalogSkills?: number } } | undefined> | undefined;
+    | Record<string, { skills?: { maxCatalogSkills?: number } } | undefined>
+    | undefined;
   return endpoints?.[EModelEndpoint.agents]?.skills?.maxCatalogSkills;
 }
 

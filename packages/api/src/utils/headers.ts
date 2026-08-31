@@ -129,7 +129,8 @@ export function resolveConfigHeaders({
   }
 
   const clientOptions = (llmConfig as AnthropicClientOptions).clientOptions as
-    DefaultHeadersContainer | undefined;
+    | DefaultHeadersContainer
+    | undefined;
   if (clientOptions?.defaultHeaders != null) {
     clientOptions.defaultHeaders = resolveOnce(clientOptions.defaultHeaders);
   }

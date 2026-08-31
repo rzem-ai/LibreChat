@@ -1455,7 +1455,13 @@ export const interfaceSchema = z
       })
       .optional(),
     fileSearch: z.boolean().optional(),
+    // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+    providerUpload: z.boolean().optional(),
     fileCitations: z.boolean().optional(),
+    /** Horizontal alignment of the current user's own chat turns. `'right'` right-aligns
+     * the user's messages as iMessage-style bubbles without an avatar/name header
+     * (assistant/agent messages remain left-aligned and unaffected). */
+    userMessageAlignment: z.enum(['left', 'right']).optional(),
     /** Tool keys (and `'mcp'` or an MCP server name) pinned to the prompt bar by default */
     defaultPinnedTools: z.array(z.string()).optional(),
     buildInfo: z.boolean().optional(),
@@ -1531,7 +1537,10 @@ export const interfaceSchema = z
       public: false,
     },
     fileSearch: true,
+    // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+    providerUpload: false,
     fileCitations: true,
+    userMessageAlignment: 'left',
     buildInfo: true,
     remoteAgents: {
       use: false,
@@ -3209,7 +3218,7 @@ export type TSpecialVarLabel = `com_ui_special_var_${keyof typeof specialVariabl
  * Does not infer or default any endpoint type when absent.
  */
 export function getEndpointField<
-  K extends (TConfig[keyof TConfig] extends never ? never : keyof TConfig),
+  K extends TConfig[keyof TConfig] extends never ? never : keyof TConfig,
 >(
   endpointsConfig: TEndpointsConfig | undefined | null,
   endpoint: EModelEndpoint | string | null | undefined,

@@ -44,6 +44,8 @@ export function useMCPSelect({
    * pin when the array includes the `'mcp'` keyword or any configured server name.
    * Only applies on first load when the user has no stored preference; when the option
    * is absent entirely, the legacy default (pinned) is kept.
+   * When `showToolsDropdown` is disabled the user cannot pin manually, so the admin
+   * default is treated as forced and overrides any stored preference.
    */
   useEffect(() => {
     if (hasAppliedDefaultPin.current || !startupConfig) {
@@ -54,7 +56,11 @@ export function useMCPSelect({
       hasAppliedDefaultPin.current = true;
       return;
     }
-    if (localStorage.getItem(LocalStorageKeys.PIN_MCP_) != null) {
+
+    // Deloitte Custom Change: Force pin the tool if tools dropdown is hidden
+    const toolsDropdownHidden =
+      startupConfig.interface?.customDeloitteFeatureFlags?.showToolsDropdown === false;
+    if (!toolsDropdownHidden && localStorage.getItem(LocalStorageKeys.PIN_MCP_) != null) {
       hasAppliedDefaultPin.current = true;
       return;
     }

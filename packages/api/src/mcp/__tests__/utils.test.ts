@@ -373,6 +373,7 @@ describe('redactServerSecrets', () => {
       type: 'sse',
       url: 'https://example.com/mcp',
       title: 'My Server',
+      parentGroup: 'ClearTrack MCP',
       description: 'A test server',
       iconPath: '/icons/test.png',
       chatMenu: true,
@@ -387,6 +388,7 @@ describe('redactServerSecrets', () => {
     };
     const redacted = redactServerSecrets(config);
     expect(redacted.title).toBe('My Server');
+    expect(redacted.parentGroup).toBe('ClearTrack MCP');
     expect(redacted.description).toBe('A test server');
     expect(redacted.iconPath).toBe('/icons/test.png');
     expect(redacted.chatMenu).toBe(true);

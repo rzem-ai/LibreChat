@@ -83,6 +83,7 @@ interface AttachFileMenuProps {
   conversation: TConversation | null;
 }
 
+// Deloitte Custom Tests: # Visible icons for file uploads- PR #219
 const AttachFileMenu = ({
   agentId,
   endpoint,
@@ -121,6 +122,8 @@ const AttachFileMenu = ({
   const { agentsConfig } = useGetAgentsConfig();
   const { data: startupConfig } = useGetStartupConfig();
   const sharePointEnabled = startupConfig?.sharePointFilePickerEnabled;
+  // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+  const providerUploadEnabled = startupConfig?.interface?.providerUpload === true;
 
   const [isSharePointDialogOpen, setIsSharePointDialogOpen] = useState(false);
 
@@ -178,7 +181,6 @@ const AttachFileMenu = ({
       const items: MenuItemProps[] = [];
 
       let currentProvider = provider || endpoint;
-
       // This will be removed in a future PR to formally normalize Providers comparisons to be case insensitive
       if (currentProvider?.toLowerCase() === Providers.OPENROUTER) {
         currentProvider = Providers.OPENROUTER;
@@ -189,37 +191,40 @@ const AttachFileMenu = ({
           endpointType === EModelEndpoint.azureOpenAI) &&
         useResponsesApi === true;
 
-      if (
-        isDocumentSupportedProvider(endpointType) ||
-        isDocumentSupportedProvider(currentProvider) ||
-        isAzureWithResponsesApi
-      ) {
-        items.push({
-          label: localize('com_ui_upload_provider'),
-          onClick: () => {
-            setToolResource(undefined);
-            let fileType: Exclude<FileUploadType, 'image' | 'document'> = 'image_document';
-            if (currentProvider === Providers.GOOGLE || currentProvider === Providers.OPENROUTER) {
-              fileType = 'image_document_video_audio';
-            } else if (
-              currentProvider === Providers.BEDROCK ||
-              endpointType === EModelEndpoint.bedrock
-            ) {
-              fileType = 'image_document_extended';
-            }
-            onAction(fileType);
-          },
-          icon: <FileImageIcon className="icon-md" />,
-        });
-      } else {
-        items.push({
-          label: localize('com_ui_upload_image_input'),
-          onClick: () => {
-            setToolResource(undefined);
-            onAction('image');
-          },
-          icon: <ImageUpIcon className="icon-md" />,
-        });
+      // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+      if (providerUploadEnabled) {
+        if (
+          isDocumentSupportedProvider(endpointType) ||
+          isDocumentSupportedProvider(currentProvider) ||
+          isAzureWithResponsesApi
+        ) {
+          items.push({
+            label: localize('com_ui_upload_provider'),
+            onClick: () => {
+              setToolResource(undefined);
+              let fileType: Exclude<FileUploadType, 'image' | 'document'> = 'image_document';
+              if (currentProvider === Providers.GOOGLE || currentProvider === Providers.OPENROUTER) {
+                fileType = 'image_document_video_audio';
+              } else if (
+                currentProvider === Providers.BEDROCK ||
+                endpointType === EModelEndpoint.bedrock
+              ) {
+                fileType = 'image_document_extended';
+              }
+              onAction(fileType);
+            },
+            icon: <FileImageIcon className="icon-md" />,
+          });
+        } else {
+          items.push({
+            label: localize('com_ui_upload_image_input'),
+            onClick: () => {
+              setToolResource(undefined);
+              onAction('image');
+            },
+            icon: <ImageUpIcon className="icon-md" />,
+          });
+        }
       }
 
       if (capabilities.contextEnabled) {
@@ -273,26 +278,28 @@ const AttachFileMenu = ({
         setIsSharePointDialogOpen(true);
         // Note: toolResource will be set by the specific item clicked
       });
-      localItems.push({
-        label: localize('com_files_upload_sharepoint'),
-        onClick: () => {},
-        icon: <SharePointIcon className="icon-md" />,
-        subItems: sharePointItems,
-      });
-      return localItems;
+      if (sharePointItems.length > 0) {
+        localItems.push({
+          label: localize('com_files_upload_sharepoint'),
+          onClick: () => {},
+          icon: <SharePointIcon className="icon-md" />,
+          subItems: sharePointItems,
+        });
+      }
     }
 
     return localItems;
   }, [
     localize,
-    endpoint,
-    provider,
-    endpointType,
     capabilities,
-    useResponsesApi,
     handleUploadClick,
     setEphemeralAgent,
     sharePointEnabled,
+    providerUploadEnabled,
+    provider,
+    endpoint,
+    endpointType,
+    useResponsesApi,
     codeAllowedByAgent,
     fileSearchAllowedByAgent,
     setIsSharePointDialogOpen,

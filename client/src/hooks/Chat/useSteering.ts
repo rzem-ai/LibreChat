@@ -113,7 +113,8 @@ function hasLiveToolApproval(messages: TMessage[] | undefined): boolean {
         return false;
       }
       const toolCall = part[ContentTypes.TOOL_CALL] as
-        { approval?: unknown; output?: string | null } | undefined;
+        | { approval?: unknown; output?: string | null }
+        | undefined;
       return toolCall?.approval != null && (toolCall.output?.length ?? 0) === 0;
     });
   }

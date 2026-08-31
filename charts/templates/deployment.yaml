@@ -40,6 +40,15 @@ spec:
     spec:
       serviceAccountName: {{ .Values.serviceAccount.name }}
 
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
       {{- with $podConfig.securityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
