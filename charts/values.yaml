@@ -69,6 +69,7 @@ pods:
           ALLOW_REGISTRATION: 'false'
           ALLOW_SOCIAL_LOGIN: 'true'
           ALLOW_SOCIAL_REGISTRATION: 'false'
+          APP_TITLE: 'MyAssist 2.0'
           OPENID_CALLBACK_URL: '/oauth/openid/callback'
           OPENID_GRAPH_SCOPES: 'User.Read,User.ReadBasic.All' #People.Read GroupMember.Read.All scopes to be added once App Registration admins grant them to us
           OPENID_REQUIRED_ROLE_TOKEN_KIND: 'id'
@@ -126,3 +127,18 @@ pods:
           targetPort: 7700
         ingress:
           enabled: false
+
+# In-cluster Valkey (Redis-compatible). StatefulSet with AOF persistence
+# and a PVC in charts/templates/valkey.yaml. Valkey is a drop-in Redis
+# replacement -- LibreChat's ioredis clients work unchanged.
+valkey:
+  image:
+    repository: 'tt-librechat/valkey'
+    pullPolicy: Always
+    tag: 'main'
+  port: 6379
+  persistence:
+    size: 5Gi
+    storageClass: ''
+  passwordSecretName: 'librechat-valkey-password-prd'
+

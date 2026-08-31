@@ -1,5 +1,5 @@
-import { useRecoilState } from 'recoil';
 import { useCallback, useEffect, useMemo } from 'react';
+import { useRecoilState } from 'recoil';
 import { useQueryClient } from '@tanstack/react-query';
 import { QueryKeys, isAgentsEndpoint } from 'librechat-data-provider';
 import {
@@ -205,7 +205,7 @@ const EditPresetDialog = ({
             </button>
             <button
               onClick={submitPreset}
-              className="rounded-md bg-green-500 px-3 py-2 text-sm font-medium text-white hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 md:px-4"
+              className="rounded-md bg-surface-submit px-3 py-2 text-sm font-medium text-white hover:bg-surface-submit-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 md:px-4"
             >
               {localize('com_ui_save')}
             </button>

@@ -7,6 +7,8 @@ const {
   createImportHandler,
   generateCheckAccess,
   getStorageMetadata,
+  isSkillScanError,
+  scanSkillFileUpload,
   resolveRequestTenantId,
   restoreTenantContextFromReq,
 } = require('@librechat/api');
@@ -36,6 +38,7 @@ const {
   grantPermission,
 } = require('~/server/services/PermissionService');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
+const { resolveSkillScannerToken } = require('~/server/services/SkillScannerTokenService');
 const { createFileLimiters } = require('~/server/middleware/limiters/uploadLimiters');
 const { maybeRunGitHubSkillSyncForRequest } = require('~/server/services/Skills/sync');
 const configMiddleware = require('~/server/middleware/config/app');
@@ -138,6 +141,7 @@ const handlers = createSkillsHandlers({
       : hasPublicPermission(params),
   grantPermission,
   isValidObjectIdString,
+  resolveScannerToken: resolveSkillScannerToken,
 });
 
 // ---------------------------------------------------------------------------
@@ -182,6 +186,7 @@ const importHandler = createImportHandler({
     return Promise.resolve();
   },
   grantPermission,
+  resolveScannerToken: resolveSkillScannerToken,
 });
 
 // ---------------------------------------------------------------------------
@@ -217,6 +222,14 @@ async function uploadFileHandler(req, res) {
     // Look up existing file before saving — needed to clean up old blob on replace
     const existingFile = await getSkillFileByPath(skillId, relativePath);
 
+    const scannerToken = process.env.SKILL_SCANNER_URL
+      ? await resolveSkillScannerToken(req.user)
+      : undefined;
+    await scanSkillFileUpload({
+      fileName: file.originalname,
+      content: file.buffer,
+      token: scannerToken,
+    });
     const fileId = crypto.randomUUID();
     const filename = file.originalname;
     const storageFileName = `${fileId}__${filename}`;
@@ -275,6 +288,13 @@ async function uploadFileHandler(req, res) {
 
     return res.status(200).json(result);
   } catch (error) {
+    if (isSkillScanError(error)) {
+      return res.status(error.statusCode).json({
+        error: 'Skill scan failed',
+        message: error.message,
+        issues: error.issues,
+      });
+    }
     if (error.code === 'SKILL_FILE_VALIDATION_FAILED') {
       return res.status(400).json({ error: error.message });
     }

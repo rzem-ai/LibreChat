@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { format } from 'date-fns';
-import { Eye, Code, User, Calendar, EarthIcon, ScrollText } from 'lucide-react';
 import { TooltipAnchor } from '@librechat/client';
+import { Eye, Code, User, Calendar, EarthIcon, ScrollText } from 'lucide-react';
 import type { TSkill } from 'librechat-data-provider';
 import { useLocalize, useAuthContext, useSkillPermissions, useSkillActiveState } from '~/hooks';
-import { ShareSkill, SkillToggle } from '../buttons';
 import SkillMarkdownRenderer from './SkillMarkdownRenderer';
-import { parseFrontmatter } from '../utils';
+import { ShareSkill, SkillToggle } from '../buttons';
 import DeleteSkill from '../dialogs/DeleteSkill';
+import { parseFrontmatter } from '../utils';
 import { cn } from '~/utils';
 
 interface SkillDetailProps {
@@ -132,10 +132,12 @@ export default function SkillDetail({ skill, onEdit, onDelete }: SkillDetailProp
 
         {/* Actions */}
         <div className="flex shrink-0 items-center gap-2">
+          {/* Deloitte Custom Change add visible active/disable label to skill toggle */}
           <SkillToggle
             enabled={skillEnabled}
             onChange={() => toggle(skill)}
             ariaLabel={localize('com_ui_skill_toggle_active')}
+            label={localize(skillEnabled ? 'com_ui_active' : 'com_ui_disabled')}
           />
           <ShareSkill skill={skill} />
           {permissions.canEdit && onEdit && (
@@ -180,7 +182,11 @@ export default function SkillDetail({ skill, onEdit, onDelete }: SkillDetailProp
       {/* Content — fills remaining space, no card wrapper */}
       <div className="min-h-0 flex-1 overflow-auto">
         {viewMode === 'rendered' ? (
-          <SkillMarkdownRenderer content={cleanBody} />
+          <SkillMarkdownRenderer
+            content={cleanBody}
+            skillId={skill._id}
+            currentFilePath="SKILL.md"
+          />
         ) : (
           <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed text-text-primary">
             {skill.body ?? ''}

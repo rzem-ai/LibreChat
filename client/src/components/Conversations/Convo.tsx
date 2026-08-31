@@ -5,9 +5,9 @@ import { useParams } from 'react-router-dom';
 import { Constants } from 'librechat-data-provider';
 import { useToastContext, useMediaQuery } from '@librechat/client';
 import type { TConversation } from 'librechat-data-provider';
+import { useGetStartupConfig, useUpdateConversationMutation } from '~/data-provider';
 import { useNavigateToConvo, useLocalize, useShiftKey } from '~/hooks';
 import ConversationEndpointIcon from './ConversationEndpointIcon';
-import { useUpdateConversationMutation } from '~/data-provider';
 import { areConversationRenderPropsEqual } from './utils';
 import { NotificationSeverity } from '~/common';
 import { ConvoOptions } from './ConvoOptions';
@@ -32,6 +32,7 @@ function Conversation({
   const params = useParams();
   const localize = useLocalize();
   const { showToast } = useToastContext();
+  const { data: startupConfig } = useGetStartupConfig();
   const { navigateToConvo } = useNavigateToConvo();
   const currentConvoId = useMemo(() => params.conversationId, [params.conversationId]);
   const updateConvoMutation = useUpdateConversationMutation(currentConvoId ?? '');
@@ -272,7 +273,9 @@ function Conversation({
           isSmallScreen={isSmallScreen}
           localize={localize}
         >
-          <ConversationEndpointIcon conversation={conversation} size={20} context="menu-item" />
+          {startupConfig?.interface?.customDeloitteFeatureFlags?.conversationIcon === true && (
+            <ConversationEndpointIcon conversation={conversation} size={20} context="menu-item" />
+          )}
         </ConvoLink>
       )}
       {conversation.pinned === true && (

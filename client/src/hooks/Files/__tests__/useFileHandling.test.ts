@@ -1,6 +1,13 @@
 import { renderHook, act } from '@testing-library/react';
-import { Constants, EModelEndpoint, getEndpointFileConfig } from 'librechat-data-provider';
+import {
+  Constants,
+  EModelEndpoint,
+  FileSources,
+  getEndpointFileConfig,
+} from 'librechat-data-provider';
+import type { TFileUpload } from 'librechat-data-provider';
 
+// Deloitte Custom Change: # Visible icons for file uploads- PR #402
 beforeAll(() => {
   global.URL.createObjectURL = jest.fn(() => 'blob:mock-url');
   global.URL.revokeObjectURL = jest.fn();
@@ -21,9 +28,13 @@ beforeAll(() => {
 const mockShowToast = jest.fn();
 const mockSetFilesLoading = jest.fn();
 const mockMutate = jest.fn();
+const mockUpdateFileById = jest.fn();
 const mockProcessFileForUpload = jest.fn(
   async (_file: File, _quality?: number, _onProgress?: (progress: number) => void) => _file,
 );
+let capturedUploadOpts:
+  | { onSuccess?: (data: TFileUpload, variables: FormData, context: unknown) => void }
+  | undefined;
 const mockLocalize = jest.fn((key: string) => key);
 
 let mockConversation: Record<string, string | null | undefined> = {};
@@ -65,9 +76,10 @@ jest.mock('@tanstack/react-query', () => ({
 
 jest.mock('~/data-provider', () => ({
   useGetFileConfig: jest.fn(() => ({ data: null })),
-  useUploadFileMutation: jest.fn((_opts: Record<string, unknown>) => ({
-    mutate: mockMutate,
-  })),
+  useUploadFileMutation: jest.fn((opts: { onSuccess?: (data: TFileUpload) => void }) => {
+    capturedUploadOpts = opts;
+    return { mutate: mockMutate };
+  }),
 }));
 
 jest.mock('~/hooks/useLocalize', () => {
@@ -101,7 +113,7 @@ jest.mock('../useUpdateFiles', () => ({
   default: jest.fn(() => ({
     addFile: jest.fn(),
     replaceFile: jest.fn(),
-    updateFileById: jest.fn(),
+    updateFileById: mockUpdateFileById,
     deleteFileById: jest.fn(),
   })),
 }));
@@ -433,6 +445,40 @@ describe('useFileHandling', () => {
       const uploadedFile = formData.get('file') as File;
       expect(uploadedFile.name).toBe('photo.jpg');
       expect(uploadedFile.type).toBe('image/jpeg');
+    });
+  });
+
+  // Deloitte Custom Change: # Visible icons for file uploads- PR #402
+  describe('upload success', () => {
+    it('forwards file metadata to updateFileById', async () => {
+      const useFileHandling = await loadHook();
+      renderHook(() => useFileHandling());
+
+      const metadata = { fileIdentifier: 'file-abc' };
+
+      await act(async () => {
+        capturedUploadOpts?.onSuccess?.(
+          {
+            temp_file_id: 'temp-1',
+            file_id: 'file-1',
+            filepath: '/path/to/file',
+            type: 'text/plain',
+            filename: 'test.txt',
+            source: FileSources.local,
+            embedded: false,
+            metadata,
+          } as TFileUpload,
+          new FormData(),
+          undefined,
+        );
+        await new Promise((resolve) => setTimeout(resolve, 350));
+      });
+
+      expect(mockUpdateFileById).toHaveBeenCalledWith(
+        'temp-1',
+        expect.objectContaining({ metadata }),
+        false,
+      );
     });
   });
 });

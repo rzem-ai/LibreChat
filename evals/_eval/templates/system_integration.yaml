@@ -1,0 +1,146 @@
+# Template: System Integration or Utility
+#
+# Use this template for skills where a single tool call or external system
+# interaction is the primary mechanism for producing output:
+#   - Data import/export utilities, file format converters
+#   - API-driven lookups, single-step tool invocations
+#   - Utility agents that transform or route data via one tool
+#
+# Note: tool_correctness requires expected_tools to be populated on each case.
+#       If the skill has no defined expected tools, remove tool_correctness from
+#       the metrics list and use task_completion only.
+#
+# For multi-step tool chains (dependencies between tool calls), use
+# workflow_automation.yaml instead.
+#
+# Copy this file to: evals/skills/<Skill Name>/eval_cases.yaml
+# Then customise the cases below.
+#
+# Run with:
+#   uv run eval-run --config "evals/skills/<Skill Name>/eval_cases.yaml" --case case_1
+
+adapter: _eval.adapters.librechat_adapter.LibreChatAdapter
+invoke_method: invoke_text
+num_runs: 3
+
+cases:
+
+  # --- Single-turn case using invoke_text ---
+  case_1:
+    name: "TODO: Describe this test case"
+    category: "System Integration or Utility"
+    source_material: "documents/TODO_sample_input.md"
+    chatbot_role: "TODO: Describe the agent's role"
+    user_query: >-
+      TODO: Write the user prompt that triggers this skill.
+    expected_output: >-
+      TODO: Describe the expected output — the result of the tool invocation,
+      structured data, or confirmation of the operation.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "TODO: skill-name"
+      # Add additional expected tool calls here if the skill uses other tools.
+
+    metrics:
+      - faithfulness
+      - task_completion
+      - tool_correctness
+
+    thresholds:
+      faithfulness: 0.7
+      task_completion: 0.7
+      tool_correctness: 1.0
+
+    leading_questions:
+      - name: "Correct Tool Selected"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Did the agent select the correct tool or skill without user disambiguation?
+
+      - name: "Parameter Correctness"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Were the tool input parameters populated correctly from the user's
+          request context?
+
+      - name: "No Redundant Calls"
+        question: >-
+          Did the agent avoid redundant or retry tool calls that were not
+          required?
+
+      - name: "Data Fidelity"
+        question: >-
+          Does the output faithfully represent the data returned by the tool
+          without distortion or omission?
+
+  # --- Multi-turn case using invoke_sequential ---
+  case_2:
+    name: "TODO: Describe the multi-turn variant"
+    category: "System Integration or Utility"
+    invoke_method: invoke_sequential
+    source_material: "documents/TODO_sample_input.md"
+    chatbot_role: "TODO: Describe the agent's role"
+    expected_output: >-
+      TODO: Describe the expected output across multiple turns.
+    expected_tools:
+      - name: skill
+        input_parameters:
+          skillName: "TODO: skill-name"
+
+    turns:
+      - content: >-
+          TODO: Initial user request triggering the tool invocation.
+        attach_source: true
+        turn_assertions:
+          - type: expected_tools
+            name: "Correct tool invoked"
+            tools:
+              - name: skill
+                input_parameters:
+                  skillName: "TODO: skill-name"
+          - type: leading_question
+            name: "TODO: Verify initial tool output"
+            question: >-
+              TODO: Does the response confirm the tool was invoked successfully
+              and return the expected data?
+
+      - content: >-
+          TODO: Follow-up request (e.g., use the result for a secondary action).
+        turn_assertions:
+          - type: leading_question
+            name: "TODO: Verify secondary action"
+            question: >-
+              TODO: Does the agent correctly use the prior tool output to
+              complete the follow-up request?
+
+    metrics:
+      - faithfulness
+      - tool_correctness
+      - conversation_completeness
+
+    thresholds:
+      faithfulness: 0.7
+      tool_correctness: 1.0
+      conversation_completeness: 0.5
+
+    leading_questions:
+      - name: "Correct Tool Sequence"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Did the agent invoke tools in the correct sequence across turns?
+
+      - name: "Parameter Correctness"
+        type: gating
+        threshold: 0.7
+        question: >-
+          Were tool parameters correctly derived from conversation context
+          rather than fabricated?
+
+      - name: "No Irrelevant Tools"
+        question: >-
+          Did the agent avoid invoking tools that were irrelevant to the
+          request?

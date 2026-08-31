@@ -16,7 +16,12 @@ import type {
   TextContent,
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
-import type { SearchResultData, UIResource, TPlugin } from 'librechat-data-provider';
+import type {
+  SearchResultData,
+  UIResource,
+  TPlugin,
+  MCPToolsetCatalogEntry,
+} from 'librechat-data-provider';
 import type { TokenMethods, IUser } from '@librechat/data-schemas';
 import type { LCTool } from '@librechat/agents';
 import type { OboTokenResolver, OboTrustChecker } from '~/mcp/oauth/obo';
@@ -46,9 +51,19 @@ export interface MCPResource {
   mimeType?: string;
 }
 
+/**
+ * Deloitte Custom Change: package-local alias so `packages/api/src/mcp/*` modules can
+ * import this type alongside their other local types (`MCPResource`, `MCPPrompt`, etc.)
+ * instead of reaching into `librechat-data-provider` directly. Same shape as
+ * `MCPToolsetCatalogEntry`, not a duplicate.
+ */
+export type ToolsetCatalogEntry = MCPToolsetCatalogEntry;
+
 export interface LCFunctionTool {
   type: 'function';
   ['function']: LCTool;
+  /** Deloitte Custom Change: Capability-profile names this tool belongs to, from the MCP server's `_meta.toolsets`. */
+  toolsets?: string[];
 }
 
 export type LCAvailableTools = Record<string, LCFunctionTool>;

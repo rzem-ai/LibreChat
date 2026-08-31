@@ -1,4 +1,4 @@
-import type { TConversation, TEndpointOption } from 'librechat-data-provider';
+import type { TConversation, TEndpointOption, TEphemeralAgent } from 'librechat-data-provider';
 import type { IUser, AppConfig } from '@librechat/data-schemas';
 import type { Request } from 'express';
 
@@ -18,6 +18,12 @@ export type RequestBody = {
   endpointOption?: Partial<TEndpointOption>;
   /** Browser IANA timezone used to resolve local-time prompt variables (e.g. `{{current_datetime}}`). */
   timezone?: string;
+  /**
+   * Deloitte Custom Change: An "ephemeral agent" is a per-message bundle of tool/capability
+   * toggles (MCP servers, web search, code execution, etc.) attached directly to a
+   * conversation, as an alternative to selecting a saved Agent document.
+   */
+  ephemeralAgent?: TEphemeralAgent;
 };
 
 export type ServerRequest = Request<unknown, unknown, RequestBody> & {

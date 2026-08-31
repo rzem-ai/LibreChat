@@ -1,9 +1,8 @@
 import React, { memo, useMemo, useState, useCallback, useRef } from 'react';
-import { ArrowLeft, Eye, Code, Copy, Check, FileText, FileQuestion } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Spinner, TooltipAnchor, useToastContext } from '@librechat/client';
-import { apiBaseUrl } from 'librechat-data-provider';
-import { useGetSkillFileContentQuery } from '~/data-provider';
+import { ArrowLeft, Check, Code, Copy, Eye, FileQuestion, FileText } from 'lucide-react';
+import { useGetSkillFileContentQuery, useSkillFileBlobUrl } from '~/data-provider';
 import SkillMarkdownRenderer from './SkillMarkdownRenderer';
 import { parseFrontmatter } from '../utils';
 import { useLocalize } from '~/hooks';
@@ -30,11 +29,14 @@ function SkillFileViewer({ skillId, relativePath }: SkillFileViewerProps) {
   const isSkillMd = relativePath === 'SKILL.md';
   const isText = data != null && !data.isBinary && data.content != null;
 
-  const rawUrl = useMemo(
-    () =>
-      `${apiBaseUrl()}/api/skills/${skillId}/files/${encodeURIComponent(relativePath)}?raw=true`,
-    [skillId, relativePath],
-  );
+  // Deloitte: fetch bytes via authenticated axios so binary previews/downloads work with Bearer JWT.
+  const needsBlob =
+    data != null && (data.isBinary === true || (data.isBinary === false && data.content == null));
+  const {
+    url: blobUrl,
+    isLoading: isBlobLoading,
+    isError: isBlobError,
+  } = useSkillFileBlobUrl(skillId, relativePath, needsBlob);
 
   const parsed = useMemo(() => {
     if (!isMarkdown || !data?.content) {
@@ -151,24 +153,45 @@ function SkillFileViewer({ skillId, relativePath }: SkillFileViewerProps) {
         {data && !isLoading && !isError && (
           <>
             {data.isBinary && isImage && (
-              <img
-                src={rawUrl}
-                alt={data.filename}
-                className="max-h-[600px] max-w-full rounded-lg object-contain"
-              />
+              <>
+                {isBlobLoading && (
+                  <div className="flex items-center justify-center py-12">
+                    <Spinner className="size-6 text-text-secondary" />
+                  </div>
+                )}
+                {isBlobError && (
+                  <div className="flex flex-col items-center justify-center gap-2 py-12 text-text-secondary">
+                    <FileQuestion className="size-8" />
+                    <p className="text-sm">{localize('com_ui_skill_file_load_error')}</p>
+                  </div>
+                )}
+                {blobUrl && (
+                  <img
+                    src={blobUrl}
+                    alt={data.filename}
+                    className="max-h-[600px] max-w-full rounded-lg object-contain"
+                  />
+                )}
+              </>
             )}
 
             {data.isBinary && !isImage && (
               <div className="flex flex-col items-center justify-center gap-2 py-12 text-text-secondary">
                 <FileQuestion className="size-8" />
                 <p className="text-sm">{localize('com_ui_skill_file_binary')}</p>
-                <a
-                  href={rawUrl}
-                  download
-                  className="text-sm text-text-primary underline hover:no-underline"
-                >
-                  {localize('com_ui_skill_file_download')}
-                </a>
+                {isBlobLoading && <Spinner className="size-4 text-text-tertiary" />}
+                {isBlobError && (
+                  <p className="text-sm">{localize('com_ui_skill_file_load_error')}</p>
+                )}
+                {blobUrl && (
+                  <a
+                    href={blobUrl}
+                    download={data.filename}
+                    className="text-sm text-text-primary underline hover:no-underline"
+                  >
+                    {localize('com_ui_skill_file_download')}
+                  </a>
+                )}
               </div>
             )}
 
@@ -186,7 +209,11 @@ function SkillFileViewer({ skillId, relativePath }: SkillFileViewerProps) {
                   </div>
                 )}
                 {viewMode === 'rendered' ? (
-                  <SkillMarkdownRenderer content={parsed.body} />
+                  <SkillMarkdownRenderer
+                    content={parsed.body}
+                    skillId={skillId}
+                    currentFilePath={relativePath}
+                  />
                 ) : (
                   <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed text-text-primary">
                     {data.content}
@@ -207,13 +234,19 @@ function SkillFileViewer({ skillId, relativePath }: SkillFileViewerProps) {
               <div className="flex flex-col items-center justify-center gap-2 py-12 text-text-secondary">
                 <FileText className="size-8" />
                 <p className="text-sm">{localize('com_ui_skill_file_download')}</p>
-                <a
-                  href={rawUrl}
-                  download
-                  className="text-sm text-text-primary underline hover:no-underline"
-                >
-                  {localize('com_ui_skill_file_download')}
-                </a>
+                {isBlobLoading && <Spinner className="size-4 text-text-tertiary" />}
+                {isBlobError && (
+                  <p className="text-sm">{localize('com_ui_skill_file_load_error')}</p>
+                )}
+                {blobUrl && (
+                  <a
+                    href={blobUrl}
+                    download={data.filename}
+                    className="text-sm text-text-primary underline hover:no-underline"
+                  >
+                    {localize('com_ui_skill_file_download')}
+                  </a>
+                )}
               </div>
             )}
           </>
