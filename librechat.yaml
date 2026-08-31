@@ -125,8 +125,8 @@ memory:
   messageWindowSize: 5 # Number of recent messages to consider
   agent:
     enabled: true
-    provider: 'Azure Foundry AU'
-    model: 'gpt-56-luna'
+    provider: 'Azure Global'
+    model: 'gpt-56-terra'
 
 endpoints:
   # ========================================
@@ -153,12 +153,12 @@ endpoints:
     minRelevanceScore: 0.3
     # Restrict Agent Builder to the providers supported by the curated model catalog.
     allowedProviders:
-      - 'Azure Foundry AU'
+      - 'Azure Global'
       - 'VertexAI US'
       - anthropic
       - bedrock
-    model: 'gpt-56-luna'
-    endpoint: 'Azure Foundry AU'
+    model: 'gpt-56-terra'
+    endpoint: 'Azure Global'
 
   anthropic:
     streamRate: 25
@@ -191,11 +191,10 @@ endpoints:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
 
-    # --- Azure Foundry AU ---
-    # This AU gateway exposes OpenAI Global Standard deployments; "AU" identifies the gateway region.
-    - name: 'Azure Foundry AU'
+    # --- Azure Global ---
+    - name: 'Azure Global'
       apiKey: 'dummy'
-      baseURL: '${BASE_URL_AZURE_FOUNDRY_AU}'
+      baseURL: '${BASE_URL_AZURE_GLOBAL}'
       models:
         default:
           - 'gpt-56-luna'
@@ -203,7 +202,7 @@ endpoints:
           - 'gpt-56-sol'
         fetch: false
       titleConvo: true
-      titleModel: 'gpt-56-luna'
+      titleModel: 'gpt-56-terra'
       modelDisplayLabel: 'OpenAI'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
@@ -285,31 +284,31 @@ modelSpecs:
           - Preserve factual fidelity to the provided content and avoid adding unstated claims.
 
   list:
-    - name: 'azure-foundry-au-gpt-56-luna'
-      label: 'GPT 5.6 Luna'
+    - name: 'azure-global-gpt-56-terra'
+      label: 'GPT 5.6 Terra'
       group: 'OpenAI Global'
       groupIcon: 'openAI'
       iconURL: 'openAI'
       preset:
-        endpoint: 'Azure Foundry AU'
-        model: 'gpt-56-luna'
-        promptPrefix: *deloitteSystemPrompt
-
-    - name: 'azure-foundry-au-gpt-56-terra'
-      label: 'GPT 5.6 Terra'
-      group: 'OpenAI Global'
-      iconURL: 'openAI'
-      preset:
-        endpoint: 'Azure Foundry AU'
+        endpoint: 'Azure Global'
         model: 'gpt-56-terra'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: 'azure-foundry-au-gpt-56-sol'
+    - name: 'azure-global-gpt-56-luna'
+      label: 'GPT 5.6 Luna'
+      group: 'OpenAI Global'
+      iconURL: 'openAI'
+      preset:
+        endpoint: 'Azure Global'
+        model: 'gpt-56-luna'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'azure-global-gpt-56-sol'
       label: 'GPT 5.6 Sol'
       group: 'OpenAI Global'
       iconURL: 'openAI'
       preset:
-        endpoint: 'Azure Foundry AU'
+        endpoint: 'Azure Global'
         model: 'gpt-56-sol'
         promptPrefix: *deloitteSystemPrompt
 

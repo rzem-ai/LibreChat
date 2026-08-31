@@ -1,5 +1,5 @@
 /**
- * azure_proxy.js - njs handler for Azure AU, Azure US, Azure Global, and Azure Foundry AU custom endpoints.
+ * azure_proxy.js - njs handler for Azure AU and Azure Global custom endpoints.
  *
  * LibreChat's `custom` endpoint type sends requests in plain OpenAI format:
  *   POST /azure-au/chat/completions
@@ -176,11 +176,11 @@ async function azureProxy(r) {
   logInfo(r, '[' + reqId + '] Extracted model name: ' + model);
 
   // --- Resolve upstream base URL from nginx variable ---
-  var region = /^\/azure-au(?:\/|$)/.test(r.uri) ? 'azure-au' : 'azure-foundry-au';
+  var region = /^\/azure-au(?:\/|$)/.test(r.uri) ? 'azure-au' : 'azure-global';
   var upstreamBase =
     region === 'azure-au'
       ? r.variables['token_proxy_azure_au_url']
-      : r.variables['token_proxy_azure_foundry_au_url'];
+      : r.variables['token_proxy_azure_global_url'];
 
   logInfo(
     r,
@@ -212,7 +212,7 @@ async function azureProxy(r) {
   // Preserve the requested OpenAI-style endpoint path (e.g. /v1/embeddings, /v1/chat/completions)
   // but strip the provider prefix and optional /v1 prefix.
   var rawPath = r.uri;
-  var path = r.uri.replace(/^\/azure-(?:au|foundry-au)(?:\/|$)/, '/').replace(/^\/v1\//, '/');
+  var path = r.uri.replace(/^\/azure-(?:au|global)(?:\/|$)/, '/').replace(/^\/v1\//, '/');
   if (path === '/' || path === '') {
     path = '/chat/completions';
   }
