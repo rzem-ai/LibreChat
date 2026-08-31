@@ -56,7 +56,6 @@ Be aware of the following before you use this tool:
 3. This app does not replace a human review.   
  
 4. The **Engagement Partner must read** the NDA and the **Compliance Table** prior to signing.
-Xakia
 
 ### Step 2: Run Assessment
 Once the document is available, assess it against Deloitte's standard positions.
