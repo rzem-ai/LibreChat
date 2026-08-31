@@ -137,9 +137,15 @@ export interface RegisterFileAuthoringToolsParams {
  * per-request state — so a single frozen object is safe to share across
  * every agent init.
  */
+
+// Deloitte Custom Change: Add a hint to explain how to read Office files.
+const OFFICE_BINARY_HINT = `Never use \`read_file\` on Office formats (.docx, .xlsx, .pptx) — they are binary. If \`bash_tool\` is available, verify a sandbox Office file (e.g. under /mnt/data) with OfficeCLI: \`officecli validate /mnt/data/file.docx --json\` or \`officecli view /mnt/data/file.docx text --json\`.`;
+
 const SKILL_READ_FILE_DESCRIPTION = `${ReadFileToolDefinition.description}
 
-Also accepts authored skill file paths using "skills/{skillName}/...", including "skills/{skillName}/SKILL.md".`;
+Also accepts authored skill file paths using "skills/{skillName}/...", including "skills/{skillName}/SKILL.md".
+
+${OFFICE_BINARY_HINT}`;
 
 const READ_FILE_DEF: LCTool = Object.freeze({
   name: ReadFileToolDefinition.name,
@@ -150,7 +156,9 @@ const READ_FILE_DEF: LCTool = Object.freeze({
 
 const CODE_READ_FILE_DESCRIPTION = `Read a known file from the code-execution sandbox. Text files return line-numbered content (large files truncate around 256KB); images (png, jpeg, gif, webp) return as visual content you can see.
 
-Use for text, CSV, JSON, Markdown, logs, small source files, and images at paths returned by tool output, just written, or under /mnt/data/. Do not run ls/find just to rediscover known paths. Use bash_tool for other binary files, large files, transforms, metadata, or true filesystem discovery. /tmp is per-call scratch and unavailable later.`;
+Use for text, CSV, JSON, Markdown, logs, small source files, and images at paths returned by tool output, just written, or under /mnt/data/. Do not run ls/find just to rediscover known paths. Use bash_tool for other binary files, large files, transforms, metadata, or true filesystem discovery. /tmp is per-call scratch and unavailable later.
+
+${OFFICE_BINARY_HINT}`;
 
 const CODE_READ_FILE_PARAMETERS: LCTool['parameters'] = Object.freeze({
   type: 'object',

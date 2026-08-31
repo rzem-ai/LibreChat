@@ -132,10 +132,12 @@ export default function SkillDetail({ skill, onEdit, onDelete }: SkillDetailProp
 
         {/* Actions */}
         <div className="flex shrink-0 items-center gap-2">
+          {/* Deloitte Custom Change add visible active/disable label to skill toggle */}
           <SkillToggle
             enabled={skillEnabled}
             onChange={() => toggle(skill)}
             ariaLabel={localize('com_ui_skill_toggle_active')}
+            label={localize(skillEnabled ? 'com_ui_active' : 'com_ui_disabled')}
           />
           <ShareSkill skill={skill} />
           {permissions.canEdit && onEdit && (

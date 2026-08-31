@@ -85,6 +85,8 @@ const { loadTools } = require('~/app/clients/tools/util');
 const { findPluginAuthsByKeys } = require('~/models');
 const { getFlowStateManager, getMCPServersRegistry } = require('~/config');
 const { getLogStores } = require('~/cache');
+// Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+const { areCustomActionsEnabled } = require('~/server/middleware/rejectDisabledActions');
 
 const domainSeparatorRegex = new RegExp(actionDomainSeparator, 'g');
 
@@ -355,6 +357,17 @@ async function processRequiredActions(client, requiredActions) {
       };
     };
 
+    // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+    const actionIndex = currentAction.tool.indexOf(actionDelimiter);
+    const mcpIndex = currentAction.tool.indexOf(Constants.mcp_delimiter);
+    const isCustomAction = actionIndex >= 0 && (mcpIndex < 0 || mcpIndex < actionIndex);
+    if (isCustomAction && !areCustomActionsEnabled(appConfig)) {
+      logger.warn(
+        `[processRequiredActions] Custom Action disabled. User: ${client.req.user.id} | Tool: ${currentAction.tool}`,
+      );
+      throw new Error(`{"type":"${ErrorTypes.INVALID_ACTION}"}`);
+    }
+
     if (!tool) {
       // throw new Error(`Tool ${currentAction.tool} not found.`);
 
@@ -551,8 +564,8 @@ const createExpectedMCPToolsUnavailableError = (agentName, cause) => {
 const isBuiltInTool = (toolName) =>
   Boolean(
     manifestToolMap[toolName] ||
-    toolkits.some((t) => t.pluginKey === toolName) ||
-    nativeTools.has(toolName),
+      toolkits.some((t) => t.pluginKey === toolName) ||
+      nativeTools.has(toolName),
   );
 
 /**
@@ -601,7 +614,9 @@ async function loadToolDefinitionsWrapper({
 
   const checkCapability = (capability) => enabledCapabilities.has(capability);
   const areToolsEnabled = checkCapability(AgentCapabilities.tools);
-  const actionsEnabled = checkCapability(AgentCapabilities.actions);
+  // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+  const actionsEnabled =
+    checkCapability(AgentCapabilities.actions) && areCustomActionsEnabled(appConfig);
   const deferredToolsEnabled = checkCapability(AgentCapabilities.deferred_tools);
   const programmaticToolsEnabled = enabledCapabilities.has(AgentCapabilities.programmatic_tools);
   const codeExecutionEnabled =
@@ -1305,7 +1320,9 @@ async function loadAgentTools({
     return enabled;
   };
   const areToolsEnabled = checkCapability(AgentCapabilities.tools);
-  const actionsEnabled = checkCapability(AgentCapabilities.actions);
+  // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+  const actionsEnabled =
+    checkCapability(AgentCapabilities.actions) && areCustomActionsEnabled(appConfig);
   const hasMCPTools = agent.tools?.some((tool) => tool?.includes(Constants.mcp_delimiter));
   const mcpPermissionContext = createMCPPermissionContext(req);
   const canUseMCP = hasMCPTools ? await mcpPermissionContext.canUseServers(req.user) : true;
@@ -1693,12 +1710,14 @@ async function loadToolsForExecution({
   const isCodeExecutionToolRequested = isBashToolRequested || isLegacyExecuteCodeRequested;
 
   let enabledCapabilities;
-  if (actionsEnabled === undefined || isPTCRequested || isCodeExecutionToolRequested) {
+  if (actionsEnabled !== false || isPTCRequested || isCodeExecutionToolRequested) {
     enabledCapabilities = await resolveAgentCapabilities(req, appConfig, agent?.id);
   }
-  if (actionsEnabled === undefined) {
-    actionsEnabled = enabledCapabilities.has(AgentCapabilities.actions);
-  }
+  // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+  actionsEnabled =
+    actionsEnabled !== false &&
+    enabledCapabilities?.has(AgentCapabilities.actions) === true &&
+    areCustomActionsEnabled(appConfig);
   const codeExecutionEnabled =
     enabledCapabilities?.has(AgentCapabilities.execute_code) === true &&
     agent?.tools?.includes(Tools.execute_code) === true;

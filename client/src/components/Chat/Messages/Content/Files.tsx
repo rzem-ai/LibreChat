@@ -39,6 +39,11 @@ const Files = ({ message }: { message?: TMessage }) => {
             height={file.height ?? 1920}
             width={file.width ?? 1080}
             altText={file.filename ?? 'Uploaded Image'}
+            fileName={file.filename}
+            // Deloitte: enable authenticated proxy for private azure_blob.
+            source={file.source}
+            fileId={file.file_id}
+            userId={file.user}
           />
         ))}
       <FilePreviewDialog

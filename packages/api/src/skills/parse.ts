@@ -13,7 +13,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function extractFrontmatterBlock(raw: string): string | null {
+function splitFrontmatter(raw: string): { block: string; body: string } | null {
   const normalized = raw.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
   const firstContentIndex = normalized.search(/\S/);
   if (firstContentIndex === -1) {
@@ -24,12 +24,31 @@ function extractFrontmatterBlock(raw: string): string | null {
   if (!opening) {
     return null;
   }
-  const body = content.slice(opening[0].length);
-  const closingFence = /(?:^|\n)---[ \t]*(?:\n|$)/.exec(body);
+  const afterOpening = content.slice(opening[0].length);
+  const closingFence = /(?:^|\n)---[ \t]*(?:\n|$)/.exec(afterOpening);
   if (!closingFence) {
     return null;
   }
-  return body.slice(0, closingFence.index);
+  return {
+    block: afterOpening.slice(0, closingFence.index),
+    body: afterOpening.slice(closingFence.index + closingFence[0].length),
+  };
+}
+
+function extractFrontmatterBlock(raw: string): string | null {
+  return splitFrontmatter(raw)?.block ?? null;
+}
+
+/**
+ * The SKILL.md content after the closing frontmatter fence \u2014 i.e. everything
+ * the frontmatter YAML block itself doesn't cover. Falls back to the full raw
+ * text when there's no frontmatter block to strip. Used to rebuild a
+ * scanner-safe manifest (name/description + this body) that omits
+ * LibreChat-internal frontmatter fields the external registry doesn't know
+ * about (see `buildSkillMarkdown` in `scanner.ts`).
+ */
+export function extractSkillBody(raw: string): string {
+  return splitFrontmatter(raw)?.body ?? raw;
 }
 
 function getCaseInsensitive(frontmatter: Record<string, unknown>, key: string): unknown {

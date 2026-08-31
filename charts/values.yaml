@@ -127,3 +127,18 @@ pods:
           targetPort: 7700
         ingress:
           enabled: false
+
+# In-cluster Valkey (Redis-compatible). StatefulSet with AOF persistence
+# and a PVC in charts/templates/valkey.yaml. Valkey is a drop-in Redis
+# replacement -- LibreChat's ioredis clients work unchanged.
+valkey:
+  image:
+    repository: 'tt-librechat/valkey'
+    pullPolicy: Always
+    tag: 'main'
+  port: 6379
+  persistence:
+    size: 5Gi
+    storageClass: ''
+  passwordSecretName: 'librechat-valkey-password-prd'
+

@@ -7,9 +7,10 @@ import {
   mergeFileConfig,
   fileConfig as defaultFileConfig,
 } from 'librechat-data-provider';
+import type { TSkillWarning } from 'librechat-data-provider';
 import { useGetFileConfig, useImportSkillMutation } from '~/data-provider';
+import { cn, formatSkillScanError } from '~/utils';
 import { useLocalize } from '~/hooks';
-import { cn } from '~/utils';
 
 interface UploadSkillDialogProps {
   isOpen: boolean;
@@ -45,16 +46,23 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
 
   const importMutation = useImportSkillMutation({
     onSuccess: (skill) => {
-      showToast({ status: 'success', message: localize('com_ui_skill_created') });
+      const warnings: TSkillWarning[] | undefined = skill.warnings;
+      showToast({
+        status: warnings && warnings.length > 0 ? 'warning' : 'success',
+        message:
+          warnings && warnings.length > 0
+            ? warnings.map((w) => w.message).join('\n')
+            : localize('com_ui_skill_created'),
+      });
       setIsOpen(false);
       navigate(`/skills/${skill._id}`);
     },
     onError: (error: unknown) => {
-      const errData = (error as { response?: { data?: { error?: string; message?: string } } })
-        ?.response?.data;
-      const message =
-        errData?.message ?? errData?.error ?? localize('com_ui_create_skill_upload_error');
-      showToast({ status: 'error', message });
+      // Show the scanner's validation error (if present), otherwise fall back to the generic skill creation error.
+      showToast({
+        status: 'error',
+        message: formatSkillScanError(error, localize('com_ui_create_skill_upload_error')),
+      });
     },
   });
 

@@ -12,11 +12,11 @@ import {
   SKILL_NAME_MAX_LENGTH,
   SKILL_DESCRIPTION_MAX_LENGTH,
 } from 'librechat-data-provider';
-import type { TSkill } from 'librechat-data-provider';
+import type { TSkill, TSkillWarning } from 'librechat-data-provider';
 import type { FormEvent } from 'react';
 import { useCreateSkillMutation } from '~/data-provider';
+import { cn, formatSkillScanError } from '~/utils';
 import { useLocalize } from '~/hooks';
-import { cn } from '~/utils';
 
 interface CreateSkillDialogProps {
   isOpen: boolean;
@@ -66,7 +66,15 @@ export default function CreateSkillDialog({
 
   const createSkill = useCreateSkillMutation({
     onSuccess: (skill) => {
-      showToast({ status: 'success', message: localize('com_ui_skill_created') });
+      const warnings: TSkillWarning[] | undefined = skill.warnings;
+      // Deloitte Custom Change: Show the scanner's warnings (if present) alongside the success toast, instead of a plain success message.
+      showToast({
+        status: warnings && warnings.length > 0 ? 'warning' : 'success',
+        message:
+          warnings && warnings.length > 0
+            ? warnings.map((w) => w.message).join('\n')
+            : localize('com_ui_skill_created'),
+      });
       setIsOpen(false);
       reset();
       if (onCreated) {
@@ -76,10 +84,11 @@ export default function CreateSkillDialog({
       navigate(`/skills/${skill._id}`);
     },
     onError: (error: unknown) => {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        localize('com_ui_skill_create_error');
-      showToast({ status: 'error', message });
+      // Deloitte Custom Change: Show the scanner's validation error (if present), otherwise fall back to the generic skill creation error.
+      showToast({
+        status: 'error',
+        message: formatSkillScanError(error, localize('com_ui_skill_create_error')),
+      });
     },
   });
 

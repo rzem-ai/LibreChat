@@ -1765,6 +1765,7 @@ class AgentClient extends BaseClient {
       contentParts: this.contentParts,
       artifactPromises: this.artifactPromises,
       fileCitations: this.options.req?.config?.interfaceConfig?.fileCitations,
+      mcpUsageGuidelinesUrl: process.env.KX_USAGE_GUIDELINES_URL,
       logger,
     });
 

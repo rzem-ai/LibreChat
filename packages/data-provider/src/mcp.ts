@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { TokenExchangeMethodEnum } from './types/agents';
 import { extractEnvVariable, stripUnresolvedPlaceholderQueryParams } from './utils';
+import { TokenExchangeMethodEnum } from './types/agents';
 
 const validateOAuthClientCredentials = (
   oauth: {
@@ -151,7 +151,18 @@ const UserOAuthOptionsSchema = OAuthOptionsBaseSchema.omit({
 
 const OboOptionsSchema = z.object({
   /** Scopes to request for the downstream MCP server (e.g., "api://<client-id>/Mcp.Tools.ReadWrite") */
-  scopes: z.string().min(1),
+  // Deloitte Custom Change: resolve `${VAR}` placeholders the same way the transport `url`
+  // schemas do — without this, an unset/templated scope is sent to the IdP literally
+  // (e.g. "${MCP_GATEWAY_OBO_SCOPE}"), and the OBO token exchange fails. The `refine` below
+  // fails config validation fast when the placeholder is still unresolved after expansion,
+  // instead of deferring to a less actionable IdP error at OBO exchange time.
+  scopes: z
+    .string()
+    .min(1)
+    .transform((val) => extractEnvVariable(val))
+    .refine((val) => !envVarPattern.test(val), {
+      message: 'MCP OBO scopes contains an unresolved environment variable placeholder',
+    }),
 });
 
 const BaseOptionsSchema = z.object({
@@ -162,6 +173,8 @@ const BaseOptionsSchema = z.object({
     .optional(),
   /** Description of the MCP server */
   description: z.string().optional(),
+  /** Deloitte Custom Change: parent brand/grouping name shown as `${title} - ${parentGroup}` in the Tool Library. */
+  parentGroup: z.string().optional(),
   /**
    * Controls whether the MCP server is initialized during application startup.
    * - true (default): Server is initialized during app startup and included in app-level connections

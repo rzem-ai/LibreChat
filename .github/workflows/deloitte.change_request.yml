@@ -14,4 +14,4 @@ jobs:
     uses: Deloitte-Australia/ct-devops-resources/.github/workflows/change_request.yml@main
     secrets: inherit
     with:
-      buildWorkflowPath: '.github/workflows/build-and-promote.yml' # Please provide the correct path to the build workflow file
+      buildWorkflowPath: '.github/workflows/deloitte.build-and-promote.yml' # Please provide the correct path to the build workflow file

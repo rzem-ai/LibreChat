@@ -884,6 +884,21 @@ export type UIResource = {
   [key: string]: unknown;
 };
 
+export type MCPResultSource = {
+  toolName: string;
+  serverName: string;
+  content: string;
+  title?: string;
+  link?: string;
+  usageRestriction?: boolean;
+};
+
+/** Sources extracted from a single MCP tool result, plus an optional disclaimer the tool wants surfaced verbatim (e.g. KX usage restrictions). */
+export type MCPSourcesResult = {
+  sources: MCPResultSource[];
+  disclaimer?: string;
+};
+
 export type TAttachmentMetadata = {
   type?: Tools;
   messageId: string;
@@ -892,6 +907,7 @@ export type TAttachmentMetadata = {
   [Tools.ui_resources]?: UIResource[];
   [Tools.web_search]?: SearchResultData;
   [Tools.file_search]?: SearchResultData;
+  [Tools.mcp_results]?: MCPSourcesResult;
 };
 
 export type TAttachment =
