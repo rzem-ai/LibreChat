@@ -117,10 +117,10 @@ pods:
           # Wrap the OTLP exporter with an Azure AD bearer-token headers factory (managed identity via AZURE_CLIENT_ID)
           AZURE_MONITOR_AUTH_ENABLED: 'true'
           # Logging for debugging
-          OTEL_LOG_LEVEL: 'DEBUG'
-          OTEL_IOREDIS_TRACING_ENABLED: 'true'
-          DEBUG_LOGGING: 'true'
-          DEBUG_CONSOLE: 'true'
+          OTEL_LOG_LEVEL: 'INFO'
+          OTEL_IOREDIS_TRACING_ENABLED: 'false'
+          DEBUG_LOGGING: 'false'
+          DEBUG_CONSOLE: 'false'
           AGENT_DEBUG_LOGGING: 'true'
           # Skill Security Scanner
           SKILL_SCANNER_URL: 'https://ai-registry-dev.ctk.au.deloitte.com/v1/scan?verbose=false'
