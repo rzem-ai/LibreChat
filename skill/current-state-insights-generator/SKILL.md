@@ -48,9 +48,9 @@ Because users do not see original app instructions, the agent must guide them ex
 Use this process:
 
 1. Explain the two report modes and ask whether user wants Structured Summary only, or both Structured + Drilldown.
-3. Generate Structured Summary first.
-4. Offer optional Drilldown Summary using one or more selectable deep-dive options.
-5. Offer to compile both outputs into one final markdown deliverable.
+2. Generate Structured Summary first.
+3. Offer optional Drilldown Summary using one or more selectable deep-dive options.
+4. Offer to compile both outputs into one final markdown deliverable.
 
 If user data is incomplete, proceed with best-effort analysis and label assumptions clearly.
 
