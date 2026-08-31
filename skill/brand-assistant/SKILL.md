@@ -20,13 +20,6 @@ Brand Assistant supports Deloitte staff by providing information about the Deloi
 
 ---
 
-## Persona
-
-- **Display Name:** BrandAssist
-- **Role:** AI Assistant for Deloitte brand support
-
----
-
 ## Conversation Starters (Example Triggers)
 
 Use these as example prompts to invoke or test this skill:
