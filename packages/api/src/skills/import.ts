@@ -13,10 +13,12 @@ import type {
 import type { Request, Response } from 'express';
 import type { Types } from 'mongoose';
 import type { ImportLimits } from './limits';
+import { isSkillScanError, scanSkillMarkdown, scanSkillUpload } from './scanner';
 import { resolveRequestTenantId } from '~/middleware/tenant';
 import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
 import { isSafeSkillFilePath } from './path';
 import { parseSkillMarkdown } from './parse';
+import { readZipEntry } from './zip';
 
 const SKILL_MD = 'SKILL.md';
 
@@ -129,6 +131,13 @@ export interface ImportSkillDeps {
     accessRoleId: string;
     grantedBy: string;
   }) => Promise<unknown>;
+
+  /**
+   * Resolves an OBO-derived skill scanner token for the requesting user, or
+   * `undefined` if none can be obtained (e.g. non-OpenID users, or before
+   * OBO admin consent is granted).
+   */
+  resolveScannerToken: (user: ServerRequest['user']) => Promise<string | undefined>;
 }
 
 interface ServerRequest extends Request {
@@ -139,6 +148,8 @@ interface ServerRequest extends Request {
     name?: string;
     username?: string;
     tenantId?: string;
+    openidId?: string;
+    federatedTokens?: { access_token?: string };
   };
   file?: Express.Multer.File;
 }
@@ -161,13 +172,38 @@ export function createImportHandler(deps: ImportSkillDeps) {
 
     try {
       if (ext === '.md') {
+        const scannerToken = process.env.SKILL_SCANNER_URL
+          ? await deps.resolveScannerToken(req.user)
+          : undefined;
+        // Deloitte custom feature: scan skills
+        await scanSkillMarkdown({
+          content: file.buffer.toString('utf-8'),
+          fileName: `${file.originalname}.zip`,
+          token: scannerToken,
+        });
         return await handleMarkdown(req, res, deps, file);
       }
       if (ext === '.zip' || ext === '.skill') {
+        const scannerToken = process.env.SKILL_SCANNER_URL
+          ? await deps.resolveScannerToken(req.user)
+          : undefined;
+        // Deloitte custom feature: scan skills
+        await scanSkillUpload({
+          archive: file.buffer,
+          fileName: file.originalname,
+          token: scannerToken,
+        });
         return await handleZip(req, res, deps, file);
       }
       return res.status(400).json({ error: `Unsupported file type: ${ext}` });
     } catch (error) {
+      if (isSkillScanError(error)) {
+        return res.status(error.statusCode).json({
+          error: 'Skill scan failed',
+          message: error.message,
+          issues: error.issues,
+        });
+      }
       // Surface validation errors as 400 instead of generic 500
       if (isValidationError(error)) {
         return res.status(400).json({
@@ -609,44 +645,6 @@ async function handleZip(
       errors,
     },
   });
-}
-
-async function readZipEntry(
-  zipEntry: JSZip.JSZipObject,
-  effectiveLimit: number,
-): Promise<{ buffer: Buffer | null; bytesRead: number }> {
-  if (effectiveLimit <= 0) {
-    return { buffer: null, bytesRead: 0 };
-  }
-
-  const chunks: Buffer[] = [];
-  let bytesRead = 0;
-  let exceededLimit = false;
-  const entryStream = zipEntry.nodeStream('nodebuffer');
-  await new Promise<void>((resolve, reject) => {
-    entryStream.on('data', (chunk: Buffer) => {
-      if (exceededLimit) {
-        return;
-      }
-      bytesRead += chunk.length;
-      if (bytesRead > effectiveLimit) {
-        exceededLimit = true;
-        if ('destroy' in entryStream && typeof entryStream.destroy === 'function') {
-          entryStream.destroy();
-        }
-        resolve();
-        return;
-      }
-      chunks.push(chunk);
-    });
-    entryStream.on('end', resolve);
-    entryStream.on('error', reject);
-  });
-
-  return {
-    buffer: exceededLimit ? null : Buffer.concat(chunks),
-    bytesRead,
-  };
 }
 
 const MIME_MAP: Record<string, string> = {

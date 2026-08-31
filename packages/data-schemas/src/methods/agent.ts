@@ -645,7 +645,8 @@ export function createAgentMethods(
         /** Callers that authorized the tools pass resolved names; deriving from the key
          * alone cannot tell a config server's suffix from a real DB server name. */
         const supplied = (directUpdates as Record<string, unknown>).mcpServerNames as
-          string[] | undefined;
+          | string[]
+          | undefined;
         const mcpServerNames =
           supplied ??
           rebuildMCPServerNames(

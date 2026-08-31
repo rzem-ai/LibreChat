@@ -162,7 +162,7 @@ export function validateSkillDescription(description: unknown): ValidationIssue[
       code: 'TOO_SHORT',
       severity: 'warning',
       message:
-        'Short descriptions may cause Claude to miss triggering opportunities — aim for a concrete "when to use this skill" sentence.',
+        'Short descriptions may cause the assistant to miss triggering opportunities — aim for a concrete "when to use this skill" sentence.',
     });
   }
   return issues;
@@ -696,7 +696,9 @@ export type CreateSkillResult = {
 };
 
 type BodyAlwaysApplyResult =
-  { status: 'absent' } | { status: 'valid'; value: boolean } | { status: 'invalid' };
+  | { status: 'absent' }
+  | { status: 'valid'; value: boolean }
+  | { status: 'invalid' };
 
 /**
  * Extractor for the `always-apply` / `alwaysApply` flag sitting inside a SKILL.md body's
