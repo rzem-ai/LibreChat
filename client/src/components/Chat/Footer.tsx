@@ -25,13 +25,23 @@ function Footer({ className, startupConfig }: FooterProps) {
   const termsOfService = config?.interface?.termsOfService;
 
   const privacyPolicyRender = privacyPolicy?.externalUrl != null && (
-    <a className="text-text-secondary underline" href={privacyPolicy.externalUrl} rel="noreferrer">
+    <a
+      className="text-text-secondary underline"
+      href={privacyPolicy.externalUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
       {localize('com_ui_privacy_policy')}
     </a>
   );
 
   const termsOfServiceRender = termsOfService?.externalUrl != null && (
-    <a className="text-text-secondary underline" href={termsOfService.externalUrl} rel="noreferrer">
+    <a
+      className="text-text-secondary underline"
+      href={termsOfService.externalUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
       {localize('com_ui_terms_of_service')}
     </a>
   );
@@ -61,10 +71,11 @@ function Footer({ className, startupConfig }: FooterProps) {
           a: ({ node: _n, href, children, ...otherProps }) => {
             return (
               <a
+                {...otherProps}
                 className="text-text-secondary underline"
                 href={href}
-                rel="noreferrer"
-                {...otherProps}
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 {children}
               </a>
