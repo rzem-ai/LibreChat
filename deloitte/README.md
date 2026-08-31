@@ -188,7 +188,7 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 31. `BEDROCK_AWS_SECRET_ACCESS_KEY=unused`
 32. `BEDROCK_AWS_MODELS=au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0`
 33. `BEDROCK_REVERSE_PROXY=au-bedrock-exp.ctk.au.deloitte.com`
-34. `BEDROCK_GATEWAY_URL=http://127.0.0.1:8081/bedrock-au`
+34. `BEDROCK_GATEWAY_URL=http://127.0.0.1:8081`
 35. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
 36. `MCP_GATEWAY_URL=https://mcp-gw-dev.ctk.au.deloitte.com/mcp`
 37. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims`

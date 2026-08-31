@@ -383,6 +383,14 @@ describe('initializeBedrock', () => {
   });
 
   describe('Proxy Configuration', () => {
+    it('should use the pod-local gateway root so Bedrock requests retain their native paths', async () => {
+      process.env.BEDROCK_GATEWAY_URL = 'http://127.0.0.1:8081';
+      const params = createMockParams();
+      const result = (await initializeBedrock(params)) as BedrockLLMConfigResult;
+
+      expect(result.llmConfig.client).toHaveProperty('endpoint', 'http://127.0.0.1:8081');
+    });
+
     it('should create BedrockRuntimeClient with proxy when PROXY is set', async () => {
       process.env.PROXY = 'http://proxy:8080';
       const params = createMockParams();

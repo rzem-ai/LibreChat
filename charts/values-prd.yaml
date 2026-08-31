@@ -71,7 +71,7 @@ pods:
           BEDROCK_AWS_DEFAULT_REGION: 'ap-southeast-2'
           BEDROCK_AWS_SECRET_ACCESS_KEY: 'unused'
           BEDROCK_AWS_MODELS: 'au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0'
-          BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081/bedrock-au'
+          BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081'
           CUSTOM_FOOTER: "**Feedback?** Submit a bug report, feature request or success story [here](https://forms.cloud.microsoft/e/E9AyvN4Ayx)"
           DOMAIN_CLIENT: 'https://myassist.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://myassist.ctk.au.deloitte.com'
