@@ -54,7 +54,7 @@ pods:
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
           ANTHROPIC_MODELS: 'claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-sonnet-5,claude-opus-4-8'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
-          APP_TITLE: 'MyAssist 2.0 (UAT)'
+          APP_TITLE: 'MyAssist (UAT)'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
           BASE_URL_AZURE_GLOBAL: 'http://127.0.0.1:8081/azure-global'
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'

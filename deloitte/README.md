@@ -1,6 +1,6 @@
-# LibreChat – Local Setup (MyAssist 2.0)
+# LibreChat – Local Setup (MyAssist)
 
-This repository contains the local development setup for **LibreChat**, configured to work with Deloitte’s **ClearTrack LLM Gateway** and internal model endpoints. This setup is intended to support development and experimentation for **MyAssist 2.0**.
+This repository contains the local development setup for **LibreChat**, configured to work with Deloitte’s **ClearTrack LLM Gateway** and internal model endpoints. This setup is intended to support development and experimentation for **MyAssist**.
 
 ---
 
@@ -157,7 +157,7 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 
 1. `ENDPOINTS=anthropic,custom,agents`
 2. `ANTHROPIC_REVERSE_PROXY=http://gateway-proxy:8080/anthropic`
-3. `APP_TITLE="MyAssist 2.0"`
+3. `APP_TITLE="MyAssist"`
 4. `CUSTOM_FOOTER="⚠️ WARNING: This is a development environment. Do not upload client or confidential data."`
 5. `DOMAIN_CLIENT=https://<yourhostname>.local` (for example `https://AU-ABC123123.local`)
 6. `DOMAIN_SERVER=https://<yourhostname>.local` (for example `https://AU-ABC123123.local`)
