@@ -47,7 +47,7 @@ function Header({ conversation = null }: { conversation?: TConversation | null }
     permission: Permissions.CREATE,
   });
 
-  const showConversationTitle = customFlags?.showConversationTitle === true;
+  const showConversationTitle = customFlags?.showConversationTitleInHeader === true;
   const isExportEnabled = customFlags?.exportChat === true;
   const isSharedButtonEnabled =
     (startupConfig?.sharedLinksEnabled ?? false) && hasAccessToSharedLinks;

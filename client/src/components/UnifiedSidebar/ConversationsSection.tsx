@@ -48,7 +48,7 @@ const ConversationsSection = memo(() => {
          * ProjectsSection; exclude them here to avoid listing them twice. Skip
          * the filter while searching, since ProjectsSection is hidden then and
          * this list becomes the only place search results can surface. */
-        projectId: search.query ? undefined : 'unassigned',
+        projectId: search.debouncedQuery ? undefined : 'unassigned',
       },
       {
         enabled: isAuthenticated,

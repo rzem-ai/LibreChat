@@ -4,11 +4,13 @@ import { useUpdateConversationMutation } from '~/data-provider';
 import { NotificationSeverity } from '~/common';
 import { useLocalize } from '~/hooks';
 import { logger } from '~/utils';
+import store from '~/store';
 
 export default function useConversationRename(conversationId: string | null, title: string | null) {
   const localize = useLocalize();
   const { showToast } = useToastContext();
   const updateConvoMutation = useUpdateConversationMutation(conversationId ?? '');
+  const { setConversation } = store.useSetConversationAtom(0);
 
   const [titleInput, setTitleInput] = useState(title || '');
   const [renaming, setRenaming] = useState(false);
@@ -28,13 +30,13 @@ export default function useConversationRename(conversationId: string | null, tit
       return;
     }
     if (title !== previousTitle.current) {
-      setTitleInput(title as string);
+      setTitleInput(title ?? '');
       previousTitle.current = title;
     }
   }, [conversationId, title]);
 
   const handleRename = () => {
-    setTitleInput(title as string);
+    setTitleInput(title ?? '');
     setRenaming(true);
   };
 
@@ -45,14 +47,25 @@ export default function useConversationRename(conversationId: string | null, tit
     }
 
     try {
-      await updateConvoMutation.mutateAsync({
+      const updatedConversation = await updateConvoMutation.mutateAsync({
         conversationId,
         title: newTitle.trim() || localize('com_ui_untitled'),
       });
+      if (previousConversationId.current !== conversationId) {
+        return;
+      }
+      setConversation((currentConversation) =>
+        currentConversation?.conversationId === conversationId
+          ? updatedConversation
+          : currentConversation,
+      );
       setRenaming(false);
     } catch (error) {
       logger.error('Error renaming conversation', error);
-      setTitleInput(title as string);
+      if (previousConversationId.current !== conversationId) {
+        return;
+      }
+      setTitleInput(title ?? '');
       showToast({
         message: localize('com_ui_rename_failed'),
         severity: NotificationSeverity.ERROR,
@@ -63,7 +76,7 @@ export default function useConversationRename(conversationId: string | null, tit
   };
 
   const handleCancelRename = () => {
-    setTitleInput(title as string);
+    setTitleInput(title ?? '');
     setRenaming(false);
   };
 

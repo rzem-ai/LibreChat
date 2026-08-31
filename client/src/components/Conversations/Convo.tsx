@@ -45,7 +45,7 @@ function Conversation({
     handleRename: startRenaming,
     handleRenameSubmit,
     handleCancelRename,
-  } = useConversationRename(conversationId, title as string);
+  } = useConversationRename(conversationId, title);
   const [isPopoverActive, setIsPopoverActive] = useState(false);
   // Lazy-load ConvoOptions to avoid running heavy hooks for all conversations
   const [hasInteracted, setHasInteracted] = useState(false);
