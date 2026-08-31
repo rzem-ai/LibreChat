@@ -17,6 +17,7 @@ function Artifacts() {
   const localize = useLocalize();
   const context = useBadgeRowContext();
   const { toggleState, debouncedChange, isPinned } = context?.artifacts ?? {};
+  /** Deloitte Custom Change: limits Artifacts to shadcn/ui mode when enabled. */
   const shadcnOnly = useArtifactsShadcnOnly();
 
   const { artifactsEnabled } = useAgentCapabilities(

@@ -5,6 +5,7 @@ import { useGetStartupConfig } from '~/data-provider';
 
 function useExternalVoiceProviderEnabled(): boolean {
   const { data: startupConfig } = useGetStartupConfig();
+  /** Deloitte Custom Change: hides the external voice provider when disabled. */
   return startupConfig?.interface?.customDeloitteFeatureFlags?.externalVoiceProvider !== false;
 }
 

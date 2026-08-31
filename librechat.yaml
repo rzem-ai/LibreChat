@@ -101,6 +101,7 @@ interface:
 
   temporaryChat: false # Set to false to disable temporary chats
 
+  # Deloitte Custom Change: Deloitte-specific UI feature flags.
   customDeloitteFeatureFlags:
     exportChat: false # Set to false to disable exporting conversations
     regenerate: true # Set to false to disable regenerating assistant responses

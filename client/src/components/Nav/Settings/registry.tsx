@@ -489,6 +489,7 @@ export const registry: SettingEntry[] = [
     labelKey: 'com_ui_settings_label_shared_links',
     Component: SharedLinks,
   },
+  // Deloitte Custom Change: `dataApiKeys` controls the Data controls API keys settings.
   // Data controls · API keys
   {
     id: 'providerApiKeys',
@@ -525,6 +526,7 @@ export const registry: SettingEntry[] = [
     show: (ctx) => ctx.langfuseConnectionAccess,
     Component: LangfuseConnection,
   },
+  // Deloitte Custom Change: `dataDangerZone` controls the Data controls Danger zone settings.
   // Data controls · Danger zone
   {
     id: 'deleteCache',
@@ -543,6 +545,7 @@ export const registry: SettingEntry[] = [
     Component: ClearChats,
   },
 
+  // Deloitte Custom Change: `accountsTab` controls all Account settings.
   // Account · Profile
   {
     id: 'avatar',

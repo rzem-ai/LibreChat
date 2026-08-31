@@ -43,6 +43,7 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     skillsEnabled,
   } = useAgentCapabilities(context?.agentsConfig?.capabilities ?? defaultAgentCapabilities);
 
+  /** Deloitte Custom Change: limits Artifacts to shadcn/ui mode when enabled. */
   const shadcnOnly = useArtifactsShadcnOnly();
 
   const canUseWebSearch = useHasAccess({
