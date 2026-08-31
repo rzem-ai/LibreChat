@@ -63,7 +63,7 @@ pods:
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
           ANTHROPIC_MODELS: 'claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-sonnet-5,claude-opus-4-8'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
-          APP_TITLE: 'MyAssist 2.0'
+          APP_TITLE: 'MyAssist'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
           BASE_URL_AZURE_GLOBAL: 'http://127.0.0.1:8081/azure-global'
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
@@ -124,10 +124,10 @@ pods:
           # Wrap the OTLP exporter with an Azure AD bearer-token headers factory (managed identity via AZURE_CLIENT_ID)
           AZURE_MONITOR_AUTH_ENABLED: 'true'
           # Logging for debugging
-          OTEL_LOG_LEVEL: 'DEBUG'
-          OTEL_IOREDIS_TRACING_ENABLED: 'true'
-          DEBUG_LOGGING: 'true'
-          DEBUG_CONSOLE: 'true'
+          OTEL_LOG_LEVEL: 'INFO'
+          OTEL_IOREDIS_TRACING_ENABLED: 'false'
+          DEBUG_LOGGING: 'false'
+          DEBUG_CONSOLE: 'false'
           AGENT_DEBUG_LOGGING: 'true'
           # Skill Security Scanner
           SKILL_SCANNER_URL: 'https://ai-registry.ctk.au.deloitte.com/v1/scan?verbose=false'

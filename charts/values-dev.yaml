@@ -28,7 +28,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'develop@sha256:d4cded9e786b13f2123d219bd67b63b7c0a1fe69dacd27a9787b4cf435cbef0d'
+          tag: 'develop@sha256:46064395fb896aac963fb247b56c30071247d9b42167a2163fdc55b32280fea2'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -48,13 +48,13 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:68a2aef15ca4eab7131280ef57e62cbbe5dd64738d37bf36347a867e1db6e4b1'
+          tag: 'develop@sha256:52150a540a6c5b7fe03547239e2c2dbe7006e2bbce546b2da1923fda50138049'
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
           ANTHROPIC_MODELS: 'claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-sonnet-5,claude-opus-4-8'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
-          APP_TITLE: 'MyAssist 2.0 (DEV)'
+          APP_TITLE: 'MyAssist (DEV)'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
           BASE_URL_AZURE_GLOBAL: 'http://127.0.0.1:8081/azure-global'
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
@@ -117,10 +117,10 @@ pods:
           # Wrap the OTLP exporter with an Azure AD bearer-token headers factory (managed identity via AZURE_CLIENT_ID)
           AZURE_MONITOR_AUTH_ENABLED: 'true'
           # Logging for debugging
-          OTEL_LOG_LEVEL: 'DEBUG'
-          OTEL_IOREDIS_TRACING_ENABLED: 'true'
-          DEBUG_LOGGING: 'true'
-          DEBUG_CONSOLE: 'true'
+          OTEL_LOG_LEVEL: 'INFO'
+          OTEL_IOREDIS_TRACING_ENABLED: 'false'
+          DEBUG_LOGGING: 'false'
+          DEBUG_CONSOLE: 'false'
           AGENT_DEBUG_LOGGING: 'true'
           # Skill Security Scanner
           SKILL_SCANNER_URL: 'https://ai-registry-dev.ctk.au.deloitte.com/v1/scan?verbose=false'
@@ -156,7 +156,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:d26e657c4bd96cb69d120caaa2b8a74d11b7744df323ad486bdac4be2f918a7f'
+          tag: 'develop@sha256:ac196aac1d0a518d156601456fc493a3eb278eae7c00315d32d34f7ad04b8978'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -174,7 +174,6 @@ pods:
           EMBEDDINGS_PROVIDER: 'openai'
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
- 
         secrets:
           # AZURE_OPENAI_API_KEY: librechat-azure-api-key
           # RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
@@ -186,22 +185,22 @@ pods:
           targetPort: 8000
         ingress:
           enabled: false
-      # meilisearch: # TODO: Enable meilisearch when we can have multi-container PVC
-      #   image:
-      #     pullPolicy: Always
-      #     tag: 'develop@sha256:5cb7817994348e6ce9f2e0653199a75e501083ae32c80259dabbc656012bdb0f'
-      #   env:
-      #     MEILI_ENV: 'development'
-      #   secrets:
-      #     MEILI_MASTER_KEY: librechat-meili-master-key-dev
-      #   persistence:
-      #     enabled: true
-      #     size: 10Gi
-      #     accessModes:
-      #       - ReadWriteOnce
-      #     name: 'meilisearch-data'
-      #     mountPath: /meili_data
-      #     storageClass: 'managed-csi-standard-private'
+          # meilisearch: # TODO: Enable meilisearch when we can have multi-container PVC
+          #   image:
+          #     pullPolicy: Always
+          #     tag: 'develop@sha256:5cb7817994348e6ce9f2e0653199a75e501083ae32c80259dabbc656012bdb0f'
+          #   env:
+          #     MEILI_ENV: 'development'
+          #   secrets:
+          #     MEILI_MASTER_KEY: librechat-meili-master-key-dev
+          #   persistence:
+          #     enabled: true
+          #     size: 10Gi
+          #     accessModes:
+          #       - ReadWriteOnce
+          #     name: 'meilisearch-data'
+          #     mountPath: /meili_data
+          #     storageClass: 'managed-csi-standard-private'
   admin:
     replicas: 1
     containers:
@@ -213,7 +212,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:5bc1ffcb601896010e4b3d9bf99f8e2373e7d507f8e6a1f3b863dadc4d30413f'
+          tag: 'develop@sha256:27ddad2cf5e2fd4204794492c204732fe5c9f44f4815c49f68e858dee62b2908'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
@@ -236,7 +235,7 @@ pods:
 
 valkey:
   image:
-    tag: 'develop@sha256:18c462d0a8b774bfdf9ec010a345ff33b98671b4a00e2c74bf625ebbfe6442e8'
+    tag: 'develop@sha256:a1b953e16e8e805f419826b563aeb967a7deb2d6e96bb1839dfefbea2fc6d507'
   persistence:
     storageClass: 'managed-csi-standard-private'
   passwordSecretName: 'librechat-valkey-password-dev'

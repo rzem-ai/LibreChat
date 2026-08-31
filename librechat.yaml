@@ -128,6 +128,8 @@ interface:
     simplifyFork: true # Set to true to skip the fork options popover and always fork with default settings
     editChat: true # Set to false to disable editing submitted messages
     showToolsDropdown: false # Set to false to disable the chat tools menu
+    alwaysEnableFileSearch: true # Set to true to force-enable file_search where the user is authorized
+    hideFileSearchToggle: true # Set to true to hide the file search pill without changing tool state
     createActions: false # Set to false to hide action creation in the marketplace
     landingIcon: true # Set to false to hide the model or agent icon beside the landing greeting
     conversationIcon: true # Set to false to hide model or endpoint icons in conversation history
@@ -136,6 +138,7 @@ interface:
     dataDangerZone: false # Set to false to hide the Danger zone section under Data controls settings
     externalVoiceProvider: false # Set to false to hide the external voice provider option in Speech settings (browser voice only)
     artifactsShadcnOnly: true # Set to true to force the shadcn/ui artifacts mode and hide other artifact mode options
+    showConversationTitleInHeader: false # Set to true to show the conversation title in the chat header
 
 fileConfig:
   endpoints:
@@ -480,6 +483,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
 mcpSettings:
   allowedDomains:
     - mcp-gw-dev.ctk.au.deloitte.com
+    - mcp-gateway.ctk.au.deloitte.com
 
 speech: # https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/speech
   speechTab:

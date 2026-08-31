@@ -103,6 +103,10 @@ interface:
   # Enable/disable direct provider uploads (image/document attachments sent directly to model providers).
   # When false, only tool-based uploads (file search, code, OCR/context) are shown.
   providerUpload: true
+  # Deloitte custom feature flags:
+  # customDeloitteFeatureFlags:
+  #   alwaysEnableFileSearch: true # Force-enable file_search for authorized users/capable endpoints.
+  #   hideFileSearchToggle: true # Hide the file search pill without changing the underlying tool state.
   # Privacy policy settings
   privacyPolicy:
     externalUrl: 'https://librechat.ai/privacy-policy'

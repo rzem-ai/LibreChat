@@ -10,8 +10,14 @@ import MCPServerList from './MCPServerList';
 
 export default function MCPBuilderPanel() {
   const localize = useLocalize();
-  const { availableMCPServers, isLoading, getServerStatusIconProps, getConfigDialogProps } =
-    useMCPServerManager();
+  const {
+    availableMCPServers,
+    isLoading,
+    getServerStatusIconProps,
+    getConfigDialogProps,
+    connectOrConfigureServer,
+    revokeOAuthForServer,
+  } = useMCPServerManager();
 
   const hasCreateAccess = useHasAccess({
     permissionType: PermissionTypes.MCP_SERVERS,
@@ -85,6 +91,8 @@ export default function MCPBuilderPanel() {
           <MCPServerList
             servers={filteredServers}
             getServerStatusIconProps={getServerStatusIconProps}
+            connectOrConfigureServer={connectOrConfigureServer}
+            revokeOAuthForServer={revokeOAuthForServer}
             isFiltered={searchQuery.trim().length > 0}
           />
         )}

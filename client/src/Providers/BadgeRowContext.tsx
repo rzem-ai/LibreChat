@@ -1,14 +1,20 @@
+// Deloitte Custom Change: added new imports
 import React, { createContext, useContext, useEffect, useMemo, useRef } from 'react';
 import { useSetRecoilState } from 'recoil';
 import {
   Tools,
   Constants,
   ArtifactModes,
+  Permissions,
   LocalStorageKeys,
   AgentCapabilities,
+  PermissionTypes,
+  defaultAgentCapabilities,
 } from 'librechat-data-provider';
 import type { TAgentsEndpoint, TEphemeralAgent } from 'librechat-data-provider';
 import {
+  useHasAccess,
+  useAgentCapabilities,
   useMCPServerManager,
   useSearchApiKeyForm,
   useGetAgentsConfig,
@@ -28,6 +34,7 @@ interface BadgeRowContextType {
   webSearch: ReturnType<typeof useToolToggle>;
   artifacts: ReturnType<typeof useToolToggle>;
   fileSearch: ReturnType<typeof useToolToggle>;
+  canUseFileSearchPill: boolean;
   codeInterpreter: ReturnType<typeof useToolToggle>;
   searchApiKeyForm: ReturnType<typeof useSearchApiKeyForm>;
   mcpServerManager: ReturnType<typeof useMCPServerManager>;
@@ -250,6 +257,43 @@ export default function BadgeRowProvider({
     isAuthenticated: true,
   });
 
+  // Deloitte Custom Change: enable fileSearch without showing button
+  const canUseFileSearch = useHasAccess({
+    permissionType: PermissionTypes.FILE_SEARCH,
+    permission: Permissions.USE,
+  });
+
+  const { fileSearchEnabled } = useAgentCapabilities(
+    agentsConfig?.capabilities ?? defaultAgentCapabilities,
+  );
+
+  const canUseFileSearchPill = canUseFileSearch && fileSearchEnabled;
+  const { toggleState: fileSearchToggleState, setEphemeralAgent: setFileSearchEphemeralAgent } =
+    fileSearch;
+
+  useEffect(() => {
+    if (startupConfig?.interface?.customDeloitteFeatureFlags?.alwaysEnableFileSearch !== true) {
+      return;
+    }
+    if (!canUseFileSearchPill || fileSearchToggleState === true) {
+      return;
+    }
+    setFileSearchEphemeralAgent((prev) => {
+      if (prev?.[Tools.file_search] === true) {
+        return prev;
+      }
+      return {
+        ...(prev ?? {}),
+        [Tools.file_search]: true,
+      };
+    });
+  }, [
+    canUseFileSearchPill,
+    fileSearchToggleState,
+    setFileSearchEphemeralAgent,
+    startupConfig?.interface?.customDeloitteFeatureFlags?.alwaysEnableFileSearch,
+  ]);
+
   /** Artifacts hook - using a custom key since it's not a Tool but a capability */
   const artifacts = useToolToggle({
     conversationId,
@@ -301,6 +345,7 @@ export default function BadgeRowProvider({
     webSearch,
     artifacts,
     fileSearch,
+    canUseFileSearchPill, // Deloitte Custom Change
     agentsConfig,
     conversationId,
     storageContextKey,

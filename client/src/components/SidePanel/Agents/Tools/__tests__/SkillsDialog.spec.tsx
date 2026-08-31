@@ -8,6 +8,8 @@ const mockFetchNextPage = jest.fn();
 const mockRefetch = jest.fn();
 const mockUseListSkillsQuery = jest.fn();
 const mockUseSkillsInfiniteQuery = jest.fn();
+const mockToggleFavorite = jest.fn();
+let mockFavoriteKeys = new Set<string>();
 
 let mockInfiniteResult: {
   data?: { pages: Array<{ skills: TSkillSummary[] }> };
@@ -41,10 +43,7 @@ jest.mock('~/hooks', () => ({
   },
   useHasAccess: () => true,
   useAuthContext: () => ({ user: { id: 'user-1' } }),
-  useToolFavorites: () => ({
-    favoriteKeys: new Set<string>(),
-    toggle: jest.fn(),
-  }),
+  useToolFavorites: () => ({ favoriteKeys: mockFavoriteKeys, toggle: mockToggleFavorite }),
 }));
 
 jest.mock('~/data-provider', () => ({
@@ -62,7 +61,25 @@ jest.mock('~/components/Skills/dialogs', () => ({
 
 jest.mock('../CategoryFilter', () => ({
   __esModule: true,
-  default: () => null,
+  default: ({
+    options,
+    onChange,
+  }: {
+    options: Array<{ value: string; label: string }>;
+    onChange: (value: string) => void;
+  }) => (
+    <div>
+      {/* eslint-disable-next-line i18next/no-literal-string */}
+      <button type="button" onClick={() => onChange('all')}>
+        all categories
+      </button>
+      {options.map((option) => (
+        <button key={option.value} type="button" onClick={() => onChange(option.value)}>
+          {option.label}
+        </button>
+      ))}
+    </div>
+  ),
 }));
 
 jest.mock('../ItemDialog/ItemDialog', () => ({
@@ -94,7 +111,21 @@ jest.mock('@librechat/client', () => ({
     </button>
   ),
   Input: (props: React.ComponentProps<'input'>) => <input {...props} />,
-  Radio: () => null,
+  Radio: ({
+    options,
+    onChange,
+  }: {
+    options: Array<{ value: string; label: string }>;
+    onChange?: (value: string) => void;
+  }) => (
+    <div>
+      {options.map((option) => (
+        <button key={option.value} type="button" onClick={() => onChange?.(option.value)}>
+          {option.label}
+        </button>
+      ))}
+    </div>
+  ),
   OGDialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
     open ? <div>{children}</div> : null,
   OGDialogContent: ({ children }: { children: React.ReactNode }) => (
@@ -104,7 +135,11 @@ jest.mock('@librechat/client', () => ({
   OGDialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
 }));
 
-function makeSkill(id: string, name: string): TSkillSummary {
+function makeSkill(
+  id: string,
+  name: string,
+  overrides: Partial<Pick<TSkillSummary, 'isPublic' | 'author' | 'authorName' | 'category'>> = {},
+): TSkillSummary {
   return {
     _id: id,
     name,
@@ -116,6 +151,7 @@ function makeSkill(id: string, name: string): TSkillSummary {
     fileCount: 0,
     createdAt: '2026-07-24T00:00:00.000Z',
     updatedAt: '2026-07-24T00:00:00.000Z',
+    ...overrides,
   };
 }
 
@@ -138,6 +174,8 @@ beforeEach(() => {
   });
   mockUseSkillsInfiniteQuery.mockReset();
   mockUseSkillsInfiniteQuery.mockImplementation(() => mockInfiniteResult);
+  mockToggleFavorite.mockReset();
+  mockFavoriteKeys = new Set<string>();
 });
 
 describe('SkillsDialog pagination', () => {
@@ -245,5 +283,127 @@ describe('SkillsDialog pagination', () => {
 
     expect(mockFetchNextPage).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('SkillsDialog view grouping', () => {
+  test('Public/Shared/Mine tabs narrow the list per the locked precedence rule (public wins)', () => {
+    mockInfiniteResult = {
+      ...mockInfiniteResult,
+      data: {
+        pages: [
+          {
+            skills: [
+              makeSkill('public-and-shared', 'public-and-shared-skill', {
+                isPublic: true,
+                author: 'other-user',
+                authorName: 'Other',
+              }),
+              makeSkill('shared-only', 'shared-only-skill', {
+                author: 'other-user',
+                authorName: 'Other',
+              }),
+              makeSkill('mine', 'my-skill', { author: 'user-1' }),
+            ],
+          },
+        ],
+      },
+      hasNextPage: false,
+    };
+
+    render(<SkillsDialog open onOpenChange={jest.fn()} agentId="agent-1" />);
+
+    // All (default view): everything shows.
+    expect(screen.getByText('public-and-shared-skill')).toBeInTheDocument();
+    expect(screen.getByText('shared-only-skill')).toBeInTheDocument();
+    expect(screen.getByText('my-skill')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_skills_view_public' }));
+    expect(screen.getByText('public-and-shared-skill')).toBeInTheDocument();
+    expect(screen.queryByText('shared-only-skill')).toBeNull();
+    expect(screen.queryByText('my-skill')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_skills_view_shared' }));
+    expect(screen.queryByText('public-and-shared-skill')).toBeNull();
+    expect(screen.getByText('shared-only-skill')).toBeInTheDocument();
+    expect(screen.queryByText('my-skill')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_skills_view_mine' }));
+    expect(screen.queryByText('public-and-shared-skill')).toBeNull();
+    expect(screen.queryByText('shared-only-skill')).toBeNull();
+    expect(screen.getByText('my-skill')).toBeInTheDocument();
+  });
+
+  test('Favorites tab narrows the list to favorited skills, alongside Public/Shared/Mine', () => {
+    mockInfiniteResult = {
+      ...mockInfiniteResult,
+      data: {
+        pages: [
+          {
+            skills: [
+              makeSkill('favorited', 'favorited-skill', { author: 'user-1' }),
+              makeSkill('not-favorited', 'not-favorited-skill', { author: 'user-1' }),
+            ],
+          },
+        ],
+      },
+      hasNextPage: false,
+    };
+    mockFavoriteKeys = new Set(['skill:favorited']);
+
+    render(<SkillsDialog open onOpenChange={jest.fn()} agentId="agent-1" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_tools_view_favorites' }));
+    expect(screen.getByText('favorited-skill')).toBeInTheDocument();
+    expect(screen.queryByText('not-favorited-skill')).toBeNull();
+  });
+
+  test('category filter narrows the list and still combines with a group view', () => {
+    mockInfiniteResult = {
+      ...mockInfiniteResult,
+      data: {
+        pages: [
+          {
+            skills: [
+              makeSkill('writing-mine', 'writing-mine-skill', {
+                category: 'writing',
+                author: 'user-1',
+              }),
+              makeSkill('coding-mine', 'coding-mine-skill', {
+                category: 'coding',
+                author: 'user-1',
+              }),
+              makeSkill('writing-shared', 'writing-shared-skill', {
+                category: 'writing',
+                author: 'other-user',
+                authorName: 'Other',
+              }),
+            ],
+          },
+        ],
+      },
+      hasNextPage: false,
+    };
+
+    render(<SkillsDialog open onOpenChange={jest.fn()} agentId="agent-1" />);
+
+    // Category alone, no view narrowing: only "writing" skills remain, across owners.
+    fireEvent.click(screen.getByRole('button', { name: 'writing' }));
+    expect(screen.getByText('writing-mine-skill')).toBeInTheDocument();
+    expect(screen.getByText('writing-shared-skill')).toBeInTheDocument();
+    expect(screen.queryByText('coding-mine-skill')).toBeNull();
+
+    /* Switching the view tab resets the category filter (pre-existing
+       behavior, unchanged by grouping) — select the view first, then the
+       category, to see the two axes actually compose. */
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_skills_view_mine' }));
+    expect(screen.getByText('writing-mine-skill')).toBeInTheDocument();
+    expect(screen.getByText('coding-mine-skill')).toBeInTheDocument();
+    expect(screen.queryByText('writing-shared-skill')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'writing' }));
+    expect(screen.getByText('writing-mine-skill')).toBeInTheDocument();
+    expect(screen.queryByText('coding-mine-skill')).toBeNull();
+    expect(screen.queryByText('writing-shared-skill')).toBeNull();
   });
 });
