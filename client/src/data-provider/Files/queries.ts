@@ -1,10 +1,16 @@
 import { useCallback, useMemo } from 'react';
 import { useRecoilValue } from 'recoil';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileSources, QueryKeys, DynamicQueryKeys, dataService, request } from 'librechat-data-provider';
+import {
+  FileSources,
+  QueryKeys,
+  DynamicQueryKeys,
+  dataService,
+  request,
+} from 'librechat-data-provider';
 import type { QueryObserverResult, UseQueryOptions } from '@tanstack/react-query';
-import type { AxiosResponse } from 'axios';
 import type t from 'librechat-data-provider';
+import type { AxiosResponse } from 'axios';
 import { useBlobUrl } from '~/hooks/Files/useBlobUrl';
 import { isEphemeralAgent } from '~/common';
 import { addFileToCache } from '~/utils';
@@ -144,8 +150,8 @@ export const useAuthenticatedBlobUrl = (
       headers: { Accept: 'application/octet-stream' },
     });
     return response.data;
-  // url is the only meaningful dep; the function body is intentionally recreated when url changes
-  }, [url]); // eslint-disable-line react-hooks/exhaustive-deps
+    // url is the only meaningful dep; the function body is intentionally recreated when url changes
+  }, [url]);
 
   return useBlobUrl(url ? fetchBlob : null, enabled && !!url && isSameOrigin);
 };

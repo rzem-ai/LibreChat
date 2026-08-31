@@ -71,6 +71,8 @@ export async function loadDefaultInterface({
     runCode: interfaceConfig?.runCode,
     webSearch: interfaceConfig?.webSearch,
     fileSearch: interfaceConfig?.fileSearch,
+    // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+    providerUpload: interfaceConfig?.providerUpload,
     fileCitations: interfaceConfig?.fileCitations,
     deloitteHeader,
     defaultPinnedTools: interfaceConfig?.defaultPinnedTools,

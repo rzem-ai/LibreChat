@@ -4,10 +4,7 @@ export type BlobUrlResult = { url: string | null; isLoading: boolean; isError: b
 
 // Deloitte: generic blob lifecycle hook. Caller stabilises fetchBlob via useCallback
 // so the effect re-runs only when the resource changes. Revokes the object URL on cleanup.
-export function useBlobUrl(
-  fetchBlob: (() => Promise<Blob>) | null,
-  enabled = true,
-): BlobUrlResult {
+export function useBlobUrl(fetchBlob: (() => Promise<Blob>) | null, enabled = true): BlobUrlResult {
   const [url, setUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
