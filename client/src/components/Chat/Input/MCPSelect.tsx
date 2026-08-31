@@ -111,8 +111,9 @@ function MCPSelectContent() {
             'scale-95 data-[leave]:scale-95 data-[leave]:opacity-0',
           )}
         >
-          {/* Deloitte Custom Change: Bulk "Connect All / Disconnect All" action. Uses
-              MenuItemCheckbox (matching MCPServerMenuItem) and an explicit aria-checked
+          {/* Deloitte Custom Change: Bulk "Connect All" action. Label always reads "Connect
+              All" — only the checkbox (checked/mixed/unchecked) reflects selection state.
+              Uses MenuItemCheckbox (matching MCPServerMenuItem) and an explicit aria-checked
               override so assistive tech gets menuitemcheckbox semantics, including the
               mixed (indeterminate) state, instead of a purely visual checkbox. */}
           <Ariakit.MenuItemCheckbox
@@ -121,9 +122,7 @@ function MCPSelectContent() {
             aria-checked={someConnectorsSelected ? 'mixed' : allConnectorsSelected}
             hideOnClick={false}
             onClick={toggleSelectAll}
-            aria-label={localize(
-              allConnectorsSelected ? 'com_ui_disconnect_all' : 'com_ui_connect_all',
-            )}
+            aria-label={localize('com_ui_connect_all')}
             className={cn(
               'group mb-1 flex w-full cursor-pointer items-center justify-between gap-3',
               'rounded-lg border-b border-border-light px-2.5 py-2 outline-none transition-all duration-150',
@@ -131,7 +130,7 @@ function MCPSelectContent() {
             )}
           >
             <span className="text-sm font-medium text-text-primary">
-              {localize(allConnectorsSelected ? 'com_ui_disconnect_all' : 'com_ui_connect_all')}
+              {localize('com_ui_connect_all')}
             </span>
             <span
               aria-hidden="true"

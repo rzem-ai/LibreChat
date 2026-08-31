@@ -175,7 +175,7 @@ describe('MCPSelect', () => {
       expect(selectAll).toHaveAttribute('aria-checked', 'mixed');
     });
 
-    it('shows checked state and "Disconnect All" label when every connector is selected', async () => {
+    it('shows checked state with the "Connect All" label still shown when every connector is selected', async () => {
       mockMcpServerManager = {
         ...defaultMcpServerManager,
         mcpValues: ['server-a', 'server-b'],
@@ -186,7 +186,7 @@ describe('MCPSelect', () => {
       render(<MCPSelect />);
 
       await user.click(screen.getByRole('button'));
-      const selectAll = screen.getByRole('menuitemcheckbox', { name: /com_ui_disconnect_all/i });
+      const selectAll = screen.getByRole('menuitemcheckbox', { name: /com_ui_connect_all/i });
       expect(selectAll).toHaveAttribute('aria-checked', 'true');
     });
 
