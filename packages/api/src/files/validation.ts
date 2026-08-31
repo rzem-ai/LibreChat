@@ -6,6 +6,116 @@ export interface ValidationResult {
   error?: string;
 }
 
+export interface FileContentValidationResult {
+  isValid: boolean;
+  error?: string;
+  detectedMime?: string;
+}
+
+/** Generic "unknown binary type" MIME — the browser's fallback when it cannot determine a file's type. */
+const OCTET_STREAM = 'application/octet-stream';
+/** Upper bound on magic-byte detection so a slow/stuck read can never stall the upload request. */
+const DETECTION_TIMEOUT_MS = 4000;
+
+// Same real file, different acceptable labels (e.g. a jpeg can legitimately be declared jpg/jpeg/pjpeg).
+const compatibleMimePairs: Record<string, ReadonlySet<string>> = {
+  'image/jpeg': new Set(['image/jpg', 'image/jpeg', 'image/pjpeg']),
+  'image/jpg': new Set(['image/jpg', 'image/jpeg', 'image/pjpeg']),
+  'image/pjpeg': new Set(['image/jpg', 'image/jpeg', 'image/pjpeg']),
+  'audio/mpeg': new Set(['audio/mpeg', 'audio/mp3']),
+  'audio/mp3': new Set(['audio/mpeg', 'audio/mp3']),
+  'video/quicktime': new Set(['video/quicktime', 'video/mov']),
+  'application/zip': new Set([
+    'application/zip',
+    'application/x-zip-compressed',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/vnd.oasis.opendocument.text',
+    'application/vnd.oasis.opendocument.spreadsheet',
+    'application/vnd.oasis.opendocument.presentation',
+    'application/epub+zip',
+    'application/java-archive',
+  ]),
+};
+
+const isCompatibleMime = (detected: string, declared: string): boolean => {
+  if (detected === declared) return true;
+  if (declared === OCTET_STREAM) return true;
+  return compatibleMimePairs[detected]?.has(declared) === true;
+};
+
+/**
+ * Pure policy: given the already-detected MIME (or undefined, meaning `file-type`
+ * found no recognizable signature — e.g. plain text/code), decide whether the
+ * declared MIME is compatible. Kept side-effect free so it is trivially
+ * unit-testable without loading the ESM-only `file-type` module.
+ */
+export function evaluateContent(
+  detectedMime: string | undefined,
+  declaredMime: string,
+): FileContentValidationResult {
+  // Nothing was claimed, so there's nothing to contradict.
+  if (!declaredMime || declaredMime === OCTET_STREAM) {
+    return { isValid: true };
+  }
+  // No magic bytes found at all (true of plain text/code) — nothing to compare against.
+  if (!detectedMime) {
+    return { isValid: true };
+  }
+  if (isCompatibleMime(detectedMime, declaredMime)) {
+    return { isValid: true, detectedMime };
+  }
+  // Real content contradicts the declared type — reject.
+  return {
+    isValid: false,
+    detectedMime,
+    error: `File content (${detectedMime}) does not match declared type (${declaredMime}).`,
+  };
+}
+
+type FileTypeModule = typeof import('file-type');
+// `new Function` hides the dynamic import from babel/jest CJS transforms that would
+// otherwise rewrite it to `require()` and fail against the ESM-only `file-type` package.
+const importFileType = new Function('return import("file-type")') as () => Promise<FileTypeModule>;
+
+/** Exported for testing the timeout behavior in isolation from the `file-type` module. */
+export const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T | undefined> =>
+  new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(undefined), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(undefined);
+      },
+    );
+  });
+
+/**
+ * Magic-byte validation for uploads. Rejects clear mismatches; passes ambiguous
+ * cases (including detection timing out) so unknown-but-legitimate formats and
+ * transient read failures aren't blocked.
+ */
+export async function validateFileContent(
+  filePath: string,
+  declaredMime: string,
+): Promise<FileContentValidationResult> {
+  if (!declaredMime || declaredMime === OCTET_STREAM) {
+    return { isValid: true };
+  }
+
+  // The actual check: read the file's real magic bytes, bounded by a timeout so it can't hang.
+  const detected = await withTimeout(
+    importFileType().then(({ fileTypeFromFile }) => fileTypeFromFile(filePath)),
+    DETECTION_TIMEOUT_MS,
+  );
+  return evaluateContent(detected?.mime, declaredMime);
+}
+
 export interface PDFValidationResult {
   isValid: boolean;
   error?: string;

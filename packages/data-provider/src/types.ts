@@ -222,6 +222,7 @@ export type TError = {
   response?: {
     data?: {
       message?: string;
+      code?: string;
     };
     status?: number;
   };

@@ -8,6 +8,7 @@ const {
   shouldUseUploadSse,
   startUploadSseStream,
   resolveUploadErrorMessage,
+  validateFileContent,
   verifyAgentUploadPermission,
 } = require('@librechat/api');
 const {
@@ -653,6 +654,18 @@ router.post('/', async (req, res) => {
     if (isAssistantsEndpoint(metadata.endpoint)) {
       openSseStreamIfRequested();
       return await processFileUpload({ req, res, metadata, sseStream });
+    }
+
+    // Magic-byte check: does the file's real content match the declared MIME type?
+    const contentCheck = await validateFileContent(req.file.path, req.file.mimetype);
+    if (!contentCheck.isValid) {
+      logger.warn(
+        `[/files] Rejected upload — declared "${req.file.mimetype}", detected "${contentCheck.detectedMime ?? 'unknown'}"`,
+      );
+      return res.status(400).json({
+        code: 'FILE_CONTENT_MISMATCH',
+        message: contentCheck.error,
+      });
     }
 
     let skipUploadAuth = false;
