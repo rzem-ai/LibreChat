@@ -17,6 +17,7 @@ import {
   useHasMemoryAccess,
   useAgentCapabilities,
 } from '~/hooks';
+import useArtifactsShadcnOnly from '~/hooks/Artifacts/useArtifactsShadcnOnly';
 import ArtifactsSubMenu from '~/components/Chat/Input/ArtifactsSubMenu';
 import MCPSubMenu from '~/components/Chat/Input/MCPSubMenu';
 import { useGetStartupConfig } from '~/data-provider';
@@ -42,8 +43,7 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     skillsEnabled,
   } = useAgentCapabilities(context?.agentsConfig?.capabilities ?? defaultAgentCapabilities);
 
-  const shadcnOnly =
-    startupConfig?.interface?.customDeloitteFeatureFlags?.artifactsShadcnOnly === true;
+  const shadcnOnly = useArtifactsShadcnOnly();
 
   const canUseWebSearch = useHasAccess({
     permissionType: PermissionTypes.WEB_SEARCH,

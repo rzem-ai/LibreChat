@@ -3,8 +3,8 @@ import * as Ariakit from '@ariakit/react';
 import { CheckboxButton } from '@librechat/client';
 import { WandSparkles, ChevronDown } from 'lucide-react';
 import { ArtifactModes, defaultAgentCapabilities } from 'librechat-data-provider';
+import useArtifactsShadcnOnly from '~/hooks/Artifacts/useArtifactsShadcnOnly';
 import { useLocalize, useAgentCapabilities } from '~/hooks';
-import { useGetStartupConfig } from '~/data-provider';
 import { useBadgeRowContext } from '~/Providers';
 import { cn } from '~/utils';
 
@@ -17,9 +17,7 @@ function Artifacts() {
   const localize = useLocalize();
   const context = useBadgeRowContext();
   const { toggleState, debouncedChange, isPinned } = context?.artifacts ?? {};
-  const { data: startupConfig } = useGetStartupConfig();
-  const shadcnOnly =
-    startupConfig?.interface?.customDeloitteFeatureFlags?.artifactsShadcnOnly === true;
+  const shadcnOnly = useArtifactsShadcnOnly();
 
   const { artifactsEnabled } = useAgentCapabilities(
     context?.agentsConfig?.capabilities ?? defaultAgentCapabilities,
