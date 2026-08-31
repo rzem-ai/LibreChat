@@ -27,7 +27,7 @@ Inside `agentic_converted/` in the current working directory:
 2. Create `agentic_converted/` if it doesn't exist.
 3. Convert every file using `markitdown`. If markitdown fails for a file, fall back to `docling`. If neither works, skip the file.
    ```bash
-   ~/.local/bin/markitdown "<source_file>" -o "agentic_converted/<filename>.md"
+   markitdown "<source_file>" -o "agentic_converted/<filename>.md"
    ```
     Run conversions for all files.
 4. Confirm to the user how many files were converted before proceeding.
