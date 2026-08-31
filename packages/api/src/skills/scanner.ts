@@ -156,6 +156,7 @@ function problemToIssue(problem: ValidationProblem): SkillScanIssue {
   return { message: problem };
 }
 
+// Deloitte Custom Change: Suppress manifest-validation noise for security-only scanner passes.
 /**
  * Flatten a scanner response into the list of issues we surface to the user.
  * Collects manifest validation problems first (only when the scan actually
@@ -165,7 +166,6 @@ function problemToIssue(problem: ValidationProblem): SkillScanIssue {
  * security findings, with progressively looser fallbacks so the user always
  * gets *some* reason rather than a generic failure.
  */
-// Deloitte Custom Change: Suppress manifest-validation noise for security-only scanner passes.
 function toIssues(
   result: SkillScanResult | undefined,
   requireValidation: boolean,
@@ -472,6 +472,7 @@ export async function scanSkillOnUpdate(params: {
   );
 }
 
+// Deloitte Custom Change: Remove manifest-owned fields before the frontmatter-only scanner pass.
 /**
  * Drop the fields `buildSkillMarkdown` already carries as first-class manifest
  * columns (`name`/`description`) plus `always-apply`/`alwaysApply` (surfaced
@@ -479,7 +480,6 @@ export async function scanSkillOnUpdate(params: {
  * frontmatter bag, leaving only the extra fields that still need a
  * security-only pass through `scanFrontmatter`.
  */
-// Deloitte Custom Change: Remove manifest-owned fields before the frontmatter-only scanner pass.
 function extraFrontmatterFields(
   frontmatter: Record<string, unknown> | undefined,
 ): Record<string, unknown> | undefined {
