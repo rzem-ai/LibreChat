@@ -61,7 +61,7 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
       navigate(`/skills/${skill._id}`);
     },
     onError: (error: unknown) => {
-      // Surface the scanner's validation error inline so it stays on screen
+      // Deloitte Custom Change: Surface the scanner's validation error inline so it stays on screen
       // until the user retries, instead of an auto-dismissing toast.
       setScanError(formatSkillScanError(error, localize('com_ui_create_skill_upload_error')));
     },
