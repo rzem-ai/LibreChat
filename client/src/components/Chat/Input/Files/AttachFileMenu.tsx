@@ -279,7 +279,13 @@ const AttachFileMenu = ({
       });
       localItems.push({
         label: localize('com_files_upload_sharepoint'),
-        onClick: sharePointItems.length === 0 ? () => setIsSharePointDialogOpen(true) : () => {},
+        onClick:
+          sharePointItems.length === 0
+            ? () => {
+                toolResourceRef.current = undefined;
+                setIsSharePointDialogOpen(true);
+              }
+            : () => {},
         icon: <SharePointIcon className="icon-md" />,
         ...(sharePointItems.length > 0 ? { subItems: sharePointItems } : {}),
       });
