@@ -32,7 +32,11 @@ export function getModelCost(modelId: string | null | undefined, modelPricing: T
     return undefined;
   }
 
-  return modelPricing[modelId] ?? modelPricing[modelId.split('/').pop() ?? ''];
+  const modelName = modelId.replace(/^au\.anthropic\./, '').replace(/-\d{8}-v1:\d+$/, '');
+
+  return (
+    modelPricing[modelId] ?? modelPricing[modelName] ?? modelPricing[modelId.split('/').pop() ?? '']
+  );
 }
 
 export default function ModelCost({ modelId }: { modelId: string | null | undefined }) {
