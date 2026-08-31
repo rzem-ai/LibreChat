@@ -48,7 +48,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:eb3ec9a7ce3e9b0bdcec6e24c944f67de775f0c057f90090ae0e2e2c29db1deb'
+          tag: 'develop@sha256:d1d413011dcccd45443a6b4415c9bf4f33774c5b5f3e181d54ff7e49101ba98f'
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -156,7 +156,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:9fa7c7d0a39402fe0aa1da374a50d06d5c59e7e07378dfc553863e83d5fdd586'
+          tag: 'develop@sha256:b742720683b671d57599a95ef109e03acdb0960aba9539e3bd1e02d192e7a725'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -212,7 +212,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:2bd3f23ce1508aa03d0920e7f8c8687fafdeb99f646eeb3eb776cf9e789e17ba'
+          tag: 'develop@sha256:2e83d6a84be0715d3bb45b39c358cc60dea559de2bc4ddfc12a2b3e1e851e06f'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
