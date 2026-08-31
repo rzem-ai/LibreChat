@@ -56,7 +56,7 @@ for env_var in $REQUIRED_ENV_VARS; do
 done
 
 log "Starting proxy with sync interval ${TOKEN_PROXY_SYNC_SECONDS}s."
-  log "Configured upstreams: AzureAU=$TOKEN_PROXY_AZURE_AU_URL AzureGlobal=$TOKEN_PROXY_AZURE_GLOBAL_URL VertexAI=$TOKEN_PROXY_VERTEXAI_URL AnthropicGlobal=$TOKEN_PROXY_ANTHROPIC_URL BedrockAU=$TOKEN_PROXY_BEDROCK_AU_URL MCP=$TOKEN_PROXY_MCP_URL"
+log "Configured upstreams: AzureAU=$TOKEN_PROXY_AZURE_AU_URL AzureGlobal=$TOKEN_PROXY_AZURE_GLOBAL_URL VertexAI=$TOKEN_PROXY_VERTEXAI_URL AnthropicGlobal=$TOKEN_PROXY_ANTHROPIC_URL BedrockAU=$TOKEN_PROXY_BEDROCK_AU_URL MCP=$TOKEN_PROXY_MCP_URL"
 
 # Derive the DNS resolver from the pod's /etc/resolv.conf so the nginx resolver
 # directive works on any Kubernetes cluster without hardcoding an IP address.

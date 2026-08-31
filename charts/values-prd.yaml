@@ -27,6 +27,7 @@ ingress:
         - 'myassist.ctk.au.deloitte.com'
 pods:
   librechat:
+    replicas: 1
     securityContext:
       fsGroup: 1000
 

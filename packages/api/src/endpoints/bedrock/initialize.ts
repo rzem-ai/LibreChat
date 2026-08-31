@@ -273,15 +273,17 @@ export async function initializeBedrock({
   const hasBearerToken = typeof bearerToken === 'string' && bearerToken !== '';
 
   const bedrockRegion = typeof llmConfig.region === 'string' ? llmConfig.region : undefined;
-  const proxyAgent = getHttpsProxyAgent(
-    getBedrockProxyTarget(bedrockRegion, BEDROCK_REVERSE_PROXY),
-  );
+  const reverseProxy = BEDROCK_REVERSE_PROXY?.trim();
+  const reverseProxyTarget = getBedrockProxyTarget(bedrockRegion, reverseProxy);
+  const hasReverseProxyUrl = /^https?:\/\//i.test(reverseProxy ?? '');
+  const proxyAgent = getHttpsProxyAgent(reverseProxyTarget);
   // Deloitte Custom Change: Create a custom client when routing through the Deloitte gateway.
   if (
     proxyAgent ||
     hasBearerToken ||
     BEDROCK_GATEWAY_URL ||
-    (LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION && BEDROCK_REVERSE_PROXY)
+    hasReverseProxyUrl ||
+    (LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION && reverseProxy)
   ) {
     const credentialProvider =
       !hasCompleteCredentials && !hasBearerToken && BEDROCK_AWS_PROFILE
@@ -319,16 +321,13 @@ export async function initializeBedrock({
     // Deloitte Custom Change: Prefer the pod-local Bedrock gateway over the reverse-proxy host.
     if (BEDROCK_GATEWAY_URL) {
       customClientConfig.endpoint = BEDROCK_GATEWAY_URL;
-    } else if (BEDROCK_REVERSE_PROXY) {
-      customClientConfig.endpoint = getBedrockProxyTarget(undefined, BEDROCK_REVERSE_PROXY);
+    } else if (reverseProxyTarget) {
+      customClientConfig.endpoint = reverseProxyTarget;
     }
 
     const customClient = new BedrockRuntimeClient(customClientConfig);
     // Deloitte Custom Change: Forward the local identity token to Deloitte gateway routes.
-    if (
-      LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION &&
-      (BEDROCK_GATEWAY_URL || BEDROCK_REVERSE_PROXY)
-    ) {
+    if (LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION && (BEDROCK_GATEWAY_URL || reverseProxy)) {
       customClient.middlewareStack.add(
         (next) => async (args) => {
           const request = args.request as { headers?: Record<string, string> } | undefined;
@@ -354,8 +353,8 @@ export async function initializeBedrock({
       llmConfig.profile = BEDROCK_AWS_PROFILE;
     }
 
-    if (BEDROCK_REVERSE_PROXY) {
-      llmConfig.endpointHost = BEDROCK_REVERSE_PROXY;
+    if (reverseProxy) {
+      llmConfig.endpointHost = reverseProxy;
     }
   }
 
