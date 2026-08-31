@@ -36,7 +36,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'main@sha256:2ab7ba3209eeed2730e8e1373a820f34dbc5e390e31af990cf21153997581aae'
+          tag: 'main@sha256:720d9ba1ce0333d6a219bc6d2188a7b6fdea031ef24574d9aab22a21b3a4de1f'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-prd.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-prd.svc.cluster.local:8080'
@@ -55,7 +55,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'main@sha256:161ee363aa753ac8415fbe31c258ad7ae66f191c5bc1097bc1d9cf8373288af5'
+          tag: 'main@sha256:84ebba1c3f525857734e538c05a8055b68d426f747e4af0f0f7ea4c7236200a1'
         env:
           ADMIN_PANEL_URL: 'https://myassist.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -145,7 +145,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'main@sha256:bcb8b402b9d5d7111ff1705f7a871a59a99d426eb09547465acd64ae83ef0191'
+          tag: 'main@sha256:954e992bd1a1345bdca2914a9d7c5064186cbb2780184c32a492e87f7cc66592'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -173,7 +173,7 @@ pods:
       meilisearch:
         image:
           pullPolicy: Always
-          tag: 'main@sha256:f49590554b5373882fd079212c6baaf399dcf88446cd648ad940f4c797d09da9'
+          tag: 'main@sha256:622056186b7aca6f974dc1086f07ed50ea68caef9905ed879b1ab98de4605e7b'
         env:
           MEILI_ENV: 'production'
         secrets:
@@ -197,7 +197,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'main@sha256:4885fc6db977dcc6b27b0413d960590999e3005b3330893843cf3f778a1b1b0f'
+          tag: 'main@sha256:10b9ad4934f4fe1cad6b7871a1ca2d818ca6ecbad05c484e41e22bb31ee9004c'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
@@ -220,7 +220,7 @@ pods:
 
 valkey:
   image:
-    tag: 'main@sha256:ec7ab07262c5ac3da2847ec47ca04ac706570c5ebf2d4e2ed63f44348eb25a28'
+    tag: 'main@sha256:22f6eee37fe992967aa51a5868b2a60751bda130b898779612bb990dff4dd275'
   persistence:
     storageClass: 'managed-csi-standard-private'
   passwordSecretName: 'librechat-valkey-password'
