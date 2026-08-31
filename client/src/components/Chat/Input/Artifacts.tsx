@@ -62,6 +62,14 @@ function Artifacts() {
     }
   }, [isPopoverOpen]);
 
+  useEffect(() => {
+    if (!shadcnOnly || !isEnabled || currentState.mode === ArtifactModes.SHADCNUI) {
+      return;
+    }
+
+    debouncedChange?.({ value: ArtifactModes.SHADCNUI });
+  }, [currentState.mode, debouncedChange, isEnabled, shadcnOnly]);
+
   const handleShadcnToggle = useCallback(() => {
     if (!debouncedChange) return;
     if (isShadcnEnabled) {
