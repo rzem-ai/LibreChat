@@ -16,6 +16,11 @@ interface SkillListProps {
   activeSkillId?: string;
 }
 
+/**
+ * Deloitte Custom Change: order/labels for the Public/Shared/Created by me
+ * sections rendered by `SkillList`, driven by the shared `resolveSkillGroup`
+ * grouping rule (see `client/src/common/skills.ts`).
+ */
 const GROUP_ORDER: SkillGroup[] = ['public', 'shared', 'mine'];
 
 const GROUP_LABEL_KEYS: Record<SkillGroup, TranslationKeys> = {
