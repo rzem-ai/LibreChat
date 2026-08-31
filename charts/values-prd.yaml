@@ -29,6 +29,22 @@ ingress:
 pods:
   librechat:
     replicas: 2
+    initContainers:
+      llm-gateway-proxy:
+        restartPolicy: Always
+        image:
+          repository: 'tt-librechat/llm-gateway-proxy'
+          pullPolicy: Always
+          tag: 'main'
+        env:
+          TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_AZURE_FOUNDRY_AU_URL: 'http://foundry-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_ANTHROPIC_URL: 'http://anthropic-eastus2.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_BEDROCK_AU_URL: 'http://bedrock-ap-southeast-2.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_MCP_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
     containers:
       librechat:
         image:
@@ -40,9 +56,32 @@ pods:
           limits:
             memory: "4Gi"
             cpu: "2000m"
+        env:
+          ANTHROPIC_API_KEY: 'dummy' # Anthropic API key is injected by the gateway proxy.
+          ANTHROPIC_MODELS: 'claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-sonnet-5,claude-opus-4-8'
+          ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
+          BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
+          BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
+          BASE_URL_AZURE_GLOBAL: 'http://127.0.0.1:8081/azure-global'
+          BASE_URL_AZURE_FOUNDRY_AU: 'http://127.0.0.1:8081/azure-foundry-au'
+          BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
+          BEDROCK_AWS_ACCESS_KEY_ID: 'unused'
+          BEDROCK_AWS_DEFAULT_REGION: 'ap-southeast-2'
+          BEDROCK_AWS_SECRET_ACCESS_KEY: 'unused'
+          BEDROCK_AWS_MODELS: 'au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0'
+          BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081/bedrock-au'
+          EMBEDDINGS_MODEL: 'text-embedding-3-small'
+          EMBEDDINGS_PROVIDER: 'openai'
+          ENDPOINTS: 'agents,anthropic,bedrock,custom'
+          RAG_OPENAI_API_KEY: 'dummy' # OpenAI API key is injected by the gateway proxy.
+          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
       rag-api:
         image:
           tag: 'main'
+        env:
+          EMBEDDINGS_PROVIDER: 'openai'
+          RAG_OPENAI_API_KEY: 'dummy' # OpenAI API key is injected by the gateway proxy.
+          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
 
 valkey:
   image:
