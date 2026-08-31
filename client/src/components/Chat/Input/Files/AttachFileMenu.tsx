@@ -276,19 +276,16 @@ const AttachFileMenu = ({
     if (sharePointEnabled) {
       const sharePointItems = createMenuItems(() => {
         setIsSharePointDialogOpen(true);
+        // Note: toolResource will be set by the specific item clicked
       });
-      localItems.push({
-        label: localize('com_files_upload_sharepoint'),
-        onClick:
-          sharePointItems.length === 0
-            ? () => {
-                toolResourceRef.current = undefined;
-                setIsSharePointDialogOpen(true);
-              }
-            : () => {},
-        icon: <SharePointIcon className="icon-md" />,
-        ...(sharePointItems.length > 0 ? { subItems: sharePointItems } : {}),
-      });
+      if (sharePointItems.length > 0) {
+        localItems.push({
+          label: localize('com_files_upload_sharepoint'),
+          onClick: () => {},
+          icon: <SharePointIcon className="icon-md" />,
+          subItems: sharePointItems,
+        });
+      }
     }
 
     return localItems;
