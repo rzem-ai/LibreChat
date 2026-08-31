@@ -21,7 +21,7 @@ Invoke this skill when a user needs to:
 The user must provide at least:
 
 | Job Family Group |
----
+| --- |
 
 # Step 1 — Generate Capabilities
 
