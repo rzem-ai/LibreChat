@@ -1376,6 +1376,7 @@ export const interfaceSchema = z
     bookmarks: z.boolean().optional(),
     memories: z.boolean().optional(),
     presets: z.boolean().optional(),
+    // Deloitte Custom Change: Deloitte-specific UI feature flags.
     customDeloitteFeatureFlags: z
       .object({
         exportChat: z.boolean().optional(),
@@ -1389,6 +1390,11 @@ export const interfaceSchema = z
         createActions: z.boolean().optional(),
         landingIcon: z.boolean().optional(),
         conversationIcon: z.boolean().optional(),
+        accountsTab: z.boolean().optional(),
+        dataApiKeys: z.boolean().optional(),
+        dataDangerZone: z.boolean().optional(),
+        externalVoiceProvider: z.boolean().optional(),
+        artifactsShadcnOnly: z.boolean().optional(),
         showConversationTitleInHeader: z.boolean().optional(),
       })
       .optional(),

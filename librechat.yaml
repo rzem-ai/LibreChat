@@ -22,6 +22,8 @@ interface:
 
   bookmarks: false # Set to false to disable saving conversations as bookmarks
 
+  buildInfo: false # Set to false to hide the About section in settings
+
   # Pin tools to the prompt bar by default for all users
   defaultPinnedTools:
     - 'file_search'
@@ -118,6 +120,7 @@ interface:
 
   temporaryChat: false # Set to false to disable temporary chats
 
+  # Deloitte Custom Change: Deloitte-specific UI feature flags.
   customDeloitteFeatureFlags:
     exportChat: false # Set to false to disable exporting conversations
     regenerate: true # Set to false to disable regenerating assistant responses
@@ -130,6 +133,11 @@ interface:
     createActions: false # Set to false to hide action creation in the marketplace
     landingIcon: true # Set to false to hide the model or agent icon beside the landing greeting
     conversationIcon: true # Set to false to hide model or endpoint icons in conversation history
+    accountsTab: false # Set to false to hide the Account settings tab
+    dataApiKeys: false # Set to false to hide the API keys section under Data controls settings
+    dataDangerZone: false # Set to false to hide the Danger zone section under Data controls settings
+    externalVoiceProvider: false # Set to false to hide the external voice provider option in Speech settings (browser voice only)
+    artifactsShadcnOnly: true # Set to true to force the shadcn/ui artifacts mode and hide other artifact mode options
     showConversationTitleInHeader: false # Set to true to show the conversation title in the chat header
 
 fileConfig:

@@ -4,6 +4,7 @@ import { useSetRecoilState } from 'recoil';
 import {
   Tools,
   Constants,
+  ArtifactModes,
   Permissions,
   LocalStorageKeys,
   AgentCapabilities,
@@ -19,6 +20,7 @@ import {
   useGetAgentsConfig,
   useToolToggle,
 } from '~/hooks';
+import useArtifactsShadcnOnly from '~/hooks/Artifacts/useArtifactsShadcnOnly';
 import { getTimestampedValue } from '~/utils/timestamps';
 import { useGetStartupConfig } from '~/data-provider';
 import { ephemeralAgentByConvoId } from '~/store';
@@ -300,6 +302,22 @@ export default function BadgeRowProvider({
     localStorageKey: LocalStorageKeys.LAST_ARTIFACTS_TOGGLE_,
     isAuthenticated: true,
   });
+
+  /** Deloitte Custom Change: force any persisted non-shadcn artifacts mode back to
+   *  shadcn/ui-only when `artifactsShadcnOnly` is enabled, so a stale localStorage
+   *  value can't keep the mode picker's hidden options active. */
+  const shadcnOnly = useArtifactsShadcnOnly();
+  const { toggleState: artifactsToggleState, handleChange: handleArtifactsChange } = artifacts;
+  useEffect(() => {
+    if (
+      shadcnOnly &&
+      typeof artifactsToggleState === 'string' &&
+      artifactsToggleState !== '' &&
+      artifactsToggleState !== ArtifactModes.SHADCNUI
+    ) {
+      handleArtifactsChange({ value: ArtifactModes.SHADCNUI });
+    }
+  }, [shadcnOnly, artifactsToggleState, handleArtifactsChange]);
 
   /** Skills hook - using a custom key since it's not a Tool but a capability */
   const skills = useToolToggle({
