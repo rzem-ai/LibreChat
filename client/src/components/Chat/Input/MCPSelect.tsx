@@ -27,18 +27,18 @@ function MCPSelectContent() {
   }, [manager?.selectableServers, manager?.mcpValues]);
 
   const displayText = useMemo(() => {
-    const selectedCount = manager?.mcpValues?.length ?? 0;
+    // Deloitte Custom Change: Count from de-duplicated selectedServers so the label
+    // cannot over-count when mcpValues contains duplicates.
+    const selectedCount = selectedServers.length;
     if (selectedCount === 0) {
       return null;
     }
     if (selectedCount === 1) {
-      const server = manager?.selectableServers?.find(
-        (s) => s.serverName === manager?.mcpValues?.[0],
-      );
-      return server?.config?.title || manager?.mcpValues?.[0];
+      const [server] = selectedServers;
+      return server?.config?.title || server?.serverName;
     }
     return localize('com_ui_x_connected', { 0: selectedCount });
-  }, [manager?.selectableServers, manager?.mcpValues, localize]);
+  }, [selectedServers, localize]);
 
   if (!manager) {
     return null;
