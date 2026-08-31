@@ -651,12 +651,7 @@ router.post('/', async (req, res) => {
     metadata.temp_file_id = metadata.file_id;
     metadata.file_id = req.file_id;
 
-    if (isAssistantsEndpoint(metadata.endpoint)) {
-      openSseStreamIfRequested();
-      return await processFileUpload({ req, res, metadata, sseStream });
-    }
-
-    // Magic-byte check: does the file's real content match the declared MIME type?
+    // Deloitte Custom Change: verify the file's actual content matches its declared MIME type.
     const contentCheck = await validateFileContent(req.file.path, req.file.mimetype);
     if (!contentCheck.isValid) {
       logger.warn(
@@ -666,6 +661,11 @@ router.post('/', async (req, res) => {
         code: 'FILE_CONTENT_MISMATCH',
         message: contentCheck.error,
       });
+    }
+
+    if (isAssistantsEndpoint(metadata.endpoint)) {
+      openSseStreamIfRequested();
+      return await processFileUpload({ req, res, metadata, sseStream });
     }
 
     let skipUploadAuth = false;
