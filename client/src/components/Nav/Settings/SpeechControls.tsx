@@ -1,13 +1,7 @@
 import { useGetCustomConfigSpeechQuery } from 'librechat-data-provider/react-query';
 import { EngineSTTDropdown } from '../SettingsTabs/Speech/STT';
 import { EngineTTSDropdown } from '../SettingsTabs/Speech/TTS';
-import { useGetStartupConfig } from '~/data-provider';
-
-function useExternalVoiceProviderEnabled(): boolean {
-  const { data: startupConfig } = useGetStartupConfig();
-  /** Deloitte Custom Change: hides the external voice provider when disabled. */
-  return startupConfig?.interface?.customDeloitteFeatureFlags?.externalVoiceProvider !== false;
-}
+import { useExternalVoiceProviderEnabled } from '~/hooks';
 
 export function EngineSTTSetting() {
   const { data } = useGetCustomConfigSpeechQuery();
