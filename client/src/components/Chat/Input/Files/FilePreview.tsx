@@ -23,9 +23,7 @@ const FilePreview = ({
       {/* Deloitte Custom Change: # Visible icons for file uploads- PR #402 */}
       <SourceIcon
         source={file?.source}
-        isCodeFile={
-          file?.metadata?.codeEnvRef != null || file?.metadata?.fileIdentifier != null
-        }
+        isCodeFile={file?.metadata?.codeEnvRef != null || file?.metadata?.fileIdentifier != null}
         isFileSearch={file?.embedded === true}
       />
       {typeof file?.['progress'] === 'number' && file?.['progress'] < 1 && (

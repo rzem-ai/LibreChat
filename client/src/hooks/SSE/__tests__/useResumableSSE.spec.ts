@@ -130,7 +130,9 @@ type DrainAfterAbortState =
 const applyLastDrainAfterAbortUpdate = (current: DrainAfterAbortState): DrainAfterAbortState => {
   const calls = mockSetDrainAfterAbort.mock.calls;
   const update = calls[calls.length - 1]?.[0] as
-    DrainAfterAbortState | ((armed: DrainAfterAbortState) => DrainAfterAbortState) | undefined;
+    | DrainAfterAbortState
+    | ((armed: DrainAfterAbortState) => DrainAfterAbortState)
+    | undefined;
   if (typeof update !== 'function') {
     throw new Error('Expected a functional drain-after-abort update');
   }

@@ -116,10 +116,10 @@ jobs:
             submodule: false
           # Admin Panel image — built from admin_panel submodule Dockerfile with VITE_BASE_PATH=/admin
           # The admin panel is a Vite SPA where the base path must be baked in at build time.
-          - imageNameAlias: admin-panel
+          - imageNameAlias: admin
             buildContext: admin_panel
             dockerFilePath: admin_panel/Dockerfile
-            yamlKeyPath: '.pods.admin-panel.containers.admin-panel.image'
+            yamlKeyPath: '.pods.admin.containers.admin.image'
             buildArgs: VITE_BASE_PATH=/admin
             submodule: true
         #####################################################################################

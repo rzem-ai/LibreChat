@@ -57,6 +57,7 @@ export async function loadDefaultInterface({
     contextUsage: interfaceConfig?.contextUsage ?? defaults.contextUsage,
     contextCost: interfaceConfig?.contextCost ?? defaults.contextCost,
     currency: interfaceConfig?.currency ?? defaults.currency,
+    userMessageAlignment: interfaceConfig?.userMessageAlignment ?? defaults.userMessageAlignment,
 
     // Permissions and related settings - only include if explicitly configured
     bookmarks: interfaceConfig?.bookmarks,
@@ -71,6 +72,8 @@ export async function loadDefaultInterface({
     runCode: interfaceConfig?.runCode,
     webSearch: interfaceConfig?.webSearch,
     fileSearch: interfaceConfig?.fileSearch,
+    // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+    providerUpload: interfaceConfig?.providerUpload,
     fileCitations: interfaceConfig?.fileCitations,
     deloitteHeader,
     defaultPinnedTools: interfaceConfig?.defaultPinnedTools,

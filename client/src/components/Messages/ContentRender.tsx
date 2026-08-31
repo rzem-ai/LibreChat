@@ -6,6 +6,7 @@ import type { TMessageProps, TMessageIcon, TMessageChatContext } from '~/common'
 import {
   areMessageFieldsEqual,
   cn,
+  getMessageAlignmentClasses,
   getHeaderPrefixForScreenReader,
   getMessageAriaLabel,
 } from '~/utils';
@@ -18,6 +19,7 @@ import SiblingSwitch from '~/components/Chat/Messages/SiblingSwitch';
 import HoverButtons from '~/components/Chat/Messages/HoverButtons';
 import MessageIcon from '~/components/Chat/Messages/MessageIcon';
 import SubRow from '~/components/Chat/Messages/SubRow';
+import { useIsRightAligned } from '~/Providers';
 import { fontSizeAtom } from '~/store/fontSize';
 import store from '~/store';
 
@@ -104,6 +106,8 @@ const ContentRender = memo(function ContentRender({
   });
   const fontSize = useAtomValue(fontSizeAtom);
   const maximizeChatSpace = useRecoilValue(store.maximizeChatSpace);
+  const rightAligned = useIsRightAligned(msg?.isCreatedByUser);
+  const align = getMessageAlignmentClasses(rightAligned);
 
   const handleRegenerateMessage = useCallback(() => regenerateMessage(), [regenerateMessage]);
   const isLast = useMemo(
@@ -160,7 +164,10 @@ const ContentRender = memo(function ContentRender({
   };
 
   const baseClasses = {
-    common: 'group mx-auto flex flex-1 gap-3 transition-all duration-300 transform-gpu ',
+    common: cn(
+      'group mx-auto flex flex-1 gap-3 transition-all duration-300 transform-gpu',
+      align.row,
+    ),
     chat: getChatWidthClass(),
   };
 
@@ -179,7 +186,7 @@ const ContentRender = memo(function ContentRender({
         'message-render',
       )}
     >
-      {!hasParallelContent && (
+      {!hasParallelContent && !align.hideAvatar && (
         <div className="relative flex flex-shrink-0 flex-col items-center">
           <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full">
             <MessageIcon iconData={iconData} assistant={assistant} agent={agent} />
@@ -195,7 +202,7 @@ const ContentRender = memo(function ContentRender({
         )}
       >
         {!hasParallelContent && (
-          <h2 className={cn('select-none font-semibold', fontSize)}>
+          <h2 className={cn('select-none font-semibold', align.header, fontSize)}>
             <span className="sr-only">{getHeaderPrefixForScreenReader(msg, localize)}</span>
             {messageLabel}
             <MessageTimestamp value={msg.createdAt ?? msg.clientTimestamp} />
@@ -203,7 +210,9 @@ const ContentRender = memo(function ContentRender({
         )}
 
         <div className="flex flex-col gap-1">
-          <div className="flex min-h-[20px] max-w-full flex-grow flex-col gap-0">
+          <div
+            className={cn('flex min-h-[20px] max-w-full flex-grow flex-col gap-0', align.content)}
+          >
             <ContentParts
               edit={edit}
               isLast={isLast}
@@ -226,7 +235,7 @@ const ContentRender = memo(function ContentRender({
           {hasNoChildren && isSubmitting ? (
             <PlaceholderRow />
           ) : (
-            <SubRow classes="text-xs">
+            <SubRow classes={cn('text-xs', align.subRow)}>
               <SiblingSwitch
                 siblingIdx={siblingIdx}
                 siblingCount={siblingCount}

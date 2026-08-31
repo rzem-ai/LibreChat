@@ -164,7 +164,9 @@ export const SKILL_TRIGGER_MODEL = 'model';
 export const SKILL_TRIGGER_ALWAYS_APPLY = 'always-apply';
 
 export type SkillTrigger =
-  typeof SKILL_TRIGGER_MANUAL | typeof SKILL_TRIGGER_MODEL | typeof SKILL_TRIGGER_ALWAYS_APPLY;
+  | typeof SKILL_TRIGGER_MANUAL
+  | typeof SKILL_TRIGGER_MODEL
+  | typeof SKILL_TRIGGER_ALWAYS_APPLY;
 
 /**
  * Predicate that identifies a LangChain message as one we spliced in via

@@ -2782,8 +2782,9 @@ describe('RedisJobStore Integration Tests', () => {
       }
 
       const { RedisJobStore } = await import('../implementations/RedisJobStore');
-      const { STEER_ENQUEUE_QUEUE_FULL, STEER_QUEUE_MAX_DEPTH } =
-        await import('../interfaces/IJobStore');
+      const { STEER_ENQUEUE_QUEUE_FULL, STEER_QUEUE_MAX_DEPTH } = await import(
+        '../interfaces/IJobStore'
+      );
       const store = new RedisJobStore(ioredisClient);
       await store.initialize();
 

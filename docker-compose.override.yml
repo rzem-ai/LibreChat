@@ -63,8 +63,6 @@ services:
     build:
       context: ./rag_api
       dockerfile: Dockerfile.lite
-    volumes:
-      - ./uploads:/app/uploads
   admin-panel:
     image: librechat-admin-panel
     build:

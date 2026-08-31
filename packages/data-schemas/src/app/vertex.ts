@@ -191,7 +191,8 @@ export function validateVertexConfig(
  */
 export function vertexConfigSetup(config: Partial<TCustomConfig>): TVertexAIConfig | null {
   const anthropicConfig = config.endpoints?.[EModelEndpoint.anthropic] as
-    TAnthropicEndpoint | undefined;
+    | TAnthropicEndpoint
+    | undefined;
 
   if (!anthropicConfig?.vertex) {
     return null;

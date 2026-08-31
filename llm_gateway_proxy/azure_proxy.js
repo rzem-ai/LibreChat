@@ -1,9 +1,9 @@
 /**
- * azure_proxy.js - njs handler for Azure AU and Azure US custom endpoints.
+ * azure_proxy.js - njs handler for Azure AU and Azure Global custom endpoints.
  *
  * LibreChat's `custom` endpoint type sends requests in plain OpenAI format:
  *   POST /azure-au/chat/completions
- *   Body: { "model": "gpt-4o-mini", ... }
+ *   Body: { "model": "gpt-56-luna", ... }
  *
  * The LLM Gateway requires Azure OpenAI deployment path format:
  *   POST /openai/deployments/{model}/chat/completions?api-version=2025-01-01-preview
@@ -176,11 +176,11 @@ async function azureProxy(r) {
   logInfo(r, '[' + reqId + '] Extracted model name: ' + model);
 
   // --- Resolve upstream base URL from nginx variable ---
-  var region = /^\/azure-au(?:\/|$)/.test(r.uri) ? 'azure-au' : 'azure-us';
+  var region = /^\/azure-au(?:\/|$)/.test(r.uri) ? 'azure-au' : 'azure-global';
   var upstreamBase =
     region === 'azure-au'
       ? r.variables['token_proxy_azure_au_url']
-      : r.variables['token_proxy_azure_us_url'];
+      : r.variables['token_proxy_azure_global_url'];
 
   logInfo(
     r,
@@ -210,9 +210,9 @@ async function azureProxy(r) {
 
   // --- Build the Azure-format upstream URL ---
   // Preserve the requested OpenAI-style endpoint path (e.g. /v1/embeddings, /v1/chat/completions)
-  // but strip the provider prefix (/azure-au or /azure-us) and optional /v1 prefix.
+  // but strip the provider prefix and optional /v1 prefix.
   var rawPath = r.uri;
-  var path = r.uri.replace(/^\/azure-(?:au|us)(?:\/|$)/, '/').replace(/^\/v1\//, '/');
+  var path = r.uri.replace(/^\/azure-(?:au|global)(?:\/|$)/, '/').replace(/^\/v1\//, '/');
   if (path === '/' || path === '') {
     path = '/chat/completions';
   }

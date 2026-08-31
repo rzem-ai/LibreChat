@@ -445,8 +445,13 @@ const Part = memo(function Part({
       <Image
         imagePath={cached ?? imageFile.filepath}
         altText={imageFile.filename ?? 'Uploaded Image'}
+        fileName={imageFile.filename}
         width={imageFile.width}
         height={imageFile.height}
+        // Deloitte: enable authenticated proxy for private azure_blob.
+        source={imageFile.source}
+        fileId={imageFile.file_id}
+        userId={imageFile.user}
       />
     );
   }

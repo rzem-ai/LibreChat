@@ -29,6 +29,7 @@ const refTypeMap: Record<string | SearchRefType, string> = {
   ref: 'references',
   news: 'topStories',
   file: 'references',
+  mcp: 'mcp_results',
 };
 
 export function useCitation({
