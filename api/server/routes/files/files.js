@@ -719,20 +719,28 @@ router.post('/', async (req, res) => {
     metadata.temp_file_id = metadata.file_id;
     metadata.file_id = req.file_id;
 
-    // DELOITTE SPECIFIC CHANGE: verify the file's actual content matches its declared MIME type
-    // before any endpoint-specific processing, so spoofed/renamed uploads are rejected early.
-    const contentCheck = await validateFileContent(req.file.path, req.file.mimetype);
-    if (!contentCheck.isValid) {
+    /** DELOITTE SPECIFIC CHANGE: verify the file's actual content matches its declared MIME type,
+     * so spoofed/renamed uploads are rejected before any endpoint-specific processing. Runs only
+     * after authorization so unauthorized requests don't pay the detection cost. */
+    const isContentMismatch = async () => {
+      const contentCheck = await validateFileContent(req.file.path, req.file.mimetype);
+      if (contentCheck.isValid) {
+        return false;
+      }
       logger.warn(
         `[/files] Rejected upload — declared ${JSON.stringify(req.file.mimetype)}, detected ${JSON.stringify(contentCheck.detectedMime ?? 'unknown')}`,
       );
-      return res.status(400).json({
+      res.status(400).json({
         code: 'FILE_CONTENT_MISMATCH',
         message: contentCheck.error,
       });
-    }
+      return true;
+    };
 
     if (isAssistantsEndpoint(metadata.endpoint)) {
+      if (await isContentMismatch()) {
+        return;
+      }
       openSseStreamIfRequested();
       return await processFileUpload({ req, res, metadata, sseStream });
     }
@@ -755,6 +763,10 @@ router.post('/', async (req, res) => {
       if (denied) {
         return;
       }
+    }
+
+    if (await isContentMismatch()) {
+      return;
     }
 
     openSseStreamIfRequested();
