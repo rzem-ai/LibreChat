@@ -6,6 +6,8 @@ export interface ValidationResult {
   error?: string;
 }
 
+// DELOITTE CUSTOM CHANGE: magic-byte content validation — verifies an uploaded file's real
+// signature (via `file-type`) matches its declared MIME type, to catch spoofed/renamed uploads.
 export interface FileContentValidationResult {
   isValid: boolean;
   error?: string;
