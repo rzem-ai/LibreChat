@@ -657,7 +657,7 @@ router.post('/', async (req, res) => {
     const contentCheck = await validateFileContent(req.file.path, req.file.mimetype);
     if (!contentCheck.isValid) {
       logger.warn(
-        `[/files] Rejected upload — declared "${req.file.mimetype}", detected "${contentCheck.detectedMime ?? 'unknown'}"`,
+        `[/files] Rejected upload — declared ${JSON.stringify(req.file.mimetype)}, detected ${JSON.stringify(contentCheck.detectedMime ?? 'unknown')}`,
       );
       return res.status(400).json({
         code: 'FILE_CONTENT_MISMATCH',
