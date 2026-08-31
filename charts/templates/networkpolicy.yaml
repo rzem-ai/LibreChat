@@ -92,7 +92,7 @@ spec:
     - toFQDNs:
         - matchName: "mcp-gw-dev.ctk.au.deloitte.com"
         - matchName: "mcp-gw-uat.ctk.au.deloitte.com"
-        - matchName: "mcp-gw.ctk.au.deloitte.com"
+        - matchName: "mcp-gateway.ctk.au.deloitte.com"
       toPorts:
         - ports:
             - port: "443"
