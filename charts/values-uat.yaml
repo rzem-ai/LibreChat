@@ -110,8 +110,8 @@ pods:
           # Wrap the OTLP exporter with an Azure AD bearer-token headers factory (managed identity via AZURE_CLIENT_ID)
           AZURE_MONITOR_AUTH_ENABLED: 'true'
           # Logging for debugging
-          OTEL_LOG_LEVEL: 'DEBUG'
-          OTEL_IOREDIS_TRACING_ENABLED: 'true'
+          OTEL_LOG_LEVEL: 'INFO'
+          OTEL_IOREDIS_TRACING_ENABLED: 'false'
           DEBUG_LOGGING: 'true'
           DEBUG_CONSOLE: 'true'
           AGENT_DEBUG_LOGGING: 'true'
