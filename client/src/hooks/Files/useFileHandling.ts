@@ -176,7 +176,7 @@ const useFileHandlingCore = (params: UseFileHandling | undefined, fileState: Fil
         if (error?.code === 'ERR_CANCELED') {
           errorMessage = 'com_error_files_upload_canceled';
         } else if (error?.response?.data?.code === 'FILE_CONTENT_MISMATCH') {
-          // DELOITTE CUSTOM CHANGE: surface a specific message for magic-byte content mismatches
+          // DELOITTE SPECIFIC CHANGE: surface a specific message for magic-byte content mismatches
           errorMessage = 'com_error_files_content_mismatch';
         } else if (error?.response?.data?.message) {
           errorMessage = error.response.data.message;
@@ -272,7 +272,7 @@ const useFileHandlingCore = (params: UseFileHandling | undefined, fileState: Fil
 
   const loadImage = (extendedFile: ExtendedFile, preview: string) => {
     const img = new Image();
-    // DELOITTE CUSTOM CHANGE / KNOWN ISSUE: no img.onerror handler — a file labeled as an image
+    // DELOITTE SPECIFIC CHANGE / KNOWN ISSUE: no img.onerror handler — a file labeled as an image
     // by extension (e.g. a renamed .pdf) that fails to decode leaves the upload stuck forever
     // with no error surfaced. Tracked separately; not fixed here.
     img.onload = async () => {

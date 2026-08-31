@@ -828,7 +828,7 @@ describe('PDF Validation with fileConfig.endpoints.*.fileSizeLimit', () => {
   });
 });
 
-// DELOITTE CUSTOM CHANGE: tests for magic-byte content validation (evaluateContent/validateFileContent)
+// DELOITTE SPECIFIC CHANGE: tests for magic-byte content validation (evaluateContent/validateFileContent)
 describe('evaluateContent', () => {
   it('passes when detected mime exactly matches declared mime', () => {
     const result = evaluateContent('image/png', 'image/png');

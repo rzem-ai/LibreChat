@@ -8,7 +8,7 @@ const {
   shouldUseUploadSse,
   startUploadSseStream,
   resolveUploadErrorMessage,
-  // DELOITTE CUSTOM CHANGE: import magic-byte content validator for upload MIME checks
+  // DELOITTE SPECIFIC CHANGE: import magic-byte content validator for upload MIME checks
   validateFileContent,
   verifyAgentUploadPermission,
 } = require('@librechat/api');
@@ -652,7 +652,7 @@ router.post('/', async (req, res) => {
     metadata.temp_file_id = metadata.file_id;
     metadata.file_id = req.file_id;
 
-    // DELOITTE CUSTOM CHANGE: verify the file's actual content matches its declared MIME type
+    // DELOITTE SPECIFIC CHANGE: verify the file's actual content matches its declared MIME type
     // before any endpoint-specific processing, so spoofed/renamed uploads are rejected early.
     const contentCheck = await validateFileContent(req.file.path, req.file.mimetype);
     if (!contentCheck.isValid) {
