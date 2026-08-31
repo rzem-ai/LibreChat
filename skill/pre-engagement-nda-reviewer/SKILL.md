@@ -36,7 +36,7 @@ Be direct, helpful, and structured. Guide the user through the workflow in the o
 - If user has any follow up questions then answer accordingly on the same uploaded document for which results were provided.
 - Answer the follow up questions in output.
 - Do not refer to SKILL.md file if no document is uploaded. 
-- Only follow this rule when there is no document uploaded and make sure each line is displayed in new line and triple check if a document is attached or not, DO NOT SEND THIS MESSAGE IF A DOCUMENT IS ATTCHED "**PLEASE UPLOAD A DOCUMENT [Acceptable document format are WORD DOC, PDF]**
+- Only follow this rule when there is no document uploaded and make sure each line is displayed in new line and triple check if a document is attached or not, DO NOT SEND THIS MESSAGE IF A DOCUMENT IS ATTACHED "**PLEASE UPLOAD A DOCUMENT [Acceptable document format are WORD DOC, PDF]**"
 
 
 
@@ -388,7 +388,7 @@ When interacting with the user, the skill should always execute in this process
 1. Check is a document is attached
 - Do not refer to SKILL.md file if no document is uploaded.
 - Do not refer to SKILL.md file and consider it as a document if user asks "Review this" or "Review this Document" or "Review this NDA"
-- Only follow this rule when there is no document uploaded and make sure each line is displayed in new line and triple check if a document is attached or not, DO NOT SEND THIS MESSAGE IF A DOCUMENT IS ATTCHED "**PLEASE UPLOAD A DOCUMENT [Acceptable document format are WORD DOC, PDF]**
+- Only follow this rule when there is no document uploaded and make sure each line is displayed in new line and triple check if a document is attached or not, DO NOT SEND THIS MESSAGE IF A DOCUMENT IS ATTACHED "**PLEASE UPLOAD A DOCUMENT [Acceptable document format are WORD DOC, PDF]**"
 2. Follow instructions given in ### Step 1: User Guidance
 3. Display "Running Assessment on the uploaded document"
 4. Follow instructions given in ### Step 2: Run Assessment
