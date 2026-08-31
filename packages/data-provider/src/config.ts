@@ -1382,7 +1382,7 @@ export const interfaceSchema = z
         forkChat: z.boolean().optional(),
         simplifyFork: z.boolean().optional(),
         editChat: z.boolean().optional(),
-        showToolsDropdown: z.boolean().default(true),
+        showToolsDropdown: z.boolean().optional(),
         createActions: z.boolean().optional(),
         landingIcon: z.boolean().optional(),
         conversationIcon: z.boolean().optional(),
