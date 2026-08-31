@@ -114,6 +114,8 @@ interface:
     simplifyFork: true # Set to true to skip the fork options popover and always fork with default settings
     editChat: true # Set to false to disable editing submitted messages
     showToolsDropdown: false # Set to false to disable the chat tools menu
+    alwaysEnableFileSearch: true # Set to true to force-enable file_search where the user is authorized
+    hideFileSearchToggle: true # Set to true to hide the file search pill without changing tool state
     createActions: false # Set to false to hide action creation in the marketplace
     landingIcon: true # Set to false to hide the model or agent icon beside the landing greeting
     conversationIcon: true # Set to false to hide model or endpoint icons in conversation history

@@ -1383,6 +1383,8 @@ export const interfaceSchema = z
         simplifyFork: z.boolean().optional(),
         editChat: z.boolean().optional(),
         showToolsDropdown: z.boolean().optional(),
+        alwaysEnableFileSearch: z.boolean().optional(), // Deloitte Custom Change
+        hideFileSearchToggle: z.boolean().optional(), // Deloitte Custom Change
         createActions: z.boolean().optional(),
         landingIcon: z.boolean().optional(),
         conversationIcon: z.boolean().optional(),
