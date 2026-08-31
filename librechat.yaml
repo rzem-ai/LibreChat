@@ -97,6 +97,16 @@ interface:
 
   sharedLinks: false # Set to false to disable sharing conversations through links
 
+  skills:
+    use: true
+    create: true
+    share: true # Enable share with other users
+    public: false # Disable share with everyone
+
+  # 'left' (default) or 'right'. 'right' right-aligns the current user's own chat turns as
+  # iMessage-style bubbles without an avatar/name header (assistant/agent turns are unaffected).
+  userMessageAlignment: right
+
   temporaryChat: false # Set to false to disable temporary chats
 
   customDeloitteFeatureFlags:

@@ -154,6 +154,10 @@ interface:
   modelSelect: true
   parameters: true
   presets: true
+  # Horizontal alignment of the current user's own chat turns: 'left' (default) or 'right'.
+  # 'right' right-aligns the user's messages as iMessage-style bubbles without an
+  # avatar/name header (assistant/agent messages stay left-aligned and unaffected).
+  userMessageAlignment: left
   prompts:
     use: true
     create: true
