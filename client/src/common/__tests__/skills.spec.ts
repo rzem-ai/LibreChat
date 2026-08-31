@@ -40,13 +40,13 @@ describe('resolveSkillGroup', () => {
     );
   });
 
-  it('returns mine when authored by someone else but with no authorName', () => {
+  it('returns shared when authored by someone else (even if authorName is missing) and not public', () => {
     expect(
       resolveSkillGroup(
         makeSkill({ isPublic: false, author: 'other-user', authorName: '' }),
         'user-1',
       ),
-    ).toBe('mine');
+    ).toBe('shared');
   });
 
   it('cannot resolve ownership when currentUserId is nullish, so falls to shared', () => {
