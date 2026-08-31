@@ -12,6 +12,11 @@ jest.mock('~/utils', () => ({
 
 jest.mock('librechat-data-provider', () => ({
   apiBaseUrl: () => '',
+  FileSources: { azure_blob: 'azure_blob' },
+}));
+
+jest.mock('~/data-provider', () => ({
+  useAuthenticatedBlobUrl: () => ({ url: null, isLoading: false, isError: false }),
 }));
 
 jest.mock('@librechat/client', () => ({

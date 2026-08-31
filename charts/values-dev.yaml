@@ -28,12 +28,13 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'develop@sha256:5e48ae2578b7cdb928974e4400dfc4247b755daec9b2749b40c127d8d08984f8'
+          tag: 'develop@sha256:fe636c747ebd6bd47d19da168272d8d1fb10cccc4c5d56d158b7ddf0f99a384f'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
-          TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://foundry-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_ANTHROPIC_URL: 'http://anthropic-eastus2.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_BEDROCK_AU_URL: 'http://bedrock-ap-southeast-2.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_MCP_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
     containers:
       librechat:
@@ -47,22 +48,27 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:a8e0a5c421907966b6afae45356661e4b3030a21ad3d4643129adf096e708cad'
+          tag: 'develop@sha256:b5da4f93d3802bad03b5a91a1828abbf920edc1df9d59006d1b1a4a10823ccbf'
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
-          ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7,claude-sonnet-5,claude-opus-4-8'
+          ANTHROPIC_MODELS: 'claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-sonnet-5,claude-opus-4-8'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
-          APP_TITLE: 'MyAssist 2.0 (DEV)'
+          APP_TITLE: 'MyAssist (DEV)'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
-          BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
+          BASE_URL_AZURE_GLOBAL: 'http://127.0.0.1:8081/azure-global'
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
+          BEDROCK_AWS_ACCESS_KEY_ID: 'unused'
+          BEDROCK_AWS_DEFAULT_REGION: 'ap-southeast-2'
+          BEDROCK_AWS_SECRET_ACCESS_KEY: 'unused'
+          BEDROCK_AWS_MODELS: 'au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0'
+          BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081'
           CUSTOM_FOOTER: '⚠️ WARNING: This is a development environment. Do not upload client or confidential data.'
           DOMAIN_CLIENT: 'https://librechat-dev.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://librechat-dev.ctk.au.deloitte.com'
           EMBEDDINGS_MODEL: 'text-embedding-3-small'
           EMBEDDINGS_PROVIDER: 'openai'
-          ENDPOINTS: 'agents,anthropic,custom'
+          ENDPOINTS: 'agents,anthropic,bedrock,custom'
           KEY_VAULT_NAME: 'kv-int-librechat-dev'
           MCP_GATEWAY_OBO_SCOPE: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
           MCP_GATEWAY_TOOLSETS: 'teams,research,news,kx,desc,gims'
@@ -84,6 +90,7 @@ pods:
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
           RAG_PORT: '8000'
           RAG_USE_FULL_CONTEXT: 'true'
+          REFRESH_TOKEN_EXPIRY: '86400000' # (ms) - 1 day refresh token expiration
           # ClearTrack Code Interpreter (ea-code-runtime)
           LIBRECHAT_CODE_BASEURL: 'https://code-runtime-dev.ctk.au.deloitte.com/v1'
           CODEAPI_AUTH_PROVIDER: 'librechat-jwt'
@@ -110,11 +117,17 @@ pods:
           # Wrap the OTLP exporter with an Azure AD bearer-token headers factory (managed identity via AZURE_CLIENT_ID)
           AZURE_MONITOR_AUTH_ENABLED: 'true'
           # Logging for debugging
-          OTEL_LOG_LEVEL: 'DEBUG'
-          OTEL_IOREDIS_TRACING_ENABLED: 'true'
-          DEBUG_LOGGING: 'true'
-          DEBUG_CONSOLE: 'true'
+          OTEL_LOG_LEVEL: 'INFO'
+          OTEL_IOREDIS_TRACING_ENABLED: 'false'
+          DEBUG_LOGGING: 'false'
+          DEBUG_CONSOLE: 'false'
           AGENT_DEBUG_LOGGING: 'true'
+          # Skill Security Scanner
+          SKILL_SCANNER_URL: 'https://ai-registry-dev.ctk.au.deloitte.com/v1/scan?verbose=false'
+          SKILL_SCANNER_TIMEOUT_MS: '15000'
+          SKILL_SCANNER_MIN_SEVERITY: 'high'
+          # AI Registry
+          AI_REGISTRY_CLIENT_ID: "4aeebbdc-56f5-4329-b40e-3d0a243bf74a" # AI Registry DEV & UAT
           # In-cluster Valkey -- StatefulSet from charts/templates/valkey.yaml
           USE_REDIS: 'true'
           USE_REDIS_STREAMS: 'true'
@@ -132,7 +145,7 @@ pods:
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-dev
           OPENID_SESSION_SECRET: librechat-openid-session-secret-dev
           # RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
-          MEILI_MASTER_KEY: librechat-meili-master-key-dev
+          # MEILI_MASTER_KEY: librechat-meili-master-key-dev
           # ClearTrack Code Interpreter (ea-code-runtime) — JWK signing key
           CODEAPI_JWT_PRIVATE_JWK_JSON: librechat-codeapi-jwt-private-jwk-dev
           #Langfuse Observability
@@ -143,7 +156,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:613e13439e992c670d0210c5e975308e219a1f2b8e2b860b247a49275bf0d76d'
+          tag: 'develop@sha256:06fd587ffd5f14a81293b75e68d128872f00a39e93da6b90601ebb181af487a5'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -161,7 +174,6 @@ pods:
           EMBEDDINGS_PROVIDER: 'openai'
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
-
         secrets:
           # AZURE_OPENAI_API_KEY: librechat-azure-api-key
           # RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
@@ -173,22 +185,22 @@ pods:
           targetPort: 8000
         ingress:
           enabled: false
-      meilisearch:
-        image:
-          pullPolicy: Always
-          tag: 'develop@sha256:89dfc866b1e7400e771c3b4b629b0c784db17565d2e37e018459183c5380edaa'
-        env:
-          MEILI_ENV: 'development'
-        secrets:
-          MEILI_MASTER_KEY: librechat-meili-master-key-dev
-        persistence:
-          enabled: true
-          size: 10Gi
-          accessModes:
-            - ReadWriteOnce
-          name: 'meilisearch-data'
-          mountPath: /meili_data
-          storageClass: 'managed-csi-standard-private'
+          # meilisearch: # TODO: Enable meilisearch when we can have multi-container PVC
+          #   image:
+          #     pullPolicy: Always
+          #     tag: 'develop@sha256:5cb7817994348e6ce9f2e0653199a75e501083ae32c80259dabbc656012bdb0f'
+          #   env:
+          #     MEILI_ENV: 'development'
+          #   secrets:
+          #     MEILI_MASTER_KEY: librechat-meili-master-key-dev
+          #   persistence:
+          #     enabled: true
+          #     size: 10Gi
+          #     accessModes:
+          #       - ReadWriteOnce
+          #     name: 'meilisearch-data'
+          #     mountPath: /meili_data
+          #     storageClass: 'managed-csi-standard-private'
   admin:
     replicas: 1
     containers:
@@ -200,7 +212,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:7925c17e3a58eabc8da68ff1340b69bb2bf8a226f30e5c816e40343ad0014871'
+          tag: 'develop@sha256:e2b86d77e350d184d671445661b718b3423d9231356a9994399ca258ad6e0d9b'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
@@ -223,7 +235,7 @@ pods:
 
 valkey:
   image:
-    tag: 'develop@sha256:18c462d0a8b774bfdf9ec010a345ff33b98671b4a00e2c74bf625ebbfe6442e8'
+    tag: 'develop@sha256:4c9c22ac6597f444deb3378136b42d7ebfdd947f8a4b5d9a16431aef6b5e6c3a'
   persistence:
     storageClass: 'managed-csi-standard-private'
   passwordSecretName: 'librechat-valkey-password-dev'

@@ -79,6 +79,8 @@ describe('initializeBedrock', () => {
     delete process.env.BEDROCK_AWS_PROFILE;
     delete process.env.BEDROCK_AWS_SESSION_TOKEN;
     delete process.env.BEDROCK_REVERSE_PROXY;
+    delete process.env.BEDROCK_GATEWAY_URL;
+    delete process.env.LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION;
     delete process.env.PROXY;
     delete process.env.proxy;
     delete process.env.HTTP_PROXY;
@@ -381,6 +383,14 @@ describe('initializeBedrock', () => {
   });
 
   describe('Proxy Configuration', () => {
+    it('should use the pod-local gateway root so Bedrock requests retain their native paths', async () => {
+      process.env.BEDROCK_GATEWAY_URL = 'http://127.0.0.1:8081';
+      const params = createMockParams();
+      const result = (await initializeBedrock(params)) as BedrockLLMConfigResult;
+
+      expect(result.llmConfig.client).toHaveProperty('endpoint', 'http://127.0.0.1:8081');
+    });
+
     it('should create BedrockRuntimeClient with proxy when PROXY is set', async () => {
       process.env.PROXY = 'http://proxy:8080';
       const params = createMockParams();
@@ -441,6 +451,19 @@ describe('initializeBedrock', () => {
 
       expect(result.llmConfig).toHaveProperty('endpointHost', 'reverse-proxy.example.com');
       expect(result.llmConfig).not.toHaveProperty('client');
+    });
+
+    it('should create a custom client for a protocol-qualified reverse proxy URL', async () => {
+      process.env.BEDROCK_REVERSE_PROXY = 'https://reverse-proxy.example.com/bedrock';
+      const params = createMockParams();
+      const result = (await initializeBedrock(params)) as BedrockLLMConfigResult;
+
+      expect(result.llmConfig).toHaveProperty('client');
+      expect(result.llmConfig.client).toHaveProperty(
+        'endpoint',
+        'https://reverse-proxy.example.com/bedrock',
+      );
+      expect(result.llmConfig).not.toHaveProperty('endpointHost');
     });
   });
 

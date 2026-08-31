@@ -1,5 +1,5 @@
-import { isAfter } from 'date-fns';
 import React, { useMemo } from 'react';
+import { isAfter } from 'date-fns';
 import { imageExtRegex } from 'librechat-data-provider';
 import type { TFile, TAttachment, TAttachmentMetadata } from 'librechat-data-provider';
 import type { Artifact } from '~/common';
@@ -239,7 +239,12 @@ const LogContent: React.FC<LogContentProps> = ({ output = '', renderImages, atta
           height={attachment.height}
           key={renderAttachmentKey('image', attachment, index)}
           altText={attachment.filename}
+          fileName={attachment.filename}
           imagePath={attachment.filepath}
+          // Deloitte: enable authenticated proxy for private azure_blob.
+          source={attachment.source}
+          fileId={attachment.file_id}
+          userId={attachment.user}
         />
       ))}
     </>

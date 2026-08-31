@@ -17,6 +17,9 @@ const ctx: SettingsContextValue = {
   twoFactorEnabled: false,
   allowAccountDeletion: true,
   aboutEnabled: false,
+  accountsTabEnabled: true,
+  dataApiKeysEnabled: true,
+  dataDangerZoneEnabled: true,
   engineTTS: 'browser',
   langfuseConnectionAccess: false,
 };

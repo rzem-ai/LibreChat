@@ -9,6 +9,8 @@ const {
   shouldUseUploadSse,
   startUploadSseStream,
   resolveUploadErrorMessage,
+  // DELOITTE SPECIFIC CHANGE: import magic-byte content validator for upload MIME checks
+  validateFileContent,
   verifyAgentUploadPermission,
 } = require('@librechat/api');
 const {
@@ -35,7 +37,7 @@ const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { getOpenAIClient } = require('~/server/controllers/assistants/helpers');
 const { hasCapability } = require('~/server/middleware/roles/capabilities');
 const { checkPermission } = require('~/server/services/PermissionService');
-const { cleanFileName, getContentDisposition } = require('~/server/utils/files');
+const { cleanFileName, getContentDisposition, SAFE_INLINE_TYPES } = require('~/server/utils/files');
 const { getLogStores } = require('~/cache');
 const { Readable } = require('stream');
 const db = require('~/models');
@@ -68,7 +70,18 @@ router.get('/', async (req, res) => {
         logger.warn('[/files] Error refreshing S3 file URLs:', error);
       }
     }
-    res.status(200).send(files);
+    // Deloitte: rewrite azure_blob filepath to authenticated proxy for private containers.
+    const rewritten = files.map((file) => {
+      if (file.source === FileSources.azure_blob && file.file_id) {
+        const obj = file.toObject ? file.toObject() : file;
+        return {
+          ...obj,
+          filepath: `/api/files/download/${req.user.id}/${file.file_id}?inline=true`,
+        };
+      }
+      return file;
+    });
+    res.status(200).send(rewritten);
   } catch (error) {
     logger.error('[/files] Error getting files:', error);
     res.status(400).json({ message: 'Error in request', error: error.message });
@@ -126,7 +139,19 @@ router.get('/agent/:agent_id', async (req, res) => {
       text: 0,
     });
 
-    res.status(200).json(files);
+    // Deloitte: rewrite azure_blob filepath to authenticated proxy for private containers.
+    const rewritten = files.map((file) => {
+      if (file.source === FileSources.azure_blob && file.file_id) {
+        const obj = file.toObject ? file.toObject() : file;
+        return {
+          ...obj,
+          filepath: `/api/files/download/${userId}/${file.file_id}?inline=true`,
+        };
+      }
+      return file;
+    });
+
+    res.status(200).json(rewritten);
   } catch (error) {
     logger.error('[/files/agent/:agent_id] Error fetching agent files:', error);
     res.status(500).json({ error: 'Failed to fetch agent files' });
@@ -572,9 +597,17 @@ router.get('/download/:userId/:file_id', fileAccess, async (req, res) => {
       return res.status(501).send('Not Implemented');
     }
 
+    const inline = req.query.inline === 'true' && SAFE_INLINE_TYPES.has(file.type);
     const setHeaders = () => {
-      res.setHeader('Content-Disposition', getContentDisposition(file.filename));
-      res.setHeader('Content-Type', 'application/octet-stream');
+      // Prevents browsers from sniffing the Content-Type and executing e.g. an
+      // SVG served as image/png as active script content under our origin.
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      if (inline) {
+        res.setHeader('Content-Type', file.type);
+      } else {
+        res.setHeader('Content-Disposition', getContentDisposition(file.filename));
+        res.setHeader('Content-Type', 'application/octet-stream');
+      }
       res.setHeader(
         'X-File-Metadata',
         encodeURIComponent(JSON.stringify(getDownloadFileMetadata(file))),
@@ -686,7 +719,28 @@ router.post('/', async (req, res) => {
     metadata.temp_file_id = metadata.file_id;
     metadata.file_id = req.file_id;
 
+    /** DELOITTE SPECIFIC CHANGE: verify the file's actual content matches its declared MIME type,
+     * so spoofed/renamed uploads are rejected before any endpoint-specific processing. Runs only
+     * after authorization so unauthorized requests don't pay the detection cost. */
+    const isContentMismatch = async () => {
+      const contentCheck = await validateFileContent(req.file.path, req.file.mimetype);
+      if (contentCheck.isValid) {
+        return false;
+      }
+      logger.warn(
+        `[/files] Rejected upload — declared ${JSON.stringify(req.file.mimetype)}, detected ${JSON.stringify(contentCheck.detectedMime ?? 'unknown')}`,
+      );
+      res.status(400).json({
+        code: 'FILE_CONTENT_MISMATCH',
+        message: contentCheck.error,
+      });
+      return true;
+    };
+
     if (isAssistantsEndpoint(metadata.endpoint)) {
+      if (await isContentMismatch()) {
+        return;
+      }
       openSseStreamIfRequested();
       return await processFileUpload({ req, res, metadata, sseStream });
     }
@@ -709,6 +763,10 @@ router.post('/', async (req, res) => {
       if (denied) {
         return;
       }
+    }
+
+    if (await isContentMismatch()) {
+      return;
     }
 
     openSseStreamIfRequested();

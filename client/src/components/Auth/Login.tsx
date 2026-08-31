@@ -5,6 +5,7 @@ import { useOutletContext, useSearchParams, useLocation } from 'react-router-dom
 import type { TLoginLayoutContext } from '~/common';
 import { getLoginError, persistRedirectToSession } from '~/utils';
 import { ErrorMessage } from '~/components/Auth/ErrorMessage';
+import { DeloitteLogo } from '~/components/DeloitteComponents/DeloitteLogo';
 import SocialButton from '~/components/Auth/SocialButton';
 import { useAuthContext } from '~/hooks/AuthContext';
 import { useLocalize } from '~/hooks';
@@ -83,13 +84,7 @@ function Login() {
             enabled={startupConfig.openidLoginEnabled}
             serverDomain={startupConfig.serverDomain}
             oauthPath="openid"
-            Icon={() =>
-              startupConfig.openidImageUrl ? (
-                <img src={startupConfig.openidImageUrl} alt="OpenID Logo" className="h-5 w-5" />
-              ) : (
-                <OpenIDIcon />
-              )
-            }
+            Icon={() => <DeloitteLogo compact className="text-background" />}
             label={startupConfig.openidLabel}
             id="openid"
           />

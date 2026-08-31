@@ -1,10 +1,6 @@
-import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { QueryKeys, dataService } from 'librechat-data-provider';
-import type {
-  QueryObserverResult,
-  UseQueryOptions,
-  UseInfiniteQueryOptions,
-} from '@tanstack/react-query';
+import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   TSkill,
   TSkillListRequest,
@@ -13,6 +9,13 @@ import type {
   TListSkillFilesResponse,
   TSkillFileContentResponse,
 } from 'librechat-data-provider';
+import type {
+  QueryObserverResult,
+  UseQueryOptions,
+  UseInfiniteQueryOptions,
+} from '@tanstack/react-query';
+import type { BlobUrlResult } from '~/hooks/Files/useBlobUrl';
+import { useBlobUrl } from '~/hooks/Files/useBlobUrl';
 
 /**
  * Paginated skill list (single page) — use this for small lists or when you want to
@@ -148,6 +151,23 @@ export const useGetSkillFileContentQuery = (
       ...config,
       enabled: enabled && (config?.enabled ?? true),
     },
+  );
+};
+
+// Deloitte: fetch skill file bytes via authenticated axios; expose object URL per hook instance.
+export const useSkillFileBlobUrl = (
+  skillId: string | null | undefined,
+  relativePath: string | null | undefined,
+  enabled: boolean = true,
+): BlobUrlResult => {
+  const fetchBlob = useCallback(async () => {
+    const response = await dataService.getSkillFileBlob(skillId as string, relativePath as string);
+    return response.data;
+    // skillId + relativePath are the resource key; recreate when either changes
+  }, [skillId, relativePath]);
+  return useBlobUrl(
+    skillId && relativePath ? fetchBlob : null,
+    enabled && !!skillId && !!relativePath,
   );
 };
 

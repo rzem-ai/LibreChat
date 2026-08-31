@@ -1,6 +1,17 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { Providers } from '@librechat/agents';
 import { mbToBytes } from 'librechat-data-provider';
-import { validatePdf, validateBedrockDocument, validateVideo, validateAudio } from './validation';
+import {
+  validatePdf,
+  validateBedrockDocument,
+  validateVideo,
+  validateAudio,
+  evaluateContent,
+  withTimeout,
+  validateFileContent,
+} from './validation';
 
 describe('PDF Validation with fileConfig.endpoints.*.fileSizeLimit', () => {
   /** Helper to create a PDF buffer with valid header */
@@ -881,4 +892,121 @@ describe('PDF Validation with fileConfig.endpoints.*.fileSizeLimit', () => {
       });
     });
   });
+});
+
+// DELOITTE SPECIFIC CHANGE: tests for magic-byte content validation (evaluateContent/validateFileContent)
+describe('evaluateContent', () => {
+  it('passes when detected mime exactly matches declared mime', () => {
+    const result = evaluateContent('image/png', 'image/png');
+    expect(result.isValid).toBe(true);
+    expect(result.detectedMime).toBe('image/png');
+  });
+
+  it('passes for known mime alias pairs (jpg/jpeg)', () => {
+    expect(evaluateContent('image/jpeg', 'image/jpg').isValid).toBe(true);
+    expect(evaluateContent('image/jpg', 'image/jpeg').isValid).toBe(true);
+  });
+
+  it('passes for known mime alias pairs (mp3/mpeg)', () => {
+    expect(evaluateContent('audio/mpeg', 'audio/mp3').isValid).toBe(true);
+  });
+
+  it('passes for known mime alias pairs (mov/quicktime)', () => {
+    expect(evaluateContent('video/quicktime', 'video/mov').isValid).toBe(true);
+  });
+
+  it('passes when a docx is detected as its zip-family declared type', () => {
+    const result = evaluateContent(
+      'application/zip',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    );
+    expect(result.isValid).toBe(true);
+  });
+
+  it('rejects a clear mismatch between detected and declared mime', () => {
+    const result = evaluateContent('application/x-msdownload', 'image/png');
+    expect(result.isValid).toBe(false);
+    expect(result.detectedMime).toBe('application/x-msdownload');
+    expect(result.error).toContain('application/x-msdownload');
+    expect(result.error).toContain('image/png');
+  });
+
+  it('passes when no signature is detected, regardless of declared type', () => {
+    const result = evaluateContent(undefined, 'text/plain');
+    expect(result.isValid).toBe(true);
+  });
+
+  it('passes when declared mime is empty', () => {
+    expect(evaluateContent('application/x-msdownload', '').isValid).toBe(true);
+  });
+
+  it('passes when declared mime is application/octet-stream, even on mismatch', () => {
+    const result = evaluateContent('application/x-msdownload', 'application/octet-stream');
+    expect(result.isValid).toBe(true);
+  });
+});
+
+describe('withTimeout', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('resolves with the value when the promise settles before the timeout', async () => {
+    const result = withTimeout(Promise.resolve('done'), 4000);
+    await Promise.resolve(); // flush the microtask queue so the .then handler runs
+    await expect(result).resolves.toBe('done');
+  });
+
+  it('resolves with undefined once the timeout elapses without the promise settling', async () => {
+    const neverSettles = new Promise(() => {});
+    const result = withTimeout(neverSettles, 4000);
+
+    jest.advanceTimersByTime(4000);
+
+    await expect(result).resolves.toBeUndefined();
+  });
+});
+
+describe('validateFileContent', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'validate-file-content-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('passes without inspecting the file when declared mime is empty', async () => {
+    const filePath = path.join(tmpDir, 'missing-file-is-fine.bin');
+    const result = await validateFileContent(filePath, '');
+    expect(result.isValid).toBe(true);
+  });
+
+  it('passes without inspecting the file when declared mime is application/octet-stream', async () => {
+    const filePath = path.join(tmpDir, 'missing-file-is-fine.bin');
+    const result = await validateFileContent(filePath, 'application/octet-stream');
+    expect(result.isValid).toBe(true);
+  });
+
+  it('passes a plain text file declared as text/plain', async () => {
+    const filePath = path.join(tmpDir, 'note.txt');
+    fs.writeFileSync(filePath, 'just some plain text content');
+    const result = await validateFileContent(filePath, 'text/plain');
+    expect(result.isValid).toBe(true);
+  });
+
+  // Note: real `file-type` magic-byte detection (e.g. a PNG signature actually being
+  // recognized) can't be exercised here — Jest's VM sandbox rejects the dynamic
+  // `import("file-type")` this module uses to load the ESM-only package (it throws
+  // "A dynamic import callback was invoked without --experimental-vm-modules"), so
+  // `validateFileContent` silently falls back to "no signature detected" for any real
+  // binary content under Jest. The actual detection logic is covered by the pure
+  // `evaluateContent` tests above, and real end-to-end detection has been verified
+  // manually (plain `node -e`) and in the running app's logs.
 });

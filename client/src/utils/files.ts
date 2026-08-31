@@ -7,18 +7,18 @@ import {
   SheetPaths,
 } from '@librechat/client';
 import {
-  megabyte,
   Providers,
+  megabyte,
   QueryKeys,
   inferMimeType,
+  EModelEndpoint,
   excelMimeTypes,
   EToolResources,
-  EModelEndpoint,
   retrievalMimeTypes,
   isBedrockDocumentType,
-  isPermissiveMimeConfig,
-  codeInterpreterMimeTypes,
   isDocumentSupportedProvider,
+  codeInterpreterMimeTypes,
+  isPermissiveMimeConfig,
   fileConfig as defaultFileConfig,
 } from 'librechat-data-provider';
 import type { TFile, EndpointFileConfig, FileConfig } from 'librechat-data-provider';
@@ -330,6 +330,8 @@ export type UploadOptionContext = {
   endpoint?: string | null;
   endpointType?: string | null;
   useResponsesApi?: boolean;
+  // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+  providerUploadEnabled?: boolean;
   fileSearchEnabled: boolean;
   codeEnabled: boolean;
   contextEnabled: boolean;
@@ -354,8 +356,6 @@ const isProviderAttachType = (type: string, ctx: UploadOptionContext): boolean =
     isDocumentSupportedProvider(currentProvider) ||
     isAzureWithResponsesApi
   ) {
-    /** Custom endpoints that the admin opened up (permissive config) honor that allowlist,
-     * matching the file picker; an inherited default config is not treated as opened up. */
     if (
       ctx.endpointType === EModelEndpoint.custom &&
       ctx.endpointSupportedMimeTypes != null &&
@@ -388,9 +388,8 @@ const isContextType = (type: string, fileConfig: FileConfig | null): boolean =>
 
 /**
  * Upload destinations a file set can be routed to, given the active endpoint and agent
- * capabilities. `undefined` is direct provider attachment; the rest are tool resources.
- * Each option requires every file to be valid for it, so the caller can decide between
- * auto-routing (one option), prompting (multiple), or rejecting (none).
+ * capabilities. Each option requires every file to be valid for it, so the caller can decide
+ * between auto-routing (one option), prompting (multiple), or rejecting (none).
  */
 export const getViableUploadOptions = (
   fileList: File[],
@@ -407,7 +406,8 @@ export const getViableUploadOptions = (
     types.every((type) => predicate(type as string));
 
   const options: (EToolResources | undefined)[] = [];
-  if (every((type) => isProviderAttachType(type, ctx))) {
+  // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+  if (ctx.providerUploadEnabled === true && every((type) => isProviderAttachType(type, ctx))) {
     options.push(undefined);
   }
   if (

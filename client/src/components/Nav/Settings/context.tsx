@@ -32,6 +32,11 @@ export function useSettingsContext(): SettingsContextValue {
   const twoFactorEnabled = user?.twoFactorEnabled === true;
   const allowAccountDeletion = startupConfig?.allowAccountDeletion !== false;
   const aboutEnabled = startupConfig?.interface?.buildInfo !== false;
+  /** Deloitte Custom Change: settings visibility flags. */
+  const customDeloitteFeatureFlags = startupConfig?.interface?.customDeloitteFeatureFlags;
+  const accountsTabEnabled = customDeloitteFeatureFlags?.accountsTab !== false;
+  const dataApiKeysEnabled = customDeloitteFeatureFlags?.dataApiKeys !== false;
+  const dataDangerZoneEnabled = customDeloitteFeatureFlags?.dataDangerZone !== false;
   const hasRemoteAgentsBool = hasRemoteAgents === true;
   const hasMultiConvoBool = hasMultiConvo === true;
   const hasPromptsBool = hasPrompts === true;
@@ -51,6 +56,9 @@ export function useSettingsContext(): SettingsContextValue {
       twoFactorEnabled,
       allowAccountDeletion,
       aboutEnabled,
+      accountsTabEnabled,
+      dataApiKeysEnabled,
+      dataDangerZoneEnabled,
       engineTTS,
       langfuseConnectionAccess,
     }),
@@ -66,6 +74,9 @@ export function useSettingsContext(): SettingsContextValue {
       twoFactorEnabled,
       allowAccountDeletion,
       aboutEnabled,
+      accountsTabEnabled,
+      dataApiKeysEnabled,
+      dataDangerZoneEnabled,
       engineTTS,
       langfuseConnectionAccess,
     ],

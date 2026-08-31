@@ -1,6 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Skeleton } from '@librechat/client';
-import { apiBaseUrl } from 'librechat-data-provider';
+import { apiBaseUrl, FileSources } from 'librechat-data-provider';
+import { useAuthenticatedBlobUrl } from '~/data-provider';
 import DialogImage from './DialogImage';
 import { cn } from '~/utils';
 
@@ -27,13 +28,19 @@ function computeHeightStyle(w: number, h: number): React.CSSProperties {
 const Image = ({
   imagePath,
   altText,
+  fileName,
   className,
   args,
   width,
   height,
+  source,
+  fileId,
+  userId,
 }: {
   imagePath: string;
   altText: string;
+  /** Filename used for the download link. Falls back to altText then 'image' if absent. */
+  fileName?: string;
   className?: string;
   args?: {
     prompt?: string;
@@ -44,27 +51,60 @@ const Image = ({
   };
   width?: number;
   height?: number;
+  source?: string;
+  fileId?: string;
+  userId?: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const absoluteImageUrl = useMemo(() => {
-    if (!imagePath) return imagePath;
-
-    if (imagePath.startsWith('http') || imagePath.startsWith('data:')) {
-      return imagePath;
+  // Deloitte: rewrite raw azure_blob URLs to same-origin proxy so browser doesn't hit
+  // private container directly (avoids 403 + prevents Bearer leak to blob.core.windows.net).
+  const rewrittenPath = useMemo(() => {
+    if (source === FileSources.azure_blob && fileId && userId && imagePath?.startsWith('http')) {
+      // inline=true returns an allowlisted MIME type rather than forcing Content-Disposition: attachment.
+      return `/api/files/download/${userId}/${fileId}?inline=true`;
     }
-
-    // Root-relative server paths (`/images/...` static, `/api/share/...` share
-    // routes) are resolved against the API base so they load under a subpath.
-    if (imagePath.startsWith('/images/') || imagePath.startsWith('/api/')) {
-      return `${apiBaseUrl()}${imagePath}`;
-    }
-
     return imagePath;
-  }, [imagePath]);
+  }, [imagePath, source, fileId, userId]);
+
+  const absoluteImageUrl = useMemo(() => {
+    if (!rewrittenPath) return rewrittenPath;
+
+    if (rewrittenPath.startsWith('http') || rewrittenPath.startsWith('data:')) {
+      return rewrittenPath;
+    }
+
+    if (rewrittenPath.startsWith('/images/') || rewrittenPath.startsWith('/api/')) {
+      return `${apiBaseUrl()}${rewrittenPath}`;
+    }
+
+    return rewrittenPath;
+  }, [rewrittenPath]);
+
+  // Deloitte: /api/ routes need Bearer JWT; <img src> can't send it — fetch via axios blob.
+  const needsBlob = rewrittenPath?.startsWith('/api/') ?? false;
+  const { url: blobUrl } = useAuthenticatedBlobUrl(absoluteImageUrl, needsBlob);
+  const displayUrl = needsBlob ? blobUrl : absoluteImageUrl;
 
   const downloadImage = async () => {
+    // Deloitte: bail early if the authenticated blob URL hasn't resolved yet —
+    // the fallback fetch() below cannot attach the Bearer header and would 401.
+    // Neither branch reaches the try/catch below; both return before it.
+    if (needsBlob && !blobUrl) {
+      return;
+    }
+    const downloadName = fileName || altText || 'image';
+    if (blobUrl) {
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = downloadName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+    // Non-blob path (public URLs, static /images/): fetch without auth header.
     try {
       const response = await fetch(absoluteImageUrl);
       if (!response.ok) {
@@ -76,7 +116,7 @@ const Image = ({
 
       const link = document.createElement('a');
       link.href = url;
-      link.download = altText || 'image.png';
+      link.download = downloadName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -86,7 +126,7 @@ const Image = ({
       console.error('Download failed:', error);
       const link = document.createElement('a');
       link.href = absoluteImageUrl;
-      link.download = altText || 'image.png';
+      link.download = downloadName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -119,23 +159,27 @@ const Image = ({
         )}
         style={heightStyle}
       >
-        {showSkeleton && <Skeleton className="absolute inset-0" aria-hidden="true" />}
-        <img
-          alt={altText}
-          src={absoluteImageUrl}
-          onLoad={() => paintedUrls.add(absoluteImageUrl)}
-          className={cn(
-            'relative block text-transparent',
-            hasDimensions
-              ? 'size-full object-contain'
-              : cn('h-auto w-auto max-w-full', IMAGE_MAX_H),
-          )}
-        />
+        {(showSkeleton || (needsBlob && !displayUrl)) && (
+          <Skeleton className="absolute inset-0" aria-hidden="true" />
+        )}
+        {displayUrl && (
+          <img
+            alt={altText}
+            src={displayUrl}
+            onLoad={() => paintedUrls.add(absoluteImageUrl)}
+            className={cn(
+              'relative block text-transparent',
+              hasDimensions
+                ? 'size-full object-contain'
+                : cn('h-auto w-auto max-w-full', IMAGE_MAX_H),
+            )}
+          />
+        )}
       </button>
       <DialogImage
         isOpen={isOpen}
         onOpenChange={setIsOpen}
-        src={absoluteImageUrl}
+        src={displayUrl ?? absoluteImageUrl}
         downloadImage={downloadImage}
         args={args}
         triggerRef={triggerRef}

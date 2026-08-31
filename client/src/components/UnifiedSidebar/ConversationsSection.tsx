@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, useMemo, memo, lazy, Suspense, useRef } from 'react';
-import { useSetRecoilState, useRecoilValue } from 'recoil';
 import { useMediaQuery } from '@librechat/client';
+import { useSetRecoilState, useRecoilValue } from 'recoil';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import type { InfiniteQueryObserverResult } from '@tanstack/react-query';
 import type { ConversationListResponse } from 'librechat-data-provider';
@@ -13,9 +13,9 @@ import {
   useNavScrolling,
 } from '~/hooks';
 import { useConversationsInfiniteQuery, useTitleGeneration } from '~/data-provider';
-import { Conversations } from '~/components/Conversations';
 import ProjectsSection from '~/components/Conversations/ProjectsSection';
 import FavoritesList from '~/components/Nav/Favorites/FavoritesList';
+import { Conversations } from '~/components/Conversations';
 import SearchBar from '~/components/Nav/SearchBar';
 import store from '~/store';
 
@@ -44,6 +44,11 @@ const ConversationsSection = memo(() => {
       {
         tags: tags.length === 0 ? undefined : tags,
         search: search.debouncedQuery || undefined,
+        /** Project-assigned conversations already render under their project in
+         * ProjectsSection; exclude them here to avoid listing them twice. Skip
+         * the filter while searching, since ProjectsSection is hidden then and
+         * this list becomes the only place search results can surface. */
+        projectId: search.debouncedQuery ? undefined : 'unassigned',
       },
       {
         enabled: isAuthenticated,

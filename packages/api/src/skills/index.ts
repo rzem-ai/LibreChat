@@ -4,6 +4,7 @@ export * from './import';
 export * from './path';
 export * from './limits';
 export * from './parse';
+export * from './scanner';
 export * from './skillStates';
 export * from './deployment';
 export * from './sync';

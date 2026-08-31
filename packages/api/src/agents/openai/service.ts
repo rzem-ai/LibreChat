@@ -294,7 +294,8 @@ export function sendErrorResponse(
 export type ChatCompletionValidationSuccess = { valid: true; request: ChatCompletionRequest };
 export type ChatCompletionValidationFailure = { valid: false; error: string };
 export type ChatCompletionValidationResult =
-  ChatCompletionValidationSuccess | ChatCompletionValidationFailure;
+  | ChatCompletionValidationSuccess
+  | ChatCompletionValidationFailure;
 
 /**
  * Type guard for validation failure

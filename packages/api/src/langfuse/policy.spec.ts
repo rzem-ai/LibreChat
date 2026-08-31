@@ -56,8 +56,9 @@ describe('Langfuse policy', () => {
     process.env.LANGFUSE_SECRET_KEY = 'sk-central';
     process.env.LANGFUSE_FANOUT_ENABLED = 'true';
     process.env.LANGFUSE_FANOUT_COLLECTOR_URL = 'http://collector:4318';
-    const { isLangfuseConnectionAvailable, usesLangfuseMultiTenantRouting } =
-      await import('./policy');
+    const { isLangfuseConnectionAvailable, usesLangfuseMultiTenantRouting } = await import(
+      './policy'
+    );
 
     expect(usesLangfuseMultiTenantRouting()).toBe(true);
     expect(isLangfuseConnectionAvailable()).toBe(true);

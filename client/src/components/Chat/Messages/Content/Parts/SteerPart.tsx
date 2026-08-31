@@ -143,6 +143,11 @@ const SteerPart = memo(function SteerPart({
                   height={file.height ?? 1920}
                   width={file.width ?? 1080}
                   altText={file.filename ?? localize('com_ui_attached_image')}
+                  fileName={file.filename}
+                  // Deloitte: enable authenticated proxy for private azure_blob.
+                  source={file.source}
+                  fileId={file.file_id}
+                  userId={file.user}
                 />
               ))}
             </div>
