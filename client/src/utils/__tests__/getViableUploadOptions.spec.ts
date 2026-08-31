@@ -21,6 +21,7 @@ const baseCtx = (over: Partial<UploadOptionContext> = {}): UploadOptionContext =
   endpoint: 'anthropic',
   endpointType: 'anthropic',
   useResponsesApi: false,
+  providerUploadEnabled: true,
   fileSearchEnabled: true,
   codeEnabled: true,
   contextEnabled: true,
