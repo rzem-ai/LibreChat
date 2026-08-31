@@ -1,5 +1,7 @@
 import JSZip from 'jszip';
 import {
+  scanSkillOnCreate,
+  scanSkillOnUpdate,
   scanSkillUpload,
   scanSkillMarkdown,
   scanSkillFileUpload,
@@ -251,6 +253,141 @@ describe('skill scanner', () => {
     await expect(
       scanSkillFileUpload({ fileName: 'script.sh', content: Buffer.from('echo hi') }),
     ).resolves.toBeUndefined();
+  });
+
+  it('does not surface manifest validation problems as the reason a requireValidation:false scan failed', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse({
+        validation: { passed: false, problems: ['Missing required file: SKILL.md'] },
+        scan: { is_safe: false, findings: [] },
+      }),
+    ) as unknown as typeof fetch;
+
+    await expect(
+      scanSkillFileUpload({ fileName: 'script.sh', content: Buffer.from('echo hi') }),
+    ).rejects.toMatchObject({
+      statusCode: 422,
+      issues: [{ message: 'Skill scan failed due to validation issues' }],
+    });
+  });
+
+  it('does not block a requireValidation:false scan when the scanner returns scan: null (no manifest to evaluate)', async () => {
+    // Mirrors the real scanner's response to a manifest-less archive: it
+    // reports the manifest is missing but declines to run a security scan
+    // at all, rather than reporting an unsafe verdict.
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse({
+        request_id: '0b24cd759bec4c71850fe5b398cb6653',
+        validation: { passed: false, problems: ['Missing required file: SKILL.md'] },
+        scan: null,
+        risk_classification: null,
+        verbose: null,
+      }),
+    ) as unknown as typeof fetch;
+
+    await expect(
+      scanSkillFileUpload({ fileName: 'script.sh', content: Buffer.from('echo hi') }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('still blocks a requireValidation:false scan when the scanner does return an unsafe verdict', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse({
+        validation: { passed: false, problems: ['Missing required file: SKILL.md'] },
+        scan: {
+          is_safe: false,
+          findings: [
+            {
+              severity: 'critical',
+              description: 'exec() call detected',
+              rule_id: 'DANGEROUS_EXEC',
+            },
+          ],
+        },
+      }),
+    ) as unknown as typeof fetch;
+
+    await expect(
+      scanSkillFileUpload({ fileName: 'script.sh', content: Buffer.from('echo hi') }),
+    ).rejects.toMatchObject({
+      statusCode: 422,
+      issues: [{ code: 'DANGEROUS_EXEC', severity: 'critical', message: 'exec() call detected' }],
+    });
+  });
+
+  it('still blocks a requireValidation:true scan when the scanner returns scan: null', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse({
+        validation: { passed: true, problems: [] },
+        scan: null,
+      }),
+    ) as unknown as typeof fetch;
+
+    await expect(upload()).rejects.toMatchObject({ statusCode: 422 });
+  });
+
+  describe('scanSkillOnCreate / scanSkillOnUpdate frontmatter scanning', () => {
+    function passingResponse(): Response {
+      return jsonResponse({
+        validation: { passed: true, problems: [] },
+        scan: { is_safe: true, findings: [] },
+      });
+    }
+
+    it('runs a single scan (no frontmatter-only pass) when there is no frontmatter beyond name/description', async () => {
+      const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
+      global.fetch = fetchSpy as unknown as typeof fetch;
+
+      await scanSkillOnUpdate({
+        name: 'demo-skill',
+        description: 'A demo skill',
+        body: 'Do the thing.',
+        frontmatter: { name: 'demo-skill', description: 'A demo skill' },
+      });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('runs a single scan when frontmatter is undefined and alwaysApply is undefined', async () => {
+      const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
+      global.fetch = fetchSpy as unknown as typeof fetch;
+
+      await scanSkillOnCreate({
+        name: 'demo-skill',
+        description: 'A demo skill',
+        body: 'Do the thing.',
+      });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('runs a second frontmatter-only scan when frontmatter has fields beyond name/description', async () => {
+      const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
+      global.fetch = fetchSpy as unknown as typeof fetch;
+
+      await scanSkillOnUpdate({
+        name: 'demo-skill',
+        description: 'A demo skill',
+        body: 'Do the thing.',
+        frontmatter: { name: 'demo-skill', description: 'A demo skill', 'allowed-tools': ['bash'] },
+      });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('runs a second frontmatter-only scan when alwaysApply is explicitly set, even with no extra frontmatter fields', async () => {
+      const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
+      global.fetch = fetchSpy as unknown as typeof fetch;
+
+      await scanSkillOnCreate({
+        name: 'demo-skill',
+        description: 'A demo skill',
+        body: 'Do the thing.',
+        alwaysApply: true,
+      });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('Authorization header', () => {
