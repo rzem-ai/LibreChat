@@ -190,10 +190,9 @@ export default function SkillsDialog({ open, onOpenChange, agentId }: SkillsDial
     [localize],
   );
 
-  const emptyKey: TranslationKeys =
-    search.trim() || category !== 'all'
-      ? 'com_ui_tools_search_no_results'
-      : EMPTY_KEY_BY_VIEW[view];
+  const emptyKey: TranslationKeys = search.trim()
+    ? 'com_ui_tools_search_no_results'
+    : EMPTY_KEY_BY_VIEW[view];
 
   return (
     <OGDialog open={open} onOpenChange={onOpenChange}>

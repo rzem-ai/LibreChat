@@ -134,7 +134,11 @@ export type GenerationJobStore = 'memory' | 'redis';
 export type GenerationJobResult = 'created' | 'completed' | 'error' | 'aborted' | 'abort_failed';
 export type GenerationStreamSubscriptionType = 'initial' | 'resume' | 'resume_state';
 export type GenerationStreamSubscriptionResult =
-  'success' | 'not_found' | 'error' | 'found' | 'missing';
+  | 'success'
+  | 'not_found'
+  | 'error'
+  | 'found'
+  | 'missing';
 export type RumProxyEndpoint = 'traces' | 'logs' | 'unknown';
 export type RumProxyResult =
   | 'success'
@@ -386,7 +390,8 @@ export function instrumentMongooseQueryMetrics(mongoose: Mongoose): void {
 
   const instrumented = Symbol.for('librechat.mongooseQueryMetrics.instrumented');
   const queryPrototype = mongoose.Query?.prototype as
-    (typeof mongoose.Query.prototype & { [instrumented]?: boolean }) | undefined;
+    | (typeof mongoose.Query.prototype & { [instrumented]?: boolean })
+    | undefined;
 
   if (!queryPrototype || queryPrototype[instrumented]) return;
 

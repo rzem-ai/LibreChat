@@ -7,9 +7,10 @@ import {
   mergeFileConfig,
   fileConfig as defaultFileConfig,
 } from 'librechat-data-provider';
+import type { TSkillWarning } from 'librechat-data-provider';
 import { useGetFileConfig, useImportSkillMutation } from '~/data-provider';
+import { cn, formatSkillScanError } from '~/utils';
 import { useLocalize } from '~/hooks';
-import { cn } from '~/utils';
 
 interface UploadSkillDialogProps {
   isOpen: boolean;
@@ -43,18 +44,28 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
       ? `${configuredSizeLimitMb}`
       : formatMegabytes(skillImportSizeLimit);
 
+  // Deloitte Custom Change: Keep scanner failures visible inline while the upload dialog remains open.
+  const [scanError, setScanError] = useState<string | null>(null);
+
   const importMutation = useImportSkillMutation({
     onSuccess: (skill) => {
-      showToast({ status: 'success', message: localize('com_ui_skill_created') });
+      const warnings: TSkillWarning[] | undefined = skill.warnings;
+      showToast({
+        status: warnings && warnings.length > 0 ? 'warning' : 'success',
+        message:
+          warnings && warnings.length > 0
+            ? warnings.map((w) => w.message).join('\n')
+            : localize('com_ui_skill_created'),
+      });
+      // Deloitte Custom Change: Clear any previous inline scanner failure after a successful upload.
+      setScanError(null);
       setIsOpen(false);
       navigate(`/skills/${skill._id}`);
     },
     onError: (error: unknown) => {
-      const errData = (error as { response?: { data?: { error?: string; message?: string } } })
-        ?.response?.data;
-      const message =
-        errData?.message ?? errData?.error ?? localize('com_ui_create_skill_upload_error');
-      showToast({ status: 'error', message });
+      // Deloitte Custom Change: Surface the scanner's validation error inline so it stays on screen
+      // until the user retries, instead of an auto-dismissing toast.
+      setScanError(formatSkillScanError(error, localize('com_ui_create_skill_upload_error')));
     },
   });
 
@@ -63,6 +74,8 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
       if (importMutation.isLoading) {
         return;
       }
+      // Deloitte Custom Change: Clear stale scanner output before retrying upload.
+      setScanError(null);
       if (file.size > skillImportSizeLimit) {
         showToast({
           status: 'error',
@@ -100,8 +113,23 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
     [handleFile],
   );
 
+  // Deloitte Custom Change: Reset inline scanner output when the upload dialog closes.
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setScanError(null);
+    }
+    setIsOpen(open);
+  };
+
+  // Deloitte Custom Change: Render scanner failures inline with preserved line breaks for readability.
+  const scanErrorMessage = scanError ? (
+    <p className="whitespace-pre-line text-xs text-red-500" role="alert">
+      {scanError}
+    </p>
+  ) : null;
+
   return (
-    <OGDialog open={isOpen} onOpenChange={setIsOpen}>
+    <OGDialog open={isOpen} onOpenChange={handleOpenChange}>
       <OGDialogContent className="w-11/12 max-w-lg overflow-hidden">
         <div className="flex flex-col gap-6 p-1 sm:p-2">
           <h2 className="text-lg font-bold text-text-primary">
@@ -145,6 +173,8 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
                 </ul>
               </div>
             </div>
+
+            {scanErrorMessage}
           </div>
 
           <input

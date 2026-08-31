@@ -1,6 +1,6 @@
 import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, AlertCircle, Download, ChevronDown, Files as FilesIcon } from 'lucide-react';
 import { Tools } from 'librechat-data-provider';
+import { Loader2, AlertCircle, Download, ChevronDown, Files as FilesIcon } from 'lucide-react';
 import type { TAttachment, TFile, TAttachmentMetadata } from 'librechat-data-provider';
 import type { ToolArtifactType } from '~/utils/artifacts';
 import {
@@ -13,14 +13,14 @@ import {
   isTextAttachment,
   renderAttachmentKey,
 } from './attachmentTypes';
-import FilePreview from '~/components/Chat/Input/Files/FilePreview';
+import { useLocalize, useAttachmentPreviewSync, useExpandCollapse } from '~/hooks';
 import FileContainer from '~/components/Chat/Input/Files/FileContainer';
 import { fileToArtifact, TOOL_ARTIFACT_TYPES } from '~/utils/artifacts';
+import FilePreview from '~/components/Chat/Input/Files/FilePreview';
 import Image from '~/components/Chat/Messages/Content/Image';
 import ToolMermaidArtifact from './ToolMermaidArtifact';
 import ToolArtifactCard from './ToolArtifactCard';
 import { useAttachmentLink } from './LogLink';
-import { useLocalize, useAttachmentPreviewSync, useExpandCollapse } from '~/hooks';
 import { cn, getFileType } from '~/utils';
 
 const COLLAPSED_MAX_HEIGHT = 320;
@@ -426,7 +426,14 @@ const TextAttachment = memo(
 
 const ImageAttachment = memo(({ attachment }: { attachment: TAttachment }) => {
   const [isLoaded, setIsLoaded] = useState(false);
-  const { width, height, filepath = null } = attachment as TFile & TAttachmentMetadata;
+  const {
+    width,
+    height,
+    filepath = null,
+    source,
+    file_id,
+    user,
+  } = attachment as TFile & TAttachmentMetadata;
 
   useEffect(() => {
     setIsLoaded(false);
@@ -449,9 +456,14 @@ const ImageAttachment = memo(({ attachment }: { attachment: TAttachment }) => {
     >
       <Image
         altText={attachment.filename || 'attachment image'}
+        fileName={attachment.filename}
         imagePath={filepath ?? ''}
         width={width}
         height={height}
+        // Deloitte: source/fileId/userId enable authenticated proxy for private azure_blob.
+        source={source}
+        fileId={file_id}
+        userId={user}
         className="mb-4"
       />
     </div>

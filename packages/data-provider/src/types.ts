@@ -268,6 +268,8 @@ export type TError = {
   response?: {
     data?: {
       message?: string;
+      /** DELOITTE SPECIFIC CHANGE: error code (e.g. FILE_CONTENT_MISMATCH) for client-side mapping */
+      code?: string;
     };
     status?: number;
   };
