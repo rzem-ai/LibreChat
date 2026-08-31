@@ -1382,7 +1382,7 @@ export const interfaceSchema = z
         forkChat: z.boolean().optional(),
         simplifyFork: z.boolean().optional(),
         editChat: z.boolean().optional(),
-        showToolsDropdown: z.boolean().default(true),
+        showToolsDropdown: z.boolean().optional(),
         createActions: z.boolean().optional(),
         landingIcon: z.boolean().optional(),
         conversationIcon: z.boolean().optional(),
@@ -1439,7 +1439,13 @@ export const interfaceSchema = z
       })
       .optional(),
     fileSearch: z.boolean().optional(),
+    // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+    providerUpload: z.boolean().optional(),
     fileCitations: z.boolean().optional(),
+    /** Horizontal alignment of the current user's own chat turns. `'right'` right-aligns
+     * the user's messages as iMessage-style bubbles without an avatar/name header
+     * (assistant/agent messages remain left-aligned and unaffected). */
+    userMessageAlignment: z.enum(['left', 'right']).optional(),
     /** Tool keys (and `'mcp'` or an MCP server name) pinned to the prompt bar by default */
     defaultPinnedTools: z.array(z.string()).optional(),
     buildInfo: z.boolean().optional(),
@@ -1515,7 +1521,10 @@ export const interfaceSchema = z
       public: false,
     },
     fileSearch: true,
+    // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+    providerUpload: false,
     fileCitations: true,
+    userMessageAlignment: 'left',
     buildInfo: true,
     remoteAgents: {
       use: false,

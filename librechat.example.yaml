@@ -99,6 +99,10 @@ interface:
   # Note: This setting does not disable the Agents File Search Capability.
   # To disable the Agents Capability, see the Agents Endpoint configuration instead.
   fileSearch: true
+  # Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+  # Enable/disable direct provider uploads (image/document attachments sent directly to model providers).
+  # When false, only tool-based uploads (file search, code, OCR/context) are shown.
+  providerUpload: true
   # Privacy policy settings
   privacyPolicy:
     externalUrl: 'https://librechat.ai/privacy-policy'
@@ -150,6 +154,10 @@ interface:
   modelSelect: true
   parameters: true
   presets: true
+  # Horizontal alignment of the current user's own chat turns: 'left' (default) or 'right'.
+  # 'right' right-aligns the user's messages as iMessage-style bubbles without an
+  # avatar/name header (assistant/agent messages stay left-aligned and unaffected).
+  userMessageAlignment: left
   prompts:
     use: true
     create: true

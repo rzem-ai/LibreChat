@@ -566,7 +566,8 @@ describe('bedrockInputParser', () => {
       const input = { model: 'meta.llama3-1-8b-instruct-v1:0' };
       const result = bedrockInputParser.parse(input) as Record<string, unknown>;
       const additionalFields = result.additionalModelRequestFields as
-        Record<string, unknown> | undefined;
+        | Record<string, unknown>
+        | undefined;
       expect(additionalFields?.thinking).toBeUndefined();
       expect(additionalFields?.anthropic_beta).toBeUndefined();
     });
@@ -830,7 +831,8 @@ describe('bedrockInputParser', () => {
       };
       const result = bedrockInputParser.parse(input) as Record<string, unknown>;
       const additionalFields = result.additionalModelRequestFields as
-        Record<string, unknown> | undefined;
+        | Record<string, unknown>
+        | undefined;
       expect(additionalFields?.anthropic_beta).toBeUndefined();
     });
 
@@ -840,7 +842,8 @@ describe('bedrockInputParser', () => {
       };
       const result = bedrockInputParser.parse(input) as Record<string, unknown>;
       const additionalFields = result.additionalModelRequestFields as
-        Record<string, unknown> | undefined;
+        | Record<string, unknown>
+        | undefined;
       expect(additionalFields?.anthropic_beta).toBeUndefined();
     });
 

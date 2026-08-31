@@ -28,7 +28,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'uat'
+          tag: 'uat@sha256:adb8e6ea1557c84c0ff0f44cade9b69d24a8ba8350df59db1575fb3692e94319'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -47,9 +47,9 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'uat'
+          tag: 'uat@sha256:195a888ef37d1eafcaada9413e8f7744dbd27925e6594f9219647b239a2bad39'
         env:
-          ADMIN_PANEL_URL: 'https://libre-admin-panel-uat.ctk.au.deloitte.com'
+          ADMIN_PANEL_URL: 'https://myassist-uat.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
           ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7,claude-sonnet-5,claude-opus-4-8'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
@@ -84,6 +84,7 @@ pods:
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
           RAG_PORT: '8000'
           RAG_USE_FULL_CONTEXT: 'true'
+          REFRESH_TOKEN_EXPIRY: '86400000' # (ms) - 1 day refresh token expiration
           # ClearTrack Code Interpreter (ea-code-runtime)
           LIBRECHAT_CODE_BASEURL: 'https://code-runtime-uat.ctk.au.deloitte.com/v1'
           CODEAPI_AUTH_PROVIDER: 'librechat-jwt'
@@ -115,6 +116,12 @@ pods:
           DEBUG_LOGGING: 'true'
           DEBUG_CONSOLE: 'true'
           AGENT_DEBUG_LOGGING: 'true'
+          # Skill Security Scanner
+          SKILL_SCANNER_URL: 'https://ai-registry-uat.ctk.au.deloitte.com/v1/scan?verbose=false'
+          SKILL_SCANNER_TIMEOUT_MS: '15000'
+          SKILL_SCANNER_MIN_SEVERITY: 'high'
+          # AI Registry
+          AI_REGISTRY_CLIENT_ID: "4aeebbdc-56f5-4329-b40e-3d0a243bf74a" # AI Registry DEV & UAT
         secrets:
           # AZURE_API_KEY: librechat-azure-api-key
           MONGO_URI: librechat-uat-mdb-connection-string
@@ -135,7 +142,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'uat'
+          tag: 'uat@sha256:495715246a46113723afd12ea34b63e813a64b80ea186771f11dfeafc0f9c263'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -167,7 +174,7 @@ pods:
       meilisearch:
         image:
           pullPolicy: Always
-          tag: 'uat'
+          tag: 'uat@sha256:333043792dcc3f9974abdf8497b2eb190f282e63c185a3fd9fd5b892277df75a'
         env:
           MEILI_ENV: 'production' # Use production to mimic PROD environment behaviour
         secrets:
@@ -180,10 +187,41 @@ pods:
           name: 'meilisearch-data'
           mountPath: /meili_data
           storageClass: 'managed-csi-standard-private'
+  admin:
+    replicas: 1
+    containers:
+      admin:
+        # Image must be built with --build-arg VITE_BASE_PATH=/admin
+        # The admin panel is a Vite SPA where the base path is baked in at build time.
+        # CI must build this image with the VITE_BASE_PATH arg; otherwise asset paths
+        # will be incorrect when routed through nginx at /admin.
+        image:
+          repository: 'tt-librechat/admin'
+          pullPolicy: Always
+          tag: 'uat@sha256:eab4bfeb2f35a5d6a5777376f62fe1074dd8820ba9fd7d2f599508df8ecf3d18'
+        env:
+          PORT: '3000'
+          ADMIN_SSO_ONLY: 'true'
+          VITE_BASE_PATH: '/admin'
+          VITE_API_BASE_URL: 'https://myassist-uat.ctk.au.deloitte.com'
+          API_SERVER_URL: 'https://myassist-uat.ctk.au.deloitte.com'
+          SESSION_COOKIE_SECURE: 'true'
+        secrets:
+          SESSION_SECRET: librechat-admin-panel-session-secret-uat
+        service:
+          enabled: true
+          type: ClusterIP
+          port: 3000
+          targetPort: 3000
+        ingress:
+          enabled: true
+          paths:
+            - path: /admin
+              pathType: Prefix
 
 valkey:
   image:
-    tag: 'uat'
+    tag: 'uat@sha256:8eb9d4d81b89218546e6e371c9925803e6f5bbabd522bfee3865cba08e0df6a1'
   persistence:
     storageClass: 'managed-csi-standard-private'
   passwordSecretName: 'librechat-valkey-password-uat'

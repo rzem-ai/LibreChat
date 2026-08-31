@@ -22,6 +22,10 @@ interface:
 
   bookmarks: false # Set to false to disable saving conversations as bookmarks
 
+  skills:
+    use: true
+    create: true
+
   # Pin tools to the prompt bar by default for all users
   defaultPinnedTools:
     - 'file_search'
@@ -96,6 +100,10 @@ interface:
     create: true
     share: true # Enable share with other users
     public: false # Disable share with everyone
+
+  # 'left' (default) or 'right'. 'right' right-aligns the current user's own chat turns as
+  # iMessage-style bubbles without an avatar/name header (assistant/agent turns are unaffected).
+  userMessageAlignment: right
 
   temporaryChat: false # Set to false to disable temporary chats
 

@@ -259,8 +259,9 @@ describe('checkpointer (mongodb-memory-server integration)', () => {
   });
 
   it('adapts LangGraph root namespaces and prevents a late predecessor pause from hydrating into its replacement', async () => {
-    const { StateGraph, START, END, interrupt, Annotation, Command } =
-      await import('@langchain/langgraph');
+    const { StateGraph, START, END, interrupt, Annotation, Command } = await import(
+      '@langchain/langgraph'
+    );
     const saver = await getAgentCheckpointer(MONGO_CFG);
     const threadId = `convo-${new mongoose.Types.ObjectId().toString()}`;
 
@@ -591,8 +592,9 @@ describe('LazyMongoSaver (lazy persistence — mongodb-memory-server)', () => {
     // Guards the `putWrites` change: the `__interrupt__` write must still be forwarded (it is
     // resumable) so a paused run rehydrates and the resume value flows in. Mirrors the real HITL
     // round-trip across a fresh `invoke` on the same thread_id.
-    const { StateGraph, START, END, interrupt, Annotation, Command } =
-      await import('@langchain/langgraph');
+    const { StateGraph, START, END, interrupt, Annotation, Command } = await import(
+      '@langchain/langgraph'
+    );
     const saver = await getAgentCheckpointer(MONGO_CFG);
 
     const State = Annotation.Root({ approved: Annotation });
@@ -623,8 +625,9 @@ describe('LazyMongoSaver (lazy persistence — mongodb-memory-server)', () => {
     // checkpoint). On resume — through a REBUILT graph, as resume.js rebuilds the Run — the
     // completed siblings must not run again. Before the buffering fix this probe measured
     // effects {a:2, c:2}: the dropped markers made LangGraph re-execute both siblings.
-    const { StateGraph, START, END, interrupt, Annotation, Send, Command } =
-      await import('@langchain/langgraph');
+    const { StateGraph, START, END, interrupt, Annotation, Send, Command } = await import(
+      '@langchain/langgraph'
+    );
     const saver = await getAgentCheckpointer(MONGO_CFG);
 
     const effects: Record<string, number> = {};

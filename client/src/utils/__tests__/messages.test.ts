@@ -8,6 +8,7 @@ import {
   isValidTimestamp,
   getMessageAriaLabel,
   getMessageTimestamp,
+  isRightAlignedTurn,
   getHeaderPrefixForScreenReader,
   areMessageFieldsEqual,
   areMessageRowPropsEqual,
@@ -342,5 +343,25 @@ describe('areMessageRowPropsEqual', () => {
         makeProps({ message: makeFieldsMsg({ text: 'edited' }) }),
       ),
     ).toBe(false);
+  });
+});
+
+describe('isRightAlignedTurn', () => {
+  it('right-aligns a user message when configured "right"', () => {
+    expect(isRightAlignedTurn(true, 'right')).toBe(true);
+  });
+
+  it('left-aligns a user message when configured "left"', () => {
+    expect(isRightAlignedTurn(true, 'left')).toBe(false);
+  });
+
+  it('left-aligns a user message when unconfigured (defaults to left)', () => {
+    expect(isRightAlignedTurn(true, undefined)).toBe(false);
+  });
+
+  it('never right-aligns an assistant/agent message, even when configured "right"', () => {
+    expect(isRightAlignedTurn(false, 'right')).toBe(false);
+    expect(isRightAlignedTurn(null, 'right')).toBe(false);
+    expect(isRightAlignedTurn(undefined, 'right')).toBe(false);
   });
 });
