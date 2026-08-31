@@ -1387,6 +1387,7 @@ export const interfaceSchema = z
         createActions: z.boolean().optional(),
         landingIcon: z.boolean().optional(),
         conversationIcon: z.boolean().optional(),
+        showConversationTitleInHeader: z.boolean().optional(),
       })
       .optional(),
     prompts: z
