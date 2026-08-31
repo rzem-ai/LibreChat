@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Info, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Info, AlertTriangle } from 'lucide-react';
 import { useForm, Controller, FormProvider } from 'react-hook-form';
 import { Input, Button, Skeleton, TextareaAutosize, useToastContext } from '@librechat/client';
 import {
@@ -12,12 +12,12 @@ import {
 import type { TSkill, TSkillWarning, TUpdateSkillPayload } from 'librechat-data-provider';
 import { useGetSkillQuery, useUpdateSkillMutation } from '~/data-provider';
 import { useLocalize, useSkillPermissions } from '~/hooks';
-import SkillContentEditor from './SkillContentEditor';
 import InvocationModePicker from './InvocationModePicker';
+import SkillContentEditor from './SkillContentEditor';
+import { cn, formatSkillScanError } from '~/utils';
 import CategorySelector from './CategorySelector';
 import DeleteSkill from '../dialogs/DeleteSkill';
 import { ShareSkill } from '../buttons';
-import { cn } from '~/utils';
 
 interface SkillFormValues {
   name: string;
@@ -52,6 +52,8 @@ export default function SkillForm({ skillId }: SkillFormProps) {
   const navigate = useNavigate();
   const { showToast } = useToastContext();
   const [warnings, setWarnings] = useState<TSkillWarning[] | null>(null);
+  // Deloitte Custom Change: Keep scanner failures visible inline on the edit form.
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const skillQuery = useGetSkillQuery(skillId);
   const skill = skillQuery.data;
@@ -81,6 +83,8 @@ export default function SkillForm({ skillId }: SkillFormProps) {
 
   useEffect(() => {
     setWarnings(null);
+    // Deloitte Custom Change: Clear previous skill scanner output when navigating between skills.
+    setScanError(null);
   }, [skillId]);
 
   const updateSkill = useUpdateSkillMutation({
@@ -90,6 +94,8 @@ export default function SkillForm({ skillId }: SkillFormProps) {
         message: localize('com_ui_skill_updated'),
       });
       setWarnings(updated.warnings ?? null);
+      // Deloitte Custom Change: Clear any previous inline scanner failure after a successful save.
+      setScanError(null);
       reset(toValues(updated));
     },
     onError: (error: unknown) => {
@@ -99,10 +105,8 @@ export default function SkillForm({ skillId }: SkillFormProps) {
         skillQuery.refetch();
         return;
       }
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
-        localize('com_ui_skill_update_error');
-      showToast({ status: 'error', message });
+      // Deloitte Custom Change: Surface the scanner's validation error inline instead of an auto-dismissing toast.
+      setScanError(formatSkillScanError(error, localize('com_ui_skill_update_error')));
     },
   });
 
@@ -113,6 +117,8 @@ export default function SkillForm({ skillId }: SkillFormProps) {
     if (!skill || updateSkill.isLoading) {
       return;
     }
+    // Deloitte Custom Change: Clear stale scanner output before retrying save.
+    setScanError(null);
     const trimmedName = data.name.trim();
     if (!SKILL_NAME_PATTERN.test(trimmedName)) {
       setError('name', { message: localize('com_ui_skill_name_invalid') });
@@ -155,6 +161,12 @@ export default function SkillForm({ skillId }: SkillFormProps) {
 
   const readOnly = !permissions.canEdit;
   const saveDisabled = !isDirty || !isValid || isSubmitting || updateSkill.isLoading;
+  // Deloitte Custom Change: Render scanner failures inline near warning messages for readability.
+  const scanErrorMessage = scanError ? (
+    <p className="mt-4 whitespace-pre-line text-xs text-red-500" role="alert">
+      {scanError}
+    </p>
+  ) : null;
 
   return (
     <FormProvider {...methods}>
@@ -263,6 +275,8 @@ export default function SkillForm({ skillId }: SkillFormProps) {
             </ul>
           </div>
         )}
+
+        {scanErrorMessage}
 
         <div className="mt-4 flex w-full flex-col gap-4">
           <Controller
