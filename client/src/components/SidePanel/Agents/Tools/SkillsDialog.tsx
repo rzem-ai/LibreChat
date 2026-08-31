@@ -271,7 +271,7 @@ export default function SkillsDialog({ open, onOpenChange, agentId }: SkillsDial
               onToggle={handleToggle}
               onConfigure={setDetailItem}
               isLoadingSkills={isLoadingSkills || isFetchingNextPage}
-              skillsInView={view !== 'mine'}
+              skillsInView={true}
               favoriteKeys={favoriteKeys}
               onToggleFavorite={toggleFavorite}
               emptyKey={emptyKey}

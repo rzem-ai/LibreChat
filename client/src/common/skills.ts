@@ -19,7 +19,7 @@ export function resolveSkillGroup(
   }
 
   if (currentUserId == null) {
-    return 'mine';
+    return 'shared';
   }
 
   return skill.author === currentUserId ? 'mine' : 'shared';
