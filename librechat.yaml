@@ -162,6 +162,7 @@ endpoints:
 
   anthropic:
     streamRate: 25
+    modelDisplayLabel: 'Anthropic'
     titleConvo: true
     titleModel: 'claude-haiku-4-5'
     titleMethod: 'completion'
@@ -230,6 +231,7 @@ endpoints:
         Content-Type: 'application/json'
 
     # --- Azure Foundry AU ---
+    # This AU gateway exposes OpenAI Global Standard deployments; "AU" identifies the gateway region.
     - name: 'Azure Foundry AU'
       apiKey: 'dummy'
       baseURL: '${BASE_URL_AZURE_FOUNDRY_AU}'
@@ -241,7 +243,7 @@ endpoints:
         fetch: false
       titleConvo: true
       titleModel: 'gpt-56-luna'
-      modelDisplayLabel: 'Azure Foundry AU'
+      modelDisplayLabel: 'OpenAI'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
@@ -259,7 +261,7 @@ endpoints:
         fetch: false
       titleConvo: true
       titleModel: 'google/gemini-2.5-flash'
-      modelDisplayLabel: 'VertexAI US'
+      modelDisplayLabel: 'Gemini'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
@@ -268,6 +270,7 @@ endpoints:
 
   # Anthropic AU models use Bedrock's native API and inference-profile IDs.
   bedrock:
+    modelDisplayLabel: 'Claude AU'
     models:
       - 'au.anthropic.claude-sonnet-4-6'
       - 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
@@ -458,40 +461,47 @@ modelSpecs:
     #     promptPrefix: *deloitteSystemPrompt
 
     - name: 'azure-foundry-au-gpt-56-luna'
-      label: 'Azure Foundry AU gpt-56-luna'
-      group: 'Azure Foundry AU'
+      label: 'GPT 5.6 Luna'
+      group: 'OpenAI Global'
+      groupIcon: 'openAI'
+      iconURL: 'openAI'
       preset:
         endpoint: 'Azure Foundry AU'
         model: 'gpt-56-luna'
         promptPrefix: *deloitteSystemPrompt
 
     - name: 'azure-foundry-au-gpt-56-terra'
-      label: 'Azure Foundry AU gpt-56-terra'
-      group: 'Azure Foundry AU'
+      label: 'GPT 5.6 Terra'
+      group: 'OpenAI Global'
+      iconURL: 'openAI'
       preset:
         endpoint: 'Azure Foundry AU'
         model: 'gpt-56-terra'
         promptPrefix: *deloitteSystemPrompt
 
     - name: 'azure-foundry-au-gpt-56-sol'
-      label: 'Azure Foundry AU gpt-56-sol'
-      group: 'Azure Foundry AU'
+      label: 'GPT 5.6 Sol'
+      group: 'OpenAI Global'
+      iconURL: 'openAI'
       preset:
         endpoint: 'Azure Foundry AU'
         model: 'gpt-56-sol'
         promptPrefix: *deloitteSystemPrompt
 
     - name: 'vertexai-us-gemini-2-5-flash'
-      label: 'VertexAI US gemini-2.5-flash'
-      group: 'VertexAI US'
+      label: 'Gemini 2.5 Flash'
+      group: 'Gemini Global'
+      groupIcon: 'google'
+      iconURL: 'google'
       preset:
         endpoint: 'VertexAI US'
         model: 'google/gemini-2.5-flash'
         promptPrefix: *deloitteSystemPrompt
 
     - name: 'vertexai-us-gemini-2-5-pro'
-      label: 'VertexAI US gemini-2.5-pro'
-      group: 'VertexAI US'
+      label: 'Gemini 2.5 Pro'
+      group: 'Gemini Global'
+      iconURL: 'google'
       preset:
         endpoint: 'VertexAI US'
         model: 'google/gemini-2.5-pro'
@@ -514,16 +524,19 @@ modelSpecs:
     #     promptPrefix: *deloitteSystemPrompt
 
     - name: 'anthropic-claude-haiku-4-5'
-      label: 'Anthropic claude-haiku-4-5'
-      group: 'Anthropic'
+      label: 'Claude Haiku 4.5'
+      group: 'Anthropic Global'
+      groupIcon: 'anthropic'
+      iconURL: 'anthropic'
       preset:
         endpoint: 'anthropic'
         model: 'claude-haiku-4-5'
         promptPrefix: *deloitteSystemPrompt
 
     - name: 'anthropic-claude-sonnet-5'
-      label: 'Anthropic claude-sonnet-5'
-      group: 'Anthropic'
+      label: 'Claude Sonnet 5'
+      group: 'Anthropic Global'
+      iconURL: 'anthropic'
       preset:
         endpoint: 'anthropic'
         model: 'claude-sonnet-5'
@@ -538,8 +551,9 @@ modelSpecs:
     #     promptPrefix: *deloitteSystemPrompt
 
     - name: 'anthropic-claude-sonnet-4-6'
-      label: 'Anthropic claude-sonnet-4-6'
-      group: 'Anthropic'
+      label: 'Claude Sonnet 4.6'
+      group: 'Anthropic Global'
+      iconURL: 'anthropic'
       preset:
         endpoint: 'anthropic'
         model: 'claude-sonnet-4-6'
@@ -554,8 +568,9 @@ modelSpecs:
     #     promptPrefix: *deloitteSystemPrompt
 
     - name: 'anthropic-claude-opus-4-6'
-      label: 'Anthropic claude-opus-4-6'
-      group: 'Anthropic'
+      label: 'Claude Opus 4.6'
+      group: 'Anthropic Global'
+      iconURL: 'anthropic'
       preset:
         endpoint: 'anthropic'
         model: 'claude-opus-4-6'
@@ -570,24 +585,28 @@ modelSpecs:
     #     promptPrefix: *deloitteSystemPrompt
 
     - name: 'anthropic-claude-opus-4-8'
-      label: 'Anthropic claude-opus-4-8'
-      group: 'Anthropic'
+      label: 'Claude Opus 4.8'
+      group: 'Anthropic Global'
+      iconURL: 'anthropic'
       preset:
         endpoint: 'anthropic'
         model: 'claude-opus-4-8'
         promptPrefix: *deloitteSystemPrompt
 
     - name: 'anthropic-au-claude-sonnet-4-6'
-      label: 'Anthropic AU claude-sonnet-4-6'
+      label: 'Claude Sonnet 4.6'
       group: 'Anthropic AU'
+      groupIcon: 'anthropic'
+      iconURL: 'anthropic'
       preset:
         endpoint: 'bedrock'
         model: 'au.anthropic.claude-sonnet-4-6'
         promptPrefix: *deloitteSystemPrompt
 
     - name: 'anthropic-au-claude-haiku-4-5'
-      label: 'Anthropic AU claude-haiku-4-5'
+      label: 'Claude Haiku 4.5'
       group: 'Anthropic AU'
+      iconURL: 'anthropic'
       preset:
         endpoint: 'bedrock'
         model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
