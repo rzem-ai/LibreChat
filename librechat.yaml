@@ -396,24 +396,24 @@ modelSpecs:
         model: 'claude-opus-4-8'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: 'anthropic-au-claude-sonnet-4-6'
-      label: 'Claude Sonnet 4.6'
-      group: 'Anthropic AU'
-      groupIcon: 'anthropic'
-      iconURL: 'anthropic'
-      preset:
-        endpoint: 'bedrock'
-        model: 'au.anthropic.claude-sonnet-4-6'
-        promptPrefix: *deloitteSystemPrompt
+    # - name: 'anthropic-au-claude-sonnet-4-6'
+    #   label: 'Claude Sonnet 4.6'
+    #   group: 'Anthropic AU'
+    #   groupIcon: 'anthropic'
+    #   iconURL: 'anthropic'
+    #   preset:
+    #     endpoint: 'bedrock'
+    #     model: 'au.anthropic.claude-sonnet-4-6'
+    #     promptPrefix: *deloitteSystemPrompt
 
-    - name: 'anthropic-au-claude-haiku-4-5'
-      label: 'Claude Haiku 4.5'
-      group: 'Anthropic AU'
-      iconURL: 'anthropic'
-      preset:
-        endpoint: 'bedrock'
-        model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
-        promptPrefix: *deloitteSystemPrompt
+    # - name: 'anthropic-au-claude-haiku-4-5'
+    #   label: 'Claude Haiku 4.5'
+    #   group: 'Anthropic AU'
+    #   iconURL: 'anthropic'
+    #   preset:
+    #     endpoint: 'bedrock'
+    #     model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
+    #     promptPrefix: *deloitteSystemPrompt
 
 # MCP Servers configuration
 # Each entry filters the gateway to a single toolset via the `toolsets` query param.
