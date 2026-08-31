@@ -121,6 +121,13 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
     setIsOpen(open);
   };
 
+  // Deloitte Custom Change: Render scanner failures inline with preserved line breaks for readability.
+  const scanErrorMessage = scanError ? (
+    <p className="whitespace-pre-line text-xs text-red-500" role="alert">
+      {scanError}
+    </p>
+  ) : null;
+
   return (
     <OGDialog open={isOpen} onOpenChange={handleOpenChange}>
       <OGDialogContent className="w-11/12 max-w-lg overflow-hidden">
@@ -167,12 +174,7 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
               </div>
             </div>
 
-            {/* // Deloitte Custom Change: Render scanner failures inline with preserved line breaks for readability. */}
-            {scanError && (
-              <p className="whitespace-pre-line text-xs text-red-500" role="alert">
-                {scanError}
-              </p>
-            )}
+            {scanErrorMessage}
           </div>
 
           <input

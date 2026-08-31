@@ -161,6 +161,12 @@ export default function SkillForm({ skillId }: SkillFormProps) {
 
   const readOnly = !permissions.canEdit;
   const saveDisabled = !isDirty || !isValid || isSubmitting || updateSkill.isLoading;
+  // Deloitte Custom Change: Render scanner failures inline near warning messages for readability.
+  const scanErrorMessage = scanError ? (
+    <p className="mt-4 whitespace-pre-line text-xs text-red-500" role="alert">
+      {scanError}
+    </p>
+  ) : null;
 
   return (
     <FormProvider {...methods}>
@@ -270,12 +276,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
           </div>
         )}
 
-        {/* // Deloitte Custom Change: Render scanner failures inline near warning messages for readability. */}
-        {scanError && (
-          <p className="mt-4 whitespace-pre-line text-xs text-red-500" role="alert">
-            {scanError}
-          </p>
-        )}
+        {scanErrorMessage}
 
         <div className="mt-4 flex w-full flex-col gap-4">
           <Controller

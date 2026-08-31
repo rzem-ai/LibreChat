@@ -128,6 +128,14 @@ export default function CreateSkillDialog({
   };
 
   const submitDisabled = !isValid || isSubmitting || createSkill.isLoading;
+  // Deloitte Custom Change: Render scanner failures inline with preserved line breaks for readability.
+  const scanErrorMessage = scanError ? (
+    <p className="whitespace-pre-line text-xs text-red-500" role="alert">
+      {scanError}
+    </p>
+  ) : null;
+  // Deloitte Custom Change: Route Cancel through the shared close handler so inline scanner output resets.
+  const handleCancel = () => handleOpenChange(false);
 
   return (
     <OGDialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -211,17 +219,11 @@ export default function CreateSkillDialog({
             />
           </div>
 
-          {/* // Deloitte Custom Change: Render scanner failures inline with preserved line breaks for readability. */}
-          {scanError && (
-            <p className="whitespace-pre-line text-xs text-red-500" role="alert">
-              {scanError}
-            </p>
-          )}
+          {scanErrorMessage}
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-2 pt-2">
-            {/* // Deloitte Custom Change: Route Cancel through the shared close handler so inline scanner output resets. */}
-            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={handleCancel}>
               {localize('com_ui_cancel')}
             </Button>
             <Button
