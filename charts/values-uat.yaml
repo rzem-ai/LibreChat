@@ -31,8 +31,6 @@ pods:
           tag: 'uat@sha256:adb8e6ea1557c84c0ff0f44cade9b69d24a8ba8350df59db1575fb3692e94319'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
-          TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
-          TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://azure-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_FOUNDRY_AU_URL: 'http://foundry-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_ANTHROPIC_URL: 'http://anthropic-eastus2.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -54,13 +52,10 @@ pods:
         env:
           ADMIN_PANEL_URL: 'https://myassist-uat.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
-          # ANTHROPIC_MODELS: 'claude-sonnet-4-5,claude-opus-4-5,claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-opus-4-7,claude-sonnet-5,claude-opus-4-8'
           ANTHROPIC_MODELS: 'claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-sonnet-5,claude-opus-4-8'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
           APP_TITLE: 'MyAssist 2.0 (UAT)'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
-          BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
-          BASE_URL_AZURE_GLOBAL: 'http://127.0.0.1:8081/azure-global'
           BASE_URL_AZURE_FOUNDRY_AU: 'http://127.0.0.1:8081/azure-foundry-au'
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
           BEDROCK_AWS_ACCESS_KEY_ID: 'unused'

@@ -3,7 +3,7 @@
  *
  * LibreChat's `custom` endpoint type sends requests in plain OpenAI format:
  *   POST /azure-au/chat/completions
- *   Body: { "model": "gpt-4o-mini", ... }
+ *   Body: { "model": "gpt-56-luna", ... }
  *
  * The LLM Gateway requires Azure OpenAI deployment path format:
  *   POST /openai/deployments/{model}/chat/completions?api-version=2025-01-01-preview
@@ -176,21 +176,11 @@ async function azureProxy(r) {
   logInfo(r, '[' + reqId + '] Extracted model name: ' + model);
 
   // --- Resolve upstream base URL from nginx variable ---
-  var region = /^\/azure-au(?:\/|$)/.test(r.uri)
-    ? 'azure-au'
-    : /^\/azure-global(?:\/|$)/.test(r.uri)
-      ? 'azure-global'
-      : /^\/azure-foundry-au(?:\/|$)/.test(r.uri)
-        ? 'azure-foundry-au'
-        : 'azure-us';
+  var region = /^\/azure-au(?:\/|$)/.test(r.uri) ? 'azure-au' : 'azure-foundry-au';
   var upstreamBase =
     region === 'azure-au'
       ? r.variables['token_proxy_azure_au_url']
-      : region === 'azure-global'
-        ? r.variables['token_proxy_azure_global_url']
-        : region === 'azure-foundry-au'
-          ? r.variables['token_proxy_azure_foundry_au_url']
-        : r.variables['token_proxy_azure_us_url'];
+      : r.variables['token_proxy_azure_foundry_au_url'];
 
   logInfo(
     r,
@@ -222,7 +212,7 @@ async function azureProxy(r) {
   // Preserve the requested OpenAI-style endpoint path (e.g. /v1/embeddings, /v1/chat/completions)
   // but strip the provider prefix and optional /v1 prefix.
   var rawPath = r.uri;
-  var path = r.uri.replace(/^\/azure-(?:au|us|global|foundry-au)(?:\/|$)/, '/').replace(/^\/v1\//, '/');
+  var path = r.uri.replace(/^\/azure-(?:au|foundry-au)(?:\/|$)/, '/').replace(/^\/v1\//, '/');
   if (path === '/' || path === '') {
     path = '/chat/completions';
   }

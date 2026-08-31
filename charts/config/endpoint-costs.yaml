@@ -1,5 +1,5 @@
 metadata:
-    REFERENCE_MODEL_ID: 'gpt-41-mini' # Reference model that the cost multiplier will be based on.
+    REFERENCE_MODEL_ID: 'gpt-56-luna' # Reference model that the cost multiplier will be based on.
     MULTIPLIER_ROUNDING_INCREMENT: 0.1 # At what increment will the multiplier be rounded to. The Model is always rounded up to the nearest increment.
     MIN_MULTIPLIER: 0.1 # The smallest multiplier that will be used for any model. This is to ensure that even if a model is very cheap, it will still show a cost associated with it.
 data:
@@ -9,30 +9,6 @@ data:
     providers:
       azure-openai:
         models:
-            gpt-41:
-                input_per_1m: 2
-                output_per_1m: 8
-            gpt-41-mini:
-                input_per_1m: 0.4
-                output_per_1m: 1.6
-            gpt-41-nano:
-                input_per_1m: 0.1
-                output_per_1m: 0.4            
-            gpt-5-chat:
-                input_per_1m: 2
-                output_per_1m: 8
-            gpt-5-mini:
-                input_per_1m: 0.25
-                output_per_1m: 2
-            gpt-5-nano:
-                input_per_1m: 0.05
-                output_per_1m: 0.4
-            gpt-4o:
-                input_per_1m: 2.5
-                output_per_1m: 10
-            gpt-4o-mini:
-                input_per_1m: 0.15
-                output_per_1m: 0.6
             gpt-56-sol:
                 input_per_1m: 5
                 output_per_1m: 30
@@ -52,19 +28,10 @@ data:
                 output_per_1m: 2.5
       anthropic:
         models:
-            claude-sonnet-4-5:
-                input_per_1m: 3
-                output_per_1m: 15
             claude-sonnet-4-6:
                 input_per_1m: 3
                 output_per_1m: 15
-            claude-opus-4-5:
-                input_per_1m: 5
-                output_per_1m: 25
             claude-opus-4-6:
-                input_per_1m: 5
-                output_per_1m: 25
-            claude-opus-4-7:
                 input_per_1m: 5
                 output_per_1m: 25
             claude-haiku-4-5:

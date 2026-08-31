@@ -125,8 +125,8 @@ memory:
   messageWindowSize: 5 # Number of recent messages to consider
   agent:
     enabled: true
-    provider: 'Azure AU'
-    model: 'gpt-41-nano'
+    provider: 'Azure Foundry AU'
+    model: 'gpt-56-luna'
 
 endpoints:
   # ========================================
@@ -189,45 +189,6 @@ endpoints:
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
-        Content-Type: 'application/json'
-
-    # --- Azure US (eastus) ---
-    - name: 'Azure US'
-      apiKey: 'dummy'
-      baseURL: '${BASE_URL_AZURE_US}'
-      models:
-        default:
-          - 'gpt-5-nano'
-          - 'gpt-56-luna'
-          - 'gpt-56-terra'
-          - 'gpt-56-sol'
-          - 'gpt-5-mini'
-          - 'gpt-5-chat'
-        fetch: false
-      titleConvo: true
-      titleModel: 'gpt-56-luna'
-      modelDisplayLabel: 'Azure US'
-      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
-      headers:
-        x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
-        Content-Type: 'application/json'
-
-    # --- Azure Global (Foundry) ---
-    - name: 'Azure Global'
-      apiKey: 'dummy'
-      baseURL: '${BASE_URL_AZURE_GLOBAL}'
-      models:
-        default:
-          - 'gpt-56-luna'
-          - 'gpt-56-terra'
-          - 'gpt-56-sol'
-        fetch: false
-      titleConvo: true
-      titleModel: 'gpt-56-luna'
-      modelDisplayLabel: 'Azure Global'
-      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
-      headers:
-        x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
         Content-Type: 'application/json'
 
     # --- Azure Foundry AU ---
@@ -324,142 +285,6 @@ modelSpecs:
           - Preserve factual fidelity to the provided content and avoid adding unstated claims.
 
   list:
-    # - name: 'azure-au-gpt-4o-mini'
-    #   label: 'Azure AU gpt-4o-mini'
-    #   group: 'Azure AU'
-    #   preset:
-    #     endpoint: 'Azure AU'
-    #     model: 'gpt-4o-mini'
-    #     promptPrefix: *deloitteSystemPrompt
-
-    # - name: 'azure-au-gpt-4o'
-    #   label: 'Azure AU gpt-4o'
-    #   group: 'Azure AU'
-    #   preset:
-    #     endpoint: 'Azure AU'
-    #     model: 'gpt-4o'
-    #     promptPrefix: *deloitteSystemPrompt
-
-    # - name: 'azure-au-gpt-41'
-    #   label: 'Azure AU gpt-41'
-    #   group: 'Azure AU'
-    #   preset:
-    #     endpoint: 'Azure AU'
-    #     model: 'gpt-41'
-    #     promptPrefix: *deloitteSystemPrompt
-
-    # - name: 'azure-au-gpt-41-nano'
-    #   label: 'Azure AU gpt-41-nano'
-    #   group: 'Azure AU'
-    #   preset:
-    #     endpoint: 'Azure AU'
-    #     model: 'gpt-41-nano'
-    #     promptPrefix: *deloitteSystemPrompt
-
-    # - name: 'azure-au-gpt-41-mini'
-    #   label: 'Azure AU gpt-41-mini'
-    #   group: 'Azure AU'
-    #   preset:
-    #     endpoint: 'Azure AU'
-    #     model: 'gpt-41-mini'
-    #     promptPrefix: *deloitteSystemPrompt
-
-    # - name: 'azure-us-gpt-41'
-    #   label: 'Azure US gpt-41'
-    #   group: 'Azure US'
-    #   preset:
-    #     endpoint: 'Azure US'
-    #     model: 'gpt-41'
-    #     promptPrefix: *deloitteSystemPrompt
-
-    # - name: 'azure-us-gpt-41-nano'
-    #   label: 'Azure US gpt-41-nano'
-    #   group: 'Azure US'
-    #   preset:
-    #     endpoint: 'Azure US'
-    #     model: 'gpt-41-nano'
-    #     promptPrefix: *deloitteSystemPrompt
-
-    # - name: 'azure-us-gpt-41-mini'
-    #   label: 'Azure US gpt-41-mini'
-    #   group: 'Azure US'
-    #   preset:
-    #     endpoint: 'Azure US'
-    #     model: 'gpt-41-mini'
-    #     promptPrefix: *deloitteSystemPrompt
-
-    # - name: 'azure-us-gpt-5-chat'
-    #   label: 'Azure US gpt-5-chat'
-    #   group: 'Azure US'
-    #   preset:
-    #     endpoint: 'Azure US'
-    #     model: 'gpt-5-chat'
-    #     promptPrefix: *deloitteSystemPrompt
-
-    # - name: 'azure-us-gpt-5-mini'
-    #   label: 'Azure US gpt-5-mini'
-    #   group: 'Azure US'
-    #   preset:
-    #     endpoint: 'Azure US'
-    #     model: 'gpt-5-mini'
-    #     promptPrefix: *deloitteSystemPrompt
-
-    # - name: 'azure-us-gpt-5-nano'
-    #   label: 'Azure US gpt-5-nano'
-    #   group: 'Azure US'
-    #   preset:
-    #     endpoint: 'Azure US'
-    #     model: 'gpt-5-nano'
-    #     promptPrefix: *deloitteSystemPrompt
-
-    # - name: 'azure-us-gpt-56-luna'
-    #   label: 'Azure US gpt-56-luna'
-    #   group: 'Azure US'
-    #   preset:
-    #     endpoint: 'Azure US'
-    #     model: 'gpt-56-luna'
-    #     promptPrefix: *deloitteSystemPrompt
-
-    # - name: 'azure-us-gpt-56-terra'
-    #   label: 'Azure US gpt-56-terra'
-    #   group: 'Azure US'
-    #   preset:
-    #     endpoint: 'Azure US'
-    #     model: 'gpt-56-terra'
-    #     promptPrefix: *deloitteSystemPrompt
-
-    # - name: 'azure-us-gpt-56-sol'
-    #   label: 'Azure US gpt-56-sol'
-    #   group: 'Azure US'
-    #   preset:
-    #     endpoint: 'Azure US'
-    #     model: 'gpt-56-sol'
-    #     promptPrefix: *deloitteSystemPrompt
-
-    # - name: 'azure-global-gpt-56-luna'
-    #   label: 'Azure Global gpt-56-luna'
-    #   group: 'Azure Global'
-    #   preset:
-    #     endpoint: 'Azure Global'
-    #     model: 'gpt-56-luna'
-    #     promptPrefix: *deloitteSystemPrompt
-
-    # - name: 'azure-global-gpt-56-terra'
-    #   label: 'Azure Global gpt-56-terra'
-    #   group: 'Azure Global'
-    #   preset:
-    #     endpoint: 'Azure Global'
-    #     model: 'gpt-56-terra'
-    #     promptPrefix: *deloitteSystemPrompt
-
-    # - name: 'azure-global-gpt-56-sol'
-    #   label: 'Azure Global gpt-56-sol'
-    #   group: 'Azure Global'
-    #   preset:
-    #     endpoint: 'Azure Global'
-    #     model: 'gpt-56-sol'
-    #     promptPrefix: *deloitteSystemPrompt
-
     - name: 'azure-foundry-au-gpt-56-luna'
       label: 'GPT 5.6 Luna'
       group: 'OpenAI Global'
@@ -507,22 +332,6 @@ modelSpecs:
         model: 'google/gemini-2.5-pro'
         promptPrefix: *deloitteSystemPrompt
 
-    # - name: 'anthropic-claude-sonnet-4-5'
-    #   label: 'Anthropic claude-sonnet-4-5'
-    #   group: 'Anthropic'
-    #   preset:
-    #     endpoint: 'anthropic'
-    #     model: 'claude-sonnet-4-5'
-    #     promptPrefix: *deloitteSystemPrompt
-
-    # - name: 'anthropic-claude-opus-4-5'
-    #   label: 'Anthropic claude-opus-4-5'
-    #   group: 'Anthropic'
-    #   preset:
-    #     endpoint: 'anthropic'
-    #     model: 'claude-opus-4-5'
-    #     promptPrefix: *deloitteSystemPrompt
-
     - name: 'anthropic-claude-haiku-4-5'
       label: 'Claude Haiku 4.5'
       group: 'Anthropic Global'
@@ -542,14 +351,6 @@ modelSpecs:
         model: 'claude-sonnet-5'
         promptPrefix: *deloitteSystemPrompt
 
-    # - name: 'anthropic-claude-sonnet-4-5'
-    #   label: 'Anthropic claude-sonnet-4-5'
-    #   group: 'Anthropic'
-    #   preset:
-    #     endpoint: 'anthropic'
-    #     model: 'claude-sonnet-4-5'
-    #     promptPrefix: *deloitteSystemPrompt
-
     - name: 'anthropic-claude-sonnet-4-6'
       label: 'Claude Sonnet 4.6'
       group: 'Anthropic Global'
@@ -559,14 +360,6 @@ modelSpecs:
         model: 'claude-sonnet-4-6'
         promptPrefix: *deloitteSystemPrompt
 
-    # - name: 'anthropic-claude-opus-4-5'
-    #   label: 'Anthropic claude-opus-4-5'
-    #   group: 'Anthropic'
-    #   preset:
-    #     endpoint: 'anthropic'
-    #     model: 'claude-opus-4-5'
-    #     promptPrefix: *deloitteSystemPrompt
-
     - name: 'anthropic-claude-opus-4-6'
       label: 'Claude Opus 4.6'
       group: 'Anthropic Global'
@@ -575,14 +368,6 @@ modelSpecs:
         endpoint: 'anthropic'
         model: 'claude-opus-4-6'
         promptPrefix: *deloitteSystemPrompt
-
-    # - name: 'anthropic-claude-opus-4-7'
-    #   label: 'Anthropic claude-opus-4-7'
-    #   group: 'Anthropic'
-    #   preset:
-    #     endpoint: 'anthropic'
-    #     model: 'claude-opus-4-7'
-    #     promptPrefix: *deloitteSystemPrompt
 
     - name: 'anthropic-claude-opus-4-8'
       label: 'Claude Opus 4.8'

@@ -30,6 +30,7 @@ type ParsedBedrockUserCredentials = Partial<Record<UserCredentialKey, UserCreden
 
 function getBedrockProxyTarget(region?: string, reverseProxy?: string): string | undefined {
   const trimmedReverseProxy = reverseProxy?.trim();
+  // Deloitte Custom Change: Support reverse-proxy URLs that already include a protocol.
   if (trimmedReverseProxy) {
     return /^https?:\/\//.test(trimmedReverseProxy)
       ? trimmedReverseProxy
@@ -123,6 +124,7 @@ export async function initializeBedrock({
       } & Record<string, unknown>)
     | undefined;
 
+  // Deloitte Custom Change: Configure Bedrock through the Deloitte gateway and local identity token.
   const {
     BEDROCK_AWS_SECRET_ACCESS_KEY,
     BEDROCK_AWS_ACCESS_KEY_ID,
@@ -274,6 +276,7 @@ export async function initializeBedrock({
   const proxyAgent = getHttpsProxyAgent(
     getBedrockProxyTarget(bedrockRegion, BEDROCK_REVERSE_PROXY),
   );
+  // Deloitte Custom Change: Create a custom client when routing through the Deloitte gateway.
   if (
     proxyAgent ||
     hasBearerToken ||
@@ -313,6 +316,7 @@ export async function initializeBedrock({
       });
     }
 
+    // Deloitte Custom Change: Prefer the pod-local Bedrock gateway over the reverse-proxy host.
     if (BEDROCK_GATEWAY_URL) {
       customClientConfig.endpoint = BEDROCK_GATEWAY_URL;
     } else if (BEDROCK_REVERSE_PROXY) {
@@ -320,6 +324,7 @@ export async function initializeBedrock({
     }
 
     const customClient = new BedrockRuntimeClient(customClientConfig);
+    // Deloitte Custom Change: Forward the local identity token to Deloitte gateway routes.
     if (
       LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION &&
       (BEDROCK_GATEWAY_URL || BEDROCK_REVERSE_PROXY)

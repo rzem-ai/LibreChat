@@ -39,8 +39,6 @@ pods:
           tag: 'main@sha256:2ab7ba3209eeed2730e8e1373a820f34dbc5e390e31af990cf21153997581aae'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-prd.svc.cluster.local:8080'
-          TOKEN_PROXY_AZURE_US_URL: 'http://azure-eastus.llm-gateway-prd.svc.cluster.local:8080'
-          TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://azure-eastus.llm-gateway-prd.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_FOUNDRY_AU_URL: 'http://foundry-aus-east.llm-gateway-prd.svc.cluster.local:8080'
           TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-prd.svc.cluster.local:8080'
           TOKEN_PROXY_ANTHROPIC_URL: 'http://anthropic-eastus2.llm-gateway-prd.svc.cluster.local:8080'
@@ -66,8 +64,6 @@ pods:
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
           APP_TITLE: 'MyAssist 2.0'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
-          BASE_URL_AZURE_US: 'http://127.0.0.1:8081/azure-us'
-          BASE_URL_AZURE_GLOBAL: 'http://127.0.0.1:8081/azure-global'
           BASE_URL_AZURE_FOUNDRY_AU: 'http://127.0.0.1:8081/azure-foundry-au'
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
           BEDROCK_AWS_ACCESS_KEY_ID: 'unused'
