@@ -138,7 +138,7 @@ pods:
           OPENID_CLIENT_SECRET: librechat-openid-client-secret-uat
           OPENID_SESSION_SECRET: librechat-openid-session-secret-uat
           # RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
-          MEILI_MASTER_KEY: librechat-meili-master-key-uat
+          # MEILI_MASTER_KEY: librechat-meili-master-key-uat
           # ClearTrack Code Interpreter (ea-code-runtime) — JWK signing key
           CODEAPI_JWT_PRIVATE_JWK_JSON: librechat-codeapi-jwt-private-jwk-uat
           #Langfuse Observability
@@ -177,22 +177,22 @@ pods:
           targetPort: 8000
         ingress:
           enabled: false
-      meilisearch:
-        image:
-          pullPolicy: Always
-          tag: 'uat@sha256:333043792dcc3f9974abdf8497b2eb190f282e63c185a3fd9fd5b892277df75a'
-        env:
-          MEILI_ENV: 'production' # Use production to mimic PROD environment behaviour
-        secrets:
-          MEILI_MASTER_KEY: librechat-meili-master-key-uat
-        persistence:
-          enabled: true
-          size: 10Gi
-          accessModes:
-            - ReadWriteOnce
-          name: 'meilisearch-data'
-          mountPath: /meili_data
-          storageClass: 'managed-csi-standard-private'
+      # meilisearch: # TODO: Enable meilisearch when we can have multi-container PVC
+      #   image:
+      #     pullPolicy: Always
+      #     tag: 'uat@sha256:333043792dcc3f9974abdf8497b2eb190f282e63c185a3fd9fd5b892277df75a'
+      #   env:
+      #     MEILI_ENV: 'production' # Use production to mimic PROD environment behaviour
+      #   secrets:
+      #     MEILI_MASTER_KEY: librechat-meili-master-key-uat
+      #   persistence:
+      #     enabled: true
+      #     size: 10Gi
+      #     accessModes:
+      #       - ReadWriteOnce
+      #     name: 'meilisearch-data'
+      #     mountPath: /meili_data
+      #     storageClass: 'managed-csi-standard-private'
   admin:
     replicas: 1
     containers:
