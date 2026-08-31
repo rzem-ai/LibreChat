@@ -17,9 +17,10 @@ export function resolveSkillGroup(
   if (skill.isPublic === true) {
     return 'public';
   }
-  const ownedByUser = currentUserId != null && skill.author === currentUserId;
-  if (!ownedByUser && Boolean(skill.authorName)) {
-    return 'shared';
+
+  if (currentUserId == null) {
+    return 'mine';
   }
-  return 'mine';
+
+  return skill.author === currentUserId ? 'mine' : 'shared';
 }
