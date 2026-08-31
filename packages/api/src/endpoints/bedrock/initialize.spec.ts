@@ -389,6 +389,7 @@ describe('initializeBedrock', () => {
       const result = (await initializeBedrock(params)) as BedrockLLMConfigResult;
 
       expect(result.llmConfig.client).toHaveProperty('endpoint', 'http://127.0.0.1:8081');
+      expect(result.llmConfig.client).toHaveProperty('requestHandler');
     });
 
     it('should create BedrockRuntimeClient with proxy when PROXY is set', async () => {
@@ -463,6 +464,7 @@ describe('initializeBedrock', () => {
         'endpoint',
         'https://reverse-proxy.example.com/bedrock',
       );
+      expect(result.llmConfig.client).not.toHaveProperty('requestHandler');
       expect(result.llmConfig).not.toHaveProperty('endpointHost');
     });
   });
