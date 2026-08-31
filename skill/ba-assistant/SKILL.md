@@ -97,8 +97,6 @@ These apply to every action below:
   format.
 - **First drafts only.** Frame outputs as editable drafts for the BA to review.
 
-Model settings for this plugin: **temperature 0.5**, **max tokens 4096**. Owner: **Noah
-Chapman (nchapman@deloitte.com.au)**.
 
 ## Skills / Actions
 
@@ -276,26 +274,15 @@ robustness), explain how and why each change should be made, highlight points of
 show how to build simple statements into value-driven content. Recommend consistent formatting
 using the user's perspective (e.g. "As a data analyst, I want to break down reports by hour and
 day so that I can drive behavioural insights"). Then **review and RE-WRITE** the user stories.
-Format the response in **Markdown**. Output populates the **Feedback and Review** panel.
+Format the response in **Markdown**.
 
 ### 11. Generate Review
 
 **Source: the pasted User Stories text**, plus any **Additional Feedback Instructions.** Same
 senior-BA review-and-rewrite task, formatting, and Markdown output as Action 10, but the user
-stories come from the text box rather than a file. Output populates the **Feedback and Review**
-panel.
+stories come from the text box rather than a file.
 
 ## Download / Export
 
-Two download buttons in the final step export what the user has reviewed; they perform no
-further generation.
-
-- **Download Excel** — exports the four generated data grids as an Excel workbook (filename
-  `Discoveria-output`): the **Epics**, **Features**, **User Stories**, and **Test Cases**
-  tables.
-- **Download Document** — exports the context and review as a document (filename `Discoveria
-  Inputs`): the **Problem**, **Solution**, **Industry**, **Requirements and additional
-  details** fields, the **User Stories** review-input text, and the **Feedback and Review**
-  output.
 
 Remind the user that the contents are first drafts to be reviewed before delivery.

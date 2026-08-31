@@ -72,7 +72,6 @@ These apply to the action below:
 - **First draft only.** The report is AI-assisted guidance for the project team to review, not
   a final sign-off.
 
-Model settings for this plugin: **temperature 0.9**, **max tokens 4096**. Owner: **Simon Forman (sforman@deloitte.com.au)**.
 
 ## Skills / Actions
 

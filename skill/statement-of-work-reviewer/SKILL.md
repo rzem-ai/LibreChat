@@ -46,14 +46,6 @@ For assessment tasks, the output must follow these hard rules:
 - If feedback contradicts result, set result to `⚠️`.
 
 ## Reference Docs (Authoritative)
-Use these local docs as the source of truth for table sequence and guideline mapping:
-
-- `references/REFERENCE_TABLE_MAP.md` for SoW type to section-to-action mapping
-- `references/COMMON_PROMPTS.md` for shared Q and A prompts
-- `references/ADVISORY_PROMPTS.md` for Advisory SoW prompts
-- `references/IMPLEMENT_PROMPTS.md` for Implement SoW prompts
-- `references/OPERATE_PROMPTS.md` for Operate SoW prompts
-- `references/IMPLEMENT_OPERATE_PROMPTS.md` for Implement and Operate SoW prompts
 
 ### Prompt Retrieval Workflow (Mandatory)
 

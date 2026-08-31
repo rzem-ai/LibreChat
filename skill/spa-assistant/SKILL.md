@@ -67,13 +67,10 @@ Only ask additional clarification questions where a material review assumption i
 
 ### Step 2a — Extract Buyer-Side Observations
 
-[RETAIN EXISTING CONTENT FROM CURRENT SKILL]
 
 ---
 
 ### Step 2b — Extract Seller-Side Observations
-
-[RETAIN EXISTING CONTENT FROM CURRENT SKILL]
 
 ---
 

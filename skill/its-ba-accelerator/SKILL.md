@@ -84,8 +84,6 @@ These apply to every action below:
 - **First drafts only.** Frame outputs as a starting point for the analyst to review and
   enhance before finalising.
 
-Model settings for this plugin: **temperature 0.8**, **max tokens 4096**. Owner: **Samar
-Tahir Abbas (samabbas@deloitte.com.au)**.
 
 ## Skills / Actions
 

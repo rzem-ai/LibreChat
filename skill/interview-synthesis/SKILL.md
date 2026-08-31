@@ -28,9 +28,7 @@ prior knowledge and do not invent interviewees, quotes, or findings.
    something, say so rather than fabricating a demographic detail, a quote, or a persona.
 4. **Do not attribute the interviewer's words to interviewees.** Two actions state this
    directly (see Pain Points and High Points); apply the same discipline throughout.
-5. **Treat every output as a first draft.** Each analysis step writes into an editable
-   rich-text field with the helper text "Hit the button above to analyse with AI"; frame
-   outputs so the user can readily review and edit them before moving on.
+5. **Treat every output as a first draft.** Frame outputs so the user can readily review and edit them before moving on.
 
 **Analyse in smaller chunks for best results.** Due to token limits, the best results come
 from analysing interviews in smaller chunks — up to roughly **10,000 words** at a time.
@@ -63,14 +61,11 @@ These apply to every action below:
 - **First drafts only.** Each output lands in an editable field for the user to refine
   before the download step.
 
-Model settings: the config does **not** specify a temperature or max-tokens value for this
-plugin (see the quirks note). Owner: **Ally Fulton (afulton@deloitte.com.au)**.
 
 ## Skills / Actions
 
 Run these in order. The first four analyse the uploaded interviews directly; the last two
-build on the reviewed outputs of the earlier steps. Each action is triggered by its button
-and writes into the matching rich-text field.
+build on the reviewed outputs of the earlier steps.
 
 ### 1. Demographics
 

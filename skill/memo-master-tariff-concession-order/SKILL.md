@@ -91,8 +91,6 @@ These apply to every generative action below:
 - **First drafts only.** Frame every output as a working draft for the Engagement Team to
   review; it must not be shared with clients or submitted to the ABF in its current form.
 
-Model settings for this plugin: **temperature 0.5**, **max tokens 4096**. Owner: **Ankit
-Shrestha (ashrestha@deloitte.com.au)**.
 
 ## Skills / Actions
 
