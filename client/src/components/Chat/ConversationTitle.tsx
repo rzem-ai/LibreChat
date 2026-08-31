@@ -23,11 +23,15 @@ export default function ConversationTitle({
     titleInput,
     setTitleInput,
     renaming,
-    handleRename,
+    handleRename: startRenaming,
     handleRenameSubmit,
     handleCancelRename,
   } = useConversationRename(conversationId, title);
 
+  const handleRename = () => {
+    setIsPopoverActive(false);
+    startRenaming();
+  };
   if (!conversation) {
     return (
       <span className="flex-shrink-0 whitespace-nowrap px-2 text-sm font-semibold text-text-primary">
