@@ -109,6 +109,7 @@ interface:
     createActions: false # Set to false to hide action creation in the marketplace
     landingIcon: true # Set to false to hide the model or agent icon beside the landing greeting
     conversationIcon: true # Set to false to hide model or endpoint icons in conversation history
+    showConversationTitle: true # Set to false to hide the conversation title in the chat header
 
 fileConfig:
   endpoints:

@@ -417,7 +417,7 @@ function ConvoOptions({
         setIsOpen={setIsPopoverActive}
         trigger={
           <Ariakit.MenuButton
-            id={`conversation-menu-${conversationId}`}
+            id={`conversation-menu-${conversationId}-${menuId}`}
             aria-label={localize('com_nav_convo_menu_options')}
             aria-expanded={isPopoverActive}
             className={cn(
