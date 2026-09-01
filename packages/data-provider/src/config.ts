@@ -915,6 +915,10 @@ export const agentsEndpointSchema = baseEndpointSchema
       /* agents specific */
       recursionLimit: z.number().optional(),
       disableBuilder: z.boolean().optional().default(false),
+      /** Hides the File Context upload section in the Agent Builder UI. Purely cosmetic —
+       * unlike removing `AgentCapabilities.context` from `capabilities`, it does not affect
+       * loading of already-uploaded context files at runtime. */
+      hideFileContext: z.boolean().optional().default(false),
       maxRecursionLimit: z.number().optional(),
       /** Max cumulative bytes a single streamed tool call's arguments may reach before the run
        * aborts. Defaults to 64 KiB in the agents SDK; `0` disables the guard. */

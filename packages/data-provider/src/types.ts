@@ -524,6 +524,7 @@ export type TConfig = {
   userProvideSessionToken?: boolean;
   userProvideBearerToken?: boolean;
   disableBuilder?: boolean;
+  hideFileContext?: boolean;
   retrievalModels?: string[];
   capabilities?: string[];
   customParams?: {

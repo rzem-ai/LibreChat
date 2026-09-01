@@ -156,7 +156,7 @@ export default function AgentConfig() {
       <ToolsSection agentId={agent_id} />
 
       {/* FILE CONTEXT — standalone section, separate from the tool library */}
-      {contextEnabled && (
+      {contextEnabled && !agentsConfig?.hideFileContext && (
         <div className="mb-3">
           <FileContext agent_id={agent_id} files={contextFiles} />
         </div>
