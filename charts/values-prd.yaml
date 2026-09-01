@@ -253,6 +253,12 @@ pods:
             - path: /admin
               pathType: Prefix
 
+  redis:
+    containers:
+      redis:
+        secrets:
+          REDIS_PASSWORD: 'librechat-valkey-password'
+
 valkey:
   image:
     tag: 'main@sha256:b5a82e99970c2d7d1421a0146fb2f006d44f35303f8a07ba73e4cf15f2580ff3'
