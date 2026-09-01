@@ -104,20 +104,20 @@ function parsePricingYaml(pricingYaml: string): TModelPricing {
 function parseEndpointCostConfig(contents: string): TEndpointCostConfig {
   const config = { ...DEFAULT_ENDPOINT_COST_CONFIG };
 
-  const referenceModelMatch = contents.match(/^\s*REFERENCE_MODEL_ID:\s*['"]?([^'"\n]+)['"]?\s*$/m);
+  const referenceModelMatch = contents.match(/^\s*REFERENCE_MODEL_ID:\s*['"]?([^'"\n#]+)['"]?\s*(?:#.*)?$/m);
   if (referenceModelMatch?.[1]) {
     config.REFERENCE_MODEL_ID = referenceModelMatch[1].trim();
   }
 
   const roundingIncrementMatch = contents.match(
-    /^\s*MULTIPLIER_ROUNDING_INCREMENT:\s*([0-9.]+)\s*$/m,
+    /^\s*MULTIPLIER_ROUNDING_INCREMENT:\s*([0-9.]+)\s*(?:#.*)?$/m,
   );
   const roundingIncrement = Number(roundingIncrementMatch?.[1]);
   if (Number.isFinite(roundingIncrement) && roundingIncrement > 0) {
     config.MULTIPLIER_ROUNDING_INCREMENT = roundingIncrement;
   }
 
-  const minMultiplierMatch = contents.match(/^\s*MIN_MULTIPLIER:\s*([0-9.]+)\s*$/m);
+  const minMultiplierMatch = contents.match(/^\s*MIN_MULTIPLIER:\s*([0-9.]+)\s*(?:#.*)?$/m);
   const minMultiplier = Number(minMultiplierMatch?.[1]);
   if (Number.isFinite(minMultiplier) && minMultiplier > 0) {
     config.MIN_MULTIPLIER = minMultiplier;
