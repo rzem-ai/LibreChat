@@ -6,13 +6,14 @@ import type { TEndpointCostConfig, TModelPricing } from 'librechat-data-provider
 const DEFAULT_PRICING_PATH = '/app/endpoint-costs.yaml';
 const LOCAL_CONFIGMAP_PATH = path.resolve(process.cwd(), 'charts/config/endpoint-costs.yaml');
 const DEFAULT_ENDPOINT_COST_CONFIG: TEndpointCostConfig = {
-  REFERENCE_MODEL_ID: 'gpt-41',
+  REFERENCE_MODEL_ID: 'gpt-56-luna',
   MULTIPLIER_ROUNDING_INCREMENT: 0.1,
   MIN_MULTIPLIER: 0.1,
 };
 
 let cachedEndpointCosts:
-  { modelPricing: TModelPricing; endpointCostConfig: TEndpointCostConfig } | undefined;
+  | { modelPricing: TModelPricing; endpointCostConfig: TEndpointCostConfig }
+  | undefined;
 
 function readFirstExisting(paths: Array<string | undefined>): string | null {
   for (const filePath of paths) {
@@ -101,12 +102,17 @@ function parsePricingYaml(pricingYaml: string): TModelPricing {
   return pricing;
 }
 
-function applyEndpointCostEnvOverrides(config: TEndpointCostConfig): TEndpointCostConfig {
+function applyEndpointCostOverrides(
+  config: TEndpointCostConfig,
+  referenceModelId?: string,
+): TEndpointCostConfig {
   const nextConfig = { ...config };
 
-  const referenceModelId = process.env.MODEL_PRICING_REFERENCE_MODEL_ID?.trim();
-  if (referenceModelId) {
-    nextConfig.REFERENCE_MODEL_ID = referenceModelId;
+  const envReferenceModelId = process.env.MODEL_PRICING_REFERENCE_MODEL_ID?.trim();
+  if (envReferenceModelId) {
+    nextConfig.REFERENCE_MODEL_ID = envReferenceModelId;
+  } else if (referenceModelId?.trim()) {
+    nextConfig.REFERENCE_MODEL_ID = referenceModelId.trim();
   }
 
   const roundingIncrement = Number(process.env.MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT);
@@ -137,13 +143,13 @@ function getEndpointCosts() {
     if (!rawContents) {
       cachedEndpointCosts = {
         modelPricing: {},
-        endpointCostConfig: applyEndpointCostEnvOverrides(DEFAULT_ENDPOINT_COST_CONFIG),
+        endpointCostConfig: DEFAULT_ENDPOINT_COST_CONFIG,
       };
       return cachedEndpointCosts;
     }
 
     const pricingYaml = extractPricingYaml(rawContents);
-    const endpointCostConfig = applyEndpointCostEnvOverrides(DEFAULT_ENDPOINT_COST_CONFIG);
+    const endpointCostConfig = DEFAULT_ENDPOINT_COST_CONFIG;
     cachedEndpointCosts = {
       modelPricing: parsePricingYaml(pricingYaml),
       endpointCostConfig,
@@ -154,7 +160,7 @@ function getEndpointCosts() {
     logger.warn(`[config] Failed to load model pricing: ${message}`);
     cachedEndpointCosts = {
       modelPricing: {},
-      endpointCostConfig: applyEndpointCostEnvOverrides(DEFAULT_ENDPOINT_COST_CONFIG),
+      endpointCostConfig: DEFAULT_ENDPOINT_COST_CONFIG,
     };
     return cachedEndpointCosts;
   }
@@ -164,8 +170,8 @@ export function getModelPricing(): TModelPricing {
   return getEndpointCosts().modelPricing;
 }
 
-export function getEndpointCostConfig(): TEndpointCostConfig {
-  return getEndpointCosts().endpointCostConfig;
+export function getEndpointCostConfig(referenceModelId?: string): TEndpointCostConfig {
+  return applyEndpointCostOverrides(getEndpointCosts().endpointCostConfig, referenceModelId);
 }
 
 export function clearModelPricingCache(): void {
