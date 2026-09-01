@@ -1,6 +1,9 @@
 imageRegistry: 'dttaitsprd.azurecr.io'
 branch: ''
 
+llmGateway:
+  namespace: 'llm-gateway-ctnp'
+
 serviceAccount:
   name: sa-librechat-prd
 
