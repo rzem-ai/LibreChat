@@ -119,7 +119,7 @@ pods:
           CODEAPI_JWT_MINT_CACHE_SECONDS: '30'
           CODEAPI_JWT_SINGLE_TENANT_ID: 'legacy'
           # Azure Storage Container
-          AZURE_CLIENT_ID: 'e6da7f6e-8634-47df-be2f-7631d2f99822' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-prd
+          AZURE_CLIENT_ID: '8ad6bae3-1376-4c98-bf67-4b3be70f3ab6' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-prd
           AZURE_STORAGE_ACCOUNT_NAME: 'stctspokeprdshared'
           AZURE_STORAGE_PUBLIC_ACCESS: 'false'
           AZURE_CONTAINER_NAME: 'stc-librechat-app-prd'
@@ -188,7 +188,7 @@ pods:
           POSTGRES_DB: 'pgdb_librechat_app_prd'
           POSTGRES_USER: 'id-int-librechat-prd'
           POSTGRES_AUTH_TYPE: 'ActiveDirectoryMsi'
-          MANAGED_IDENTITY_CLIENT_ID: 'e6da7f6e-8634-47df-be2f-7631d2f99822' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-prd
+          MANAGED_IDENTITY_CLIENT_ID: '8ad6bae3-1376-4c98-bf67-4b3be70f3ab6' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-prd
           DB_HOST: 'psql-ctspoke-prd.postgres.database.azure.com'
           DB_PORT: '5432'
           RAG_HOST: '0.0.0.0'
