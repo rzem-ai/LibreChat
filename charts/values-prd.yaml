@@ -4,6 +4,9 @@ branch: 'main'
 serviceAccount:
   name: sa-librechat-prd
 
+llmGateway:
+  namespace: 'llm-gateway-prd'
+
 nodeSelector:
   app: myassist
 

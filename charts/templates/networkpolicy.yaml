@@ -1,8 +1,5 @@
 {{- $enabled := true -}}
-{{- $llmGatewayNamespace := "llm-gateway-ctnp" -}}
-{{- if and (hasKey .Values "llmGateway") (hasKey .Values.llmGateway "namespace") -}}
-  {{- $llmGatewayNamespace = .Values.llmGateway.namespace -}}
-{{- end -}}
+{{- $llmGatewayNamespace := .Values.llmGateway.namespace -}}
 {{- if and (hasKey .Values "networkPolicy") (eq (toString .Values.networkPolicy.enabled) "false") -}}
   {{- $enabled = false -}}
 {{- end -}}
