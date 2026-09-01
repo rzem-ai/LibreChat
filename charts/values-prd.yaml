@@ -61,6 +61,13 @@ pods:
             fi && exec npm run backend
         image:
           tag: 'main@sha256:5421cb3e8234e2f1586d92bdf5360726f8e808cda9e9901154f758c92d60dec4'
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "32Gi"
+            cpu: "6000m"
         env:
           ADMIN_PANEL_URL: 'https://myassist.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -167,6 +174,13 @@ pods:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
           tag: 'main@sha256:2377a3565a905cb507eee8a36fe9fc15f85c30aa5e8124b798a546dc7e4f1828'
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "32Gi"
+            cpu: "6000m"
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
