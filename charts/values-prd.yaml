@@ -37,7 +37,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'main@sha256:2ab7ba3209eeed2730e8e1373a820f34dbc5e390e31af990cf21153997581aae'
+          tag: 'main@sha256:05666603a2e4eaf48ed7ba1e8d64826636805a91959bb40054d27930aef97d37'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-prd.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://global.llm-gateway-prd.svc.cluster.local:8080'
@@ -228,7 +228,7 @@ pods:
 
 valkey:
   image:
-    tag: 'main@sha256:ec7ab07262c5ac3da2847ec47ca04ac706570c5ebf2d4e2ed63f44348eb25a28'
+    tag: 'main@sha256:b5a82e99970c2d7d1421a0146fb2f006d44f35303f8a07ba73e4cf15f2580ff3'
   persistence:
     storageClass: 'managed-csi-standard-private'
   passwordSecretName: 'librechat-valkey-password'
