@@ -126,6 +126,27 @@ function parseEndpointCostConfig(contents: string): TEndpointCostConfig {
   return config;
 }
 
+function applyEndpointCostEnvOverrides(config: TEndpointCostConfig): TEndpointCostConfig {
+  const nextConfig = { ...config };
+
+  const referenceModelId = process.env.MODEL_PRICING_REFERENCE_MODEL_ID?.trim();
+  if (referenceModelId) {
+    nextConfig.REFERENCE_MODEL_ID = referenceModelId;
+  }
+
+  const roundingIncrement = Number(process.env.MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT);
+  if (Number.isFinite(roundingIncrement) && roundingIncrement > 0) {
+    nextConfig.MULTIPLIER_ROUNDING_INCREMENT = roundingIncrement;
+  }
+
+  const minMultiplier = Number(process.env.MODEL_PRICING_MIN_MULTIPLIER);
+  if (Number.isFinite(minMultiplier) && minMultiplier > 0) {
+    nextConfig.MIN_MULTIPLIER = minMultiplier;
+  }
+
+  return nextConfig;
+}
+
 function getEndpointCosts() {
   if (cachedEndpointCosts) {
     return cachedEndpointCosts;
@@ -147,9 +168,10 @@ function getEndpointCosts() {
     }
 
     const pricingYaml = extractPricingYaml(rawContents);
+    const endpointCostConfig = applyEndpointCostEnvOverrides(parseEndpointCostConfig(rawContents));
     cachedEndpointCosts = {
       modelPricing: parsePricingYaml(pricingYaml),
-      endpointCostConfig: parseEndpointCostConfig(rawContents),
+      endpointCostConfig,
     };
     return cachedEndpointCosts;
   } catch (error) {
