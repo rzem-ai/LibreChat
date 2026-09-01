@@ -131,14 +131,19 @@ export default function SkillsDialog({ open, onOpenChange, agentId }: SkillsDial
         continue;
       }
       seen.add(value);
+      const translationKey = `com_ui_${value}` as TranslationKeys;
+      const label =
+        localize(translationKey) !== translationKey
+          ? localize(translationKey)
+          : value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
       options.push({
         value,
-        label: value,
+        label,
         icon: <CategoryIcon category={value} className="size-4" />,
       });
     }
     return options;
-  }, [catalog]);
+  }, [catalog, localize]);
 
   const filtered = useMemo(() => {
     const base = applyFilter(catalog, { search, kind: 'skill', category, view: 'marketplace' });
