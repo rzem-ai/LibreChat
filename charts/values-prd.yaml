@@ -61,6 +61,13 @@ pods:
             fi && exec npm run backend
         image:
           tag: 'main@sha256:5421cb3e8234e2f1586d92bdf5360726f8e808cda9e9901154f758c92d60dec4'
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "32Gi"
+            cpu: "6000m"
         env:
           ADMIN_PANEL_URL: 'https://myassist.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -138,13 +145,14 @@ pods:
           SKILL_SCANNER_MIN_SEVERITY: 'high'
           # AI Registry
           AI_REGISTRY_CLIENT_ID: "65dad51c-d3ca-4252-b97d-815cf8518d6a"
-          # In-cluster Valkey -- StatefulSet from charts/templates/valkey.yaml
-          USE_REDIS: 'true'
-          USE_REDIS_STREAMS: 'true'
-          REDIS_URI: 'redis://librechat-valkey:6379'
-          REDIS_KEY_PREFIX: 'librechat'
-          REDIS_PING_INTERVAL: '300'
-          STREAM_DELTA_COALESCE_MS: '25'
+          # Enable once we are looking to add persistance
+          # # In-cluster Valkey -- StatefulSet from charts/templates/valkey.yaml
+          # USE_REDIS: 'true'
+          # USE_REDIS_STREAMS: 'true'
+          # REDIS_URI: 'redis://librechat-valkey:6379'
+          # REDIS_KEY_PREFIX: 'librechat'
+          # REDIS_PING_INTERVAL: '300'
+          # STREAM_DELTA_COALESCE_MS: '25'
         secrets:
           MONGO_URI: librechat-mdb-connection-string
           JWT_SECRET: librechat-jwt-secret # Use LibreChat Credentials Generator
@@ -159,11 +167,20 @@ pods:
           #Langfuse Observability
           LANGFUSE_PUBLIC_KEY: librechat-langfuse-public-key # TODO: Need to deploy to langfuse to prod first, then create an API in the frontend.
           LANGFUSE_SECRET_KEY: librechat-langfuse-secret-key # TODO: Need to deploy to langfuse to prod first, then create an API in the frontend.
+          # Redis/Valkey - Enable once we are looking to add persistance
+          # REDIS_PASSWORD: librechat-valkey-password-prd
       rag-api:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
           tag: 'main@sha256:2377a3565a905cb507eee8a36fe9fc15f85c30aa5e8124b798a546dc7e4f1828'
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "32Gi"
+            cpu: "6000m"
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
