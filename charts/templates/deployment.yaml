@@ -1,4 +1,5 @@
 {{- range $pod, $podConfig := .Values.pods }}
+{{- if eq $pod "redis" }}{{- continue }}{{- end }}
 {{- with $ -}}
 {{- $persistenceEnabled := false }}
 {{- if and $podConfig.persistence (hasKey $podConfig.persistence "enabled") $podConfig.persistence.enabled }}
