@@ -27,7 +27,8 @@ jest.mock('~/hooks', () => ({
 
 const CONVO_ID = 'convo-q';
 let updateQueueForTest:
-  ((updater: (current: QueuedMessage[]) => QueuedMessage[]) => void) | undefined;
+  | ((updater: (current: QueuedMessage[]) => QueuedMessage[]) => void)
+  | undefined;
 
 function QueueState() {
   const queue = useRecoilValue(store.queuedMessagesByConvoId(CONVO_ID));

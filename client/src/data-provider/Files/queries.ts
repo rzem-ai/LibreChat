@@ -1,11 +1,23 @@
+import { useCallback, useMemo } from 'react';
 import { useRecoilValue } from 'recoil';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { FileSources, QueryKeys, DynamicQueryKeys, dataService } from 'librechat-data-provider';
+import {
+  FileSources,
+  QueryKeys,
+  DynamicQueryKeys,
+  dataService,
+  request,
+} from 'librechat-data-provider';
 import type { QueryObserverResult, UseQueryOptions } from '@tanstack/react-query';
 import type t from 'librechat-data-provider';
+import type { AxiosResponse } from 'axios';
+import { useBlobUrl } from '~/hooks/Files/useBlobUrl';
 import { isEphemeralAgent } from '~/common';
 import { addFileToCache } from '~/utils';
 import store from '~/store';
+
+export type { BlobUrlResult } from '~/hooks/Files/useBlobUrl';
+export { useBlobUrl };
 
 export const useGetFiles = <TData = t.TFile[] | boolean>(
   config?: UseQueryOptions<t.TFile[], unknown, TData>,
@@ -116,6 +128,32 @@ export const useFileDownload = (
       retry: false,
     },
   );
+};
+
+// Deloitte: fetch /api/ URL bytes via authenticated axios; expose object URL per hook instance.
+export const useAuthenticatedBlobUrl = (
+  url: string | null | undefined,
+  enabled: boolean = true,
+) => {
+  const isSameOrigin = useMemo(() => {
+    if (!url) return false;
+    try {
+      return new URL(url, window.location.origin).origin === window.location.origin;
+    } catch {
+      return false;
+    }
+  }, [url]);
+
+  const fetchBlob = useCallback(async () => {
+    const response = await request.getResponse<AxiosResponse<Blob>>(url as string, {
+      responseType: 'blob',
+      headers: { Accept: 'application/octet-stream' },
+    });
+    return response.data;
+    // url is the only meaningful dep; the function body is intentionally recreated when url changes
+  }, [url]);
+
+  return useBlobUrl(url ? fetchBlob : null, enabled && !!url && isSameOrigin);
 };
 
 /**

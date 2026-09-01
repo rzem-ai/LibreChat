@@ -17,6 +17,7 @@ import {
   useHasMemoryAccess,
   useAgentCapabilities,
 } from '~/hooks';
+import useArtifactsShadcnOnly from '~/hooks/Artifacts/useArtifactsShadcnOnly';
 import ArtifactsSubMenu from '~/components/Chat/Input/ArtifactsSubMenu';
 import MCPSubMenu from '~/components/Chat/Input/MCPSubMenu';
 import { useGetStartupConfig } from '~/data-provider';
@@ -41,6 +42,9 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     fileSearchEnabled,
     skillsEnabled,
   } = useAgentCapabilities(context?.agentsConfig?.capabilities ?? defaultAgentCapabilities);
+
+  /** Deloitte Custom Change: limits Artifacts to shadcn/ui mode when enabled. */
+  const shadcnOnly = useArtifactsShadcnOnly();
 
   const canUseWebSearch = useHasAccess({
     permissionType: PermissionTypes.WEB_SEARCH,
@@ -120,11 +124,13 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
   const handleArtifactsToggle = useCallback(() => {
     const currentState = artifacts?.toggleState;
     if (!currentState || currentState === '') {
-      artifacts?.debouncedChange({ value: ArtifactModes.DEFAULT });
+      artifacts?.debouncedChange({
+        value: shadcnOnly ? ArtifactModes.SHADCNUI : ArtifactModes.DEFAULT,
+      });
     } else {
       artifacts?.debouncedChange({ value: '' });
     }
-  }, [artifacts]);
+  }, [artifacts, shadcnOnly]);
 
   const handleShadcnToggle = useCallback(() => {
     const currentState = artifacts?.toggleState;
@@ -354,6 +360,7 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
           handleArtifactsToggle={handleArtifactsToggle}
           handleShadcnToggle={handleShadcnToggle}
           handleCustomToggle={handleCustomToggle}
+          shadcnOnly={shadcnOnly}
         />
       ),
     });

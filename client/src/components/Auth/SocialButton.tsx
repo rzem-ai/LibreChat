@@ -6,15 +6,15 @@ const SocialButton = ({ id, enabled, serverDomain, oauthPath, Icon, label }) => 
   }
 
   return (
-    <div className="mt-2 flex gap-x-2">
+    <div className="mt-6 flex justify-center">
       <a
         aria-label={`${label}`}
-        className="flex w-full items-center space-x-3 rounded-2xl border border-border-light bg-surface-primary px-5 py-3 text-text-primary transition-colors duration-200 hover:bg-surface-tertiary"
+        className="flex h-10 w-fit items-center justify-center space-x-2 rounded-md border border-border bg-foreground px-8 text-background transition-opacity duration-200 hover:opacity-90"
         href={`${serverDomain}/oauth/${oauthPath}`}
         data-testid={id}
       >
         <Icon />
-        <p>{label}</p>
+        <span className="text-sm">{label}</span>
       </a>
     </div>
   );

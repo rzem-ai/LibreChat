@@ -1,20 +1,19 @@
 import React, { memo } from 'react';
 import { CheckboxButton, VectorIcon } from '@librechat/client';
-import { PermissionTypes, Permissions } from 'librechat-data-provider';
-import { useLocalize, useHasAccess } from '~/hooks';
+import { useGetStartupConfig } from '~/data-provider';
 import { useBadgeRowContext } from '~/Providers';
+import { useLocalize } from '~/hooks';
 
+// Deloitte Custom Change: enable fileSearch without showing button
 function FileSearch() {
   const localize = useLocalize();
   const context = useBadgeRowContext();
+  const { data: startupConfig } = useGetStartupConfig();
   const { toggleState: fileSearchEnabled, debouncedChange, isPinned } = context?.fileSearch ?? {};
+  const hideFileSearchToggle =
+    startupConfig?.interface?.customDeloitteFeatureFlags?.hideFileSearchToggle === true;
 
-  const canUseFileSearch = useHasAccess({
-    permissionType: PermissionTypes.FILE_SEARCH,
-    permission: Permissions.USE,
-  });
-
-  if (!canUseFileSearch) {
+  if (!context?.canUseFileSearchPill || hideFileSearchToggle) {
     return null;
   }
 

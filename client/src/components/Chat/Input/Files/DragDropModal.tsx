@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useRecoilValue } from 'recoil';
 import { OGDialog, OGDialogTemplate } from '@librechat/client';
 import {
@@ -15,12 +15,7 @@ import {
   EModelEndpoint,
   isDocumentSupportedProvider,
 } from 'librechat-data-provider';
-import {
-  useLocalize,
-  useUploadOptions,
-  useFileUploadRouter,
-  useAgentToolPermissions,
-} from '~/hooks';
+import { useLocalize, useUploadOptions, useFileUploadRouter, useAgentToolPermissions } from '~/hooks';
 import { useDragDropContext, useUploadModalContext } from '~/Providers';
 import { ephemeralAgentByConvoId } from '~/store';
 
@@ -35,6 +30,7 @@ const DragDropModal = () => {
   const { getOptions } = useUploadOptions();
   const routeFiles = useFileUploadRouter();
 
+  // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
   const isProviderDocSupported = useMemo(() => {
     let currentProvider = (provider || endpoint) ?? '';
     if (currentProvider.toLowerCase() === Providers.OPENROUTER) {
@@ -83,8 +79,35 @@ const DragDropModal = () => {
 
   const options = useMemo(() => getOptions(files), [getOptions, files]);
 
+  // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+  // Auto-route to file search if it's the only viable option
+  useEffect(() => {
+    if (options.length === 1 && options[0] === EToolResources.file_search) {
+      routeFiles(files, EToolResources.file_search);
+      closeModal();
+    }
+  }, [options, files, routeFiles, closeModal]);
+
+
   if (!isVisible) {
     return null;
+  }
+
+  // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+  // If no options available, show error
+  if (options.length === 0) {
+    return (
+      <OGDialog open={isVisible} onOpenChange={(open) => !open && closeModal()}>
+        <OGDialogTemplate
+          title={localize('com_ui_upload_type')}
+          main={
+            <div className="text-center text-red-500">
+              {localize('com_error_files_not_supported')}
+            </div>
+          }
+        />
+      </OGDialog>
+    );
   }
 
   return (

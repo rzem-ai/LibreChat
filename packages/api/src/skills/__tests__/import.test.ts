@@ -50,6 +50,7 @@ function mockImportDeps(limits?: ImportSkillDeps['limits']): ImportSkillDeps {
     upsertSkillFile: jest.fn(async () => skillFile),
     saveBuffer: jest.fn(async () => ({ filepath: '/tmp/imported-file', source: 'local' })),
     grantPermission: jest.fn(async () => undefined),
+    resolveScannerToken: jest.fn(async () => undefined),
   };
 }
 

@@ -150,7 +150,15 @@ export const imageExtRegex = /\.(jpg|jpeg|png|gif|webp|heic|heif)$/i;
 
 /** @see https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_DocumentBlock.html */
 export type BedrockDocumentFormat =
-  'pdf' | 'csv' | 'doc' | 'docx' | 'xls' | 'xlsx' | 'html' | 'txt' | 'md';
+  | 'pdf'
+  | 'csv'
+  | 'doc'
+  | 'docx'
+  | 'xls'
+  | 'xlsx'
+  | 'html'
+  | 'txt'
+  | 'md';
 
 /** Maps MIME types to Bedrock Converse API document format values */
 export const bedrockDocumentFormats: Record<string, BedrockDocumentFormat> = {

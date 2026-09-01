@@ -609,6 +609,8 @@ export const baseEndpointSchema = z.object({
     .union([z.literal('completion'), z.literal('functions'), z.literal('structured')])
     .optional(),
   titleEndpoint: z.string().optional(),
+  /** Provider label displayed above assistant responses. */
+  modelDisplayLabel: z.string().optional(),
   titlePromptTemplate: z.string().optional(),
   /**
    * When conversation titles are generated. `immediate` (default) generates the
@@ -1011,7 +1013,6 @@ export const endpointSchema = baseEndpointSchema.merge(
       userIdQuery: z.boolean().optional(),
     }),
     iconURL: z.string().optional(),
-    modelDisplayLabel: z.string().optional(),
     /**
      * Forces the endpoint to use a provider's native client / request format
      * instead of the default OpenAI-compatible client. Currently supports
@@ -1375,6 +1376,7 @@ export const interfaceSchema = z
     bookmarks: z.boolean().optional(),
     memories: z.boolean().optional(),
     presets: z.boolean().optional(),
+    // Deloitte Custom Change: Deloitte-specific UI feature flags.
     customDeloitteFeatureFlags: z
       .object({
         exportChat: z.boolean().optional(),
@@ -1382,10 +1384,18 @@ export const interfaceSchema = z
         forkChat: z.boolean().optional(),
         simplifyFork: z.boolean().optional(),
         editChat: z.boolean().optional(),
-        showToolsDropdown: z.boolean().default(true),
+        showToolsDropdown: z.boolean().optional(),
+        alwaysEnableFileSearch: z.boolean().optional(), // Deloitte Custom Change
+        hideFileSearchToggle: z.boolean().optional(), // Deloitte Custom Change
         createActions: z.boolean().optional(),
         landingIcon: z.boolean().optional(),
         conversationIcon: z.boolean().optional(),
+        accountsTab: z.boolean().optional(),
+        dataApiKeys: z.boolean().optional(),
+        dataDangerZone: z.boolean().optional(),
+        externalVoiceProvider: z.boolean().optional(),
+        artifactsShadcnOnly: z.boolean().optional(),
+        showConversationTitleInHeader: z.boolean().optional(),
       })
       .optional(),
     prompts: z
@@ -1436,10 +1446,32 @@ export const interfaceSchema = z
     marketplace: z
       .object({
         use: z.boolean().optional(),
+        // Deloitte Custom Change: allow `librechat.yaml` to configure Agent Marketplace
+        // categories instead of relying solely on the hardcoded defaults.
+        categories: z
+          .object({
+            enableDefaultCategories: z.boolean().optional(),
+            list: z
+              .array(
+                z.object({
+                  value: z.string(),
+                  label: z.string().optional(),
+                  description: z.string().optional(),
+                }),
+              )
+              .optional(),
+          })
+          .optional(),
       })
       .optional(),
     fileSearch: z.boolean().optional(),
+    // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+    providerUpload: z.boolean().optional(),
     fileCitations: z.boolean().optional(),
+    /** Horizontal alignment of the current user's own chat turns. `'right'` right-aligns
+     * the user's messages as iMessage-style bubbles without an avatar/name header
+     * (assistant/agent messages remain left-aligned and unaffected). */
+    userMessageAlignment: z.enum(['left', 'right']).optional(),
     /** Tool keys (and `'mcp'` or an MCP server name) pinned to the prompt bar by default */
     defaultPinnedTools: z.array(z.string()).optional(),
     buildInfo: z.boolean().optional(),
@@ -1515,7 +1547,10 @@ export const interfaceSchema = z
       public: false,
     },
     fileSearch: true,
+    // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+    providerUpload: false,
     fileCitations: true,
+    userMessageAlignment: 'left',
     buildInfo: true,
     remoteAgents: {
       use: false,

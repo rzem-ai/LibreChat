@@ -560,7 +560,8 @@ export function createActivityLabelHook(
        * label actually surfacing.
        */
       let deferredUsage:
-        ((estimate?: () => LabelUsageEstimate) => void | Promise<void>) | undefined;
+        | ((estimate?: () => LabelUsageEstimate) => void | Promise<void>)
+        | undefined;
       const collectDeferredUsage = async (
         committed: boolean,
         estimate?: () => LabelUsageEstimate,

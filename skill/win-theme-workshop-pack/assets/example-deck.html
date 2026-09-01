@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{PURSUIT_NAME}} win themes workshop</title>
+<!--
+  GENERICISED EXAMPLE — reference only, do not ship as-is.
+  This is a worked structural example for the win-theme-workshop-pack skill.
+  CSS/JS mechanics are reusable as-is; every {{PLACEHOLDER}} and bracketed
+  example must be replaced with real, sourced content for the actual pursuit.
+  Signal counts, challenge counts and slide count are illustrative — adjust
+  to fit the real signal map and the time available in Step 1 of the skill.
+-->
+<style>
+  :root {
+    --brand: #86BC25;
+    --brand-dark: #046A38;
+    --brand-pale: #F1F6E4;
+    --charcoal: #222222;
+    --gray-900: #000000;
+    --gray-700: #53565A;
+    --gray-500: #75787B;
+    --gray-300: #D0D0CE;
+    --gray-100: #E5E5E5;
+    --cream: #FFFFFF;
+    --white: #FFFFFF;
+    --font-sans: "Open Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: var(--font-sans);
+    background: var(--charcoal);
+    color: var(--charcoal);
+    font-size: clamp(15px, 1.05vw + 0.5vh, 22px);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .deck { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    padding: 7.5vh 5vw 6vh;
+    background: var(--cream);
+    overflow: hidden;
+  }
+
+  .slide.active {
+    display: flex;
+    animation: slide-in 0.5s var(--ease);
+  }
+
+  @keyframes slide-in {
+    from { opacity: 0; transform: translateY(0.8rem); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .brand-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 0.35rem;
+    background: var(--brand);
+  }
+
+  .brand-mark {
+    position: absolute;
+    top: 1.8vh;
+    left: 3vw;
+    width: 4.7rem;
+    height: 2rem;
+  }
+
+  .brand-mark svg { display: block; width: 100%; height: 100%; }
+
+  .slide-num {
+    position: absolute;
+    right: 3vw;
+    bottom: 2.4vh;
+    color: var(--gray-500);
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  .slide-header { margin-bottom: 2vh; }
+
+  .eyebrow {
+    color: var(--brand-dark);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    margin-bottom: 0.7vh;
+  }
+
+  h1 {
+    max-width: 22em;
+    color: var(--charcoal);
+    font-size: clamp(2rem, 3.45vw, 3.45rem);
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.05;
+  }
+
+  h1 .accent { color: var(--charcoal); }
+  h1 .green-dot {
+    display: inline-block;
+    width: 0.18em;
+    height: 0.18em;
+    margin-left: 0.08em;
+    border-radius: 50%;
+    background: var(--brand);
+    vertical-align: 0.05em;
+  }
+
+  .sub {
+    margin-top: 1vh;
+    color: var(--gray-700);
+    font-size: clamp(0.9rem, 1.05vw, 1.15rem);
+    line-height: 1.4;
+  }
+
+  .formula {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+    align-items: stretch;
+    gap: 0.5em;
+    margin-bottom: 1.8vh;
+  }
+
+  .formula-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 12.5vh;
+    padding: 0.85em 0.95em;
+    background: var(--white);
+    border: 1px solid var(--gray-300);
+    border-top: 0.22rem solid var(--gray-900);
+  }
+
+  .formula-card--benefit { border-top-color: var(--brand); }
+
+  .formula-label {
+    margin-bottom: 0.45em;
+    color: var(--gray-700);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .formula-card--benefit .formula-label { color: var(--brand-dark); }
+
+  .formula-title {
+    color: var(--charcoal);
+    font-size: clamp(0.95rem, 1.2vw, 1.22rem);
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .formula-prompt {
+    margin-top: 0.45em;
+    color: var(--gray-700);
+    font-size: 0.82rem;
+    line-height: 1.35;
+  }
+
+  .operator {
+    display: grid;
+    place-items: center;
+    color: var(--brand-dark);
+    font-size: 1.8rem;
+    font-weight: 800;
+  }
+
+  .signals-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1em;
+    margin-bottom: 1vh;
+  }
+
+  .signals-head h2 {
+    color: var(--charcoal);
+    font-size: clamp(1rem, 1.3vw, 1.35rem);
+    font-weight: 800;
+  }
+
+  .signals-head p {
+    color: var(--gray-500);
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  .signal-map {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1em;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .signal-group {
+    display: flex;
+    flex-direction: column;
+    background: var(--white);
+    border: 1px solid var(--gray-300);
+    min-height: 0;
+  }
+
+  .signal-group-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1em;
+    padding: 0.55em 0.85em;
+    background: var(--gray-900);
+    color: var(--white);
+  }
+
+  .signal-group--secondary .signal-group-head {
+    background: var(--gray-100);
+    color: var(--charcoal);
+  }
+
+  .signal-group-head h3 {
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .signal-group-head span {
+    color: var(--gray-300);
+    font-size: 0.62rem;
+    font-weight: 700;
+  }
+
+  .signal-group--secondary .signal-group-head span { color: var(--gray-500); }
+
+  .signal-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    flex: 1;
+    list-style: none;
+    min-height: 0;
+  }
+
+  .signal-list li {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0.55em 0.75em 0.55em 1.45em;
+    border-right: 1px solid var(--gray-100);
+    border-bottom: 1px solid var(--gray-100);
+  }
+
+  .signal-list li:nth-child(even) { border-right: 0; }
+  .signal-list li:nth-last-child(-n+2) { border-bottom: 0; }
+
+  .signal-list li::before {
+    content: "";
+    position: absolute;
+    left: 0.75em;
+    top: 1.05em;
+    width: 0.4em;
+    height: 0.4em;
+    border-radius: 50%;
+    background: var(--brand);
+  }
+
+  .signal-group--secondary .signal-list li::before { background: var(--gray-500); }
+
+  .signal-name {
+    color: var(--charcoal);
+    font-size: 0.76rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .signal-source {
+    margin-top: 0.22em;
+    color: var(--gray-500);
+    font-size: 0.58rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .agenda {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    align-items: stretch;
+    gap: 0.5em;
+    margin: auto 0;
+  }
+
+  .agenda-item {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 24vh;
+    padding: 1.3em 1.4em;
+    background: var(--white);
+    border: 1px solid var(--gray-300);
+    border-top: 0.22rem solid var(--gray-900);
+  }
+
+  .agenda-item:last-child { border-top-color: var(--brand); }
+
+  .agenda-item-top {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    margin-bottom: 0.9em;
+  }
+
+  .agenda-step {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 1.7em;
+    height: 1.7em;
+    border-radius: 50%;
+    background: var(--gray-900);
+    color: var(--white);
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .agenda-item:last-child .agenda-step { background: var(--brand); }
+
+  .agenda-time {
+    color: var(--brand-dark);
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .agenda-copy h2 {
+    margin-bottom: 0.4em;
+    color: var(--charcoal);
+    font-size: clamp(1rem, 1.3vw, 1.32rem);
+    font-weight: 800;
+    line-height: 1.15;
+  }
+
+  .agenda-copy p {
+    color: var(--gray-700);
+    font-size: clamp(0.82rem, 0.95vw, 1rem);
+    line-height: 1.42;
+  }
+
+  .agenda-arrow {
+    display: grid;
+    place-items: center;
+    color: var(--gray-300);
+    font-size: 1.6rem;
+    font-weight: 800;
+  }
+
+  .slide.active .agenda-item { animation: rise 0.4s var(--ease) both; }
+  .slide.active .agenda-item:nth-child(1) { animation-delay: 0.1s; }
+  .slide.active .agenda-item:nth-child(3) { animation-delay: 0.2s; }
+  .slide.active .agenda-item:nth-child(5) { animation-delay: 0.3s; }
+
+  .progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    height: 0.18rem;
+    width: 100%;
+    background: var(--brand);
+  }
+
+  .s-label {
+    position: fixed;
+    left: 3vw;
+    bottom: 2.4vh;
+    z-index: 90;
+    color: var(--gray-500);
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .fs-btn {
+    position: fixed;
+    top: 2vh;
+    right: 3vw;
+    z-index: 95;
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    background: var(--white);
+    border: 1px solid var(--gray-300);
+    border-radius: 0;
+    color: var(--gray-700);
+    cursor: pointer;
+  }
+
+  .fs-btn svg { width: 1rem; height: 1rem; }
+
+  .nav {
+    position: fixed;
+    left: 50%;
+    bottom: 1.2vh;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 0.7em;
+    transform: translateX(-50%);
+    padding: 0.35em 0.7em;
+    background: var(--gray-900);
+    color: var(--white);
+    font-size: 0.68rem;
+  }
+
+  .nav button {
+    width: 1.55rem;
+    height: 1.55rem;
+    background: transparent;
+    border: 1px solid var(--gray-500);
+    border-radius: 50%;
+    color: var(--white);
+    cursor: pointer;
+  }
+
+  .nav button:disabled { opacity: 0.35; cursor: default; }
+
+  .slide.active .formula-card,
+  .slide.active .operator,
+  .slide.active .signal-group { animation: rise 0.4s var(--ease) both; }
+  .slide.active .formula-card:nth-child(1) { animation-delay: 0.08s; }
+  .slide.active .operator:nth-child(2) { animation-delay: 0.13s; }
+  .slide.active .formula-card:nth-child(3) { animation-delay: 0.18s; }
+  .slide.active .operator:nth-child(4) { animation-delay: 0.23s; }
+  .slide.active .formula-card:nth-child(5) { animation-delay: 0.28s; }
+  .slide.active .operator:nth-child(6) { animation-delay: 0.33s; }
+  .slide.active .formula-card:nth-child(7) { animation-delay: 0.38s; }
+  .slide.active .signal-group:nth-child(1) { animation-delay: 0.44s; }
+  .slide.active .signal-group:nth-child(2) { animation-delay: 0.51s; }
+
+  .brand-word {
+    display: flex;
+    align-items: baseline;
+    color: var(--gray-900);
+    font-size: 1.16rem;
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+
+  .brand-word .brand-dot {
+    width: 0.28em;
+    height: 0.28em;
+    margin-left: 0.08em;
+    border-radius: 50%;
+    background: var(--brand);
+  }
+
+  .challenge-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(15rem, 0.62fr);
+    gap: 1.35rem;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .challenge-column {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .challenge-column-head {
+    margin-bottom: 0.7rem;
+    padding-bottom: 0.4rem;
+    color: var(--brand-dark);
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--gray-900);
+  }
+
+  .challenge-list {
+    display: grid;
+    grid-template-rows: repeat(3, 1fr);
+    gap: 0.7rem;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .challenge-item {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.3rem;
+    padding: 0.7rem 0.85rem;
+    background: var(--gray-100);
+    border-left: 0.22rem solid var(--brand);
+  }
+
+  .challenge-item-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .challenge-index {
+    color: var(--brand-dark);
+    font-size: 0.68rem;
+    font-weight: 800;
+  }
+
+  .challenge-item h2 {
+    color: var(--charcoal);
+    font-size: clamp(0.84rem, 1vw, 1rem);
+    font-weight: 800;
+    line-height: 1.15;
+  }
+
+  .challenge-desc {
+    color: var(--gray-700);
+    font-size: 0.7rem;
+    line-height: 1.34;
+  }
+
+  .challenge-response {
+    color: var(--charcoal);
+    font-size: 0.7rem;
+    line-height: 1.34;
+  }
+
+  .challenge-tag {
+    display: inline-block;
+    margin-right: 0.4em;
+    padding: 0.1em 0.45em;
+    background: var(--brand-pale);
+    color: var(--brand-dark);
+    font-size: 0.58rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .challenge-insight {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 1.2rem;
+    background: var(--gray-900);
+    color: var(--white);
+  }
+
+  .challenge-insight .insight-kicker {
+    color: var(--brand);
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .challenge-insight blockquote {
+    margin: 0.8rem 0 1rem;
+    font-size: clamp(1.05rem, 1.45vw, 1.5rem);
+    font-weight: 700;
+    line-height: 1.24;
+  }
+
+  .insight-facts {
+    display: grid;
+    gap: 0.7rem;
+  }
+
+  .insight-fact {
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--gray-700);
+  }
+
+  .insight-fact strong {
+    display: block;
+    color: var(--brand);
+    font-size: clamp(1.2rem, 2vw, 2rem);
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .insight-fact span,
+  .insight-source {
+    display: block;
+    margin-top: 0.28rem;
+    color: var(--gray-300);
+    font-size: 0.62rem;
+    line-height: 1.3;
+  }
+
+  .slide--dark { background: var(--gray-900); }
+  .slide--dark h1,
+  .slide--dark .challenge-copy h2,
+  .slide--dark .challenge-response strong { color: var(--white); }
+  .slide--dark .sub,
+  .slide--dark .challenge-copy p,
+  .slide--dark .challenge-response { color: var(--gray-300); }
+  .slide--dark .eyebrow,
+  .slide--dark .challenge-index { color: var(--brand); }
+  .slide--dark .brand-word { color: var(--white); }
+  .slide--dark .challenge-list { border-top-color: var(--white); }
+  .slide--dark .challenge-item,
+  .slide--dark .challenge-index { border-color: var(--gray-700); }
+  .slide--dark .challenge-insight { background: var(--white); color: var(--charcoal); }
+  .slide--dark .challenge-insight .insight-kicker,
+  .slide--dark .insight-fact strong { color: var(--brand-dark); }
+  .slide--dark .insight-fact { border-top-color: var(--gray-300); }
+  .slide--dark .insight-fact span,
+  .slide--dark .insight-source { color: var(--gray-700); }
+  .slide--dark .slide-num { color: var(--gray-500); }
+  .slide--dark .brand-mark svg g { fill: var(--white); }
+
+  .slide--dark .agenda-item {
+    background: var(--charcoal);
+    border-color: var(--gray-700);
+    border-top-color: var(--gray-700);
+  }
+  .slide--dark .agenda-item:last-child { border-top-color: var(--brand); }
+  .slide--dark .agenda-step { background: var(--white); color: var(--charcoal); }
+  .slide--dark .agenda-item:last-child .agenda-step { background: var(--brand); color: var(--white); }
+  .slide--dark .agenda-time { color: var(--brand); }
+  .slide--dark .agenda-copy h2 { color: var(--white); }
+  .slide--dark .agenda-copy p { color: var(--gray-300); }
+  .slide--dark .agenda-arrow { color: var(--gray-700); }
+
+  .slide.active .challenge-item,
+  .slide.active .challenge-insight { animation: rise 0.4s var(--ease) both; }
+  .slide.active .challenge-item:nth-child(1) { animation-delay: 0.08s; }
+  .slide.active .challenge-item:nth-child(2) { animation-delay: 0.14s; }
+  .slide.active .challenge-item:nth-child(3) { animation-delay: 0.20s; }
+  .slide.active .challenge-item:nth-child(4) { animation-delay: 0.26s; }
+  .slide.active .challenge-item:nth-child(5) { animation-delay: 0.32s; }
+  .slide.active .challenge-insight { animation-delay: 0.18s; }
+
+  .check-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 0.85rem;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .check-card {
+    display: flex;
+    flex-direction: column;
+    padding: 0.85em 0.95em;
+    background: var(--white);
+    border: 1px solid var(--gray-300);
+    border-top: 0.22rem solid var(--gray-900);
+    min-height: 0;
+  }
+
+  .check-label {
+    margin-bottom: 0.4em;
+    color: var(--gray-700);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .check-title {
+    color: var(--charcoal);
+    font-size: clamp(0.82rem, 1vw, 1.02rem);
+    font-weight: 800;
+    line-height: 1.22;
+  }
+
+  .check-prompt {
+    margin-top: 0.5em;
+    color: var(--gray-700);
+    font-size: 0.68rem;
+    line-height: 1.36;
+  }
+
+  .check-card--test {
+    justify-content: space-between;
+    background: var(--gray-900);
+    border-top-color: var(--brand);
+    color: var(--white);
+  }
+
+  .check-card--test .check-label { color: var(--brand); }
+
+  .check-card--test blockquote {
+    margin: 0.4em 0;
+    font-size: clamp(0.88rem, 1.05vw, 1.08rem);
+    font-weight: 700;
+    line-height: 1.28;
+  }
+
+  .check-card--test .check-note {
+    color: var(--gray-300);
+    font-size: 0.66rem;
+    line-height: 1.34;
+  }
+
+  .check-card--test .check-note strong { color: var(--brand); }
+
+  .slide.active .check-card { animation: rise 0.4s var(--ease) both; }
+  .slide.active .check-card:nth-child(1) { animation-delay: 0.06s; }
+  .slide.active .check-card:nth-child(2) { animation-delay: 0.11s; }
+  .slide.active .check-card:nth-child(3) { animation-delay: 0.16s; }
+  .slide.active .check-card:nth-child(4) { animation-delay: 0.21s; }
+  .slide.active .check-card:nth-child(5) { animation-delay: 0.26s; }
+  .slide.active .check-card:nth-child(6) { animation-delay: 0.31s; }
+  .slide.active .check-card:nth-child(7) { animation-delay: 0.36s; }
+  .slide.active .check-card:nth-child(8) { animation-delay: 0.41s; }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(0.7rem); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 900px) {
+    .slide { padding: 7vh 4vw 7vh; }
+    .s-label { display: none; }
+    .formula { grid-template-columns: 1fr; gap: 0.4em; }
+    .operator { display: none; }
+    .formula-card { min-height: auto; padding: 0.8em 1em; }
+    .signal-map { grid-template-columns: 1fr; }
+    .signal-list { grid-template-columns: repeat(2, 1fr); }
+    .signals-head p { display: none; }
+    .agenda { grid-template-columns: 1fr; margin: 0; }
+    .agenda-arrow { display: none; }
+    .agenda-item { min-height: auto; }
+    .challenge-layout { grid-template-columns: 1fr; }
+    .challenge-insight { display: none; }
+    .check-grid { grid-template-columns: 1fr 1fr; grid-template-rows: repeat(4, auto); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .slide.active, .slide.active * { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="s-label" id="slabel"></div>
+
+<button class="fs-btn" id="fsBtn" title="Toggle fullscreen" aria-label="Toggle fullscreen">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M8 3H5a2 2 0 0 0-2 2v3"></path><path d="M21 8V5a2 2 0 0 0-2-2h-3"></path>
+    <path d="M3 16v3a2 2 0 0 0 2 2h3"></path><path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
+  </svg>
+</button>
+
+<main class="deck" id="deck">
+  <section class="slide slide--dark active" data-label="Workshop overview">
+    <div class="brand-bar"></div>
+    <div class="brand-mark" aria-label="Deloitte">
+      <svg viewBox="0 0 387.37 157.52" role="img" aria-hidden="true">
+        <g fill="#000000">
+          <path d="M95.01,77.67c0,8.67-2.33,15.35-6.99,20.04-4.66,4.69-11.21,7.04-19.66,7.04h-16.41v-51.95h17.56c8.14,0,14.43,2.13,18.86,6.4,4.43,4.26,6.64,10.42,6.64,18.48M80.79,78.16c0-4.76-.92-8.29-2.76-10.59-1.84-2.3-4.63-3.45-8.38-3.45h-3.99v29.1h3.05c4.16,0,7.22-1.24,9.16-3.71,1.94-2.47,2.92-6.26,2.92-11.35"></path>
+          <rect x="140.47" y="52.57" width="13.06" height="52.17"></rect><path d="M196.39,85.28c0,6.34-1.66,11.28-4.99,14.82-3.33,3.55-7.99,5.32-13.98,5.32s-10.31-1.81-13.71-5.44c-3.4-3.62-5.1-8.53-5.1-14.7s1.66-11.23,4.99-14.73c3.33-3.5,8-5.25,14.01-5.25,3.72,0,7,.81,9.85,2.43,2.85,1.62,5.05,3.94,6.6,6.96,1.55,3.02,2.32,6.55,2.32,10.58M171.87,85.28c0,3.33.43,5.86,1.3,7.61.87,1.74,2.33,2.62,4.37,2.62s3.46-.87,4.29-2.62c.83-1.74,1.25-4.28,1.25-7.61s-.42-5.8-1.27-7.49c-.85-1.69-2.29-2.53-4.34-2.53s-3.44.84-4.31,2.52c-.87,1.68-1.3,4.18-1.3,7.51"></path>
+          <rect x="201.57" y="65.99" width="13.06" height="38.75"></rect><rect x="201.57" y="52.57" width="13.06" height="8.73"></rect><path d="M241.09,94.86c1.76,0,3.86-.45,6.31-1.34v9.75c-1.76.77-3.44,1.33-5.03,1.66-1.59.33-3.46.5-5.6.5-4.38,0-7.55-1.1-9.49-3.3-1.93-2.2-2.9-5.58-2.9-10.14v-15.97h-4.57v-10.02h4.57v-9.89l13.16-2.29v12.18h8.33v10.02h-8.33v15.08c0,2.51,1.18,3.76,3.54,3.76"></path><path d="M271.32,94.86c1.76,0,3.86-.45,6.31-1.34v9.75c-1.76.77-3.44,1.33-5.03,1.66-1.59.33-3.46.5-5.6.5-4.38,0-7.55-1.1-9.48-3.3-1.94-2.2-2.91-5.58-2.91-10.14v-15.97h-4.58v-10.02h4.58v-10.04l13.16-2.14v12.18h8.34v10.02h-8.34v15.08c0,2.51,1.18,3.76,3.54,3.76"></path>
+          <path d="M312.53,69.88c-3.1-3.04-7.51-4.57-13.21-4.57-5.99,0-10.6,1.75-13.83,5.25-3.23,3.5-4.84,8.52-4.84,15.06s1.74,11.22,5.23,14.66c3.49,3.43,8.38,5.15,14.68,5.15,3.03,0,5.63-.21,7.81-.62,2.17-.41,4.27-1.14,6.31-2.2l-2.01-8.73c-1.48.6-2.89,1.07-4.22,1.38-1.92.45-4.03.67-6.33.67-2.52,0-4.5-.62-5.96-1.85-1.46-1.23-2.23-2.93-2.32-5.1h23.34v-5.95c0-5.72-1.55-10.11-4.66-13.15M294.11,80.56c.18-2.12.78-3.68,1.82-4.67,1.04-.99,2.32-1.49,3.86-1.49,1.67,0,3,.56,3.99,1.68.99,1.12,1.51,2.61,1.55,4.48h-11.22Z"></path><path d="M130.76,69.88c-3.1-3.04-7.51-4.57-13.21-4.57-5.99,0-10.6,1.75-13.83,5.25-3.23,3.5-4.84,8.52-4.84,15.06s1.74,11.22,5.23,14.66c3.48,3.43,8.38,5.15,14.68,5.15,3.03,0,5.63-.21,7.81-.62,2.17-.41,4.27-1.14,6.31-2.2l-2.01-8.73c-1.48.6-2.89,1.07-4.22,1.38-1.93.45-4.03.67-6.33.67-2.52,0-4.5-.62-5.96-1.85-1.46-1.23-2.23-2.93-2.32-5.1h23.34v-5.95c0-5.72-1.55-10.11-4.66-13.15M112.34,80.56c.18-2.12.79-3.68,1.82-4.67,1.04-.99,2.32-1.49,3.86-1.49,1.67,0,3,.56,3.99,1.68.99,1.12,1.51,2.61,1.55,4.48h-11.22Z"></path>
+        </g>
+        <path fill="#86BC25" d="M320.39,98.06c0-4.15,3.37-7.51,7.51-7.51s7.51,3.37,7.51,7.51-3.36,7.51-7.51,7.51-7.51-3.36-7.51-7.51"></path>
+      </svg>
+    </div>
+
+    <header class="slide-header">
+      <div class="eyebrow">{{PURSUIT_NAME}} win themes workshop · {{DURATION}}</div>
+      <h1>Agree the themes that win {{CLIENT_NAME}}'s confidence<span class="green-dot" aria-hidden="true"></span></h1>
+      <p class="sub">Shared view of what {{CLIENT_NAME}} needs, agreement on why we win it, and the proof and numbers to back each theme.</p>
+    </header>
+
+    <div class="agenda" aria-label="Session agenda">
+      <article class="agenda-item">
+        <div class="agenda-item-top"><span class="agenda-step">1</span><span class="agenda-time">{{AGENDA_1_TIME}}</span></div>
+        <div class="agenda-copy"><h2>{{AGENDA_1_TITLE}}</h2><p>{{AGENDA_1_DESCRIPTION}}</p></div>
+      </article>
+      <div class="agenda-arrow" aria-hidden="true">&#8594;</div>
+      <article class="agenda-item">
+        <div class="agenda-item-top"><span class="agenda-step">2</span><span class="agenda-time">{{AGENDA_2_TIME}}</span></div>
+        <div class="agenda-copy"><h2>{{AGENDA_2_TITLE}}</h2><p>{{AGENDA_2_DESCRIPTION}}</p></div>
+      </article>
+      <div class="agenda-arrow" aria-hidden="true">&#8594;</div>
+      <article class="agenda-item">
+        <div class="agenda-item-top"><span class="agenda-step">3</span><span class="agenda-time">{{AGENDA_3_TIME}}</span></div>
+        <div class="agenda-copy"><h2>{{AGENDA_3_TITLE}}</h2><p>{{AGENDA_3_DESCRIPTION}}</p></div>
+      </article>
+    </div>
+
+    <div class="slide-num">01</div>
+  </section>
+
+  <!--
+    OPTIONAL SLIDE — only include if there's genuine external evidence
+    (regulator reports, market data, media coverage) that changes how the
+    room should read the client's priorities. Drop it otherwise; don't pad
+    the deck to fill time.
+  -->
+  <section class="slide" data-label="Industry context">
+    <div class="brand-bar"></div>
+    <div class="brand-mark brand-word" aria-label="Deloitte">Deloitte<span class="brand-dot" aria-hidden="true"></span></div>
+
+    <header class="slide-header">
+      <div class="eyebrow">Industry context · draft, open to challenge</div>
+      <h1>{{CONTEXT_HEADLINE}}<span class="green-dot" aria-hidden="true"></span></h1>
+      <p class="sub">{{CONTEXT_SUBHEADING}}</p>
+    </header>
+
+    <div class="challenge-layout">
+      <div class="challenge-column">
+        <h3 class="challenge-column-head">{{CHALLENGE_COLUMN_1_HEAD}}</h3>
+        <div class="challenge-list" aria-label="{{CHALLENGE_COLUMN_1_HEAD}} challenges">
+          <article class="challenge-item">
+            <div class="challenge-item-head"><span class="challenge-index">01</span><h2>{{CHALLENGE_1_TITLE}}</h2></div>
+            <p class="challenge-desc">{{CHALLENGE_1_DESCRIPTION}}</p>
+            <p class="challenge-response"><span class="challenge-tag">Implication</span>{{CHALLENGE_1_IMPLICATION}}</p>
+          </article>
+          <article class="challenge-item">
+            <div class="challenge-item-head"><span class="challenge-index">02</span><h2>{{CHALLENGE_2_TITLE}}</h2></div>
+            <p class="challenge-desc">{{CHALLENGE_2_DESCRIPTION}}</p>
+            <p class="challenge-response"><span class="challenge-tag">Implication</span>{{CHALLENGE_2_IMPLICATION}}</p>
+          </article>
+          <article class="challenge-item">
+            <div class="challenge-item-head"><span class="challenge-index">03</span><h2>{{CHALLENGE_3_TITLE}}</h2></div>
+            <p class="challenge-desc">{{CHALLENGE_3_DESCRIPTION}}</p>
+            <p class="challenge-response"><span class="challenge-tag">Implication</span>{{CHALLENGE_3_IMPLICATION}}</p>
+          </article>
+        </div>
+      </div>
+
+      <div class="challenge-column">
+        <h3 class="challenge-column-head">{{CHALLENGE_COLUMN_2_HEAD}}</h3>
+        <div class="challenge-list" aria-label="{{CHALLENGE_COLUMN_2_HEAD}} challenges">
+          <article class="challenge-item">
+            <div class="challenge-item-head"><span class="challenge-index">04</span><h2>{{CHALLENGE_4_TITLE}}</h2></div>
+            <p class="challenge-desc">{{CHALLENGE_4_DESCRIPTION}}</p>
+            <p class="challenge-response"><span class="challenge-tag">Implication</span>{{CHALLENGE_4_IMPLICATION}}</p>
+          </article>
+          <article class="challenge-item">
+            <div class="challenge-item-head"><span class="challenge-index">05</span><h2>{{CHALLENGE_5_TITLE}}</h2></div>
+            <p class="challenge-desc">{{CHALLENGE_5_DESCRIPTION}}</p>
+            <p class="challenge-response"><span class="challenge-tag">Implication</span>{{CHALLENGE_5_IMPLICATION}}</p>
+          </article>
+          <article class="challenge-item">
+            <div class="challenge-item-head"><span class="challenge-index">06</span><h2>{{CHALLENGE_6_TITLE}}</h2></div>
+            <p class="challenge-desc">{{CHALLENGE_6_DESCRIPTION}}</p>
+            <p class="challenge-response"><span class="challenge-tag">Implication</span>{{CHALLENGE_6_IMPLICATION}}</p>
+          </article>
+        </div>
+      </div>
+
+      <aside class="challenge-insight" aria-label="Evidence and trust signals">
+        <div>
+          <div class="insight-kicker">So what</div>
+          <blockquote>{{CONTEXT_SO_WHAT_STATEMENT}}</blockquote>
+        </div>
+        <div class="insight-facts">
+          <div class="insight-fact"><strong>{{STAT_1_VALUE}}</strong><span>{{STAT_1_DESCRIPTION}}</span></div>
+          <div class="insight-fact"><strong>{{STAT_2_VALUE}}</strong><span>{{STAT_2_DESCRIPTION}}</span></div>
+          <div class="insight-fact"><strong>{{STAT_3_VALUE}}</strong><span>{{STAT_3_DESCRIPTION}}</span></div>
+          <div class="insight-source">Sources: {{SOURCE_CITATIONS}} — every stat on this slide must be traceable to a named, dated source.</div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="slide-num">02</div>
+  </section>
+
+  <section class="slide" data-label="Client priorities and win theme formula">
+    <div class="brand-bar"></div>
+    <div class="brand-mark brand-word" aria-label="Deloitte">Deloitte<span class="brand-dot" aria-hidden="true"></span></div>
+
+    <header class="slide-header">
+      <div class="eyebrow">{{PURSUIT_NAME}} win themes workshop · {{DURATION}}</div>
+      <h1>Build themes from the signals {{CLIENT_NAME}} is sending<span class="green-dot" aria-hidden="true"></span></h1>
+      <p class="sub">Build each theme through four separate questions: priority, why us, proof and measurable value.</p>
+    </header>
+
+    <div class="formula" aria-label="Win theme formula">
+      <article class="formula-card">
+        <div class="formula-label">Client priority</div>
+        <div class="formula-title">What must {{CLIENT_NAME}} achieve or avoid?</div>
+        <div class="formula-prompt">Use their language, not ours.</div>
+      </article>
+      <div class="operator" aria-hidden="true">+</div>
+      <article class="formula-card">
+        <div class="formula-label">Why us</div>
+        <div class="formula-title">What can we bring that matters?</div>
+        <div class="formula-prompt">Relevant and difficult to match.</div>
+      </article>
+      <div class="operator" aria-hidden="true">+</div>
+      <article class="formula-card formula-card--proof">
+        <div class="formula-label">Proof</div>
+        <div class="formula-title">How will we make it credible?</div>
+        <div class="formula-prompt">Evidence, example or demonstration.</div>
+      </article>
+      <div class="operator" aria-hidden="true">+</div>
+      <article class="formula-card formula-card--benefit">
+        <div class="formula-label">Quantifiable benefit</div>
+        <div class="formula-title">What changes, by how much?</div>
+        <div class="formula-prompt">Baseline, measure and timeframe.</div>
+      </article>
+    </div>
+
+    <div class="signals-head">
+      <h2>Validated signal map</h2>
+      <p>Primary = explicit, repeated or evaluated · Secondary = requirement and risk implications</p>
+    </div>
+
+    <div class="signal-map" aria-label="Primary and secondary source signals">
+      <section class="signal-group">
+        <header class="signal-group-head"><h3>Primary signals · {{PRIMARY_SIGNAL_COUNT}}</h3><span>Direct client priorities</span></header>
+        <ul class="signal-list">
+          <li><span class="signal-name">{{PRIMARY_SIGNAL_1}}</span><span class="signal-source">{{PRIMARY_SIGNAL_1_SOURCE}}</span></li>
+          <li><span class="signal-name">{{PRIMARY_SIGNAL_2}}</span><span class="signal-source">{{PRIMARY_SIGNAL_2_SOURCE}}</span></li>
+          <li><span class="signal-name">{{PRIMARY_SIGNAL_3}}</span><span class="signal-source">{{PRIMARY_SIGNAL_3_SOURCE}}</span></li>
+          <li><span class="signal-name">{{PRIMARY_SIGNAL_4}}</span><span class="signal-source">{{PRIMARY_SIGNAL_4_SOURCE}}</span></li>
+          <li><span class="signal-name">{{PRIMARY_SIGNAL_5}}</span><span class="signal-source">{{PRIMARY_SIGNAL_5_SOURCE}}</span></li>
+          <li><span class="signal-name">{{PRIMARY_SIGNAL_6}}</span><span class="signal-source">{{PRIMARY_SIGNAL_6_SOURCE}}</span></li>
+          <li><span class="signal-name">{{PRIMARY_SIGNAL_7}}</span><span class="signal-source">{{PRIMARY_SIGNAL_7_SOURCE}}</span></li>
+          <li><span class="signal-name">{{PRIMARY_SIGNAL_8}}</span><span class="signal-source">{{PRIMARY_SIGNAL_8_SOURCE}}</span></li>
+        </ul>
+      </section>
+      <section class="signal-group signal-group--secondary">
+        <header class="signal-group-head"><h3>Secondary signals · {{SECONDARY_SIGNAL_COUNT}}</h3><span>Requirements and risk implications</span></header>
+        <ul class="signal-list">
+          <li><span class="signal-name">{{SECONDARY_SIGNAL_1}}</span><span class="signal-source">{{SECONDARY_SIGNAL_1_SOURCE}}</span></li>
+          <li><span class="signal-name">{{SECONDARY_SIGNAL_2}}</span><span class="signal-source">{{SECONDARY_SIGNAL_2_SOURCE}}</span></li>
+          <li><span class="signal-name">{{SECONDARY_SIGNAL_3}}</span><span class="signal-source">{{SECONDARY_SIGNAL_3_SOURCE}}</span></li>
+          <li><span class="signal-name">{{SECONDARY_SIGNAL_4}}</span><span class="signal-source">{{SECONDARY_SIGNAL_4_SOURCE}}</span></li>
+          <li><span class="signal-name">{{SECONDARY_SIGNAL_5}}</span><span class="signal-source">{{SECONDARY_SIGNAL_5_SOURCE}}</span></li>
+          <li><span class="signal-name">{{SECONDARY_SIGNAL_6}}</span><span class="signal-source">{{SECONDARY_SIGNAL_6_SOURCE}}</span></li>
+          <li><span class="signal-name">{{SECONDARY_SIGNAL_7}}</span><span class="signal-source">{{SECONDARY_SIGNAL_7_SOURCE}}</span></li>
+          <li><span class="signal-name">{{SECONDARY_SIGNAL_8}}</span><span class="signal-source">{{SECONDARY_SIGNAL_8_SOURCE}}</span></li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="slide-num">03</div>
+  </section>
+
+  <!--
+    FINAL CHECK SLIDE — this is the fixed framework from references/framework.md.
+    Reproduce this slide verbatim; it does not change between pursuits.
+  -->
+  <section class="slide" data-label="Final check on key messages">
+    <div class="brand-bar"></div>
+    <div class="brand-mark brand-word" aria-label="Deloitte">Deloitte<span class="brand-dot" aria-hidden="true"></span></div>
+
+    <header class="slide-header">
+      <div class="eyebrow">Final check · apply once each theme is drafted</div>
+      <h1>Stress-test every win theme before it leaves the room<span class="green-dot" aria-hidden="true"></span></h1>
+      <p class="sub">Run each draft statement through these seven checks. Sharpen anything a competitor could claim just as easily.</p>
+    </header>
+
+    <div class="check-grid" aria-label="Final check questions">
+      <article class="check-card">
+        <div class="check-label">Why us</div>
+        <div class="check-title">The client should choose us because&hellip;</div>
+        <p class="check-prompt">Best fit &middot; unique value &middot; what the client gains by selecting us.</p>
+      </article>
+      <article class="check-card">
+        <div class="check-label">What makes us different</div>
+        <div class="check-title">Unlike other bidders, we&hellip;</div>
+        <p class="check-prompt">Our people &middot; experience &middot; delivery approach &middot; tools or accelerators &middot; relationships &middot; way of working.</p>
+      </article>
+      <article class="check-card">
+        <div class="check-label">What worries the client</div>
+        <div class="check-title">{{CLIENT_NAME}}'s biggest risk is&hellip; and we address it by&hellip;</div>
+        <p class="check-prompt">Delivery risk &middot; stakeholder engagement &middot; timeframes &middot; change management &middot; technical complexity &middot; governance cost.</p>
+      </article>
+      <article class="check-card">
+        <div class="check-label">Strongest evidence</div>
+        <div class="check-title">Our strongest proof point is&hellip;</div>
+        <p class="check-prompt">Similar projects &middot; measurable outcomes &middot; client testimonials &middot; industry recognition &middot; certifications and case studies &middot; experienced personnel.</p>
+      </article>
+      <article class="check-card">
+        <div class="check-label">Client outcome</div>
+        <div class="check-title">By choosing us, {{CLIENT_NAME}} will be able to&hellip;</div>
+        <p class="check-prompt">Focus on outcomes, not activities: deliver sooner and reduce risk, improve services and build internal capability, achieve long-term sustainability.</p>
+      </article>
+      <article class="check-card">
+        <div class="check-label">Finish the sentence</div>
+        <div class="check-title">We don't just provide ___, we provide ___.</div>
+        <p class="check-prompt">technology &rarr; confidence &middot; advice &rarr; practical outcomes &middot; project management &rarr; successful delivery &middot; resources &rarr; trusted partners.</p>
+      </article>
+      <article class="check-card">
+        <div class="check-label">Competitive gap</div>
+        <div class="check-title">If we lose, what will the winning bidder have convinced {{CLIENT_NAME}} of?</div>
+        <p class="check-prompt">Use the answer to close our own gaps and sharpen the message.</p>
+      </article>
+      <article class="check-card check-card--test">
+        <div class="check-label">Believability test</div>
+        <blockquote>If a competitor used this exact statement, would it still be believable?</blockquote>
+        <p class="check-note"><strong>Yes</strong> &mdash; it's too generic, sharpen it. <strong>No</strong> &mdash; that's a real win theme.</p>
+      </article>
+    </div>
+
+    <div class="slide-num">04</div>
+  </section>
+</main>
+
+<div class="nav">
+  <button id="prev" aria-label="Previous slide">‹</button>
+  <span><span id="cur">1</span> / <span id="total">1</span></span>
+  <button id="next" aria-label="Next slide">›</button>
+</div>
+
+<script>
+  (function () {
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const prev = document.getElementById('prev');
+    const next = document.getElementById('next');
+    const current = document.getElementById('cur');
+    const total = document.getElementById('total');
+    const label = document.getElementById('slabel');
+    let index = 0;
+
+    total.textContent = slides.length;
+    function render() {
+      slides.forEach(function (slide, slideIndex) { slide.classList.toggle('active', slideIndex === index); });
+      current.textContent = index + 1;
+      label.textContent = slides[index].dataset.label || '';
+      prev.disabled = index === 0;
+      next.disabled = index === slides.length - 1;
+      try { history.replaceState(null, '', '#' + (index + 1)); } catch (_) {}
+    }
+    function go(delta) { index = Math.max(0, Math.min(slides.length - 1, index + delta)); render(); }
+
+    prev.addEventListener('click', function () { go(-1); });
+    next.addEventListener('click', function () { go(1); });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'ArrowRight' || event.key === ' ' || event.key === 'PageDown') go(1);
+      if (event.key === 'ArrowLeft' || event.key === 'PageUp') go(-1);
+      if (event.key === 'Home' || event.key === 'End') { index = 0; render(); }
+    });
+
+    let startX = 0;
+    let startY = 0;
+    const deck = document.getElementById('deck');
+    deck.addEventListener('pointerdown', function (event) { startX = event.clientX; startY = event.clientY; });
+    deck.addEventListener('pointerup', function (event) {
+      const deltaX = event.clientX - startX;
+      const deltaY = event.clientY - startY;
+      if (Math.abs(deltaX) > 60 && Math.abs(deltaX) > Math.abs(deltaY)) go(deltaX < 0 ? 1 : -1);
+    });
+
+    document.getElementById('fsBtn').addEventListener('click', function () {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(function () {});
+      else document.exitFullscreen().catch(function () {});
+    });
+    render();
+  })();
+</script>
+</body>
+</html>
