@@ -8,6 +8,7 @@ import {
   Newspaper,
   Building2,
   Users,
+  Folder,
   TriangleAlert,
 } from 'lucide-react';
 import type { SourceData } from '~/components/Web/SourceHovercard';
@@ -60,6 +61,9 @@ function getMCPIcon(toolName?: string) {
   }
   if (toolName.startsWith('kx_')) {
     return Users;
+  }
+  if (toolName.startsWith('sp_')) {
+    return Folder;
   }
   return Plug;
 }
