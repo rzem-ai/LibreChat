@@ -1,0 +1,14 @@
+{
+  "kind": "skill",
+  "name": "deloitte-microsite",
+  "version": "1.0.0",
+  "added": "2026-05-06",
+  "contributors": ["copilot@deloitte.com.au"],
+  "source": "deloitte-internal",
+  "origin": "https://github.com/Deloitte-Australia/engineering-ai-training-2026/blob/main/index.html",
+  "ip": "deloitte-confidential",
+  "featured": true,
+  "solutionArchetypes": ["Full Stack Development", "Pre-Sales & RFP"],
+  "stages": ["Build"],
+  "technologies": []
+}
