@@ -128,6 +128,13 @@ pods:
           SKILL_SCANNER_MIN_SEVERITY: 'high'
           # AI Registry
           AI_REGISTRY_CLIENT_ID: "4aeebbdc-56f5-4329-b40e-3d0a243bf74a" # AI Registry DEV & UAT
+          # In-cluster Valkey -- StatefulSet from charts/templates/valkey.yaml
+          USE_REDIS: 'true'
+          USE_REDIS_STREAMS: 'true'
+          REDIS_URI: 'redis://librechat-valkey:6379'
+          REDIS_KEY_PREFIX: 'librechat'
+          REDIS_PING_INTERVAL: '300'
+          STREAM_DELTA_COALESCE_MS: '25'
         secrets:
           # AZURE_API_KEY: librechat-azure-api-key
           MONGO_URI: librechat-uat-mdb-connection-string
@@ -144,6 +151,7 @@ pods:
           #Langfuse Observability
           LANGFUSE_PUBLIC_KEY: librechat-langfuse-public-key-uat
           LANGFUSE_SECRET_KEY: librechat-langfuse-secret-key-uat
+          REDIS_PASSWORD: librechat-valkey-password-uat
       rag-api:
         image:
           repository: 'tt-librechat/rag-api'

@@ -1,6 +1,9 @@
 imageRegistry: 'dttaitsprd.azurecr.io'
 branch: ''
 
+llmGateway:
+  namespace: 'llm-gateway-ctnp'
+
 serviceAccount:
   name: sa-librechat-prd
 
@@ -87,6 +90,7 @@ pods:
           OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf'
           OTEL_TRACES_SAMPLER: 'parentbased_traceidratio'
           OTEL_TRACES_SAMPLER_ARG: '0.1'
+          REDIS_PASSWORD: librechat-valkey-password-prd
           # Meilisearch Configuration # TODO: Enable meilisearch when we can have multi-container PVC
           SEARCH: 'false'
           # MEILI_NO_ANALYTICS: 'true'
