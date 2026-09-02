@@ -2059,6 +2059,11 @@ export const configSchema = z.object({
     .default({ socialLogins: defaultSocialLogins }),
   balance: balanceSchema.optional(),
   transactions: transactionsSchema.optional(),
+  modelPricing: z
+    .object({
+      referenceModelId: z.string().min(1),
+    })
+    .optional(),
   speech: z
     .object({
       tts: ttsSchema.optional(),
