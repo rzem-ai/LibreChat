@@ -1,78 +1,122 @@
-# Section Patterns
+# Section patterns
 
-Copy-paste HTML+CSS blocks for each section type. Read only the patterns you need.
+Copy-paste HTML blocks built on the `.gel-*` classes and `--gel-*` tokens
+defined in `design-tokens.md` and wired up in `assets/microsite-template.html`.
+Read only the patterns you need for this build — per
+`composition-principles.md`, don't include a section just because it's in
+this file.
+
+Every pattern already respects `banned-patterns.md` (sentence case, no
+gradients, radius from tokens, one primary button, brand green reserved for
+interaction). Fill in `{{PLACEHOLDER}}` content; don't add hardcoded colours.
 
 **Index**
-1. [Hero](#1-hero)
-2. [Overview / About](#2-overview--about)
-3. [Feature / Card grid](#3-feature--card-grid)
-4. [Timeline / Schedule](#4-timeline--schedule)
-5. [Team / Speakers](#5-team--speakers)
-6. [Resources / Links](#6-resources--links)
-7. [CTA / Register](#7-cta--register)
-8. [Stats bar](#8-stats-bar)
-9. [Two-column content](#9-two-column-content)
+1. [Nav](#1-nav)
+2. [Hero](#2-hero)
+3. [Overview / stats](#3-overview--stats)
+4. [Feature / card grid](#4-feature--card-grid)
+5. [Timeline / schedule](#5-timeline--schedule)
+6. [Team / speakers](#6-team--speakers)
+7. [Resources / links](#7-resources--links)
+8. [Comparison table](#8-comparison-table)
+9. [CTA band](#9-cta-band)
 10. [Accordion / FAQ](#10-accordion--faq)
+11. [Footer](#11-footer)
+12. [Status callout](#12-status-callout)
 
 ---
 
-## 1. Hero
+## 1. Nav
 
-Full-width dark opening section. Always the first section after nav.
+Already wired into `assets/microsite-template.html` — included here for
+reference when editing. `{{LOGO_SVG}}` is the markup in
+`assets/deloitte-logo.svg` (the canonical file — never a text-plus-dot
+simulation). If the site sits under a specific programme/product name, add
+the lockup label next to the logo (mirrors the approved `DeloitteLogoLockup`
+pattern) — otherwise omit `.gel-nav__lockup` entirely and let the logo stand
+alone.
 
 ```html
-<section class="hero section-pad" id="home">
-  <div class="container">
-    <span class="eyebrow eyebrow--light">{{EYEBROW_LABEL}}</span>
-    <h1>{{HEADLINE}} <span class="accent--light">{{HEADLINE_ACCENT}}</span></h1>
-    <p class="hero__sub">{{HERO_SUBHEADING}}</p>
-    <div class="hero__actions">
-      <a href="#{{CTA_ANCHOR}}" class="btn btn--primary">{{CTA_PRIMARY}}</a>
-      <a href="#{{INFO_ANCHOR}}" class="btn btn--ghost">{{CTA_SECONDARY}}</a>
+<nav class="gel-nav dark" aria-label="Main navigation">
+  <div class="gel-container gel-nav__inner">
+    <a href="#" class="gel-nav__brand" aria-label="Deloitte, home">
+      {{LOGO_SVG}}
+      <!-- Optional lockup — omit both spans entirely if there's no product name -->
+      <span class="gel-nav__divider" aria-hidden="true"></span>
+      <span class="gel-nav__lockup">{{SITE_TITLE_SHORT}}</span>
+    </a>
+    <ul class="gel-nav__links" id="gel-nav-links">
+      {{NAV_LINKS}}
+    </ul>
+    <button class="gel-nav__toggle" id="gel-nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="gel-nav-links">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <line x1="3" y1="5" x2="17" y2="5" />
+        <line x1="3" y1="10" x2="17" y2="10" />
+        <line x1="3" y1="15" x2="17" y2="15" />
+      </svg>
+    </button>
+  </div>
+</nav>
+```
+
+---
+
+## 2. Hero
+
+Full-width dark band. Always the first section after nav. `{{HERO_LABEL}}`
+is a short, sentence-case context line — NOT an uppercase eyebrow.
+
+```html
+<section class="gel-band gel-hero dark" id="home">
+  <div class="gel-container">
+    <p class="gel-hero__label">{{HERO_LABEL}}</p>
+    <h1 class="gel-display">{{HEADLINE}}</h1>
+    <p class="gel-lead">{{HERO_SUBHEADING}}</p>
+    <div class="gel-hero__actions">
+      <a href="#{{CTA_ANCHOR}}" class="gel-btn gel-btn--primary gel-btn--lg">{{CTA_PRIMARY}}</a>
+      <a href="#{{INFO_ANCHOR}}" class="gel-btn gel-btn--outline gel-btn--lg">{{CTA_SECONDARY}}</a>
     </div>
   </div>
 </section>
 ```
 
 **Usage notes:**
-- Replace `{{EYEBROW_LABEL}}` with a short context phrase, e.g. `Deloitte Engineering · 2026`.
-- `{{HEADLINE_ACCENT}}` is the key word or phrase — rendered in `--brand`.
-- Remove `btn--ghost` entirely if there is only one CTA.
-- The green gradient overlay is already on `.hero::before` in the template.
+- Remove the second `<a>` entirely if there's only one CTA — never leave a
+  secondary button with no real destination just to balance the layout.
+- `{{HEADLINE}}` should state the reader's job in plain language, not name
+  the document type (avoid "Welcome to the Program Microsite").
+- Primary + outline is the default secondary-CTA pairing (a bordered,
+  green-text button beside the filled one) — reach for ghost only when the
+  second action is genuinely low-emphasis (e.g. "Skip for now"), not as the
+  default hero pairing.
+- `gel-btn--lg` on both buttons here is deliberate — a hero is the one
+  place in the page where the default 36px button height reads as
+  undersized next to a display headline. Everywhere else, the default size
+  is correct.
 
 ---
 
-## 2. Overview / About
+## 3. Overview / stats
 
-Two-column: prose + stat block. Use when the site needs a brief "what is this?" section.
+Two-column: prose + a stat block. Use when the page needs a brief "what is
+this" section with a small number of real figures.
 
 ```html
-<section class="overview section-pad" id="about">
-  <div class="container">
-    <div class="overview__layout">
-      <div class="overview__copy">
-        <span class="eyebrow">About</span>
-        <h2>{{SECTION_HEADLINE}} <span class="accent">{{SECTION_ACCENT}}</span></h2>
-        <p>{{BODY_TEXT_1}}</p>
-        <p>{{BODY_TEXT_2}}</p>
+<section class="gel-band" id="about">
+  <div class="gel-container gel-overview">
+    <div class="gel-overview__copy">
+      <h2>{{SECTION_HEADLINE}}</h2>
+      <p>{{BODY_TEXT_1}}</p>
+      <p>{{BODY_TEXT_2}}</p>
+    </div>
+    <div class="gel-stat-strip">
+      <div class="gel-stat">
+        <p class="gel-stat__value">{{STAT_1_VALUE}}</p>
+        <p class="gel-stat__label">{{STAT_1_LABEL}}</p>
       </div>
-      <div class="overview__stats">
-        <div>
-          <div class="stat">{{STAT_1_VALUE}}</div>
-          <div class="stat__label">{{STAT_1_LABEL}}</div>
-        </div>
-        <div>
-          <div class="stat">{{STAT_2_VALUE}}</div>
-          <div class="stat__label">{{STAT_2_LABEL}}</div>
-        </div>
-        <div>
-          <div class="stat">{{STAT_3_VALUE}}</div>
-          <div class="stat__label">{{STAT_3_LABEL}}</div>
-        </div>
-        <div>
-          <div class="stat">{{STAT_4_VALUE}}</div>
-          <div class="stat__label">{{STAT_4_LABEL}}</div>
-        </div>
+      <div class="gel-stat">
+        <p class="gel-stat__value">{{STAT_2_VALUE}}</p>
+        <p class="gel-stat__label">{{STAT_2_LABEL}}</p>
       </div>
     </div>
   </div>
@@ -80,34 +124,31 @@ Two-column: prose + stat block. Use when the site needs a brief "what is this?" 
 ```
 
 **Usage notes:**
-- Use `--brand-dark` color on `.stat` for green emphasis.
-- Replace stat entries with actual figures; omit any unused `<div>` pairs.
+- Only include stats you have real values for. Don't pad to a fixed count —
+  two honest figures beat four where two are filler.
 
 ---
 
-## 3. Feature / Card grid
+## 4. Feature / card grid
 
-Use for 3–6 key topics, modules, capabilities, or service areas.
+Use for 3–6 key topics, modules, or capabilities — true peers, equal weight.
 
 ```html
-<section class="features section-pad" id="features">
-  <div class="container">
-    <div class="features__header">
-      <span class="eyebrow">{{EYEBROW}}</span>
-      <h2>{{HEADLINE}} <span class="accent">{{HEADLINE_ACCENT}}</span></h2>
-    </div>
-    <div class="grid-3">
-      <div class="card card--top">
-        <div class="card__title">{{CARD_1_TITLE}}</div>
-        <p class="card__body">{{CARD_1_BODY}}</p>
+<section class="gel-band gel-band--muted" id="features">
+  <div class="gel-container">
+    <h2>{{HEADLINE}}</h2>
+    <div class="gel-grid-3">
+      <div class="gel-card">
+        <h3 class="gel-card__title">{{CARD_1_TITLE}}</h3>
+        <p class="gel-card__body">{{CARD_1_BODY}}</p>
       </div>
-      <div class="card card--top">
-        <div class="card__title">{{CARD_2_TITLE}}</div>
-        <p class="card__body">{{CARD_2_BODY}}</p>
+      <div class="gel-card">
+        <h3 class="gel-card__title">{{CARD_2_TITLE}}</h3>
+        <p class="gel-card__body">{{CARD_2_BODY}}</p>
       </div>
-      <div class="card card--top">
-        <div class="card__title">{{CARD_3_TITLE}}</div>
-        <p class="card__body">{{CARD_3_BODY}}</p>
+      <div class="gel-card">
+        <h3 class="gel-card__title">{{CARD_3_TITLE}}</h3>
+        <p class="gel-card__body">{{CARD_3_BODY}}</p>
       </div>
     </div>
   </div>
@@ -115,93 +156,83 @@ Use for 3–6 key topics, modules, capabilities, or service areas.
 ```
 
 **Usage notes:**
-- Change `.grid-3` to `.grid-2` or `.grid-4` to match the number of cards.
-- Cards with important caveats or risks use `.card--accent` (blue top border) or `.card--dark`.
-- Add a `<span class="pill">{{TAG}}</span>` after `.card__body` for categorisation labels.
-
-### Card with icon variant
-
-Uses the `.resource-item__icon` class from the base template as a reusable icon wrapper (40×40 px, `--light-bg` background, `--brand-dark` color). No extra CSS needed.
-
-```html
-<div class="card card--top">
-  <div class="resource-item__icon" style="margin-bottom:1rem;" aria-hidden="true">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <!-- insert Lucide icon path here -->
-      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-    </svg>
+- Swap `.gel-grid-3` for `.gel-grid-2` or `.gel-grid-4` to match the card
+  count — never leave an orphaned card alone in the last row if it can be
+  avoided by rebalancing the grid.
+- If one item is genuinely more important than its peers (e.g. a
+  recommended option), it isn't a peer grid any more — give it its own
+  layout instead of forcing false parity.
+- Only add an icon when it makes the card faster to recognise, not by
+  default. Use a Material Symbol (`.gel-icon`, see `design-tokens.md`), not
+  a hand-drawn SVG — that's what GEL's real icon components actually are.
+  Add the Material Symbols `<link>` to `<head>` the first time a build uses
+  one:
+  ```html
+  <div class="gel-card">
+    <span class="gel-icon" aria-hidden="true" style="margin-bottom:0.5rem;">insights</span>
+    <h3 class="gel-card__title">{{CARD_1_TITLE}}</h3>
+    <p class="gel-card__body">{{CARD_1_BODY}}</p>
   </div>
-  <div class="card__title">{{CARD_TITLE}}</div>
-  <p class="card__body">{{CARD_BODY}}</p>
-</div>
-```
+  ```
+  `.gel-icon` defaults to `color: inherit` (the current foreground) — don't
+  add `--gel-primary` or `--gel-primary-strong` to a content icon just to
+  give it presence. Green is reserved for interactive elements; a card icon
+  is informational, not a button.
 
 ---
 
-## 4. Timeline / Schedule
+## 5. Timeline / schedule
 
-Vertical timeline for programs, events, or step sequences.
+**Not a GEL component — use only when the content genuinely needs it.**
+GEL's only related component is `Stepper` (`packages/core/brand-components/
+src/stepper/stepper.tsx`), and it solves a different problem: a horizontal,
+interactive wizard/progress indicator with clickable numbered steps
+(`activeStep`, `onStepChange`) for a multi-step form the user is currently
+in. It is not a read-only list of dated events, so it isn't a real
+substitute here. This pattern is a generic, self-authored vertical list —
+dot, connector, date, title, description — dressed in `--gel-*` tokens, not
+something sourced from a real GEL component the way buttons, cards, and the
+accordion are. Reach for it only when the content is genuinely an ordered
+sequence of dated steps (a programme schedule, an event agenda); don't
+default to including it just because it's in this file — see
+`composition-principles.md`.
+
+Vertical timeline for programmes, events, or ordered steps.
 
 ```html
-<section class="timeline section-pad" id="schedule">
-  <div class="container">
-    <span class="eyebrow">{{EYEBROW}}</span>
-    <h2 style="margin-bottom:2.5rem;">{{HEADLINE}} <span class="accent">{{HEADLINE_ACCENT}}</span></h2>
-    <ul class="timeline__list">
-      <li class="timeline__item">
-        <div class="timeline__date">{{DATE_1}}</div>
-        <div class="timeline__title">{{EVENT_1_TITLE}}</div>
-        <p class="timeline__desc">{{EVENT_1_DESC}}</p>
+<section class="gel-band" id="schedule">
+  <div class="gel-container">
+    <h2>{{HEADLINE}}</h2>
+    <ul class="gel-timeline">
+      <li class="gel-timeline__item">
+        <p class="gel-timeline__date">{{DATE_1}}</p>
+        <p class="gel-timeline__title">{{EVENT_1_TITLE}}</p>
+        <p class="gel-timeline__desc">{{EVENT_1_DESC}}</p>
       </li>
-      <li class="timeline__item">
-        <div class="timeline__date">{{DATE_2}}</div>
-        <div class="timeline__title">{{EVENT_2_TITLE}}</div>
-        <p class="timeline__desc">{{EVENT_2_DESC}}</p>
-      </li>
-      <li class="timeline__item">
-        <div class="timeline__date">{{DATE_3}}</div>
-        <div class="timeline__title">{{EVENT_3_TITLE}}</div>
-        <p class="timeline__desc">{{EVENT_3_DESC}}</p>
+      <li class="gel-timeline__item">
+        <p class="gel-timeline__date">{{DATE_2}}</p>
+        <p class="gel-timeline__title">{{EVENT_2_TITLE}}</p>
+        <p class="gel-timeline__desc">{{EVENT_2_DESC}}</p>
       </li>
     </ul>
   </div>
 </section>
 ```
 
-**Usage notes:**
-- Add or remove `<li class="timeline__item">` blocks as needed.
-- `{{DATE_N}}` examples: `Monday 12 May`, `Week 1 · 9–10 AM AEST`, `Phase 1`.
-- To highlight the "current" step, add `style="--brand-dark: var(--brand);"` on `.timeline__item::before` or add a `.is-current` modifier.
-
 ---
 
-## 5. Team / Speakers
-
-Named contributors with name, role, and optional bio.
+## 6. Team / speakers
 
 ```html
-<section class="team section-pad" id="team">
-  <div class="container">
-    <span class="eyebrow">{{EYEBROW}}</span>
-    <h2 style="margin-bottom:2.5rem;">{{HEADLINE}}</h2>
-    <div class="grid-3">
-      <div class="team-card">
-        <div class="team-card__avatar">{{INITIALS_1}}</div>
-        <div class="team-card__name">{{NAME_1}}</div>
-        <div class="team-card__role">{{ROLE_1}}</div>
-        <p class="team-card__bio">{{BIO_1}}</p>
-      </div>
-      <div class="team-card">
-        <div class="team-card__avatar">{{INITIALS_2}}</div>
-        <div class="team-card__name">{{NAME_2}}</div>
-        <div class="team-card__role">{{ROLE_2}}</div>
-        <p class="team-card__bio">{{BIO_2}}</p>
-      </div>
-      <div class="team-card">
-        <div class="team-card__avatar">{{INITIALS_3}}</div>
-        <div class="team-card__name">{{NAME_3}}</div>
-        <div class="team-card__role">{{ROLE_3}}</div>
-        <p class="team-card__bio">{{BIO_3}}</p>
+<section class="gel-band gel-band--muted" id="team">
+  <div class="gel-container">
+    <h2>{{HEADLINE}}</h2>
+    <div class="gel-grid-3">
+      <div class="gel-team-card">
+        <div class="gel-team-card__avatar" aria-hidden="true">{{INITIALS_1}}</div>
+        <p class="gel-team-card__name">{{NAME_1}}</p>
+        <p class="gel-team-card__role">{{ROLE_1}}</p>
+        <p class="gel-team-card__bio">{{BIO_1}}</p>
       </div>
     </div>
   </div>
@@ -209,239 +240,192 @@ Named contributors with name, role, and optional bio.
 ```
 
 **Usage notes:**
-- `{{INITIALS_N}}` is 1–2 uppercase letters shown as the avatar fallback (e.g. `JA`).
-- If an `<img>` is available, replace the inner content of `.team-card__avatar` with `<img src="path/to/photo.jpg" alt="Name" style="width:100%;height:100%;object-fit:cover;">`.
-- Bio is optional — remove `<p class="team-card__bio">` if not needed.
+- If a real photo is available, replace the avatar's initials with
+  `<img src="..." alt="{{NAME_1}}" style="width:100%;height:100%;object-fit:cover;">`.
+- Bio is optional — drop `<p class="gel-team-card__bio">` if there's nothing
+  substantive to say.
 
 ---
 
-## 6. Resources / Links
-
-Download links, external docs, or reference materials.
+## 7. Resources / links
 
 ```html
-<section class="resources section-pad" id="resources">
-  <div class="container">
-    <span class="eyebrow">{{EYEBROW}}</span>
-    <h2 style="margin-bottom:2rem;">{{HEADLINE}}</h2>
-    <div>
-      <div class="resource-item">
-        <div class="resource-item__icon" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-          </svg>
-        </div>
-        <div style="flex:1;">
-          <div class="resource-item__title">{{RESOURCE_1_TITLE}}</div>
-          <div class="resource-item__desc">{{RESOURCE_1_DESC}}</div>
-        </div>
-        <a href="{{RESOURCE_1_URL}}" class="resource-item__link" target="_blank" rel="noopener">Download ↗</a>
+<section class="gel-band" id="resources">
+  <div class="gel-container">
+    <h2>{{HEADLINE}}</h2>
+    <div class="gel-resource">
+      <div class="gel-resource__icon" aria-hidden="true">
+        <span class="gel-icon">description</span>
       </div>
-      <div class="resource-item">
-        <div class="resource-item__icon" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="8" x2="12" y2="16"></line>
-            <line x1="8" y1="12" x2="16" y2="12"></line>
-          </svg>
-        </div>
-        <div style="flex:1;">
-          <div class="resource-item__title">{{RESOURCE_2_TITLE}}</div>
-          <div class="resource-item__desc">{{RESOURCE_2_DESC}}</div>
-        </div>
-        <a href="{{RESOURCE_2_URL}}" class="resource-item__link" target="_blank" rel="noopener">View ↗</a>
+      <div class="gel-resource__text">
+        <p class="gel-resource__title">{{RESOURCE_1_TITLE}}</p>
+        <p class="gel-resource__desc">{{RESOURCE_1_DESC}}</p>
       </div>
+      <a href="{{RESOURCE_1_URL}}" class="gel-resource__link" target="_blank" rel="noopener">Download</a>
     </div>
-  </div>
-</section>
-```
-
----
-
-## 7. CTA / Register
-
-Prominent call-to-action block. Always on a dark background.
-
-```html
-<section class="cta-section section-pad" id="register">
-  <div class="container">
-    <span class="eyebrow eyebrow--light">{{EYEBROW}}</span>
-    <h2>{{HEADLINE}} <span class="accent--light">{{HEADLINE_ACCENT}}</span></h2>
-    <p>{{CTA_BODY_TEXT}}</p>
-    <a href="{{CTA_URL}}" class="btn btn--primary">{{CTA_BUTTON_LABEL}}</a>
   </div>
 </section>
 ```
 
 **Usage notes:**
-- `{{CTA_URL}}` can be an external registration link, a `mailto:` address, or a `#` anchor.
-- Add a second `btn--ghost` alongside if there is a secondary action (e.g. "Learn more").
-- Keep body text under 2 sentences — this is a conversion block, not a content section.
+- `.gel-icon`'s text content is the Material Symbol name (`description`,
+  `download`, `link`, etc.) — see `design-tokens.md` for the font-loading
+  `<link>` and base rule. Pick the name that matches the resource type.
 
 ---
 
-## 8. Stats bar
+## 8. Comparison table
 
-A horizontal row of key figures. Use as a standalone band between other sections.
+Use when the reader needs to scan exact values across options — a real
+`<table>`, not styled `<div>`s. Numeric columns are right-aligned; text
+columns stay left-aligned.
 
 ```html
-<section style="background:var(--dark);color:var(--white);padding:3rem 0;" id="stats">
-  <div class="container">
-    <div class="grid-4" style="text-align:center;">
-      <div>
-        <div class="stat" style="color:var(--brand);">{{STAT_1}}</div>
-        <div class="stat__label" style="color:var(--gray-light);">{{LABEL_1}}</div>
-      </div>
-      <div>
-        <div class="stat" style="color:var(--brand);">{{STAT_2}}</div>
-        <div class="stat__label" style="color:var(--gray-light);">{{LABEL_2}}</div>
-      </div>
-      <div>
-        <div class="stat" style="color:var(--brand);">{{STAT_3}}</div>
-        <div class="stat__label" style="color:var(--gray-light);">{{LABEL_3}}</div>
-      </div>
-      <div>
-        <div class="stat" style="color:var(--brand);">{{STAT_4}}</div>
-        <div class="stat__label" style="color:var(--gray-light);">{{LABEL_4}}</div>
-      </div>
-    </div>
+<section class="gel-band" id="compare">
+  <div class="gel-container">
+    <h2>{{HEADLINE}}</h2>
+    <table class="gel-table">
+      <caption class="gel-visually-hidden">{{TABLE_CAPTION}}</caption>
+      <thead>
+        <tr>
+          <th scope="col">{{COLUMN_1_LABEL}}</th>
+          <th scope="col" class="gel-numeric">{{COLUMN_2_LABEL}}</th>
+          <th scope="col" class="gel-numeric">{{COLUMN_3_LABEL}}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">{{ROW_1_LABEL}}</th>
+          <td class="gel-numeric">{{ROW_1_VALUE_1}}</td>
+          <td class="gel-numeric">{{ROW_1_VALUE_2}}</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </section>
 ```
 
+**Usage notes:**
+- Keep units and precision consistent down a column — don't mix "12%" with
+  "0.12" in the same column.
+- Let the table use the full container width; don't squeeze it into a
+  half-width split next to prose if it has five or more columns.
+
 ---
 
-## 9. Two-column content
+## 9. CTA band
 
-Prose on the left, supplementary content (list, image placeholder, quote) on the right.
+Prominent call-to-action, always a dark band. Keep body copy under two
+sentences — this is a conversion block, not a content section.
 
 ```html
-<section class="section-pad" id="{{SECTION_ID}}" style="background:var(--light-bg);">
-  <div class="container">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(2rem,5vw,5rem);align-items:start;">
-      <div>
-        <span class="eyebrow">{{EYEBROW}}</span>
-        <h2>{{HEADLINE}}</h2>
-        <p>{{BODY_TEXT_1}}</p>
-        <p>{{BODY_TEXT_2}}</p>
-        <a href="{{LINK_URL}}" class="btn btn--outline" style="margin-top:1.5rem;">{{LINK_LABEL}}</a>
-      </div>
-      <div>
-        <!-- Option A: Ordered list -->
-        <ol style="list-style:none;padding:0;display:flex;flex-direction:column;gap:1.25rem;counter-reset:steps;">
-          <li style="display:flex;gap:1rem;counter-increment:steps;">
-            <span style="width:2rem;height:2rem;background:var(--brand);color:var(--white);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;flex-shrink:0;"
-                  aria-hidden="true">1</span>
-            <div>
-              <div style="font-weight:700;margin-bottom:0.25rem;">{{STEP_1_TITLE}}</div>
-              <p style="margin:0;color:var(--gray-mid);">{{STEP_1_DESC}}</p>
-            </div>
-          </li>
-          <li style="display:flex;gap:1rem;">
-            <span style="width:2rem;height:2rem;background:var(--brand);color:var(--white);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;flex-shrink:0;"
-                  aria-hidden="true">2</span>
-            <div>
-              <div style="font-weight:700;margin-bottom:0.25rem;">{{STEP_2_TITLE}}</div>
-              <p style="margin:0;color:var(--gray-mid);">{{STEP_2_DESC}}</p>
-            </div>
-          </li>
-        </ol>
-        <!-- Option B: Pull quote (replace Option A if preferred) -->
-        <!--
-        <blockquote style="border-left:4px solid var(--brand);padding:1.25rem 1.5rem;background:var(--white);">
-          <p style="font-size:1.15rem;font-weight:300;color:var(--charcoal);line-height:1.65;max-width:none;margin:0 0 0.75rem;">
-            "{{QUOTE_TEXT}}"
-          </p>
-          <cite style="font-size:0.82rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--brand-dark);font-style:normal;">
-            — {{QUOTE_AUTHOR}}, {{QUOTE_ROLE}}
-          </cite>
-        </blockquote>
-        -->
-      </div>
-    </div>
+<section class="gel-band gel-cta dark" id="register">
+  <div class="gel-container">
+    <h2>{{HEADLINE}}</h2>
+    <p class="gel-lead">{{CTA_BODY_TEXT}}</p>
+    <a href="{{CTA_URL}}" class="gel-btn gel-btn--primary gel-btn--lg">{{CTA_BUTTON_LABEL}}</a>
   </div>
 </section>
-```
-
-**CSS to add to `{{SECTION_STYLES}}`** if the two-column layout needs to collapse:
-
-```css
-@media (max-width: 768px) {
-  #{{SECTION_ID}} > .container > div {
-    grid-template-columns: 1fr;
-  }
-}
 ```
 
 ---
 
 ## 10. Accordion / FAQ
 
-Expandable question-and-answer pairs.
+Native `<details>`/`<summary>` — no JavaScript needed.
 
 ```html
-<section class="section-pad" id="faq" style="background:var(--white);">
-  <div class="container">
-    <span class="eyebrow">{{EYEBROW}}</span>
-    <h2 style="margin-bottom:2rem;">{{HEADLINE}}</h2>
-    <div class="accordion" style="max-width:800px;">
-      <details class="accordion__item">
-        <summary class="accordion__q">{{QUESTION_1}}</summary>
-        <div class="accordion__a"><p>{{ANSWER_1}}</p></div>
+<section class="gel-band" id="faq">
+  <div class="gel-container">
+    <h2>{{HEADLINE}}</h2>
+    <div class="gel-accordion">
+      <details class="gel-accordion__item">
+        <summary class="gel-accordion__q">
+          {{QUESTION_1}}
+          <svg class="gel-accordion__chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m6 9 6 6 6-6"/>
+          </svg>
+        </summary>
+        <div class="gel-accordion__a"><p>{{ANSWER_1}}</p></div>
       </details>
-      <details class="accordion__item">
-        <summary class="accordion__q">{{QUESTION_2}}</summary>
-        <div class="accordion__a"><p>{{ANSWER_2}}</p></div>
-      </details>
-      <details class="accordion__item">
-        <summary class="accordion__q">{{QUESTION_3}}</summary>
-        <div class="accordion__a"><p>{{ANSWER_3}}</p></div>
+      <details class="gel-accordion__item">
+        <summary class="gel-accordion__q">
+          {{QUESTION_2}}
+          <svg class="gel-accordion__chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m6 9 6 6 6-6"/>
+          </svg>
+        </summary>
+        <div class="gel-accordion__a"><p>{{ANSWER_2}}</p></div>
       </details>
     </div>
   </div>
 </section>
 ```
 
-**CSS to add to `{{SECTION_STYLES}}`:**
+---
 
-```css
-.accordion__item {
-  border-bottom: 1px solid var(--border);
-}
-.accordion__item:first-child {
-  border-top: 1px solid var(--border);
-}
-.accordion__q {
-  list-style: none;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.1rem 0;
-  font-weight: 700;
-  font-size: 0.95rem;
-  cursor: pointer;
-  color: var(--charcoal);
-  user-select: none;
-}
-.accordion__q::-webkit-details-marker { display: none; }
-.accordion__q::after {
-  content: '+';
-  font-size: 1.25rem;
-  font-weight: 300;
-  color: var(--brand-dark);
-  flex-shrink: 0;
-  transition: transform 0.2s ease;
-}
-details[open] .accordion__q::after {
-  transform: rotate(45deg);
-}
-.accordion__a {
-  padding: 0 0 1.25rem;
-}
-.accordion__a p {
-  color: var(--gray-mid);
-  font-size: 0.95rem;
-  margin: 0;
-}
+## 11. Footer
+
+Already wired into `assets/microsite-template.html`. Matches the real
+`Footer` component's structure exactly (`packages/core/brand-components/
+src/footer/footer.tsx`) — **no logo**, just a copyright + policy-links row,
+then a separate verbatim disclaimer paragraph. The policy links are
+deliberately NOT the same set as `{{NAV_LINKS}}` in the nav — don't repeat
+the site's section anchors here.
+
+```html
+<footer class="gel-footer dark">
+  <div class="gel-container">
+    <div class="gel-footer__top">
+      <span class="gel-footer__copyright">&copy; {{YEAR}} Deloitte Touche Tohmatsu</span>
+      <ul class="gel-footer__links">
+        <li><a href="#">Privacy policy</a></li>
+        <li><a href="#">Terms of use</a></li>
+        <li><a href="#">Contact us</a></li>
+      </ul>
+    </div>
+    <p class="gel-footer__legal">
+      Deloitte Refers to one or more of Deloitte Touche Tohmatsu Limited, a UK
+      private company limited by guarantee ("DTTL"), its network of member
+      firms, and their related entities. DTTL and each of its member firms are
+      legally separate and independent entities. DTTL (also referred to as
+      "Deloitte Global") does not provide services to clients. Please see
+      About Deloitte for a detailed description of DTTL and its member firms.
+    </p>
+  </div>
+</footer>
 ```
+
+**Usage notes:**
+- Replace the three `href="#"` placeholders with real policy/contact URLs
+  before production (the real component's own documented rule,
+  `footer-production-destinations`).
+- Never shorten, paraphrase, or "fix" the disclaimer text — it's copied
+  verbatim from the real component's default, including its capitalisation.
+
+---
+
+## 12. Status callout
+
+Not a full section — a small inline block for a genuine status message
+(e.g. an important date has changed, a form submission failed). Reach for
+this rarely; most microsite copy doesn't need a callout at all.
+
+```html
+<div class="gel-callout gel-callout--warning">
+  <span class="gel-icon gel-callout__icon" aria-hidden="true">warning</span>
+  <p>{{CALLOUT_BODY_TEXT}}</p>
+</div>
+```
+
+**Usage notes:**
+- Swap `gel-callout--warning` for `--info`, `--success`, or `--critical`,
+  and match the icon name to the status (`info`, `check_circle`, `warning`,
+  `error` are reasonable Material Symbols choices).
+- The paragraph text stays default foreground/muted colour — never recolour
+  it to the status colour. Only the background and the icon carry the
+  status.
+- Don't reach for `--gel-success` here just because "success" sounds
+  positive and brand-adjacent — it's a status token, not a brand accent.
+  A congratulatory microsite headline still uses plain typography, not a
+  green callout box.

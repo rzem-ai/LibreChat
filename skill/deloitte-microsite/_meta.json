@@ -2,13 +2,13 @@
   "kind": "skill",
   "name": "deloitte-microsite",
   "version": "1.0.0",
-  "added": "2026-05-06",
-  "contributors": ["copilot@deloitte.com.au"],
+  "added": "2026-09-02",
+  "contributors": [],
   "source": "deloitte-internal",
-  "origin": "https://github.com/Deloitte-Australia/engineering-ai-training-2026/blob/main/index.html",
+  "origin": "Derived from the Deloitte GEL design system (packages/specs/design/DESIGN.md, packages/core/css/shadcn.css, and the gel-design-review skill) in the GEL platform repo.",
   "ip": "deloitte-confidential",
-  "featured": true,
+  "featured": false,
   "solutionArchetypes": ["Full Stack Development", "Pre-Sales & RFP"],
   "stages": ["Build"],
-  "technologies": []
+  "technologies": ["html", "css"]
 }

@@ -1,113 +1,188 @@
 ---
 name: deloitte-microsite
-description: Generate self-contained, Deloitte-branded HTML microsites — responsive single-page or multi-section websites with the standard Deloitte green-dot identity, Open Sans typography, sticky navigation, hero, feature grids, timelines, CTA blocks, and footer. Use this skill when the user asks to "create a Deloitte microsite", "build a landing page", "generate a program/event/project site", "make an HTML website with Deloitte branding", or references the engineering-ai-training-2026 index.html style. Always confirms site purpose, color tokens, and required sections before generating.
+description: Generate a self-contained, Deloitte GEL-branded HTML page — a microsite (event, programme, project, training) or a smaller single-purpose asset (a one-page brief, an announcement, a CTA banner) — as one copy-paste .html file with real GEL design tokens, typography, and the official logo. Use this when the user asks to "create a Deloitte microsite", "build a landing page", "make an on-brand HTML page/asset", or wants a GEL-accurate alternative to a generic AI-generated page. Confirms purpose, audience, and sections before generating; brand colours and typography are fixed to GEL, not user-customisable.
 ---
 
 # deloitte-microsite
 
-Generate self-contained, Deloitte-branded HTML microsites in one file. Responsive, scrollable, no build step required — drop the file on any static host or double-click to preview locally.
+Generate a self-contained Deloitte GEL-branded HTML page in one file. No
+build step, no external CSS/JS beyond the Open Sans font request — the file
+works by double-clicking it or dropping it on any static host.
+
+This skill covers **microsites and standalone assets** — event pages,
+programme/training sites, project recaps, one-page briefs, CTA banners. It
+does not cover production application UI (that's `gel-design-review` in the
+GEL platform repo) or data-heavy report pages with calculators/complex
+charts (out of scope — the comparison-table pattern here covers simple
+lookups only).
+
+## Brand is fixed, not a per-site input
+
+This skill does not ask the user to pick hex colours — GEL brand green,
+radius, and type scale are constants, grounded directly in the actual GEL
+design system (see `references/design-tokens.md` for provenance). Letting
+each site invent its own palette while calling it "Deloitte-branded" is
+itself a brand violation, so treat the token set as fixed and move straight
+to composition and content.
 
 ## Workflow
 
-Follow these steps in order.
+### Step 1 — Intake (blocking)
 
-### Step 1 — Intake: purpose and design tokens (BLOCKING)
-
-Before generating any HTML, confirm the following. If not already provided, ask in **one** consolidated message.
-
-#### 1a. Site purpose
+Confirm before generating anything, in one consolidated message if not
+already provided:
 
 | Field | Question |
 |---|---|
-| Site name / title | What is this microsite called? |
-| Purpose | Program? Event? Training? Project? Internal tool docs? |
+| Site/asset name | What is this called? |
+| Purpose | Event, programme, training, project recap, internal tool docs, or a smaller single-purpose asset? |
 | Audience | Internal Deloitte staff, client-facing, or public? |
-| Primary CTA | What is the single most important action a visitor should take? |
+| Primary action | What is the one thing a visitor should do or take away? |
+| Stage | Early/internal share, or something that needs to be genuinely polished? |
 
-#### 1b. Design tokens
-
-| Token | Purpose | Default |
-|---|---|---|
-| `BRAND` | Green dot color, accent bar, highlights | `#86BC25` |
-| `BRAND_DARK` | Headings on light bg, hover states | `#046A38` |
-| `ACCENT` | Secondary highlight (links, tags, badges) | `#00A3E0` |
-| `DARK` | Dark header/footer background | `#000000` |
-| `CHARCOAL` | Body text | `#222222` |
-| `LIGHT_BG` | Off-white section backgrounds | `#F7F7F7` |
-| `FONT_SANS` | Type stack | `'Open Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif` |
-| `SITE_TITLE` | Browser tab title | e.g. `Engineering AI Training 2026` |
-| `ORG_LABEL` | Top-left nav label (brand mark) | e.g. `Deloitte` |
-
-**Smart defaults:** if the user says "use Deloitte defaults" or doesn't specify colors, use the default column above verbatim and proceed.
-
-### Step 2 — Confirm content sections
-
-Establish which sections the site needs. Present this list and ask the user to confirm, remove, or reorder:
+Then work out which sections are actually needed — see
+`references/composition-principles.md` before defaulting to a long list.
+For a full microsite, offer this menu and let the user confirm, cut, or
+reorder:
 
 | # | Section | When to include |
 |---|---|---|
-| 1 | **Nav** | Always — sticky top navigation with logo and links |
-| 2 | **Hero** | Always — full-width opening section with headline, sub, and CTA button |
-| 3 | **Overview / About** | Most sites — 2-column text + stat row |
-| 4 | **Feature / Card grid** | When there are 3–6 key topics, modules, or capabilities |
-| 5 | **Timeline / Schedule** | Programs, events with a sequence of dates or steps |
-| 6 | **Team / Speakers** | Named contributors with role and avatar placeholder |
-| 7 | **Resources / Links** | Download links, external references |
-| 8 | **CTA / Register** | Conversion block — prominent button and supporting copy |
-| 9 | **Footer** | Always — links, Deloitte legal, copyright |
+| 1 | Nav | Always |
+| 2 | Hero | Always |
+| 3 | Overview / stats | Most sites — brief "what is this" plus real figures |
+| 4 | Feature / card grid | 3–6 true-peer topics or capabilities |
+| 5 | Timeline / schedule | Programmes, events with an ordered sequence |
+| 6 | Team / speakers | Named contributors |
+| 7 | Resources / links | Downloads, external references |
+| 8 | Comparison table | Options/tiers that need exact side-by-side values |
+| 9 | CTA band | Conversion — always present unless the hero CTA is the only ask |
+| 10 | FAQ | Recurring questions |
+| 11 | Footer | Always |
+| 12 | Status callout | Rare — a specific warning/caveat that genuinely needs to interrupt reading, not general commentary dressed up in a coloured box |
 
-If the user has already described their content, infer the sections from context and skip this question.
+For a smaller single-purpose asset, most of this list won't apply — build
+from only the two or three blocks the content actually needs.
 
-### Step 3 — Read the references
+### Step 2 — Read the references
 
-Before generating the template, load these into context:
+Read these in full before writing any HTML:
 
-- `references/design-principles.md` — non-negotiable brand rules. Read in full.
-- `references/section-patterns.md` — copy-paste HTML+CSS blocks for each section. Use the index — only read patterns you need.
+- `references/design-tokens.md` — the exact colours, radius, type scale, and
+  logo rule. Non-negotiable.
+- `references/composition-principles.md` — how to choose a structure that
+  fits this content instead of defaulting to a template.
+- `references/banned-patterns.md` — the reject list. Check output against
+  it before delivering, not just while writing.
 
-### Step 4 — Assemble the microsite
+Then read only the needed blocks of `references/section-patterns.md` — skip
+patterns for sections that aren't in this build.
 
-1. Read `assets/microsite-template.html`.
-2. Build the output file by:
-   - Replacing all `{{TOKEN}}` placeholders in `:root` with the user's values.
-   - Replacing `{{SITE_TITLE}}` with the browser tab name.
-   - Replacing `{{ORG_LABEL}}` with the nav brand mark.
-   - Replacing `{{NAV_LINKS}}` with `<a href="#section-id">Label</a>` links for each section used.
-   - Replacing `{{SECTIONS}}` with the concatenated HTML blocks from `references/section-patterns.md`.
-3. Keep all CSS and JS inline — no external CDN links, no `<link rel=stylesheet>`, no `<script src=...>`.
+### Step 3 — Assemble
 
-### Step 5 — Apply design rules to copy
+1. Start from `assets/microsite-template.html` — it already has the correct
+   token block, Open Sans loading, official logo in the nav, and base styles
+   wired up. Don't recreate these from scratch. Note the real `Footer`
+   component has no logo — only the nav does.
+2. Replace `{{SECTIONS}}` with the concatenated section blocks from
+   `section-patterns.md`, and `{{NAV_LINKS}}` with `<li><a href="#id">Label</a></li>`
+   for each section — this only appears once now, in the nav. The footer's
+   policy links (Privacy policy / Terms of use / Contact us) are separate,
+   already in the template, and use their own `href="#"` placeholders — see
+   step 5 of the verify checklist below.
+3. Replace `{{SITE_TITLE}}`, `{{META_DESCRIPTION}}`, `{{SITE_TITLE_SHORT}}`
+   (or delete the `.gel-nav__lockup` span if there's no product name),
+   and `{{YEAR}}` with the current year.
+4. Keep all CSS and JS inline — no external CDN links besides the Google
+   Fonts request already in the template, no `<script src="...">`. If a
+   section uses an icon, add the Material Symbols `<link>` from
+   `references/design-tokens.md`'s Icons section to `<head>` — only then,
+   not by default.
+5. If a section genuinely needs a rule not in the template, add it under
+   `{{SECTION_STYLES}}` reading only `--gel-*` tokens — never a raw hex
+   value, and never a rule that duplicates something the template already
+   provides.
 
-While writing section content:
+### Step 4 — Apply copy and brand rules
 
-- **Headlines:** sentence case, light weight (300), one `<span class="accent">` per heading if an accent is appropriate.
-- **Green dot:** append a `<span class="green-dot"></span>` after standalone words that complete a thought (section headers, list items, the brand mark).
-- **Buttons:** square corners (`border-radius: 0`). Primary = `--brand` background + white text. Ghost = transparent + `--brand` border.
-- **Cards:** 1px `--border` edge, no drop shadow on light bg. `box-shadow` only inside dark sections.
-- **Australian English:** *organisation*, *optimise*, *programme*, *colour*.
-- **No emoji.** Use inline SVG icons with `stroke="currentColor"` if iconography is needed.
+- Sentence case throughout — headings, buttons, nav links. Never uppercase
+  outside the badge role.
+- No em dashes.
+- Australian English: *organisation*, *optimise*, *programme*, *colour*,
+  *behaviour*, *recognised*.
+- One primary (filled, brand-green) button per section.
+- Run the full list in `references/banned-patterns.md`.
 
-### Step 6 — Verify before delivering
+### Step 5 — Verify before delivering
 
-Run these mental checks:
+- [ ] No `{{TOKEN}}` placeholders left unreplaced.
+- [ ] No hardcoded hex/rgb anywhere except the logo SVG's fixed dot fill
+      (`#86BC25`) — every other colour is a `var(--gel-*)`.
+- [ ] No uppercase outside `.gel-badge`.
+- [ ] No gradients, no box-shadow beyond what's already in the template.
+- [ ] No decorative left-border accent on a rounded box (reads as an alert,
+      not a stat/card).
+- [ ] Nav links resolve to real `#id` anchors that exist in `<main>`.
+- [ ] `lang="en-AU"` on `<html>`, viewport meta present.
+- [ ] Mobile nav toggle opens/closes; scroll-spy highlights the active link.
+- [ ] Footer copyright line present verbatim, correct year, disclaimer text
+      unedited (see `references/section-patterns.md` #11).
+- [ ] Footer policy link URLs replaced with real destinations before a
+      production/public launch (they ship as `href="#"` placeholders).
+- [ ] `prefers-reduced-motion` block preserved.
+- [ ] Every image has real `alt` text, or `alt=""` if decorative.
 
-- [ ] No external CDN links or `<script src=...>`.
-- [ ] Navigation links resolve to valid `id` anchors in the page.
-- [ ] CTA button has a meaningful `href` or `#cta` anchor.
-- [ ] All colors come from `var(--)` tokens — no raw hex in markup.
-- [ ] Mobile nav hamburger works (JavaScript toggle).
-- [ ] `lang="en-AU"` on `<html>`.
-- [ ] `<meta name="viewport" content="width=device-width, initial-scale=1.0">` present.
-- [ ] Footer has `© {{YEAR}} Deloitte Touche Tohmatsu` copyright line.
-- [ ] Green dot appears on brand mark in the nav.
-- [ ] `prefers-reduced-motion` media query preserved.
+Tell the user the file path and that they can open it by double-clicking or
+hosting it on any static server. Mention `#section-id` deep links work.
 
-Tell the user the file path and that they can open it by double-clicking or hosting on any static server. Mention that `#section-id` deep-links are supported.
+**Before a public or client-facing launch:** flag that `assets/deloitte-logo.svg`
+— the canonical file the inlined nav/footer logos are copied from — is
+sourced from a file the GEL repo itself marks as a placeholder
+(`gel-design-review/assets/DeloitteLogo.tsx`). Recommend swapping
+`deloitte-logo.svg` for the current production wordmark from Deloitte's
+official brand asset source, preserving the same `fill="currentColor"`
+treatment on the wordmark (needed so it stays legible on this template's
+dark nav/footer) and never altering the green dot's fixed `#86BC25` fill —
+then re-copying the updated markup into both inline spots in the template.
 
-## Editing existing microsites
+## Hard rules — quick reference
 
-When the user asks to modify a site this skill produced:
+Full detail lives in `references/design-tokens.md` and
+`references/banned-patterns.md`; this is the distilled version:
 
-- **Add a section** → insert the section HTML block from `references/section-patterns.md` in the right position; add its `<a>` link to `<nav>`.
-- **Change colors** → only edit the `:root` variables; never touch section markup.
-- **Add a pattern not in `section-patterns.md`** → build from existing primitives (`.card`, `.grid-2/3`, `.stat`, `.pill`, `.btn`) before inventing new classes. If you do invent, document the pattern in `references/section-patterns.md`.
+- **Font:** Open Sans only, loaded via the Google Fonts link already in the
+  template. h1/h2 are weight 300 (light) — that's correct GEL styling.
+- **Colour:** Only `--gel-*` tokens. Brand green (`--gel-primary`) is the
+  sole interaction colour, never decorative. Destructive red only for
+  irreversible actions (rare in a microsite).
+- **Radius:** `--gel-radius: 0.4rem` and its derived scale. Never mix radii
+  in one group, never a raw `border-radius: 0` or arbitrary value.
+- **Dark sections:** apply `class="dark"` to the wrapper (nav, hero, footer,
+  CTA) — never hand-author a separate dark palette.
+- **Logo:** the official SVG, unmodified except the documented
+  `currentColor` wordmark fix — never a text-plus-dot simulation.
+- **Buttons:** text-only by default, sentence case, one primary per section.
+- **Motion:** stillness by default; respect `prefers-reduced-motion`.
+
+## Editing an existing deloitte-microsite output
+
+- **Add a section** — insert the block from `section-patterns.md` in the
+  right position; add its `<li><a></a></li>` to both nav instances.
+- **Change content** — edit markup directly; never touch the `:root`/`.dark`
+  token block or introduce a hex value.
+- **Need a pattern not in `section-patterns.md`** — build from the existing
+  primitives (`.gel-card`, `.gel-btn`, `.gel-grid-*`, `.gel-stat-strip`)
+  before inventing a new class. If you do add one, name it `.gel-*` and
+  document it in `section-patterns.md`.
+
+## Related files
+
+- `references/design-tokens.md` — canonical colours, radius, type scale,
+  logo rule; refresh from the GEL repo's `packages/core/css/shadcn.css` /
+  `packages/specs/design/DESIGN.md` if those change.
+- `references/composition-principles.md` — how to choose structure, not just
+  fill in a template.
+- `references/banned-patterns.md` — the self-check reject list.
+- `references/section-patterns.md` — the section block library.
+- `assets/deloitte-logo.svg` — canonical logo file; the template's two
+  inline copies must match it exactly.
+- `assets/microsite-template.html` — the master skeleton.
