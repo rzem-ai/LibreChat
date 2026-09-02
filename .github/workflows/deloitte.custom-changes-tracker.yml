@@ -37,7 +37,7 @@ jobs:
           ref: develop
           fetch-depth: 0
           token: ${{ steps.auth.outputs.token }}
-          persist-credentials: true
+          persist-credentials: false
       - name: Gather PR metadata
         uses: actions/github-script@v7
         with:
