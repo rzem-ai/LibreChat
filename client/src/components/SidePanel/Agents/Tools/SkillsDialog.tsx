@@ -131,11 +131,10 @@ export default function SkillsDialog({ open, onOpenChange, agentId }: SkillsDial
         continue;
       }
       seen.add(value);
-      const translationKey = `com_ui_${value}` as TranslationKeys;
-      const label =
-        localize(translationKey) !== translationKey
-          ? localize(translationKey)
-          : value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+const translationKey = `com_ui_${value}` as TranslationKeys;
+const fallback = value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+const localized = localize(translationKey);
+const label = localized !== translationKey ? localized : fallback;
       options.push({
         value,
         label,
