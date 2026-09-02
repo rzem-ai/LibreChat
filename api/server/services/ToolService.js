@@ -68,7 +68,10 @@ const {
   getCachedTools,
 } = require('~/server/services/Config');
 const { processFileURL, uploadImageBuffer } = require('~/server/services/Files/process');
-const { primeFiles: primeSearchFiles } = require('~/app/clients/tools/util/fileSearch');
+const {
+  primeFiles: primeSearchFiles,
+  hasFileSearchAttachments,
+} = require('~/app/clients/tools/util/fileSearch');
 const { primeFiles: primeCodeFiles } = require('~/server/services/Files/Code/process');
 const { manifestToolMap, toolkits } = require('~/app/clients/tools/manifest');
 const { createOnSearchResults } = require('~/server/services/Tools/search');
@@ -628,7 +631,12 @@ async function loadToolDefinitionsWrapper({
 
   const filteredTools = agent.tools?.filter((tool) => {
     if (tool === Tools.file_search) {
-      return checkCapability(AgentCapabilities.file_search);
+      const included =
+        checkCapability(AgentCapabilities.file_search) && hasFileSearchAttachments(tool_resources);
+      // logger.info(
+      //   `[TEMP-DEBUG file_search] included=${included} tool_resources=${JSON.stringify(tool_resources?.[EToolResources.file_search])}`,
+      // );
+      return included;
     }
     if (tool === Tools.execute_code) {
       return checkCapability(AgentCapabilities.execute_code);
@@ -1330,7 +1338,9 @@ async function loadAgentTools({
   let includesWebSearch = false;
   const _agentTools = agent.tools?.filter((tool) => {
     if (tool === Tools.file_search) {
-      return checkCapability(AgentCapabilities.file_search);
+      return (
+        checkCapability(AgentCapabilities.file_search) && hasFileSearchAttachments(tool_resources)
+      );
     } else if (tool === Tools.execute_code) {
       return checkCapability(AgentCapabilities.execute_code);
     } else if (tool === Tools.web_search) {

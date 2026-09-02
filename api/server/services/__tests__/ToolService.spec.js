@@ -63,6 +63,7 @@ jest.mock('~/server/services/Files/process', () => ({
   uploadImageBuffer: jest.fn(),
 }));
 jest.mock('~/app/clients/tools/util/fileSearch', () => ({
+  ...jest.requireActual('~/app/clients/tools/util/fileSearch'),
   primeFiles: jest.fn().mockResolvedValue({}),
 }));
 jest.mock('~/server/services/Files/Code/process', () => ({
