@@ -44,6 +44,9 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
       ? `${configuredSizeLimitMb}`
       : formatMegabytes(skillImportSizeLimit);
 
+  // Deloitte Custom Change: Keep scanner failures visible inline while the upload dialog remains open.
+  const [scanError, setScanError] = useState<string | null>(null);
+
   const importMutation = useImportSkillMutation({
     onSuccess: (skill) => {
       const warnings: TSkillWarning[] | undefined = skill.warnings;
@@ -54,15 +57,15 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
             ? warnings.map((w) => w.message).join('\n')
             : localize('com_ui_skill_created'),
       });
+      // Deloitte Custom Change: Clear any previous inline scanner failure after a successful upload.
+      setScanError(null);
       setIsOpen(false);
       navigate(`/skills/${skill._id}`);
     },
     onError: (error: unknown) => {
-      // Show the scanner's validation error (if present), otherwise fall back to the generic skill creation error.
-      showToast({
-        status: 'error',
-        message: formatSkillScanError(error, localize('com_ui_create_skill_upload_error')),
-      });
+      // Deloitte Custom Change: Surface the scanner's validation error inline so it stays on screen
+      // until the user retries, instead of an auto-dismissing toast.
+      setScanError(formatSkillScanError(error, localize('com_ui_create_skill_upload_error')));
     },
   });
 
@@ -71,6 +74,8 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
       if (importMutation.isLoading) {
         return;
       }
+      // Deloitte Custom Change: Clear stale scanner output before retrying upload.
+      setScanError(null);
       if (file.size > skillImportSizeLimit) {
         showToast({
           status: 'error',
@@ -108,8 +113,23 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
     [handleFile],
   );
 
+  // Deloitte Custom Change: Reset inline scanner output when the upload dialog closes.
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setScanError(null);
+    }
+    setIsOpen(open);
+  };
+
+  // Deloitte Custom Change: Render scanner failures inline with preserved line breaks for readability.
+  const scanErrorMessage = scanError ? (
+    <p className="whitespace-pre-line text-xs text-red-500" role="alert">
+      {scanError}
+    </p>
+  ) : null;
+
   return (
-    <OGDialog open={isOpen} onOpenChange={setIsOpen}>
+    <OGDialog open={isOpen} onOpenChange={handleOpenChange}>
       <OGDialogContent className="w-11/12 max-w-lg overflow-hidden">
         <div className="flex flex-col gap-6 p-1 sm:p-2">
           <h2 className="text-lg font-bold text-text-primary">
@@ -153,6 +173,8 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
                 </ul>
               </div>
             </div>
+
+            {scanErrorMessage}
           </div>
 
           <input

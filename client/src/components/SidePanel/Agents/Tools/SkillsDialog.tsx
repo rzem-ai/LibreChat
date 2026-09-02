@@ -14,8 +14,8 @@ import {
 import type { TSkill, TSkillSummary } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks/useLocalize';
 import type { CategoryOption } from './CategoryFilter';
+import type { AgentForm, SkillGroup } from '~/common';
 import type { AgentItem } from './items/types';
-import type { AgentForm } from '~/common';
 import { useLocalize, useHasAccess, useAuthContext, useToolFavorites } from '~/hooks';
 import { CreateSkillDialog } from '~/components/Skills/dialogs';
 import { skillsEnabledTransition } from './items/mutations';
@@ -26,6 +26,7 @@ import { buildSkillItems } from './items/catalog';
 import ItemDialog from './ItemDialog/ItemDialog';
 import { applyFilter } from './items/filtering';
 import CategoryFilter from './CategoryFilter';
+import { resolveSkillGroup } from '~/common';
 import { itemKey } from './items/selectors';
 
 interface SkillsDialogProps {
@@ -34,13 +35,23 @@ interface SkillsDialogProps {
   agentId: string;
 }
 
-type SkillView = 'marketplace' | 'mine' | 'favorites';
+type SkillView = 'marketplace' | SkillGroup | 'favorites';
 
 const VIEWS: Array<{ value: SkillView; labelKey: TranslationKeys }> = [
   { value: 'marketplace', labelKey: 'com_ui_all_proper' },
-  { value: 'mine', labelKey: 'com_ui_tools_view_made_by_you' },
+  { value: 'public', labelKey: 'com_ui_skills_view_public' },
+  { value: 'shared', labelKey: 'com_ui_skills_view_shared' },
+  { value: 'mine', labelKey: 'com_ui_skills_view_mine' },
   { value: 'favorites', labelKey: 'com_ui_tools_view_favorites' },
 ];
+
+const EMPTY_KEY_BY_VIEW: Record<SkillView, TranslationKeys> = {
+  marketplace: 'com_ui_no_skills_found',
+  public: 'com_ui_skills_view_public_empty',
+  shared: 'com_ui_skills_view_shared_empty',
+  mine: 'com_ui_tools_view_mine_empty',
+  favorites: 'com_ui_tools_view_favorites_empty',
+};
 
 export default function SkillsDialog({ open, onOpenChange, agentId }: SkillsDialogProps) {
   const localize = useLocalize();
@@ -129,15 +140,18 @@ export default function SkillsDialog({ open, onOpenChange, agentId }: SkillsDial
     return options;
   }, [catalog]);
 
-  const filtered = useMemo(
-    () =>
-      applyFilter(
-        catalog,
-        { search, kind: 'skill', category, view },
-        { favoritedIds: favoriteKeys },
-      ),
-    [catalog, search, category, view, favoriteKeys],
-  );
+  const filtered = useMemo(() => {
+    const base = applyFilter(catalog, { search, kind: 'skill', category, view: 'marketplace' });
+    if (view === 'marketplace') {
+      return base;
+    }
+    if (view === 'favorites') {
+      return base.filter((item) => favoriteKeys?.has(itemKey(item)) === true);
+    }
+    return base.filter(
+      (item) => item.kind === 'skill' && resolveSkillGroup(item.skill, user?.id) === view,
+    );
+  }, [catalog, search, category, view, user?.id, favoriteKeys]);
 
   const applySkillsSelection = useCallback(
     (next: string[]) => {
@@ -176,10 +190,9 @@ export default function SkillsDialog({ open, onOpenChange, agentId }: SkillsDial
     [localize],
   );
 
-  const emptyKey: TranslationKeys | undefined =
-    !search.trim() && category === 'all' && view === 'marketplace'
-      ? 'com_ui_no_skills_found'
-      : undefined;
+  const emptyKey: TranslationKeys = search.trim()
+    ? 'com_ui_tools_search_no_results'
+    : EMPTY_KEY_BY_VIEW[view];
 
   return (
     <OGDialog open={open} onOpenChange={onOpenChange}>
@@ -191,7 +204,7 @@ export default function SkillsDialog({ open, onOpenChange, agentId }: SkillsDial
           <div className="flex flex-col gap-3 border-b border-border-light px-6 pb-4 pt-5">
             <div className="flex items-center gap-2 pr-10">
               <OGDialogTitle className="text-base font-semibold text-text-primary">
-                {localize('com_ui_skills')}
+                {localize('com_ui_skills_dialog_title')}
               </OGDialogTitle>
             </div>
 
@@ -256,9 +269,8 @@ export default function SkillsDialog({ open, onOpenChange, agentId }: SkillsDial
               selectedIds={selectedIds}
               onToggle={handleToggle}
               onConfigure={setDetailItem}
-              view={view}
               isLoadingSkills={isLoadingSkills || isFetchingNextPage}
-              skillsInView={view !== 'mine'}
+              skillsInView={true}
               favoriteKeys={favoriteKeys}
               onToggleFavorite={toggleFavorite}
               emptyKey={emptyKey}

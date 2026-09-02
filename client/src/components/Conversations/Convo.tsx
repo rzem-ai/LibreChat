@@ -1,19 +1,18 @@
-import React, { memo, useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { memo, useState, useRef, useMemo, useCallback } from 'react';
 import { Pin } from 'lucide-react';
 import { useRecoilValue } from 'recoil';
 import { useParams } from 'react-router-dom';
+import { useMediaQuery } from '@librechat/client';
 import { Constants } from 'librechat-data-provider';
-import { useToastContext, useMediaQuery } from '@librechat/client';
 import type { TConversation } from 'librechat-data-provider';
-import { useGetStartupConfig, useUpdateConversationMutation } from '~/data-provider';
-import { useNavigateToConvo, useLocalize, useShiftKey } from '~/hooks';
+import { useNavigateToConvo, useConversationRename, useLocalize, useShiftKey } from '~/hooks';
 import ConversationEndpointIcon from './ConversationEndpointIcon';
 import { areConversationRenderPropsEqual } from './utils';
-import { NotificationSeverity } from '~/common';
+import { useGetStartupConfig } from '~/data-provider';
 import { ConvoOptions } from './ConvoOptions';
 import RenameForm from './RenameForm';
-import { cn, logger } from '~/utils';
 import ConvoLink from './ConvoLink';
+import { cn } from '~/utils';
 import store from '~/store';
 
 interface ConversationProps {
@@ -31,31 +30,27 @@ function Conversation({
 }: ConversationProps) {
   const params = useParams();
   const localize = useLocalize();
-  const { showToast } = useToastContext();
   const { data: startupConfig } = useGetStartupConfig();
   const { navigateToConvo } = useNavigateToConvo();
   const currentConvoId = useMemo(() => params.conversationId, [params.conversationId]);
-  const updateConvoMutation = useUpdateConversationMutation(currentConvoId ?? '');
   const activeConvos = useRecoilValue(store.allConversationsSelector);
   const isSmallScreen = useMediaQuery('(max-width: 768px)');
   const isShiftHeld = useShiftKey();
   const { conversationId, title = '' } = conversation;
 
-  const [titleInput, setTitleInput] = useState(title || '');
-  const [renaming, setRenaming] = useState(false);
+  const {
+    titleInput,
+    setTitleInput,
+    renaming,
+    handleRename: startRenaming,
+    handleRenameSubmit,
+    handleCancelRename,
+  } = useConversationRename(conversationId, title);
   const [isPopoverActive, setIsPopoverActive] = useState(false);
   // Lazy-load ConvoOptions to avoid running heavy hooks for all conversations
   const [hasInteracted, setHasInteracted] = useState(false);
 
-  const previousTitle = useRef(title);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (title !== previousTitle.current) {
-      setTitleInput(title as string);
-      previousTitle.current = title;
-    }
-  }, [title]);
 
   const isActiveConvo = useMemo(() => {
     if (conversationId === Constants.NEW_CONVO) {
@@ -72,37 +67,7 @@ function Conversation({
 
   const handleRename = () => {
     setIsPopoverActive(false);
-    setTitleInput(title as string);
-    setRenaming(true);
-  };
-
-  const handleRenameSubmit = async (newTitle: string) => {
-    if (!conversationId || newTitle === title) {
-      setRenaming(false);
-      return;
-    }
-
-    try {
-      await updateConvoMutation.mutateAsync({
-        conversationId,
-        title: newTitle.trim() || localize('com_ui_untitled'),
-      });
-      setRenaming(false);
-    } catch (error) {
-      logger.error('Error renaming conversation', error);
-      setTitleInput(title as string);
-      showToast({
-        message: localize('com_ui_rename_failed'),
-        severity: NotificationSeverity.ERROR,
-        showIcon: true,
-      });
-      setRenaming(false);
-    }
-  };
-
-  const handleCancelRename = () => {
-    setTitleInput(title as string);
-    setRenaming(false);
+    startRenaming();
   };
 
   const handleMouseEnter = useCallback(() => {

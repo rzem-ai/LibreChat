@@ -53,12 +53,20 @@ jest.mock('@librechat/data-schemas', () => {
       debug: jest.fn(),
       error: jest.fn(),
     },
+    // Deloitte Custom Change: mock `runAsSystem` so marketplace category sync can run in tests.
+    runAsSystem: jest.fn((fn) => fn()),
   };
 });
 
+// Deloitte Custom Change: mock the marketplace category sync module invoked by `loadCustomConfig`.
+jest.mock('~/server/utils/agentCategory', () => ({
+  syncCategories: jest.fn(),
+}));
+
 const axios = require('axios');
 const { loadYaml } = require('@librechat/api');
-const { logger } = require('@librechat/data-schemas');
+const { logger, runAsSystem } = require('@librechat/data-schemas');
+const { syncCategories } = require('~/server/utils/agentCategory');
 const { ReasoningParameterFormat, ReasoningResponseKey } = require('librechat-data-provider');
 const loadCustomConfig = require('./loadCustomConfig');
 
@@ -119,6 +127,35 @@ describe('loadCustomConfig', () => {
     const result = await loadCustomConfig();
 
     expect(result).toEqual(mockConfig);
+  });
+
+  // Deloitte Custom Change: verifies marketplace category sync runs under `runAsSystem` when
+  // `interface.marketplace.categories` is configured.
+  it('runs marketplace category sync within a system tenant context', async () => {
+    runAsSystem.mockImplementation((fn) => fn());
+    const config = {
+      version: '1.0',
+      cache: true,
+      interface: {
+        marketplace: {
+          use: true,
+          categories: {
+            enableDefaultCategories: false,
+            list: [{ value: 'pursue-shape', label: 'Pursue & Shape' }],
+          },
+        },
+      },
+    };
+    process.env.CONFIG_PATH = 'marketplaceConfig.yaml';
+    loadYaml.mockReturnValueOnce(config);
+
+    await loadCustomConfig();
+
+    expect(runAsSystem).toHaveBeenCalledTimes(1);
+    expect(syncCategories).toHaveBeenCalledWith(
+      [{ value: 'pursue-shape', label: 'Pursue & Shape' }],
+      false,
+    );
   });
 
   it('should return null and log if config schema validation fails', async () => {

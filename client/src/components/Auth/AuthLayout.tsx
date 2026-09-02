@@ -1,9 +1,9 @@
-import { ThemeSelector } from '@librechat/client';
 import { TStartupConfig } from 'librechat-data-provider';
+import { ThemeSelector } from '@librechat/client';
+import { DeloitteLogo } from '~/components/DeloitteComponents/DeloitteLogo';
 import { ErrorMessage } from '~/components/Auth/ErrorMessage';
 import { TranslationKeys, useLocalize } from '~/hooks';
 import SocialLoginRender from './SocialLoginRender';
-import { BlinkAnimation } from './BlinkAnimation';
 import { Banner } from '../Banners';
 import Footer from './Footer';
 
@@ -57,28 +57,28 @@ function AuthLayout({
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-surface-primary">
+    <div className="relative flex min-h-screen flex-col bg-[url('/assets/AI-Secondary-light.jpg')] bg-[length:auto_180vh] bg-[position:left_-37.5vh_top_-47.7vh] bg-no-repeat dark:bg-[url('/assets/AI-Secondary-dark.jpg')] dark:bg-black">
       <Banner />
-      <BlinkAnimation active={isFetching}>
-        <div className="mt-6 h-10 w-full bg-cover">
-          <img
-            src="assets/logo.svg"
-            className="h-full w-full object-contain"
-            alt={localize('com_ui_logo', { 0: startupConfig?.appTitle ?? 'LibreChat' })}
-          />
-        </div>
-      </BlinkAnimation>
+
       <DisplayError />
       <div className="absolute bottom-0 left-0 md:m-4">
         <ThemeSelector />
       </div>
 
       <main className="flex flex-grow items-center justify-center">
-        <div className="w-authPageWidth overflow-hidden bg-surface-primary px-6 py-4 sm:max-w-md sm:rounded-lg">
+        <div
+          className="w-authPageWidth rounded-xl overflow-hidden border border-border-light bg-card p-6 sm:max-w-md"
+        >
+          {!hasStartupConfigError && !isFetching && (
+            <div className="mb-3 flex justify-center">
+              <div className="h-6 w-24 bg-cover">
+                <DeloitteLogo className="h-full w-full text-foreground" />
+              </div>
+            </div>
+          )}
           {!hasStartupConfigError && !isFetching && header && (
             <h1
-              className="mb-4 text-center text-3xl font-medium text-text-primary"
-              style={{ userSelect: 'none' }}
+              className="mb-4 select-none text-center text-xl font-medium leading-none tracking-tight text-text-primary"
             >
               {header}
             </h1>

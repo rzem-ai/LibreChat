@@ -7,6 +7,7 @@ import {
   cn,
   getMessageAriaLabel,
   areMessageRowPropsEqual,
+  getMessageAlignmentClasses,
   getHeaderPrefixForScreenReader,
 } from '~/utils';
 import { useMessageHelpers, useLocalize, useAttachments, useContentMetadata } from '~/hooks';
@@ -14,6 +15,7 @@ import AuthorHeader from '~/components/Chat/Messages/Content/Parts/AuthorHeader'
 import MessageTimestamp from '~/components/Chat/Messages/ui/MessageTimestamp';
 import MessageIcon from '~/components/Chat/Messages/MessageIcon';
 import ContentParts from './Content/ContentParts';
+import { useIsRightAligned } from '~/Providers';
 import { fontSizeAtom } from '~/store/fontSize';
 import SiblingSwitch from './SiblingSwitch';
 import HoverButtons from './HoverButtons';
@@ -46,6 +48,8 @@ function MessageParts(props: TMessageProps) {
   const fontSize = useAtomValue(fontSizeAtom);
   const maximizeChatSpace = useRecoilValue(store.maximizeChatSpace);
   const { messageId = null, isCreatedByUser } = message ?? {};
+  const rightAligned = useIsRightAligned(isCreatedByUser);
+  const align = getMessageAlignmentClasses(rightAligned);
 
   const name = useMemo(() => {
     let result = '';
@@ -108,7 +112,10 @@ function MessageParts(props: TMessageProps) {
   };
 
   const baseClasses = {
-    common: 'group mx-auto flex flex-1 gap-3 transition-all duration-300 transform-gpu',
+    common: cn(
+      'group mx-auto flex flex-1 gap-3 transition-all duration-300 transform-gpu',
+      align.row,
+    ),
     chat: getChatWidthClass(),
   };
 
@@ -130,7 +137,7 @@ function MessageParts(props: TMessageProps) {
               'message-render',
             )}
           >
-            {!hasParallelContent && (
+            {!hasParallelContent && !align.hideAvatar && (
               <div className="relative flex flex-shrink-0 flex-col items-center">
                 <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full pt-0.5">
                   <MessageIcon iconData={iconData} assistant={assistant} agent={agent} />
@@ -145,7 +152,13 @@ function MessageParts(props: TMessageProps) {
               )}
             >
               {!hasParallelContent && (
-                <h2 className={cn('select-none font-semibold text-text-primary', fontSize)}>
+                <h2
+                  className={cn(
+                    'select-none font-semibold text-text-primary',
+                    align.header,
+                    fontSize,
+                  )}
+                >
                   <span className="sr-only">
                     {getHeaderPrefixForScreenReader(message, localize)}
                   </span>
@@ -154,7 +167,12 @@ function MessageParts(props: TMessageProps) {
                 </h2>
               )}
               <div className="flex flex-col gap-1">
-                <div className="flex min-h-[20px] max-w-full flex-grow flex-col gap-0">
+                <div
+                  className={cn(
+                    'flex min-h-[20px] max-w-full flex-grow flex-col gap-0',
+                    align.content,
+                  )}
+                >
                   <ContentParts
                     edit={edit}
                     isLast={isLast}
@@ -176,7 +194,7 @@ function MessageParts(props: TMessageProps) {
                 {isLast && isSubmitting ? (
                   <div className="mt-1 h-[31px] bg-transparent" />
                 ) : (
-                  <SubRow classes="text-xs">
+                  <SubRow classes={cn('text-xs', align.subRow)}>
                     <SiblingSwitch
                       siblingIdx={siblingIdx}
                       siblingCount={siblingCount}

@@ -47,6 +47,26 @@ export interface MCPServerDefinition {
   consumeOnly?: boolean;
 }
 
+/**
+ * Deloitte Custom Change: Backs the tri-state "Connect All / Disconnect All" toggle.
+ * Checks selection by connector name membership rather than comparing array lengths, so
+ * a stale or duplicate entry in `selectedConnectorNames` can't be mistaken for full
+ * selection.
+ */
+export function getSelectAllState(
+  selectableConnectors: MCPServerDefinition[],
+  selectedConnectorNames: string[] | undefined,
+): { allSelected: boolean; someSelected: boolean } {
+  const selectedConnectorNameSet = new Set(selectedConnectorNames ?? []);
+  const allSelected =
+    selectableConnectors.length > 0 &&
+    selectableConnectors.every((connector) => selectedConnectorNameSet.has(connector.serverName));
+  const someSelected =
+    !allSelected &&
+    selectableConnectors.some((connector) => selectedConnectorNameSet.has(connector.serverName));
+  return { allSelected, someSelected };
+}
+
 // Poll intervals are kept local since they're timer references that can't be serialized
 // The init states (isInitializing, isCancellable, etc.) are stored in the global Jotai atom
 type PollIntervals = Record<string, NodeJS.Timeout | null>;
@@ -116,6 +136,41 @@ export function useMCPServerManager({
     mcpValuesRef.current = mcpValues;
   }, [mcpValues]);
 
+  /**
+   * Deloitte Custom Change: Every write to the connector selection must go through this
+   * (not `setMCPValues` directly) — it keeps `mcpValuesRef` synchronously current instead
+   * of waiting for the effect above, so concurrent completions (e.g. "Connect All"
+   * triggering several OAuth flows) read the truly-latest value instead of a stale
+   * snapshot and clobbering each other.
+   */
+  const setSelection = useCallback(
+    (nextValues: string[]) => {
+      mcpValuesRef.current = nextValues;
+      setMCPValues(nextValues);
+    },
+    [setMCPValues],
+  );
+
+  /** Deloitte Custom Change: Adds a connector to the current selection, if not already in it. */
+  const addConnectorToSelection = useCallback(
+    (connectorName: string) => {
+      const currentValues = mcpValuesRef.current ?? [];
+      if (currentValues.includes(connectorName)) {
+        return;
+      }
+      setSelection([...currentValues, connectorName]);
+    },
+    [setSelection],
+  );
+
+  // Deloitte Custom Change: Single source of truth for "Connect All" tri-state, shared by
+  // toggleSelectAll below and exposed to consumers (e.g. the chat dropdown) so both agree
+  // on whether every/some selectable connectors are currently selected.
+  const { allSelected: allConnectorsSelected, someSelected: someConnectorsSelected } = useMemo(
+    () => getSelectAllState(selectableServers, mcpValues),
+    [selectableServers, mcpValues],
+  );
+
   // Check if specific permission bit is set
   const checkEffectivePermission = useCallback(
     (effectivePermissions: number, permissionBit: number): boolean => {
@@ -140,7 +195,7 @@ export function useMCPServerManager({
         const serverName = variables.pluginKey.replace(Constants.mcp_prefix, '');
         const currentValues = mcpValuesRef.current ?? [];
         const filteredValues = currentValues.filter((name) => name !== serverName);
-        setMCPValues(filteredValues);
+        setSelection(filteredValues);
       }
 
       await Promise.all([
@@ -324,10 +379,7 @@ export function useMCPServerManager({
               status: 'success',
             });
 
-            const currentValues = mcpValuesRef.current ?? [];
-            if (!currentValues.includes(serverName)) {
-              setMCPValues([...currentValues, serverName]);
-            }
+            addConnectorToSelection(serverName);
 
             await Promise.all([
               queryClient.invalidateQueries([QueryKeys.mcpServers]),
@@ -420,7 +472,14 @@ export function useMCPServerManager({
       timeoutId = setTimeout(pollOnce, getPollInterval(0));
       pollIntervalsRef.current[serverName] = timeoutId;
     },
-    [queryClient, showToast, localize, setMCPValues, cleanupServerState, reinitializeMutation],
+    [
+      queryClient,
+      showToast,
+      localize,
+      addConnectorToSelection,
+      cleanupServerState,
+      reinitializeMutation,
+    ],
   );
 
   const initializeServer = useCallback(
@@ -471,10 +530,7 @@ export function useMCPServerManager({
             status: 'success',
           });
 
-          const currentValues = mcpValues ?? [];
-          if (!currentValues.includes(serverName)) {
-            setMCPValues([...currentValues, serverName]);
-          }
+          addConnectorToSelection(serverName);
 
           cleanupServerState(serverName);
         }
@@ -495,10 +551,79 @@ export function useMCPServerManager({
       queryClient,
       showToast,
       localize,
-      mcpValues,
       cleanupServerState,
-      setMCPValues,
+      addConnectorToSelection,
     ],
+  );
+
+  /** Deloitte Custom Change: Opens the config dialog for `serverName`, prefilling auth
+   * fields from its existing server data / customUserVars. Shared by handleConfigClick
+   * (per-server icon click) and connectOrConfigureServer below. */
+  const openConfigDialogForServer = useCallback(
+    (serverName: string) => {
+      const mcpData = queryClient.getQueryData<MCPServersResponse | undefined>([
+        QueryKeys.mcpTools,
+      ]);
+      const serverData = mcpData?.servers?.[serverName];
+      const serverConfig = loadedServers?.[serverName];
+
+      /** Minimal TPlugin object for the config dialog */
+      const configTool: TPlugin = {
+        name: serverName,
+        pluginKey: `${Constants.mcp_prefix}${serverName}`,
+        authConfig:
+          serverData?.authConfig ||
+          (serverConfig?.customUserVars
+            ? Object.entries(serverConfig.customUserVars).map(([key, config]) => ({
+                authField: key,
+                label: config.title,
+                description: config.description,
+                sensitive: config.sensitive,
+              }))
+            : []),
+        authenticated: serverData?.authenticated ?? false,
+      };
+      setSelectedToolForConfig(configTool);
+      setIsConfigModalOpen(true);
+    },
+    [queryClient, loadedServers],
+  );
+
+  /** Deloitte Custom Change: True when `serverName` has required custom user vars and
+   * isn't already connected — i.e. needs the config dialog rather than a direct
+   * initialize. Shared by connectOrConfigureServer and toggleSelectAll (which must know
+   * this per-connector before calling, to avoid opening the single-server config dialog
+   * for more than one connector in the same bulk pass). */
+  const needsCustomVarsConfig = useCallback(
+    (serverName: string) => {
+      const serverConfig = loadedServers?.[serverName];
+      const hasCustomUserVars =
+        serverConfig?.customUserVars && Object.keys(serverConfig.customUserVars).length > 0;
+      const connectionState = connectionStatus?.[serverName]?.connectionState;
+      return Boolean(hasCustomUserVars) && connectionState !== 'connected';
+    },
+    [loadedServers, connectionStatus],
+  );
+
+  /**
+   * Deloitte Custom Change: Canonical "connect this connector" action, mirroring
+   * MCPServerCard's per-connector Connect button. If it has custom user vars and isn't
+   * already connected, opens the config dialog first — the only route to enter required
+   * vars before initializing; otherwise initializes directly. Shared by MCPServerCard and
+   * toggleSelectAll so bulk connect behaves identically to connecting one at a time
+   * (instead of bulk connect calling initializeServer directly and skipping the
+   * custom-vars dialog).
+   */
+  const connectOrConfigureServer = useCallback(
+    (serverName: string, autoOpenOAuth: boolean = true) => {
+      if (needsCustomVarsConfig(serverName)) {
+        previousFocusRef.current = document.activeElement as HTMLElement;
+        openConfigDialogForServer(serverName);
+        return;
+      }
+      initializeServer(serverName, autoOpenOAuth);
+    },
+    [needsCustomVarsConfig, openConfigDialogForServer, initializeServer],
   );
 
   const cancelOAuthFlow = useCallback(
@@ -573,24 +698,94 @@ export function useMCPServerManager({
     [startupConfig?.interface?.mcpServers?.placeholder, localize],
   );
 
+  /**
+   * Deloitte Custom Change: A connector is "busy" when it's already initializing locally
+   * or the backend reports it mid-OAuth (connectionState === 'connecting') — regardless
+   * of whether that connection was started here or elsewhere (e.g. another tab). Shared
+   * by toggleServerSelection (so selection can't thrash) and toggleSelectAll (so it
+   * doesn't restart an in-flight connect).
+   */
+  const isConnectorBusy = useCallback(
+    (connectorName: string) =>
+      isInitializing(connectorName) ||
+      connectionStatus?.[connectorName]?.connectionState === 'connecting',
+    [isInitializing, connectionStatus],
+  );
+
   const toggleServerSelection = useCallback(
     (serverName: string) => {
-      if (isInitializing(serverName)) {
+      if (isConnectorBusy(serverName)) {
         return;
       }
 
-      const currentValues = mcpValues ?? [];
+      // Deloitte Custom Change: Read via mcpValuesRef, not mcpValues (see setSelection above).
+      const currentValues = mcpValuesRef.current ?? [];
       const isCurrentlySelected = currentValues.includes(serverName);
 
       if (isCurrentlySelected) {
-        const filteredValues = currentValues.filter((name) => name !== serverName);
-        setMCPValues(filteredValues);
+        setSelection(currentValues.filter((name) => name !== serverName));
       } else {
-        setMCPValues([...currentValues, serverName]);
+        setSelection([...currentValues, serverName]);
       }
     },
-    [mcpValues, setMCPValues, isInitializing],
+    [setSelection, isConnectorBusy],
   );
+
+  /** Deloitte Custom Change: Selects every selectable connector, or clears the selection if
+   * all are already selected. */
+  const toggleSelectAll = useCallback(() => {
+    const selectableConnectorNames = selectableServers.map((server) => server.serverName);
+
+    // Deloitte Custom Change: Compute fresh from mcpValuesRef.current (not the closed-over
+    // allConnectorsSelected state) — a second click before a re-render would otherwise see
+    // the same stale "all selected" verdict and re-run the select-all-and-initialize path.
+    const { allSelected } = getSelectAllState(selectableServers, mcpValuesRef.current);
+
+    // setSelection (not setMCPValues) so mcpValuesRef already reflects this bulk selection
+    // before any initializeServer call below can complete.
+    setSelection(allSelected ? [] : selectableConnectorNames);
+
+    if (!allSelected) {
+      let hasOpenedConfigDialog = false;
+      let skippedConfigCount = 0;
+      selectableConnectorNames.forEach((connectorName) => {
+        const isConnected = connectionStatus?.[connectorName]?.connectionState === 'connected';
+        if (isConnected || isConnectorBusy(connectorName)) {
+          return;
+        }
+        // Deloitte Custom Change: The config dialog holds a single selectedToolForConfig,
+        // so only the first connector needing it per Connect All click is allowed to open
+        // it — opening it for more than one in the same pass would silently overwrite
+        // each other, leaving only the last one visible. The rest are counted below so
+        // the user isn't left wondering why they're still disconnected.
+        if (needsCustomVarsConfig(connectorName)) {
+          if (hasOpenedConfigDialog) {
+            skippedConfigCount += 1;
+            return;
+          }
+          hasOpenedConfigDialog = true;
+        }
+        // Deloitte Custom Change: Auto-open OAuth tabs — the chat dropdown has no UI to
+        // surface a pending oauthUrl the way the config dialog's "Continue OAuth" does.
+        connectOrConfigureServer(connectorName, true);
+      });
+      if (skippedConfigCount > 0) {
+        showToast({
+          message: localize('com_ui_mcp_additional_config_required', { 0: skippedConfigCount }),
+          status: 'info',
+        });
+      }
+    }
+  }, [
+    selectableServers,
+    setSelection,
+    connectionStatus,
+    isConnectorBusy,
+    needsCustomVarsConfig,
+    showToast,
+    localize,
+    connectOrConfigureServer,
+  ]);
 
   const handleConfigSave = useCallback(
     (targetName: string, authData: Record<string, string>) => {
@@ -674,27 +869,8 @@ export function useMCPServerManager({
       const handleConfigClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         e.preventDefault();
-
         previousFocusRef.current = document.activeElement as HTMLElement;
-
-        /** Minimal TPlugin object for the config dialog */
-        const configTool: TPlugin = {
-          name: serverName,
-          pluginKey: `${Constants.mcp_prefix}${serverName}`,
-          authConfig:
-            serverData?.authConfig ||
-            (serverConfig?.customUserVars
-              ? Object.entries(serverConfig.customUserVars).map(([key, config]) => ({
-                  authField: key,
-                  label: config.title,
-                  description: config.description,
-                  sensitive: config.sensitive,
-                }))
-              : []),
-          authenticated: serverData?.authenticated ?? false,
-        };
-        setSelectedToolForConfig(configTool);
-        setIsConfigModalOpen(true);
+        openConfigDialogForServer(serverName);
       };
 
       const handleCancelClick = (e: React.MouseEvent) => {
@@ -727,7 +903,15 @@ export function useMCPServerManager({
         hasCustomUserVars,
       };
     },
-    [queryClient, isCancellable, isInitializing, cancelOAuthFlow, connectionStatus, loadedServers],
+    [
+      queryClient,
+      isCancellable,
+      isInitializing,
+      cancelOAuthFlow,
+      connectionStatus,
+      loadedServers,
+      openConfigDialogForServer,
+    ],
   );
 
   const getConfigDialogProps = useCallback(() => {
@@ -780,6 +964,7 @@ export function useMCPServerManager({
     isLoading,
     connectionStatus,
     initializeServer,
+    connectOrConfigureServer,
     cancelOAuthFlow,
     isInitializing,
     isCancellable,
@@ -793,6 +978,9 @@ export function useMCPServerManager({
     setIsPinned,
     placeholderText,
     toggleServerSelection,
+    toggleSelectAll,
+    allConnectorsSelected,
+    someConnectorsSelected,
     localize,
 
     isConfigModalOpen,

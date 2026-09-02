@@ -109,12 +109,15 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
       ? localize('com_ui_new_chat_in_project', { name: project.name })
       : undefined;
 
-  // Recoil conversation can lag the route during navigation; only announce a
-  // title that belongs to the conversation currently in the URL.
-  const conversationTitle =
-    chatHelpers.conversation?.conversationId === conversationId
-      ? chatHelpers.conversation?.title?.trim()
-      : undefined;
+  // Recoil conversation can lag the route during navigation; only treat it as
+  // the current conversation (for the sr-only heading and the header title)
+  // when it belongs to the conversation currently in the URL and isn't just a
+  // stale landing-page placeholder.
+  const resolvedConversation =
+    !isLandingPage && chatHelpers.conversation?.conversationId === conversationId
+      ? chatHelpers.conversation
+      : null;
+  const conversationTitle = resolvedConversation?.title?.trim();
   const pageHeading =
     isLandingPage || !conversationTitle ? localize('com_ui_new_chat') : conversationTitle;
 
@@ -125,7 +128,7 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
           <Presentation>
             <div className="relative flex h-full w-full flex-col">
               <h1 className="sr-only">{pageHeading}</h1>
-              <Header />
+              <Header conversation={resolvedConversation} />
               <>
                 <div
                   className={cn(
