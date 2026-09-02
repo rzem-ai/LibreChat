@@ -3,6 +3,7 @@ import type { TMessageContentParts, TAttachment, MCPResultSource } from 'librech
 import {
   insertFileCitations,
   insertMCPCitations,
+  insertSharePointCitations,
   appendGuaranteedMCPCitations,
   appendMCPDisclaimers,
   applyEndOfTraceCitations,
@@ -289,6 +290,230 @@ describe('insertMCPCitations', () => {
   });
 });
 
+describe('insertSharePointCitations', () => {
+  it('anchors a bulleted filename without splitting at the extension period', () => {
+    const parts = [textPart('- Consulting Graduate Induction Workbook.pptx')];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_list_recent',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    const text = readText(parts[0]);
+    expect(text).toContain(`${MARKER}turn0mcp0`);
+    expect(text.startsWith('- Consulting Graduate Induction Workbook.pptx')).toBe(true);
+  });
+
+  it('anchors a title whose own name ends in a real parenthetical', () => {
+    const parts = [textPart('- Major Release 7.0.0 (MyAssist V2)')];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Major Release 7.0.0 (MyAssist V2)',
+            content: 'Major Release 7.0.0 (MyAssist V2)',
+          },
+        ]),
+      ],
+      0,
+    );
+    const text = readText(parts[0]);
+    expect(text).toContain(`${MARKER}turn0mcp0`);
+    expect(text.startsWith('- Major Release 7.0.0 (MyAssist V2)')).toBe(true);
+  });
+
+  it('anchors a short folder name that would fail MIN_SENTENCE_CONTENT_WORDS', () => {
+    const parts = [textPart('* Microsoft Teams Chat Files (1,436 items)')];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_list_items',
+            serverName: 'sharepoint',
+            title: 'Microsoft Teams Chat Files',
+            content: 'Microsoft Teams Chat Files',
+          },
+        ]),
+      ],
+      0,
+    );
+    expect(readText(parts[0])).toContain(`${MARKER}turn0mcp0`);
+  });
+
+  it('matches by exact fileIndex across multiple sources in one attachment', () => {
+    const parts = [textPart('- Report A.docx\n- Report B.docx')];
+    const usedCoords = insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'sp_search', serverName: 'sharepoint', title: 'Report A.docx', content: 'a' },
+          { toolName: 'sp_search', serverName: 'sharepoint', title: 'Report B.docx', content: 'b' },
+        ]),
+      ],
+      0,
+    );
+    const text = readText(parts[0]);
+    expect(text).toContain(`${MARKER}turn0mcp0`);
+    expect(text).toContain(`${MARKER}turn0mcp1`);
+    expect(usedCoords).toEqual(new Set(['0:0', '0:1']));
+  });
+
+  it('advances the turn counter for a non-SharePoint attachment ahead of it', () => {
+    const parts = [textPart('- Report A.docx')];
+    const usedCoords = insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([{ toolName: 'afr_search_news', serverName: 'afr', content: OTHER_ARTICLE }]),
+        mcpAttachment([
+          { toolName: 'sp_search', serverName: 'sharepoint', title: 'Report A.docx', content: 'a' },
+        ]),
+      ],
+      0,
+    );
+    expect(readText(parts[0])).toContain(`${MARKER}turn1mcp0`);
+    expect(usedCoords).toEqual(new Set(['1:0']));
+  });
+
+  it('is a no-op when no attachment carries a SharePoint source', () => {
+    const original = '- Report A.docx';
+    const parts = [textPart(original)];
+    const usedCoords = insertSharePointCitations(
+      parts,
+      [mcpAttachment([{ toolName: 'afr_search_news', serverName: 'afr', content: OTHER_ARTICLE }])],
+      0,
+    );
+    expect(readText(parts[0])).toBe(original);
+    expect(usedCoords.size).toBe(0);
+  });
+
+  it('anchors a line where the model appends commentary after the exact title', () => {
+    const parts = [textPart('- Major Release 7.0.0 (MyAssist V2) – last modified 26 August 2026')];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Major Release 7.0.0 (MyAssist V2)',
+            content: 'Major Release 7.0.0 (MyAssist V2)',
+          },
+        ]),
+      ],
+      0,
+    );
+    expect(readText(parts[0])).toContain(`${MARKER}turn0mcp0`);
+  });
+
+  it('anchors a line where the model swaps the extension for a trailing parenthetical', () => {
+    const parts = [textPart('- UAT Release 6.2.0 Test Checklist (xlsx)')];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'UAT Release 6.2.0 Test Checklist.xlsx',
+            content: 'UAT Release 6.2.0 Test Checklist.xlsx',
+          },
+        ]),
+      ],
+      0,
+    );
+    expect(readText(parts[0])).toContain(`${MARKER}turn0mcp0`);
+  });
+
+  it('anchors a line where the model appends a trailing descriptor word with no punctuation', () => {
+    const parts = [textPart('- Minor Release 6.2.0 documentation')];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Minor Release 6.2.0',
+            content: 'x',
+          },
+        ]),
+      ],
+      0,
+    );
+    expect(readText(parts[0])).toContain(`${MARKER}turn0mcp0`);
+  });
+
+  it('anchors despite an underscore-vs-space difference between the title and the rendered line', () => {
+    const parts = [
+      textPart('- 6.2.0 Release Readiness Checklist and Runsheets (73MB spreadsheet)'),
+    ];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: '6.2.0_Release Readiness Checklist and Runsheets.xlsx',
+            content: 'x',
+          },
+        ]),
+      ],
+      0,
+    );
+    expect(readText(parts[0])).toContain(`${MARKER}turn0mcp0`);
+  });
+
+  it('prefers the longer, more specific title when a short generic title also prefixes the line', () => {
+    const parts = [textPart('- Release Announcements folder')];
+    const usedCoords = insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'sp_search', serverName: 'sharepoint', title: 'Release', content: 'x' },
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Release Announcements',
+            content: 'y',
+          },
+        ]),
+      ],
+      0,
+    );
+    expect(readText(parts[0])).toContain(`${MARKER}turn0mcp1`);
+    expect(readText(parts[0])).not.toContain(`${MARKER}turn0mcp0`);
+    expect(usedCoords).toEqual(new Set(['0:1']));
+  });
+
+  it('does not anchor prose that merely mentions a filename mid-sentence', () => {
+    const original = 'The document Report A.docx was updated last week.';
+    const parts = [textPart(original)];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'sp_search', serverName: 'sharepoint', title: 'Report A.docx', content: 'a' },
+        ]),
+      ],
+      0,
+    );
+    expect(readText(parts[0])).toBe(original);
+  });
+});
+
 describe('appendGuaranteedMCPCitations', () => {
   const KX_QUAL = 'assistance with ai governance and responsible ai ecosystem for the client';
 
@@ -549,5 +774,38 @@ describe('applyEndOfTraceCitations', () => {
       '[usage guidelines](https://resources.deloitte.com/sites/kx/usage-guidelines)',
     );
     expect(text.indexOf(`${MARKER}turn0mcp0`)).toBeLessThan(text.indexOf(disclaimer));
+  });
+
+  it('anchors SharePoint sources by line and other MCP sources by sentence in the same turn set', async () => {
+    const parts = [
+      textPart(
+        '- Consulting Graduate Induction Workbook.pptx\nShares in the mining sector rallied after a surprise jump in iron ore prices overseas.',
+      ),
+    ];
+    await applyEndOfTraceCitations({
+      contentParts: parts,
+      artifactPromises: [
+        Promise.resolve(
+          mcpAttachment([
+            {
+              toolName: 'sp_list_recent',
+              serverName: 'sharepoint',
+              title: 'Consulting Graduate Induction Workbook.pptx',
+              content: 'Consulting Graduate Induction Workbook.pptx',
+            },
+          ]),
+        ),
+        Promise.resolve(
+          mcpAttachment([
+            { toolName: 'afr_search_news', serverName: 'afr', content: OTHER_ARTICLE },
+          ]),
+        ),
+      ],
+      fileCitations: true,
+    });
+    const text = readText(parts[0]);
+    expect(text).toContain(`${MARKER}turn0mcp0`);
+    expect(text).toContain(`${MARKER}turn1mcp0`);
+    expect(anchorCount(text, `${MARKER}turn0mcp0`)).toBe(1);
   });
 });

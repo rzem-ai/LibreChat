@@ -547,6 +547,146 @@ export function appendGuaranteedMCPCitations(
   writeText(targetPart, withAnchors(text, missingAnchors));
 }
 
+/** Tool-name prefix identifying SharePoint MCP results (see `packages/api/src/mcp/sharepoint/sharepoint.ts` and `KNOWN_MCP_TOOLSET_PREFIXES` in `feed.ts`). */
+const SHAREPOINT_TOOL_PREFIX = 'sp_';
+
+function isSharePointSource(source: MCPResultSource): boolean {
+  return source.toolName?.startsWith(SHAREPOINT_TOOL_PREFIX) ?? false;
+}
+
+/**
+ * Strips a leading list marker (`-`, `*`, `•`, `1.`) and markdown bold, so a
+ * rendered bullet line can be compared directly against a raw source title.
+ */
+function stripLineMarkers(line: string): string {
+  return line
+    .trim()
+    .replace(/^[-*•]\s+/, '')
+    .replace(/^\d+[.)]\s+/, '')
+    .replace(/\*\*/g, '')
+    .trim();
+}
+
+/**
+ * Lowercases and collapses `_`/`-`/whitespace runs to a single space, so
+ * titles and rendered lines compare equal despite cosmetic differences the
+ * model introduces when restating a name (e.g. `6.2.0_Release` vs
+ * `6.2.0 Release`).
+ */
+function normalizeForMatch(text: string): string {
+  return text.toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/** Strips a real file extension (`.xlsx`, `.docx`, `.loop`, ...) off a title, or returns undefined if it has none. */
+function stripExtension(title: string): string | undefined {
+  const match = title.match(/^(.+)\.[a-z0-9]{1,6}$/i);
+  return match?.[1];
+}
+
+interface SharePointTitleAlias {
+  /** Normalized match key. */
+  alias: string;
+  turn: number;
+  fileIndex: number;
+}
+
+/**
+ * Inserts citation anchors for SharePoint MCP sources by matching each line
+ * against source titles, instead of the sentence-boundary heuristic
+ * `insertMCPCitations` uses. SharePoint answers are rendered as bulleted
+ * filename/folder lists, not paraphrased prose, and `splitIntoSentences`
+ * splits on `.`, which fractures a filename at its extension's period
+ * (`report.pdf` -> `report` + `pdf`), misplacing the anchor and dropping
+ * short names below `MIN_SENTENCE_CONTENT_WORDS`.
+ *
+ * A line is anchored when it *starts with* a source title (after stripping
+ * bullet/bold markers and normalizing case/punctuation) — not exact-equals —
+ * because the model frequently appends commentary after the name (`- Foo.pptx
+ * – last modified today`, `- Foo documentation`) or swaps the extension for a
+ * trailing parenthetical (`- Foo (xlsx)`), which an exact-line match misses.
+ * Each title also registers an extension-stripped alias to catch the latter.
+ * When more than one title prefixes the same line, the longest (most
+ * specific) one wins, so a short generic title (e.g. a folder literally named
+ * "Release") can't steal credit from a longer, more specific one that also
+ * matches (e.g. "Release Announcements"). Requiring a prefix match (not a
+ * substring) still keeps prose that merely *mentions* a filename mid-sentence
+ * from getting a spurious anchor.
+ *
+ * Scoped to sources whose `toolName` starts with `sp_` so every other MCP
+ * connector keeps using the existing lexical pass unchanged. Returns the
+ * `"turn:fileIndex"` coordinates it anchored, in the same format
+ * `insertMCPCitations` returns, so the caller can merge them into the same
+ * `usedCoords` set.
+ */
+export function insertSharePointCitations(
+  contentParts: TMessageContentParts[],
+  mcpAttachments: TAttachment[],
+  turnOffset: number,
+): Set<string> {
+  const usedCoords = new Set<string>();
+  const aliases: SharePointTitleAlias[] = [];
+
+  let turn = turnOffset;
+  for (const attachment of mcpAttachments) {
+    const payload = attachment[Tools.mcp_results];
+    if (!payload?.sources) {
+      continue;
+    }
+    payload.sources.forEach((source, fileIndex) => {
+      if (!source.title || !isSharePointSource(source)) {
+        return;
+      }
+      const fullAlias = normalizeForMatch(source.title);
+      aliases.push({ alias: fullAlias, turn, fileIndex });
+      const withoutExtension = stripExtension(source.title);
+      if (withoutExtension) {
+        const extensionStrippedAlias = normalizeForMatch(withoutExtension);
+        if (extensionStrippedAlias !== fullAlias) {
+          aliases.push({ alias: extensionStrippedAlias, turn, fileIndex });
+        }
+      }
+    });
+    turn += 1;
+  }
+
+  if (aliases.length === 0) {
+    return usedCoords;
+  }
+  aliases.sort((a, b) => b.alias.length - a.alias.length);
+
+  for (const part of contentParts) {
+    const text = readText(part);
+    if (text == null || text.length === 0) {
+      continue;
+    }
+
+    let changed = false;
+    const rebuiltLines = text.split('\n').map((line) => {
+      const base = stripLineMarkers(line);
+      if (!base) {
+        return line;
+      }
+      const normalizedLine = normalizeForMatch(base);
+
+      for (const { alias, turn: turnNum, fileIndex } of aliases) {
+        if (!normalizedLine.startsWith(alias)) {
+          continue;
+        }
+        usedCoords.add(`${turnNum}:${fileIndex}`);
+        changed = true;
+        return withAnchors(line, [`${ANCHOR_MARKER}turn${turnNum}mcp${fileIndex}`]);
+      }
+      return line;
+    });
+
+    if (changed) {
+      writeText(part, rebuiltLines.join('\n'));
+    }
+  }
+
+  return usedCoords;
+}
+
 /**
  * Appends a single deterministic trailing disclaimer paragraph when any MCP
  * attachment carries one (e.g. KX's `usage_guidelines`), plus a link to the
@@ -639,8 +779,18 @@ export async function applyEndOfTraceCitations({
     }
     if (mcpAttachments.length > 0) {
       const turnOffset = fileSearchAttachments.length;
-      const usedCoords = insertMCPCitations(contentParts, mcpAttachments, turnOffset);
-      appendGuaranteedMCPCitations(contentParts, mcpAttachments, turnOffset, usedCoords);
+      const usedCoords = insertSharePointCitations(contentParts, mcpAttachments, turnOffset);
+      const lexicalPassAttachments = mcpAttachments.map((attachment) => {
+        const payload = attachment[Tools.mcp_results];
+        if (payload == null || !payload.sources.some(isSharePointSource)) {
+          return attachment;
+        }
+        return { ...attachment, [Tools.mcp_results]: { ...payload, sources: [] } };
+      });
+      insertMCPCitations(contentParts, lexicalPassAttachments, turnOffset).forEach((coord) =>
+        usedCoords.add(coord),
+      );
+      appendGuaranteedMCPCitations(contentParts, lexicalPassAttachments, turnOffset, usedCoords);
       appendMCPDisclaimers(contentParts, mcpAttachments, mcpUsageGuidelinesUrl);
     }
   } catch (error) {
