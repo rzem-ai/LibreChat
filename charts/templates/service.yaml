@@ -1,5 +1,4 @@
 {{- range $pod, $podConfig := .Values.pods }}
-{{- if eq $pod "redis" }}{{- continue }}{{- end }}
 {{- range $container, $config := $podConfig.containers }}
 {{- if $config.service.enabled -}}
 {{- with $ -}}
