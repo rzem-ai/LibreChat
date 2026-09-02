@@ -1,4 +1,26 @@
 ---
+# ExternalSecret: pulls Valkey auth password from Azure Key Vault into a
+# dedicated K8s secret consumed only by the Valkey pod. Kept separate from
+# the app container secrets to avoid cross-pod secret drift.
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: librechat-valkey-secret
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: app-secret-store
+    kind: SecretStore
+  target:
+    name: librechat-valkey-secret
+    template:
+      type: Opaque
+      engineVersion: v2
+  data:
+    - secretKey: REDIS_PASSWORD
+      remoteRef:
+        key: {{ .Values.valkey.passwordSecretName | quote }}
+---
 # StatefulSet: single-node Valkey (Redis-compatible) for LibreChat.
 # Provides USE_REDIS features: cross-replica concurrency, leader election,
 # MCP OAuth state sharing, and stream resumption across pod restarts.
@@ -56,14 +78,19 @@ spec:
           ports:
             - containerPort: {{ .Values.valkey.port }}
               name: redis
-          envFrom:
-            - secretRef:
-                name: {{ include "helm.fullname" . }}-app-store-secrets-redis
           env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: librechat-valkey-secret
+                  key: REDIS_PASSWORD
+            # REDISCLI_AUTH is read by valkey-cli automatically, allowing liveness
+            # and readiness probes to authenticate without passing -a on the command
+            # line (which would expose the password in the process list).
             - name: REDISCLI_AUTH
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "helm.fullname" . }}-app-store-secrets-redis
+                  name: librechat-valkey-secret
                   key: REDIS_PASSWORD
           volumeMounts:
             - name: data

@@ -1,5 +1,4 @@
 {{- range $pod, $podConfig := .Values.pods }}
-{{- if eq $pod "redis" }}{{- continue }}{{- end }}
 {{- with $ -}}
 apiVersion: v1
 kind: Pod
