@@ -99,6 +99,14 @@ interface:
   # Note: This setting does not disable the Agents File Search Capability.
   # To disable the Agents Capability, see the Agents Endpoint configuration instead.
   fileSearch: true
+  # Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+  # Enable/disable direct provider uploads (image/document attachments sent directly to model providers).
+  # When false, only tool-based uploads (file search, code, OCR/context) are shown.
+  providerUpload: true
+  # Deloitte custom feature flags:
+  # customDeloitteFeatureFlags:
+  #   alwaysEnableFileSearch: true # Force-enable file_search for authorized users/capable endpoints.
+  #   hideFileSearchToggle: true # Hide the file search pill without changing the underlying tool state.
   # Privacy policy settings
   privacyPolicy:
     externalUrl: 'https://librechat.ai/privacy-policy'
@@ -150,6 +158,10 @@ interface:
   modelSelect: true
   parameters: true
   presets: true
+  # Horizontal alignment of the current user's own chat turns: 'left' (default) or 'right'.
+  # 'right' right-aligns the user's messages as iMessage-style bubbles without an
+  # avatar/name header (assistant/agent messages stay left-aligned and unaffected).
+  userMessageAlignment: left
   prompts:
     use: true
     create: true
@@ -172,6 +184,29 @@ interface:
     #   - example.com
   marketplace:
     use: false
+    # Deloitte Custom Change: documents the `interface.marketplace.categories` config block,
+    # which lets a deployment declare its own Agent Marketplace categories in `librechat.yaml`.
+    # categories is only applied when marketplace is enabled above
+    categories:
+      # When false, the built-in categories are hidden. `general` always stays
+      # active because it is the fallback category assigned to new agents.
+      enableDefaultCategories: false
+      list:
+        # `label` and `description` are optional and fall back to `value`.
+        # A value starting with `com_` is resolved as a UI translation key and
+        # must exist in the bundled locale files, otherwise the key itself is
+        # displayed. Omit `label` to show `value` exactly as typed.
+        - value: "pursue-shape"
+          label: "Pursue & Shape"
+        - value: "discover-define"
+          label: "Discover & Define"
+        - value: "build-deliver"
+          label: "Build & Deliver"
+        - value: "produce-assure"
+          label: "Produce & Assure"
+        - value: "resource-grow-people"
+          label: "Resource & Grow People"
+
   fileCitations: true
   # Tools pinned to the prompt bar by default for all users.
   # Only seeds the initial state — once a user pins/unpins a tool, their choice is kept.

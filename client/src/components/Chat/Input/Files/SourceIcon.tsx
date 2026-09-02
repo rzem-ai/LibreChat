@@ -60,10 +60,7 @@ export default function SourceIcon({
   // Deloitte Custom Change: # Visible icons for file uploads- PR #402
   if (isFileSearch === true || source === FileSources.vectordb) {
     return (
-      <div
-        className={cn(className, sourceToClassname[FileSources.vectordb] ?? '')}
-        {...divProps}
-      >
+      <div className={cn(className, sourceToClassname[FileSources.vectordb] ?? '')} {...divProps}>
         <span className="flex items-center justify-center text-white" aria-hidden="true">
           <Search className="h-3 w-3 stroke-[2.5]" />
         </span>

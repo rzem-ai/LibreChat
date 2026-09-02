@@ -30,7 +30,12 @@ type ParsedBedrockUserCredentials = Partial<Record<UserCredentialKey, UserCreden
 
 function getBedrockProxyTarget(region?: string, reverseProxy?: string): string | undefined {
   const trimmedReverseProxy = reverseProxy?.trim();
-  if (trimmedReverseProxy) return `https://${trimmedReverseProxy}`;
+  // Deloitte Custom Change: Support reverse-proxy URLs that already include a protocol.
+  if (trimmedReverseProxy) {
+    return /^https?:\/\//.test(trimmedReverseProxy)
+      ? trimmedReverseProxy
+      : `https://${trimmedReverseProxy}`;
+  }
 
   const trimmedRegion = region?.trim();
   if (!trimmedRegion) return undefined;
@@ -119,6 +124,7 @@ export async function initializeBedrock({
       } & Record<string, unknown>)
     | undefined;
 
+  // Deloitte Custom Change: Configure Bedrock through the Deloitte gateway and local identity token.
   const {
     BEDROCK_AWS_SECRET_ACCESS_KEY,
     BEDROCK_AWS_ACCESS_KEY_ID,
@@ -126,7 +132,9 @@ export async function initializeBedrock({
     BEDROCK_AWS_PROFILE,
     BEDROCK_AWS_BEARER_TOKEN,
     BEDROCK_REVERSE_PROXY,
+    BEDROCK_GATEWAY_URL,
     BEDROCK_AWS_DEFAULT_REGION,
+    LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION,
   } = process.env;
 
   const { key: expiresAt } = req.body;
@@ -265,10 +273,18 @@ export async function initializeBedrock({
   const hasBearerToken = typeof bearerToken === 'string' && bearerToken !== '';
 
   const bedrockRegion = typeof llmConfig.region === 'string' ? llmConfig.region : undefined;
-  const proxyAgent = getHttpsProxyAgent(
-    getBedrockProxyTarget(bedrockRegion, BEDROCK_REVERSE_PROXY),
-  );
-  if (proxyAgent || hasBearerToken) {
+  const reverseProxy = BEDROCK_REVERSE_PROXY?.trim();
+  const reverseProxyTarget = getBedrockProxyTarget(bedrockRegion, reverseProxy);
+  const hasReverseProxyUrl = /^https?:\/\//i.test(reverseProxy ?? '');
+  const proxyAgent = getHttpsProxyAgent(reverseProxyTarget);
+  // Deloitte Custom Change: Create a custom client when routing through the Deloitte gateway.
+  if (
+    proxyAgent ||
+    hasBearerToken ||
+    BEDROCK_GATEWAY_URL ||
+    hasReverseProxyUrl ||
+    (LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION && reverseProxy)
+  ) {
     const credentialProvider =
       !hasCompleteCredentials && !hasBearerToken && BEDROCK_AWS_PROFILE
         ? fromNodeProviderChain({ profile: BEDROCK_AWS_PROFILE })
@@ -295,18 +311,41 @@ export async function initializeBedrock({
       customClientConfig.credentials = credentialProvider;
     }
 
-    if (proxyAgent) {
-      customClientConfig.requestHandler = new NodeHttpHandler({
-        httpAgent: proxyAgent,
-        httpsAgent: proxyAgent,
-      });
+    // Deloitte Custom Change: Prefer the pod-local Bedrock gateway over the reverse-proxy host.
+    if (BEDROCK_GATEWAY_URL) {
+      customClientConfig.endpoint = BEDROCK_GATEWAY_URL;
+    } else if (reverseProxyTarget) {
+      customClientConfig.endpoint = reverseProxyTarget;
     }
 
-    if (BEDROCK_REVERSE_PROXY) {
-      customClientConfig.endpoint = `https://${BEDROCK_REVERSE_PROXY}`;
+    const endpoint =
+      typeof customClientConfig.endpoint === 'string' ? customClientConfig.endpoint : undefined;
+    const useNodeHttpHandler = !!proxyAgent || /^http:\/\//i.test(endpoint ?? '');
+
+    if (useNodeHttpHandler) {
+      customClientConfig.requestHandler = proxyAgent
+        ? new NodeHttpHandler({
+            httpAgent: proxyAgent,
+            httpsAgent: proxyAgent,
+          })
+        : new NodeHttpHandler();
     }
 
     const customClient = new BedrockRuntimeClient(customClientConfig);
+    // Deloitte Custom Change: Forward the local identity token to Deloitte gateway routes.
+    if (LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION && (BEDROCK_GATEWAY_URL || reverseProxy)) {
+      customClient.middlewareStack.add(
+        (next) => async (args) => {
+          const request = args.request as { headers?: Record<string, string> } | undefined;
+          if (request && typeof request === 'object') {
+            request.headers ??= {};
+            request.headers['x-id-token'] = LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION;
+          }
+          return next(args);
+        },
+        { step: 'build', name: 'llmGatewayIdentityToken' },
+      );
+    }
 
     llmConfig.client = customClient;
   } else {
@@ -320,8 +359,8 @@ export async function initializeBedrock({
       llmConfig.profile = BEDROCK_AWS_PROFILE;
     }
 
-    if (BEDROCK_REVERSE_PROXY) {
-      llmConfig.endpointHost = BEDROCK_REVERSE_PROXY;
+    if (reverseProxy) {
+      llmConfig.endpointHost = reverseProxy;
     }
   }
 
