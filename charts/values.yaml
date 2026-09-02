@@ -82,6 +82,7 @@ pods:
           MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT: '0.1'
           MODEL_PRICING_REFERENCE_MODEL_ID: 'gpt-56-luna'
           RAG_API_URL: 'http://127.0.0.1:8000'
+          RAG_USE_FULL_CONTEXT: 'false'
           USE_ENTRA_ID_FOR_PEOPLE_SEARCH: 'true'
           ENTRA_ID_INCLUDE_OWNERS_AS_MEMBERS: 'true'
           # OpenTelemetry Tracing
