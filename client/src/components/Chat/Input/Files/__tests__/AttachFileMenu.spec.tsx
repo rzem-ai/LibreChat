@@ -320,6 +320,11 @@ describe('AttachFileMenu', () => {
   describe('SharePoint Integration', () => {
     it('shows SharePoint option when enabled', () => {
       setupMocks();
+      mockUseAgentCapabilities.mockReturnValue({
+        contextEnabled: true,
+        fileSearchEnabled: false,
+        codeEnabled: false,
+      });
       mockUseGetStartupConfig.mockReturnValue({
         data: { sharePointFilePickerEnabled: true },
       });
