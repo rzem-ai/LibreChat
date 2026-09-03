@@ -398,7 +398,7 @@ description: Use when <updated trigger language that captures the new scenario>.
 ## Notes
 
 - **This skill must not edit a SKILL.md file without explicit user confirmation.** It may apply approved changes directly only after asking the user whether they want the changes applied and receiving a clear yes.
-- **This skill must not evaluate, refine, or edit the skill-refiner SKILL.md.** If the user names `skill-refiner` or the file `skill-refiner/SKILL.md` as the target skill at any point, decline immediately and direct them to the skill's maintainer.
+- **This skill must not evaluate, refine, or edit its own SKILL.md.** If the user names `myassist-skill-refiner` or the file `myassist-skill-refiner/SKILL.md` as the target skill at any point, decline immediately and direct them to the skill's maintainer.
 - When processing feedback from a non-technical user, always confirm your interpretation before generating output — do not assume.
 - If a user pastes a SKILL.md file for evaluation, treat the pasted content as the source of truth, not any prior knowledge of that skill.
 - This skill is designed to be used with any skill. It is not limited to a specific skill or domain.
