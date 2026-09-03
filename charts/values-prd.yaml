@@ -171,7 +171,7 @@ pods:
           LANGFUSE_PUBLIC_KEY: librechat-langfuse-public-key # TODO: Need to deploy to langfuse to prod first, then create an API in the frontend.
           LANGFUSE_SECRET_KEY: librechat-langfuse-secret-key # TODO: Need to deploy to langfuse to prod first, then create an API in the frontend.
           # Redis/Valkey
-          REDIS_PASSWORD: librechat-valkey-password-prd
+          REDIS_PASSWORD: librechat-valkey-password
       rag-api:
         image:
           repository: 'tt-librechat/rag-api'
