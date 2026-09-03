@@ -167,6 +167,10 @@ endpoints:
     recursionLimit: 25
     maxRecursionLimit: 50
     disableBuilder: false # Set to true to disable the agent builder interface
+    # Hides the File Context upload section in the Agent Builder side panel — it's visually
+    # similar to file_search but less reliable, causing user confusion. Purely a UI toggle:
+    # existing agents' uploaded context files keep loading normally at runtime.
+    hideFileContext: true
     maxCitations: 30
     maxCitationsPerFile: 7
     capabilities:
@@ -265,6 +269,11 @@ endpoints:
       - 'au.anthropic.claude-sonnet-4-6'
       - 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
 
+# Deloitte Custom Change: model pricing uses this baseline when no environment override is set.
+# Keep it aligned with the soft-default model and endpoint-costs.yaml.
+modelPricing:
+  referenceModelId: 'gpt-56-luna'
+
 modelSpecs:
   # enforce: true would block requests without a spec name — this breaks the Agents endpoint
   # (user-created agents don't carry a spec name), so we leave it at the default (false).
@@ -328,6 +337,7 @@ modelSpecs:
       label: 'GPT 5.6 Luna'
       group: 'OpenAI Global'
       iconURL: 'openAI'
+      softDefault: true
       preset:
         endpoint: 'Azure Global'
         model: 'gpt-56-luna'
@@ -407,24 +417,24 @@ modelSpecs:
         model: 'claude-opus-4-8'
         promptPrefix: *deloitteSystemPrompt
 
-    # - name: 'anthropic-au-claude-sonnet-4-6'
-    #   label: 'Claude Sonnet 4.6'
-    #   group: 'Anthropic AU'
-    #   groupIcon: 'anthropic'
-    #   iconURL: 'anthropic'
-    #   preset:
-    #     endpoint: 'bedrock'
-    #     model: 'au.anthropic.claude-sonnet-4-6'
-    #     promptPrefix: *deloitteSystemPrompt
+    - name: 'anthropic-au-claude-sonnet-4-6'
+      label: 'Claude Sonnet 4.6'
+      group: 'Anthropic AU'
+      groupIcon: 'anthropic'
+      iconURL: 'anthropic'
+      preset:
+       endpoint: 'bedrock'
+       model: 'au.anthropic.claude-sonnet-4-6'
+       promptPrefix: *deloitteSystemPrompt
 
-    # - name: 'anthropic-au-claude-haiku-4-5'
-    #   label: 'Claude Haiku 4.5'
-    #   group: 'Anthropic AU'
-    #   iconURL: 'anthropic'
-    #   preset:
-    #     endpoint: 'bedrock'
-    #     model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
-    #     promptPrefix: *deloitteSystemPrompt
+    - name: 'anthropic-au-claude-haiku-4-5'
+      label: 'Claude Haiku 4.5'
+      group: 'Anthropic AU'
+      iconURL: 'anthropic'
+      preset:
+       endpoint: 'bedrock'
+       model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
+       promptPrefix: *deloitteSystemPrompt
 
 # MCP Servers configuration
 # Each entry filters the gateway to a single toolset via the `toolsets` query param.

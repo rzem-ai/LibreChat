@@ -27,7 +27,6 @@ const baseCtx = (over: Partial<UploadOptionContext> = {}): UploadOptionContext =
   contextEnabled: true,
   fileSearchAllowedByAgent: true,
   codeAllowedByAgent: true,
-  providerUploadEnabled: true,
   fileConfig,
   ...over,
 });

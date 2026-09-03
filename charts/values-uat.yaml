@@ -62,7 +62,7 @@ pods:
           BEDROCK_AWS_DEFAULT_REGION: 'ap-southeast-2'
           BEDROCK_AWS_SECRET_ACCESS_KEY: 'unused'
           BEDROCK_AWS_MODELS: 'au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0'
-          BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081'
+          BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081/bedrock'
           CUSTOM_FOOTER: '⚠️ WARNING: This is a User Acceptance Testing environment. Do not upload client or confidential data.'
           DOMAIN_CLIENT: 'https://myassist-uat.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://myassist-uat.ctk.au.deloitte.com'
@@ -73,6 +73,9 @@ pods:
           MCP_GATEWAY_OBO_SCOPE: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
           MCP_GATEWAY_TOOLSETS: 'teams,research,news,kx,desc,gims'
           MCP_GATEWAY_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
+          MODEL_PRICING_MIN_MULTIPLIER: '0.1'
+          MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT: '0.1'
+          MODEL_PRICING_REFERENCE_MODEL_ID: 'gpt-56-luna'
           MONGO_DB: 'mdb-librechat-database-uat'
           NODE_ENV: 'production' # Use production to mimic PROD environment behaviour
           NODE_TLS_REJECT_UNAUTHORIZED: '0' # TODO: Review Node TLS setup. See: https://github.com/Deloitte-Australia/tt-librechat/issues/159

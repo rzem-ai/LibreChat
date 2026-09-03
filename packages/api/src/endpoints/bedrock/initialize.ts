@@ -311,18 +311,24 @@ export async function initializeBedrock({
       customClientConfig.credentials = credentialProvider;
     }
 
-    if (proxyAgent) {
-      customClientConfig.requestHandler = new NodeHttpHandler({
-        httpAgent: proxyAgent,
-        httpsAgent: proxyAgent,
-      });
-    }
-
     // Deloitte Custom Change: Prefer the pod-local Bedrock gateway over the reverse-proxy host.
     if (BEDROCK_GATEWAY_URL) {
       customClientConfig.endpoint = BEDROCK_GATEWAY_URL;
     } else if (reverseProxyTarget) {
       customClientConfig.endpoint = reverseProxyTarget;
+    }
+
+    const endpoint =
+      typeof customClientConfig.endpoint === 'string' ? customClientConfig.endpoint : undefined;
+    const useNodeHttpHandler = !!proxyAgent || /^http:\/\//i.test(endpoint ?? '');
+
+    if (useNodeHttpHandler) {
+      customClientConfig.requestHandler = proxyAgent
+        ? new NodeHttpHandler({
+            httpAgent: proxyAgent,
+            httpsAgent: proxyAgent,
+          })
+        : new NodeHttpHandler();
     }
 
     const customClient = new BedrockRuntimeClient(customClientConfig);
