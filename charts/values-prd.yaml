@@ -17,8 +17,8 @@ ingress:
   className: cilium
   host: 'myassist.ctk.au.deloitte.com'
   annotations:
-    ingress.cilium.io/loadbalancer-mode: "shared"
-    ingress.cilium.io/force-https: "true"
+    ingress.cilium.io/loadbalancer-mode: 'shared'
+    ingress.cilium.io/force-https: 'true'
     kubernetes.io/ingress.class: cilium
   tls:
     - secretName: ctk-au-deloitte-com
@@ -67,21 +67,25 @@ pods:
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
           BASE_URL_AZURE_GLOBAL: 'http://127.0.0.1:8081/azure-global'
           BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
-          BEDROCK_AWS_ACCESS_KEY_ID: 'unused'
-          BEDROCK_AWS_DEFAULT_REGION: 'ap-southeast-2'
-          BEDROCK_AWS_SECRET_ACCESS_KEY: 'unused'
-          BEDROCK_AWS_MODELS: 'au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0'
-          BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081'
-          CUSTOM_FOOTER: "**Feedback?** Submit a bug report, feature request or success story [here](https://forms.cloud.microsoft/e/E9AyvN4Ayx)"
+          # BEDROCK_AWS_ACCESS_KEY_ID: 'unused'
+          # BEDROCK_AWS_DEFAULT_REGION: 'ap-southeast-2'
+          # BEDROCK_AWS_SECRET_ACCESS_KEY: 'unused'
+          # BEDROCK_AWS_MODELS: 'au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0'
+          # BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081'
+          CUSTOM_FOOTER: '**Feedback?** Submit a bug report, feature request or success story [here](https://forms.cloud.microsoft/e/E9AyvN4Ayx)'
           DOMAIN_CLIENT: 'https://myassist.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://myassist.ctk.au.deloitte.com'
           EMBEDDINGS_MODEL: 'text-embedding-3-small'
           EMBEDDINGS_PROVIDER: 'openai'
-          ENDPOINTS: 'agents,anthropic,bedrock,custom'
+          # TO DO: Turn on Bedrock endpoint when ready
+          ENDPOINTS: 'agents,anthropic,custom'
           KEY_VAULT_NAME: 'kv-int-librechat-prd'
           MCP_GATEWAY_OBO_SCOPE: 'api://32e2a3a5-ad52-446e-8a61-5a7ad6103099/access_as_user'
           MCP_GATEWAY_TOOLSETS: 'teams,research,news,kx,desc,gims'
           MCP_GATEWAY_URL: 'https://mcp-gateway.ctk.au.deloitte.com/mcp'
+          MODEL_PRICING_MIN_MULTIPLIER: '0.1'
+          MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT: '0.1'
+          MODEL_PRICING_REFERENCE_MODEL_ID: 'gpt-56-luna'
           MONGO_DB: 'mdb-librechat-database-prd'
           NODE_ENV: 'production'
           NODE_TLS_REJECT_UNAUTHORIZED: '0' # TODO: Review Node TLS setup. See: https://github.com/Deloitte-Australia/tt-librechat/issues/159
@@ -134,7 +138,7 @@ pods:
           SKILL_SCANNER_TIMEOUT_MS: '15000'
           SKILL_SCANNER_MIN_SEVERITY: 'high'
           # AI Registry
-          AI_REGISTRY_CLIENT_ID: "65dad51c-d3ca-4252-b97d-815cf8518d6a"
+          AI_REGISTRY_CLIENT_ID: '65dad51c-d3ca-4252-b97d-815cf8518d6a'
         secrets:
           MONGO_URI: librechat-mdb-connection-string
           JWT_SECRET: librechat-jwt-secret # Use LibreChat Credentials Generator
