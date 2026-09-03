@@ -18,6 +18,7 @@ const fileSearchJsonSchema = {
   required: ['query'],
 };
 
+// Deloitte Custom Change: added to detect missing attachments, since file search is enabled by default.
 /**
  * Whether `tool_resources` currently references any file_search-eligible file,
  * either from the agent's permanent knowledge base (`file_ids`) or files
@@ -66,6 +67,8 @@ const primeFiles = async (options) => {
 
   dbFiles = dbFiles.concat(resourceFiles);
 
+  // Deloitte Custom Change: no longer nag about missing files, since file search is enabled by default.
+  // Stays empty unless a file is found below — nothing to tell the model when there's nothing to search.
   let toolContext = '';
 
   const files = [];

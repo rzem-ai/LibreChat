@@ -631,12 +631,12 @@ async function loadToolDefinitionsWrapper({
 
   const filteredTools = agent.tools?.filter((tool) => {
     if (tool === Tools.file_search) {
-      const included =
-        checkCapability(AgentCapabilities.file_search) && hasFileSearchAttachments(tool_resources);
-      // logger.info(
-      //   `[TEMP-DEBUG file_search] included=${included} tool_resources=${JSON.stringify(tool_resources?.[EToolResources.file_search])}`,
-      // );
-      return included;
+      // Deloitte Custom Change: exclude file_search when no files are attached, since file search is enabled by default.
+      // Require an actual attachment in addition to the capability check, so the tool
+      // is only offered to the model when there is something for it to search.
+      return (
+        checkCapability(AgentCapabilities.file_search) && hasFileSearchAttachments(tool_resources)
+      );
     }
     if (tool === Tools.execute_code) {
       return checkCapability(AgentCapabilities.execute_code);
@@ -1206,6 +1206,18 @@ async function loadToolDefinitionsWrapper({
     } catch (error) {
       logger.error('[loadToolDefinitionsWrapper] Error priming search files:', error);
     }
+  } else {
+    // Deloitte Custom Change: guard against false file-search claims, since file search is enabled by default.
+    /**
+     * file_search is unavailable this turn — either the capability is off,
+     * or it's on but got filtered out of `filteredTools` because there are
+     * no files to search. Either way the tool itself is unreachable, but
+     * nothing stops the model from still talking about files unprompted
+     * (e.g. via its own agent.instructions) — guard against that narrative
+     * regardless of why the tool is missing.
+     */
+    dynamicToolContextMap.file_search_guardrail =
+      '- Note: No files are currently attached to this conversation, and file search is unavailable this turn. Do not tell the user you searched any documents, and do not proactively suggest uploading a file. Only if the user explicitly asks you to look something up in an uploaded file should you mention that none is available and offer to answer from general knowledge instead.';
   }
 
   const imageFiles = tool_resources?.[EToolResources.image_edit]?.files ?? [];
@@ -1338,6 +1350,9 @@ async function loadAgentTools({
   let includesWebSearch = false;
   const _agentTools = agent.tools?.filter((tool) => {
     if (tool === Tools.file_search) {
+      // Deloitte Custom Change: exclude file_search when no files are attached, since file search is enabled by default.
+      // Mirrors the same attachment check applied when building the tool definitions above,
+      // so the constructed tool instance is only created when there is something to search.
       return (
         checkCapability(AgentCapabilities.file_search) && hasFileSearchAttachments(tool_resources)
       );

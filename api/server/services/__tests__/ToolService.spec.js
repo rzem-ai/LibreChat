@@ -63,6 +63,8 @@ jest.mock('~/server/services/Files/process', () => ({
   uploadImageBuffer: jest.fn(),
 }));
 jest.mock('~/app/clients/tools/util/fileSearch', () => ({
+  // Deloitte Custom Change: mock updated for file_search attachment gating, since file search is enabled by default.
+  // Keep the real hasFileSearchAttachments implementation; only primeFiles hits the database.
   ...jest.requireActual('~/app/clients/tools/util/fileSearch'),
   primeFiles: jest.fn().mockResolvedValue({}),
 }));
