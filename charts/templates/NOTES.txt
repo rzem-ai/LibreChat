@@ -1,6 +1,5 @@
 1. Get the application URL by running these commands:
 {{- range $podName, $pod := .Values.pods }}
-{{- if eq $podName "redis" }}{{- continue }}{{- end }}
 {{- range $config := $pod.containers }}
 {{- if $config.ingress.enabled }}
   {{- range $config.ingress.paths }}
