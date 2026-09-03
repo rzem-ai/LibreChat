@@ -167,6 +167,10 @@ endpoints:
     recursionLimit: 25
     maxRecursionLimit: 50
     disableBuilder: false # Set to true to disable the agent builder interface
+    # Hides the File Context upload section in the Agent Builder side panel — it's visually
+    # similar to file_search but less reliable, causing user confusion. Purely a UI toggle:
+    # existing agents' uploaded context files keep loading normally at runtime.
+    hideFileContext: true
     maxCitations: 30
     maxCitationsPerFile: 7
     capabilities:
