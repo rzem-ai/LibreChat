@@ -13,6 +13,7 @@ interface ArtifactsSubMenuProps extends React.HTMLAttributes<HTMLButtonElement> 
   handleArtifactsToggle: () => void;
   handleShadcnToggle: () => void;
   handleCustomToggle: () => void;
+  shadcnOnly?: boolean;
 }
 
 const ArtifactsSubMenu = React.forwardRef<HTMLButtonElement, ArtifactsSubMenuProps>(
@@ -24,6 +25,7 @@ const ArtifactsSubMenu = React.forwardRef<HTMLButtonElement, ArtifactsSubMenuPro
       handleArtifactsToggle,
       handleShadcnToggle,
       handleCustomToggle,
+      shadcnOnly = false,
       className,
       ...props
     },
@@ -37,7 +39,7 @@ const ArtifactsSubMenu = React.forwardRef<HTMLButtonElement, ArtifactsSubMenuPro
       placement: 'right',
     });
 
-    const isEnabled = artifactsMode !== '' && artifactsMode !== undefined;
+    const isEnabled = artifactsMode !== '' && artifactsMode !== undefined && !shadcnOnly;
     const isShadcnEnabled = artifactsMode === ArtifactModes.SHADCNUI;
     const isCustomEnabled = artifactsMode === ArtifactModes.CUSTOM;
 

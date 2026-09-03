@@ -61,12 +61,7 @@ const Image = ({
   // Deloitte: rewrite raw azure_blob URLs to same-origin proxy so browser doesn't hit
   // private container directly (avoids 403 + prevents Bearer leak to blob.core.windows.net).
   const rewrittenPath = useMemo(() => {
-    if (
-      source === FileSources.azure_blob &&
-      fileId &&
-      userId &&
-      imagePath?.startsWith('http')
-    ) {
+    if (source === FileSources.azure_blob && fileId && userId && imagePath?.startsWith('http')) {
       // inline=true returns an allowlisted MIME type rather than forcing Content-Disposition: attachment.
       return `/api/files/download/${userId}/${fileId}?inline=true`;
     }

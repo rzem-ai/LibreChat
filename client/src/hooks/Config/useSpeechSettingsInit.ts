@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { useRecoilState, useSetRecoilState } from 'recoil';
+import { useRecoilState, useRecoilValue, useSetRecoilState } from 'recoil';
 import { useGetCustomConfigSpeechQuery } from 'librechat-data-provider/react-query';
+import { useExternalVoiceProviderEnabled } from '~/hooks/Audio';
 import { TTSEndpoints } from '~/common';
 import { logger } from '~/utils';
 import store from '~/store';
@@ -14,6 +15,8 @@ const VALID_TTS_ENGINES: string[] = [TTSEndpoints.browser, TTSEndpoints.external
 export default function useSpeechSettingsInit(isAuthenticated: boolean) {
   const { data } = useGetCustomConfigSpeechQuery({ enabled: isAuthenticated });
   const [engineTTS, setEngineTTS] = useRecoilState<string>(store.engineTTS);
+  const engineSTT = useRecoilValue<string>(store.engineSTT);
+  const externalVoiceProviderEnabled = useExternalVoiceProviderEnabled();
 
   const setters = useRef({
     conversationMode: useSetRecoilState(store.conversationMode),
@@ -57,4 +60,21 @@ export default function useSpeechSettingsInit(isAuthenticated: boolean) {
     logger.log(`Resetting invalid TTS engine "${engineTTS}" to ${TTSEndpoints.browser}`);
     setEngineTTS(TTSEndpoints.browser);
   }, [engineTTS, setEngineTTS]);
+
+  /** Deloitte Custom Change: force any persisted 'external' STT/TTS engine back to
+   *  'browser' when externalVoiceProvider is disabled. Runs on app startup so it's
+   *  enforced independently of whether the user ever opens the Speech settings tab. */
+  useEffect(() => {
+    if (externalVoiceProviderEnabled) return;
+
+    if (engineSTT === TTSEndpoints.external) {
+      logger.log('External voice provider disabled: resetting STT engine to browser');
+      setters.engineSTT(TTSEndpoints.browser);
+    }
+
+    if (engineTTS === TTSEndpoints.external) {
+      logger.log('External voice provider disabled: resetting TTS engine to browser');
+      setEngineTTS(TTSEndpoints.browser);
+    }
+  }, [externalVoiceProviderEnabled, engineSTT, engineTTS, setters, setEngineTTS]);
 }

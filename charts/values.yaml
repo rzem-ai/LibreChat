@@ -69,7 +69,8 @@ pods:
           ALLOW_REGISTRATION: 'false'
           ALLOW_SOCIAL_LOGIN: 'true'
           ALLOW_SOCIAL_REGISTRATION: 'false'
-          APP_TITLE: 'MyAssist 2.0'
+          APP_TITLE: 'MyAssist'
+          HELP_AND_FAQ_URL: 'https://forms.cloud.microsoft/e/E9AyvN4Ayx'
           OPENID_CALLBACK_URL: '/oauth/openid/callback'
           OPENID_GRAPH_SCOPES: 'User.Read,User.ReadBasic.All' #People.Read GroupMember.Read.All scopes to be added once App Registration admins grant them to us
           OPENID_REQUIRED_ROLE_TOKEN_KIND: 'id'
@@ -77,6 +78,9 @@ pods:
           OPENID_USE_END_SESSION_ENDPOINT: 'true'
           OPENID_BUTTON_LABEL: 'Login with SSO'
           OPENID_IMAGE_URL: '/assets/favicon.svg'
+          MODEL_PRICING_MIN_MULTIPLIER: '0.1'
+          MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT: '0.1'
+          MODEL_PRICING_REFERENCE_MODEL_ID: 'gpt-56-luna'
           RAG_API_URL: 'http://127.0.0.1:8000'
           USE_ENTRA_ID_FOR_PEOPLE_SEARCH: 'true'
           ENTRA_ID_INCLUDE_OWNERS_AS_MEMBERS: 'true'
@@ -86,10 +90,10 @@ pods:
           OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf'
           OTEL_TRACES_SAMPLER: 'parentbased_traceidratio'
           OTEL_TRACES_SAMPLER_ARG: '0.1'
-          # Meilisearch Configuration
-          SEARCH: 'true'
-          MEILI_NO_ANALYTICS: 'true'
-          MEILI_HOST: 'http://127.0.0.1:7700'
+          # Meilisearch Configuration # TODO: Enable meilisearch when we can have multi-container PVC
+          SEARCH: 'false'
+          # MEILI_NO_ANALYTICS: 'true'
+          # MEILI_HOST: 'http://127.0.0.1:7700'
         service:
           enabled: true
           type: ClusterIP
@@ -112,21 +116,21 @@ pods:
           targetPort: 8000
         ingress:
           enabled: false
-      meilisearch:
-        image:
-          repository: 'tt-librechat/meilisearch'
-          pullPolicy: Always
-          tag: 'main'
-        env:
-          MEILI_NO_ANALYTICS: 'true'
-          MEILI_HOST: '127.0.0.0:7700'
-        service:
-          enabled: false
-          type: ClusterIP
-          port: 7700
-          targetPort: 7700
-        ingress:
-          enabled: false
+      # meilisearch: # TODO: Enable meilisearch when we can have multi-container PVC
+      #   image:
+      #     repository: 'tt-librechat/meilisearch'
+      #     pullPolicy: Always
+      #     tag: 'main'
+      #   env:
+      #     MEILI_NO_ANALYTICS: 'true'
+      #     MEILI_HOST: '127.0.0.0:7700'
+      #   service:
+      #     enabled: false
+      #     type: ClusterIP
+      #     port: 7700
+      #     targetPort: 7700
+      #   ingress:
+      #     enabled: false
 
 # In-cluster Valkey (Redis-compatible). StatefulSet with AOF persistence
 # and a PVC in charts/templates/valkey.yaml. Valkey is a drop-in Redis
@@ -141,4 +145,3 @@ valkey:
     size: 5Gi
     storageClass: ''
   passwordSecretName: 'librechat-valkey-password-prd'
-

@@ -1,6 +1,6 @@
-# LibreChat – Local Setup (MyAssist 2.0)
+# LibreChat – Local Setup (MyAssist)
 
-This repository contains the local development setup for **LibreChat**, configured to work with Deloitte’s **ClearTrack LLM Gateway** and internal model endpoints. This setup is intended to support development and experimentation for **MyAssist 2.0**.
+This repository contains the local development setup for **LibreChat**, configured to work with Deloitte’s **ClearTrack LLM Gateway** and internal model endpoints. This setup is intended to support development and experimentation for **MyAssist**.
 
 ---
 
@@ -157,7 +157,7 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 
 1. `ENDPOINTS=anthropic,custom,agents`
 2. `ANTHROPIC_REVERSE_PROXY=http://gateway-proxy:8080/anthropic`
-3. `APP_TITLE="MyAssist 2.0"`
+3. `APP_TITLE="MyAssist"`
 4. `CUSTOM_FOOTER="⚠️ WARNING: This is a development environment. Do not upload client or confidential data."`
 5. `DOMAIN_CLIENT=https://<yourhostname>.local` (for example `https://AU-ABC123123.local`)
 6. `DOMAIN_SERVER=https://<yourhostname>.local` (for example `https://AU-ABC123123.local`)
@@ -181,10 +181,21 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 24. BASE_URL_AZURE_AU=https://au-openai-exp.ctk.au.deloitte.com/openai/v1
 25. BASE_URL_AZURE_US=https://us-openai-exp.ctk.au.deloitte.com/openai/v1
 26. BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com
-27. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
-28. `MCP_GATEWAY_URL=https://mcp-gw-dev.ctk.au.deloitte.com/mcp`
-29. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims`
-30. `MCP_GATEWAY_OBO_SCOPE=api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user`
+27. `BASE_URL_AZURE_GLOBAL=https://us-openai-exp.ctk.au.deloitte.com/openai/v1`
+28. `BASE_URL_AZURE_FOUNDRY_AU=https://au-foundry-exp.ctk.au.deloitte.com/openai/v1`
+29. `BEDROCK_AWS_DEFAULT_REGION=ap-southeast-2`
+30. `BEDROCK_AWS_ACCESS_KEY_ID=unused`
+31. `BEDROCK_AWS_SECRET_ACCESS_KEY=unused`
+32. `BEDROCK_AWS_MODELS=au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0`
+33. `BEDROCK_REVERSE_PROXY=au-bedrock-exp.ctk.au.deloitte.com`
+34. `BEDROCK_GATEWAY_URL=http://127.0.0.1:8081`
+35. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
+36. `MCP_GATEWAY_URL=https://mcp-gw-dev.ctk.au.deloitte.com/mcp`
+37. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims`
+38. `MCP_GATEWAY_OBO_SCOPE=api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user`
+39. `MODEL_PRICING_REFERENCE_MODEL_ID=gpt-56-luna`
+40. `MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT=0.1`
+41. `MODEL_PRICING_MIN_MULTIPLIER=0.1`
 > The **ClearTrack MCP Gateway** connection (`mcpServers` block in `librechat.yaml` at repo root and `charts/config/librechat.yaml` for Helm) uses On-Behalf-Of (OBO) auth, not a dedicated OAuth client — it reuses `OPENID_CLIENT_ID`/`OPENID_CLIENT_SECRET` from item 8–9 to exchange the user's login token for one scoped to the gateway. There are no gateway-specific client credentials to set; the only requirement is that `OPENID_SCOPE` (item 12) includes the gateway's audience scope.
 31. `SKILL_SCANNER_URL=https://ai-registry-dev.ctk.au.deloitte.com/v1/scan?verbose=false`
 32. `SKILL_SCANNER_TIMEOUT_MS=15000`

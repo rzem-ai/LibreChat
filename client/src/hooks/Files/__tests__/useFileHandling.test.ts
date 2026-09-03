@@ -469,6 +469,7 @@ describe('useFileHandling', () => {
             metadata,
           } as TFileUpload,
           new FormData(),
+          undefined,
         );
         await new Promise((resolve) => setTimeout(resolve, 350));
       });

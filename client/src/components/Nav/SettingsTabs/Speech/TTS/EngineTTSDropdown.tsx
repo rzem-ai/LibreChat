@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Dropdown } from '@librechat/client';
 import { useRecoilState, useRecoilValue } from 'recoil';
 import { useLocalize } from '~/hooks';
@@ -12,6 +12,14 @@ const EngineTTSDropdown: React.FC<EngineTTSDropdownProps> = ({ external }) => {
   const localize = useLocalize();
   const [engineTTS, setEngineTTS] = useRecoilState<string>(store.engineTTS);
   const textToSpeech = useRecoilValue(store.textToSpeech);
+
+  /** Deloitte Custom Change: force a persisted 'external' engine back to 'browser'
+   *  when the external voice provider option is disabled via feature flag. */
+  useEffect(() => {
+    if (!external && engineTTS === 'external') {
+      setEngineTTS('browser');
+    }
+  }, [external, engineTTS, setEngineTTS]);
 
   const endpointOptions = external
     ? [

@@ -1,13 +1,6 @@
 import { useCallback } from 'react';
-import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { QueryKeys, dataService } from 'librechat-data-provider';
-import { useBlobUrl } from '~/hooks/Files/useBlobUrl';
-import type { BlobUrlResult } from '~/hooks/Files/useBlobUrl';
-import type {
-  QueryObserverResult,
-  UseQueryOptions,
-  UseInfiniteQueryOptions,
-} from '@tanstack/react-query';
+import { useQuery, useMutation, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   TSkill,
   TSkillListRequest,
@@ -16,6 +9,13 @@ import type {
   TListSkillFilesResponse,
   TSkillFileContentResponse,
 } from 'librechat-data-provider';
+import type {
+  QueryObserverResult,
+  UseQueryOptions,
+  UseInfiniteQueryOptions,
+} from '@tanstack/react-query';
+import type { BlobUrlResult } from '~/hooks/Files/useBlobUrl';
+import { useBlobUrl } from '~/hooks/Files/useBlobUrl';
 
 /**
  * Paginated skill list (single page) — use this for small lists or when you want to
@@ -163,8 +163,8 @@ export const useSkillFileBlobUrl = (
   const fetchBlob = useCallback(async () => {
     const response = await dataService.getSkillFileBlob(skillId as string, relativePath as string);
     return response.data;
-  // skillId + relativePath are the resource key; recreate when either changes
-  }, [skillId, relativePath]); // eslint-disable-line react-hooks/exhaustive-deps
+    // skillId + relativePath are the resource key; recreate when either changes
+  }, [skillId, relativePath]);
   return useBlobUrl(
     skillId && relativePath ? fetchBlob : null,
     enabled && !!skillId && !!relativePath,
