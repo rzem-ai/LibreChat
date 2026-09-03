@@ -1,5 +1,5 @@
 {{- $enabled := true -}}
-{{- $llmGatewayNamespace := .Values.llmGateway.namespace -}}
+{{- $llmGatewayNamespace := dig "llmGateway" "namespace" "llm-gateway-ctnp" (merge (dict) .Values) -}}
 {{- if and (hasKey .Values "networkPolicy") (eq (toString .Values.networkPolicy.enabled) "false") -}}
   {{- $enabled = false -}}
 {{- end -}}
