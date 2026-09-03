@@ -39,7 +39,7 @@ This is a **Level 3** skill because it:
 ## Template Reference
 
 Use this file as the section model for generation:
-- `/Users/suntrinh/Repos/GenAI%20Studio/.github/skills/skill-template/skill_template.md`
+- `references/skill_template.md`
 
 The generated draft should follow the same major sections:
 - Frontmatter
