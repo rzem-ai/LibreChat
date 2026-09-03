@@ -54,12 +54,21 @@ type SkillScanIssue = {
   code?: string;
   severity?: string;
   message: string;
+  // True when `message` is already the scanner's human-friendly `user_message`
+  // (prose that spells out severity/rule context on its own), so the client
+  // shouldn't also prepend a raw `severity=`/`code=` prefix.
+  friendly?: boolean;
 };
 
 type ScanFinding = {
   severity?: string;
   description?: string;
   rule_id?: string;
+  // Human-friendly, pre-formatted variant of `description` (e.g. "Critical —
+  // Command Injection Eval: Pattern detected: exec("). Preferred over
+  // `description` when present so the UI shows the scanner's own user-facing
+  // copy instead of the raw rule description.
+  user_message?: string;
 };
 
 // Per the scanner's OpenAPI schema, a manifest validation problem is always a
@@ -181,7 +190,8 @@ function toIssues(
     issues.push({
       code: finding.rule_id,
       severity: finding.severity,
-      message: finding.description ?? 'Skill scan found an issue',
+      message: finding.user_message ?? finding.description ?? 'Skill scan found an issue',
+      friendly: finding.user_message != null,
     });
   }
 
