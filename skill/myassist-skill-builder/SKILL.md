@@ -26,7 +26,7 @@ Do not use this skill when:
 - The user wants to review, improve, or troubleshoot an existing SKILL.md.
 - The request is unrelated to building or refining a MyAssist skill.
 
-If the user asks about an existing skill draft, redirect them to `skill-refiner`.
+If the user asks about an existing skill draft, redirect them to `myassist-skill-refiner`.
 
 ## Skill Level Definition
 
