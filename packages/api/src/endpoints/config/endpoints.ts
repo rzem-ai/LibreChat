@@ -70,6 +70,7 @@ export function createEndpointsConfigService(deps: EndpointsConfigDeps): {
     }
 
     if (mergedConfig[EModelEndpoint.agents] && appConfig?.endpoints?.[EModelEndpoint.agents]) {
+      // Deloitte Custom Change: merge hideFileContext into the client-facing endpoints config
       const { disableBuilder, hideFileContext, capabilities, allowedProviders } =
         appConfig.endpoints[EModelEndpoint.agents];
       mergedConfig[EModelEndpoint.agents] = {

@@ -175,6 +175,7 @@ describe('createEndpointsConfigService', () => {
       expect(result?.[EModelEndpoint.agents]?.allowedProviders).toEqual(['openAI', 'anthropic']);
     });
 
+    // Deloitte Custom Change: covers the hideFileContext merge path added to endpoints.ts
     it('merges agents config with hideFileContext', async () => {
       const deps = createMockDeps({
         loadDefaultEndpointsConfig: jest.fn().mockResolvedValue({

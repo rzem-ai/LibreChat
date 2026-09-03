@@ -524,6 +524,7 @@ export type TConfig = {
   userProvideSessionToken?: boolean;
   userProvideBearerToken?: boolean;
   disableBuilder?: boolean;
+  /** Deloitte Custom Change: hides the File Context upload section in the Agent Builder UI. */
   hideFileContext?: boolean;
   retrievalModels?: string[];
   capabilities?: string[];
