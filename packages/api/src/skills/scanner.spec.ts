@@ -215,6 +215,38 @@ describe('skill scanner', () => {
     });
   });
 
+  it('falls back when user_message or description is an empty string', async () => {
+    process.env.SKILL_SCANNER_MIN_SEVERITY = 'high';
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse({
+        validation: { passed: true, problems: [] },
+        scan: {
+          is_safe: true,
+          findings: [
+            {
+              severity: 'critical',
+              description: '',
+              rule_id: 'BLANK_MESSAGE',
+              user_message: '',
+            },
+          ],
+        },
+      }),
+    ) as unknown as typeof fetch;
+
+    await expect(upload()).rejects.toMatchObject({
+      statusCode: 422,
+      issues: [
+        {
+          code: 'BLANK_MESSAGE',
+          severity: 'critical',
+          message: 'Skill scan found an issue',
+          friendly: false,
+        },
+      ],
+    });
+  });
+
   it('fails safe and blocks a finding with a missing severity, even under the most lenient threshold', async () => {
     process.env.SKILL_SCANNER_MIN_SEVERITY = 'critical';
     global.fetch = jest.fn().mockResolvedValue(

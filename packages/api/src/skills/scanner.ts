@@ -145,6 +145,14 @@ function asString(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
+function nonEmptyString(value: string | undefined): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? value : undefined;
+}
+
 function yamlValue(value: unknown): string {
   return JSON.stringify(asString(value));
 }
@@ -187,11 +195,13 @@ function toIssues(
   }
 
   for (const finding of blockingFindings(result)) {
+    const userMessage = nonEmptyString(finding.user_message);
+    const description = nonEmptyString(finding.description);
     issues.push({
       code: finding.rule_id,
       severity: finding.severity,
-      message: finding.user_message ?? finding.description ?? 'Skill scan found an issue',
-      friendly: finding.user_message != null,
+      message: userMessage ?? description ?? 'Skill scan found an issue',
+      friendly: userMessage != null,
     });
   }
 
