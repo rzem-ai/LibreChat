@@ -2,6 +2,7 @@ import React from 'react';
 import { RefreshCw, Trash2 } from 'lucide-react';
 import { Button, Spinner } from '@librechat/client';
 import { useLocalize, useMCPServerManager, useMCPConnectionStatus } from '~/hooks';
+import { isSilentlyConnectableOboServer } from './mcpServerUtils';
 
 interface ServerInitializationSectionProps {
   sidePanel?: boolean;
@@ -47,7 +48,9 @@ export default function ServerInitializationSection({
   const serverOAuthUrl = getOAuthUrl(serverName);
 
   const shouldShowReinit = isConnected && (requiresOAuth || hasCustomUserVars);
-  const shouldShowInit = !isConnected && !serverOAuthUrl && !hasPendingOAuth;
+  const isSilentlyConnectable = isSilentlyConnectableOboServer(serverStatus, hasCustomUserVars);
+  const shouldShowInit =
+    !isConnected && !serverOAuthUrl && !hasPendingOAuth && !isSilentlyConnectable;
 
   if (!shouldShowReinit && !shouldShowInit && !serverOAuthUrl) {
     if (!hasPendingOAuth) {

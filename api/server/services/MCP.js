@@ -33,6 +33,7 @@ const {
   hasRuntimeUrlPlaceholders,
   containsGraphTokenPlaceholder,
   isOAuthServer,
+  isOboServer,
 } = require('@librechat/api');
 const {
   Time,
@@ -1354,7 +1355,7 @@ function canDetectMCPRuntimeOAuth(config) {
  * @param {Map<string, import('@librechat/api').MCPConnection>} userConnections - User-level connections
  * @param {Set} oauthServers - Set of OAuth servers
  * @param {{ user?: Partial<IUser>, userMCPAuthMap?: Record<string, Record<string, string>>, loadUserMCPAuthMap?: () => Promise<Record<string, Record<string, string>> | undefined>, loadMCPAllowlists?: () => Promise<{ allowedDomains?: string[] | null, allowedAddresses?: string[] | null }> }} [runtimeContext]
- * @returns {Object} Object containing requiresOAuth and connectionState
+ * @returns {Object} Object containing requiresOAuth, connectionState, and configuredObo
  */
 async function getServerConnectionStatus(
   userId,
@@ -1417,6 +1418,7 @@ async function getServerConnectionStatus(
     requiresOAuth,
     connectionState: finalConnectionState,
     authorizationState,
+    configuredObo: isOboServer(config),
   };
 }
 

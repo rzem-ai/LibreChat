@@ -71,6 +71,12 @@ export function getSelectAllState(
 // The init states (isInitializing, isCancellable, etc.) are stored in the global Jotai atom
 type PollIntervals = Record<string, NodeJS.Timeout | null>;
 
+/** Deloitte Custom Change: names of OBO servers this page session has already
+ * silently auto-connected (or attempted to). Module scope, not component state
+ * — see the auto-connect effect below for why this must be a synchronous guard
+ * shared across every mounted `useMCPServerManager` instance. Resets on reload. */
+const oboAutoConnectAttempted = new Set<string>();
+
 export function useMCPServerManager({
   conversationId,
   storageContextKey,
@@ -625,6 +631,49 @@ export function useMCPServerManager({
     },
     [needsCustomVarsConfig, openConfigDialogForServer, initializeServer],
   );
+
+  /** Deloitte Custom Change: OBO-configured servers never need a manual "Connect"
+   * click — the backend authenticates them silently per tool call. Auto-trigger
+   * the same silent initializeServer path a click would take, once per
+   * disconnect "episode" (see the `connected` branch below for why the guard
+   * is cleared rather than set-once-forever).
+   *
+   * `oboAutoConnectAttempted` (module scope, not React/Jotai state) is the guard,
+   * not a state field: `useMCPServerManager` is mounted independently in several
+   * places at once (BadgeRowProvider, the MCP builder panel, one McpSection per
+   * tool item, …), each running this same effect over the full server list. A
+   * React-state guard (even a shared atom) only becomes visible to sibling
+   * instances on their next re-render, so multiple instances can all read
+   * "not yet attempted" before any of their writes commit, and all fire
+   * `initializeServer` for the same server at once. A plain module-level Set is
+   * read and written synchronously in the same JS turn, so the first instance to
+   * reach a server closes the door for every other instance immediately. */
+  useEffect(() => {
+    if (!connectionStatus) {
+      return;
+    }
+    for (const [serverName, status] of Object.entries(connectionStatus)) {
+      if (status.connectionState === 'connected') {
+        // Clear the guard on a successful connect so a later disconnect for this
+        // server (e.g. the backend's idle-connection reaper closing an unused
+        // OBO connection) is auto-retried instead of being silently stuck
+        // forever, since the "Connect" button stays hidden for OBO servers.
+        oboAutoConnectAttempted.delete(serverName);
+        continue;
+      }
+      if (status.connectionState !== 'disconnected' || !status.configuredObo) {
+        continue;
+      }
+      if (needsCustomVarsConfig(serverName)) {
+        continue;
+      }
+      if (oboAutoConnectAttempted.has(serverName)) {
+        continue;
+      }
+      oboAutoConnectAttempted.add(serverName);
+      initializeServer(serverName, false);
+    }
+  }, [connectionStatus, needsCustomVarsConfig, initializeServer]);
 
   const cancelOAuthFlow = useCallback(
     (serverName: string) => {
