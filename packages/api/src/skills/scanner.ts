@@ -586,12 +586,17 @@ async function reRootZip(zip: JSZip, prefix: string): Promise<JSZip | null> {
       continue;
     }
     const normalized = entryPath.replace(/\\/g, '/');
-    const relativePath = normalized.startsWith(prefix)
-      ? normalized.slice(prefix.length)
-      : normalized;
+    const isUnderPrefix = normalized.startsWith(prefix);
+    const relativePath = isUnderPrefix ? normalized.slice(prefix.length) : normalized;
 
     // Mirror handleZip's path-safety rules so we don't generate traversal/absolute paths.
     const safePath = relativePath.replace(/^\/+/, '');
+
+    // Match handleZip behavior: when SKILL.md is discovered under `prefix`, ignore any
+    // other SKILL.md entries outside that prefix so they can't overwrite the rooted manifest.
+    if (!isUnderPrefix && safePath.toUpperCase() === SKILL_MD.toUpperCase()) {
+      continue;
+    }
     if (
       !safePath ||
       safePath.startsWith('/') ||
@@ -604,17 +609,13 @@ async function reRootZip(zip: JSZip, prefix: string): Promise<JSZip | null> {
 
     const cumulativeLimit = DEFAULT_SKILL_IMPORT_LIMITS.maxDecompressedBytes - totalDecompressed;
     if (cumulativeLimit <= 0) {
-      break;
+      return null;
     }
     const effectiveLimit = Math.min(perFileLimit, cumulativeLimit);
     const { buffer, bytesRead } = await readZipEntry(entry, effectiveLimit);
     totalDecompressed += bytesRead;
     if (buffer == null) {
-      // Skip oversized single files; stop when the cumulative budget is exceeded.
-      if (bytesRead > cumulativeLimit) {
-        break;
-      }
-      continue;
+      return null;
     }
     rooted.file(safePath, buffer);
   }
