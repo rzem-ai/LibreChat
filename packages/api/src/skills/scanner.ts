@@ -569,17 +569,34 @@ async function reRootZip(zip: JSZip, prefix: string): Promise<JSZip | null> {
     const relativePath = normalized.startsWith(prefix)
       ? normalized.slice(prefix.length)
       : normalized;
-    if (!relativePath) {
+
+    // Mirror handleZip's path-safety rules so we don't generate traversal/absolute paths.
+    const safePath = relativePath.replace(/^\/+/, '');
+    if (
+      !safePath ||
+      safePath.startsWith('/') ||
+      safePath.startsWith('\\') ||
+      safePath.split('/').some((seg) => seg === '' || seg === '.' || seg === '..') ||
+      !/^[a-zA-Z0-9._\-/]+$/.test(safePath)
+    ) {
       continue;
     }
+
     const cumulativeLimit = DEFAULT_SKILL_IMPORT_LIMITS.maxDecompressedBytes - totalDecompressed;
+    if (cumulativeLimit <= 0) {
+      break;
+    }
     const effectiveLimit = Math.min(perFileLimit, cumulativeLimit);
     const { buffer, bytesRead } = await readZipEntry(entry, effectiveLimit);
-    if (buffer == null) {
-      return null;
-    }
     totalDecompressed += bytesRead;
-    rooted.file(relativePath, buffer);
+    if (buffer == null) {
+      // Skip oversized single files; stop when the cumulative budget is exceeded.
+      if (bytesRead > cumulativeLimit) {
+        break;
+      }
+      continue;
+    }
+    rooted.file(safePath, buffer);
   }
   return rooted;
 }
