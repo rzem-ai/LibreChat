@@ -19,8 +19,8 @@ import JSZip from 'jszip';
 import { logger } from '@librechat/data-schemas';
 import { SKILL_SEVERITY_LEVELS } from 'librechat-data-provider';
 import { parseSkillMarkdown, extractSkillBody } from './parse';
+import { readZipEntry, stripMacOSMetadata } from './zip';
 import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
-import { readZipEntry } from './zip';
 
 const SKILL_MD = 'SKILL.md';
 const DEFAULT_TIMEOUT_MS = 15000;
@@ -701,9 +701,21 @@ export async function scanSkillUpload(params: {
   const bytes = new Uint8Array(params.archive.length);
   bytes.set(params.archive);
 
-  const stripped = await stripInternalFrontmatterFromZip(bytes);
+  // Deloitte Custom Change: Strip macOS metadata before scanning so __MACOSX/
+  // sidecars and .DS_Store files do not trigger false-positive validation errors.
+  let cleanBytes = bytes;
+  try {
+    const zip = await JSZip.loadAsync(bytes);
+    stripMacOSMetadata(zip);
+    cleanBytes = await zip.generateAsync({ type: 'uint8array' });
+  } catch {
+    // If the archive is corrupt, fall back to original bytes —
+    // the scanner will surface the error via its own validation.
+  }
+
+  const stripped = await stripInternalFrontmatterFromZip(cleanBytes);
   if (!stripped) {
-    await scanArchive(bytes, params.fileName, { token: params.token });
+    await scanArchive(cleanBytes, params.fileName, { token: params.token });
     return;
   }
   await scanArchive(stripped.archive, params.fileName, { token: params.token });

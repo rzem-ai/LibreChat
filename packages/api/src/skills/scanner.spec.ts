@@ -571,6 +571,56 @@ describe('skill scanner', () => {
       expect(frontmatterText).toMatch(/alwaysApply/);
     });
 
+    // Deloitte Custom Change: Verify macOS metadata is stripped before scanning so
+    // __MACOSX/ sidecars and .DS_Store files do not trigger false-positive validation errors.
+    it('strips __MACOSX, .DS_Store, and ._* entries from a macOS Finder zip before scanning', async () => {
+      const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
+      global.fetch = fetchSpy as unknown as typeof fetch;
+
+      // Level 3 skill with macOS Finder artefacts injected by right-click → Compress
+      const zip = new JSZip();
+      zip.file(
+        'skill-name/SKILL.md',
+        ['---', 'name: mac-skill', 'description: A macOS-created skill.', '---', '# Body'].join(
+          '\n',
+        ),
+      );
+      zip.file('skill-name/FORMS.md', '# Form-filling guide');
+      zip.file('skill-name/scripts/fill_form.py', 'print("hello")');
+      zip.file('skill-name/references/api-schema.json', '{"api": "schema"}');
+      zip.file('skill-name/assets/template.txt', 'template');
+      // .DS_Store files at multiple depths — Finder writes one per folder it opens
+      zip.file('skill-name/.DS_Store', '');
+      zip.file('skill-name/scripts/.DS_Store', '');
+      zip.file('.DS_Store', '');
+      // __MACOSX/ mirror — Finder injects one sidecar per file with extended attributes
+      zip.file('__MACOSX/skill-name/._SKILL.md', '');
+      zip.file('__MACOSX/skill-name/._FORMS.md', '');
+      zip.file('__MACOSX/skill-name/scripts/._fill_form.py', '');
+      zip.file('__MACOSX/skill-name/references/._api-schema.json', '');
+      zip.file('__MACOSX/skill-name/assets/._template.txt', '');
+      const archive = await zip.generateAsync({ type: 'uint8array' });
+
+      await scanSkillUpload({ archive, fileName: 'skill-name.zip' });
+
+      // Inspect what the scanner actually received
+      const scannedZip = await scannedArchiveFrom(fetchSpy.mock.calls[0]);
+      const scannedEntries = Object.keys(scannedZip.files);
+
+      // Real skill files must be present
+      expect(scannedEntries).toContain('skill-name/SKILL.md');
+      expect(scannedEntries).toContain('skill-name/FORMS.md');
+      expect(scannedEntries).toContain('skill-name/scripts/fill_form.py');
+      expect(scannedEntries).toContain('skill-name/references/api-schema.json');
+      expect(scannedEntries).toContain('skill-name/assets/template.txt');
+
+      // macOS metadata must not be present in the scanned archive
+      expect(scannedEntries).not.toContain('.DS_Store');
+      expect(scannedEntries.some((e) => e.startsWith('__MACOSX/'))).toBe(false);
+      expect(scannedEntries.some((e) => e.endsWith('.DS_Store'))).toBe(false);
+      expect(scannedEntries.some((e) => e.includes('._'))).toBe(false);
+    });
+
     it('strips always-apply out of a zip upload while preserving companion files', async () => {
       const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
       global.fetch = fetchSpy as unknown as typeof fetch;

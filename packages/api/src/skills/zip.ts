@@ -1,4 +1,27 @@
+import path from 'path';
 import type JSZip from 'jszip';
+
+/**
+ * Deloitte Custom Change: Strip macOS metadata injected by Finder's "Compress"
+ * from an in-memory JSZip object before scanning or processing.
+ * Removes __MACOSX/ resource fork sidecars, .DS_Store Finder view-state files,
+ * and ._* resource fork sidecar files so the skill scanner does not flag them
+ * as validation errors and block the upload.
+ */
+export function stripMacOSMetadata(zip: JSZip): void {
+  for (const entryPath of Object.keys(zip.files)) {
+    const normalized = entryPath.replace(/\\/g, '/');
+    const basename = path.posix.basename(normalized);
+    if (
+      normalized === '__MACOSX' ||
+      normalized.startsWith('__MACOSX/') ||
+      basename === '.DS_Store' ||
+      basename.startsWith('._')
+    ) {
+      zip.remove(entryPath);
+    }
+  }
+}
 
 /**
  * Streams a zip entry's decompressed bytes, aborting as soon as the running
