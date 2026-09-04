@@ -181,7 +181,7 @@ export function isSilentlyConnectableOboServer(
   return (
     serverStatus?.connectionState === 'disconnected' &&
     serverStatus?.configuredObo === true &&
-    !hasCustomUserVars
+    hasCustomUserVars === false
   );
 }
 

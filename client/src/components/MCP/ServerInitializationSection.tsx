@@ -19,7 +19,7 @@ export default function ServerInitializationSection({
   conversationId,
   storageContextKey,
   sidePanel = false,
-  hasCustomUserVars = false,
+  hasCustomUserVars,
 }: ServerInitializationSectionProps) {
   const localize = useLocalize();
 
