@@ -12,6 +12,8 @@ interface SharePointEntity {
   webUrl?: string;
   description?: string;
   parentPath?: string;
+  /** Full file content (e.g. markdown/text extracted by `sp_read_file`), if present. */
+  content?: string;
 }
 
 interface SharePointSearchHit {
@@ -38,7 +40,7 @@ function buildEntitySource(
   if (!title) {
     return undefined;
   }
-  const detail = snippet ?? entity.description ?? entity.parentPath;
+  const detail = entity.content ?? snippet ?? entity.description ?? entity.parentPath;
   return {
     toolName,
     serverName,
@@ -67,11 +69,13 @@ function buildSourcesFromEntities(
  * Parses the SharePoint/Graph gateway payload shapes (`sp_search`'s
  * `{ results: [{ summary, resource }] }`, the `sp_list_*` tools' labeled list
  * wrappers `{ items | sites | drives | recentFiles | sharedFiles: [...] }`,
- * and `sp_get_site`/`sp_get_item`'s bare Graph object) into one
- * {@link MCPResultSource} per site/drive/file, so each citation can point at
- * the specific document instead of the whole raw JSON blob. Returns undefined
- * (letting the caller fall back) when the content isn't one of these shapes,
- * or no entry yields usable text.
+ * `sp_get_site`/`sp_get_item`'s bare Graph object, and `sp_read_file`'s
+ * `{ name, webUrl, content }` object where `content` is the file's full
+ * extracted text/markdown) into one {@link MCPResultSource} per
+ * site/drive/file, so each citation can point at the specific document
+ * instead of the whole raw JSON blob. Returns undefined (letting the caller
+ * fall back) when the content isn't one of these shapes, or no entry yields
+ * usable text.
  */
 export function buildSharePointSources({
   toolName,

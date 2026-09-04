@@ -136,6 +136,31 @@ describe('buildSharePointSources', () => {
     expect(result?.sources[0]).toMatchObject({ title: 'Report.pdf' });
   });
 
+  it('builds a source carrying full file content for an sp_read_file-style payload', () => {
+    const content = JSON.stringify({
+      name: 'Anthropic_Claude_Certification_Guide.docx',
+      webUrl:
+        'https://contoso.sharepoint.com/sites/finance/Anthropic_Claude_Certification_Guide.docx',
+      content:
+        '# Anthropic Claude Certification Guide\n\nClaude Certified Associate – Foundations (CCAO-F)...',
+    });
+
+    const result = buildSharePointSources({
+      toolName: 'sp_read_file',
+      serverName: 'cleartrack-mcp-gateway-sharepoint',
+      content,
+    });
+
+    expect(result?.sources).toHaveLength(1);
+    expect(result?.sources[0]).toMatchObject({
+      title: 'Anthropic_Claude_Certification_Guide.docx',
+      link: 'https://contoso.sharepoint.com/sites/finance/Anthropic_Claude_Certification_Guide.docx',
+    });
+    expect(result?.sources[0].content).toContain(
+      'Claude Certified Associate – Foundations (CCAO-F)',
+    );
+  });
+
   it('returns undefined for an empty list result', () => {
     const content = JSON.stringify({ items: [], count: 0 });
 
