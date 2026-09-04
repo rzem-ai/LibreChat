@@ -1217,8 +1217,8 @@ async function loadToolDefinitionsWrapper({
      * file_search, so agents without it never see this note. Deliberately
      * avoids asserting whether other (non-file_search) attachments exist.
      */
-    dynamicToolContextMap.file_search_guardrail =
-      '- Note: File search is unavailable this turn — there are no documents available to search. Do not tell the user you searched any documents, and do not proactively suggest uploading a file. Only if the user explicitly asks you to look something up in an uploaded file should you mention that none is available for search right now.';
+dynamicToolContextMap.file_search_guardrail =
+  '- Note: File search is unavailable this turn. Do not tell the user you searched any documents, and do not proactively suggest uploading a file. Only if the user explicitly asks you to look something up in an uploaded file should you say that file search is not available right now.';
   }
 
   const imageFiles = tool_resources?.[EToolResources.image_edit]?.files ?? [];
