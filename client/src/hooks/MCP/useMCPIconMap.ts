@@ -1,24 +1,42 @@
 import { useMemo } from 'react';
 import { normalizeServerName } from 'librechat-data-provider';
+import type { MCPServerDBObjectResponse } from 'librechat-data-provider';
 import { useMCPServersQuery } from '~/data-provider';
 
-export function useMCPIconMap(): Map<string, string> {
+/**
+ * Deloitte Custom Change: maps each configured MCP server's normalized name (the
+ * form tool keys and citation `serverName` fields carry, since the config itself
+ * is keyed by the raw name) to its full config entry, so field-specific maps
+ * below can share one pass over the server list instead of each re-iterating it.
+ */
+function useMCPServerConfigMap(): Map<string, MCPServerDBObjectResponse> {
   const { data: servers } = useMCPServersQuery();
 
   return useMemo(() => {
-    const map = new Map<string, string>();
+    const map = new Map<string, MCPServerDBObjectResponse>();
     if (!servers) {
       return map;
     }
     for (const [serverName, config] of Object.entries(servers)) {
-      if (config.iconPath) {
-        /** Looked up with a server name parsed out of a tool key, which carries the
-         *  normalized form, so key the map the same way. */
-        map.set(normalizeServerName(serverName), config.iconPath);
-      }
+      map.set(normalizeServerName(serverName), config);
     }
     return map;
   }, [servers]);
+}
+
+// Deloitte Custom Change: reads from the shared config map instead of re-querying servers
+export function useMCPIconMap(): Map<string, string> {
+  const configMap = useMCPServerConfigMap();
+
+  return useMemo(() => {
+    const map = new Map<string, string>();
+    for (const [serverName, config] of configMap) {
+      if (config.iconPath) {
+        map.set(serverName, config.iconPath);
+      }
+    }
+    return map;
+  }, [configMap]);
 }
 
 /**
@@ -28,4 +46,19 @@ export function useMCPIconMap(): Map<string, string> {
 export function useMCPServerNames(): string[] {
   const { data: servers } = useMCPServersQuery();
   return useMemo(() => (servers ? Object.keys(servers).map(normalizeServerName) : []), [servers]);
+}
+
+/** Deloitte Custom Change: maps each configured MCP server's normalized name to its display title. */
+export function useMCPServerTitleMap(): Map<string, string> {
+  const configMap = useMCPServerConfigMap();
+
+  return useMemo(() => {
+    const map = new Map<string, string>();
+    for (const [serverName, config] of configMap) {
+      if (config.title) {
+        map.set(serverName, config.title);
+      }
+    }
+    return map;
+  }, [configMap]);
 }
