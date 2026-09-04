@@ -2905,6 +2905,8 @@ export enum Constants {
   SAVED_TAG = 'Saved',
   /** Max number of Conversation starters for Agents/Assistants */
   MAX_CONVO_STARTERS = 4,
+  /** Max length for Agent name */
+  AGENT_NAME_MAX_LENGTH = 60,
   /** Delimiter for MCP tools */
   mcp_delimiter = '_mcp_',
   /** Prefix for MCP plugins */
