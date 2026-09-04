@@ -159,7 +159,7 @@ memory:
     model: 'google/gemini-2.5-flash'
     instructions: |
       Only store stated preferences (e.g. I like X, I dislike Y) and any important facts/context about the user's work at Deloitte (e.g. current projects, team composition).
-      Delete outdated or corrected information promptly.
+      Update or delete out-of-date information promptly.
 
 endpoints:
   # ========================================
