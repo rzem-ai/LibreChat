@@ -175,7 +175,7 @@ export function serverNeedsAction(
 export function shouldShowActionButton(statusIconProps?: MCPServerStatusIconProps | null): boolean {
   if (!statusIconProps) return false;
 
-  const { serverStatus, canCancel, hasCustomUserVars, isInitializing } = statusIconProps;
+  const { serverStatus, canCancel, hasCustomUserVars, isObo, isInitializing } = statusIconProps;
 
   // Show cancel button during OAuth flow
   if (isInitializing && canCancel) return true;
@@ -185,14 +185,18 @@ export function shouldShowActionButton(statusIconProps?: MCPServerStatusIconProp
   if (!serverStatus) return false;
   const { connectionState, requiresOAuth } = serverStatus;
 
-  // Show for disconnected/error (can reconnect/configure)
-  if (connectionState === 'disconnected' || connectionState === 'error') return true;
   // Show a cancel action for pending OAuth connections.
   if (connectionState === 'connecting' && requiresOAuth && canCancel) return true;
   // Don't show connecting spinner when no action is available.
   if (connectionState === 'connecting') return false;
-  // Connected: only show if there's config to manage
-  if (connectionState === 'connected') return hasCustomUserVars || requiresOAuth;
+  // Deloitte Custom Change: Disconnected/error: show the connect button unless the server
+  // is OBO — OBO connects transparently via the checkbox, so no separate action is needed
+  // (matches the ConnectButton condition in MCPServerStatusIcon).
+  if (connectionState === 'disconnected' || connectionState === 'error') return !isObo;
+  // Deloitte Custom Change: Connected: only show if there's custom-var config to manage
+  // (matches the ConfigureButton condition in MCPServerStatusIcon — requiresOAuth alone
+  // renders nothing).
+  if (connectionState === 'connected') return Boolean(hasCustomUserVars);
 
   return false;
 }
