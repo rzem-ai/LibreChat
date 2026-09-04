@@ -649,7 +649,12 @@ export function useMCPServerManager({
    * read and written synchronously in the same JS turn, so the first instance to
    * reach a server closes the door for every other instance immediately. */
   useEffect(() => {
+    // Clear the guard when connectionStatus becomes unavailable (e.g., on logout),
+    // signaling the start of a new session. Without this, a logout/login flow without
+    // a full page reload would leave stale server names in the Set, preventing
+    // auto-connect from working in the next session.
     if (!connectionStatus) {
+      oboAutoConnectAttempted.clear();
       return;
     }
     for (const [serverName, status] of Object.entries(connectionStatus)) {
