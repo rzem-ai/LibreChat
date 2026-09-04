@@ -1206,18 +1206,19 @@ async function loadToolDefinitionsWrapper({
     } catch (error) {
       logger.error('[loadToolDefinitionsWrapper] Error priming search files:', error);
     }
-  } else {
+  } else if (agent.tools?.includes(Tools.file_search)) {
     // Deloitte Custom Change: guard against false file-search claims, since file search is enabled by default.
     /**
-     * file_search is unavailable this turn — either the capability is off,
-     * or it's on but got filtered out of `filteredTools` because there are
-     * no files to search. Either way the tool itself is unreachable, but
-     * nothing stops the model from still talking about files unprompted
-     * (e.g. via its own agent.instructions) — guard against that narrative
-     * regardless of why the tool is missing.
+     * file_search is configured for this agent but unavailable this turn —
+     * either the capability is off, or it's on but got filtered out of
+     * `filteredTools` because there are no eligible files to search. Guard
+     * against the model claiming to have searched documents regardless of
+     * which reason applies. Scoped to agents that actually reference
+     * file_search, so agents without it never see this note. Deliberately
+     * avoids asserting whether other (non-file_search) attachments exist.
      */
     dynamicToolContextMap.file_search_guardrail =
-      '- Note: No files are currently attached to this conversation, and file search is unavailable this turn. Do not tell the user you searched any documents, and do not proactively suggest uploading a file. Only if the user explicitly asks you to look something up in an uploaded file should you mention that none is available and offer to answer from general knowledge instead.';
+      '- Note: File search is unavailable this turn — there are no documents available to search. Do not tell the user you searched any documents, and do not proactively suggest uploading a file. Only if the user explicitly asks you to look something up in an uploaded file should you mention that none is available for search right now.';
   }
 
   const imageFiles = tool_resources?.[EToolResources.image_edit]?.files ?? [];
