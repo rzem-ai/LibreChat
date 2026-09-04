@@ -1,6 +1,9 @@
 imageRegistry: 'dttaitsdev.azurecr.io'
 branch: 'develop'
 
+llmGateway:
+  namespace: 'llm-gateway-ctnp'
+
 serviceAccount:
   name: sa-librechat-dev
 
