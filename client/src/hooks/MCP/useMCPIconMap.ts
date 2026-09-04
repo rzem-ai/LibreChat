@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { normalizeServerName } from 'librechat-data-provider';
+import { normalizeServerName, buildServerNameAliases } from 'librechat-data-provider';
 import type { MCPServerDBObjectResponse } from 'librechat-data-provider';
 import { useMCPServersQuery } from '~/data-provider';
 
@@ -8,6 +8,8 @@ import { useMCPServersQuery } from '~/data-provider';
  * form tool keys and citation `serverName` fields carry, since the config itself
  * is keyed by the raw name) to its full config entry, so field-specific maps
  * below can share one pass over the server list instead of each re-iterating it.
+ * Collisions are resolved via `buildServerNameAliases`, the same deterministic
+ * routing the server uses, rather than "last/first configured name wins".
  */
 function useMCPServerConfigMap(): Map<string, MCPServerDBObjectResponse> {
   const { data: servers } = useMCPServersQuery();
@@ -17,8 +19,12 @@ function useMCPServerConfigMap(): Map<string, MCPServerDBObjectResponse> {
     if (!servers) {
       return map;
     }
-    for (const [serverName, config] of Object.entries(servers)) {
-      map.set(normalizeServerName(serverName), config);
+    const aliases = buildServerNameAliases(Object.keys(servers));
+    for (const [normalizedName, rawName] of aliases) {
+      const config = servers[rawName];
+      if (config) {
+        map.set(normalizedName, config);
+      }
     }
     return map;
   }, [servers]);

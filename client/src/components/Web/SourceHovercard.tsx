@@ -51,9 +51,10 @@ export function FaviconImage({ domain, className = '' }: { domain: string; class
 }
 
 /**
- * Deloitte Custom Change: full hovercard body: title at the top (full width,
- * always underlined), then any additional content, then the source icon + name
- * as a footer at the bottom of the card.
+ * Deloitte Custom Change: full hovercard body: title at the top (underlined
+ * when it links out or opens a preview, plain text otherwise), then any
+ * additional content, then the source icon + name as a footer at the bottom
+ * of the card.
  */
 export function TooltipContent({
   icon,
