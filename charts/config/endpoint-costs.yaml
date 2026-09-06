@@ -1,7 +1,3 @@
-metadata:
-    REFERENCE_MODEL_ID: 'gpt-56-luna' # Reference model that the cost multiplier will be based on.
-    MULTIPLIER_ROUNDING_INCREMENT: 0.1 # At what increment will the multiplier be rounded to. The Model is always rounded up to the nearest increment.
-    MIN_MULTIPLIER: 0.1 # The smallest multiplier that will be used for any model. This is to ensure that even if a model is very cheap, it will still show a cost associated with it.
 data:
   pricing.yaml: |
     # LLM Pricing Configuration for Cost Analysis

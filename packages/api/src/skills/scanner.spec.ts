@@ -152,6 +152,101 @@ describe('skill scanner', () => {
     });
   });
 
+  it('prefers the finding user_message over description when both are present', async () => {
+    process.env.SKILL_SCANNER_MIN_SEVERITY = 'high';
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse({
+        validation: { passed: true, problems: [] },
+        scan: {
+          is_safe: true,
+          findings: [
+            {
+              severity: 'critical',
+              description: 'Pattern detected: exec(',
+              rule_id: 'COMMAND_INJECTION_EVAL',
+              user_message: 'Critical — Command Injection Eval: Pattern detected: exec(',
+            },
+          ],
+        },
+      }),
+    ) as unknown as typeof fetch;
+
+    await expect(upload()).rejects.toMatchObject({
+      statusCode: 422,
+      issues: [
+        {
+          code: 'COMMAND_INJECTION_EVAL',
+          severity: 'critical',
+          message: 'Critical — Command Injection Eval: Pattern detected: exec(',
+          friendly: true,
+        },
+      ],
+    });
+  });
+
+  it('does not mark a finding as friendly when it has no user_message (falls back to description)', async () => {
+    process.env.SKILL_SCANNER_MIN_SEVERITY = 'high';
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse({
+        validation: { passed: true, problems: [] },
+        scan: {
+          is_safe: true,
+          findings: [
+            {
+              severity: 'critical',
+              description: 'exec() call detected',
+              rule_id: 'DANGEROUS_EXEC',
+            },
+          ],
+        },
+      }),
+    ) as unknown as typeof fetch;
+
+    await expect(upload()).rejects.toMatchObject({
+      statusCode: 422,
+      issues: [
+        {
+          code: 'DANGEROUS_EXEC',
+          severity: 'critical',
+          message: 'exec() call detected',
+          friendly: false,
+        },
+      ],
+    });
+  });
+
+  it('falls back when user_message or description is an empty string', async () => {
+    process.env.SKILL_SCANNER_MIN_SEVERITY = 'high';
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse({
+        validation: { passed: true, problems: [] },
+        scan: {
+          is_safe: true,
+          findings: [
+            {
+              severity: 'critical',
+              description: '',
+              rule_id: 'BLANK_MESSAGE',
+              user_message: '',
+            },
+          ],
+        },
+      }),
+    ) as unknown as typeof fetch;
+
+    await expect(upload()).rejects.toMatchObject({
+      statusCode: 422,
+      issues: [
+        {
+          code: 'BLANK_MESSAGE',
+          severity: 'critical',
+          message: 'Skill scan found an issue',
+          friendly: false,
+        },
+      ],
+    });
+  });
+
   it('fails safe and blocks a finding with a missing severity, even under the most lenient threshold', async () => {
     process.env.SKILL_SCANNER_MIN_SEVERITY = 'critical';
     global.fetch = jest.fn().mockResolvedValue(

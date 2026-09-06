@@ -25,6 +25,13 @@ export interface MCPServerStatusIconProps {
   canCancel: boolean;
   onCancel: (e: React.MouseEvent) => void;
   hasCustomUserVars?: boolean;
+  /**
+   * Deloitte Custom Change: True when the server authenticates via On-Behalf-Of (OBO) token
+   * exchange. OBO connects transparently (no interactive OAuth step), so the checkbox
+   * alone is enough to trigger it — the explicit connect button is redundant
+   * and suppressed for these servers.
+   */
+  isObo?: boolean;
   /** When true, renders as a small status dot for compact layouts */
   compact?: boolean;
 }
@@ -33,7 +40,7 @@ export interface MCPServerStatusIconProps {
  * Renders the appropriate status icon for an MCP server based on its state.
  *
  * Unified icon system:
- * - PlugZap: Connect/Authenticate (for disconnected servers that need connection)
+ * - PlugZap: Connect/Authenticate (disconnected/error servers, unless OBO)
  * - SlidersHorizontal: Configure (for connected servers with custom vars)
  * - Spinner: Loading state (during connection)
  * - X: Cancel (during OAuth flow, shown on hover over spinner)
@@ -46,6 +53,7 @@ export default function MCPServerStatusIcon({
   canCancel,
   onCancel,
   hasCustomUserVars = false,
+  isObo = false,
   compact = false,
 }: MCPServerStatusIconProps) {
   localize = useLocalize();
@@ -89,8 +97,13 @@ export default function MCPServerStatusIcon({
     return <ConnectingSpinner serverName={serverName} />;
   }
 
-  // Disconnected or Error: show connect button (PlugZap icon)
+  // Deloitte Custom Change: Disconnected or Error: OBO connects transparently via the
+  // checkbox, so no separate action is needed. Other auth types still get an explicit
+  // connect button.
   if (connectionState === 'disconnected' || connectionState === 'error') {
+    if (isObo) {
+      return null;
+    }
     return <ConnectButton serverName={serverName} onConfigClick={onConfigClick} />;
   }
 
@@ -178,7 +191,7 @@ function ConnectingSpinner({ serverName }: { serverName: string }) {
   );
 }
 
-/** Connect button - shown for disconnected/error states. Uses PlugZap icon. */
+/** Deloitte Custom Change: Connect button - shown for disconnected/error states (non-OBO). Uses PlugZap icon. */
 function ConnectButton({ serverName, onConfigClick }: StatusIconProps) {
   return (
     <button

@@ -320,6 +320,13 @@ describe('AttachFileMenu', () => {
   describe('SharePoint Integration', () => {
     it('shows SharePoint option when enabled', () => {
       setupMocks();
+      // Deloitte Custom Change: explicit mock so this test doesn't depend on the
+      // useAgentCapabilities default across unrelated fixture changes.
+      mockUseAgentCapabilities.mockReturnValue({
+        contextEnabled: true,
+        fileSearchEnabled: false,
+        codeEnabled: false,
+      });
       mockUseGetStartupConfig.mockReturnValue({
         data: { sharePointFilePickerEnabled: true },
       });

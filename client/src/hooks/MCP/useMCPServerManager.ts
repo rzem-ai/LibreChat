@@ -221,7 +221,9 @@ export function useMCPServerManager({
   // Poll intervals are kept local (not serializable)
   const pollIntervalsRef = useRef<PollIntervals>({});
 
-  const { connectionStatus } = useMCPConnectionStatus({
+  // Deloitte Custom Change: isConnectionStatusLoading feeds isConnectorBusy below, so
+  // per-connector connects can't race the initial status fetch.
+  const { connectionStatus, isConnectionStatusLoading } = useMCPConnectionStatus({
     enabled: !isLoading && availableMCPServers.length > 0,
   });
 
@@ -701,15 +703,21 @@ export function useMCPServerManager({
   /**
    * Deloitte Custom Change: A connector is "busy" when it's already initializing locally
    * or the backend reports it mid-OAuth (connectionState === 'connecting') — regardless
-   * of whether that connection was started here or elsewhere (e.g. another tab). Shared
-   * by toggleServerSelection (so selection can't thrash) and toggleSelectAll (so it
-   * doesn't restart an in-flight connect).
+   * of whether that connection was started here or elsewhere (e.g. another tab). Also busy
+   * while the initial connectionStatus fetch is still in flight, so a checkbox click can't
+   * race a not-yet-loaded status: acting on it before load would otherwise force a
+   * redundant reinitialize for an already-connected server (status looks "empty") or
+   * silently no-op for a genuinely disconnected one (status guessed as "connected") —
+   * neither of which we can tell apart until the fetch resolves. Shared by
+   * toggleServerSelection (so selection can't thrash) and toggleSelectAll (so it doesn't
+   * restart an in-flight connect).
    */
   const isConnectorBusy = useCallback(
     (connectorName: string) =>
+      isConnectionStatusLoading ||
       isInitializing(connectorName) ||
       connectionStatus?.[connectorName]?.connectionState === 'connecting',
-    [isInitializing, connectionStatus],
+    [isConnectionStatusLoading, isInitializing, connectionStatus],
   );
 
   const toggleServerSelection = useCallback(
@@ -724,16 +732,34 @@ export function useMCPServerManager({
 
       if (isCurrentlySelected) {
         setSelection(currentValues.filter((name) => name !== serverName));
-      } else {
-        setSelection([...currentValues, serverName]);
+        return;
+      }
+
+      setSelection([...currentValues, serverName]);
+
+      // Deloitte Custom Change: Checking a row now owns connecting (no separate plug-icon
+      // button). Mirrors the per-connector branch in toggleSelectAll below. isConnectorBusy
+      // above already blocks this while the initial connectionStatus fetch is in flight, so
+      // by this point every tracked server has a real entry — no need to special-case
+      // "unloaded" here.
+      const isConnected = connectionStatus?.[serverName]?.connectionState === 'connected';
+      if (!isConnected) {
+        connectOrConfigureServer(serverName, true);
       }
     },
-    [setSelection, isConnectorBusy],
+    [setSelection, isConnectorBusy, connectionStatus, connectOrConfigureServer],
   );
 
   /** Deloitte Custom Change: Selects every selectable connector, or clears the selection if
    * all are already selected. */
   const toggleSelectAll = useCallback(() => {
+    // Deloitte Custom Change: Bail out before selecting anything while the initial
+    // connectionStatus fetch is in flight — otherwise every connector reads as "busy" below
+    // and setSelection would check every box while connecting none of them.
+    if (isConnectionStatusLoading) {
+      return;
+    }
+
     const selectableConnectorNames = selectableServers.map((server) => server.serverName);
 
     // Deloitte Custom Change: Compute fresh from mcpValuesRef.current (not the closed-over
@@ -777,6 +803,7 @@ export function useMCPServerManager({
       }
     }
   }, [
+    isConnectionStatusLoading,
     selectableServers,
     setSelection,
     connectionStatus,
@@ -881,6 +908,8 @@ export function useMCPServerManager({
 
       const hasCustomUserVars =
         serverConfig?.customUserVars && Object.keys(serverConfig.customUserVars).length > 0;
+      // Deloitte Custom Change: Feeds MCPServerStatusIcon's !isObo gate on the connect button.
+      const isObo = serverConfig?.obo != null;
       const hasPendingOAuth =
         serverStatus?.requiresOAuth === true && serverStatus.connectionState === 'connecting';
       const canCancelOAuth = isCancellable(serverName) || hasPendingOAuth;
@@ -901,6 +930,7 @@ export function useMCPServerManager({
         canCancel: canCancelOAuth,
         onCancel: handleCancelClick,
         hasCustomUserVars,
+        isObo,
       };
     },
     [
