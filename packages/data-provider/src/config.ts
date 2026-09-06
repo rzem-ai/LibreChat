@@ -1472,6 +1472,8 @@ export const interfaceSchema = z
     // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
     providerUpload: z.boolean().optional(),
     fileCitations: z.boolean().optional(),
+    /** Enable/disable the in-app Learning Hub tutorials (first-run prompt, guided tours). */
+    isTutorialEnabled: z.boolean().optional(),
     /** Horizontal alignment of the current user's own chat turns. `'right'` right-aligns
      * the user's messages as iMessage-style bubbles without an avatar/name header
      * (assistant/agent messages remain left-aligned and unaffected). */
@@ -1554,6 +1556,7 @@ export const interfaceSchema = z
     // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
     providerUpload: false,
     fileCitations: true,
+    isTutorialEnabled: true,
     userMessageAlignment: 'left',
     buildInfo: true,
     remoteAgents: {

@@ -1316,6 +1316,16 @@ export function acceptTerms(): Promise<t.TAcceptTermsResponse> {
   return request.post(endpoints.acceptUserTerms());
 }
 
+export function getUserTutorialState(): Promise<t.TTutorialStateResponse> {
+  return request.get(endpoints.userTutorialState());
+}
+
+export function updateUserTutorialState(
+  update: Partial<t.TTutorialStateResponse>,
+): Promise<t.TTutorialStateResponse> {
+  return request.post(endpoints.userTutorialState(), update);
+}
+
 export function getBanner(): Promise<t.TBannerResponse> {
   return request.get(endpoints.banner());
 }

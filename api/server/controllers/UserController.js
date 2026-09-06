@@ -112,6 +112,47 @@ const acceptTermsController = async (req, res) => {
   }
 };
 
+const getTutorialStateController = async (req, res) => {
+  try {
+    const user = await db.getUserById(req.user.id, 'tutorialPromptSeen tutorialRatings');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.status(200).json({
+      tutorialPromptSeen: !!user.tutorialPromptSeen,
+      tutorialRatings: user.tutorialRatings || {},
+    });
+  } catch (error) {
+    logger.error('Error fetching tutorial state:', error);
+    res.status(500).json({ message: 'Error fetching tutorial state' });
+  }
+};
+
+const updateTutorialStateController = async (req, res) => {
+  try {
+    const { tutorialPromptSeen, tutorialRatings } = req.body;
+    const update = {};
+    if (typeof tutorialPromptSeen === 'boolean') {
+      update.tutorialPromptSeen = tutorialPromptSeen;
+    }
+    if (tutorialRatings && typeof tutorialRatings === 'object') {
+      const existing = await db.getUserById(req.user.id, 'tutorialRatings');
+      update.tutorialRatings = { ...(existing?.tutorialRatings || {}), ...tutorialRatings };
+    }
+    const user = await db.updateUser(req.user.id, update);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.status(200).json({
+      tutorialPromptSeen: !!user.tutorialPromptSeen,
+      tutorialRatings: user.tutorialRatings || {},
+    });
+  } catch (error) {
+    logger.error('Error updating tutorial state:', error);
+    res.status(500).json({ message: 'Error updating tutorial state' });
+  }
+};
+
 const deleteUserFiles = async (req) => {
   try {
     const userFiles = await db.getFiles({ user: req.user.id });
@@ -627,6 +668,8 @@ module.exports = {
   getUserController,
   getTermsStatusController,
   acceptTermsController,
+  getTutorialStateController,
+  updateTutorialStateController,
   deleteUserController,
   verifyEmailController,
   updateUserPluginsController,

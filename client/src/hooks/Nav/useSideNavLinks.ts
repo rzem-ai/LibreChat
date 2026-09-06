@@ -4,6 +4,7 @@ import {
   Bot,
   Brain,
   Bookmark,
+  Lightbulb,
   NotebookPen,
   ScrollText,
   ArrowRightToLine,
@@ -30,6 +31,7 @@ import AgentPanelSwitch from '~/components/SidePanel/Agents/AgentPanelSwitch';
 import BookmarkPanel from '~/components/SidePanel/Bookmarks/BookmarkPanel';
 import PanelSwitch from '~/components/SidePanel/Builder/PanelSwitch';
 import Parameters from '~/components/SidePanel/Parameters/Panel';
+import LearningPanel from '~/components/Learning/LearningPanel';
 import { MemoryPanel } from '~/components/SidePanel/Memories';
 import FilesPanel from '~/components/SidePanel/Files/Panel';
 import { PromptsAccordion } from '~/components/Prompts';
@@ -206,6 +208,16 @@ export default function useSideNavLinks({
       });
     }
 
+    if (interfaceConfig.isTutorialEnabled !== false) {
+      links.push({
+        title: 'com_ui_learning_hub',
+        label: '',
+        icon: Lightbulb,
+        id: 'learning',
+        Component: LearningPanel,
+      });
+    }
+
     if (includeHidePanel && hidePanel) {
       links.push({
         title: 'com_sidepanel_hide_panel',
@@ -234,6 +246,7 @@ export default function useSideNavLinks({
     availableMCPServers,
     hasAccessToUseMCPSettings,
     hasAccessToCreateMCP,
+    interfaceConfig.isTutorialEnabled,
     includeHidePanel,
     hidePanel,
   ]);

@@ -25,6 +25,7 @@ function FileSearch() {
           checked={fileSearchEnabled}
           setValue={debouncedChange}
           label={localize('com_assistants_file_search')}
+          testId="toolbar-toggle-file-search"
           isCheckedClassName="border-green-600/40 bg-surface-submit/10 hover:bg-surface-submit-hover/10"
           icon={<VectorIcon className="icon-md" />}
         />

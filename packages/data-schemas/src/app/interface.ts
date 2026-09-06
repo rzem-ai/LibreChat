@@ -58,6 +58,7 @@ export async function loadDefaultInterface({
     contextCost: interfaceConfig?.contextCost ?? defaults.contextCost,
     currency: interfaceConfig?.currency ?? defaults.currency,
     userMessageAlignment: interfaceConfig?.userMessageAlignment ?? defaults.userMessageAlignment,
+    isTutorialEnabled: interfaceConfig?.isTutorialEnabled ?? defaults.isTutorialEnabled,
 
     // Permissions and related settings - only include if explicitly configured
     bookmarks: interfaceConfig?.bookmarks,

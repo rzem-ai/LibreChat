@@ -1171,3 +1171,25 @@ export const useAcceptTermsMutation = (
     onMutate: options?.onMutate,
   });
 };
+
+export const useUpdateTutorialStateMutation = (
+  options?: t.UpdateTutorialStateMutationOptions,
+): UseMutationResult<
+  t.TTutorialStateResponse,
+  unknown,
+  Partial<t.TTutorialStateResponse>,
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  return useMutation(
+    (update: Partial<t.TTutorialStateResponse>) => dataService.updateUserTutorialState(update),
+    {
+      onSuccess: (data, variables, context) => {
+        queryClient.setQueryData<t.TTutorialStateResponse>([QueryKeys.userTutorialState], data);
+        options?.onSuccess?.(data, variables, context);
+      },
+      onError: options?.onError,
+      onMutate: options?.onMutate,
+    },
+  );
+};

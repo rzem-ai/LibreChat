@@ -1,3 +1,4 @@
+import { useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import {
   QueryKeys,
   dataService,
@@ -6,14 +7,6 @@ import {
   defaultOrderQuery,
   defaultAssistantsVersion,
 } from 'librechat-data-provider';
-import { useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import type {
-  UseInfiniteQueryOptions,
-  QueryObserverResult,
-  UseQueryOptions,
-  InfiniteData,
-} from '@tanstack/react-query';
-import type t from 'librechat-data-provider';
 import type {
   Action,
   TPreset,
@@ -30,6 +23,13 @@ import type {
   SharedLinksListParams,
   SharedLinksResponse,
 } from 'librechat-data-provider';
+import type {
+  UseInfiniteQueryOptions,
+  QueryObserverResult,
+  UseQueryOptions,
+  InfiniteData,
+} from '@tanstack/react-query';
+import type t from 'librechat-data-provider';
 import type { ConversationCursorData } from '~/utils/convos';
 import { findConversationInInfinite, isNotFoundError } from '~/utils';
 
@@ -534,4 +534,19 @@ export const useUserTermsQuery = (
     refetchOnMount: false,
     ...config,
   });
+};
+
+export const useTutorialStateQuery = (
+  config?: UseQueryOptions<t.TTutorialStateResponse>,
+): QueryObserverResult<t.TTutorialStateResponse> => {
+  return useQuery<t.TTutorialStateResponse>(
+    [QueryKeys.userTutorialState],
+    () => dataService.getUserTutorialState(),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      ...config,
+    },
+  );
 };

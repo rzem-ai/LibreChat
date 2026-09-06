@@ -826,6 +826,11 @@ export type TAcceptTermsResponse = {
   termsAcceptedAt: Date | string;
 };
 
+export type TTutorialStateResponse = {
+  tutorialPromptSeen: boolean;
+  tutorialRatings: Record<string, number>;
+};
+
 export type TBannerResponse = TBanner | null;
 
 export type TUpdateFeedbackRequest = {

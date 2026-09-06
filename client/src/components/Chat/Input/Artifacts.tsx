@@ -103,6 +103,7 @@ function Artifacts() {
         checked={isEnabled}
         setValue={handleToggle}
         label={localize('com_ui_artifacts')}
+        testId="toolbar-toggle-artifacts"
         isCheckedClassName="border-amber-600/40 bg-amber-500/10 hover:bg-amber-700/10"
         icon={<WandSparkles className="icon-md" aria-hidden="true" />}
       />
