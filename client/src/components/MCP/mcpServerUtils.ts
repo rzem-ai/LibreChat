@@ -212,13 +212,37 @@ export function serverNeedsAction(
 }
 
 /**
+ * Whether a disconnected server is an OBO (on-behalf-of) server that
+ * authenticates silently on every tool call — so it never needs a manual
+ * "Connect" click, unless it also has custom vars still to be filled in.
+ * A server can be configured for both OBO and OAuth at once; `requiresOAuth`
+ * is the authoritative "needs interactive user action" flag, so it must be
+ * false too, or a server stuck behind OAuth would have its only Connect
+ * affordance hidden. Shared by every surface that decides whether to show a
+ * Connect button.
+ */
+export function isSilentlyConnectableOboServer(
+  serverStatus:
+    | Pick<MCPServerStatus, 'connectionState' | 'configuredObo' | 'requiresOAuth'>
+    | undefined,
+  hasCustomUserVars: boolean | undefined,
+): boolean {
+  return (
+    serverStatus?.connectionState === 'disconnected' &&
+    serverStatus?.configuredObo === true &&
+    serverStatus?.requiresOAuth === false &&
+    hasCustomUserVars === false
+  );
+}
+
+/**
  * Determines if an action button should be shown for a server status.
  * Returns true only when the button would be actionable (not just informational).
  */
 export function shouldShowActionButton(statusIconProps?: MCPServerStatusIconProps | null): boolean {
   if (!statusIconProps) return false;
 
-  const { serverStatus, canCancel, hasCustomUserVars, isObo, isInitializing } = statusIconProps;
+  const { serverStatus, canCancel, hasCustomUserVars, isInitializing } = statusIconProps;
 
   // Show cancel button during OAuth flow
   if (isInitializing && canCancel) return true;
@@ -228,14 +252,17 @@ export function shouldShowActionButton(statusIconProps?: MCPServerStatusIconProp
   if (!serverStatus) return false;
   const { connectionState, requiresOAuth } = serverStatus;
 
+  // Error always needs a retry action.
+  if (connectionState === 'error') return true;
+  // Disconnected: OBO servers connect silently, so no button is needed unless
+  // custom vars still need to be entered.
+  if (connectionState === 'disconnected') {
+    return !isSilentlyConnectableOboServer(serverStatus, hasCustomUserVars);
+  }
   // Show a cancel action for pending OAuth connections.
   if (connectionState === 'connecting' && requiresOAuth && canCancel) return true;
   // Don't show connecting spinner when no action is available.
   if (connectionState === 'connecting') return false;
-  // Deloitte Custom Change: Disconnected/error: show the connect button unless the server
-  // is OBO — OBO connects transparently via the checkbox, so no separate action is needed
-  // (matches the ConnectButton condition in MCPServerStatusIcon).
-  if (connectionState === 'disconnected' || connectionState === 'error') return !isObo;
   // Deloitte Custom Change: Connected: only show if there's custom-var config to manage
   // (matches the ConfigureButton condition in MCPServerStatusIcon — requiresOAuth alone
   // renders nothing).
