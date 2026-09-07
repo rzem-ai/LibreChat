@@ -4,14 +4,52 @@ import type { MCPServerStatusIconProps } from './MCPServerStatusIcon';
 
 export type { MCPServerStatus };
 
-export interface SelectedIconInfo {
+// Deloitte Custom Change: light/dark themed MCP server icons.
+/** The set of icon-path fields a server's config can provide, shared across icon-related types. */
+export interface ThemedIconPaths {
+  iconPath: string | null;
+  iconPathLight: string | null;
+  iconPathDark: string | null;
+}
+
+// Deloitte Custom Change: light/dark themed MCP server icons.
+const NO_ICON_PATHS: ThemedIconPaths = {
+  iconPath: null,
+  iconPathLight: null,
+  iconPathDark: null,
+};
+
+// Deloitte Custom Change: SelectedIconInfo now carries the light/dark icon variants too.
+export interface SelectedIconInfo extends ThemedIconPaths {
   key: string;
   serverName: string;
-  iconPath: string | null;
   displayName: string;
 }
 
 export type ConnectionStatusMap = Record<string, MCPServerStatus>;
+
+// Deloitte Custom Change: light/dark themed MCP server icons.
+/** Whether any icon path is configured for a server, i.e. it shouldn't fall back to the generic icon. */
+export function hasConfiguredIcon(icons: Partial<ThemedIconPaths>): boolean {
+  return Boolean(icons.iconPath || icons.iconPathLight || icons.iconPathDark);
+}
+
+// Deloitte Custom Change: light/dark themed MCP server icons.
+/**
+ * Resolves the icon path to show in each theme, given a server's configured icon fields.
+ * Precedence per theme: its own variant, then the shared `iconPath`, then (as a last resort,
+ * so a themed icon is never simply missing) the other theme's variant.
+ */
+export function resolveThemedIconPaths(icons: Partial<ThemedIconPaths>): {
+  light: string | null;
+  dark: string | null;
+} {
+  const { iconPath, iconPathLight, iconPathDark } = icons;
+  return {
+    light: iconPathLight || iconPath || iconPathDark || null,
+    dark: iconPathDark || iconPath || iconPathLight || null,
+  };
+}
 
 /**
  * Generates a list of icons to display for selected MCP servers.
@@ -28,11 +66,16 @@ export function getSelectedServerIcons(
 
   for (const server of selectedServers) {
     const displayName = server.config?.title || server.serverName;
-    if (server.config?.iconPath) {
+    // Deloitte Custom Change: light/dark themed MCP server icons.
+    const { iconPath, iconPathLight, iconPathDark } = server.config ?? {};
+    if (hasConfiguredIcon({ iconPath, iconPathLight, iconPathDark })) {
       customIcons.push({
         key: server.serverName,
         serverName: server.serverName,
-        iconPath: server.config.iconPath,
+        iconPath: iconPath ?? null,
+        // Deloitte Custom Change: light/dark themed MCP server icons.
+        iconPathLight: iconPathLight ?? null,
+        iconPathDark: iconPathDark ?? null,
         displayName,
       });
     } else {
@@ -49,8 +92,8 @@ export function getSelectedServerIcons(
           {
             key: '_default_',
             serverName: defaultServerNames[0],
-            iconPath: null,
             displayName: 'MCP',
+            ...NO_ICON_PATHS, // Deloitte Custom Change: light/dark themed MCP server icons.
           },
         ]
       : customIcons;
@@ -213,8 +256,10 @@ export function shouldShowActionButton(statusIconProps?: MCPServerStatusIconProp
   if (connectionState === 'connecting' && requiresOAuth && canCancel) return true;
   // Don't show connecting spinner when no action is available.
   if (connectionState === 'connecting') return false;
-  // Connected: only show if there's config to manage
-  if (connectionState === 'connected') return hasCustomUserVars || requiresOAuth;
+  // Deloitte Custom Change: Connected: only show if there's custom-var config to manage
+  // (matches the ConfigureButton condition in MCPServerStatusIcon — requiresOAuth alone
+  // renders nothing).
+  if (connectionState === 'connected') return Boolean(hasCustomUserVars);
 
   return false;
 }

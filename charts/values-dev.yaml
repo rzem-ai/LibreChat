@@ -1,6 +1,9 @@
 imageRegistry: 'dttaitsdev.azurecr.io'
 branch: 'develop'
 
+llmGateway:
+  namespace: 'llm-gateway-ctnp'
+
 serviceAccount:
   name: sa-librechat-dev
 
@@ -48,7 +51,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:1f330b5575c7a77f75aba57621ced7da1f1d6dbc9991b976769e83ef5826b4c8'
+          tag: 'develop@sha256:55d5a2f5c69dc0a98d29ce50898912c33a9450db5d28d9f3e7c50186c2ca78e2'
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -92,7 +95,6 @@ pods:
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
           RAG_PORT: '8000'
-          RAG_USE_FULL_CONTEXT: 'true'
           REFRESH_TOKEN_EXPIRY: '86400000' # (ms) - 1 day refresh token expiration
           # ClearTrack Code Interpreter (ea-code-runtime)
           LIBRECHAT_CODE_BASEURL: 'https://code-runtime-dev.ctk.au.deloitte.com/v1'
@@ -127,7 +129,7 @@ pods:
           AGENT_DEBUG_LOGGING: 'true'
           # Skill Security Scanner
           SKILL_SCANNER_URL: 'https://ai-registry-dev.ctk.au.deloitte.com/v1/scan?verbose=false'
-          SKILL_SCANNER_TIMEOUT_MS: '15000'
+          SKILL_SCANNER_TIMEOUT_MS: '30000'
           SKILL_SCANNER_MIN_SEVERITY: 'high'
           # AI Registry
           AI_REGISTRY_CLIENT_ID: "4aeebbdc-56f5-4329-b40e-3d0a243bf74a" # AI Registry DEV & UAT
@@ -159,7 +161,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:5e2cdf8fe3e735fb3793a55e546d705858924aaf80d75e832510c2d3ccdfeffc'
+          tag: 'develop@sha256:a8ee1f38e54e32042afb8ce023bfb03e17ca0d11ef75d9815de30693042ea4ca'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -215,7 +217,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:5704885f16baa9bdfc9f30123982d7ce8223b6b9be485cc2a196c315bd457fa0'
+          tag: 'develop@sha256:50403ae2847100e22229bddf453971e4613c9db4ca694cc85fdf28c7b347d9b9'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'

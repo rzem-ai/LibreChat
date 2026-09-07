@@ -447,6 +447,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     url: '${MCP_GATEWAY_URL}?toolsets=research'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    iconPath: '/assets/mcp/ibisworld.png' # same logo in both themes
 
   cleartrack-mcp-gateway-news:
     title: 'AFR News'
@@ -455,6 +456,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     url: '${MCP_GATEWAY_URL}?toolsets=news'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    iconPath: '/assets/mcp/afr.png' # same logo in both themes
 
   cleartrack-mcp-gateway-kx:
     title: 'KX'
@@ -463,6 +465,8 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     url: '${MCP_GATEWAY_URL}?toolsets=kx'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    iconPathLight: '/assets/mcp/kx-light.png'
+    iconPathDark: '/assets/mcp/kx-dark.png'
 
   cleartrack-mcp-gateway-desc:
     title: 'DESC'
@@ -471,6 +475,8 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     url: '${MCP_GATEWAY_URL}?toolsets=desc'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    iconPathLight: '/assets/mcp/deloitte-light.png' # placeholder: no dedicated DESC logo yet
+    iconPathDark: '/assets/mcp/deloitte-dark.png' # placeholder: no dedicated DESC logo yet
 
   cleartrack-mcp-gateway-gims:
     title: 'GIMS'
@@ -479,6 +485,8 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     url: '${MCP_GATEWAY_URL}?toolsets=gims'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    iconPathLight: '/assets/mcp/deloitte-light.png' # placeholder: no dedicated GIMS logo yet
+    iconPathDark: '/assets/mcp/deloitte-dark.png' # placeholder: no dedicated GIMS logo yet
 
   cleartrack-mcp-gateway-sharepoint:
     title: 'SharePoint'
@@ -487,6 +495,8 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     url: '${MCP_GATEWAY_URL}?toolsets=sharepoint'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    iconPathLight: '/assets/mcp/sharepoint-light.png'
+    iconPathDark: '/assets/mcp/sharepoint-dark.png'
 #    oauth_headers:
 #      X-Custom-Header: "custom_value"
 
