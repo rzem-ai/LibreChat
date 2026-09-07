@@ -1,7 +1,3 @@
 #!/bin/sh
 [ -n "$CI" ] && exit 0
-
-PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
-export PATH
-
-npm exec -- lint-staged --config ./.husky/lint-staged.config.js
+npx lint-staged --config ./.husky/lint-staged.config.js
