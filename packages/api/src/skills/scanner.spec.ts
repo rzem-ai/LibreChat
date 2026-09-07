@@ -606,6 +606,35 @@ describe('skill scanner', () => {
       expect(frontmatterText).toMatch(/alwaysApply/);
     });
 
+    // Deloitte Custom Change: Verify a wrapping-folder upload is re-rooted before scanning.
+    it('re-roots a one-level-deep zip (SKILL.md inside a wrapping folder) before scanning', async () => {
+      const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
+      global.fetch = fetchSpy as unknown as typeof fetch;
+
+      const zip = new JSZip();
+      zip.file(
+        'my-skill/SKILL.md',
+        ['---', 'name: my-skill', 'description: A wrapped fixture.', '---', '', '# Body'].join(
+          '\n',
+        ),
+      );
+      zip.file('my-skill/scripts/helper.py', 'print("hello")\n');
+      const archive = await zip.generateAsync({ type: 'uint8array' });
+
+      await scanSkillUpload({ archive, fileName: 'skill.zip' });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      const scannedZip = await scannedArchiveFrom(fetchSpy.mock.calls[0]);
+      const fileEntries = Object.values(scannedZip.files)
+        .filter((entry) => !entry.dir)
+        .map((entry) => entry.name);
+      expect(fileEntries).toEqual(['SKILL.md', 'scripts/helper.py']);
+      const scannedSkillMd = await scannedZip.file('SKILL.md')?.async('string');
+      expect(scannedSkillMd).toContain('name:');
+      const companionFile = await scannedZip.file('scripts/helper.py')?.async('string');
+      expect(companionFile).toBe('print("hello")\n');
+    });
+
     it('falls back to scanning the raw archive when SKILL.md has invalid YAML frontmatter', async () => {
       const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
       global.fetch = fetchSpy as unknown as typeof fetch;
