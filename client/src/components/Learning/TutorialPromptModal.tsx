@@ -1,4 +1,4 @@
-import { GraduationCap } from 'lucide-react';
+import { Lightbulb } from 'lucide-react';
 import { OGDialog, OGDialogClose, OGDialogTemplate, Button } from '@librechat/client';
 import useTutorialPrompt from '~/hooks/Learning/useTutorialPrompt';
 import { useActivePanel } from '~/Providers';
@@ -31,8 +31,8 @@ export default function TutorialPromptModal() {
         showCancelButton={false}
         main={
           <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-submit/10">
-              <GraduationCap className="h-4 w-4 text-surface-submit" />
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-tertiary">
+              <Lightbulb className="size-4 text-text-secondary" />
             </div>
             <p className="text-sm text-text-secondary">{localize('com_learning_prompt_body')}</p>
           </div>

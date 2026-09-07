@@ -23,8 +23,16 @@ export default function useLandingPageTour(onComplete?: () => void) {
       stagePadding: 6,
       stageRadius: 8,
       onDestroyStarted: () => {
+        // Driver.js calls this for every way a tour ends — Escape, the close
+        // button, an overlay click, or finishing the last step — with no
+        // built-in signal distinguishing "cancelled" from "finished". Check
+        // whether we were on the last step before destroying, so cancelling
+        // partway through never fires the completion popup.
+        const finishedTour = tourDriver.isLastStep();
         tourDriver.destroy();
-        onComplete?.();
+        if (finishedTour) {
+          onComplete?.();
+        }
       },
       steps: [
         {
@@ -57,9 +65,9 @@ export default function useLandingPageTour(onComplete?: () => void) {
         {
           element: "[data-testid='bookmark-menu']",
           popover: {
-            title: 'Bookmarks',
+            title: 'Bookmark This Chat',
             description:
-              'Tag and organize conversations you want to find again quickly — useful for grouping chats by project or topic.',
+              'Tag the current conversation so you can find it again quickly — useful for grouping chats by project or topic.',
             side: 'bottom',
           },
         },
@@ -73,11 +81,91 @@ export default function useLandingPageTour(onComplete?: () => void) {
           },
         },
         {
-          element: "[data-testid^='nav-panel-']",
+          element: "[data-testid='nav-panel-conversations']",
           popover: {
-            title: 'Sidebar Panels',
+            title: 'Conversations',
             description:
-              'Each icon switches the sidebar to a different panel — your conversation history, prompts, agents, memories, bookmarks, files, and more, all in the same space.',
+              'The default panel — your chat history, search, and projects all live here.',
+            side: 'right',
+          },
+        },
+        {
+          element: "[data-testid='nav-panel-agents']",
+          popover: {
+            title: 'Agent Builder',
+            description:
+              'Create and configure your own custom agents — give them instructions, tools, and knowledge tailored to a specific job.',
+            side: 'right',
+          },
+        },
+        {
+          element: "[data-testid='nav-panel-skills']",
+          popover: {
+            title: 'Skills',
+            description:
+              'Manage reusable knowledge documents you can attach to agents or pull into a message.',
+            side: 'right',
+          },
+        },
+        {
+          element: "[data-testid='nav-panel-prompts']",
+          popover: {
+            title: 'Prompts',
+            description:
+              'Save prompt templates you use often, then trigger them in chat with a /command instead of retyping them.',
+            side: 'right',
+          },
+        },
+        {
+          element: "[data-testid='nav-panel-memories']",
+          popover: {
+            title: 'Memories',
+            description:
+              'Review and manage what the assistant remembers about you across conversations.',
+            side: 'right',
+          },
+        },
+        {
+          element: "[data-testid='nav-panel-bookmarks']",
+          popover: {
+            title: 'Bookmarks',
+            description:
+              'Browse every conversation you have tagged, grouped by your own bookmark labels.',
+            side: 'right',
+          },
+        },
+        {
+          element: "[data-testid='nav-panel-files']",
+          popover: {
+            title: 'Files',
+            description:
+              'See every file you have uploaded across all your conversations in one place.',
+            side: 'right',
+          },
+        },
+        {
+          element: "[data-testid='nav-panel-parameters']",
+          popover: {
+            title: 'Parameters',
+            description:
+              'Fine-tune model settings like temperature and max tokens for the current conversation.',
+            side: 'right',
+          },
+        },
+        {
+          element: "[data-testid='nav-panel-mcp-builder']",
+          popover: {
+            title: 'MCP Connectors',
+            description: 'Configure and manage Model Context Protocol server connections.',
+            side: 'right',
+          },
+        },
+        {
+          element: "[data-testid='nav-panel-learning']",
+          popover: {
+            title: 'Learning Hub',
+            description:
+              "You're here right now! Come back any time to replay this tour or check for new ones.",
             side: 'right',
           },
         },
@@ -127,11 +215,39 @@ export default function useLandingPageTour(onComplete?: () => void) {
           },
         },
         {
-          element: "[data-testid^='toolbar-toggle-']",
+          element: "[data-testid='toolbar-toggle-code-interpreter']",
           popover: {
-            title: 'Feature Toggles',
+            title: 'Run Code',
             description:
-              'Turn on extra capabilities for this message — Code Interpreter, Web Search, Skills, Artifacts, Memory, File Search, or MCP connectors. Only the ones enabled for your account will show up here.',
+              'Lets the model write and execute real code (Python, JS, and more) to solve a problem — great for calculations, data processing, or generating a chart.',
+            side: 'top',
+          },
+        },
+        {
+          element: "[data-testid='toolbar-toggle-skills']",
+          popover: {
+            title: 'Skills',
+            description:
+              'Attaches a reusable knowledge document to this message — use it to give the model reference material or instructions specific to a task.',
+            side: 'top',
+          },
+        },
+        {
+          element: "[data-testid='toolbar-toggle-artifacts']",
+          popover: {
+            title: 'Artifacts',
+            description:
+              'Renders code, documents, or diagrams the model produces in a dedicated side panel instead of inline in the chat — handy for reviewing or iterating on longer outputs.',
+            side: 'top',
+          },
+        },
+        {
+          element:
+            "[data-testid='toolbar-toggle-web-search'], [data-testid='toolbar-toggle-memory'], [data-testid='toolbar-toggle-file-search'], [data-testid='toolbar-toggle-mcp-servers']",
+          popover: {
+            title: 'More Toggles',
+            description:
+              'A few more capabilities live here too — Web Search, Memory, File Search, and MCP connectors. Only the ones enabled for your account will show up.',
             side: 'top',
           },
         },

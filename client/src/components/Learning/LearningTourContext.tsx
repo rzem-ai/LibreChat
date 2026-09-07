@@ -1,0 +1,58 @@
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import useLandingPageTour from './useLandingPageTour';
+import { useActivePanel } from '~/Providers';
+
+const LANDING_PAGE_COURSE_ID = 'landing-page-buttons';
+
+interface LearningTourContextType {
+  startLandingPageTour: () => void;
+  /** Set once the active tour reports completion; cleared by `dismissCompletion`. */
+  completedCourseId: string | null;
+  dismissCompletion: () => void;
+}
+
+const LearningTourContext = createContext<LearningTourContextType | undefined>(undefined);
+
+/**
+ * Mounted once in `Root`, above both the sidebar and the completion popup.
+ * Starting the landing-page tour switches the sidebar away from the Learning
+ * Hub panel itself (to "conversations", so search/projects are visible) —
+ * which would unmount any tour-completion state kept inside `LearningPanel`.
+ * Owning that state here instead means the completion popup still shows up
+ * no matter which panel is active when the tour finishes.
+ */
+export function LearningTourProvider({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
+  const { setActive } = useActivePanel();
+  const [completedCourseId, setCompletedCourseId] = useState<string | null>(null);
+
+  const { startTour } = useLandingPageTour(() => setCompletedCourseId(LANDING_PAGE_COURSE_ID));
+
+  const startLandingPageTour = useCallback(() => {
+    // The tour highlights elements that only exist on the main chat route
+    // (textarea, send button, header buttons) and inside the "conversations"
+    // sidebar panel (search, projects) — switch to both before driving.
+    navigate('/c/new');
+    setActive('conversations');
+    window.setTimeout(() => startTour(), 200);
+  }, [navigate, setActive, startTour]);
+
+  const dismissCompletion = useCallback(() => setCompletedCourseId(null), []);
+
+  const value = useMemo(
+    () => ({ startLandingPageTour, completedCourseId, dismissCompletion }),
+    [startLandingPageTour, completedCourseId, dismissCompletion],
+  );
+
+  return <LearningTourContext.Provider value={value}>{children}</LearningTourContext.Provider>;
+}
+
+export function useLearningTour() {
+  const context = useContext(LearningTourContext);
+  if (context === undefined) {
+    throw new Error('useLearningTour must be used within a LearningTourProvider');
+  }
+  return context;
+}

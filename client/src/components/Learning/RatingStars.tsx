@@ -21,7 +21,7 @@ export default function RatingStars({ courseId }: { courseId: string }) {
     return (
       <div
         data-testid="course-rating-thanks"
-        className="flex items-center justify-center gap-2 rounded-xl border border-green-500/30 bg-green-500/5 px-4 py-3 text-xs font-medium text-green-500"
+        className="flex items-center justify-center gap-2 rounded-lg border border-green-500/30 bg-green-500/5 px-4 py-3 text-xs font-medium text-green-500"
       >
         {localize('com_learning_rate_thanks')}
       </div>
@@ -31,7 +31,7 @@ export default function RatingStars({ courseId }: { courseId: string }) {
   return (
     <div
       data-testid="course-rating-prompt"
-      className="flex flex-col items-center gap-2 rounded-xl border border-border-light bg-surface-secondary px-4 py-3"
+      className="flex flex-col items-center gap-2 rounded-lg border border-border-light bg-surface-secondary px-4 py-3"
     >
       <p className="text-xs font-semibold text-text-primary">
         {localize('com_learning_rate_prompt')}
@@ -58,7 +58,7 @@ export default function RatingStars({ courseId }: { courseId: string }) {
             >
               <Star
                 className={cn(
-                  'h-5 w-5',
+                  'size-5',
                   isFilled ? 'fill-amber-400 text-amber-400' : 'text-text-tertiary',
                 )}
                 aria-hidden="true"

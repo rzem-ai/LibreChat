@@ -1,0 +1,55 @@
+import { renderHook } from '@testing-library/react';
+import useLandingPageTour from '../useLandingPageTour';
+
+const mockDrive = jest.fn();
+const mockDestroy = jest.fn();
+let mockIsLastStep = jest.fn();
+let capturedConfig: Record<string, unknown> | undefined;
+
+jest.mock('~/hooks', () => ({
+  useLocalize: () => (key: string) => key,
+}));
+
+jest.mock('driver.js', () => ({
+  driver: (config: Record<string, unknown>) => {
+    capturedConfig = config;
+    return {
+      drive: mockDrive,
+      destroy: mockDestroy,
+      isLastStep: mockIsLastStep,
+    };
+  },
+}));
+
+describe('useLandingPageTour', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+    mockIsLastStep = jest.fn();
+  });
+
+  it('does not report completion when the tour is cancelled before the last step', () => {
+    const onComplete = jest.fn();
+    const { result } = renderHook(() => useLandingPageTour(onComplete));
+    result.current.startTour();
+
+    mockIsLastStep.mockReturnValue(false);
+    const onDestroyStarted = capturedConfig?.onDestroyStarted as () => void;
+    onDestroyStarted();
+
+    expect(mockDestroy).toHaveBeenCalledTimes(1);
+    expect(onComplete).not.toHaveBeenCalled();
+  });
+
+  it('reports completion when the tour is destroyed while on the last step', () => {
+    const onComplete = jest.fn();
+    const { result } = renderHook(() => useLandingPageTour(onComplete));
+    result.current.startTour();
+
+    mockIsLastStep.mockReturnValue(true);
+    const onDestroyStarted = capturedConfig?.onDestroyStarted as () => void;
+    onDestroyStarted();
+
+    expect(mockDestroy).toHaveBeenCalledTimes(1);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+});

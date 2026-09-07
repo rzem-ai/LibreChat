@@ -44,7 +44,7 @@ const DIFF_ROWS: DiffRow[] = [
 function DiffPopoverContent() {
   const localize = useLocalize();
   return (
-    <div className="w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border-light bg-surface-primary shadow-2xl">
+    <div className="w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-border-light bg-surface-primary shadow-2xl">
       <div className="border-b border-border-light px-4 py-3">
         <p className="text-sm font-bold text-text-primary">{localize('com_learning_diff_title')}</p>
         <p className="mt-0.5 text-[11px] text-text-tertiary">
@@ -62,11 +62,11 @@ function DiffPopoverContent() {
             >
               <div
                 className={cn(
-                  'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg',
+                  'flex size-7 shrink-0 items-center justify-center rounded-lg',
                   row.colour,
                 )}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="size-3.5" />
               </div>
               <div className="flex min-w-0 flex-col gap-0.5">
                 <p className="text-xs font-semibold text-text-primary">{localize(row.nameKey)}</p>
@@ -105,7 +105,7 @@ export default function DiffPopoverButton() {
           className="flex shrink-0 items-center gap-1 rounded-lg border border-border-light px-2 py-1 text-[10px] font-medium text-text-tertiary transition-colors hover:border-border-medium hover:text-text-secondary"
           title={localize('com_learning_diff_button_title')}
         >
-          <HelpCircle className="h-3 w-3" />
+          <HelpCircle className="size-3" />
           <span>{localize('com_learning_diff_button')}</span>
         </button>
       </Popover.Trigger>

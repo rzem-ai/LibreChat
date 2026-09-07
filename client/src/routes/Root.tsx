@@ -20,6 +20,8 @@ import {
 } from '~/hooks';
 import { useGetStartupConfig, useHealthCheck, useUserTermsQuery } from '~/data-provider';
 import { DeloitteHeader } from '~/components/DeloitteComponents/DeloitteTopHeader';
+import { LearningTourProvider } from '~/components/Learning/LearningTourContext';
+import CourseCompletionModal from '~/components/Learning/CourseCompletionModal';
 import KeyboardShortcutsDialog from '~/components/Nav/KeyboardShortcutsDialog';
 import TutorialPromptModal from '~/components/Learning/TutorialPromptModal';
 import KeyboardDeleteDialog from '~/components/Nav/KeyboardDeleteDialog';
@@ -86,52 +88,57 @@ export default function Root() {
       <FileMapContext.Provider value={fileMap}>
         <AssistantsMapContext.Provider value={assistantsMap}>
           <ActivePanelProvider>
-            <AgentsMapContext.Provider value={agentsMap}>
-              <PromptGroupsProvider>
-                <Banner onHeightChange={setBannerHeight} />
-                {/* Deloitte Custom Change: Add Deloitte Header to top of view */}
-                <div
-                  style={
-                    { '--header-height': deloitteHeader?.enabled ? '54px' : '0px' } as CSSProperties
-                  }
-                >
-                  {deloitteHeader?.enabled && <DeloitteHeader title={deloitteHeader.title} />}
+            <LearningTourProvider>
+              <AgentsMapContext.Provider value={agentsMap}>
+                <PromptGroupsProvider>
+                  <Banner onHeightChange={setBannerHeight} />
+                  {/* Deloitte Custom Change: Add Deloitte Header to top of view */}
                   <div
-                    className="flex"
-                    style={{ height: `calc(100dvh - ${bannerHeight}px - var(--header-height))` }}
+                    style={
+                      {
+                        '--header-height': deloitteHeader?.enabled ? '54px' : '0px',
+                      } as CSSProperties
+                    }
                   >
-                    <div className="relative z-0 flex h-full w-full overflow-hidden">
-                      <UnifiedSidebar />
-                      <div
-                        className="relative flex h-full max-w-full flex-1 flex-col overflow-hidden"
-                        style={{
-                          transform:
-                            isSmallScreen && sidebarExpanded
-                              ? 'translateX(min(85vw, 380px))'
-                              : 'none',
-                          transition: 'transform 300ms cubic-bezier(0.2, 0, 0, 1)',
-                        }}
-                        inert={isSmallScreen && sidebarExpanded ? '' : undefined}
-                      >
-                        <Outlet />
+                    {deloitteHeader?.enabled && <DeloitteHeader title={deloitteHeader.title} />}
+                    <div
+                      className="flex"
+                      style={{ height: `calc(100dvh - ${bannerHeight}px - var(--header-height))` }}
+                    >
+                      <div className="relative z-0 flex h-full w-full overflow-hidden">
+                        <UnifiedSidebar />
+                        <div
+                          className="relative flex h-full max-w-full flex-1 flex-col overflow-hidden"
+                          style={{
+                            transform:
+                              isSmallScreen && sidebarExpanded
+                                ? 'translateX(min(85vw, 380px))'
+                                : 'none',
+                            transition: 'transform 300ms cubic-bezier(0.2, 0, 0, 1)',
+                          }}
+                          inert={isSmallScreen && sidebarExpanded ? '' : undefined}
+                        >
+                          <Outlet />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </PromptGroupsProvider>
-            </AgentsMapContext.Provider>
-            {config?.interface?.termsOfService?.modalAcceptance === true && (
-              <TermsAndConditionsModal
-                open={showTerms}
-                onOpenChange={setShowTerms}
-                onAccept={handleAcceptTerms}
-                onDecline={handleDeclineTerms}
-                title={config.interface.termsOfService.modalTitle}
-                modalContent={config.interface.termsOfService.modalContent}
-              />
-            )}
-            <TutorialPromptModal />
-            <KeyboardShortcutsProvider />
+                </PromptGroupsProvider>
+              </AgentsMapContext.Provider>
+              {config?.interface?.termsOfService?.modalAcceptance === true && (
+                <TermsAndConditionsModal
+                  open={showTerms}
+                  onOpenChange={setShowTerms}
+                  onAccept={handleAcceptTerms}
+                  onDecline={handleDeclineTerms}
+                  title={config.interface.termsOfService.modalTitle}
+                  modalContent={config.interface.termsOfService.modalContent}
+                />
+              )}
+              <TutorialPromptModal />
+              <CourseCompletionModal />
+              <KeyboardShortcutsProvider />
+            </LearningTourProvider>
           </ActivePanelProvider>
         </AssistantsMapContext.Provider>
       </FileMapContext.Provider>
