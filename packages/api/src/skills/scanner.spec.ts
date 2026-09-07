@@ -607,15 +607,15 @@ describe('skill scanner', () => {
       const scannedZip = await scannedArchiveFrom(fetchSpy.mock.calls[0]);
       const scannedEntries = Object.keys(scannedZip.files);
 
-      // Real skill files must be present
-      expect(scannedEntries).toContain('skill-name/SKILL.md');
-      expect(scannedEntries).toContain('skill-name/FORMS.md');
-      expect(scannedEntries).toContain('skill-name/scripts/fill_form.py');
-      expect(scannedEntries).toContain('skill-name/references/api-schema.json');
-      expect(scannedEntries).toContain('skill-name/assets/template.txt');
+      // Real skill files must be present — stripInternalFrontmatterFromZip re-roots
+      // the archive by stripping the skill-name/ prefix before sending to the scanner
+      expect(scannedEntries).toContain('SKILL.md');
+      expect(scannedEntries).toContain('FORMS.md');
+      expect(scannedEntries).toContain('scripts/fill_form.py');
+      expect(scannedEntries).toContain('references/api-schema.json');
+      expect(scannedEntries).toContain('assets/template.txt');
 
       // macOS metadata must not be present in the scanned archive
-      expect(scannedEntries).not.toContain('.DS_Store');
       expect(scannedEntries.some((e) => e.startsWith('__MACOSX/'))).toBe(false);
       expect(scannedEntries.some((e) => e.endsWith('.DS_Store'))).toBe(false);
       expect(scannedEntries.some((e) => e.includes('._'))).toBe(false);
