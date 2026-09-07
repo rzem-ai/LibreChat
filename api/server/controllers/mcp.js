@@ -42,6 +42,23 @@ const { getMCPManager, getMCPServersRegistry } = require('~/config');
 const db = require('~/models');
 
 /**
+ * Fields a user without `CONFIGURE_OBO` may modify on an OBO server (allowlist).
+ * Any field not on this list is locked: changes to it (add, modify, or remove)
+ * require the permission. Allowlisting is fail-closed — when upstream introduces
+ * a new MCP server config field, it lands in the locked set by default until
+ * explicitly opted in here. Anything that could redirect the OBO token flow
+ * (`url`, `proxy`, `headers`), change scopes (`obo`), or reroute auth (`oauth`,
+ * `apiKey`, `customUserVars`) MUST stay locked.
+ */
+const OBO_USER_EDITABLE_FIELDS = new Set([
+  'title',
+  'description',
+  'iconPath',
+  'iconPathLight', // Deloitte Custom Change: light/dark themed MCP server icons.
+  'iconPathDark', // Deloitte Custom Change: light/dark themed MCP server icons.
+]);
+
+/**
  * Handles MCP-specific errors and sends appropriate HTTP responses.
  * @param {Error} error - The error to handle
  * @param {import('express').Response} res - Express response object
@@ -330,17 +347,6 @@ function configHasObo(parsedConfig) {
     parsedConfig.obo != null
   );
 }
-
-/**
- * Fields a user without `CONFIGURE_OBO` may modify on an OBO server (allowlist).
- * Any field not on this list is locked: changes to it (add, modify, or remove)
- * require the permission. Allowlisting is fail-closed — when upstream introduces
- * a new MCP server config field, it lands in the locked set by default until
- * explicitly opted in here. Anything that could redirect the OBO token flow
- * (`url`, `proxy`, `headers`), change scopes (`obo`), or reroute auth (`oauth`,
- * `apiKey`, `customUserVars`) MUST stay locked.
- */
-const OBO_USER_EDITABLE_FIELDS = new Set(['title', 'description', 'iconPath']);
 
 /**
  * Returns true when any non-allowlisted user-input field differs between the

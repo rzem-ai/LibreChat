@@ -54,12 +54,21 @@ type SkillScanIssue = {
   code?: string;
   severity?: string;
   message: string;
+  // True when `message` is already the scanner's human-friendly `user_message`
+  // (prose that spells out severity/rule context on its own), so the client
+  // shouldn't also prepend a raw `severity=`/`code=` prefix.
+  friendly?: boolean;
 };
 
 type ScanFinding = {
   severity?: string;
   description?: string;
   rule_id?: string;
+  // Human-friendly, pre-formatted variant of `description` (e.g. "Critical —
+  // Command Injection Eval: Pattern detected: exec("). Preferred over
+  // `description` when present so the UI shows the scanner's own user-facing
+  // copy instead of the raw rule description.
+  user_message?: string;
 };
 
 // Per the scanner's OpenAPI schema, a manifest validation problem is always a
@@ -136,6 +145,14 @@ function asString(value: unknown): string {
   return typeof value === 'string' ? value : '';
 }
 
+function nonEmptyString(value: string | undefined): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? value : undefined;
+}
+
 function yamlValue(value: unknown): string {
   return JSON.stringify(asString(value));
 }
@@ -178,10 +195,13 @@ function toIssues(
   }
 
   for (const finding of blockingFindings(result)) {
+    const userMessage = nonEmptyString(finding.user_message);
+    const description = nonEmptyString(finding.description);
     issues.push({
       code: finding.rule_id,
       severity: finding.severity,
-      message: finding.description ?? 'Skill scan found an issue',
+      message: userMessage ?? description ?? 'Skill scan found an issue',
+      friendly: userMessage != null,
     });
   }
 
@@ -528,17 +548,78 @@ function stripInternalFrontmatterForScan(content: string): {
  * Locate a `SKILL.md` entry at the archive root or one level deep — mirrors
  * the discovery rule `handleZip` (import.ts) uses when it later reads the
  * real archive, so the entry we rewrite here is the same one that flow will
- * treat as the manifest.
+ * treat as the manifest. Also reports the wrapping-folder prefix (e.g.
+ * `my-skill/`), so the caller can re-root the archive before scanning — the
+ * external scanner requires the manifest at the archive root and rejects a
+ * one-level-deep upload as "missing SKILL.md", even though `handleZip` itself
+ * tolerates that layout.
  */
-function findSkillMdPath(zip: JSZip): string | null {
+function findSkillMdPath(zip: JSZip): { path: string; prefix: string } | null {
   for (const entryPath of Object.keys(zip.files)) {
     const segments = entryPath.replace(/\\/g, '/').split('/').filter(Boolean);
     const basename = segments[segments.length - 1];
     if (basename?.toUpperCase() === SKILL_MD.toUpperCase() && segments.length <= 2) {
-      return entryPath;
+      return { path: entryPath, prefix: segments.length === 2 ? `${segments[0]}/` : '' };
     }
   }
   return null;
+}
+
+/**
+ * Re-root every archive entry under `prefix` to the archive root, mirroring
+ * the flattening `handleZip` (import.ts) applies when it later saves
+ * companion files — without this, a skill zipped as a wrapping folder (e.g.
+ * `my-skill/SKILL.md`) would still have SKILL.md nested one level deep in the
+ * archive sent to the external scanner. Entries outside `prefix`
+ * (unexpected, but tolerated by `handleZip` too) are kept as-is. Enforces the
+ * same per-file/cumulative decompressed-size bounds `handleZip` applies to
+ * companion files — returns `null` if any bound is exceeded, so the caller
+ * falls back to scanning the original archive unchanged rather than risk
+ * unbounded decompression.
+ */
+async function reRootZip(zip: JSZip, prefix: string): Promise<JSZip | null> {
+  const rooted = new JSZip();
+  const perFileLimit = DEFAULT_SKILL_IMPORT_LIMITS.maxSingleFileBytes;
+  let totalDecompressed = 0;
+  for (const [entryPath, entry] of Object.entries(zip.files)) {
+    if (entry.dir) {
+      continue;
+    }
+    const normalized = entryPath.replace(/\\/g, '/');
+    const isUnderPrefix = normalized.startsWith(prefix);
+    const relativePath = isUnderPrefix ? normalized.slice(prefix.length) : normalized;
+
+    // Mirror handleZip's path-safety rules so we don't generate traversal/absolute paths.
+    const safePath = relativePath.replace(/^\/+/, '');
+
+    // Match handleZip behavior: when SKILL.md is discovered under `prefix`, ignore any
+    // other SKILL.md entries outside that prefix so they can't overwrite the rooted manifest.
+    if (!isUnderPrefix && safePath.toUpperCase() === SKILL_MD.toUpperCase()) {
+      continue;
+    }
+    if (
+      !safePath ||
+      safePath.startsWith('/') ||
+      safePath.startsWith('\\') ||
+      safePath.split('/').some((seg) => seg === '' || seg === '.' || seg === '..') ||
+      !/^[a-zA-Z0-9._\-/]+$/.test(safePath)
+    ) {
+      continue;
+    }
+
+    const cumulativeLimit = DEFAULT_SKILL_IMPORT_LIMITS.maxDecompressedBytes - totalDecompressed;
+    if (cumulativeLimit <= 0) {
+      return null;
+    }
+    const effectiveLimit = Math.min(perFileLimit, cumulativeLimit);
+    const { buffer, bytesRead } = await readZipEntry(entry, effectiveLimit);
+    totalDecompressed += bytesRead;
+    if (buffer == null) {
+      return null;
+    }
+    rooted.file(safePath, buffer);
+  }
+  return rooted;
 }
 
 /**
@@ -566,10 +647,11 @@ async function stripInternalFrontmatterFromZip(bytes: Uint8Array): Promise<{
   if (Object.keys(zip.files).length > DEFAULT_SKILL_IMPORT_LIMITS.maxEntries) {
     return null;
   }
-  const skillMdPath = findSkillMdPath(zip);
-  if (!skillMdPath) {
+  const found = findSkillMdPath(zip);
+  if (!found) {
     return null;
   }
+  const { path: skillMdPath, prefix } = found;
   const skillMdEntry = zip.file(skillMdPath);
   if (!skillMdEntry) {
     return null;
@@ -587,7 +669,11 @@ async function stripInternalFrontmatterFromZip(bytes: Uint8Array): Promise<{
     return null;
   }
   zip.file(skillMdPath, stripped.skillMd);
-  const archive = await zip.generateAsync({ type: 'uint8array' });
+  const rootedZip = prefix ? await reRootZip(zip, prefix) : zip;
+  if (!rootedZip) {
+    return null;
+  }
+  const archive = await rootedZip.generateAsync({ type: 'uint8array' });
   return {
     archive,
     frontmatter: stripped.frontmatter,
