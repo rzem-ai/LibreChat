@@ -18,6 +18,18 @@ const fileSearchJsonSchema = {
   required: ['query'],
 };
 
+// Deloitte Custom Change: added to detect missing attachments, since file search is enabled by default.
+/**
+ * Whether `tool_resources` currently references any file_search-eligible file,
+ * either from the agent's permanent knowledge base (`file_ids`) or files
+ * attached to this conversation (`files`, already resolved by `primeResources`).
+ * @param {Agent['tool_resources']} [tool_resources]
+ * @returns {boolean}
+ */
+const hasFileSearchAttachments = (tool_resources) =>
+  (tool_resources?.[EToolResources.file_search]?.file_ids?.length ?? 0) > 0 ||
+  (tool_resources?.[EToolResources.file_search]?.files?.length ?? 0) > 0;
+
 /**
  *
  * @param {Object} options
@@ -55,7 +67,9 @@ const primeFiles = async (options) => {
 
   dbFiles = dbFiles.concat(resourceFiles);
 
-  let toolContext = `- Note: Semantic search is available through the ${Tools.file_search} tool but no files are currently loaded. Request the user to upload documents to search through.`;
+  // Deloitte Custom Change: no longer nag about missing files, since file search is enabled by default.
+  // Stays empty unless a file is found below — nothing to tell the model when there's nothing to search.
+  let toolContext = '';
 
   const files = [];
   for (let i = 0; i < dbFiles.length; i++) {
@@ -199,4 +213,9 @@ const createFileSearchTool = async ({ userId, files, entity_id, fileCitations = 
   );
 };
 
-module.exports = { createFileSearchTool, primeFiles, fileSearchJsonSchema };
+module.exports = {
+  createFileSearchTool,
+  primeFiles,
+  fileSearchJsonSchema,
+  hasFileSearchAttachments,
+};
