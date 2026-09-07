@@ -3,10 +3,10 @@ import { MCPIcon } from '@librechat/client';
 import { PermissionBits, hasPermissions } from 'librechat-data-provider';
 import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusIcon';
 import type { MCPServerDefinition } from '~/hooks';
-import { useLocalize } from '~/hooks';
 import { getStatusDotColor } from './MCPStatusBadge';
 import MCPServerDialog from './MCPServerDialog';
 import MCPCardActions from './MCPCardActions';
+import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
 interface MCPServerCardProps {
@@ -41,14 +41,8 @@ export default function MCPServerCard({
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const statusIconProps = getServerStatusIconProps(server.serverName);
-  const {
-    serverStatus,
-    onConfigClick,
-    isInitializing,
-    canCancel,
-    onCancel,
-    hasCustomUserVars = false,
-  } = statusIconProps;
+  const { serverStatus, onConfigClick, isInitializing, canCancel, onCancel, hasCustomUserVars } =
+    statusIconProps;
 
   const canEditThisServer = hasPermissions(server.effectivePermissions, PermissionBits.EDIT);
   const displayName = server.config?.title || server.serverName;

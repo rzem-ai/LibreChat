@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/extend-expect';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusIcon';
 import type { McpItem } from '../../items/types';
 import McpSection from '../sections/McpSection';
 
@@ -9,6 +10,7 @@ const mockGetValues = jest.fn((): string[] => []);
 const mockGetToolOptions = jest.fn((): Record<string, object> | undefined => undefined);
 const mockMcpServersMap = jest.fn((): Map<string, object> => new Map());
 const mockInitializeServer = jest.fn();
+const mockGetServerStatusIconProps = jest.fn((): MCPServerStatusIconProps | null => null);
 const mockIsConnectionDeferred = jest.fn((): boolean => false);
 const mockToggleIntentAll = jest.fn();
 const mockIsToolProgrammaticOnly = jest.fn((_toolId: string): boolean => false);
@@ -40,7 +42,7 @@ jest.mock('~/hooks', () => ({
   useAgentCapabilities: () => mockCapabilities,
   useGetAgentsConfig: () => ({ agentsConfig: { capabilities: [] } }),
   useMCPServerManager: () => ({
-    getServerStatusIconProps: () => null,
+    getServerStatusIconProps: mockGetServerStatusIconProps,
     getConfigDialogProps: () => null,
     initializeServer: mockInitializeServer,
     isConnectionDeferred: mockIsConnectionDeferred,
@@ -110,8 +112,8 @@ jest.mock('@librechat/client', () => {
   const React = jest.requireActual('react');
   return {
     TooltipAnchor: ({ render }: { render: React.ReactElement }) => render,
-    Button: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) =>
-      React.createElement('button', { type: 'button', onClick }, children),
+    Button: ({ children, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) =>
+      React.createElement('button', { type: 'button', ...props }, children),
     Checkbox: ({
       checked,
       onCheckedChange,
@@ -162,6 +164,8 @@ describe('McpSection', () => {
     mockGetToolOptions.mockReturnValue(undefined);
     mockMcpServersMap.mockReset();
     mockMcpServersMap.mockReturnValue(new Map());
+    mockGetServerStatusIconProps.mockReset();
+    mockGetServerStatusIconProps.mockReturnValue(null);
     mockCapabilities.toolIntentsEnabled = false;
   });
 
@@ -212,6 +216,20 @@ describe('McpSection', () => {
   test('renders an inline Connect button when the server is not connected', () => {
     render(<McpSection item={item} />);
     expect(screen.getByText('com_nav_mcp_connect_server')).toBeInTheDocument();
+  });
+
+  test('collapses the Connect button for a disconnected OBO server', () => {
+    mockGetServerStatusIconProps.mockReturnValue({
+      serverName: 'srv',
+      serverStatus: { requiresOAuth: false, connectionState: 'disconnected', configuredObo: true },
+      onConfigClick: jest.fn(),
+      isInitializing: false,
+      canCancel: false,
+      onCancel: jest.fn(),
+      hasCustomUserVars: false,
+    });
+    render(<McpSection item={item} />);
+    expect(screen.getByText('com_nav_mcp_connect_server')).toHaveAttribute('aria-hidden', 'true');
   });
 
   test('clicking Connect initializes the server without auto-opening OAuth', () => {

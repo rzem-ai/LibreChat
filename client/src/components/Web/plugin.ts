@@ -255,8 +255,85 @@ function processTree(tree: Node) {
   });
 }
 
+/**
+ * Deloitte Custom Change
+ * mdast node types that are phrasing (inline) content, per the CommonMark/mdast
+ * spec, plus this plugin's own inline node types (`citation`, `composite-citation`,
+ * `highlighted-text`). Anything not in this set is treated as flow (block) content.
+ * Kept as a local list rather than depending on `mdast-util-phrasing` (only a
+ * transitive dependency here, and it wouldn't know about our custom node types anyway).
+ */
+const PHRASING_TYPES = new Set([
+  'text',
+  'emphasis',
+  'strong',
+  'delete',
+  'inlineCode',
+  'break',
+  'link',
+  'linkReference',
+  'image',
+  'imageReference',
+  'footnoteReference',
+  'html',
+  'citation',
+  'composite-citation',
+  'highlighted-text',
+]);
+
+function isPhrasing(node: CitationNode): boolean {
+  return typeof node.type === 'string' && PHRASING_TYPES.has(node.type);
+}
+
+/**
+ * Deloitte Custom Change
+ * Recursively moves every `citation`/`composite-citation` node (mutating the
+ * tree in place) to the end of its nearest non-phrasing (block) ancestor —
+ * e.g. a paragraph, heading, or table cell — so chips never interrupt the
+ * middle of a sentence, regardless of how deeply nested inside inline nodes
+ * (emphasis/strong/links/etc.) they originally appeared. `highlighted-text`
+ * nodes are left untouched since they represent real inline content, not a
+ * relocatable chip. Returns any citations still bubbling up through phrasing
+ * ancestors (empty once absorbed by a block ancestor).
+ */
+function relocateCitations(node: CitationNode): Array<CitationNode> {
+  if (!node.children || node.children.length === 0) return [];
+
+  const bubbled: Array<CitationNode> = [];
+  const keptChildren: Array<CitationNode> = [];
+
+  for (const child of node.children) {
+    if (child.type === 'citation' || child.type === 'composite-citation') {
+      bubbled.push(child);
+      continue;
+    }
+    if (child.type === 'highlighted-text') {
+      keptChildren.push(child);
+      continue;
+    }
+    const hadChildren = Array.isArray(child.children) && child.children.length > 0;
+    const childBubbled = relocateCitations(child);
+    if (isPhrasing(child)) {
+      bubbled.push(...childBubbled);
+    }
+    if (hadChildren && Array.isArray(child.children) && child.children.length === 0) {
+      continue;
+    }
+    keptChildren.push(child);
+  }
+
+  if (isPhrasing(node)) {
+    node.children = keptChildren;
+    return bubbled;
+  }
+
+  node.children = [...keptChildren, ...bubbled];
+  return [];
+}
+
 export function unicodeCitation() {
   return (tree: Node) => {
     processTree(tree);
+    relocateCitations(tree as CitationNode);
   };
 }

@@ -33,7 +33,9 @@ const {
   hasRuntimeUrlPlaceholders,
   containsGraphTokenPlaceholder,
   isOAuthServer,
+  isOboServer,
 } = require('@librechat/api');
+const { extractOpenIDTokenInfo, isOpenIDTokenValid } = require('@librechat/api');
 const {
   Time,
   CacheKeys,
@@ -1354,7 +1356,7 @@ function canDetectMCPRuntimeOAuth(config) {
  * @param {Map<string, import('@librechat/api').MCPConnection>} userConnections - User-level connections
  * @param {Set} oauthServers - Set of OAuth servers
  * @param {{ user?: Partial<IUser>, userMCPAuthMap?: Record<string, Record<string, string>>, loadUserMCPAuthMap?: () => Promise<Record<string, Record<string, string>> | undefined>, loadMCPAllowlists?: () => Promise<{ allowedDomains?: string[] | null, allowedAddresses?: string[] | null }> }} [runtimeContext]
- * @returns {Object} Object containing requiresOAuth and connectionState
+ * @returns {Object} Object containing requiresOAuth, connectionState, and configuredObo
  */
 async function getServerConnectionStatus(
   userId,
@@ -1370,6 +1372,7 @@ async function getServerConnectionStatus(
   const configuredOAuth = oauthServers.has(serverName);
   const liveConnectionOAuth = connection?.usesOAuth?.() === true;
   const runtimeOAuthCandidate = canDetectMCPRuntimeOAuth(config);
+  const isOboConfig = isOboServer(config);
   const effectiveOAuth = configuredOAuth || liveConnectionOAuth;
 
   const baseConnectionState = isStaleOrDoNotExist
@@ -1409,6 +1412,23 @@ async function getServerConnectionStatus(
         requiresOAuth = true;
         finalConnectionState = 'connected';
         authorizationState = 'authorized';
+      } else if (isOboConfig && runtimeContext?.user?.openidId) {
+        // OBO servers extract tokens from federatedTokens (preserved in safe user object)
+        const tokenInfo = extractOpenIDTokenInfo(runtimeContext.user);
+
+        if (tokenInfo && isOpenIDTokenValid(tokenInfo)) {
+          /**
+           * OBO servers use ephemeral in-memory cached tokens (not persistent DB storage).
+           * User's upstream OpenID token is sufficient to display 'connected' status.
+           *
+           * Trustedness validation occurs later via oboTrustChecker during actual token exchange.
+           * Token expiration/validity is checked during on-demand OBO token resolution at tool execution.
+           * This allows green icon display on sign-in when upstream token is fresh.
+           */
+          requiresOAuth = true;
+          finalConnectionState = 'connected';
+          authorizationState = 'authorized';
+        }
       }
     }
   }
@@ -1417,6 +1437,7 @@ async function getServerConnectionStatus(
     requiresOAuth,
     connectionState: finalConnectionState,
     authorizationState,
+    configuredObo: isOboConfig,
   };
 }
 

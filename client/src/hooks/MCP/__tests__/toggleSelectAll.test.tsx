@@ -1,6 +1,6 @@
 import React from 'react';
-import { Provider as JotaiProvider, createStore } from 'jotai';
 import { renderHook, act } from '@testing-library/react';
+import { Provider as JotaiProvider, createStore } from 'jotai';
 import { useMCPServerManager } from '../useMCPServerManager';
 
 const mockShowToast = jest.fn();
@@ -30,6 +30,7 @@ const mockSetMCPValues = jest.fn((next: string[]) => {
   mockMcpValues = next;
 });
 let mockConnectionStatus: Record<string, { connectionState: string; requiresOAuth?: boolean }> = {};
+let mockIsConnectionStatusLoading = false;
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string) => key,
@@ -40,7 +41,10 @@ jest.mock('~/hooks', () => ({
     setIsPinned: jest.fn(),
     setMCPValues: mockSetMCPValues,
   }),
-  useMCPConnectionStatus: () => ({ connectionStatus: mockConnectionStatus }),
+  useMCPConnectionStatus: () => ({
+    connectionStatus: mockConnectionStatus,
+    isConnectionStatusLoading: mockIsConnectionStatusLoading,
+  }),
 }));
 
 let mockLoadedServers: Record<string, { chatMenu?: boolean; customUserVars?: unknown }> = {};
@@ -66,8 +70,25 @@ describe('useMCPServerManager toggleSelectAll', () => {
     jest.clearAllMocks();
     mockMcpValues = [];
     mockConnectionStatus = {};
+    mockIsConnectionStatusLoading = false;
     mockLoadedServers = {};
     mockMutateAsync.mockResolvedValue({ success: true });
+  });
+
+  // Deloitte Custom Change: covers the isConnectionStatusLoading bail-out in toggleSelectAll
+  it('does nothing while the initial connectionStatus fetch is in flight', async () => {
+    mockLoadedServers = { a: makeServer(), b: makeServer() };
+    mockConnectionStatus = {};
+    mockIsConnectionStatusLoading = true;
+
+    const { result } = renderManager();
+
+    await act(async () => {
+      result.current.toggleSelectAll();
+    });
+
+    expect(mockMcpValues).toEqual([]);
+    expect(mockMutateAsync).not.toHaveBeenCalled();
   });
 
   it('skips a connector that is already initializing locally, but still initializes the others', async () => {
