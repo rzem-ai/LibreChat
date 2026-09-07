@@ -35,6 +35,7 @@ const {
   isOAuthServer,
   isOboServer,
 } = require('@librechat/api');
+const { extractOpenIDTokenInfo, isOpenIDTokenValid } = require('@librechat/api');
 const {
   Time,
   CacheKeys,
@@ -1412,9 +1413,10 @@ async function getServerConnectionStatus(
         finalConnectionState = 'connected';
         authorizationState = 'authorized';
       } else if (isOboConfig && runtimeContext?.user?.openidId) {
-        const hasValidToken = runtimeContext.user.accessToken || runtimeContext.user.tokenValue;
+        // OBO servers extract tokens from federatedTokens (preserved in safe user object)
+        const tokenInfo = extractOpenIDTokenInfo(runtimeContext.user);
 
-        if (hasValidToken) {
+        if (tokenInfo && isOpenIDTokenValid(tokenInfo)) {
           /**
            * OBO servers use ephemeral in-memory cached tokens (not persistent DB storage).
            * User's upstream OpenID token is sufficient to display 'connected' status.
