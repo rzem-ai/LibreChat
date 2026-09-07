@@ -428,6 +428,8 @@ export function redactServerSecrets(
     parentGroup: config.parentGroup, // Deloitte Custom Change: parent group
     description: config.description,
     iconPath: config.iconPath,
+    iconPathLight: config.iconPathLight, // Deloitte Custom Change: light/dark themed MCP server icons.
+    iconPathDark: config.iconPathDark, // Deloitte Custom Change: light/dark themed MCP server icons.
     chatMenu: config.chatMenu,
     requiresOAuth: config.requiresOAuth,
     capabilities: config.capabilities,
