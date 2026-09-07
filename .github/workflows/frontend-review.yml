@@ -299,3 +299,22 @@ jobs:
 
       - name: Build client
         run: cd client && npm run build:ci
+
+  all-checks-passed:
+    name: All checks passed
+    if: always()
+    needs:
+      - build
+      - typecheck
+      - test-packages-client
+      - test-ubuntu
+      - test-windows
+      - build-verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any dependency failed or was cancelled
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" || "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "One or more required jobs failed."
+            exit 1
+          fi
