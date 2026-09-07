@@ -1371,6 +1371,7 @@ async function getServerConnectionStatus(
   const configuredOAuth = oauthServers.has(serverName);
   const liveConnectionOAuth = connection?.usesOAuth?.() === true;
   const runtimeOAuthCandidate = canDetectMCPRuntimeOAuth(config);
+  const isOboConfig = isOboServer(config);
   const effectiveOAuth = configuredOAuth || liveConnectionOAuth;
 
   const baseConnectionState = isStaleOrDoNotExist
@@ -1410,6 +1411,22 @@ async function getServerConnectionStatus(
         requiresOAuth = true;
         finalConnectionState = 'connected';
         authorizationState = 'authorized';
+      } else if (isOboConfig && runtimeContext?.user?.openidId) {
+        const hasValidToken = runtimeContext.user.accessToken || runtimeContext.user.tokenValue;
+
+        if (hasValidToken) {
+          /**
+           * OBO servers use ephemeral in-memory cached tokens (not persistent DB storage).
+           * User's upstream OpenID token is sufficient to display 'connected' status.
+           * 
+           * Trustedness validation occurs later via oboTrustChecker during actual token exchange.
+           * Token expiration/validity is checked during on-demand OBO token resolution at tool execution.
+           * This allows green icon display on sign-in when upstream token is fresh.
+           */
+          requiresOAuth = true;
+          finalConnectionState = 'connected';
+          authorizationState = 'authorized';
+        }
       }
     }
   }
@@ -1418,7 +1435,7 @@ async function getServerConnectionStatus(
     requiresOAuth,
     connectionState: finalConnectionState,
     authorizationState,
-    configuredObo: isOboServer(config),
+    configuredObo: isOboConfig,
   };
 }
 
