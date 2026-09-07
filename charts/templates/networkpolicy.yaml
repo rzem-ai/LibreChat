@@ -1,5 +1,5 @@
 {{- $enabled := true -}}
-{{- $llmGatewayNamespace := .Values.llmGateway.namespace -}}
+{{- $llmGatewayNamespace := dig "llmGateway" "namespace" "llm-gateway-ctnp" (merge (dict) .Values) -}}
 {{- if and (hasKey .Values "networkPolicy") (eq (toString .Values.networkPolicy.enabled) "false") -}}
   {{- $enabled = false -}}
 {{- end -}}
@@ -221,6 +221,7 @@ spec:
     - fromEndpoints:
         - matchLabels:
             component: librechat
+            k8s:io.kubernetes.pod.namespace: {{ .Release.Namespace | quote }}
       toPorts:
         - ports:
             - port: "{{ .Values.valkey.port }}"

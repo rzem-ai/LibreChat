@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="{{META_DESCRIPTION}}" />
+<title>{{SITE_TITLE}}</title>
+
+<!-- Open Sans is the Deloitte GEL typeface. Loaded from Google Fonts with a
+     system-font fallback stack below, so the page still reads correctly if
+     the request is blocked or offline — see references/design-tokens.md. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" referrerpolicy="no-referrer">
+
+<style>
+  /* ============================================================
+     DESIGN TOKENS
+     Values copied from the Deloitte GEL design system's canonical
+     token source (packages/core/css/shadcn.css). Do not hardcode a
+     colour, radius, or font size anywhere below this block — every
+     rule in this file reads one of these custom properties. See
+     references/design-tokens.md for provenance and the full table.
+     ============================================================ */
+  :root {
+    --gel-background: oklch(0.985 0 0);
+    --gel-foreground: oklch(0.145 0 0);
+    --gel-surface-contrast: oklch(0.985 0 0); /* only distinct from background once .dark is applied */
+    --gel-card: oklch(0.99 0 0);
+    --gel-card-foreground: oklch(0.145 0 0);
+    --gel-primary: oklch(0.5519 0.1748 140.7437);       /* Deloitte green — the only interaction colour */
+    --gel-primary-foreground: oklch(1 0 0);
+    --gel-primary-hover: oklch(0.45 0.1748 140.7437);
+    --gel-primary-strong: oklch(0.507 0.1608 141.2369); /* higher-contrast green for text/icons */
+    --gel-secondary: oklch(0.94 0 0);
+    --gel-secondary-foreground: oklch(0.205 0 0);
+    --gel-muted: oklch(0.948 0 0);
+    --gel-muted-foreground: oklch(0.317 0 0);
+    --gel-accent: oklch(0.95 0 0);
+    --gel-accent-foreground: oklch(0.145 0 0);          /* text on --gel-accent — identical to --gel-foreground, confirmed against packages/core/css/shadcn.css */
+    --gel-destructive: oklch(0.577 0.245 27.325);       /* irreversible actions only */
+    --gel-border: oklch(0.80 0 0);
+    --gel-ring: oklch(0.5 0.134 242.749);                /* focus ring — deliberately not brand green */
+
+    /* Status tokens (packages/core/css/custom.css) — bare = tinted callout
+       background, -solid = icon/accent on that SAME background. Never body
+       text, never a substitute for --gel-primary/--gel-destructive. See
+       references/design-tokens.md and banned-patterns.md. */
+    --gel-info: oklch(0.9438 0.0118 231.6565);
+    --gel-info-solid: oklch(0.5552 0.1206 236.668);
+    --gel-success: oklch(0.9533 0.0191 140.5005);
+    --gel-success-solid: oklch(0.5519 0.1748 140.7437);
+    --gel-warning: oklch(0.9618 0.0186 62.4562);
+    --gel-warning-solid: oklch(0.6553 0.1684 51.444);
+    --gel-critical: oklch(0.95 0.019 25.6);
+    --gel-critical-solid: oklch(0.5746 0.2126 29.553);
+
+    --gel-radius: 0.4rem;
+    --gel-radius-sm: 0.125rem;
+    --gel-radius-md: 0.25rem;
+    --gel-radius-lg: 0.4rem;
+    --gel-radius-xl: 0.625rem;
+    --gel-radius-full: 9999px;
+
+    --gel-font-sans: "Open Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --gel-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+    --gel-text-xs: 0.75rem;
+    --gel-text-sm: 0.875rem;
+    --gel-text-base: 1rem;
+    --gel-text-lg: 1.125rem;
+    --gel-text-xl: 1.25rem;
+    --gel-text-2xl: 1.5rem;
+    --gel-text-3xl: 1.875rem;
+    --gel-text-4xl: 2.25rem;
+    --gel-text-5xl: 3rem;
+    --gel-text-6xl: 3.75rem;
+  }
+
+  /* Scoped dark band — apply class="dark" to ONE wrapper (nav, hero,
+     footer, CTA) to flip it to GEL's dark-surface values AND paint it.
+     This is the only mechanism for a dark section; never hand-author a
+     second palette, and never rely on a component-specific rule to do
+     the painting — that's how a band silently stays light (it happened
+     twice while building this template: the footer, then the hero and
+     CTA band). Folding background/color into .dark itself means any
+     element carrying the class is automatically correct, full stop.
+     --gel-primary is identical here on purpose — brand green never
+     changes with theme. See references/design-tokens.md. */
+  .dark {
+    --gel-background: oklch(0.145 0 0);
+    --gel-foreground: oklch(0.985 0 0);
+    --gel-surface-contrast: oklch(0 0 0);
+    --gel-card: oklch(0.205 0 0);
+    --gel-card-foreground: oklch(0.985 0 0);
+    --gel-primary: oklch(0.5519 0.1748 140.7437);
+    --gel-primary-foreground: oklch(1 0 0);
+    --gel-primary-hover: oklch(0.45 0.1748 140.7437);
+    --gel-primary-strong: oklch(0.6514 0.1842 140.073);
+    --gel-secondary: oklch(0.269 0 0);
+    --gel-secondary-foreground: oklch(0.985 0 0);
+    --gel-muted: oklch(0.269 0 0);
+    --gel-muted-foreground: oklch(0.708 0 0);
+    --gel-accent: oklch(0.269 0 0);
+    --gel-accent-foreground: oklch(0.985 0 0);
+    --gel-destructive: oklch(0.704 0.191 22.216);
+    --gel-border: oklch(0.28 0 0);
+    --gel-ring: oklch(0.5 0.134 242.749);
+    --gel-info: oklch(0.2555 0.0237 248.7749);
+    --gel-info-solid: oklch(0.7101 0.1146 238.8207);
+    --gel-success: oklch(0.2776 0.0445 144.2604);
+    --gel-success-solid: oklch(0.6514 0.1842 140.073);
+    --gel-warning: oklch(0.2713 0.0235 72.1722);
+    --gel-warning-solid: oklch(0.7972 0.1638 69.6155);
+    --gel-critical: oklch(0.2445 0.0321 19.6391);
+    --gel-critical-solid: oklch(0.6403 0.2125 28.7793);
+    background: var(--gel-surface-contrast);
+    color: var(--gel-foreground);
+  }
+
+  /* ---- Reset ---- */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  /* No explicit font-size here — leave the root alone so it inherits the
+     browser/OS default. Every size below is rem, which is relative to
+     that root: pinning it to 16px would silently override a user's
+     accessibility text-size preference instead of scaling with it. */
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--gel-font-sans);
+    color: var(--gel-foreground);
+    background: var(--gel-background);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  ul { list-style: none; }
+  img { max-width: 100%; display: block; }
+
+  /* ---- Accessibility ---- */
+  :focus-visible { outline: 2px solid var(--gel-ring); outline-offset: 2px; }
+
+  .gel-skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 1000;
+    background: var(--gel-primary);
+    color: var(--gel-primary-foreground);
+    padding: 0.75rem 1.25rem;
+    border-radius: 0 0 var(--gel-radius-md) 0;
+    font-weight: 600;
+  }
+  .gel-skip-link:focus { left: 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+    html { scroll-behavior: auto; }
+  }
+
+  /* ---- Typography ----
+     Weights follow GEL's real semantic mapping: h1/h2 are weight 300
+     (light), h3 is 400, h4 is 600. This is deliberate GEL styling, not
+     a mistake — see references/design-tokens.md. */
+  h1 {
+    font-size: var(--gel-text-4xl);
+    font-weight: 300;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+  }
+  h2 {
+    font-size: var(--gel-text-3xl);
+    font-weight: 300;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+  h3 {
+    font-size: var(--gel-text-2xl);
+    font-weight: 400;
+    line-height: 1.375;
+    letter-spacing: -0.025em;
+  }
+  h4 {
+    font-size: var(--gel-text-xl);
+    font-weight: 600;
+    line-height: 1.375;
+  }
+  p {
+    font-size: var(--gel-text-base);
+    line-height: 1.5;
+    max-width: 68ch;
+  }
+  .gel-band h2 { margin-bottom: clamp(2rem, 4vw, 3rem); }
+  p + p { margin-top: 1rem; }
+  a { color: inherit; text-decoration: none; }
+  a:hover { color: var(--gel-primary-hover); }
+
+  .gel-display {
+    font-size: clamp(var(--gel-text-4xl), 6vw, var(--gel-text-6xl));
+    font-weight: 300;
+    line-height: 1.167;
+    letter-spacing: -0.025em;
+    max-width: 18em;
+    margin-bottom: 1.5rem;
+  }
+  .gel-lead {
+    font-size: var(--gel-text-xl);
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--gel-muted-foreground);
+    max-width: 56ch;
+  }
+  /* .gel-hero__label is the same role as .gel-label, used inside the hero
+     pattern (section-patterns.md) — kept as one rule so they can never
+     drift out of sync with each other. */
+  .gel-label, .gel-hero__label {
+    font-size: var(--gel-text-base);
+    font-weight: 400;
+    color: var(--gel-muted-foreground);
+    margin-bottom: 1rem;
+  }
+  .gel-caption {
+    font-size: var(--gel-text-xs);
+    color: var(--gel-muted-foreground);
+  }
+  .gel-mono { font-family: var(--gel-font-mono); font-size: var(--gel-text-sm); }
+
+  /* Uppercase is reserved for this one badge role — see banned-patterns.md */
+  .gel-badge {
+    display: inline-block;
+    font-size: var(--gel-text-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.3em 0.85em;
+    border-radius: var(--gel-radius-xl);
+    background: var(--gel-muted);
+    color: var(--gel-muted-foreground);
+  }
+  .gel-badge--primary { background: var(--gel-primary); color: var(--gel-primary-foreground); }
+
+  /* Status callout — a tinted background paired with its matching -solid
+     icon, per the naming convention in references/design-tokens.md. Body
+     text inside stays --gel-foreground/--gel-muted-foreground; the status
+     colour never touches the text, only the background and the icon. Use
+     sparingly — see banned-patterns.md. */
+  .gel-callout {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-radius: var(--gel-radius-lg);
+  }
+  .gel-callout__icon { flex-shrink: 0; }
+  .gel-callout--info { background: var(--gel-info); }
+  .gel-callout--info .gel-callout__icon { color: var(--gel-info-solid); }
+  .gel-callout--success { background: var(--gel-success); }
+  .gel-callout--success .gel-callout__icon { color: var(--gel-success-solid); }
+  .gel-callout--warning { background: var(--gel-warning); }
+  .gel-callout--warning .gel-callout__icon { color: var(--gel-warning-solid); }
+  .gel-callout--critical { background: var(--gel-critical); }
+  .gel-callout--critical .gel-callout__icon { color: var(--gel-critical-solid); }
+
+  .gel-visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* ---- Layout ---- */
+  .gel-container {
+    width: 100%;
+    max-width: 96rem; /* 1536px — Tailwind's max-w-screen-2xl */
+    margin: 0 auto;
+    padding: 0 clamp(1.25rem, 4vw, 3rem);
+  }
+  /* Nav and footer content spans the full page width with the same
+     horizontal padding as .gel-container, but no max-width — matches the
+     real Header/Footer components exactly (both are "mx-auto w-full px-*",
+     no max-w-* class at all; only .gel-container's page sections get a
+     reading-width constraint). */
+  .gel-full-bleed { padding: 0 clamp(1.25rem, 4vw, 3rem); }
+  .gel-band { padding: clamp(4rem, 8vw, 7rem) 0; }
+  .gel-band--muted { background: var(--gel-muted); }
+
+  .gel-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
+  .gel-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+  .gel-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+  @media (max-width: 56.25rem) { /* 900px */
+    .gel-grid-3, .gel-grid-4 { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 37.5rem) { /* 600px */
+    .gel-grid-2, .gel-grid-3, .gel-grid-4 { grid-template-columns: 1fr; }
+  }
+
+  /* ---- Buttons ----
+     Six variants, matching the real Button component exactly — confirmed
+     directly against its rendered output (apps/web/public/registry/
+     component-html.json), not guessed. Weight is 400 (regular) for EVERY
+     variant, confirmed the same way — not 500, not 600. Sentence case, no
+     letter-spacing, never uppercase. One primary (filled) button per
+     section/view. Full variant table and common-mistake list in
+     references/design-tokens.md — read it before touching this block. */
+  .gel-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-family: var(--gel-font-sans);
+    font-size: var(--gel-text-sm);
+    font-weight: 400;
+    height: 2.25rem; /* 36px, matches h-9 */
+    padding: 0 1rem; /* 16px, matches px-4 */
+    border-radius: var(--gel-radius-md);
+    border: 1px solid transparent;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  /* Every :hover rule below re-declares color, even when it isn't
+     changing. Without it, the page-wide `a:hover { color: var(--gel-
+     primary-hover) }` rule (higher specificity than a bare
+     .gel-btn--variant class for the color property, since these buttons
+     are <a> elements) wins the cascade and repaints the label green on
+     hover — including on the primary button, where it produced dark-green
+     text on a dark-green background and failed contrast entirely. */
+  .gel-btn--primary { background: var(--gel-primary); color: var(--gel-primary-foreground); }
+  .gel-btn--primary:hover { background: var(--gel-primary-hover); color: var(--gel-primary-foreground); }
+
+  .gel-btn--secondary { background: var(--gel-secondary); color: var(--gel-secondary-foreground); }
+  .gel-btn--secondary:hover { background: color-mix(in oklch, var(--gel-secondary) 80%, transparent); color: var(--gel-secondary-foreground); }
+
+  .gel-btn--destructive { background: var(--gel-destructive); color: var(--gel-primary-foreground); }
+  .gel-btn--destructive:hover { background: color-mix(in oklch, var(--gel-destructive) 90%, transparent); color: var(--gel-primary-foreground); }
+
+  .gel-btn--outline {
+    background: var(--gel-background);
+    color: var(--gel-primary-strong);
+    border-color: var(--gel-primary-strong);
+    padding: 0 calc(1rem - 1px); /* compensate for the border so total width matches borderless variants */
+  }
+  /* NOT a solid green fill on hover — the real component only lightens to
+     --gel-accent and drops the text to --gel-accent-foreground, keeping the
+     green border. This skill got it wrong before; don't reintroduce that. */
+  .gel-btn--outline:hover { background: var(--gel-accent); color: var(--gel-accent-foreground); }
+
+  .gel-btn--ghost { background: transparent; color: inherit; }
+  .gel-btn--ghost:hover { background: var(--gel-accent); color: var(--gel-accent-foreground); }
+
+  .gel-btn--link {
+    height: auto;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--gel-primary-strong);
+    text-underline-offset: 4px;
+  }
+  .gel-btn--link:hover { color: var(--gel-primary-strong); text-decoration: underline; }
+
+  /* Size modifier — stacks with any variant class above, e.g.
+     class="gel-btn gel-btn--primary gel-btn--lg". Matches the real
+     Button's "lg" size exactly (component-html.json's Large variant):
+     bigger box, same 14px label — size changes height/padding, not type
+     scale. There's no small/xs modifier here; a microsite has no reason
+     to reach for a button smaller than the default. */
+  .gel-btn--lg {
+    height: 2.5rem; /* 40px */
+    padding: 0 1.5rem; /* 24px */
+    gap: 0.5rem;
+  }
+  .gel-btn--lg.gel-btn--outline { padding: 0 calc(1.5rem - 1px); }
+
+  /* ---- Cards ---- */
+  .gel-card {
+    background: var(--gel-card);
+    color: var(--gel-card-foreground);
+    border: 1px solid var(--gel-border);
+    border-radius: var(--gel-radius-lg);
+    padding: 1.5rem; /* matches .gel-team-card — one padding scale for all card-like surfaces */
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .gel-card__title {
+    font-size: var(--gel-text-xl);
+    font-weight: 600;
+    line-height: 1.375;
+  }
+  .gel-card__body {
+    font-size: var(--gel-text-sm);
+    color: var(--gel-muted-foreground);
+    line-height: 1.5;
+    flex: 1;
+    max-width: none;
+  }
+
+  /* ---- Stat strip ----
+     No decorative accent border here — a rounded box with a coloured
+     left stripe reads as an "alert" component, not a stat block. Brand
+     presence comes from the value colour, not a border. */
+  .gel-stat-strip {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+    padding: 2rem;
+    background: var(--gel-muted);
+    border-radius: var(--gel-radius-lg);
+  }
+  .gel-stat__value {
+    font-size: clamp(var(--gel-text-3xl), 4vw, var(--gel-text-5xl));
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--gel-primary-strong);
+  }
+  .gel-stat__label {
+    /* base (16px), not xs — this sits directly under a large display
+       number as its primary caption, not a secondary metadata line, so
+       it needs to hold its own rather than read as a footnote. */
+    font-size: var(--gel-text-base);
+    font-weight: 600;
+    color: var(--gel-muted-foreground);
+    margin-top: 0.4rem;
+  }
+
+  /* ============================================================
+     NAV — GEL's Header component defaults to a dark contrast
+     surface (adaptive=false). Apply class="dark" here to match.
+     ============================================================ */
+  .gel-nav {
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    border-bottom: 1px solid var(--gel-border);
+  }
+  .gel-nav__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 4rem; /* 64px */
+  }
+  /* Brand/logo link — matches the real Header component's treatment exactly
+     (packages/core/brand-components/src/header/header.tsx): a subtle
+     background wash on hover/focus, NEVER a colour change on the wordmark.
+     The blanket a:hover rule above must not reach this — see the
+     :hover/:focus-visible overrides below. (The real Footer component has
+     no logo at all — this only applies to the nav.) */
+  .gel-nav__brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: inherit;
+    border-radius: var(--gel-radius-md);
+    padding: 0.25rem 0.5rem;
+    margin: -0.25rem -0.5rem;
+    transition: background-color 0.15s ease;
+  }
+  .gel-nav__brand:hover {
+    color: inherit; /* overrides the generic a:hover green — the logo never recolours */
+    background: color-mix(in oklch, currentColor 10%, transparent);
+  }
+  .gel-nav__brand:focus-visible {
+    outline-color: color-mix(in oklch, currentColor 50%, transparent);
+  }
+  .gel-nav__brand svg { display: block; height: 1.5rem; width: auto; color: inherit; } /* 24px */
+  /* Matches DeloitteLogoLockup exactly (packages/core/brand-components/src/
+     deloitte-logo-lockup/deloitte-logo-lockup.tsx): "flex h-6 items-stretch
+     gap-3" — a dedicated vertical Separator, explicitly 24px tall (h-6),
+     NOT a border on the text itself. A border-left on the text span ties
+     the divider's height to the text's line-height (~33px at 24px font,
+     visibly taller than the 24px logo) — that was the "separator too
+     large" bug. An explicit-height divider element fixes it. */
+  .gel-nav__divider {
+    width: 1px;
+    height: 1.5rem; /* 24px — matches the logo, not the lockup text's line-height */
+    background: var(--gel-border);
+    flex-shrink: 0;
+  }
+  .gel-nav__lockup {
+    font-size: var(--gel-text-2xl); /* 24px */
+    font-weight: 400;
+    line-height: 1; /* keep the box compact so it doesn't dwarf the 24px logo/divider */
+    letter-spacing: -0.025em;
+  }
+  .gel-nav__links { display: flex; align-items: center; gap: 0.5rem; }
+  /* Real GEL nav items are ghost Buttons (packages/core/brand-components/
+     src/header/header.tsx renders each item as <Button variant="ghost">),
+     and the ghost variant's own hover state is a background wash — never a
+     colour change (packages/core/ui/src/vendor/button.tsx: "hover:bg-accent
+     hover:text-accent-foreground", no primary-green anywhere in it). Match
+     that here instead of recolouring nav text green on hover, which isn't
+     what the real component does. */
+  .gel-nav__links a {
+    display: inline-block;
+    font-size: var(--gel-text-sm);
+    font-weight: 500;
+    color: var(--gel-muted-foreground);
+    padding: 0.4rem 0.75rem;
+    border-radius: var(--gel-radius-md);
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+  .gel-nav__links a:hover,
+  .gel-nav__links a.is-active {
+    background: var(--gel-accent);
+    color: var(--gel-foreground);
+  }
+  .gel-nav__toggle {
+    display: none;
+    background: transparent;
+    border: 1px solid var(--gel-border);
+    border-radius: var(--gel-radius-md);
+    color: inherit;
+    width: 2.25rem; /* 36px */
+    height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  @media (max-width: 48rem) { /* 768px */
+    .gel-nav { position: sticky; }
+    .gel-nav__toggle { display: flex; }
+    .gel-nav__links {
+      display: none;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--gel-surface-contrast);
+      border-top: 1px solid var(--gel-border);
+      padding: 0.5rem 0;
+    }
+    .gel-nav__links.is-open { display: flex; }
+    .gel-nav__links li { border-bottom: 1px solid var(--gel-border); }
+    .gel-nav__links a { display: block; padding: 0.9rem clamp(1.25rem, 4vw, 3rem); }
+  }
+
+  /* ---- Hero ---- */
+  .gel-hero__actions { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 2rem; }
+
+  /* ---- Overview / stats ---- */
+  .gel-overview { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(2rem, 5vw, 4rem); align-items: start; }
+  @media (max-width: 48rem) { .gel-overview { grid-template-columns: 1fr; } } /* 768px */
+
+  /* ---- Timeline ----
+     Dot and connector are both derived from ONE indent value (the item's
+     own padding-left) instead of stacking a second padding-left on the
+     <ul> as well — that double-indent was what made the dot and line
+     drift out of alignment with each other. Each item now owns a self-
+     contained dot + the connector segment running from it to the next
+     item, so there's nothing to keep in sync across two elements. */
+  .gel-timeline { margin-top: 2rem; }
+  .gel-timeline__item {
+    position: relative;
+    padding-left: 2rem;
+    padding-bottom: 2.5rem;
+  }
+  .gel-timeline__item:last-child { padding-bottom: 0; }
+  .gel-timeline__item::before {
+    /* dot — z-index puts it above the connector line below. Without it,
+       the ::after connector (painted after ::before in normal stacking
+       order) sits on top wherever the two overlap, covering the dot. */
+    content: '';
+    position: absolute;
+    z-index: 1;
+    left: 0; top: 0.45rem;
+    width: 0.75rem; height: 0.75rem;
+    border-radius: var(--gel-radius-full);
+    background: var(--gel-primary);
+    border: 2px solid var(--gel-background);
+  }
+  .gel-timeline__item:not(:last-child)::after {
+    /* connector to the next dot — centred under the dot above */
+    content: '';
+    position: absolute;
+    left: calc(0.375rem - 1px); top: 0.45rem; bottom: 0;
+    width: 2px;
+    background: var(--gel-border);
+  }
+  .gel-timeline__date {
+    font-size: var(--gel-text-xs);
+    font-weight: 600;
+    color: var(--gel-primary-strong);
+    margin-bottom: 0.35rem;
+  }
+  .gel-timeline__title { font-size: var(--gel-text-base); font-weight: 600; margin-bottom: 0.4rem; }
+  .gel-timeline__desc { font-size: var(--gel-text-sm); color: var(--gel-muted-foreground); max-width: 52ch; }
+
+  /* ---- Team ---- */
+  .gel-team-card {
+    background: var(--gel-card);
+    border: 1px solid var(--gel-border);
+    border-radius: var(--gel-radius-lg);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+  .gel-team-card__avatar {
+    width: 4rem; height: 4rem; /* 64px */
+    border-radius: var(--gel-radius-full);
+    background: var(--gel-muted);
+    display: flex; align-items: center; justify-content: center;
+    font-size: var(--gel-text-xl);
+    font-weight: 600;
+    color: var(--gel-muted-foreground);
+    overflow: hidden;
+    flex-shrink: 0;
+    margin-bottom: 0.5rem;
+  }
+  .gel-team-card__name { font-size: var(--gel-text-base); font-weight: 600; }
+  .gel-team-card__role { font-size: var(--gel-text-sm); font-weight: 600; color: var(--gel-primary-strong); }
+  .gel-team-card__bio { font-size: var(--gel-text-sm); color: var(--gel-muted-foreground); }
+
+  /* ---- Resources ---- */
+  .gel-resource {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.25rem;
+    padding: 1.25rem 0;
+    border-bottom: 1px solid var(--gel-border);
+  }
+  .gel-resource:first-child { border-top: 1px solid var(--gel-border); }
+  .gel-resource__icon {
+    width: 2.5rem; height: 2.5rem; /* 40px */
+    flex-shrink: 0;
+    background: var(--gel-muted);
+    border-radius: var(--gel-radius-md);
+    display: flex; align-items: center; justify-content: center;
+    color: inherit; /* current foreground, not brand green — see banned-patterns.md */
+  }
+  .gel-resource__text { flex: 1; }
+  .gel-resource__title { font-weight: 600; font-size: var(--gel-text-base); }
+  .gel-resource__desc { font-size: var(--gel-text-sm); color: var(--gel-muted-foreground); }
+  .gel-resource__link {
+    font-size: var(--gel-text-sm);
+    font-weight: 600;
+    color: var(--gel-primary-strong);
+    white-space: nowrap;
+    align-self: center;
+    flex-shrink: 0;
+  }
+  .gel-resource__link:hover { color: var(--gel-primary-hover); text-decoration: underline; }
+
+  /* ---- Comparison table ---- */
+  .gel-table { width: 100%; border-collapse: collapse; font-size: var(--gel-text-sm); }
+  .gel-table th, .gel-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gel-border);
+    vertical-align: baseline;
+  }
+  .gel-table thead th { font-weight: 600; color: var(--gel-muted-foreground); border-bottom: 2px solid var(--gel-border); }
+  .gel-table tbody th[scope="row"] { font-weight: 600; }
+  .gel-table .gel-numeric { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ---- CTA band ---- */
+  .gel-cta { text-align: center; }
+  .gel-cta h2 { max-width: 20em; margin-left: auto; margin-right: auto; }
+  .gel-cta .gel-lead { margin: 0 auto 2rem; }
+
+  /* ---- Accordion / FAQ ----
+     Matches the real Accordion exactly (packages/core/ui/src/vendor/
+     accordion.tsx): a rotating chevron, muted-foreground — never a
+     plus/x glyph, never brand green. The chevron is inline SVG rather
+     than a Material Symbol because the real component's own icon
+     (lucide's ChevronDownIcon) is also a hand-drawn SVG, not a Material
+     Symbol — same precedent as the nav's hamburger toggle. */
+  .gel-accordion__item { border-bottom: 1px solid var(--gel-border); margin-top: 2rem; }
+  .gel-accordion__item:first-child { border-top: 1px solid var(--gel-border); margin-top: 0; }
+  .gel-accordion__q {
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem 0;
+    font-weight: 600;
+    font-size: var(--gel-text-base);
+    cursor: pointer;
+    color: var(--gel-foreground);
+  }
+  .gel-accordion__q::-webkit-details-marker { display: none; }
+  .gel-accordion__chevron {
+    color: var(--gel-muted-foreground);
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+  details[open] .gel-accordion__chevron { transform: rotate(180deg); }
+  .gel-accordion__a { padding: 0 0 1.25rem; }
+  .gel-accordion__a p { color: var(--gel-muted-foreground); font-size: var(--gel-text-sm); }
+
+  /* ---- Footer ----
+     Matches the real Footer component's structure exactly (packages/core/
+     brand-components/src/footer/footer.tsx): no logo — just a copyright +
+     policy-links row, then a separate disclaimer paragraph. Painting comes
+     from .dark on <footer> itself; no background/color declared here. */
+  .gel-footer { padding: 3rem 0 2rem; }
+  .gel-footer__top {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    padding-bottom: 2rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--gel-border);
+  }
+  .gel-footer__copyright { font-size: var(--gel-text-sm); }
+  .gel-footer__links { display: flex; flex-wrap: wrap; align-items: center; gap: 1.25rem; }
+  .gel-footer__links li + li { border-left: 1px solid var(--gel-border); padding-left: 1.25rem; }
+  /* Legal links are foreground + underlined by default, dimming to
+     muted-foreground on hover — not a brand-green hover. */
+  .gel-footer__links a {
+    font-size: var(--gel-text-sm);
+    color: var(--gel-foreground);
+    text-decoration: underline;
+  }
+  .gel-footer__links a:hover { color: var(--gel-muted-foreground); }
+  .gel-footer__legal {
+    font-size: var(--gel-text-xs);
+    color: var(--gel-muted-foreground);
+    max-width: 70ch;
+    line-height: 1.5;
+  }
+
+  /* ============================================================
+     SECTION-SPECIFIC STYLES
+     Add per-site overrides below this line. They must still read
+     only var(--gel-*) tokens — see references/banned-patterns.md.
+     ============================================================ */
+  /* {{SECTION_STYLES}} */
+
+</style>
+</head>
+<body>
+
+<a href="#main" class="gel-skip-link">Skip to content</a>
+
+<!-- ============================================================
+     NAV — GEL Header defaults to a dark surface (adaptive=false).
+     ============================================================ -->
+<nav class="gel-nav dark" aria-label="Main navigation">
+  <div class="gel-full-bleed gel-nav__inner">
+    <a href="#" class="gel-nav__brand" aria-label="Deloitte, home">
+      <!-- Deloitte wordmark, sourced from gel-design-review/assets/DeloitteLogo.tsx
+           in the GEL repo (that file is itself flagged there as a placeholder —
+           swap in the production brand asset when available). The wordmark path
+           uses fill="currentColor" (changed from the source file's hardcoded
+           fill="#000") so it stays legible on this header's dark surface, per
+           the Header component's documented default. The green dot's fill
+           (#86BC25) is fixed and must never change — see banned-patterns.md. -->
+      <svg role="img" aria-label="Deloitte" viewBox="0 0 97 24" width="97" height="24" xmlns="http://www.w3.org/2000/svg">
+        <title>Deloitte</title>
+        <path fill="#86BC25" d="M91.165 18.45c0-1.41 1.144-2.55 2.55-2.55a2.554 2.554 0 0 1 2.55 2.55 2.552 2.552 0 0 1-5.1 0Z"/>
+        <path fill="currentColor" d="M14.624 11.524c0 2.945-.791 5.214-2.374 6.807-1.582 1.592-3.807 2.39-6.677 2.39H0V3.078h5.964c2.764 0 4.9.724 6.405 2.174 1.505 1.446 2.255 3.539 2.255 6.276m-4.833.17c0-1.617-.312-2.816-.937-3.597C8.229 7.32 7.28 6.93 6.008 6.93H4.653v9.883h1.036c1.412 0 2.452-.42 3.11-1.26.66-.838.992-2.126.992-3.854ZM34.495 3H30.06v17.718h4.436V3ZM49.052 14.109c0 2.153-.564 3.83-1.695 5.033-1.131 1.206-2.714 1.807-4.748 1.807-2.034 0-3.502-.615-4.656-1.848-1.155-1.23-1.732-2.897-1.732-4.992 0-2.096.564-3.814 1.694-5.003 1.131-1.188 2.717-1.783 4.758-1.783 1.264 0 2.378.275 3.346.826.968.55 1.715 1.338 2.241 2.363.527 1.026.788 2.225.788 3.593m-8.324 0c0 1.131.146 1.99.442 2.585.295.59.79.89 1.484.89.693 0 1.175-.296 1.457-.89.282-.591.424-1.454.424-2.585 0-1.13-.142-1.97-.431-2.543-.289-.574-.778-.86-1.474-.86s-1.168.286-1.464.856c-.295.57-.441 1.42-.441 2.55M55.246 7.558H50.81v13.16h4.436V7.558ZM55.246 3H50.81v2.965h4.436V3ZM64.236 17.363c.598 0 1.31-.153 2.143-.455v3.311a8.722 8.722 0 0 1-1.708.564c-.54.112-1.176.17-1.902.17-1.488 0-2.564-.374-3.223-1.121-.656-.747-.985-1.895-.985-3.444v-5.424h-1.552V7.561h1.552V4.203l4.47-.778V7.56h2.828v3.403H63.03v5.122c0 .852.401 1.277 1.203 1.277M74.5 17.363c.597 0 1.31-.153 2.142-.455v3.311a8.724 8.724 0 0 1-1.708.564c-.54.112-1.175.17-1.902.17-1.488 0-2.564-.374-3.22-1.121-.659-.747-.988-1.895-.988-3.444v-5.424h-1.555V7.561h1.555v-3.41l4.47-.726V7.56h2.832v3.403h-2.833v5.122c0 .852.401 1.277 1.203 1.277M88.495 8.88c-1.053-1.033-2.55-1.553-4.486-1.553-2.035 0-3.6.594-4.697 1.783s-1.644 2.894-1.644 5.115.59 3.81 1.776 4.979c1.185 1.165 2.846 1.749 4.986 1.749 1.029 0 1.912-.072 2.652-.21a7.744 7.744 0 0 0 2.143-.748l-.682-2.965a9.741 9.741 0 0 1-1.434.469 9.427 9.427 0 0 1-2.15.227c-.855 0-1.528-.21-2.023-.628-.496-.418-.758-.995-.789-1.732h7.927v-2.02c0-1.943-.526-3.434-1.582-4.467m-6.256 3.63c.061-.72.265-1.249.618-1.585.353-.336.788-.506 1.31-.506.568 0 1.02.19 1.356.57.336.38.513.887.526 1.522h-3.81ZM26.766 8.88c-1.053-1.033-2.551-1.553-4.487-1.553-2.034 0-3.6.594-4.697 1.783s-1.644 2.894-1.644 5.115.591 3.81 1.777 4.979c1.182 1.165 2.846 1.749 4.985 1.749 1.03 0 1.912-.072 2.653-.21a7.744 7.744 0 0 0 2.143-.748l-.683-2.965a9.741 9.741 0 0 1-1.433.469 9.449 9.449 0 0 1-2.15.227c-.856 0-1.528-.21-2.024-.628-.496-.418-.757-.995-.788-1.732h7.927v-2.02c0-1.943-.527-3.434-1.583-4.467m-6.256 3.63c.061-.72.269-1.249.619-1.585.353-.336.787-.506 1.31-.506.568 0 1.02.19 1.356.57.336.38.512.887.526 1.522h-3.81Z"/>
+      </svg>
+      <!-- Optional product lockup — mirrors the approved DeloitteLogoLockup
+           pattern. Omit both spans entirely if the site has no product name. -->
+      <span class="gel-nav__divider" aria-hidden="true"></span>
+      <span class="gel-nav__lockup">{{SITE_TITLE_SHORT}}</span>
+    </a>
+    <ul class="gel-nav__links" id="gel-nav-links">
+      {{NAV_LINKS}}
+    </ul>
+    <button class="gel-nav__toggle" id="gel-nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="gel-nav-links">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <line x1="3" y1="5" x2="17" y2="5" />
+        <line x1="3" y1="10" x2="17" y2="10" />
+        <line x1="3" y1="15" x2="17" y2="15" />
+      </svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ============================================================
+     PAGE SECTIONS — assembled from references/section-patterns.md
+     ============================================================ -->
+<main id="main">
+{{SECTIONS}}
+</main>
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<footer class="gel-footer dark">
+  <div class="gel-full-bleed">
+    <div class="gel-footer__top">
+      <span class="gel-footer__copyright">&copy; {{YEAR}} Deloitte Touche Tohmatsu</span>
+      <!-- Real Footer default policy links (footer.tsx DEFAULT_LINKS) — replace
+           these href="#" placeholders with valid policy/contact URLs before
+           production (rule footer-production-destinations). These are
+           deliberately NOT the same set as {{NAV_LINKS}} above — the real
+           Footer's links are legal/policy, not a repeat of primary nav. -->
+      <ul class="gel-footer__links">
+        <li><a href="#">Privacy policy</a></li>
+        <li><a href="#">Terms of use</a></li>
+        <li><a href="#">Contact us</a></li>
+      </ul>
+    </div>
+    <!-- Verbatim disclaimer text from footer.tsx's DEFAULT_DISCLAIMER —
+         do not paraphrase or shorten legal copy. -->
+    <p class="gel-footer__legal">
+      Deloitte Refers to one or more of Deloitte Touche Tohmatsu Limited, a UK
+      private company limited by guarantee ("DTTL"), its network of member
+      firms, and their related entities. DTTL and each of its member firms are
+      legally separate and independent entities. DTTL (also referred to as
+      "Deloitte Global") does not provide services to clients. Please see
+      About Deloitte for a detailed description of DTTL and its member firms.
+    </p>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    /* ---- Mobile nav toggle ---- */
+    var toggle = document.getElementById('gel-nav-toggle');
+    var links = document.getElementById('gel-nav-links');
+    if (toggle && links) {
+      toggle.addEventListener('click', function () {
+        var open = links.classList.toggle('is-open');
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      links.querySelectorAll('a').forEach(function (a) {
+        a.addEventListener('click', function () {
+          links.classList.remove('is-open');
+          toggle.setAttribute('aria-expanded', 'false');
+        });
+      });
+    }
+
+    /* ---- Active nav link on scroll ---- */
+    var sections = Array.from(document.querySelectorAll('main section[id]'));
+    var navLinks = Array.from(document.querySelectorAll('.gel-nav__links a'));
+    function onScroll() {
+      var scrollY = window.scrollY + 90;
+      var current = '';
+      sections.forEach(function (s) {
+        if (scrollY >= s.offsetTop) { current = s.id; }
+      });
+      navLinks.forEach(function (a) {
+        a.classList.toggle('is-active', a.getAttribute('href') === '#' + current);
+      });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+</script>
+
+</body>
+</html>

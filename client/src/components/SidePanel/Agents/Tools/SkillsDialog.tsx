@@ -131,14 +131,20 @@ export default function SkillsDialog({ open, onOpenChange, agentId }: SkillsDial
         continue;
       }
       seen.add(value);
+      // Deloitte Custom Change: prefer the localized skill category label from the
+      // translation table; fall back to a readable slug if no key exists.
+      const translationKey = `com_ui_${value}` as TranslationKeys;
+      const fallback = value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+      const localized = localize(translationKey);
+      const label = localized !== translationKey ? localized : fallback;
       options.push({
         value,
-        label: value,
+        label,
         icon: <CategoryIcon category={value} className="size-4" />,
       });
     }
     return options;
-  }, [catalog]);
+  }, [catalog, localize]);
 
   const filtered = useMemo(() => {
     const base = applyFilter(catalog, { search, kind: 'skill', category, view: 'marketplace' });

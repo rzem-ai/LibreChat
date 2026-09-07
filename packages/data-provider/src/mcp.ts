@@ -182,7 +182,18 @@ const BaseOptionsSchema = z.object({
    *   requiring manual authentication (e.g., GitHub PAT tokens) that need to be configured through the UI after startup
    */
   startup: z.boolean().optional(),
+  // Deloitte Custom Change: light/dark themed MCP server icons.
+  /**
+   * Icon shown in both themes. Set this alone when the server's logo doesn't change
+   * between light/dark mode; set `iconPathLight`/`iconPathDark` instead when it does.
+   */
   iconPath: z.string().optional(),
+  // Deloitte Custom Change: light/dark themed MCP server icons.
+  /** Icon shown when the app is in light mode. Falls back to `iconPath`, then `iconPathDark`, if unset. */
+  iconPathLight: z.string().optional(),
+  // Deloitte Custom Change: light/dark themed MCP server icons.
+  /** Icon shown when the app is in dark mode. Falls back to `iconPath`, then `iconPathLight`, if unset. */
+  iconPathDark: z.string().optional(),
   timeout: z.number().int().nonnegative().optional(),
   /** Timeout (ms) for the long-lived SSE GET stream body before undici aborts it. Default: 300_000 (5 min). */
   sseReadTimeout: z.number().int().positive().optional(),

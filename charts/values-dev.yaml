@@ -1,6 +1,9 @@
 imageRegistry: 'dttaitsdev.azurecr.io'
 branch: 'develop'
 
+llmGateway:
+  namespace: 'llm-gateway-ctnp'
+
 serviceAccount:
   name: sa-librechat-dev
 
@@ -28,7 +31,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'develop@sha256:fe636c747ebd6bd47d19da168272d8d1fb10cccc4c5d56d158b7ddf0f99a384f'
+          tag: 'develop@sha256:50c0365051b5fedc51e30d53e07c86abc3952af7533e0943f1f0eb354d3fd406'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://foundry-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -48,7 +51,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:b5da4f93d3802bad03b5a91a1828abbf920edc1df9d59006d1b1a4a10823ccbf'
+          tag: 'develop@sha256:9b4e3cd22bf7039edd4af55648d9fdb563ad2a1127672ec9da9bd73475d6e0d2'
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -62,7 +65,7 @@ pods:
           BEDROCK_AWS_DEFAULT_REGION: 'ap-southeast-2'
           BEDROCK_AWS_SECRET_ACCESS_KEY: 'unused'
           BEDROCK_AWS_MODELS: 'au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0'
-          BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081'
+          BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081/bedrock'
           CUSTOM_FOOTER: '⚠️ WARNING: This is a development environment. Do not upload client or confidential data.'
           DOMAIN_CLIENT: 'https://librechat-dev.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://librechat-dev.ctk.au.deloitte.com'
@@ -73,6 +76,9 @@ pods:
           MCP_GATEWAY_OBO_SCOPE: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
           MCP_GATEWAY_TOOLSETS: 'teams,research,news,kx,desc,gims'
           MCP_GATEWAY_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
+          MODEL_PRICING_MIN_MULTIPLIER: '0.1'
+          MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT: '0.1'
+          MODEL_PRICING_REFERENCE_MODEL_ID: 'gpt-56-luna'
           MONGO_DB: 'mdb-librechat-database-dev'
           NODE_ENV: 'development'
           NODE_TLS_REJECT_UNAUTHORIZED: '0'
@@ -89,7 +95,6 @@ pods:
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
           RAG_PORT: '8000'
-          RAG_USE_FULL_CONTEXT: 'true'
           REFRESH_TOKEN_EXPIRY: '86400000' # (ms) - 1 day refresh token expiration
           # ClearTrack Code Interpreter (ea-code-runtime)
           LIBRECHAT_CODE_BASEURL: 'https://code-runtime-dev.ctk.au.deloitte.com/v1'
@@ -124,7 +129,7 @@ pods:
           AGENT_DEBUG_LOGGING: 'true'
           # Skill Security Scanner
           SKILL_SCANNER_URL: 'https://ai-registry-dev.ctk.au.deloitte.com/v1/scan?verbose=false'
-          SKILL_SCANNER_TIMEOUT_MS: '15000'
+          SKILL_SCANNER_TIMEOUT_MS: '30000'
           SKILL_SCANNER_MIN_SEVERITY: 'high'
           # AI Registry
           AI_REGISTRY_CLIENT_ID: "4aeebbdc-56f5-4329-b40e-3d0a243bf74a" # AI Registry DEV & UAT
@@ -156,7 +161,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:06fd587ffd5f14a81293b75e68d128872f00a39e93da6b90601ebb181af487a5'
+          tag: 'develop@sha256:ba92bcbc5d295c18d9e83cbd96286eea54b6e7db7b20b67e05ac94d99c097652'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -212,7 +217,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:e2b86d77e350d184d671445661b718b3423d9231356a9994399ca258ad6e0d9b'
+          tag: 'develop@sha256:fb20e4b75cbfccdc768225c58638c571380adbd0868fe11cfafaab8e36d42adc'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
