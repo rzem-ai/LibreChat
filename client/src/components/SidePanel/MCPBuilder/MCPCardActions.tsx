@@ -11,7 +11,7 @@ interface MCPCardActionsProps {
   serverStatus?: MCPServerStatus;
   isInitializing: boolean;
   canCancel: boolean;
-  hasCustomUserVars: boolean;
+  hasCustomUserVars?: boolean;
   canEdit: boolean;
   editButtonRef?: React.RefObject<HTMLDivElement>;
   onEditClick: (e: React.MouseEvent) => void;

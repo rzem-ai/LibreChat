@@ -507,6 +507,12 @@ export function useMCPServerManager({
             status: 'error',
           });
           cleanupServerState(serverName);
+          // A failed attempt leaves the backend connection state as
+          // 'disconnected', which for an OBO server keeps the manual Connect
+          // button hidden (see isSilentlyConnectableOboServer). Clear the
+          // guard so the auto-connect effect can retry instead of leaving the
+          // server stuck with no way to reconnect short of a page reload.
+          oboAutoConnectAttempted.delete(serverName);
           return response;
         }
 
@@ -548,6 +554,9 @@ export function useMCPServerManager({
           status: 'error',
         });
         cleanupServerState(serverName);
+        // See the `!response.success` branch above: clear the guard so a
+        // thrown init failure doesn't permanently strand an OBO server either.
+        oboAutoConnectAttempted.delete(serverName);
       }
     },
     [
@@ -933,8 +942,13 @@ export function useMCPServerManager({
         cancelOAuthFlow(serverName);
       };
 
-      const hasCustomUserVars =
-        serverConfig?.customUserVars && Object.keys(serverConfig.customUserVars).length > 0;
+      // `serverConfig` undefined means the config hasn't loaded yet (unknown custom vars);
+      // once loaded, a missing `customUserVars` key means the server confirmed has none.
+      const hasCustomUserVars = serverConfig
+        ? Boolean(
+            serverConfig.customUserVars && Object.keys(serverConfig.customUserVars).length > 0,
+          )
+        : undefined;
       const hasPendingOAuth =
         serverStatus?.requiresOAuth === true && serverStatus.connectionState === 'connecting';
       const canCancelOAuth = isCancellable(serverName) || hasPendingOAuth;

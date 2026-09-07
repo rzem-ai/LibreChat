@@ -171,7 +171,7 @@ export default function MCPConfigDialog({
           conversationId={conversationId}
           storageContextKey={storageContextKey}
           requiresOAuth={serverStatus?.requiresOAuth || false}
-          hasCustomUserVars={fieldsSchema && Object.keys(fieldsSchema).length > 0}
+          hasCustomUserVars={hasFields}
         />
       </OGDialogContent>
     </OGDialog>

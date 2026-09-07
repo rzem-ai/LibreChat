@@ -497,6 +497,29 @@ describe('tests for the new helper functions used by the MCP connection status e
       });
     });
 
+    it('should report configuredObo true for a server with an obo config, independent of connection state', async () => {
+      const oboConfig = { ...mockConfig, obo: { authHeader: 'Authorization' } };
+      const appConnections = new Map();
+      const userConnections = new Map();
+      const oauthServers = new Set();
+
+      const result = await getServerConnectionStatus(
+        mockUserId,
+        mockServerName,
+        oboConfig,
+        appConnections,
+        userConnections,
+        oauthServers,
+      );
+
+      expect(result).toEqual({
+        requiresOAuth: false,
+        connectionState: 'disconnected',
+        authorizationState: 'not_required',
+        configuredObo: true,
+      });
+    });
+
     it('should fallback to user connection state when app connection not available', async () => {
       const appConnections = new Map();
       const userConnections = new Map([

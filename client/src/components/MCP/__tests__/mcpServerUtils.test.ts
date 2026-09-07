@@ -57,4 +57,19 @@ describe('shouldShowActionButton', () => {
 
     expect(shouldShowActionButton(props)).toBe(true);
   });
+
+  it('shows the button for a disconnected OBO server when hasCustomUserVars is undefined (not yet resolved to a boolean)', () => {
+    // isSilentlyConnectableOboServer requires `hasCustomUserVars === false` via strict
+    // equality, so an unresolved `undefined` must fail closed (button shown) rather than
+    // being treated the same as a confirmed `false`. Regression test for the bug where
+    // MCPConfigDialog computed this prop as `fieldsSchema && Object.keys(fieldsSchema).length > 0`,
+    // which evaluates to a falsy non-boolean (`undefined`/`null`) instead of `false` when
+    // `fieldsSchema` itself was falsy.
+    const props = buildStatusIconProps(
+      { requiresOAuth: false, connectionState: 'disconnected', configuredObo: true },
+      { hasCustomUserVars: undefined },
+    );
+
+    expect(shouldShowActionButton(props)).toBe(true);
+  });
 });
