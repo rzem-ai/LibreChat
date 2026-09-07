@@ -55,22 +55,25 @@ describe('shouldShowActionButton', () => {
     expect(
       shouldShowActionButton(
         baseProps({
-          serverStatus: { connectionState: 'disconnected', requiresOAuth: true },
-          isObo: true,
+          serverStatus: {
+            connectionState: 'disconnected',
+            requiresOAuth: false,
+            configuredObo: true,
+          },
+          hasCustomUserVars: false,
         }),
       ),
     ).toBe(false);
   });
 
-  it('hides the connect button for an errored OBO server', () => {
+  it('shows the connect button for an errored OBO server — errors always need a retry action', () => {
     expect(
       shouldShowActionButton(
         baseProps({
-          serverStatus: { connectionState: 'error', requiresOAuth: false },
-          isObo: true,
+          serverStatus: { connectionState: 'error', requiresOAuth: false, configuredObo: true },
         }),
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('only shows the configure button for connected servers with custom vars', () => {
