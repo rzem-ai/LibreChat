@@ -46,7 +46,7 @@ export default function MCPServerStatusIcon({
   isInitializing,
   canCancel,
   onCancel,
-  hasCustomUserVars = false,
+  hasCustomUserVars,
   compact = false,
 }: MCPServerStatusIconProps) {
   localize = useLocalize();

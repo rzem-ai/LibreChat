@@ -77,6 +77,13 @@ type PollIntervals = Record<string, NodeJS.Timeout | null>;
  * shared across every mounted `useMCPServerManager` instance. Resets on reload. */
 const oboAutoConnectAttempted = new Set<string>();
 
+/** Names of OBO servers whose silent auto-connect attempt failed. The backend
+ * connectionState stays 'disconnected' (not 'error') after a failed reinitialize,
+ * so without this, `isSilentlyConnectableOboServer` would keep classifying the
+ * server as silently connectable forever, hiding the manual Connect button with
+ * no way to retry short of a page reload. Cleared alongside `oboAutoConnectAttempted`. */
+const oboAutoConnectFailed = new Set<string>();
+
 export function useMCPServerManager({
   conversationId,
   storageContextKey,
@@ -512,12 +519,14 @@ export function useMCPServerManager({
             status: 'error',
           });
           cleanupServerState(serverName);
-          // A failed attempt leaves the backend connection state as
-          // 'disconnected', which for an OBO server keeps the manual Connect
-          // button hidden (see isSilentlyConnectableOboServer). Clear the
-          // guard so the auto-connect effect can retry instead of leaving the
-          // server stuck with no way to reconnect short of a page reload.
           oboAutoConnectAttempted.delete(serverName);
+          if (silent) {
+            // A failed silent auto-connect leaves the backend connection state as
+            // 'disconnected' (not 'error'), so mark it here to force the manual
+            // Connect button to reappear instead of leaving the server stuck with
+            // no way to reconnect short of a page reload.
+            oboAutoConnectFailed.add(serverName);
+          }
           return response;
         }
 
@@ -564,6 +573,9 @@ export function useMCPServerManager({
         // See the `!response.success` branch above: clear the guard so a
         // thrown init failure doesn't permanently strand an OBO server either.
         oboAutoConnectAttempted.delete(serverName);
+        if (silent) {
+          oboAutoConnectFailed.add(serverName);
+        }
       }
     },
     [
@@ -671,6 +683,7 @@ export function useMCPServerManager({
     // auto-connect from working in the next session.
     if (!connectionStatus) {
       oboAutoConnectAttempted.clear();
+      oboAutoConnectFailed.clear();
       return;
     }
     for (const [serverName, status] of Object.entries(connectionStatus)) {
@@ -680,6 +693,7 @@ export function useMCPServerManager({
         // OBO connection) is auto-retried instead of being silently stuck
         // forever, since the "Connect" button stays hidden for OBO servers.
         oboAutoConnectAttempted.delete(serverName);
+        oboAutoConnectFailed.delete(serverName);
         continue;
       }
       // Deloitte Custom Change: A server can be configured for both OBO and OAuth at
@@ -690,6 +704,12 @@ export function useMCPServerManager({
         !status.configuredObo ||
         status.requiresOAuth
       ) {
+        continue;
+      }
+      // A prior silent attempt already failed — don't retry endlessly against a
+      // connectionState that the backend never moves off 'disconnected'; the
+      // manual Connect button is forced visible instead (see getServerStatusIconProps).
+      if (oboAutoConnectFailed.has(serverName)) {
         continue;
       }
       if (needsCustomVarsConfig(serverName)) {
@@ -965,7 +985,15 @@ export function useMCPServerManager({
         QueryKeys.mcpTools,
       ]);
       const serverData = mcpData?.servers?.[serverName];
-      const serverStatus = connectionStatus?.[serverName];
+      const rawServerStatus = connectionStatus?.[serverName];
+      // A server whose silent auto-connect already failed reports `configuredObo:
+      // true` from the backend forever (see oboAutoConnectFailed above) — override
+      // it here so isSilentlyConnectableOboServer stops hiding the manual Connect
+      // button for it, without touching the auto-connect effect's own gating.
+      const serverStatus =
+        rawServerStatus && oboAutoConnectFailed.has(serverName)
+          ? { ...rawServerStatus, configuredObo: false }
+          : rawServerStatus;
       const serverConfig = loadedServers?.[serverName];
 
       const handleConfigClick = (e: React.MouseEvent) => {
