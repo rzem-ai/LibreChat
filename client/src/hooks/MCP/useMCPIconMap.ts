@@ -76,12 +76,21 @@ export function useMCPIconMap(): Map<string, string> {
 }
 
 /**
- * Configured MCP server names in the normalized form tool keys are built from,
- * so they can be matched against a key. The config is keyed by the raw name.
+ * Configured MCP server names, matchable against a tool-key suffix. Includes both
+ * the normalized form (what current tool keys carry) and the raw configured names
+ * plus their alias targets, since messages/cached keys persisted before server
+ * names were normalized in tool keys may still carry a raw-suffixed name.
  */
 export function useMCPServerNames(): string[] {
   const { data: servers } = useMCPServersQuery();
-  return useMemo(() => (servers ? Object.keys(servers).map(normalizeServerName) : []), [servers]);
+  return useMemo(() => {
+    if (!servers) {
+      return [];
+    }
+    const rawNames = Object.keys(servers);
+    const aliases = buildServerNameAliases(rawNames);
+    return Array.from(new Set([...rawNames.map(normalizeServerName), ...rawNames, ...aliases.keys()]));
+  }, [servers]);
 }
 
 /** Deloitte Custom Change: maps each configured MCP server's normalized name to its display title. */
