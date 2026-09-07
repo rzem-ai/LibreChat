@@ -72,11 +72,13 @@ const browser = await chromium.launch({
   args,
   ...(process.env.E2E_CHROMIUM_CHANNEL ? { channel: process.env.E2E_CHROMIUM_CHANNEL } : {}),
 });
-const context = await browser.newContext({ ignoreHTTPSErrors: true });
+const context = await browser.newContext({ ignoreHTTPSErrors: Boolean(localHost) });
 const page = await context.newPage();
 
+try {
   console.log(`[login-live] signing in at ${baseURL}`);
 
+  await page.goto(appURL('login'), { waitUntil: 'domcontentloaded', timeout });
   const emailField = page.getByLabel('Email');
 
   if (await emailField.isVisible({ timeout: 10000 }).catch(() => false)) {

@@ -65,7 +65,7 @@ export async function getSkillActive(page: Page, skillName: string): Promise<boo
   await openSkillDetail(page, skillName);
   const toggle = page.getByRole('switch', { name: SKILL_ACTIVE_SWITCH });
   await expect(toggle).toBeVisible({ timeout: 15000 });
-  return toggle.isChecked();
+  return (await toggle.getAttribute('aria-checked')) === 'true';
 }
 
 /**

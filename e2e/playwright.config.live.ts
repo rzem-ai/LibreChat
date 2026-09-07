@@ -29,8 +29,8 @@ const resolverArgs = localHost
   : [];
 
 if (!hasAuth) {
-  console.warn(
-    '[e2e:live] e2e/live-auth.json not found — run the codegen --save-storage capture first.',
+  throw new Error(
+    '[e2e:live] e2e/live-auth.json not found — capture it first (codegen --save-storage for local runs, or run e2e/login-live.mjs in CI).',
   );
 }
 
@@ -46,9 +46,9 @@ export default defineConfig({
     baseURL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    ignoreHTTPSErrors: true,
+    ignoreHTTPSErrors: Boolean(localHost),
     headless: true,
-    storageState: hasAuth ? authFile : undefined,
+    storageState: authFile,
   },
   expect: {
     timeout: 15000,

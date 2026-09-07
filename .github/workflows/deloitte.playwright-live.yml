@@ -35,7 +35,7 @@ jobs:
       group: playwright-live-${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || (github.event.inputs.target_ref == 'uat' && 'uat' || github.event.inputs.target_ref == 'main' && 'main' || 'develop') }}
       cancel-in-progress: false
 
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     env:
       E2E_BASE_URL: ${{ github.event.inputs.base_url || vars.E2E_BASE_URL }}
