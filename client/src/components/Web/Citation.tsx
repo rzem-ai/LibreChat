@@ -1,21 +1,17 @@
 import { memo, useState, useContext, useCallback } from 'react';
 import { Button } from '@librechat/client';
-import {
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  Plug,
-  Newspaper,
-  Building2,
-  Users,
-  TriangleAlert,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, Folder, TriangleAlert } from 'lucide-react';
 import type { SourceData } from '~/components/Web/SourceHovercard';
 import type { CitationProps } from './types';
-import { SourceHovercard, FaviconImage, getCleanDomain } from '~/components/Web/SourceHovercard';
+import {
+  SourceHovercard,
+  TooltipContent,
+  FaviconImage,
+  getCleanDomain,
+} from '~/components/Web/SourceHovercard';
 import FilePreviewDialog from '~/components/Chat/Messages/Content/FilePreviewDialog';
 import { CitationContext, useCitation, useCompositeCitations } from './Context';
-import { useLocalize } from '~/hooks';
+import { useMCPServerTitleMap, useLocalize } from '~/hooks';
 
 interface FileCitationMetadata {
   fileBytes?: number;
@@ -40,28 +36,49 @@ interface FileCitationSource {
   usageRestriction?: boolean;
 }
 
+// Deloitte Custom Change: max filename length shown on a file_search citation chip
+const FILE_CHIP_LABEL_MAX_LENGTH = 10;
+
 function isHttpLink(link?: string): link is string {
   return typeof link === 'string' && (link.startsWith('http://') || link.startsWith('https://'));
 }
 
-/** Picks a citation chip icon based on the MCP tool that produced the source. */
-function getMCPIcon(toolName?: string) {
-  if (!toolName) {
-    return Plug;
+/** Deloitte Custom Change: configured display name for an MCP citation's server, if one is set. */
+function getMCPServerLabel(mcpServerTitles: Map<string, string>, serverName?: string) {
+  return serverName ? mcpServerTitles.get(serverName) : undefined;
+}
+
+/**
+ * Deloitte Custom Change: MCP tooltip footer text — configured server label, else the
+ * cleaned domain when the source has a real http(s) link, else the raw server name.
+ * Avoids surfacing the `#mcp-...` placeholder link as a fake domain.
+ */
+function getMCPSubtitle(mcpServerTitles: Map<string, string>, serverName?: string, link?: string) {
+  return (
+    getMCPServerLabel(mcpServerTitles, serverName) ??
+    (isHttpLink(link) ? getCleanDomain(link) : serverName)
+  );
+}
+
+/** Deloitte Custom Change: chip icon — a folder for file_search citations, a document for all MCP citations. */
+function getChipIcon(isFileType: boolean, isMCPType: boolean) {
+  if (isFileType) {
+    return <Folder className="size-2.5 shrink-0 text-text-secondary" aria-hidden="true" />;
   }
-  if (toolName.startsWith('afr_')) {
-    return Newspaper;
+  if (isMCPType) {
+    return <FileText className="size-2.5 shrink-0 text-text-secondary" aria-hidden="true" />;
   }
-  if (toolName.startsWith('ibisworld_')) {
-    return FileText;
-  }
-  if (toolName.startsWith('desc_') || toolName.startsWith('gims_')) {
-    return Building2;
-  }
-  if (toolName.startsWith('kx_')) {
-    return Users;
-  }
-  return Plug;
+  return undefined;
+}
+
+/**
+ * Deloitte Custom Change: chip label for a file_search citation — the first 10
+ * characters of the filename, followed by an ellipsis when it's longer.
+ */
+function truncateFileChipLabel(fileName: string) {
+  return fileName.length > FILE_CHIP_LABEL_MAX_LENGTH
+    ? `${fileName.slice(0, FILE_CHIP_LABEL_MAX_LENGTH)}...`
+    : fileName;
 }
 
 function getFileCitationData(source?: FileCitationSource) {
@@ -78,6 +95,31 @@ function getFileCitationData(source?: FileCitationSource) {
     fileRelevance: isFileType ? source.relevance : undefined,
     filePageRelevance: isFileType ? source.pageRelevance : undefined,
   };
+}
+
+/**
+ * Deloitte Custom Change: usage-restriction notice for an MCP tooltip — omits the
+ * "Learn more" link entirely when the source has no real http(s) link, instead of
+ * rendering it as dead, non-clickable text.
+ */
+function UsageRestrictionNotice({ link }: { link?: string }) {
+  const localize = useLocalize();
+  return (
+    <div className="mt-1.5 flex items-start gap-1 text-xs text-amber-600 dark:text-amber-500">
+      <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+      <span className="min-w-0 flex-1">
+        {localize('com_citation_usage_restriction')}
+        {isHttpLink(link) && (
+          <>
+            {' '}
+            <a href={link} target="_blank" rel="noopener noreferrer" className="underline">
+              {localize('com_ui_learn_more')}
+            </a>
+          </>
+        )}
+      </span>
+    </div>
+  );
 }
 
 function toSourceData(source: FileCitationSource): SourceData {
@@ -103,6 +145,7 @@ export function CompositeCitation(props: CompositeCitationProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
   const sources = useCompositeCitations(citations || []);
+  const mcpServerTitles = useMCPServerTitleMap();
 
   if (!sources || sources.length === 0) {
     return null;
@@ -116,16 +159,28 @@ export function CompositeCitation(props: CompositeCitationProps) {
 
     const firstSource = sources[0] as FileCitationSource;
     const remainingCount = sources.length - 1;
-    const isFirstMCP = firstSource.refType === 'mcp';
-    const attribution = isFirstMCP
-      ? firstSource.title ||
+    const { isFileType: isFirstFile, isMCPType: isFirstMCP } = getFileCitationData(firstSource);
+
+    // Deloitte Custom Change: file_search citations show a truncated filename, not the tool name
+    let attribution: string;
+    if (isFirstFile) {
+      attribution = truncateFileChipLabel(
+        firstSource.fileName || firstSource.title || localize('com_file_source'),
+      );
+    } else if (isFirstMCP) {
+      attribution =
+        getMCPServerLabel(mcpServerTitles, firstSource.serverName) ||
+        firstSource.title ||
         firstSource.attribution ||
         getCleanDomain(firstSource.link || '') ||
-        localize('com_citation_source')
-      : firstSource.attribution ||
+        localize('com_citation_source');
+    } else {
+      attribution =
+        firstSource.attribution ||
         firstSource.title ||
         getCleanDomain(firstSource.link || '') ||
         localize('com_citation_source');
+    }
 
     return remainingCount > 0 ? `${attribution} +${remainingCount}` : attribution;
   };
@@ -157,7 +212,6 @@ export function CompositeCitation(props: CompositeCitationProps) {
     fileRelevance,
     filePageRelevance,
   } = getFileCitationData(currentSource);
-  const MCPIcon = getMCPIcon(currentSource.toolName);
 
   const handleFileClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -217,19 +271,16 @@ export function CompositeCitation(props: CompositeCitationProps) {
     );
   };
 
+  // Deloitte Custom Change: hovercard bodies rebuilt on the shared TooltipContent layout
   const renderSourceContent = () => {
     if (isFileType) {
       return (
-        <>
-          <div className="flex items-center gap-2">
-            <FileText className="size-4 shrink-0 text-text-secondary" aria-hidden="true" />
-            <button
-              onClick={handleFileClick}
-              className="min-w-0 truncate text-sm font-medium text-text-primary hover:underline"
-            >
-              {fileName || currentSource.title || localize('com_file_source')}
-            </button>
-          </div>
+        <TooltipContent
+          icon={<Folder className="size-4 shrink-0 text-text-secondary" aria-hidden="true" />}
+          title={fileName || currentSource.title || localize('com_file_source')}
+          onClick={handleFileClick}
+          subtitle={localize('com_ui_tool_name_file_search')}
+        >
           {(fileRelevance != null || (filePages && filePages.length > 0)) && (
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
               {fileRelevance != null && fileRelevance > 0 && (
@@ -245,77 +296,48 @@ export function CompositeCitation(props: CompositeCitationProps) {
             </div>
           )}
           {currentSource.snippet && (
-            <p className="mt-1.5 line-clamp-3 break-words text-xs leading-relaxed text-text-secondary">
+            <p className="mt-1.5 line-clamp-3 break-words text-xs leading-snug text-text-secondary">
               {currentSource.snippet}
             </p>
           )}
           {renderPageNav()}
-        </>
+        </TooltipContent>
       );
     }
 
     if (isMCPType) {
       return (
-        <>
-          <div className="flex items-center gap-2">
-            <MCPIcon className="size-4 shrink-0 text-text-secondary" aria-hidden="true" />
-            {isHttpLink(currentSource.link) ? (
-              <a
-                href={currentSource.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="min-w-0 truncate text-sm font-medium text-text-primary hover:underline"
-              >
-                {currentSource.title || getCitationLabel()}
-              </a>
-            ) : (
-              <span className="min-w-0 truncate text-sm font-medium text-text-primary">
-                {currentSource.title || getCitationLabel()}
-              </span>
-            )}
-          </div>
+        <TooltipContent
+          icon={<FileText className="size-4 shrink-0 text-text-secondary" aria-hidden="true" />}
+          title={currentSource.title || getCitationLabel()}
+          href={isHttpLink(currentSource.link) ? currentSource.link : undefined}
+          subtitle={getMCPSubtitle(mcpServerTitles, currentSource.serverName, currentSource.link)}
+        >
           {currentSource.snippet && (
-            <p className="mt-1.5 line-clamp-3 break-words text-xs leading-relaxed text-text-secondary">
+            <p className="mt-1.5 line-clamp-3 break-words text-xs leading-snug text-text-secondary">
               {currentSource.snippet}
             </p>
           )}
-          {currentSource.usageRestriction && (
-            <div className="mt-1.5 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500">
-              <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
-              <span>{localize('com_citation_usage_restriction')}</span>
-            </div>
-          )}
+          {currentSource.usageRestriction && <UsageRestrictionNotice link={currentSource.link} />}
           {renderPageNav()}
-        </>
+        </TooltipContent>
       );
     }
 
     return (
-      <>
-        <div className="mb-1.5 overflow-hidden text-sm">
-          <FaviconImage
-            domain={getCleanDomain(currentSource.link || '')}
-            className="float-left mr-2 mt-0.5"
-          />
-          <span className="float-right ml-2 max-w-[40%] truncate text-xs text-text-secondary">
-            {getCleanDomain(currentSource.link || '')}
-          </span>
-          <a
-            href={currentSource.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium text-text-primary hover:underline"
-          >
-            {currentSource.title}
-          </a>
-        </div>
+      <TooltipContent
+        icon={<FaviconImage domain={getCleanDomain(currentSource.link || '')} />}
+        title={currentSource.title || currentSource.link || ''}
+        href={currentSource.link}
+        subtitle={getCleanDomain(currentSource.link || '')}
+      >
         {currentSource.snippet && (
-          <p className="line-clamp-4 break-words text-xs text-text-secondary md:text-sm">
+          <p className="mt-1.5 line-clamp-4 break-words text-xs text-text-secondary md:text-sm">
             {currentSource.snippet}
           </p>
         )}
         {renderPageNav()}
-      </>
+      </TooltipContent>
     );
   };
 
@@ -328,6 +350,7 @@ export function CompositeCitation(props: CompositeCitationProps) {
         onMouseLeave={() => setHoveredCitationId(null)}
         onClick={isFileType ? handleFileClick : undefined}
         isFile={isFileType || isMCPType}
+        chipIcon={getChipIcon(isFileType, isMCPType)}
         filePages={filePages}
         fileRelevance={fileRelevance}
       >
@@ -378,7 +401,7 @@ export function Citation(props: CitationComponentProps) {
     fileRelevance,
     filePageRelevance,
   } = getFileCitationData(refData);
-  const MCPIcon = getMCPIcon(refData?.toolName);
+  const mcpServerTitles = useMCPServerTitleMap();
 
   const [showPreview, setShowPreview] = useState(false);
 
@@ -398,8 +421,13 @@ export function Citation(props: CitationComponentProps) {
   }
 
   const getCitationLabel = () => {
+    // Deloitte Custom Change: file_search citations show a truncated filename, not the tool name
+    if (isFileType) {
+      return truncateFileChipLabel(fileName || refData.title || localize('com_file_source'));
+    }
     if (isMCPType) {
       return (
+        getMCPServerLabel(mcpServerTitles, refData.serverName) ||
         refData.title ||
         refData.attribution ||
         getCleanDomain(refData.link || '') ||
@@ -423,40 +451,24 @@ export function Citation(props: CitationComponentProps) {
         onMouseLeave={() => setHoveredCitationId(null)}
         onClick={isFileType ? handleFileClick : undefined}
         isFile={isFileType || isMCPType}
+        chipIcon={getChipIcon(isFileType, isMCPType)}
         filePages={filePages}
         fileRelevance={fileRelevance}
       >
         {isMCPType ? (
-          <>
-            <div className="flex items-center gap-2">
-              <MCPIcon className="size-4 shrink-0 text-text-secondary" aria-hidden="true" />
-              {isHttpLink(refData.link) ? (
-                <a
-                  href={refData.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="min-w-0 truncate text-sm font-medium text-text-primary hover:underline"
-                >
-                  {refData.title || getCitationLabel()}
-                </a>
-              ) : (
-                <span className="min-w-0 truncate text-sm font-medium text-text-primary">
-                  {refData.title || getCitationLabel()}
-                </span>
-              )}
-            </div>
+          <TooltipContent
+            icon={<FileText className="size-4 shrink-0 text-text-secondary" aria-hidden="true" />}
+            title={refData.title || getCitationLabel()}
+            href={isHttpLink(refData.link) ? refData.link : undefined}
+            subtitle={getMCPSubtitle(mcpServerTitles, refData.serverName, refData.link)}
+          >
             {refData.snippet && (
-              <p className="mt-1.5 line-clamp-3 break-words text-xs leading-relaxed text-text-secondary">
+              <p className="mt-1.5 line-clamp-3 break-words text-xs leading-snug text-text-secondary">
                 {refData.snippet}
               </p>
             )}
-            {refData.usageRestriction && (
-              <div className="mt-1.5 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500">
-                <TriangleAlert className="size-3.5 shrink-0" aria-hidden="true" />
-                <span>{localize('com_citation_usage_restriction')}</span>
-              </div>
-            )}
-          </>
+            {refData.usageRestriction && <UsageRestrictionNotice link={refData.link} />}
+          </TooltipContent>
         ) : null}
       </SourceHovercard>
       {isFileType && fileId && (

@@ -47,11 +47,3 @@ export function useMCPIconMap(): Map<string, string> {
   }, [servers, dark]);
 }
 
-/**
- * Configured MCP server names in the normalized form tool keys are built from,
- * so they can be matched against a key. The config is keyed by the raw name.
- */
-export function useMCPServerNames(): string[] {
-  const { data: servers } = useMCPServersQuery();
-  return useMemo(() => (servers ? Object.keys(servers).map(normalizeServerName) : []), [servers]);
-}

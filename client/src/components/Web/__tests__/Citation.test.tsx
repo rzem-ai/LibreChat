@@ -1,3 +1,4 @@
+// Deloitte Custom Change: tests
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -23,8 +24,12 @@ jest.mock('~/hooks', () => ({
     if (key === 'com_file_source') {
       return 'File source';
     }
+    if (key === 'com_ui_tool_name_file_search') {
+      return 'File Search';
+    }
     return key;
   },
+  useMCPServerTitleMap: () => new Map<string, string>([['kx', 'KX']]),
 }));
 
 jest.mock('~/components/Chat/Messages/Content/FilePreviewDialog', () => ({
@@ -99,7 +104,7 @@ describe('Citation', () => {
       searchResults as any,
     );
 
-    const fileButton = screen.getByRole('button', { name: 'Tutorial Imazing.pdf' });
+    const fileButton = screen.getByRole('button', { name: 'Tutorial I...' });
 
     expect(fileButton).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Tutorial Imazing.pdf' })).not.toBeInTheDocument();
@@ -141,5 +146,76 @@ describe('Citation', () => {
       'href',
       'https://example.com',
     );
+  });
+
+  it('resolves the MCP citation chip label from the configured server title', () => {
+    const searchResults = {
+      '0': {
+        mcp_results: [
+          {
+            attribution: 'kx',
+            link: 'https://stagequals.deloitteresources.com/quals/view/1/description/',
+            serverName: 'kx',
+            snippet: 'Qualification summary text.',
+            title: 'Digital Twin Implementation',
+            toolName: 'kx_query',
+            type: 'mcp',
+            usageRestriction: true,
+          },
+        ],
+      },
+    };
+
+    renderWithProviders(
+      <Citation
+        citationId="cite-3"
+        citationType="standalone"
+        node={{
+          properties: {
+            citation: { turn: 0, refType: 'mcp', index: 0 },
+            citationId: 'cite-3',
+          },
+        }}
+      />,
+      searchResults as any,
+    );
+
+    const chip = screen.getByRole('button', { name: 'KX' });
+    expect(chip).toBeInTheDocument();
+    expect(chip).toHaveAttribute('title', 'KX');
+  });
+
+  it('falls back to the source title when the MCP server has no configured title', () => {
+    const searchResults = {
+      '0': {
+        mcp_results: [
+          {
+            attribution: 'unknown-server',
+            link: 'https://example.com/article',
+            serverName: 'unknown-server',
+            snippet: 'Article snippet.',
+            title: 'Some Article Title',
+            toolName: 'afr_search_news',
+            type: 'mcp',
+          },
+        ],
+      },
+    };
+
+    renderWithProviders(
+      <Citation
+        citationId="cite-4"
+        citationType="standalone"
+        node={{
+          properties: {
+            citation: { turn: 0, refType: 'mcp', index: 0 },
+            citationId: 'cite-4',
+          },
+        }}
+      />,
+      searchResults as any,
+    );
+
+    expect(screen.getByRole('button', { name: 'Some Article Title' })).toBeInTheDocument();
   });
 });
