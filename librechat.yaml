@@ -465,7 +465,8 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     url: '${MCP_GATEWAY_URL}?toolsets=kx'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
-    iconPath: '/assets/mcp/kx.png' # same logo in both themes
+    iconPathLight: '/assets/mcp/kx-light.png'
+    iconPathDark: '/assets/mcp/kx-dark.png'
 
   cleartrack-mcp-gateway-desc:
     title: 'DESC'
