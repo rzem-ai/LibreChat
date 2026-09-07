@@ -155,8 +155,11 @@ memory:
   messageWindowSize: 5 # Number of recent messages to consider
   agent:
     enabled: true
-    provider: 'Azure Global'
-    model: 'gpt-56-terra'
+    provider: 'VertexAI US'
+    model: 'google/gemini-2.5-flash'
+    instructions: |
+      Only store stated preferences (e.g. I like X, I dislike Y) and any important facts/context about the user's work at Deloitte (e.g. current projects, team composition).
+      Update or delete out-of-date information promptly.
 
 endpoints:
   # ========================================
