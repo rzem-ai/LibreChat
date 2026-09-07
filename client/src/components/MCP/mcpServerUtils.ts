@@ -215,15 +215,22 @@ export function serverNeedsAction(
  * Whether a disconnected server is an OBO (on-behalf-of) server that
  * authenticates silently on every tool call — so it never needs a manual
  * "Connect" click, unless it also has custom vars still to be filled in.
- * Shared by every surface that decides whether to show a Connect button.
+ * A server can be configured for both OBO and OAuth at once; `requiresOAuth`
+ * is the authoritative "needs interactive user action" flag, so it must be
+ * false too, or a server stuck behind OAuth would have its only Connect
+ * affordance hidden. Shared by every surface that decides whether to show a
+ * Connect button.
  */
 export function isSilentlyConnectableOboServer(
-  serverStatus: Pick<MCPServerStatus, 'connectionState' | 'configuredObo'> | undefined,
+  serverStatus:
+    | Pick<MCPServerStatus, 'connectionState' | 'configuredObo' | 'requiresOAuth'>
+    | undefined,
   hasCustomUserVars: boolean | undefined,
 ): boolean {
   return (
     serverStatus?.connectionState === 'disconnected' &&
     serverStatus?.configuredObo === true &&
+    serverStatus?.requiresOAuth === false &&
     hasCustomUserVars === false
   );
 }

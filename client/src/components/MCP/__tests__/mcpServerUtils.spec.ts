@@ -55,9 +55,12 @@ describe('shouldShowActionButton', () => {
     expect(
       shouldShowActionButton(
         baseProps({
-          serverStatus: { connectionState: 'disconnected', requiresOAuth: true, configuredObo: true },
+          serverStatus: {
+            connectionState: 'disconnected',
+            requiresOAuth: false,
+            configuredObo: true,
+          },
           hasCustomUserVars: false,
-          isObo: true,
         }),
       ),
     ).toBe(false);
@@ -68,7 +71,6 @@ describe('shouldShowActionButton', () => {
       shouldShowActionButton(
         baseProps({
           serverStatus: { connectionState: 'error', requiresOAuth: false, configuredObo: true },
-          isObo: true,
         }),
       ),
     ).toBe(true);

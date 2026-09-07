@@ -491,7 +491,10 @@ export function useMCPServerManager({
   );
 
   const initializeServer = useCallback(
-    async (serverName: string, autoOpenOAuth: boolean = true) => {
+    /** `silent` suppresses the success toast — used for the OBO auto-connect effect,
+     * where a background silent authorization shouldn't surface a user-visible
+     * notification (and would otherwise spam one per auto-connected server). */
+    async (serverName: string, autoOpenOAuth: boolean = true, silent: boolean = false) => {
       /** connectionDeferred is reset up front so a stale value from a previous
        * attempt can never be mistaken for this attempt's outcome. */
       updateServerInitState(serverName, { isInitializing: true, connectionDeferred: false });
@@ -539,10 +542,12 @@ export function useMCPServerManager({
             queryClient.invalidateQueries([QueryKeys.mcpConnectionStatus]),
           ]);
 
-          showToast({
-            message: localize('com_ui_mcp_initialized_success', { 0: serverName }),
-            status: 'success',
-          });
+          if (!silent) {
+            showToast({
+              message: localize('com_ui_mcp_initialized_success', { 0: serverName }),
+              status: 'success',
+            });
+          }
 
           addConnectorToSelection(serverName);
 
@@ -677,7 +682,14 @@ export function useMCPServerManager({
         oboAutoConnectAttempted.delete(serverName);
         continue;
       }
-      if (status.connectionState !== 'disconnected' || !status.configuredObo) {
+      // Deloitte Custom Change: A server can be configured for both OBO and OAuth at
+      // once — that combination still needs the interactive OAuth flow, so don't fire
+      // a silent init attempt that can never complete on its own.
+      if (
+        status.connectionState !== 'disconnected' ||
+        !status.configuredObo ||
+        status.requiresOAuth
+      ) {
         continue;
       }
       if (needsCustomVarsConfig(serverName)) {
@@ -687,7 +699,7 @@ export function useMCPServerManager({
         continue;
       }
       oboAutoConnectAttempted.add(serverName);
-      initializeServer(serverName, false);
+      initializeServer(serverName, false, true);
     }
   }, [connectionStatus, needsCustomVarsConfig, initializeServer]);
 
@@ -976,8 +988,6 @@ export function useMCPServerManager({
             serverConfig.customUserVars && Object.keys(serverConfig.customUserVars).length > 0,
           )
         : undefined;
-      // Deloitte Custom Change: Feeds MCPServerStatusIcon's !isObo gate on the connect button.
-      const isObo = serverConfig?.obo != null;
       const hasPendingOAuth =
         serverStatus?.requiresOAuth === true && serverStatus.connectionState === 'connecting';
       const canCancelOAuth = isCancellable(serverName) || hasPendingOAuth;
@@ -998,7 +1008,6 @@ export function useMCPServerManager({
         canCancel: canCancelOAuth,
         onCancel: handleCancelClick,
         hasCustomUserVars,
-        isObo,
       };
     },
     [
