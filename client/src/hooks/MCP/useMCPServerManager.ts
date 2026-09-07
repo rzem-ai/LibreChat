@@ -20,6 +20,7 @@ import {
 import type {
   TUpdateUserPlugins,
   TPlugin,
+  MCPServerStatus,
   MCPServersResponse,
   MCPConnectionStatusResponse,
   MCPOAuthStatusResponse,
@@ -979,21 +980,29 @@ export function useMCPServerManager({
     }
   }, []);
 
+  /** A server whose silent auto-connect already failed reports `configuredObo:
+   * true` from the backend forever (see oboAutoConnectFailed above) — override it
+   * here so isSilentlyConnectableOboServer stops hiding the manual Connect button
+   * for it, without touching the auto-connect effect's own gating. Shared by every
+   * consumer of connection status (not just getServerStatusIconProps) so none of
+   * them can end up stuck reading the raw, un-overridden status. */
+  const getEffectiveServerStatus = useCallback(
+    (serverName: string): MCPServerStatus | undefined => {
+      const rawServerStatus = connectionStatus?.[serverName];
+      return rawServerStatus && oboAutoConnectFailed.has(serverName)
+        ? { ...rawServerStatus, configuredObo: false }
+        : rawServerStatus;
+    },
+    [connectionStatus],
+  );
+
   const getServerStatusIconProps = useCallback(
     (serverName: string) => {
       const mcpData = queryClient.getQueryData<MCPServersResponse | undefined>([
         QueryKeys.mcpTools,
       ]);
       const serverData = mcpData?.servers?.[serverName];
-      const rawServerStatus = connectionStatus?.[serverName];
-      // A server whose silent auto-connect already failed reports `configuredObo:
-      // true` from the backend forever (see oboAutoConnectFailed above) — override
-      // it here so isSilentlyConnectableOboServer stops hiding the manual Connect
-      // button for it, without touching the auto-connect effect's own gating.
-      const serverStatus =
-        rawServerStatus && oboAutoConnectFailed.has(serverName)
-          ? { ...rawServerStatus, configuredObo: false }
-          : rawServerStatus;
+      const serverStatus = getEffectiveServerStatus(serverName);
       const serverConfig = loadedServers?.[serverName];
 
       const handleConfigClick = (e: React.MouseEvent) => {
@@ -1043,7 +1052,7 @@ export function useMCPServerManager({
       isCancellable,
       isInitializing,
       cancelOAuthFlow,
-      connectionStatus,
+      getEffectiveServerStatus,
       loadedServers,
       openConfigDialogForServer,
     ],
@@ -1098,6 +1107,7 @@ export function useMCPServerManager({
     availableMCPServersMap: loadedServers,
     isLoading,
     connectionStatus,
+    getEffectiveServerStatus,
     initializeServer,
     connectOrConfigureServer,
     cancelOAuthFlow,
