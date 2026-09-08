@@ -839,11 +839,11 @@ export async function applyEndOfTraceCitations({
       let turnCursor = turnOffset;
       const lexicalPassAttachments = mcpAttachments.map((attachment) => {
         const payload = attachment[Tools.mcp_results];
-        const turnNum = turnCursor;
-        turnCursor += 1;
-        if (payload == null) {
+        if (!payload?.sources) {
           return attachment;
         }
+        const turnNum = turnCursor;
+        turnCursor += 1;
         const sources = payload.sources.map((source, fileIndex) => {
           if (isSharePointListingSource(source)) {
             return { ...source, content: '' };

@@ -936,4 +936,35 @@ describe('applyEndOfTraceCitations', () => {
     const text = readText(parts[0]);
     expect(text).toContain(`${MARKER}turn0mcp0`);
   });
+
+  it('skips a malformed MCP attachment without throwing and keeps turn numbering in sync for the real one', async () => {
+    const parts = [textPart('- Consulting Graduate Induction Workbook.pptx')];
+    const malformedAttachment = {
+      type: Tools.mcp_results,
+      messageId: 'msg-1',
+      toolCallId: 'call-0',
+      conversationId: 'conv-1',
+      [Tools.mcp_results]: undefined,
+    } as unknown as TAttachment;
+    await applyEndOfTraceCitations({
+      contentParts: parts,
+      artifactPromises: [
+        Promise.resolve(malformedAttachment),
+        Promise.resolve(
+          mcpAttachment([
+            {
+              toolName: 'sp_list_recent',
+              serverName: 'sharepoint',
+              title: 'Consulting Graduate Induction Workbook.pptx',
+              content: 'Consulting Graduate Induction Workbook.pptx',
+            },
+          ]),
+        ),
+      ],
+      fileCitations: true,
+    });
+    const text = readText(parts[0]);
+    expect(text).toContain(`${MARKER}turn0mcp0`);
+    expect(text).not.toContain(`${MARKER}turn1mcp0`);
+  });
 });
