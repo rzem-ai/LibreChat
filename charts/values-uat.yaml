@@ -1,6 +1,9 @@
 imageRegistry: 'dttaitsdev.azurecr.io'
 branch: 'uat'
 
+llmGateway:
+  namespace: 'llm-gateway-ctnp'
+
 serviceAccount:
   name: sa-librechat-uat
 
@@ -19,7 +22,7 @@ ingress:
 
 pods:
   librechat:
-    replicas: 1
+    replicas: 3
     securityContext:
       fsGroup: 1000
     initContainers:
@@ -28,7 +31,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'uat@sha256:3f1b4ac2afac5507120e8b69050ada0d50c5ca7bbc807519eed1e4bca68d050f'
+          tag: 'uat@sha256:c951981009e5c408d2eb4c8b47d6d72881ffe795fc867603e5541189c7e582c6'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://foundry-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -48,7 +51,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'uat@sha256:e4bc9ce1067a9b47c1a83cdda376912d9ca830467b0b92d8cc7df2e5f20b300e'
+          tag: 'uat@sha256:e1ce88e9a5e245d2e2a8fd5e87b7233092072c7bc14c9047469ba49b2a0bb1a6'
         env:
           ADMIN_PANEL_URL: 'https://myassist-uat.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -62,7 +65,7 @@ pods:
           BEDROCK_AWS_DEFAULT_REGION: 'ap-southeast-2'
           BEDROCK_AWS_SECRET_ACCESS_KEY: 'unused'
           BEDROCK_AWS_MODELS: 'au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0'
-          BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081'
+          BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081/bedrock'
           CUSTOM_FOOTER: '⚠️ WARNING: This is a User Acceptance Testing environment. Do not upload client or confidential data.'
           DOMAIN_CLIENT: 'https://myassist-uat.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://myassist-uat.ctk.au.deloitte.com'
@@ -73,6 +76,9 @@ pods:
           MCP_GATEWAY_OBO_SCOPE: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
           MCP_GATEWAY_TOOLSETS: 'teams,research,news,kx,desc,gims'
           MCP_GATEWAY_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
+          MODEL_PRICING_MIN_MULTIPLIER: '0.1'
+          MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT: '0.1'
+          MODEL_PRICING_REFERENCE_MODEL_ID: 'gpt-56-luna'
           MONGO_DB: 'mdb-librechat-database-uat'
           NODE_ENV: 'production' # Use production to mimic PROD environment behaviour
           NODE_TLS_REJECT_UNAUTHORIZED: '0' # TODO: Review Node TLS setup. See: https://github.com/Deloitte-Australia/tt-librechat/issues/159
@@ -89,7 +95,6 @@ pods:
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
           RAG_PORT: '8000'
-          RAG_USE_FULL_CONTEXT: 'true'
           REFRESH_TOKEN_EXPIRY: '86400000' # (ms) - 1 day refresh token expiration
           # ClearTrack Code Interpreter (ea-code-runtime)
           LIBRECHAT_CODE_BASEURL: 'https://code-runtime-uat.ctk.au.deloitte.com/v1'
@@ -124,7 +129,7 @@ pods:
           AGENT_DEBUG_LOGGING: 'true'
           # Skill Security Scanner
           SKILL_SCANNER_URL: 'https://ai-registry-uat.ctk.au.deloitte.com/v1/scan?verbose=false'
-          SKILL_SCANNER_TIMEOUT_MS: '15000'
+          SKILL_SCANNER_TIMEOUT_MS: '30000'
           SKILL_SCANNER_MIN_SEVERITY: 'high'
           # AI Registry
           AI_REGISTRY_CLIENT_ID: "4aeebbdc-56f5-4329-b40e-3d0a243bf74a" # AI Registry DEV & UAT
@@ -156,7 +161,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'uat@sha256:316436adba618b1358cc6282cd940d616ca974f34a2af8fc74c3e2660597a823'
+          tag: 'uat@sha256:0130e92a02651d71eeef21f9f560aae7932bfcfd511a6e82fe1162156b29f235'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -212,7 +217,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'uat@sha256:acf1cb4057e256e82a09e8b34d2db898874c3d0564c358768dd946c67b88383d'
+          tag: 'uat@sha256:2cb0cbdedc129e001d408ebd5dbd4eb3311948e62860505b865d19ba82d5794b'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
@@ -235,7 +240,7 @@ pods:
 
 valkey:
   image:
-    tag: 'uat@sha256:8eb9d4d81b89218546e6e371c9925803e6f5bbabd522bfee3865cba08e0df6a1'
+    tag: 'uat@sha256:7bb1d0b470b5e4ca0d16e526355e6fd1533bc5fcfbafba0fbe642fbbbfc4ce74'
   persistence:
     storageClass: 'managed-csi-standard-private'
   passwordSecretName: 'librechat-valkey-password-uat'

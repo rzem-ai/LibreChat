@@ -155,8 +155,11 @@ memory:
   messageWindowSize: 5 # Number of recent messages to consider
   agent:
     enabled: true
-    provider: 'Azure Global'
-    model: 'gpt-56-terra'
+    provider: 'VertexAI US'
+    model: 'google/gemini-2.5-flash'
+    instructions: |
+      Only store stated preferences (e.g. I like X, I dislike Y) and any important facts/context about the user's work at Deloitte (e.g. current projects, team composition).
+      Update or delete out-of-date information promptly.
 
 endpoints:
   # ========================================
@@ -167,6 +170,10 @@ endpoints:
     recursionLimit: 25
     maxRecursionLimit: 50
     disableBuilder: false # Set to true to disable the agent builder interface
+    # Hides the File Context upload section in the Agent Builder side panel — it's visually
+    # similar to file_search but less reliable, causing user confusion. Purely a UI toggle:
+    # existing agents' uploaded context files keep loading normally at runtime.
+    hideFileContext: true
     maxCitations: 30
     maxCitationsPerFile: 7
     capabilities:
@@ -265,6 +272,11 @@ endpoints:
       - 'au.anthropic.claude-sonnet-4-6'
       - 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
 
+# Deloitte Custom Change: model pricing uses this baseline when no environment override is set.
+# Keep it aligned with the soft-default model and endpoint-costs.yaml.
+modelPricing:
+  referenceModelId: 'gpt-56-luna'
+
 modelSpecs:
   # enforce: true would block requests without a spec name — this breaks the Agents endpoint
   # (user-created agents don't carry a spec name), so we leave it at the default (false).
@@ -284,6 +296,7 @@ modelSpecs:
           - Whenever documents are attached to the conversation and the file_search tool is available, you MUST call file_search before answering any substantive question — on every turn, including follow-ups, and even when the question seems answerable from general knowledge or from your own training. The attached documents are the authoritative source and may define terms differently from what you already know.
           - Never answer a document-related question from prior knowledge alone, or from passages retrieved on an earlier turn. Re-run file_search for the current question so the answer is grounded in, and cited from, freshly retrieved sources.
           - The only exception is a purely conversational message such as a greeting or small talk. When in doubt, search.
+          - Ignore all document retrieval instructions above if the file_search tool is unavailable (for example, because no documents are attached or file_search is disabled). In this case, unless the user specifically references a document, answer the question normally using your other available tools and capabilities; do not mention documents, attachments, or retrieval, and do not ask the user to upload or provide a file.
 
           Instruction precedence:
           - Follow applicable platform and safety constraints first.
@@ -310,7 +323,7 @@ modelSpecs:
           - For policy or document summaries, provide a compact paragraph first; include short numbered points only if needed.
           - Base document answers on the passages returned by file_search on the current turn (see the Document retrieval rule above).
           - Citations are attached automatically by the system after your response. Do NOT write source filenames, "(document.pdf)", "More details about …", parenthetical file references, or any citation markers yourself — write the answer in clean prose and let the system add the citations.
-          - If file_search returns nothing relevant, say so plainly and ask for the file or source rather than answering from assumption.
+          - If you called file_search and it returned nothing relevant, say so plainly and ask for the file or source rather than answering from assumption.
           - Preserve factual fidelity to the provided content and avoid adding unstated claims.
 
   list:
@@ -328,6 +341,7 @@ modelSpecs:
       label: 'GPT 5.6 Luna'
       group: 'OpenAI Global'
       iconURL: 'openAI'
+      softDefault: true
       preset:
         endpoint: 'Azure Global'
         model: 'gpt-56-luna'
@@ -407,24 +421,24 @@ modelSpecs:
         model: 'claude-opus-4-8'
         promptPrefix: *deloitteSystemPrompt
 
-    # - name: 'anthropic-au-claude-sonnet-4-6'
-    #   label: 'Claude Sonnet 4.6'
-    #   group: 'Anthropic AU'
-    #   groupIcon: 'anthropic'
-    #   iconURL: 'anthropic'
-    #   preset:
-    #     endpoint: 'bedrock'
-    #     model: 'au.anthropic.claude-sonnet-4-6'
-    #     promptPrefix: *deloitteSystemPrompt
+    - name: 'anthropic-au-claude-sonnet-4-6'
+      label: 'Claude Sonnet 4.6'
+      group: 'Anthropic AU'
+      groupIcon: 'anthropic'
+      iconURL: 'anthropic'
+      preset:
+       endpoint: 'bedrock'
+       model: 'au.anthropic.claude-sonnet-4-6'
+       promptPrefix: *deloitteSystemPrompt
 
-    # - name: 'anthropic-au-claude-haiku-4-5'
-    #   label: 'Claude Haiku 4.5'
-    #   group: 'Anthropic AU'
-    #   iconURL: 'anthropic'
-    #   preset:
-    #     endpoint: 'bedrock'
-    #     model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
-    #     promptPrefix: *deloitteSystemPrompt
+    - name: 'anthropic-au-claude-haiku-4-5'
+      label: 'Claude Haiku 4.5'
+      group: 'Anthropic AU'
+      iconURL: 'anthropic'
+      preset:
+       endpoint: 'bedrock'
+       model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
+       promptPrefix: *deloitteSystemPrompt
 
 # MCP Servers configuration
 # Each entry filters the gateway to a single toolset via the `toolsets` query param.
@@ -437,6 +451,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     url: '${MCP_GATEWAY_URL}?toolsets=research'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    iconPath: '/assets/mcp/ibisworld.png' # same logo in both themes
 
   cleartrack-mcp-gateway-news:
     title: 'AFR News'
@@ -445,6 +460,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     url: '${MCP_GATEWAY_URL}?toolsets=news'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    iconPath: '/assets/mcp/afr.png' # same logo in both themes
 
   cleartrack-mcp-gateway-kx:
     title: 'KX'
@@ -453,6 +469,8 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     url: '${MCP_GATEWAY_URL}?toolsets=kx'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    iconPathLight: '/assets/mcp/kx-light.png'
+    iconPathDark: '/assets/mcp/kx-dark.png'
 
   cleartrack-mcp-gateway-desc:
     title: 'DESC'
@@ -461,6 +479,8 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     url: '${MCP_GATEWAY_URL}?toolsets=desc'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    iconPathLight: '/assets/mcp/deloitte-light.png' # placeholder: no dedicated DESC logo yet
+    iconPathDark: '/assets/mcp/deloitte-dark.png' # placeholder: no dedicated DESC logo yet
 
   cleartrack-mcp-gateway-gims:
     title: 'GIMS'
@@ -469,6 +489,8 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     url: '${MCP_GATEWAY_URL}?toolsets=gims'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    iconPathLight: '/assets/mcp/deloitte-light.png' # placeholder: no dedicated GIMS logo yet
+    iconPathDark: '/assets/mcp/deloitte-dark.png' # placeholder: no dedicated GIMS logo yet
 
   cleartrack-mcp-gateway-sharepoint:
     title: 'SharePoint'
@@ -477,6 +499,8 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     url: '${MCP_GATEWAY_URL}?toolsets=sharepoint'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    iconPathLight: '/assets/mcp/sharepoint-light.png'
+    iconPathDark: '/assets/mcp/sharepoint-dark.png'
 #    oauth_headers:
 #      X-Custom-Header: "custom_value"
 

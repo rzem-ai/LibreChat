@@ -231,6 +231,17 @@ export function requiresOAuthMachinery(
   return isOAuthServer(config) || config.obo != null;
 }
 
+/**
+ * Whether a server is configured for OBO (on-behalf-of) token exchange — a
+ * static config check, independent of live connection state. OBO servers
+ * authenticate silently on every tool call, so this is exposed to clients to
+ * distinguish "disconnected, needs a click" from "disconnected, but connecting
+ * requires no user interaction."
+ */
+export function isOboServer(config: Pick<ParsedServerConfig, 'obo'>): boolean {
+  return config.obo != null;
+}
+
 /** Checks that `customUserVars` is present AND non-empty (guards against truthy `{}`) */
 export function hasCustomUserVars(
   config: Pick<UserScopedConnectionConfig, 'customUserVars'>,
@@ -428,6 +439,8 @@ export function redactServerSecrets(
     parentGroup: config.parentGroup, // Deloitte Custom Change: parent group
     description: config.description,
     iconPath: config.iconPath,
+    iconPathLight: config.iconPathLight, // Deloitte Custom Change: light/dark themed MCP server icons.
+    iconPathDark: config.iconPathDark, // Deloitte Custom Change: light/dark themed MCP server icons.
     chatMenu: config.chatMenu,
     requiresOAuth: config.requiresOAuth,
     capabilities: config.capabilities,

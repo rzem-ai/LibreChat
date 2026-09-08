@@ -20,6 +20,7 @@ import {
 import type {
   TUpdateUserPlugins,
   TPlugin,
+  MCPServerStatus,
   MCPServersResponse,
   MCPConnectionStatusResponse,
   MCPOAuthStatusResponse,
@@ -70,6 +71,19 @@ export function getSelectAllState(
 // Poll intervals are kept local since they're timer references that can't be serialized
 // The init states (isInitializing, isCancellable, etc.) are stored in the global Jotai atom
 type PollIntervals = Record<string, NodeJS.Timeout | null>;
+
+/** Deloitte Custom Change: names of OBO servers this page session has already
+ * silently auto-connected (or attempted to). Module scope, not component state
+ * — see the auto-connect effect below for why this must be a synchronous guard
+ * shared across every mounted `useMCPServerManager` instance. Resets on reload. */
+const oboAutoConnectAttempted = new Set<string>();
+
+/** Names of OBO servers whose silent auto-connect attempt failed. The backend
+ * connectionState stays 'disconnected' (not 'error') after a failed reinitialize,
+ * so without this, `isSilentlyConnectableOboServer` would keep classifying the
+ * server as silently connectable forever, hiding the manual Connect button with
+ * no way to retry short of a page reload. Cleared alongside `oboAutoConnectAttempted`. */
+const oboAutoConnectFailed = new Set<string>();
 
 export function useMCPServerManager({
   conversationId,
@@ -221,7 +235,9 @@ export function useMCPServerManager({
   // Poll intervals are kept local (not serializable)
   const pollIntervalsRef = useRef<PollIntervals>({});
 
-  const { connectionStatus } = useMCPConnectionStatus({
+  // Deloitte Custom Change: isConnectionStatusLoading feeds isConnectorBusy below, so
+  // per-connector connects can't race the initial status fetch.
+  const { connectionStatus, isConnectionStatusLoading } = useMCPConnectionStatus({
     enabled: !isLoading && availableMCPServers.length > 0,
   });
 
@@ -483,7 +499,10 @@ export function useMCPServerManager({
   );
 
   const initializeServer = useCallback(
-    async (serverName: string, autoOpenOAuth: boolean = true) => {
+    /** `silent` suppresses the success toast — used for the OBO auto-connect effect,
+     * where a background silent authorization shouldn't surface a user-visible
+     * notification (and would otherwise spam one per auto-connected server). */
+    async (serverName: string, autoOpenOAuth: boolean = true, silent: boolean = false) => {
       /** connectionDeferred is reset up front so a stale value from a previous
        * attempt can never be mistaken for this attempt's outcome. */
       updateServerInitState(serverName, { isInitializing: true, connectionDeferred: false });
@@ -501,6 +520,14 @@ export function useMCPServerManager({
             status: 'error',
           });
           cleanupServerState(serverName);
+          oboAutoConnectAttempted.delete(serverName);
+          if (silent) {
+            // A failed silent auto-connect leaves the backend connection state as
+            // 'disconnected' (not 'error'), so mark it here to force the manual
+            // Connect button to reappear instead of leaving the server stuck with
+            // no way to reconnect short of a page reload.
+            oboAutoConnectFailed.add(serverName);
+          }
           return response;
         }
 
@@ -525,10 +552,12 @@ export function useMCPServerManager({
             queryClient.invalidateQueries([QueryKeys.mcpConnectionStatus]),
           ]);
 
-          showToast({
-            message: localize('com_ui_mcp_initialized_success', { 0: serverName }),
-            status: 'success',
-          });
+          if (!silent) {
+            showToast({
+              message: localize('com_ui_mcp_initialized_success', { 0: serverName }),
+              status: 'success',
+            });
+          }
 
           addConnectorToSelection(serverName);
 
@@ -542,6 +571,12 @@ export function useMCPServerManager({
           status: 'error',
         });
         cleanupServerState(serverName);
+        // See the `!response.success` branch above: clear the guard so a
+        // thrown init failure doesn't permanently strand an OBO server either.
+        oboAutoConnectAttempted.delete(serverName);
+        if (silent) {
+          oboAutoConnectFailed.add(serverName);
+        }
       }
     },
     [
@@ -626,6 +661,69 @@ export function useMCPServerManager({
     [needsCustomVarsConfig, openConfigDialogForServer, initializeServer],
   );
 
+  /** Deloitte Custom Change: OBO-configured servers never need a manual "Connect"
+   * click — the backend authenticates them silently per tool call. Auto-trigger
+   * the same silent initializeServer path a click would take, once per
+   * disconnect "episode" (see the `connected` branch below for why the guard
+   * is cleared rather than set-once-forever).
+   *
+   * `oboAutoConnectAttempted` (module scope, not React/Jotai state) is the guard,
+   * not a state field: `useMCPServerManager` is mounted independently in several
+   * places at once (BadgeRowProvider, the MCP builder panel, one McpSection per
+   * tool item, …), each running this same effect over the full server list. A
+   * React-state guard (even a shared atom) only becomes visible to sibling
+   * instances on their next re-render, so multiple instances can all read
+   * "not yet attempted" before any of their writes commit, and all fire
+   * `initializeServer` for the same server at once. A plain module-level Set is
+   * read and written synchronously in the same JS turn, so the first instance to
+   * reach a server closes the door for every other instance immediately. */
+  useEffect(() => {
+    // Clear the guard when connectionStatus becomes unavailable (e.g., on logout),
+    // signaling the start of a new session. Without this, a logout/login flow without
+    // a full page reload would leave stale server names in the Set, preventing
+    // auto-connect from working in the next session.
+    if (!connectionStatus) {
+      oboAutoConnectAttempted.clear();
+      oboAutoConnectFailed.clear();
+      return;
+    }
+    for (const [serverName, status] of Object.entries(connectionStatus)) {
+      if (status.connectionState === 'connected') {
+        // Clear the guard on a successful connect so a later disconnect for this
+        // server (e.g. the backend's idle-connection reaper closing an unused
+        // OBO connection) is auto-retried instead of being silently stuck
+        // forever, since the "Connect" button stays hidden for OBO servers.
+        oboAutoConnectAttempted.delete(serverName);
+        oboAutoConnectFailed.delete(serverName);
+        continue;
+      }
+      // Deloitte Custom Change: A server can be configured for both OBO and OAuth at
+      // once — that combination still needs the interactive OAuth flow, so don't fire
+      // a silent init attempt that can never complete on its own.
+      if (
+        status.connectionState !== 'disconnected' ||
+        !status.configuredObo ||
+        status.requiresOAuth
+      ) {
+        continue;
+      }
+      // A prior silent attempt already failed — don't retry endlessly against a
+      // connectionState that the backend never moves off 'disconnected'; the
+      // manual Connect button is forced visible instead (see getServerStatusIconProps).
+      if (oboAutoConnectFailed.has(serverName)) {
+        continue;
+      }
+      if (needsCustomVarsConfig(serverName)) {
+        continue;
+      }
+      if (oboAutoConnectAttempted.has(serverName)) {
+        continue;
+      }
+      oboAutoConnectAttempted.add(serverName);
+      initializeServer(serverName, false, true);
+    }
+  }, [connectionStatus, needsCustomVarsConfig, initializeServer]);
+
   const cancelOAuthFlow = useCallback(
     (serverName: string) => {
       cancelOAuthMutation.mutate(serverName, {
@@ -701,15 +799,21 @@ export function useMCPServerManager({
   /**
    * Deloitte Custom Change: A connector is "busy" when it's already initializing locally
    * or the backend reports it mid-OAuth (connectionState === 'connecting') — regardless
-   * of whether that connection was started here or elsewhere (e.g. another tab). Shared
-   * by toggleServerSelection (so selection can't thrash) and toggleSelectAll (so it
-   * doesn't restart an in-flight connect).
+   * of whether that connection was started here or elsewhere (e.g. another tab). Also busy
+   * while the initial connectionStatus fetch is still in flight, so a checkbox click can't
+   * race a not-yet-loaded status: acting on it before load would otherwise force a
+   * redundant reinitialize for an already-connected server (status looks "empty") or
+   * silently no-op for a genuinely disconnected one (status guessed as "connected") —
+   * neither of which we can tell apart until the fetch resolves. Shared by
+   * toggleServerSelection (so selection can't thrash) and toggleSelectAll (so it doesn't
+   * restart an in-flight connect).
    */
   const isConnectorBusy = useCallback(
     (connectorName: string) =>
+      isConnectionStatusLoading ||
       isInitializing(connectorName) ||
       connectionStatus?.[connectorName]?.connectionState === 'connecting',
-    [isInitializing, connectionStatus],
+    [isConnectionStatusLoading, isInitializing, connectionStatus],
   );
 
   const toggleServerSelection = useCallback(
@@ -724,16 +828,34 @@ export function useMCPServerManager({
 
       if (isCurrentlySelected) {
         setSelection(currentValues.filter((name) => name !== serverName));
-      } else {
-        setSelection([...currentValues, serverName]);
+        return;
+      }
+
+      setSelection([...currentValues, serverName]);
+
+      // Deloitte Custom Change: Checking a row now owns connecting (no separate plug-icon
+      // button). Mirrors the per-connector branch in toggleSelectAll below. isConnectorBusy
+      // above already blocks this while the initial connectionStatus fetch is in flight, so
+      // by this point every tracked server has a real entry — no need to special-case
+      // "unloaded" here.
+      const isConnected = connectionStatus?.[serverName]?.connectionState === 'connected';
+      if (!isConnected) {
+        connectOrConfigureServer(serverName, true);
       }
     },
-    [setSelection, isConnectorBusy],
+    [setSelection, isConnectorBusy, connectionStatus, connectOrConfigureServer],
   );
 
   /** Deloitte Custom Change: Selects every selectable connector, or clears the selection if
    * all are already selected. */
   const toggleSelectAll = useCallback(() => {
+    // Deloitte Custom Change: Bail out before selecting anything while the initial
+    // connectionStatus fetch is in flight — otherwise every connector reads as "busy" below
+    // and setSelection would check every box while connecting none of them.
+    if (isConnectionStatusLoading) {
+      return;
+    }
+
     const selectableConnectorNames = selectableServers.map((server) => server.serverName);
 
     // Deloitte Custom Change: Compute fresh from mcpValuesRef.current (not the closed-over
@@ -777,6 +899,7 @@ export function useMCPServerManager({
       }
     }
   }, [
+    isConnectionStatusLoading,
     selectableServers,
     setSelection,
     connectionStatus,
@@ -857,13 +980,29 @@ export function useMCPServerManager({
     }
   }, []);
 
+  /** A server whose silent auto-connect already failed reports `configuredObo:
+   * true` from the backend forever (see oboAutoConnectFailed above) — override it
+   * here so isSilentlyConnectableOboServer stops hiding the manual Connect button
+   * for it, without touching the auto-connect effect's own gating. Shared by every
+   * consumer of connection status (not just getServerStatusIconProps) so none of
+   * them can end up stuck reading the raw, un-overridden status. */
+  const getEffectiveServerStatus = useCallback(
+    (serverName: string): MCPServerStatus | undefined => {
+      const rawServerStatus = connectionStatus?.[serverName];
+      return rawServerStatus && oboAutoConnectFailed.has(serverName)
+        ? { ...rawServerStatus, configuredObo: false }
+        : rawServerStatus;
+    },
+    [connectionStatus],
+  );
+
   const getServerStatusIconProps = useCallback(
     (serverName: string) => {
       const mcpData = queryClient.getQueryData<MCPServersResponse | undefined>([
         QueryKeys.mcpTools,
       ]);
       const serverData = mcpData?.servers?.[serverName];
-      const serverStatus = connectionStatus?.[serverName];
+      const serverStatus = getEffectiveServerStatus(serverName);
       const serverConfig = loadedServers?.[serverName];
 
       const handleConfigClick = (e: React.MouseEvent) => {
@@ -879,8 +1018,13 @@ export function useMCPServerManager({
         cancelOAuthFlow(serverName);
       };
 
-      const hasCustomUserVars =
-        serverConfig?.customUserVars && Object.keys(serverConfig.customUserVars).length > 0;
+      // `serverConfig` undefined means the config hasn't loaded yet (unknown custom vars);
+      // once loaded, a missing `customUserVars` key means the server confirmed has none.
+      const hasCustomUserVars = serverConfig
+        ? Boolean(
+            serverConfig.customUserVars && Object.keys(serverConfig.customUserVars).length > 0,
+          )
+        : undefined;
       const hasPendingOAuth =
         serverStatus?.requiresOAuth === true && serverStatus.connectionState === 'connecting';
       const canCancelOAuth = isCancellable(serverName) || hasPendingOAuth;
@@ -908,7 +1052,7 @@ export function useMCPServerManager({
       isCancellable,
       isInitializing,
       cancelOAuthFlow,
-      connectionStatus,
+      getEffectiveServerStatus,
       loadedServers,
       openConfigDialogForServer,
     ],
@@ -963,6 +1107,7 @@ export function useMCPServerManager({
     availableMCPServersMap: loadedServers,
     isLoading,
     connectionStatus,
+    getEffectiveServerStatus,
     initializeServer,
     connectOrConfigureServer,
     cancelOAuthFlow,

@@ -917,6 +917,10 @@ export const agentsEndpointSchema = baseEndpointSchema
       /* agents specific */
       recursionLimit: z.number().optional(),
       disableBuilder: z.boolean().optional().default(false),
+      /** Deloitte Custom Change: hides the File Context upload section in the Agent Builder UI.
+       * Purely cosmetic — unlike removing `AgentCapabilities.context` from `capabilities`, it
+       * does not affect loading of already-uploaded context files at runtime. */
+      hideFileContext: z.boolean().optional().default(false),
       maxRecursionLimit: z.number().optional(),
       /** Max cumulative bytes a single streamed tool call's arguments may reach before the run
        * aborts. Defaults to 64 KiB in the agents SDK; `0` disables the guard. */
@@ -2059,6 +2063,11 @@ export const configSchema = z.object({
     .default({ socialLogins: defaultSocialLogins }),
   balance: balanceSchema.optional(),
   transactions: transactionsSchema.optional(),
+  modelPricing: z
+    .object({
+      referenceModelId: z.string().min(1),
+    })
+    .optional(),
   speech: z
     .object({
       tts: ttsSchema.optional(),
@@ -2896,6 +2905,8 @@ export enum Constants {
   SAVED_TAG = 'Saved',
   /** Max number of Conversation starters for Agents/Assistants */
   MAX_CONVO_STARTERS = 4,
+  /** Max length for Agent name */
+  AGENT_NAME_MAX_LENGTH = 60,
   /** Delimiter for MCP tools */
   mcp_delimiter = '_mcp_',
   /** Prefix for MCP plugins */

@@ -47,7 +47,7 @@ export default function MCPServerCard({
     isInitializing,
     canCancel,
     onCancel,
-    hasCustomUserVars = false,
+    hasCustomUserVars,
   } = statusIconProps;
 
   const canEditThisServer = hasPermissions(server.effectivePermissions, PermissionBits.EDIT);

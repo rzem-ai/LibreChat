@@ -29,6 +29,21 @@ describe('excludedKeys', () => {
     expect(excludedKeys.has('tenantId')).toBe(false);
   });
 });
+// Deloitte Custom Change model pricing configuration
+describe('modelPricing config', () => {
+  it('accepts a pricing reference model', () => {
+    const result = configSchema.safeParse({
+      version: '1.0',
+      modelPricing: { referenceModelId: 'gpt-56-luna' },
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) {
+      return;
+    }
+    expect(result.data.modelPricing?.referenceModelId).toBe('gpt-56-luna');
+  });
+});
 
 describe('bedrockEndpointSchema', () => {
   it('preserves guardrailConfig from configSchema parsing', () => {
