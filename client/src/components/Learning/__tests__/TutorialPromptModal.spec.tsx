@@ -1,6 +1,6 @@
 import React from 'react';
 import '@testing-library/jest-dom';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import TutorialPromptModal from '../TutorialPromptModal';
 
 const mockSetActive = jest.fn();
@@ -21,7 +21,13 @@ jest.mock('~/hooks/Learning/useTutorialPrompt', () => ({
 }));
 
 describe('TutorialPromptModal', () => {
+  beforeEach(() => {
+    // Use fake timers so the 800ms readyToShow delay can be controlled in tests.
+    jest.useFakeTimers();
+  });
+
   afterEach(() => {
+    jest.useRealTimers();
     jest.clearAllMocks();
   });
 
@@ -31,7 +37,11 @@ describe('TutorialPromptModal', () => {
       markPromptSeen: mockMarkPromptSeen,
     });
     render(<TutorialPromptModal />);
-    expect(screen.queryByText('com_learning_prompt_title')).not.toBeInTheDocument();
+    // Advance past the delay — even so, shouldShowPrompt=false means nothing renders.
+    act(() => {
+      jest.advanceTimersByTime(800);
+    });
+    expect(screen.queryByText('com_learning_prompt_body')).not.toBeInTheDocument();
   });
 
   it('renders the prompt and switches to the Learning Hub panel on accept', () => {
@@ -40,8 +50,12 @@ describe('TutorialPromptModal', () => {
       markPromptSeen: mockMarkPromptSeen,
     });
     render(<TutorialPromptModal />);
+    // Advance past the 800ms readyToShow delay so isVisible becomes true.
+    act(() => {
+      jest.advanceTimersByTime(800);
+    });
 
-    expect(screen.getByText('com_learning_prompt_title')).toBeInTheDocument();
+    expect(screen.getByText('com_learning_prompt_body')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('com_learning_prompt_accept'));
 
@@ -55,6 +69,10 @@ describe('TutorialPromptModal', () => {
       markPromptSeen: mockMarkPromptSeen,
     });
     render(<TutorialPromptModal />);
+    // Advance past the 800ms readyToShow delay so isVisible becomes true.
+    act(() => {
+      jest.advanceTimersByTime(800);
+    });
 
     fireEvent.click(screen.getByText('com_learning_prompt_decline'));
 
