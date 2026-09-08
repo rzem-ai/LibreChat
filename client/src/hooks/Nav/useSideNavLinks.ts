@@ -4,7 +4,7 @@ import {
   Bot,
   Brain,
   Bookmark,
-  Lightbulb,
+  Library,
   NotebookPen,
   ScrollText,
   ArrowRightToLine,
@@ -212,7 +212,7 @@ export default function useSideNavLinks({
       links.push({
         title: 'com_ui_learning_hub',
         label: '',
-        icon: Lightbulb,
+        icon: Library,
         id: 'learning',
         Component: LearningPanel,
       });

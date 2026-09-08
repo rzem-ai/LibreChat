@@ -68,21 +68,29 @@ export default function LearningPanel() {
       </div>
 
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-3">
-        <div className="flex flex-col gap-3">
-          {activeCourses.map((course) => (
-            <CourseHeroCard key={course.id} course={course} onSelect={startLandingPageTour} />
-          ))}
-        </div>
+        {activeCourses.length > 0 && (
+          <div className="flex flex-col gap-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+              {localize('com_learning_courses_title')}
+            </p>
+            {activeCourses.map((course) => (
+              <CourseHeroCard key={course.id} course={course} onSelect={startLandingPageTour} />
+            ))}
+          </div>
+        )}
 
         {comingSoonCourses.length > 0 && (
           <div className="flex flex-col">
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-text-tertiary">
-              {localize('com_learning_coming_soon')}
-            </p>
             {comingSoonCourses.map((course, index) => (
               <ComingSoonRow key={course.id} course={course} isFirst={index === 0} />
             ))}
           </div>
+        )}
+
+        {comingSoonCourses.length > 0 && (
+          <p className="mt-2 text-center text-xs text-text-tertiary">
+            {localize('com_learning_coming_soon')}
+          </p>
         )}
       </div>
     </div>

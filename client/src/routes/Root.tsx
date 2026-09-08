@@ -135,7 +135,7 @@ export default function Root() {
                   modalContent={config.interface.termsOfService.modalContent}
                 />
               )}
-              <TutorialPromptModal />
+              <TutorialPromptModal termsVisible={showTerms} />
               <CourseCompletionModal />
               <KeyboardShortcutsProvider />
             </LearningTourProvider>

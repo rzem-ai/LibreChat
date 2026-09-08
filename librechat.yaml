@@ -40,6 +40,8 @@ interface:
 
   fileSearch: true # Set to true to enable searching uploaded files
 
+  isTutorialEnabled: true # Set to false to disable the in-app Learning Hub tutorials and guided tour
+
   # Mandatory terms acceptance dialog
   termsOfService:
     modalAcceptance: true
@@ -444,49 +446,49 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     title: 'IBISWorld'
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
-    url: '${MCP_GATEWAY_URL}?toolsets=research'
+    url: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp?toolsets=research'
     obo:
-      scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+      scopes: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
 
   cleartrack-mcp-gateway-news:
     title: 'AFR News'
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
-    url: '${MCP_GATEWAY_URL}?toolsets=news'
+    url: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp?toolsets=news'
     obo:
-      scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+      scopes: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
 
   cleartrack-mcp-gateway-kx:
     title: 'KX'
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
-    url: '${MCP_GATEWAY_URL}?toolsets=kx'
+    url: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp?toolsets=kx'
     obo:
-      scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+      scopes: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
 
   cleartrack-mcp-gateway-desc:
     title: 'DESC'
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
-    url: '${MCP_GATEWAY_URL}?toolsets=desc'
+    url: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp?toolsets=desc'
     obo:
-      scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+      scopes: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
 
   cleartrack-mcp-gateway-gims:
     title: 'GIMS'
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
-    url: '${MCP_GATEWAY_URL}?toolsets=gims'
+    url: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp?toolsets=gims'
     obo:
-      scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+      scopes: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
 
   cleartrack-mcp-gateway-sharepoint:
     title: 'SharePoint'
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
-    url: '${MCP_GATEWAY_URL}?toolsets=sharepoint'
+    url: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp?toolsets=sharepoint'
     obo:
-      scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+      scopes: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
 #    oauth_headers:
 #      X-Custom-Header: "custom_value"
 
