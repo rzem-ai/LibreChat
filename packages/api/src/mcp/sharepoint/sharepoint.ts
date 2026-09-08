@@ -66,6 +66,69 @@ function buildSourcesFromEntities(
 }
 
 /**
+ * Scans `content` for the first `{...}` substring whose braces balance,
+ * treating characters inside JSON string literals (respecting `\"` escapes)
+ * as inert. Used to salvage the JSON envelope out of tool output that wraps
+ * it in extra prose, e.g. `sp_read_file` prepending a plain-text notice
+ * ("I was unable to read the file as text... converting to markdown") before
+ * its `{ name, webUrl, content }` object. Returns undefined if no balanced
+ * object is found.
+ */
+function extractFirstJsonObject(content: string): string | undefined {
+  const start = content.indexOf('{');
+  if (start === -1) {
+    return undefined;
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escapeNext = false;
+  for (let i = start; i < content.length; i++) {
+    const char = content[i];
+    if (inString) {
+      if (escapeNext) {
+        escapeNext = false;
+      } else if (char === '\\') {
+        escapeNext = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (char === '"') {
+      inString = true;
+    } else if (char === '{') {
+      depth++;
+    } else if (char === '}') {
+      depth--;
+      if (depth === 0) {
+        return content.slice(start, i + 1);
+      }
+    }
+  }
+  return undefined;
+}
+
+/** Parses `content` as JSON, salvaging a balanced `{...}` substring when the whole string isn't valid JSON on its own. */
+function parseJsonLoosely(content: string): SharePointPayload | undefined {
+  try {
+    return JSON.parse(content);
+  } catch {
+    // fall through to salvage a JSON object embedded in surrounding prose
+  }
+
+  const jsonSubstring = extractFirstJsonObject(content);
+  if (!jsonSubstring) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(jsonSubstring);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Parses the SharePoint/Graph gateway payload shapes (`sp_search`'s
  * `{ results: [{ summary, resource }] }`, the `sp_list_*` tools' labeled list
  * wrappers `{ items | sites | drives | recentFiles | sharedFiles: [...] }`,
@@ -73,9 +136,10 @@ function buildSourcesFromEntities(
  * `{ name, webUrl, content }` object where `content` is the file's full
  * extracted text/markdown) into one {@link MCPResultSource} per
  * site/drive/file, so each citation can point at the specific document
- * instead of the whole raw JSON blob. Returns undefined (letting the caller
- * fall back) when the content isn't one of these shapes, or no entry yields
- * usable text.
+ * instead of the whole raw JSON blob. Tolerates extra prose surrounding the
+ * JSON object (see {@link extractFirstJsonObject}). Returns undefined
+ * (letting the caller fall back) when no JSON object can be salvaged, or no
+ * entry yields usable text.
  */
 export function buildSharePointSources({
   toolName,
@@ -86,13 +150,7 @@ export function buildSharePointSources({
   serverName: string;
   content: string;
 }): MCPSourcesResult | undefined {
-  let parsed: SharePointPayload;
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    return undefined;
-  }
-
+  const parsed = parseJsonLoosely(content);
   if (!parsed || typeof parsed !== 'object') {
     return undefined;
   }

@@ -322,9 +322,15 @@ function anchorsForSentence(
     threshold?: number;
     tokenizeFn?: (text: string) => string[];
     anchorTag?: string;
+    excludeCoords?: Set<string>;
   } = {},
 ): { anchors: string[]; coords: string[] } {
-  const { threshold = SIMILARITY_THRESHOLD, tokenizeFn = tokenize, anchorTag = 'file' } = options;
+  const {
+    threshold = SIMILARITY_THRESHOLD,
+    tokenizeFn = tokenize,
+    anchorTag = 'file',
+    excludeCoords,
+  } = options;
   const sentenceTokens = new Set(tokenizeFn(sentence));
   if (sentenceTokens.size < MIN_SENTENCE_CONTENT_WORDS) {
     return { anchors: [], coords: [] };
@@ -332,11 +338,14 @@ function anchorsForSentence(
 
   const bestByCoord = new Map<string, { turn: number; fileIndex: number; score: number }>();
   for (const passage of passages) {
+    const key = `${passage.turn}:${passage.fileIndex}`;
+    if (excludeCoords?.has(key)) {
+      continue;
+    }
     const score = containment(sentenceTokens, passage.tokens);
     if (score < threshold) {
       continue;
     }
-    const key = `${passage.turn}:${passage.fileIndex}`;
     const existing = bestByCoord.get(key);
     if (!existing || score > existing.score) {
       bestByCoord.set(key, { turn: passage.turn, fileIndex: passage.fileIndex, score });
@@ -422,8 +431,18 @@ export function insertFileCitations(
     }
 
     const sentences = splitIntoSentences(text);
+    let lineCoords = new Set<string>();
     const rebuilt = sentences
-      .map((sentence) => withAnchors(sentence, anchorsForSentence(sentence, passages).anchors))
+      .map((sentence) => {
+        const { anchors, coords } = anchorsForSentence(sentence, passages, {
+          excludeCoords: lineCoords,
+        });
+        coords.forEach((coord) => lineCoords.add(coord));
+        if (sentence.includes('\n')) {
+          lineCoords = new Set();
+        }
+        return withAnchors(sentence, anchors);
+      })
       .join('');
 
     if (rebuilt !== text) {
@@ -461,6 +480,13 @@ function buildMCPPassages(mcpAttachments: TAttachment[], turnOffset: number): Pa
  * lenient `MCP_SIMILARITY_THRESHOLD`. Mutates in place. Returns the
  * `"turn:fileIndex"` coordinates that received an anchor, so callers can
  * detect sources the lexical pass missed (see `appendGuaranteedMCPCitations`).
+ *
+ * A source already anchored earlier on the same line is excluded from later
+ * sentences on that line (reset at each `\n`). A single source's content can
+ * legitimately overlap several sentence-splitter fragments within one
+ * rendered bullet/paragraph — e.g. a filename's extension period splits it
+ * into an extra fragment — which would otherwise stack duplicate citations
+ * of the same source on what the user reads as one point.
  */
 export function insertMCPCitations(
   contentParts: TMessageContentParts[],
@@ -480,14 +506,22 @@ export function insertMCPCitations(
     }
 
     const sentences = splitIntoSentences(text);
+    let lineCoords = new Set<string>();
     const rebuilt = sentences
       .map((sentence) => {
         const { anchors, coords } = anchorsForSentence(sentence, passages, {
           threshold: MCP_SIMILARITY_THRESHOLD,
           tokenizeFn: tokenizeStemmed,
           anchorTag: 'mcp',
+          excludeCoords: lineCoords,
         });
-        coords.forEach((coord) => usedCoords.add(coord));
+        coords.forEach((coord) => {
+          usedCoords.add(coord);
+          lineCoords.add(coord);
+        });
+        if (sentence.includes('\n')) {
+          lineCoords = new Set();
+        }
         return withAnchors(sentence, anchors);
       })
       .join('');
@@ -550,8 +584,23 @@ export function appendGuaranteedMCPCitations(
 /** Tool-name prefix identifying SharePoint MCP results (see `packages/api/src/mcp/sharepoint/sharepoint.ts` and `KNOWN_MCP_TOOLSET_PREFIXES` in `feed.ts`). */
 const SHAREPOINT_TOOL_PREFIX = 'sp_';
 
+/** The only SharePoint tool whose `content` is a document's full extracted text rather than a short filename/URL listing entry. */
+const SHAREPOINT_CONTENT_TOOL = 'sp_read_file';
+
 function isSharePointSource(source: MCPResultSource): boolean {
   return source.toolName?.startsWith(SHAREPOINT_TOOL_PREFIX) ?? false;
+}
+
+/**
+ * True for `sp_search`/`sp_list_*`/`sp_get_*`-style sources: short
+ * filename+URL entries. Their `content` is unsafe input for the lexical
+ * pass's sentence splitter, which breaks at every period — including ones
+ * inside a listed file's URL or `.ext` — so a listing source that
+ * `insertSharePointCitations`'s line-matcher didn't anchor must still be
+ * excluded from the lexical fallback, not handed to it.
+ */
+function isSharePointListingSource(source: MCPResultSource): boolean {
+  return isSharePointSource(source) && source.toolName !== SHAREPOINT_CONTENT_TOOL;
 }
 
 /**
@@ -780,12 +829,31 @@ export async function applyEndOfTraceCitations({
     if (mcpAttachments.length > 0) {
       const turnOffset = fileSearchAttachments.length;
       const usedCoords = insertSharePointCitations(contentParts, mcpAttachments, turnOffset);
+      // Listing sources (sp_search/sp_list_*/sp_get_*) always skip the lexical pass —
+      // their short filename+URL content isn't safe input for a sentence splitter that
+      // breaks on periods, so one the line-matcher missed should get no citation, not a
+      // garbled one. A `sp_read_file` source only skips the lexical pass if the
+      // line-matcher already anchored it (avoids double-citing); otherwise — e.g. answered
+      // as prose/a table instead of a filename-prefixed line — it still gets a shot at the
+      // lexical/token-overlap pass, same as every other MCP connector.
+      let turnCursor = turnOffset;
       const lexicalPassAttachments = mcpAttachments.map((attachment) => {
         const payload = attachment[Tools.mcp_results];
-        if (payload == null || !payload.sources.some(isSharePointSource)) {
+        const turnNum = turnCursor;
+        turnCursor += 1;
+        if (payload == null) {
           return attachment;
         }
-        return { ...attachment, [Tools.mcp_results]: { ...payload, sources: [] } };
+        const sources = payload.sources.map((source, fileIndex) => {
+          if (isSharePointListingSource(source)) {
+            return { ...source, content: '' };
+          }
+          if (!isSharePointSource(source) || !usedCoords.has(`${turnNum}:${fileIndex}`)) {
+            return source;
+          }
+          return { ...source, content: '' };
+        });
+        return { ...attachment, [Tools.mcp_results]: { ...payload, sources } };
       });
       insertMCPCitations(contentParts, lexicalPassAttachments, turnOffset).forEach((coord) =>
         usedCoords.add(coord),

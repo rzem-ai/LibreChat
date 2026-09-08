@@ -241,6 +241,54 @@ describe('insertMCPCitations', () => {
     expect(text).toContain(`${MARKER}turn0mcp1`);
   });
 
+  it('anchors a single source only once per line even when it matches several sentence fragments', () => {
+    const docContent =
+      'MyAssist Pilot Kick-off Pack usage guidance covers responsible use, human oversight, ' +
+      'and sharing of skills during the pilot rollout across the organization.';
+    const parts = [
+      textPart(
+        'DO: Review and accept the Terms and Conditions pop-up upon first access. ' +
+          'Use client data with standard terms that include the AI tooling clause. ' +
+          'Only use approved folders, repositories, or datasets during the pilot rollout.\n',
+      ),
+    ];
+    insertMCPCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'sp_read_file', serverName: 'sharepoint', content: docContent },
+        ]),
+      ],
+      0,
+    );
+    const text = readText(parts[0]);
+    expect(anchorCount(text, `${MARKER}turn0mcp0`)).toBe(1);
+  });
+
+  it('re-anchors the same source on the next line after a same-line match', () => {
+    const docContent =
+      'MyAssist Pilot Kick-off Pack usage guidance covers responsible use, human oversight, ' +
+      'and sharing of skills during the pilot rollout across the organization.';
+    const parts = [
+      textPart(
+        'DO: Review and accept the Terms and Conditions pop-up upon first access. ' +
+          'Only use approved folders, repositories, or datasets during the pilot rollout.\n' +
+          'DO: Review and approve skills sharing and human oversight during the pilot rollout.\n',
+      ),
+    ];
+    insertMCPCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'sp_read_file', serverName: 'sharepoint', content: docContent },
+        ]),
+      ],
+      0,
+    );
+    const text = readText(parts[0]);
+    expect(anchorCount(text, `${MARKER}turn0mcp0`)).toBe(2);
+  });
+
   it('is a no-op when there are no mcp sources', () => {
     const original = 'The Reserve Bank held the cash rate steady at its meeting today.';
     const parts = [textPart(original)];
@@ -807,5 +855,61 @@ describe('applyEndOfTraceCitations', () => {
     expect(text).toContain(`${MARKER}turn0mcp0`);
     expect(text).toContain(`${MARKER}turn1mcp0`);
     expect(anchorCount(text, `${MARKER}turn0mcp0`)).toBe(1);
+  });
+
+  it('does not fall back to the lexical pass for an un-anchored SharePoint listing source', async () => {
+    const parts = [
+      textPart(
+        '**12.** GFS_style-guide.pptx URL: https://resources.deloitte.com/sites/Intellihub/SiteAssets/GFS_style-guide.pptx',
+      ),
+    ];
+    await applyEndOfTraceCitations({
+      contentParts: parts,
+      artifactPromises: [
+        Promise.resolve(
+          mcpAttachment([
+            {
+              toolName: 'sp_list_recent',
+              serverName: 'sharepoint',
+              title: 'GFS_style-guide.pptx',
+              link: 'https://resources.deloitte.com/sites/Intellihub/SiteAssets/GFS_style-guide.pptx',
+              content:
+                'GFS_style-guide.pptx\n\nhttps://resources.deloitte.com/sites/Intellihub/SiteAssets/GFS_style-guide.pptx',
+            },
+          ]),
+        ),
+      ],
+      fileCitations: true,
+    });
+    const text = readText(parts[0]);
+    expect(text).not.toContain(MARKER);
+    expect(anchorCount(text, `${MARKER}turn0mcp0`)).toBe(0);
+  });
+
+  it('falls back to the lexical pass for a SharePoint source answered as prose instead of a filename line', async () => {
+    const parts = [
+      textPart(
+        'The key business stakeholders include Central Identity & Security Engineering, who operate the governing tenant.',
+      ),
+    ];
+    await applyEndOfTraceCitations({
+      contentParts: parts,
+      artifactPromises: [
+        Promise.resolve(
+          mcpAttachment([
+            {
+              toolName: 'sp_read_file',
+              serverName: 'sharepoint',
+              title: 'Microsoft MTG.docx',
+              content:
+                'Central Identity & Security Engineering operate the governing tenant and manage discovery, governance relationships, baselines, and monitors.',
+            },
+          ]),
+        ),
+      ],
+      fileCitations: true,
+    });
+    const text = readText(parts[0]);
+    expect(text).toContain(`${MARKER}turn0mcp0`);
   });
 });

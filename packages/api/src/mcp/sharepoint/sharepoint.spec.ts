@@ -192,4 +192,29 @@ describe('buildSharePointSources', () => {
 
     expect(result).toBeUndefined();
   });
+
+  it('salvages an sp_read_file payload preceded by a plain-text fallback notice', () => {
+    const jsonPayload = JSON.stringify({
+      name: 'Microsoft MTG.docx',
+      webUrl: 'https://contoso.sharepoint.com/sites/finance/Microsoft%20MTG.docx',
+      content: '# Microsoft MTG\n\nKey stakeholders: {Central Identity & Security Engineering}...',
+    });
+    const content = [
+      'I was unable to read the file as a text file. I will try to read it again, converting it to markdown format.',
+      jsonPayload,
+    ].join('\n');
+
+    const result = buildSharePointSources({
+      toolName: 'sp_read_file',
+      serverName: 'cleartrack-mcp-gateway-sharepoint',
+      content,
+    });
+
+    expect(result?.sources).toHaveLength(1);
+    expect(result?.sources[0]).toMatchObject({
+      title: 'Microsoft MTG.docx',
+      link: 'https://contoso.sharepoint.com/sites/finance/Microsoft%20MTG.docx',
+    });
+    expect(result?.sources[0].content).toContain('Central Identity & Security Engineering');
+  });
 });
