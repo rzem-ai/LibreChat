@@ -608,12 +608,12 @@ function isSharePointListingSource(source: MCPResultSource): boolean {
  * rendered bullet line can be compared directly against a raw source title.
  */
 function stripLineMarkers(line: string): string {
-return line
-  .trim()
-  .replace(/\*\*/g, '')
-  .replace(/^[-*•]\s+/, '')
-  .replace(/^\d+[.)]\s+/, '')
-  .trim();
+  return line
+    .trim()
+    .replace(/\*\*/g, '')
+    .replace(/^[-*•]\s+/, '')
+    .replace(/^\d+[.)]\s+/, '')
+    .trim();
 }
 
 /**

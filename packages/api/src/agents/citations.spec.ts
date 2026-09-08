@@ -360,6 +360,29 @@ describe('insertSharePointCitations', () => {
     expect(text.startsWith('- Consulting Graduate Induction Workbook.pptx')).toBe(true);
   });
 
+  it('anchors a bold-wrapped numbered-list marker line', () => {
+    const parts = [
+      textPart(
+        '**12.** GFS_style-guide.pptx URL: https://resources.deloitte.com/sites/Intellihub/SiteAssets/GFS_style-guide.pptx',
+      ),
+    ];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_list_recent',
+            serverName: 'sharepoint',
+            title: 'GFS_style-guide.pptx',
+            content: 'GFS_style-guide.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    expect(readText(parts[0])).toContain(`${MARKER}turn0mcp0`);
+  });
+
   it('anchors a title whose own name ends in a real parenthetical', () => {
     const parts = [textPart('- Major Release 7.0.0 (MyAssist V2)')];
     insertSharePointCitations(
@@ -860,7 +883,8 @@ describe('applyEndOfTraceCitations', () => {
   it('does not fall back to the lexical pass for an un-anchored SharePoint listing source', async () => {
     const parts = [
       textPart(
-        '**12.** GFS_style-guide.pptx URL: https://resources.deloitte.com/sites/Intellihub/SiteAssets/GFS_style-guide.pptx',
+        'The style guide covering formatting rules is available at ' +
+          'https://resources.deloitte.com/sites/Intellihub/SiteAssets/GFS_style-guide.pptx for review.',
       ),
     ];
     await applyEndOfTraceCitations({
