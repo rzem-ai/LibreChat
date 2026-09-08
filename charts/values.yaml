@@ -90,6 +90,10 @@ pods:
           # OpenTelemetry Tracing
           OTEL_SERVICE_NAME: 'librechat'
           OTEL_TRACES_EXPORTER: 'otlp'
+          # Only traces are exported; without these the NodeSDK defaults metrics/logs
+          # to OTLP at http://localhost:4318 and fails every export interval.
+          OTEL_METRICS_EXPORTER: 'none'
+          OTEL_LOGS_EXPORTER: 'none'
           OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf'
           OTEL_TRACES_SAMPLER: 'parentbased_traceidratio'
           OTEL_TRACES_SAMPLER_ARG: '0.1'
