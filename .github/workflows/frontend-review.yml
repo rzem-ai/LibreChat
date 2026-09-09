@@ -2,22 +2,36 @@ name: Frontend Unit Tests
 
 on:
   pull_request:
-    paths:
-      - 'client/**'
-      - 'packages/client/**'
-      - 'packages/data-provider/**'
-      - '.github/workflows/frontend-review.yml'
-      - '!**.md'
 
 permissions:
   contents: read
+  pull-requests: read
 
 env:
   NODE_OPTIONS: '--max-old-space-size=${{ secrets.NODE_MAX_OLD_SPACE_SIZE || 6144 }}'
 
 jobs:
+  changes:
+    name: Detect frontend changes
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'client/**'
+              - 'packages/client/**'
+              - 'packages/data-provider/**'
+              - '.github/workflows/frontend-review.yml'
+              - '!**.md'
+
   build:
     name: Build packages
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -304,6 +318,7 @@ jobs:
     name: All checks passed
     if: always()
     needs:
+      - changes
       - build
       - typecheck
       - test-packages-client
