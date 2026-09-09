@@ -10,17 +10,24 @@ import type { FileConfig, EndpointFileConfig } from 'librechat-data-provider';
 /**
  * Mirrors the categorization logic from BaseClient.processAttachments.
  * Extracted here for testability since the /api workspace test setup is broken.
+ *
+ * Deloitte Custom Change: codeEnvRef files are only kept on the priming path
+ * (skipped here) when they belong to the current conversation or have no
+ * conversationId (agent-level tool resources). Cross-conversation codeEnvRef
+ * files fall through to normal document processing.
  */
 function categorizeFile(
   file: {
     type?: string | null;
     source?: string;
     embedded?: boolean;
+    conversationId?: string;
     metadata?: { fileIdentifier?: string; codeEnvRef?: unknown };
   },
   isBedrock: boolean,
   mergedFileConfig: FileConfig | undefined,
   endpointFileConfig: EndpointFileConfig | undefined,
+  currentConversationId?: string,
 ): 'images' | 'documents' | 'videos' | 'audios' | 'skipped' {
   const source = file.source ?? FileSources.local;
   if (source === FileSources.text) {
@@ -28,7 +35,8 @@ function categorizeFile(
   }
   if (
     file.embedded === true ||
-    file.metadata?.codeEnvRef != null ||
+    (file.metadata?.codeEnvRef != null &&
+      (!file.conversationId || file.conversationId === currentConversationId)) ||
     file.metadata?.fileIdentifier != null
   ) {
     return 'skipped';
@@ -157,6 +165,43 @@ describe('processAttachments — supportedMimeTypes routing logic', () => {
   it('should skip embedded files regardless of config', () => {
     const { merged, epConfig } = resolveConfig(['.*']);
     const result = categorizeFile({ type: 'text/csv', embedded: true }, false, merged, epConfig);
+    expect(result).toBe('skipped');
+  });
+
+  // Deloitte Custom Change: codeEnvRef routing is conditional on conversationId
+  it('should skip codeEnvRef file when conversationId matches current conversation (same-session priming path)', () => {
+    const { merged, epConfig } = resolveConfig(['.*']);
+    const result = categorizeFile(
+      { type: 'text/x-python', conversationId: 'conv-123', metadata: { codeEnvRef: { id: 'ref-abc' } } },
+      false,
+      merged,
+      epConfig,
+      'conv-123',
+    );
+    expect(result).toBe('skipped');
+  });
+
+  it('should route codeEnvRef file to documents when conversationId differs (cross-conversation Files panel attach)', () => {
+    const { merged, epConfig } = resolveConfig(['.*']);
+    const result = categorizeFile(
+      { type: 'text/x-python', conversationId: 'conv-OTHER', metadata: { codeEnvRef: { id: 'ref-abc' } } },
+      false,
+      merged,
+      epConfig,
+      'conv-123',
+    );
+    expect(result).toBe('documents');
+  });
+
+  it('should skip codeEnvRef file with no conversationId (agent-level tool resource, priming path)', () => {
+    const { merged, epConfig } = resolveConfig(['.*']);
+    const result = categorizeFile(
+      { type: 'text/x-python', metadata: { codeEnvRef: { id: 'ref-abc' } } },
+      false,
+      merged,
+      epConfig,
+      'conv-123',
+    );
     expect(result).toBe('skipped');
   });
 });
