@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
-import { useTutorialStateQuery, useUpdateTutorialStateMutation } from '~/data-provider';
-import { useGetStartupConfig } from '~/data-provider';
+import { useGetStartupConfig, useTutorialStateQuery, useUpdateTutorialStateMutation } from '~/data-provider';
 import { useAuthContext } from '~/hooks/AuthContext';
 
 /**
