@@ -618,7 +618,7 @@ describe('skill scanner', () => {
       // macOS metadata must not be present in the scanned archive
       expect(scannedEntries.some((e) => e.startsWith('__MACOSX/'))).toBe(false);
       expect(scannedEntries.some((e) => e.endsWith('.DS_Store'))).toBe(false);
-      expect(scannedEntries.some((e) => e.includes('._'))).toBe(false);
+      expect(scannedEntries.some((e) => (e.split('/').pop() ?? '').startsWith('._'))).toBe(false);
     });
 
     it('strips always-apply out of a zip upload while preserving companion files', async () => {

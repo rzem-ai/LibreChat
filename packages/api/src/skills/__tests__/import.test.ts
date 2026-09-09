@@ -422,59 +422,122 @@ describe('createImportHandler', () => {
   // SKILL_SCANNER_URL). This is the primary fix for the original bug — scanSkillUpload
   // no-ops when the scanner is disabled, so handleZip is the only protection.
   it('strips __MACOSX, ._* and .DS_Store entries in handleZip when scanner is not configured', async () => {
-    // SKILL_SCANNER_URL is intentionally not set — scanner no-ops, handleZip is sole protection
-    const deps = mockImportDeps();
-    const handler = createImportHandler(deps);
-    const res = mockResponse();
+    // Explicitly disable the scanner so this test is deterministic regardless of
+    // what SKILL_SCANNER_URL is set to in the environment or by other test suites.
+    const savedScannerUrl = process.env.SKILL_SCANNER_URL;
+    delete process.env.SKILL_SCANNER_URL;
 
-    const zip = new JSZip();
+    try {
+      const deps = mockImportDeps();
+      const handler = createImportHandler(deps);
+      const res = mockResponse();
 
-    // Level 3 skill: SKILL.md + reference doc + subfolders for scripts, references, and assets
-    zip.file(
-      'skill-name/SKILL.md',
-      '---\nname: mac-skill\ndescription: A macOS-created skill.\n---\n# Body',
-    );
-    zip.file('skill-name/FORMS.md', '# Form-filling guide');
-    zip.file('skill-name/scripts/fill_form.py', 'print("hello")');
-    zip.file('skill-name/references/api-schema.json', '{"api": "schema"}');
-    zip.file('skill-name/assets/template.txt', 'template');
+      const zip = new JSZip();
 
-    // .DS_Store files at multiple depths — Finder writes one per folder it opens
-    zip.file('skill-name/.DS_Store', '');
-    zip.file('skill-name/scripts/.DS_Store', '');
-    zip.file('.DS_Store', '');
+      // Level 3 skill: SKILL.md + reference doc + subfolders for scripts, references, and assets
+      zip.file(
+        'skill-name/SKILL.md',
+        '---\nname: mac-skill\ndescription: A macOS-created skill.\n---\n# Body',
+      );
+      zip.file('skill-name/FORMS.md', '# Form-filling guide');
+      zip.file('skill-name/scripts/fill_form.py', 'print("hello")');
+      zip.file('skill-name/references/api-schema.json', '{"api": "schema"}');
+      zip.file('skill-name/assets/template.txt', 'template');
 
-    // __MACOSX/ mirror — Finder injects one sidecar per file with extended attributes
-    zip.file('__MACOSX/skill-name/._SKILL.md', '');
-    zip.file('__MACOSX/skill-name/._FORMS.md', '');
-    zip.file('__MACOSX/skill-name/scripts/._fill_form.py', '');
-    zip.file('__MACOSX/skill-name/references/._api-schema.json', '');
-    zip.file('__MACOSX/skill-name/assets/._template.txt', '');
+      // .DS_Store files at multiple depths — Finder writes one per folder it opens
+      zip.file('skill-name/.DS_Store', '');
+      zip.file('skill-name/scripts/.DS_Store', '');
+      zip.file('.DS_Store', '');
 
-    const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+      // __MACOSX/ mirror — Finder injects one sidecar per file with extended attributes
+      zip.file('__MACOSX/skill-name/._SKILL.md', '');
+      zip.file('__MACOSX/skill-name/._FORMS.md', '');
+      zip.file('__MACOSX/skill-name/scripts/._fill_form.py', '');
+      zip.file('__MACOSX/skill-name/references/._api-schema.json', '');
+      zip.file('__MACOSX/skill-name/assets/._template.txt', '');
 
-    await handler(mockZipRequest(buffer), res);
+      const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
 
-    // Import succeeds and only the 4 real Level 3 files are stored (SKILL.md is consumed as body)
-    expect(res.status).toHaveBeenCalledWith(201);
-    const summary = importSummary(res.body);
-    expect(summary.filesProcessed).toBe(4);
-    expect(summary.filesSucceeded).toBe(4);
-    expect(summary.filesFailed).toBe(0);
+      await handler(mockZipRequest(buffer), res);
 
-    // None of the macOS entries should have reached storage
-    expect(deps.upsertSkillFile).toHaveBeenCalledTimes(4);
-    expect(deps.upsertSkillFile).toHaveBeenCalledWith(
-      expect.objectContaining({ relativePath: 'FORMS.md' }),
-    );
-    expect(deps.upsertSkillFile).toHaveBeenCalledWith(
-      expect.objectContaining({ relativePath: 'scripts/fill_form.py' }),
-    );
-    expect(deps.upsertSkillFile).toHaveBeenCalledWith(
-      expect.objectContaining({ relativePath: 'references/api-schema.json' }),
-    );
-    expect(deps.upsertSkillFile).toHaveBeenCalledWith(
-      expect.objectContaining({ relativePath: 'assets/template.txt' }),
-    );
+      // Import succeeds and only the 4 real Level 3 files are stored (SKILL.md is consumed as body)
+      expect(res.status).toHaveBeenCalledWith(201);
+      const summary = importSummary(res.body);
+      expect(summary.filesProcessed).toBe(4);
+      expect(summary.filesSucceeded).toBe(4);
+      expect(summary.filesFailed).toBe(0);
+
+      // None of the macOS entries should have reached storage
+      expect(deps.upsertSkillFile).toHaveBeenCalledTimes(4);
+      expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+        expect.objectContaining({ relativePath: 'FORMS.md' }),
+      );
+      expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+        expect.objectContaining({ relativePath: 'scripts/fill_form.py' }),
+      );
+      expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+        expect.objectContaining({ relativePath: 'references/api-schema.json' }),
+      );
+      expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+        expect.objectContaining({ relativePath: 'assets/template.txt' }),
+      );
+    } finally {
+      if (savedScannerUrl === undefined) {
+        delete process.env.SKILL_SCANNER_URL;
+      } else {
+        process.env.SKILL_SCANNER_URL = savedScannerUrl;
+      }
+    }
+  });
+
+  // Deloitte Custom Change: Verify that accidentally included Python/Node/Git directories
+  // are stripped by handleZip when the scanner is not configured. These are common artifacts
+  // from skill authors who forgot to exclude their virtual environment or dependency folders.
+  it('strips .venv, __pycache__, node_modules and .git directories when scanner is not configured', async () => {
+    const savedScannerUrl = process.env.SKILL_SCANNER_URL;
+    delete process.env.SKILL_SCANNER_URL;
+
+    try {
+      const deps = mockImportDeps();
+      const handler = createImportHandler(deps);
+      const res = mockResponse();
+
+      const zip = new JSZip();
+
+      // Real skill files
+      zip.file('SKILL.md', '---\nname: python-skill\ndescription: A Python skill.\n---\n# Body');
+      zip.file('scripts/run.py', 'print("hello")');
+
+      // Accidentally included directories at archive root
+      zip.file('.venv/bin/python', '');
+      zip.file('.venv/lib/python3.11/site-packages/pandas/__init__.py', '');
+      zip.file('__pycache__/run.cpython-311.pyc', '');
+      zip.file('node_modules/lodash/index.js', '');
+      zip.file('.git/config', '');
+      zip.file('.git/HEAD', '');
+
+      const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+      await handler(mockZipRequest(buffer), res);
+
+      // Import succeeds and only the real skill file is stored (SKILL.md is consumed as body)
+      expect(res.status).toHaveBeenCalledWith(201);
+      const summary = importSummary(res.body);
+      expect(summary.filesProcessed).toBe(1);
+      expect(summary.filesSucceeded).toBe(1);
+      expect(summary.filesFailed).toBe(0);
+
+      // Only scripts/run.py should have reached storage
+      expect(deps.upsertSkillFile).toHaveBeenCalledTimes(1);
+      expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+        expect.objectContaining({ relativePath: 'scripts/run.py' }),
+      );
+    } finally {
+      if (savedScannerUrl === undefined) {
+        delete process.env.SKILL_SCANNER_URL;
+      } else {
+        process.env.SKILL_SCANNER_URL = savedScannerUrl;
+      }
+    }
   });
 });

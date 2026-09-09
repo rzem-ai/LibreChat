@@ -632,21 +632,12 @@ async function reRootZip(zip: JSZip, prefix: string): Promise<JSZip | null> {
  * archive unchanged, so a zip-bomb SKILL.md entry can't be used to force an
  * unbounded local decompression ahead of those guards.
  */
-async function stripInternalFrontmatterFromZip(bytes: Uint8Array): Promise<{
-  archive: Uint8Array;
+async function stripInternalFrontmatterFromZip(zip: JSZip): Promise<{
+  zip: JSZip;
   frontmatter?: Record<string, unknown>;
   alwaysApply?: boolean;
   name: string;
 } | null> {
-  let zip: JSZip;
-  try {
-    zip = await JSZip.loadAsync(bytes);
-  } catch {
-    return null;
-  }
-  if (Object.keys(zip.files).length > DEFAULT_SKILL_IMPORT_LIMITS.maxEntries) {
-    return null;
-  }
   const found = findSkillMdPath(zip);
   if (!found) {
     return null;
@@ -673,9 +664,8 @@ async function stripInternalFrontmatterFromZip(bytes: Uint8Array): Promise<{
   if (!rootedZip) {
     return null;
   }
-  const archive = await rootedZip.generateAsync({ type: 'uint8array' });
   return {
-    archive,
+    zip: rootedZip,
     frontmatter: stripped.frontmatter,
     alwaysApply: stripped.alwaysApply,
     name: stripped.name,
@@ -701,24 +691,42 @@ export async function scanSkillUpload(params: {
   const bytes = new Uint8Array(params.archive.length);
   bytes.set(params.archive);
 
-  // Deloitte Custom Change: Strip macOS metadata before scanning so __MACOSX/
-  // sidecars and .DS_Store files do not trigger false-positive validation errors.
-  let cleanBytes = bytes;
+  // Single load — both strip functions operate on the same in-memory JSZip object,
+  // eliminating the previous double load/rezip cycle and halving peak memory usage.
+  let zip: JSZip;
   try {
-    const zip = await JSZip.loadAsync(bytes);
-    stripMacOSMetadata(zip);
-    cleanBytes = await zip.generateAsync({ type: 'uint8array' });
+    zip = await JSZip.loadAsync(bytes);
   } catch {
-    // If the archive is corrupt, fall back to original bytes —
-    // the scanner will surface the error via its own validation.
-  }
-
-  const stripped = await stripInternalFrontmatterFromZip(cleanBytes);
-  if (!stripped) {
-    await scanArchive(cleanBytes, params.fileName, { token: params.token });
+    // Corrupt archive — scan original bytes; the scanner will surface the error.
+    await scanArchive(bytes, params.fileName, { token: params.token });
     return;
   }
-  await scanArchive(stripped.archive, params.fileName, { token: params.token });
+
+  // Deloitte Custom Change: Strip unwanted filesystem artifacts in-place before
+  // the entry count check so they do not inflate the count toward the limit.
+  // Patterns are configured via STRIP_DIR_NAMES, STRIP_EXACT_BASENAMES, and
+  // STRIP_BASENAME_PREFIXES in zip.ts.
+  stripMacOSMetadata(zip);
+
+  // Entry count guard — moved here from stripInternalFrontmatterFromZip and placed
+  // after stripping so the count reflects real skill files only.
+  if (Object.keys(zip.files).length > DEFAULT_SKILL_IMPORT_LIMITS.maxEntries) {
+    const oversizedBytes = await zip.generateAsync({ type: 'uint8array' });
+    await scanArchive(oversizedBytes, params.fileName, { token: params.token });
+    return;
+  }
+
+  const stripped = await stripInternalFrontmatterFromZip(zip);
+  if (!stripped) {
+    // No parseable SKILL.md or other early exit — scan the already-cleaned zip.
+    const fallbackBytes = await zip.generateAsync({ type: 'uint8array' });
+    await scanArchive(fallbackBytes, params.fileName, { token: params.token });
+    return;
+  }
+
+  // Single rezip — owned here after both mutations are complete.
+  const cleanArchive = await stripped.zip.generateAsync({ type: 'uint8array' });
+  await scanArchive(cleanArchive, params.fileName, { token: params.token });
   await scanFrontmatter(
     extraFrontmatterFields(stripped.frontmatter),
     stripped.alwaysApply,
