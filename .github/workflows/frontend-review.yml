@@ -5,7 +5,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
 
 env:
   NODE_OPTIONS: '--max-old-space-size=${{ secrets.NODE_MAX_OLD_SPACE_SIZE || 6144 }}'
@@ -14,6 +13,8 @@ jobs:
   changes:
     name: Detect frontend changes
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
     steps:
