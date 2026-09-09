@@ -1396,13 +1396,7 @@ class BaseClient {
       });
     }
 
-    // Deloitte Custom Change: determine the current conversation so we can detect
-    // files that were generated in a *different* conversation and are being re-attached
-    // from the Files panel. Those files already exist in LibreChat's blob storage and
-    // should be treated as plain document attachments rather than being routed through
-    // the execute_code priming path (which only works for the originating conversation).
-    const currentConversationId = this.options.req?.body?.conversationId;
-
+    const currentConversationId = this.conversationId ?? this.options.req?.body?.conversationId;
     for (const file of attachments) {
       /** @type {FileSources} */
       const source = file.source ?? FileSources.local;
