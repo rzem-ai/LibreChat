@@ -614,7 +614,9 @@ describe('appendGuaranteedMCPCitations', () => {
     expect(readText(parts[0])).toContain(`${MARKER}turn0mcp0`);
   });
 
-  it('does not force-anchor a non-disclaimer attachment that the lexical pass missed', () => {
+  // Deloitte Custom Change: verify a non-disclaimer source is still force-anchored (behavior is
+  // no longer gated on the attachment carrying a disclaimer).
+  it('force-anchors a non-disclaimer attachment that the lexical pass missed', () => {
     const original = 'The weather today has nothing to do with any of the sources.';
     const parts = [textPart(original)];
     const usedCoords = insertMCPCitations(
@@ -628,7 +630,7 @@ describe('appendGuaranteedMCPCitations', () => {
       0,
       usedCoords,
     );
-    expect(readText(parts[0])).toBe(original);
+    expect(readText(parts[0])).toContain(`${MARKER}turn0mcp0`);
   });
 
   it('does not duplicate an anchor for a source the lexical pass already matched', () => {
@@ -645,14 +647,14 @@ describe('appendGuaranteedMCPCitations', () => {
     expect(anchorCount(readText(parts[0]), `${MARKER}turn0mcp0`)).toBe(1);
   });
 
-  it('is a no-op when there are no missing anchors and no disclaimer', () => {
+  it('is a no-op when the lexical pass already matched every source', () => {
     const original = 'Nothing to see here.';
     const parts = [textPart(original)];
     appendGuaranteedMCPCitations(
       parts,
       [mcpAttachment([{ toolName: 'afr_search_news', serverName: 'afr', content: OTHER_ARTICLE }])],
       0,
-      new Set(),
+      new Set(['0:0']),
     );
     expect(readText(parts[0])).toBe(original);
   });

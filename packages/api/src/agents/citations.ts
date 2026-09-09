@@ -535,10 +535,10 @@ export function insertMCPCitations(
 }
 
 /**
- * Force-appends a citation anchor for every MCP source that carries a
- * disclaimer (e.g. KX usage restrictions) but wasn't already anchored by the
- * lexical `insertMCPCitations` pass — so a qual with real usage restrictions
- * is always cited, not only when the model's phrasing happened to overlap.
+ * Deloitte Custom Change
+ * Force-appends a citation anchor for every MCP source that wasn't already
+ * anchored by the lexical `insertMCPCitations` pass — so a source is always
+ * cited, not only when the model's phrasing happened to overlap it.
  * Mirrors the exact turn-advancement rule `useSearchResultsByTurn` depends on:
  * the turn counter advances for every attachment whose `sources` array is
  * present, even an empty one.
@@ -552,20 +552,16 @@ export function appendGuaranteedMCPCitations(
   const missingAnchors: string[] = [];
   let turn = turnOffset;
   for (const attachment of mcpAttachments) {
-    const payload = attachment[Tools.mcp_results] as
-      | { sources?: MCPResultSource[]; disclaimer?: string }
-      | undefined;
+    const payload = attachment[Tools.mcp_results] as { sources?: MCPResultSource[] } | undefined;
     if (!payload?.sources) {
       continue;
     }
-    if (payload.disclaimer) {
-      payload.sources.forEach((_source, fileIndex) => {
-        const coord = `${turn}:${fileIndex}`;
-        if (!usedCoords.has(coord)) {
-          missingAnchors.push(`${ANCHOR_MARKER}turn${turn}mcp${fileIndex}`);
-        }
-      });
-    }
+    payload.sources.forEach((_source, fileIndex) => {
+      const coord = `${turn}:${fileIndex}`;
+      if (!usedCoords.has(coord)) {
+        missingAnchors.push(`${ANCHOR_MARKER}turn${turn}mcp${fileIndex}`);
+      }
+    });
     turn += 1;
   }
 

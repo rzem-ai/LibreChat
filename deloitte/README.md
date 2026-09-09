@@ -480,7 +480,7 @@ For LOCAL development, we need to add each user's hostname to the Redirect URIs 
 
 ### Details Per Environment
 - **DEV (Inc. LOCAL):** [AU CTK_TT_Librechat NONPROD](https://appreg.iam.deloitteresources.com/AppProperties/2075976d-5147-47b2-89d2-4ad060d19f85)
-- **UAT:** [AU CTK_TT_Librechat UAT NONPROD](https://appreg.iam.deloitteresources.com/AppProperties/2075976d-5147-47b2-89d2-4ad060d19f85)
+- **UAT:** [AU CTK_TT_Librechat UAT NONPROD](https://appreg.iam.deloitteresources.com/AppProperties/66cc6e2e-670a-47c9-a362-94c86c46782a)
 - **PROD:** [AU CTK_TT_Librechat PROD](https://appreg.iam.deloitteresources.com/AppSecrets/b5494d82-9ae5-449e-8867-6804ccc2f5ef)
 
 ### Configuration
