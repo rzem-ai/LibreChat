@@ -647,6 +647,66 @@ describe('OpenAIChatCompletionController', () => {
       });
     });
 
+    it('reconciles deltas by their run-step ID when tool indexes differ', async () => {
+      runWithEvents([
+        [
+          'on_run_step',
+          {
+            id: 'step_skill',
+            index: 3,
+            stepDetails: {
+              type: 'tool_calls',
+              tool_calls: [{ id: 'call_skill', name: 'skill' }],
+            },
+          },
+        ],
+        [
+          'on_run_step_delta',
+          {
+            id: 'step_skill',
+            delta: {
+              type: 'tool_calls',
+              tool_calls: [{ index: 0, args: '{"skillName":"meeting-summariser"}' }],
+            },
+          },
+        ],
+      ]);
+
+      await OpenAIChatCompletionController(req, res);
+
+      expect(getToolCalls()).toEqual([
+        expect.objectContaining({
+          id: 'call_skill',
+          function: { name: 'skill', arguments: '{"skillName":"meeting-summariser"}' },
+        }),
+      ]);
+    });
+
+    it('keeps seeded arguments when a completion event omits args', async () => {
+      runWithEvents([
+        [
+          'on_run_step',
+          {
+            index: 0,
+            stepDetails: {
+              type: 'tool_calls',
+              tool_calls: [
+                { id: 'call_skill', name: 'skill', args: { skillName: 'meeting-summariser' } },
+              ],
+            },
+          },
+        ],
+        [
+          'on_run_step_completed',
+          { result: { tool_call: { id: 'call_skill', output: 'complete' } } },
+        ],
+      ]);
+
+      await OpenAIChatCompletionController(req, res);
+
+      expect(getToolCalls()[0].function.arguments).toBe('{"skillName":"meeting-summariser"}');
+    });
+
     it('does not double-encode already serialized arguments', async () => {
       runWithEvents([
         [

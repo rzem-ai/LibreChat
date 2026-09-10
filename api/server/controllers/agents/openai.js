@@ -476,6 +476,7 @@ const executeOpenAIChatCompletion = async (envelope, { req, res }) => {
     const aggregator = isStreaming ? null : createOpenAIContentAggregator();
     // Deloitte Custom Change: maps Agent API tool IDs to response indexes, which differ by event type.
     const toolCallIndexesById = new Map();
+    const toolCallIndexesByStepId = new Map();
     let nextToolCallIndex = 0;
 
     const getToolCallIndex = (toolId, eventIndex) => {
@@ -676,9 +677,14 @@ const executeOpenAIChatCompletion = async (envelope, { req, res }) => {
       on_run_step: createHandler((data) => {
         const stepDetails = data?.stepDetails;
         if (stepDetails?.type === 'tool_calls' && stepDetails.tool_calls) {
-          for (const tc of stepDetails.tool_calls) {
+          for (const [toolPosition, tc] of stepDetails.tool_calls.entries()) {
             const toolId = tc.id ?? '';
             const toolIndex = getToolCallIndex(toolId, data.index ?? nextToolCallIndex);
+            if (data.id) {
+              const stepIndexes = toolCallIndexesByStepId.get(data.id) ?? new Map();
+              stepIndexes.set(tc.index ?? toolPosition, toolIndex);
+              toolCallIndexesByStepId.set(data.id, stepIndexes);
+            }
             const toolName = tc.name ?? '';
             const toolCall = {
               id: toolId,
@@ -721,8 +727,12 @@ const executeOpenAIChatCompletion = async (envelope, { req, res }) => {
               continue;
             }
 
+            const stepIndexes = data.id && toolCallIndexesByStepId.get(data.id);
             const toolIndex =
-              (tc.id && toolCallIndexesById.get(tc.id)) ?? tc.index ?? nextToolCallIndex;
+              (tc.id && toolCallIndexesById.get(tc.id)) ??
+              stepIndexes?.get(tc.index ?? 0) ??
+              tc.index ??
+              nextToolCallIndex;
 
             // Update tool call arguments
             const targetMap = isStreaming ? tracker.toolCalls : aggregator.toolCalls;
@@ -758,7 +768,7 @@ const executeOpenAIChatCompletion = async (envelope, { req, res }) => {
         const toolCall = data?.result?.tool_call;
         const toolIndex = toolCall?.id && toolCallIndexesById.get(toolCall.id);
         const tracked = toolIndex != null ? aggregator.toolCalls.get(toolIndex) : undefined;
-        if (tracked) {
+        if (tracked && Object.hasOwn(toolCall, 'args')) {
           // Deloitte Custom Change: completion events provide the authoritative final argument payload.
           tracked.function.arguments = serializeToolArguments(toolCall.args);
         }
