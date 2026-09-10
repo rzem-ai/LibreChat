@@ -16,6 +16,11 @@ jest.mock('librechat-data-provider', () => ({
 }));
 
 jest.mock('@librechat/api', () => ({
+  // Use the real validateTutorialStateUpdate so tests exercise the actual
+  // validation logic rather than a stub — consistent with SkillStatesController
+  // tests which also use the real validateSkillStatesPayload.
+  ...jest.requireActual('@librechat/api'),
+  // Override side-effectful imports that would require a running server:
   MCPOAuthHandler: {},
   MCPTokenStorage: {},
   getAppConfigOptionsFromUser: jest.fn(),

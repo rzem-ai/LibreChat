@@ -114,7 +114,7 @@ export default function TutorialPromptModal({ termsVisible = false }: TutorialPr
   }
 
   return (
-    <Popover.Root open={isVisible}>
+    <Popover.Root open={isVisible} onOpenChange={(open) => !open && markPromptSeen()}>
       {/* virtualRef positions the bubble without touching ExpandedPanel */}
       <Popover.Anchor virtualRef={virtualRef} />
 
@@ -159,9 +159,14 @@ export default function TutorialPromptModal({ termsVisible = false }: TutorialPr
                 <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-surface-tertiary">
                   <Library className="size-4 text-text-secondary" aria-hidden="true" />
                 </div>
-                <p className="text-sm font-semibold text-text-primary">
-                  {localize('com_ui_learning_hub')}
-                </p>
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+                    {localize('com_ui_learning_hub')}
+                  </p>
+                  <p className="text-sm font-semibold text-text-primary">
+                    {localize('com_learning_prompt_title')}
+                  </p>
+                </div>
               </div>
 
               <p className="text-sm leading-relaxed text-text-secondary">

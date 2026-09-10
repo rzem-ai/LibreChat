@@ -1189,7 +1189,23 @@ export const useUpdateTutorialStateMutation = (
         options?.onSuccess?.(data, variables, context);
       },
       onError: options?.onError,
-      onMutate: options?.onMutate,
+      onMutate: async (variables) => {
+        // Optimistically update the cache so the bubble closes immediately
+        // rather than waiting for the server round-trip to complete.
+        queryClient.setQueryData<t.TTutorialStateResponse>(
+          [QueryKeys.userTutorialState],
+          (current) => ({
+            ...current,
+            tutorialPromptSeen:
+              variables.tutorialPromptSeen ?? current?.tutorialPromptSeen ?? false,
+            tutorialRatings: {
+              ...(current?.tutorialRatings ?? {}),
+              ...(variables.tutorialRatings ?? {}),
+            },
+          }),
+        );
+        return options?.onMutate?.(variables);
+      },
     },
   );
 };

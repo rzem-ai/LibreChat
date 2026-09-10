@@ -10,6 +10,7 @@ const {
   extractWebSearchEnvVars,
   deleteAgentCheckpoints,
   deleteAllSharedLinksWithCleanup,
+  validateTutorialStateUpdate,
 } = require('@librechat/api');
 const {
   Tools,
@@ -130,15 +131,24 @@ const getTutorialStateController = async (req, res) => {
 
 const updateTutorialStateController = async (req, res) => {
   try {
-    const { tutorialPromptSeen, tutorialRatings } = req.body;
-    const update = {};
-    if (typeof tutorialPromptSeen === 'boolean') {
-      update.tutorialPromptSeen = tutorialPromptSeen;
+    const result = validateTutorialStateUpdate(req.body);
+
+    if ('error' in result) {
+      return res.status(400).json({ message: result.error });
     }
-    if (tutorialRatings && typeof tutorialRatings === 'object') {
+    if ('empty' in result) {
+      return res.status(400).json({ message: 'No valid fields provided' });
+    }
+
+    const { update } = result;
+
+    // If updating ratings, merge with the existing stored ratings to preserve
+    // any ratings for courses not included in this request.
+    if (update.tutorialRatings) {
       const existing = await db.getUserById(req.user.id, 'tutorialRatings');
-      update.tutorialRatings = { ...(existing?.tutorialRatings || {}), ...tutorialRatings };
+      update.tutorialRatings = { ...(existing?.tutorialRatings || {}), ...update.tutorialRatings };
     }
+
     const user = await db.updateUser(req.user.id, update);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
