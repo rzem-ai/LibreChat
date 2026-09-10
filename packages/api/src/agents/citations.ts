@@ -612,6 +612,26 @@ function stripLineMarkers(line: string): string {
     .trim();
 }
 
+/** Matches a markdown table separator row (`| --- | :--: |`), which has no source names to match against. */
+const TABLE_SEPARATOR_LINE = /^\s*\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?\s*$/;
+
+/**
+ * Splits a markdown table row (`| a | b |`) into its cell contents, or
+ * returns undefined if the line isn't a table row (including separator
+ * rows), so a SharePoint answer rendered as a table can still be matched
+ * cell-by-cell the same way a bulleted line is matched whole.
+ */
+function splitTableRowCells(line: string): string[] | undefined {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith('|') || !trimmed.endsWith('|') || trimmed.length < 2) {
+    return undefined;
+  }
+  if (TABLE_SEPARATOR_LINE.test(trimmed)) {
+    return undefined;
+  }
+  return trimmed.slice(1, -1).split('|');
+}
+
 /**
  * Lowercases and collapses `_`/`-`/whitespace runs to a single space, so
  * titles and rendered lines compare equal despite cosmetic differences the
@@ -628,11 +648,24 @@ function stripExtension(title: string): string | undefined {
   return match?.[1];
 }
 
-interface SharePointTitleAlias {
-  /** Normalized match key. */
-  alias: string;
+interface SharePointTitleCoord {
   turn: number;
   fileIndex: number;
+}
+
+/**
+ * Dequeues the next unused source for a matched alias, so when several
+ * sources share the exact same title (e.g. the same filename uploaded to
+ * different folders), each successive line that matches it is credited to
+ * a distinct source — in the same order those sources appeared in the tool
+ * result — instead of every occurrence pointing at the first duplicate.
+ */
+function nextCoordForAlias(
+  aliasQueues: Map<string, SharePointTitleCoord[]>,
+  alias: string,
+): SharePointTitleCoord | undefined {
+  const queue = aliasQueues.get(alias);
+  return queue && queue.length > 0 ? queue.shift() : undefined;
 }
 
 /**
@@ -657,6 +690,19 @@ interface SharePointTitleAlias {
  * substring) still keeps prose that merely *mentions* a filename mid-sentence
  * from getting a spurious anchor.
  *
+ * A markdown table row (`| Foo.pptx | Site | Date |`) is matched cell-by-cell
+ * instead of whole-line, since the model just as often renders SharePoint
+ * results as a table as a bulleted list, and a title normally sits alone in
+ * one cell rather than at the very start of the row. The anchor is appended
+ * inside the matched cell so the row's column count — and the table's
+ * rendering — stays intact.
+ *
+ * When several sources share the exact same title (e.g. the same filename
+ * uploaded to different folders), each is registered on a per-alias queue in
+ * source order; a line/cell match dequeues the next one, so the Nth line
+ * mentioning that title is credited to the Nth source with that title,
+ * instead of every occurrence pointing at the same duplicate.
+ *
  * Scoped to sources whose `toolName` starts with `sp_` so every other MCP
  * connector keeps using the existing lexical pass unchanged. Returns the
  * `"turn:fileIndex"` coordinates it anchored, in the same format
@@ -669,7 +715,16 @@ export function insertSharePointCitations(
   turnOffset: number,
 ): Set<string> {
   const usedCoords = new Set<string>();
-  const aliases: SharePointTitleAlias[] = [];
+  const aliasQueues = new Map<string, SharePointTitleCoord[]>();
+
+  const registerAlias = (alias: string, coord: SharePointTitleCoord): void => {
+    const queue = aliasQueues.get(alias);
+    if (queue) {
+      queue.push(coord);
+    } else {
+      aliasQueues.set(alias, [coord]);
+    }
+  };
 
   let turn = turnOffset;
   for (const attachment of mcpAttachments) {
@@ -681,23 +736,24 @@ export function insertSharePointCitations(
       if (!source.title || !isSharePointSource(source)) {
         return;
       }
+      const coord: SharePointTitleCoord = { turn, fileIndex };
       const fullAlias = normalizeForMatch(source.title);
-      aliases.push({ alias: fullAlias, turn, fileIndex });
+      registerAlias(fullAlias, coord);
       const withoutExtension = stripExtension(source.title);
       if (withoutExtension) {
         const extensionStrippedAlias = normalizeForMatch(withoutExtension);
         if (extensionStrippedAlias !== fullAlias) {
-          aliases.push({ alias: extensionStrippedAlias, turn, fileIndex });
+          registerAlias(extensionStrippedAlias, coord);
         }
       }
     });
     turn += 1;
   }
 
-  if (aliases.length === 0) {
+  if (aliasQueues.size === 0) {
     return usedCoords;
   }
-  aliases.sort((a, b) => b.alias.length - a.alias.length);
+  const sortedAliases = Array.from(aliasQueues.keys()).sort((a, b) => b.length - a.length);
 
   for (const part of contentParts) {
     const text = readText(part);
@@ -707,19 +763,49 @@ export function insertSharePointCitations(
 
     let changed = false;
     const rebuiltLines = text.split('\n').map((line) => {
+      const tableCells = splitTableRowCells(line);
+      if (tableCells) {
+        for (let cellIndex = 0; cellIndex < tableCells.length; cellIndex++) {
+          const normalizedCell = normalizeForMatch(stripLineMarkers(tableCells[cellIndex]));
+          if (!normalizedCell) {
+            continue;
+          }
+          for (const alias of sortedAliases) {
+            if (!normalizedCell.startsWith(alias)) {
+              continue;
+            }
+            const coord = nextCoordForAlias(aliasQueues, alias);
+            if (!coord) {
+              continue;
+            }
+            usedCoords.add(`${coord.turn}:${coord.fileIndex}`);
+            changed = true;
+            tableCells[cellIndex] = withAnchors(tableCells[cellIndex], [
+              `${ANCHOR_MARKER}turn${coord.turn}mcp${coord.fileIndex}`,
+            ]);
+            return `|${tableCells.join('|')}|`;
+          }
+        }
+        return line;
+      }
+
       const base = stripLineMarkers(line);
       if (!base) {
         return line;
       }
       const normalizedLine = normalizeForMatch(base);
 
-      for (const { alias, turn: turnNum, fileIndex } of aliases) {
+      for (const alias of sortedAliases) {
         if (!normalizedLine.startsWith(alias)) {
           continue;
         }
-        usedCoords.add(`${turnNum}:${fileIndex}`);
+        const coord = nextCoordForAlias(aliasQueues, alias);
+        if (!coord) {
+          continue;
+        }
+        usedCoords.add(`${coord.turn}:${coord.fileIndex}`);
         changed = true;
-        return withAnchors(line, [`${ANCHOR_MARKER}turn${turnNum}mcp${fileIndex}`]);
+        return withAnchors(line, [`${ANCHOR_MARKER}turn${coord.turn}mcp${coord.fileIndex}`]);
       }
       return line;
     });

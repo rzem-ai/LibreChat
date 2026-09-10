@@ -1,7 +1,7 @@
 import type { MCPResultSource, MCPSourcesResult } from 'librechat-data-provider';
 
 /** Upper bound on results extracted from a single SharePoint response. */
-const MAX_SHAREPOINT_ITEMS = 30;
+const MAX_SHAREPOINT_ITEMS = 100;
 
 /** Keys under which `sp_list_*` tools wrap their result array (see `formatGraphListResponse`/`formatItemListResponse` in the gateway). */
 const LIST_WRAPPER_KEYS = ['items', 'sites', 'drives', 'recentFiles', 'sharedFiles'] as const;

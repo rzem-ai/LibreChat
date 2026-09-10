@@ -583,6 +583,127 @@ describe('insertSharePointCitations', () => {
     );
     expect(readText(parts[0])).toBe(original);
   });
+
+  // Deloitte Custom Change: SharePoint results are just as often rendered as a markdown table as
+  // a bulleted list, so a title must be matched cell-by-cell, not only at the start of the line.
+  it('anchors a markdown table row by matching the cell containing the title', () => {
+    const parts = [
+      textPart(
+        '| File Name | Location | Last Modified |\n' +
+          '|---|---|---|\n' +
+          '| Consulting Graduate Induction Workbook.pptx | AISolutionStudio | 9 Sep 2026 |',
+      ),
+    ];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    const text = readText(parts[0]);
+    expect(text).toContain(`${MARKER}turn0mcp0`);
+    const rows = text.split('\n');
+    expect(rows).toHaveLength(3);
+    expect(rows[2].split('|')).toHaveLength(5);
+    expect(rows[2]).toContain('| AISolutionStudio |');
+  });
+
+  it('does not anchor a markdown table separator row', () => {
+    const parts = [
+      textPart(
+        '| File Name | Location |\n' +
+          '|---|---|\n' +
+          '| Consulting Graduate Induction Workbook.pptx | AISolutionStudio |',
+      ),
+    ];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    const rows = readText(parts[0])?.split('\n') ?? [];
+    expect(rows[1]).toBe('|---|---|');
+  });
+
+  it('leaves an unmatched table row untouched', () => {
+    const original = '| Unrelated File.docx | SomeSite | today |';
+    const parts = [textPart(original)];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  // Deloitte Custom Change: three sources can share the exact same filename (same file
+  // uploaded to different folders) — each occurrence in the answer must credit a distinct
+  // source, in the order those sources appeared in the tool result, not all the same one.
+  it('credits each occurrence of a duplicate title to a distinct source, in source order', () => {
+    const parts = [
+      textPart(
+        '| 16x9_Timesaver_PPT.pptx | Brand-Space | 21 May 2025 |\n' +
+          '| 16x9_Timesaver_PPT.pptx | DR-GR Brand Templates | 08 Jun 2026 |\n' +
+          '| 16x9_Timesaver_PPT.pptx | DR-GR | 08 Jan 2026 |',
+      ),
+    ];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: '16x9_Timesaver_PPT.pptx',
+            content: 'Brand-Space copy',
+          },
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: '16x9_Timesaver_PPT.pptx',
+            content: 'DR-GR Brand Templates copy',
+          },
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: '16x9_Timesaver_PPT.pptx',
+            content: 'DR-GR copy',
+          },
+        ]),
+      ],
+      0,
+    );
+    const rows = readText(parts[0])?.split('\n') ?? [];
+    expect(rows[0]).toContain(`${MARKER}turn0mcp0`);
+    expect(rows[1]).toContain(`${MARKER}turn0mcp1`);
+    expect(rows[2]).toContain(`${MARKER}turn0mcp2`);
+  });
 });
 
 describe('appendGuaranteedMCPCitations', () => {
@@ -882,13 +1003,14 @@ describe('applyEndOfTraceCitations', () => {
     expect(anchorCount(text, `${MARKER}turn0mcp0`)).toBe(1);
   });
 
-  it('does not fall back to the lexical pass for an un-anchored SharePoint listing source', async () => {
-    const parts = [
-      textPart(
-        'The style guide covering formatting rules is available at ' +
-          'https://resources.deloitte.com/sites/Intellihub/SiteAssets/GFS_style-guide.pptx for review.',
-      ),
-    ];
+  // Deloitte Custom Change: an un-anchored SharePoint listing source is excluded from the
+  // lexical pass (its short filename+URL content isn't safe sentence-splitter input), but must
+  // still receive the guaranteed fallback anchor so it isn't left with no citation at all.
+  it('force-anchors an un-anchored SharePoint listing source via the guaranteed pass, not the lexical pass', async () => {
+    const original =
+      'The style guide covering formatting rules is available at ' +
+      'https://resources.deloitte.com/sites/Intellihub/SiteAssets/GFS_style-guide.pptx for review.';
+    const parts = [textPart(original)];
     await applyEndOfTraceCitations({
       contentParts: parts,
       artifactPromises: [
@@ -908,8 +1030,8 @@ describe('applyEndOfTraceCitations', () => {
       fileCitations: true,
     });
     const text = readText(parts[0]);
-    expect(text).not.toContain(MARKER);
-    expect(anchorCount(text, `${MARKER}turn0mcp0`)).toBe(0);
+    expect(anchorCount(text, `${MARKER}turn0mcp0`)).toBe(1);
+    expect(text).toBe(`${original} ${MARKER}turn0mcp0`);
   });
 
   it('falls back to the lexical pass for a SharePoint source answered as prose instead of a filename line', async () => {
