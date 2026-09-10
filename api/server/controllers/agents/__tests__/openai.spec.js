@@ -647,6 +647,38 @@ describe('OpenAIChatCompletionController', () => {
       });
     });
 
+    it('accumulates every non-streaming delta fragment when the run step has no arguments', async () => {
+      runWithEvents([
+        [
+          'on_run_step',
+          {
+            index: 2,
+            stepDetails: {
+              type: 'tool_calls',
+              tool_calls: [{ id: 'call_skill', name: 'skill' }],
+            },
+          },
+        ],
+        [
+          'on_run_step_delta',
+          { delta: { type: 'tool_calls', tool_calls: [{ index: 2, args: '{"skillName":' }] } },
+        ],
+        [
+          'on_run_step_delta',
+          {
+            delta: {
+              type: 'tool_calls',
+              tool_calls: [{ index: 2, args: '"meeting-summariser"}' }],
+            },
+          },
+        ],
+      ]);
+
+      await OpenAIChatCompletionController(req, res);
+
+      expect(getToolCalls()[0].function.arguments).toBe('{"skillName":"meeting-summariser"}');
+    });
+
     it('reconciles deltas by their run-step ID when tool indexes differ', async () => {
       runWithEvents([
         [

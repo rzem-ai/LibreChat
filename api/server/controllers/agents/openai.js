@@ -477,6 +477,7 @@ const executeOpenAIChatCompletion = async (envelope, { req, res }) => {
     // Deloitte Custom Change: maps Agent API tool IDs to response indexes, which differ by event type.
     const toolCallIndexesById = new Map();
     const toolCallIndexesByStepId = new Map();
+    const seededToolCallIndexes = new Set();
     let nextToolCallIndex = 0;
 
     const getToolCallIndex = (toolId, eventIndex) => {
@@ -695,6 +696,9 @@ const executeOpenAIChatCompletion = async (envelope, { req, res }) => {
                 arguments: isStreaming ? '' : serializeToolArguments(tc.args),
               },
             };
+            if (!isStreaming && toolCall.function.arguments) {
+              seededToolCallIndexes.add(toolIndex);
+            }
 
             // Track tool call in tracker or aggregator
             if (isStreaming) {
@@ -737,8 +741,8 @@ const executeOpenAIChatCompletion = async (envelope, { req, res }) => {
             // Update tool call arguments
             const targetMap = isStreaming ? tracker.toolCalls : aggregator.toolCalls;
             const tracked = targetMap.get(toolIndex);
-            // Deloitte Custom Change: do not duplicate full non-streaming arguments with delta fragments.
-            if (tracked && (isStreaming || !tracked.function.arguments)) {
+            // Deloitte Custom Change: only seeded calls skip deltas; delta-built arguments may span chunks.
+            if (tracked && (isStreaming || !seededToolCallIndexes.has(toolIndex))) {
               tracked.function.arguments += args;
             }
 
