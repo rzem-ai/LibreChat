@@ -11,6 +11,7 @@ const CheckboxButton: React.ForwardRefExoticComponent<
     checked?: boolean;
     defaultChecked?: boolean;
     isCheckedClassName?: string;
+    // Deloitte Custom Change: testId prop added as a stable anchor for guided tour spotlights
     testId?: string;
     setValue?: (values: {
       e?: React.ChangeEvent<HTMLInputElement>;

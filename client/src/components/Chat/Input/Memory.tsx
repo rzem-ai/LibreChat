@@ -30,6 +30,7 @@ function Memory() {
         checked={memoryActive}
         setValue={debouncedChange}
         label={localize('com_ui_memory')}
+        // Deloitte Custom Change: testId added as a stable anchor for the guided tour spotlight
         testId="toolbar-toggle-memory"
         isCheckedClassName="border-purple-600/40 bg-purple-500/10 hover:bg-purple-700/10"
         icon={<Brain className="icon-md" aria-hidden="true" />}

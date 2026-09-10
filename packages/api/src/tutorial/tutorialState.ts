@@ -12,6 +12,13 @@ const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 const RATING_MIN = 1;
 const RATING_MAX = 5;
 
+/**
+ * Maximum number of course ratings a user can store.
+ * Prevents document bloat and limits unbounded writes.
+ * Easy to raise in future — this is the only constant to change.
+ */
+const MAX_TUTORIAL_RATINGS = 50;
+
 export interface TutorialStateUpdate {
   tutorialPromptSeen?: boolean;
   tutorialRatings?: Record<string, number>;
@@ -58,6 +65,17 @@ export function validateTutorialStateUpdate(body: unknown): TutorialStateValidat
     const sanitised: Record<string, number> = {};
 
     for (const [key, value] of Object.entries(ratingsMap)) {
+      // Enforce cap on total number of ratings
+      if (Object.keys(sanitised).length >= MAX_TUTORIAL_RATINGS) {
+        return { error: `tutorialRatings cannot exceed ${MAX_TUTORIAL_RATINGS} entries` };
+      }
+
+      // Reject MongoDB-illegal key characters: leading $ (operator injection)
+      // and dot (dot-notation path traversal)
+      if (key.startsWith('$') || key.includes('.')) {
+        return { error: `Invalid rating key: "${key}"` };
+      }
+
       // Reject prototype-pollution-style keys
       if (DANGEROUS_KEYS.has(key)) {
         return { error: `Invalid rating key: "${key}"` };

@@ -30,6 +30,7 @@ function WebSearch() {
         checked={webSearch}
         setValue={debouncedChange}
         label={localize('com_ui_search')}
+        // Deloitte Custom Change: testId added as a stable anchor for the guided tour spotlight
         testId="toolbar-toggle-web-search"
         isCheckedClassName="border-blue-600/40 bg-blue-500/10 hover:bg-blue-700/10"
         icon={<Globe className="icon-md" aria-hidden="true" />}

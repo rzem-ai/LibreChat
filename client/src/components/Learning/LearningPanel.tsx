@@ -22,7 +22,12 @@ function CourseHeroCard({ course, onSelect }: { course: LearningCourse; onSelect
         {course.estimatedMinutes != null && (
           <span className="flex items-center gap-1 text-xs tabular-nums text-text-tertiary">
             <Clock className="size-3" />
-            {localize('com_learning_estimated_minutes', { 0: course.estimatedMinutes })}
+            {localize(
+              course.estimatedMinutes === 1
+                ? 'com_learning_estimated_minutes'
+                : 'com_learning_estimated_minutes_plural',
+              { 0: course.estimatedMinutes },
+            )}
           </span>
         )}
         <button

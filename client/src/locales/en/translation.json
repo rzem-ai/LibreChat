@@ -2176,6 +2176,7 @@
   "com_learning_courses_title": "Courses",
   "com_learning_coming_soon_short": "Coming soon",
   "com_learning_estimated_minutes": "{{0}} min",
+  "com_learning_estimated_minutes_plural": "{{0}} mins",
   "com_learning_course_landing_page_title": "Platform Basics",
   "com_learning_course_landing_page_description": "A guided tour of the core interface — from choosing a model or agent to sending your first message.",
   "com_learning_rate_prompt": "How helpful was this tutorial?",

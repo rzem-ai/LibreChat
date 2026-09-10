@@ -144,9 +144,16 @@ const updateTutorialStateController = async (req, res) => {
 
     // If updating ratings, merge with the existing stored ratings to preserve
     // any ratings for courses not included in this request.
+    // Defensive: getUserById always returns a lean plain object so instanceof Map
+    // is currently always false, but the guard protects against future refactors
+    // that might return a hydrated Mongoose document instead.
     if (update.tutorialRatings) {
       const existing = await db.getUserById(req.user.id, 'tutorialRatings');
-      update.tutorialRatings = { ...(existing?.tutorialRatings || {}), ...update.tutorialRatings };
+      const existingRatings =
+        existing?.tutorialRatings instanceof Map
+          ? Object.fromEntries(existing.tutorialRatings)
+          : existing?.tutorialRatings || {};
+      update.tutorialRatings = { ...existingRatings, ...update.tutorialRatings };
     }
 
     const user = await db.updateUser(req.user.id, update);
