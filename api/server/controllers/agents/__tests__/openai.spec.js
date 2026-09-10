@@ -261,6 +261,26 @@ describe('OpenAIChatCompletionController', () => {
 
     const controller = require('../openai');
     OpenAIChatCompletionController = controller.OpenAIChatCompletionController;
+    const {
+      createRun,
+      createOpenAIContentAggregator,
+      createOpenAIStreamTracker,
+    } = require('@librechat/api');
+    createRun.mockReset().mockResolvedValue({ processStream: mockProcessStream });
+    createOpenAIStreamTracker.mockReturnValue({
+      addText: jest.fn(),
+      addReasoning: jest.fn(),
+      toolCalls: new Map(),
+      usage: { promptTokens: 0, completionTokens: 0, reasoningTokens: 0 },
+    });
+    createOpenAIContentAggregator.mockReturnValue({
+      addText: jest.fn(),
+      addReasoning: jest.fn(),
+      getText: jest.fn().mockReturnValue(''),
+      getReasoning: jest.fn().mockReturnValue(''),
+      toolCalls: new Map(),
+      usage: { promptTokens: 100, completionTokens: 50, reasoningTokens: 0 },
+    });
 
     req = {
       body: {
@@ -276,6 +296,8 @@ describe('OpenAIChatCompletionController', () => {
       },
       on: jest.fn(),
     };
+    const { validateRequest } = require('@librechat/api');
+    validateRequest.mockReturnValue({ request: req.body });
 
     res = {
       status: jest.fn().mockReturnThis(),
@@ -540,6 +562,197 @@ describe('OpenAIChatCompletionController', () => {
         expect.objectContaining({
           model: 'gpt-4',
         }),
+      );
+    });
+  });
+
+  // Deloitte Custom Change: protects Agent API skill-tool argument reconciliation across event types.
+  describe('tool call argument aggregation', () => {
+    const runWithEvents = (events) => {
+      const { createRun } = require('@librechat/api');
+      createRun.mockImplementationOnce(async ({ customHandlers }) => ({
+        processStream: async () => {
+          for (const [event, data] of events) {
+            await customHandlers[event].handle(event, data);
+          }
+        },
+      }));
+    };
+
+    const getToolCalls = () => {
+      const { buildNonStreamingResponse } = require('@librechat/api');
+      return Array.from(buildNonStreamingResponse.mock.calls.at(-1)[3].values());
+    };
+
+    it('preserves object skill arguments from a run step without deltas', async () => {
+      runWithEvents([
+        [
+          'on_run_step',
+          {
+            index: 4,
+            stepDetails: {
+              type: 'tool_calls',
+              tool_calls: [
+                { id: 'call_skill', name: 'skill', args: { skillName: 'meeting-summariser' } },
+              ],
+            },
+          },
+        ],
+      ]);
+
+      await OpenAIChatCompletionController(req, res);
+
+      expect(getToolCalls()).toEqual([
+        expect.objectContaining({
+          id: 'call_skill',
+          function: { name: 'skill', arguments: '{"skillName":"meeting-summariser"}' },
+        }),
+      ]);
+    });
+
+    it('replaces partial arguments with the completed tool call arguments', async () => {
+      runWithEvents([
+        [
+          'on_run_step',
+          {
+            index: 2,
+            stepDetails: {
+              type: 'tool_calls',
+              tool_calls: [{ id: 'call_skill', name: 'skill' }],
+            },
+          },
+        ],
+        [
+          'on_run_step_delta',
+          { delta: { type: 'tool_calls', tool_calls: [{ index: 2, args: '{"skill' }] } },
+        ],
+        [
+          'on_run_step_completed',
+          {
+            result: {
+              tool_call: {
+                id: 'call_skill',
+                args: { skillName: 'meeting-summariser', args: 'Summarise this meeting' },
+              },
+            },
+          },
+        ],
+      ]);
+
+      await OpenAIChatCompletionController(req, res);
+
+      expect(JSON.parse(getToolCalls()[0].function.arguments)).toEqual({
+        skillName: 'meeting-summariser',
+        args: 'Summarise this meeting',
+      });
+    });
+
+    it('does not double-encode already serialized arguments', async () => {
+      runWithEvents([
+        [
+          'on_run_step',
+          {
+            stepDetails: {
+              type: 'tool_calls',
+              tool_calls: [
+                { id: 'call_json', name: 'skill', args: '{"skillName":"meeting-summariser"}' },
+              ],
+            },
+          },
+        ],
+      ]);
+
+      await OpenAIChatCompletionController(req, res);
+
+      expect(getToolCalls()[0].function.arguments).toBe('{"skillName":"meeting-summariser"}');
+    });
+
+    it('keeps arguments associated with tool call IDs across preceding steps', async () => {
+      runWithEvents([
+        ['on_run_step', { index: 0, stepDetails: { type: 'message_creation' } }],
+        [
+          'on_run_step',
+          {
+            index: 1,
+            stepDetails: {
+              type: 'tool_calls',
+              tool_calls: [
+                { id: 'call_skill', name: 'skill', args: { skillName: 'meeting-summariser' } },
+              ],
+            },
+          },
+        ],
+        [
+          'on_run_step_completed',
+          {
+            result: { tool_call: { id: 'call_skill', args: { skillName: 'meeting-summariser' } } },
+          },
+        ],
+      ]);
+
+      await OpenAIChatCompletionController(req, res);
+
+      expect(JSON.parse(getToolCalls()[0].function.arguments).skillName).toBe('meeting-summariser');
+    });
+
+    it('retains separate arguments for multiple tool calls in one run step', async () => {
+      runWithEvents([
+        [
+          'on_run_step',
+          {
+            index: 0,
+            stepDetails: {
+              type: 'tool_calls',
+              tool_calls: [
+                { id: 'call_one', name: 'skill', args: { skillName: 'one' } },
+                { id: 'call_two', name: 'skill', args: { skillName: 'two' } },
+              ],
+            },
+          },
+        ],
+      ]);
+
+      await OpenAIChatCompletionController(req, res);
+
+      expect(
+        getToolCalls().map((toolCall) => JSON.parse(toolCall.function.arguments).skillName),
+      ).toEqual(['one', 'two']);
+    });
+
+    it('does not seed full arguments into streaming tool call chunks', async () => {
+      const { createRun, createChunk, writeSSE } = require('@librechat/api');
+      req.body.stream = true;
+      const { validateRequest } = require('@librechat/api');
+      validateRequest.mockReturnValueOnce({ request: { ...req.body, stream: true } });
+      createChunk.mockImplementation((context, delta) => ({
+        context,
+        delta: structuredClone(delta),
+      }));
+      createRun.mockImplementationOnce(async ({ customHandlers }) => ({
+        processStream: async () => {
+          customHandlers.on_run_step.handle('on_run_step', {
+            index: 0,
+            stepDetails: {
+              type: 'tool_calls',
+              tool_calls: [
+                { id: 'call_skill', name: 'skill', args: { skillName: 'meeting-summariser' } },
+              ],
+            },
+          });
+          customHandlers.on_run_step_delta.handle('on_run_step_delta', {
+            delta: {
+              type: 'tool_calls',
+              tool_calls: [{ index: 0, args: '{"skillName":"meeting-summariser"}' }],
+            },
+          });
+        },
+      }));
+
+      await OpenAIChatCompletionController(req, res);
+
+      expect(writeSSE.mock.calls[1][1].delta.tool_calls[0].function.arguments).toBe('');
+      expect(writeSSE.mock.calls[2][1].delta.tool_calls[0].function.arguments).toBe(
+        '{"skillName":"meeting-summariser"}',
       );
     });
   });
