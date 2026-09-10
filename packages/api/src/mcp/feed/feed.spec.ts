@@ -128,6 +128,66 @@ describe('buildMCPResultSources', () => {
     expect(result.sources[0].content).toContain('Gold prices have risen sharply.');
   });
 
+  // Deloitte Custom Change: verify the new `args` param is threaded through to buildReportSources.
+  it('forwards args through to buildReportSources so a Sections report gets a link', () => {
+    const content = JSON.stringify({
+      Sections: [
+        {
+          RequestedSection: 'executivesummaryanalysis',
+          StatusCode: 200,
+          Body: { ExecutiveSummaryAnalysis: { PlainText: 'Gold prices have risen sharply.' } },
+        },
+      ],
+    });
+    const result = buildMCPResultSources({
+      toolName: 'ibisworld_report_sections',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+      args: { code: '56162', country: 'AU' },
+    });
+
+    expect(result.sources).toHaveLength(1);
+    expect(result.sources[0].link).toBe(
+      'https://my.ibisworld.com/au/en/industry-specialized/56162/at-a-glance',
+    );
+  });
+
+  // Deloitte Custom Change: verify the new report-list array payload handling and per-report link.
+  it('splits a top-level array report-list payload (e.g. ibisworld_list_reports) into one source per report, each linked', () => {
+    const content = JSON.stringify([
+      { Code: '56162', Title: 'Gold Ore Mining', Country: 'AU' },
+      { Code: '11111', Title: 'Test Report', Country: 'US' },
+    ]);
+    const result = buildMCPResultSources({
+      toolName: 'ibisworld_list_reports',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+    });
+
+    expect(result.sources).toHaveLength(2);
+    expect(result.sources[0]).toMatchObject({
+      title: 'Gold Ore Mining',
+      link: 'https://my.ibisworld.com/au/en/industry-specialized/56162/at-a-glance',
+    });
+  });
+
+  // Deloitte Custom Change: verify DESC/GIMS entity payloads are routed through buildEntitySources.
+  it('cites a DESC/GIMS entity that only has an entityID', () => {
+    const content = JSON.stringify({
+      statusCode: 200,
+      message: 'Result Model.',
+      data: { entityID: 999001 },
+    });
+    const result = buildMCPResultSources({
+      toolName: 'desc_get_entity_by_id',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+    });
+
+    expect(result.sources).toHaveLength(1);
+    expect(result.sources[0]).toMatchObject({ title: 'Entity 999001' });
+  });
+
   it('surfaces the KX disclaimer alongside its sources', () => {
     const content = JSON.stringify({
       usage_guidelines: 'Please review accuracy of all the responses before reusing them.',
