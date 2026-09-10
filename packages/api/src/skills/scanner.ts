@@ -19,7 +19,7 @@ import JSZip from 'jszip';
 import { logger } from '@librechat/data-schemas';
 import { SKILL_SEVERITY_LEVELS } from 'librechat-data-provider';
 import { parseSkillMarkdown, extractSkillBody } from './parse';
-import { readZipEntry, stripMacOSMetadata } from './zip';
+import { readZipEntry, stripZipArtefacts } from './zip';
 import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
 
 const SKILL_MD = 'SKILL.md';
@@ -704,9 +704,8 @@ export async function scanSkillUpload(params: {
 
   // Deloitte Custom Change: Strip unwanted filesystem artifacts in-place before
   // the entry count check so they do not inflate the count toward the limit.
-  // Patterns are configured via STRIP_DIR_NAMES, STRIP_EXACT_BASENAMES, and
-  // STRIP_BASENAME_PREFIXES in zip.ts.
-  stripMacOSMetadata(zip);
+  // Patterns are configured via STRIP_DIR_NAMES and STRIP_BASENAME_PREFIXES in zip.ts.
+  stripZipArtefacts(zip);
 
   // Entry count guard — moved here from stripInternalFrontmatterFromZip and placed
   // after stripping so the count reflects real skill files only.

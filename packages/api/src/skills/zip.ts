@@ -6,22 +6,14 @@ import type JSZip from 'jszip';
  * artifacts in skill zip archives. To extend stripping behaviour, add new values
  * to the relevant constant below — no logic changes required.
  *
- * STRIP_DIR_NAMES        — directory names stripped when they appear as the first
- *                          path segment (archive root level only). Entries nested
- *                          inside a wrapping folder (e.g. skill-name/.venv/...)
- *                          are not affected.
- * STRIP_EXACT_BASENAMES  — exact filenames stripped at any depth in the archive.
+ * STRIP_DIR_NAMES        — directory names stripped at any depth in the archive.
+ * Dot-prefixed files and directories are also stripped at any depth.
  * STRIP_BASENAME_PREFIXES — filename prefixes stripped at any depth in the archive.
  */
 export const STRIP_DIR_NAMES: readonly string[] = [
   '__MACOSX', // macOS resource fork sidecar directory (Finder "Compress")
-  '.venv', // Python virtual environment (uv, venv) — accidentally included
   '__pycache__', // Python compiled bytecode — not relevant to skill execution
   'node_modules', // JavaScript dependencies — should never be bundled in a skill
-  '.git', // Git version control history — never relevant to skill content
-];
-export const STRIP_EXACT_BASENAMES: readonly string[] = [
-  '.DS_Store', // macOS Finder view-state file
 ];
 export const STRIP_BASENAME_PREFIXES: readonly string[] = [
   '._', // macOS resource fork sidecar files (e.g. ._SKILL.md)
@@ -29,17 +21,17 @@ export const STRIP_BASENAME_PREFIXES: readonly string[] = [
 
 /**
  * Strips unwanted filesystem artifacts from an in-memory JSZip object in-place.
- * Driven by STRIP_DIR_NAMES, STRIP_EXACT_BASENAMES, and STRIP_BASENAME_PREFIXES —
+ * Driven by STRIP_DIR_NAMES and STRIP_BASENAME_PREFIXES —
  * add new patterns to those constants to extend behaviour without touching this function.
  */
-export function stripMacOSMetadata(zip: JSZip): void {
+export function stripZipArtefacts(zip: JSZip): void {
   for (const entryPath of Object.keys(zip.files)) {
     const normalized = entryPath.replace(/\\/g, '/');
-    const firstSegment = normalized.split('/')[0];
+    const segments = normalized.split('/').filter(Boolean);
     const basename = path.posix.basename(normalized);
     if (
-      STRIP_DIR_NAMES.includes(firstSegment) ||
-      STRIP_EXACT_BASENAMES.includes(basename) ||
+      segments.some((segment) => segment.startsWith('.')) ||
+      segments.some((segment) => STRIP_DIR_NAMES.includes(segment)) ||
       STRIP_BASENAME_PREFIXES.some((prefix) => basename.startsWith(prefix))
     ) {
       zip.remove(entryPath);

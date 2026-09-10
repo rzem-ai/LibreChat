@@ -490,10 +490,9 @@ describe('createImportHandler', () => {
     }
   });
 
-  // Deloitte Custom Change: Verify that accidentally included Python/Node/Git directories
-  // are stripped by handleZip when the scanner is not configured. These are common artifacts
-  // from skill authors who forgot to exclude their virtual environment or dependency folders.
-  it('strips .venv, __pycache__, node_modules and .git directories when scanner is not configured', async () => {
+  // Deloitte Custom Change: Verify that hidden files and accidentally included dependency
+  // directories are stripped at all levels when the scanner is not configured.
+  it('strips hidden files and artifact directories at all levels when scanner is not configured', async () => {
     const savedScannerUrl = process.env.SKILL_SCANNER_URL;
     delete process.env.SKILL_SCANNER_URL;
 
@@ -504,33 +503,42 @@ describe('createImportHandler', () => {
 
       const zip = new JSZip();
 
-      // Real skill files
+      // Real skill files, including valid underscore-prefixed Python modules
       zip.file('SKILL.md', '---\nname: python-skill\ndescription: A Python skill.\n---\n# Body');
       zip.file('scripts/run.py', 'print("hello")');
+      zip.file('scripts/_helpers.py', 'def helper(): pass');
+      zip.file('scripts/__init__.py', '');
 
-      // Accidentally included directories at archive root
-      zip.file('.venv/bin/python', '');
-      zip.file('.venv/lib/python3.11/site-packages/pandas/__init__.py', '');
-      zip.file('__pycache__/run.cpython-311.pyc', '');
-      zip.file('node_modules/lodash/index.js', '');
-      zip.file('.git/config', '');
-      zip.file('.git/HEAD', '');
+      // Hidden files and accidentally included directories at nested levels
+      zip.file('.env', 'SECRET=value');
+      zip.file('skill-name/.gitignore', '.venv/');
+      zip.file('skill-name/.venv/bin/python', '');
+      zip.file('skill-name/.venv/lib/python3.11/site-packages/pandas/__init__.py', '');
+      zip.file('skill-name/scripts/__pycache__/run.cpython-311.pyc', '');
+      zip.file('skill-name/assets/node_modules/lodash/index.js', '');
+      zip.file('skill-name/references/.git/config', '');
 
       const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
 
       await handler(mockZipRequest(buffer), res);
 
-      // Import succeeds and only the real skill file is stored (SKILL.md is consumed as body)
+      // Import succeeds and only real skill files are stored (SKILL.md is consumed as body)
       expect(res.status).toHaveBeenCalledWith(201);
       const summary = importSummary(res.body);
-      expect(summary.filesProcessed).toBe(1);
-      expect(summary.filesSucceeded).toBe(1);
+      expect(summary.filesProcessed).toBe(3);
+      expect(summary.filesSucceeded).toBe(3);
       expect(summary.filesFailed).toBe(0);
 
-      // Only scripts/run.py should have reached storage
-      expect(deps.upsertSkillFile).toHaveBeenCalledTimes(1);
+      // Artifact entries are absent while valid Python modules remain available
+      expect(deps.upsertSkillFile).toHaveBeenCalledTimes(3);
       expect(deps.upsertSkillFile).toHaveBeenCalledWith(
         expect.objectContaining({ relativePath: 'scripts/run.py' }),
+      );
+      expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+        expect.objectContaining({ relativePath: 'scripts/_helpers.py' }),
+      );
+      expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+        expect.objectContaining({ relativePath: 'scripts/__init__.py' }),
       );
     } finally {
       if (savedScannerUrl === undefined) {

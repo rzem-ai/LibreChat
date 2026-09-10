@@ -15,7 +15,7 @@ import type { Types } from 'mongoose';
 import type { ImportLimits } from './limits';
 import { isSkillScanError, scanSkillMarkdown, scanSkillUpload } from './scanner';
 import { resolveRequestTenantId } from '~/middleware/tenant';
-import { readZipEntry, stripMacOSMetadata } from './zip';
+import { readZipEntry, stripZipArtefacts } from './zip';
 import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
 import { isSafeSkillFilePath } from './path';
 import { parseSkillMarkdown } from './parse';
@@ -356,11 +356,11 @@ async function handleZip(
   }
 
   // Deloitte Custom Change: Strip unwanted filesystem artifacts before processing.
-  // Patterns are configured via STRIP_DIR_NAMES, STRIP_EXACT_BASENAMES, and
-  // STRIP_BASENAME_PREFIXES in zip.ts — add new patterns there to extend behaviour.
+  // Patterns are configured via STRIP_DIR_NAMES and STRIP_BASENAME_PREFIXES in zip.ts —
+  // add new patterns there to extend behaviour.
   // This safety net runs even when the skill scanner is disabled (e.g. open source
   // / self-hosted deployments without SKILL_SCANNER_URL configured).
-  stripMacOSMetadata(zip);
+  stripZipArtefacts(zip);
 
   const entries = Object.keys(zip.files);
 
