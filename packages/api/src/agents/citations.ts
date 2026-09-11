@@ -921,7 +921,7 @@ export async function applyEndOfTraceCitations({
       const usedCoords = insertSharePointCitations(contentParts, mcpAttachments, turnOffset);
       // Listing sources (sp_search/sp_list_*/sp_get_*) always skip the lexical pass —
       // their short filename+URL content isn't safe input for a sentence splitter that
-      // breaks on periods, so one the line-matcher missed should get no citation, not a
+      // breaks on periods, so one that the line-matcher missed should get no citation, not a
       // garbled one. A `sp_read_file` source only skips the lexical pass if the
       // line-matcher already anchored it (avoids double-citing); otherwise — e.g. answered
       // as prose/a table instead of a filename-prefixed line — it still gets a shot at the
