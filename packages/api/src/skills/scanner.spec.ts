@@ -577,7 +577,7 @@ describe('skill scanner', () => {
       const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
       global.fetch = fetchSpy as unknown as typeof fetch;
 
-      // Level 3 skill with macOS Finder artefacts injected by right-click → Compress
+      // Level 3 skill with macOS Finder artifacts injected by right-click → Compress
       const zip = new JSZip();
       zip.file(
         'skill-name/SKILL.md',
