@@ -653,6 +653,22 @@ function normalizeForMatch(text: string): string {
   return text.toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * True when `text` starts with `alias` and the alias ends there — the next
+ * character (if any) is not a letter/digit. A plain `startsWith` would let a
+ * short title like "Archive" consume an unrelated line like "Archived files"
+ * just because it's a string prefix. Requiring a boundary still allows the
+ * intended "title plus commentary" match (`- Foo.pptx – last modified today`),
+ * since a space or punctuation always follows the title there.
+ */
+function startsWithAliasBoundary(text: string, alias: string): boolean {
+  if (!text.startsWith(alias)) {
+    return false;
+  }
+  const nextChar = text[alias.length];
+  return nextChar === undefined || !/[a-z0-9]/i.test(nextChar);
+}
+
 /** Strips a real file extension (`.xlsx`, `.docx`, `.loop`, ...) off a title, or returns undefined if it has none. */
 function stripExtension(title: string): string | undefined {
   const match = title.match(/^(.+)\.([a-z0-9]{1,6})$/i);
@@ -793,7 +809,7 @@ export function insertSharePointCitations(
             continue;
           }
           for (const alias of sortedAliases) {
-            if (!normalizedCell.startsWith(alias)) {
+            if (!startsWithAliasBoundary(normalizedCell, alias)) {
               continue;
             }
             const coord = nextCoordForAlias(aliasQueues, alias);
@@ -818,7 +834,7 @@ export function insertSharePointCitations(
       const normalizedLine = normalizeForMatch(base);
 
       for (const alias of sortedAliases) {
-        if (!normalizedLine.startsWith(alias)) {
+        if (!startsWithAliasBoundary(normalizedLine, alias)) {
           continue;
         }
         const coord = nextCoordForAlias(aliasQueues, alias);

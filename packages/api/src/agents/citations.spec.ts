@@ -584,6 +584,19 @@ describe('insertSharePointCitations', () => {
     expect(readText(parts[0])).toBe(original);
   });
 
+  // Deloitte Custom Change: a prefix match must stop at a word boundary, so a short title like
+  // "Archive" doesn't consume an unrelated line like "Archived files" just because it's a string prefix.
+  it('does not anchor a line whose title match is only a partial word', () => {
+    const original = '- Archived files – last modified today';
+    const parts = [textPart(original)];
+    insertSharePointCitations(
+      parts,
+      [mcpAttachment([{ toolName: 'sp_search', serverName: 'sharepoint', title: 'Archive', content: 'a' }])],
+      0,
+    );
+    expect(readText(parts[0])).toBe(original);
+  });
+
   // Deloitte Custom Change: SharePoint results are just as often rendered as a markdown table as
   // a bulleted list, so a title must be matched cell-by-cell, not only at the start of the line.
   it('anchors a markdown table row by matching the cell containing the title', () => {
@@ -614,6 +627,20 @@ describe('insertSharePointCitations', () => {
     expect(rows).toHaveLength(3);
     expect(rows[2].split('|')).toHaveLength(5);
     expect(rows[2]).toContain('| AISolutionStudio |');
+  });
+
+  it('does not anchor a table row whose cell match is only a partial word', () => {
+    const original =
+      '| File Name | Location | Last Modified |\n' +
+      '|---|---|---|\n' +
+      '| Archived Q3 Report | AISolutionStudio | 9 Sep 2026 |';
+    const parts = [textPart(original)];
+    insertSharePointCitations(
+      parts,
+      [mcpAttachment([{ toolName: 'sp_search', serverName: 'sharepoint', title: 'Archive', content: 'a' }])],
+      0,
+    );
+    expect(readText(parts[0])).toBe(original);
   });
 
   it('does not anchor a markdown table separator row', () => {
