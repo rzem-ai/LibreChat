@@ -644,8 +644,11 @@ function normalizeForMatch(text: string): string {
 
 /** Strips a real file extension (`.xlsx`, `.docx`, `.loop`, ...) off a title, or returns undefined if it has none. */
 function stripExtension(title: string): string | undefined {
-  const match = title.match(/^(.+)\.[a-z0-9]{1,6}$/i);
-  return match?.[1];
+  const match = title.match(/^(.+)\.([a-z0-9]{1,6})$/i);
+  if (!match || !/[a-z]/i.test(match[2])) {
+    return undefined;
+  }
+  return match[1];
 }
 
 interface SharePointTitleCoord {
