@@ -759,13 +759,16 @@ export function insertSharePointCitations(
         const extensionStrippedAlias = normalizeForMatch(withoutExtension);
         if (extensionStrippedAlias !== fullAlias) {
           const existingQueue = aliasQueues.get(extensionStrippedAlias);
-          if (!existingQueue && fullQueue) {
-            aliasQueues.set(extensionStrippedAlias, fullQueue);
-          } else {
-            registerAlias(extensionStrippedAlias, coord);
+          if (existingQueue !== fullQueue) {
+            if (existingQueue) {
+              registerAlias(extensionStrippedAlias, coord);
+            } else if (fullQueue) {
+              aliasQueues.set(extensionStrippedAlias, fullQueue);
+            }
           }
         }
       }
+    });
     turn += 1;
   }
 
