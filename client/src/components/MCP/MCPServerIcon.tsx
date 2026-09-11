@@ -1,6 +1,5 @@
 import { useIsDarkMode } from '~/hooks/MCP';
 import { resolveThemedIconPaths, type ThemedIconPaths } from './mcpServerUtils';
-import { cn } from '~/utils';
 
 // Deloitte Custom Change: light/dark themed MCP server icons.
 interface MCPServerIconProps extends Partial<ThemedIconPaths> {

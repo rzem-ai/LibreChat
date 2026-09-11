@@ -655,8 +655,11 @@ function normalizeForMatch(text: string): string {
 
 /** Strips a real file extension (`.xlsx`, `.docx`, `.loop`, ...) off a title, or returns undefined if it has none. */
 function stripExtension(title: string): string | undefined {
-  const match = title.match(/^(.+)\.[a-z0-9]{1,6}$/i);
-  return match?.[1];
+  const match = title.match(/^(.+)\.([a-z0-9]{1,6})$/i);
+  if (!match || !/[a-z]/i.test(match[2])) {
+    return undefined;
+  }
+  return match[1];
 }
 
 interface SharePointTitleCoord {
@@ -750,14 +753,19 @@ export function insertSharePointCitations(
       const coord: SharePointTitleCoord = { turn, fileIndex };
       const fullAlias = normalizeForMatch(source.title);
       registerAlias(fullAlias, coord);
+      const fullQueue = aliasQueues.get(fullAlias);
       const withoutExtension = stripExtension(source.title);
       if (withoutExtension) {
         const extensionStrippedAlias = normalizeForMatch(withoutExtension);
         if (extensionStrippedAlias !== fullAlias) {
-          registerAlias(extensionStrippedAlias, coord);
+          const existingQueue = aliasQueues.get(extensionStrippedAlias);
+          if (!existingQueue && fullQueue) {
+            aliasQueues.set(extensionStrippedAlias, fullQueue);
+          } else {
+            registerAlias(extensionStrippedAlias, coord);
+          }
         }
       }
-    });
     turn += 1;
   }
 
@@ -924,7 +932,7 @@ export async function applyEndOfTraceCitations({
       const usedCoords = insertSharePointCitations(contentParts, mcpAttachments, turnOffset);
       // Listing sources (sp_search/sp_list_*/sp_get_*) always skip the lexical pass —
       // their short filename+URL content isn't safe input for a sentence splitter that
-      // breaks on periods, so one the line-matcher missed should get no citation, not a
+      // breaks on periods, so one that the line-matcher missed should get no citation, not a
       // garbled one. A `sp_read_file` source only skips the lexical pass if the
       // line-matcher already anchored it (avoids double-citing); otherwise — e.g. answered
       // as prose/a table instead of a filename-prefixed line — it still gets a shot at the
