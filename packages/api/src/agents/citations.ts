@@ -536,12 +536,17 @@ export function insertMCPCitations(
 
 /**
  * Deloitte Custom Change
- * Force-appends a citation anchor for every MCP source that wasn't already
- * anchored by the lexical `insertMCPCitations` pass — so a source is always
- * cited, not only when the model's phrasing happened to overlap it.
- * Mirrors the exact turn-advancement rule `useSearchResultsByTurn` depends on:
- * the turn counter advances for every attachment whose `sources` array is
- * present, even an empty one.
+ * Force-appends a citation anchor for every disclaimer-bearing or SharePoint
+ * MCP source that wasn't already anchored by the lexical `insertMCPCitations`
+ * pass — so those sources are always cited, not only when the model's
+ * phrasing happened to overlap them. Scoped to disclaimer-bearing attachments
+ * (e.g. KX) and SharePoint sources specifically, rather than every MCP
+ * toolset: a source that never surfaces in the answer at all (e.g. an
+ * AFR/feed/entity search hit the model chose not to discuss) should not get a
+ * citation chip for text the user never reads about. Mirrors the exact
+ * turn-advancement rule `useSearchResultsByTurn` depends on: the turn counter
+ * advances for every attachment whose `sources` array is present, even an
+ * empty one.
  */
 export function appendGuaranteedMCPCitations(
   contentParts: TMessageContentParts[],
@@ -552,11 +557,17 @@ export function appendGuaranteedMCPCitations(
   const missingAnchors: string[] = [];
   let turn = turnOffset;
   for (const attachment of mcpAttachments) {
-    const payload = attachment[Tools.mcp_results] as { sources?: MCPResultSource[] } | undefined;
+    const payload = attachment[Tools.mcp_results] as
+      | { sources?: MCPResultSource[]; disclaimer?: string }
+      | undefined;
     if (!payload?.sources) {
       continue;
     }
-    payload.sources.forEach((_source, fileIndex) => {
+    const hasDisclaimer = Boolean(payload.disclaimer);
+    payload.sources.forEach((source, fileIndex) => {
+      if (!hasDisclaimer && !isSharePointSource(source)) {
+        return;
+      }
       const coord = `${turn}:${fileIndex}`;
       if (!usedCoords.has(coord)) {
         missingAnchors.push(`${ANCHOR_MARKER}turn${turn}mcp${fileIndex}`);

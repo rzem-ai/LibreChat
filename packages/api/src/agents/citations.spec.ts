@@ -735,23 +735,32 @@ describe('appendGuaranteedMCPCitations', () => {
     expect(readText(parts[0])).toContain(`${MARKER}turn0mcp0`);
   });
 
-  // Deloitte Custom Change: verify a non-disclaimer source is still force-anchored (behavior is
-  // no longer gated on the attachment carrying a disclaimer).
-  it('force-anchors a non-disclaimer attachment that the lexical pass missed', () => {
+  // Deloitte Custom Change: verify a SharePoint source is force-anchored even without a
+  // disclaimer (the guarantee is scoped to disclaimer-bearing OR SharePoint sources).
+  it('force-anchors a non-disclaimer SharePoint source the lexical pass missed', () => {
     const original = 'The weather today has nothing to do with any of the sources.';
     const parts = [textPart(original)];
-    const usedCoords = insertMCPCitations(
-      parts,
-      [mcpAttachment([{ toolName: 'afr_search_news', serverName: 'afr', content: OTHER_ARTICLE }])],
-      0,
-    );
-    appendGuaranteedMCPCitations(
-      parts,
-      [mcpAttachment([{ toolName: 'afr_search_news', serverName: 'afr', content: OTHER_ARTICLE }])],
-      0,
-      usedCoords,
-    );
+    const attachments = [
+      mcpAttachment([
+        { toolName: 'sp_search', serverName: 'sharepoint', title: 'Report A.docx', content: 'a' },
+      ]),
+    ];
+    const usedCoords = insertMCPCitations(parts, attachments, 0);
+    appendGuaranteedMCPCitations(parts, attachments, 0, usedCoords);
     expect(readText(parts[0])).toContain(`${MARKER}turn0mcp0`);
+  });
+
+  // Deloitte Custom Change: a non-disclaimer, non-SharePoint source that the model never
+  // referenced in the answer must not get a citation chip for text the user never reads about.
+  it('does not force-anchor a non-disclaimer, non-SharePoint source the lexical pass missed', () => {
+    const original = 'The weather today has nothing to do with any of the sources.';
+    const parts = [textPart(original)];
+    const attachments = [
+      mcpAttachment([{ toolName: 'afr_search_news', serverName: 'afr', content: OTHER_ARTICLE }]),
+    ];
+    const usedCoords = insertMCPCitations(parts, attachments, 0);
+    appendGuaranteedMCPCitations(parts, attachments, 0, usedCoords);
+    expect(readText(parts[0])).toBe(original);
   });
 
   it('does not duplicate an anchor for a source the lexical pass already matched', () => {
