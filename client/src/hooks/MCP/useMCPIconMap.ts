@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import { isDark, useMediaQuery, useTheme } from '@librechat/client';
 import { normalizeServerName, buildServerNameAliases } from 'librechat-data-provider';
 import type { MCPServerDBObjectResponse } from 'librechat-data-provider';
-import { useMCPServersQuery } from '~/data-provider';
 import { resolveThemedIconPaths } from '~/components/MCP/mcpServerUtils';
+import { useMCPServersQuery } from '~/data-provider';
 
 /**
  * Deloitte Custom Change: maps each configured MCP server's normalized name (the
@@ -89,7 +89,9 @@ export function useMCPServerNames(): string[] {
     }
     const rawNames = Object.keys(servers);
     const aliases = buildServerNameAliases(rawNames);
-    return Array.from(new Set([...rawNames.map(normalizeServerName), ...rawNames, ...aliases.keys()]));
+    return Array.from(
+      new Set([...rawNames.map(normalizeServerName), ...rawNames, ...aliases.keys()]),
+    );
   }, [servers]);
 }
 
@@ -107,4 +109,3 @@ export function useMCPServerTitleMap(): Map<string, string> {
     return map;
   }, [configMap]);
 }
-

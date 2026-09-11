@@ -2,8 +2,8 @@ import React from 'react';
 import { Spinner } from '@librechat/client';
 import { PlugZap, SlidersHorizontal, X } from 'lucide-react';
 import type { MCPServerStatus } from 'librechat-data-provider';
-import { useLocalize } from '~/hooks';
 import { isSilentlyConnectableOboServer } from './mcpServerUtils';
+import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
 let localize: ReturnType<typeof useLocalize>;
@@ -94,7 +94,10 @@ export default function MCPServerStatusIcon({
   // checkbox, so no separate action is needed — but an errored OBO server still needs
   // an explicit retry, since silent auto-connect won't keep retrying on its own.
   if (connectionState === 'disconnected' || connectionState === 'error') {
-    if (connectionState === 'disconnected' && isSilentlyConnectableOboServer(serverStatus, hasCustomUserVars)) {
+    if (
+      connectionState === 'disconnected' &&
+      isSilentlyConnectableOboServer(serverStatus, hasCustomUserVars)
+    ) {
       return null;
     }
     return <ConnectButton serverName={serverName} onConfigClick={onConfigClick} />;

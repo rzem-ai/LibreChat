@@ -43,14 +43,8 @@ export default function MCPServerCard({
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const statusIconProps = getServerStatusIconProps(server.serverName);
-  const {
-    serverStatus,
-    onConfigClick,
-    isInitializing,
-    canCancel,
-    onCancel,
-    hasCustomUserVars,
-  } = statusIconProps;
+  const { serverStatus, onConfigClick, isInitializing, canCancel, onCancel, hasCustomUserVars } =
+    statusIconProps;
 
   const canEditThisServer = hasPermissions(server.effectivePermissions, PermissionBits.EDIT);
   const displayName = server.config?.title || server.serverName;

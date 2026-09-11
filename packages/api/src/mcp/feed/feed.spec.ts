@@ -243,4 +243,79 @@ describe('buildMCPResultSources', () => {
 
     expect(result.sources).toEqual([]);
   });
+
+  it('splits an sp_search response (SharePoint) into one source per hit', () => {
+    const content = JSON.stringify({
+      results: [
+        {
+          rank: 1,
+          summary: 'Q3 budget summary for the finance team.',
+          resource: {
+            name: 'Q3 Budget.xlsx',
+            webUrl: 'https://contoso.sharepoint.com/sites/finance/Q3%20Budget.xlsx',
+          },
+        },
+      ],
+      total: 1,
+    });
+    const result = buildMCPResultSources({
+      toolName: 'sp_search',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+    });
+
+    expect(result.sources).toHaveLength(1);
+    expect(result.sources[0]).toMatchObject({
+      toolName: 'sp_search',
+      serverName: 'cleartrack-mcp-gateway',
+      title: 'Q3 Budget.xlsx',
+      link: 'https://contoso.sharepoint.com/sites/finance/Q3%20Budget.xlsx',
+    });
+  });
+
+  it('splits an sp_list_items response (SharePoint) into one source per item', () => {
+    const content = JSON.stringify({
+      items: [
+        {
+          id: '1',
+          name: 'Report.pdf',
+          type: 'file',
+          webUrl: 'https://contoso.sharepoint.com/sites/finance/Report.pdf',
+        },
+      ],
+      count: 1,
+    });
+    const result = buildMCPResultSources({
+      toolName: 'sp_list_items',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+    });
+
+    expect(result.sources).toHaveLength(1);
+    expect(result.sources[0]).toMatchObject({ title: 'Report.pdf' });
+  });
+
+  it('suppresses citation entirely for unrecognized JSON from the SharePoint toolset', () => {
+    const result = buildMCPResultSources({
+      toolName: 'sp_get_item',
+      serverName: 'cleartrack-mcp-gateway',
+      content: JSON.stringify({ statusCode: 500, message: 'Internal error' }),
+    });
+
+    expect(result.sources).toEqual([]);
+  });
+
+  it('does not reclassify a non-SharePoint tool result that happens to share a SharePoint payload shape', () => {
+    const content = JSON.stringify({
+      items: [{ id: '1', name: 'Report.pdf', webUrl: 'https://contoso.sharepoint.com/sites/finance/Report.pdf' }],
+      count: 1,
+    });
+    const result = buildMCPResultSources({
+      toolName: 'some_other_tool',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+    });
+
+    expect(result.sources).toEqual([{ toolName: 'some_other_tool', serverName: 'cleartrack-mcp-gateway', content }]);
+  });
 });

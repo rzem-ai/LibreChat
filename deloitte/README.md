@@ -191,7 +191,7 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 34. `BEDROCK_GATEWAY_URL=http://gateway-proxy:8081`
 35. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
 36. `MCP_GATEWAY_URL=https://mcp-gw-dev.ctk.au.deloitte.com/mcp`
-37. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims`
+37. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims,sharepoint`
 38. `MCP_GATEWAY_OBO_SCOPE=api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user`
 39. `MODEL_PRICING_REFERENCE_MODEL_ID=gpt-56-luna`
 40. `MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT=0.1`

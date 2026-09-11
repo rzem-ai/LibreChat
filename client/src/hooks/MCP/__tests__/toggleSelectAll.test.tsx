@@ -1,6 +1,6 @@
 import React from 'react';
-import { Provider as JotaiProvider, createStore } from 'jotai';
 import { renderHook, act } from '@testing-library/react';
+import { Provider as JotaiProvider, createStore } from 'jotai';
 import { useMCPServerManager } from '../useMCPServerManager';
 
 const mockShowToast = jest.fn();
