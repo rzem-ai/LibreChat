@@ -594,6 +594,31 @@ export function createUserMethods(
     return null;
   }
 
+  /**
+   * Atomically merges new course ratings into the user's tutorialRatings map
+   * using MongoDB dot-notation $set so concurrent requests targeting different
+   * keys cannot overwrite each other (no JS read-merge-write needed for the
+   * merge itself — the cap check in the controller still requires one read).
+   *
+   * runValidators is intentionally omitted: values are pre-validated by
+   * validateTutorialStateUpdate before this method is called.
+   */
+  async function mergeTutorialRatings(
+    userId: string,
+    ratings: Record<string, number>,
+  ): Promise<IUser | null> {
+    const User = mongoose.models.User;
+    const dotUpdate: Record<string, number> = {};
+    for (const [key, value] of Object.entries(ratings)) {
+      dotUpdate[`tutorialRatings.${key}`] = value;
+    }
+    const updated = await User.findByIdAndUpdate(userId, { $set: dotUpdate }, { new: true }).lean<IUser>();
+    if (updated) {
+      await invalidateAuthUserDocCache(userId);
+    }
+    return updated;
+  }
+
   return {
     findUser,
     findUsers,
@@ -607,6 +632,7 @@ export function createUserMethods(
     deleteUserById,
     updateUserPlugins,
     toggleUserMemories,
+    mergeTutorialRatings,
   };
 }
 

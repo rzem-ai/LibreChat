@@ -17,7 +17,7 @@ const RATING_MAX = 5;
  * Prevents document bloat and limits unbounded writes.
  * Easy to raise in future — this is the only constant to change.
  */
-const MAX_TUTORIAL_RATINGS = 50;
+export const MAX_TUTORIAL_RATINGS = 50;
 
 export interface TutorialStateUpdate {
   tutorialPromptSeen?: boolean;

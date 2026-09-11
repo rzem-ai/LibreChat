@@ -12,6 +12,7 @@ const {
   deleteAllSharedLinksWithCleanup,
   validateTutorialStateUpdate,
   toTutorialStateResponse,
+  MAX_TUTORIAL_RATINGS,
 } = require('@librechat/api');
 const {
   Tools,
@@ -140,21 +141,35 @@ const updateTutorialStateController = async (req, res) => {
 
     const { update } = result;
 
-    // If updating ratings, merge with the existing stored ratings to preserve
-    // any ratings for courses not included in this request.
-    // Defensive: getUserById always returns a lean plain object so instanceof Map
-    // is currently always false, but the guard protects against future refactors
-    // that might return a hydrated Mongoose document instead.
+    let user;
+
     if (update.tutorialRatings) {
+      // Read existing ratings solely for the cap check — the actual DB write
+      // uses per-key dot-notation $set (mergeTutorialRatings) so concurrent
+      // requests targeting different keys cannot overwrite each other.
       const existing = await db.getUserById(req.user.id, 'tutorialRatings');
       const existingRatings =
         existing?.tutorialRatings instanceof Map
           ? Object.fromEntries(existing.tutorialRatings)
           : existing?.tutorialRatings || {};
-      update.tutorialRatings = { ...existingRatings, ...update.tutorialRatings };
+      const merged = { ...existingRatings, ...update.tutorialRatings };
+      if (Object.keys(merged).length > MAX_TUTORIAL_RATINGS) {
+        return res.status(400).json({
+          message: `tutorialRatings cannot exceed ${MAX_TUTORIAL_RATINGS} entries`,
+        });
+      }
+
+      // Write ratings atomically via per-key $set; write any other fields
+      // (e.g. tutorialPromptSeen) separately via updateUser if present.
+      user = await db.mergeTutorialRatings(req.user.id, update.tutorialRatings);
+      const { tutorialRatings: _omitted, ...rest } = update;
+      if (Object.keys(rest).length > 0) {
+        user = (await db.updateUser(req.user.id, rest)) ?? user;
+      }
+    } else {
+      user = await db.updateUser(req.user.id, update);
     }
 
-    const user = await db.updateUser(req.user.id, update);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
