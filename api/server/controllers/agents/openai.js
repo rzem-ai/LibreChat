@@ -474,12 +474,13 @@ const executeOpenAIChatCompletion = async (envelope, { req, res }) => {
     // Create tracker for streaming or aggregator for non-streaming
     const tracker = isStreaming ? createOpenAIStreamTracker() : null;
     const aggregator = isStreaming ? null : createOpenAIContentAggregator();
-    // Deloitte Custom Change: maps Agent API tool IDs to response indexes, which differ by event type.
+    // Deloitte Custom Change: reconciles Agent API tool IDs, run-step positions, and seed state.
     const toolCallIndexesById = new Map();
     const toolCallIndexesByStepId = new Map();
     const seededToolCallIndexes = new Set();
     let nextToolCallIndex = 0;
 
+    // Deloitte Custom Change: assigns a distinct OpenAI response index to every Agent API tool call.
     const getToolCallIndex = (toolId, eventIndex) => {
       if (toolId && toolCallIndexesById.has(toolId)) {
         return toolCallIndexesById.get(toolId);
@@ -681,6 +682,7 @@ const executeOpenAIChatCompletion = async (envelope, { req, res }) => {
           for (const [toolPosition, tc] of stepDetails.tool_calls.entries()) {
             const toolId = tc.id ?? '';
             const toolIndex = getToolCallIndex(toolId, data.index ?? nextToolCallIndex);
+            // Deloitte Custom Change: preserves the step-local position needed by later delta events.
             if (data.id) {
               const stepIndexes = toolCallIndexesByStepId.get(data.id) ?? new Map();
               stepIndexes.set(tc.index ?? toolPosition, toolIndex);
@@ -696,6 +698,7 @@ const executeOpenAIChatCompletion = async (envelope, { req, res }) => {
                 arguments: isStreaming ? '' : serializeToolArguments(tc.args),
               },
             };
+            // Deloitte Custom Change: distinguishes complete run-step arguments from delta-built arguments.
             if (!isStreaming && toolCall.function.arguments) {
               seededToolCallIndexes.add(toolIndex);
             }
@@ -731,6 +734,7 @@ const executeOpenAIChatCompletion = async (envelope, { req, res }) => {
               continue;
             }
 
+            // Deloitte Custom Change: resolves delta-only local indexes through their originating run step.
             const stepIndexes = data.id && toolCallIndexesByStepId.get(data.id);
             const toolIndex =
               (tc.id && toolCallIndexesById.get(tc.id)) ??
@@ -764,6 +768,7 @@ const executeOpenAIChatCompletion = async (envelope, { req, res }) => {
         }
       }),
 
+      // Deloitte Custom Change: reconciles the final non-streaming Agent API tool-call payload.
       on_run_step_completed: createHandler((data) => {
         if (isStreaming) {
           return;

@@ -261,6 +261,7 @@ describe('OpenAIChatCompletionController', () => {
 
     const controller = require('../openai');
     OpenAIChatCompletionController = controller.OpenAIChatCompletionController;
+    // Deloitte Custom Change: give each aggregation test isolated OpenAI helper state.
     const {
       createRun,
       createOpenAIContentAggregator,
@@ -296,6 +297,7 @@ describe('OpenAIChatCompletionController', () => {
       },
       on: jest.fn(),
     };
+    // Deloitte Custom Change: retain each test's Agent API flags after request validation.
     const { validateRequest } = require('@librechat/api');
     validateRequest.mockReturnValue({ request: req.body });
 
@@ -568,6 +570,7 @@ describe('OpenAIChatCompletionController', () => {
 
   // Deloitte Custom Change: protects Agent API skill-tool argument reconciliation across event types.
   describe('tool call argument aggregation', () => {
+    // Deloitte Custom Change: replays Agent API events through the controller's registered handlers.
     const runWithEvents = (events) => {
       const { createRun } = require('@librechat/api');
       createRun.mockImplementationOnce(async ({ customHandlers }) => ({
@@ -579,6 +582,7 @@ describe('OpenAIChatCompletionController', () => {
       }));
     };
 
+    // Deloitte Custom Change: reads the OpenAI-compatible calls produced by a non-streaming response.
     const getToolCalls = () => {
       const { buildNonStreamingResponse } = require('@librechat/api');
       return Array.from(buildNonStreamingResponse.mock.calls.at(-1)[3].values());
