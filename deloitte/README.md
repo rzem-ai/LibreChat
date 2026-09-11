@@ -171,7 +171,7 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 14. `OPENID_REUSE_TOKENS=true`
 15. `OPENID_REQUIRED_ROLE=`
 16. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
-17. `OPENID_BUTTON_LABEL="Login with SSO"`
+17. `OPENID_BUTTON_LABEL="Continue with SSO"`
 18. `OPENID_IMAGE_URL=/assets/favicon.svg`
 19. `ALLOW_EMAIL_LOGIN=false`
 20. `ALLOW_REGISTRATION=false`
