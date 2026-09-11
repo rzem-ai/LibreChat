@@ -106,3 +106,26 @@ export function validateTutorialStateUpdate(body: unknown): TutorialStateValidat
 
   return { update };
 }
+
+/**
+ * Shapes a user document into the tutorial state response body.
+ *
+ * Defensively converts tutorialRatings from a Mongoose Map to a plain object
+ * before serialisation — JSON.stringify(Map) produces {} which would silently
+ * drop all stored ratings. getUserById/updateUser both call .lean() today so
+ * the Map branch is currently unreachable, but the guard protects against
+ * future refactors that return a hydrated Mongoose document instead.
+ */
+export function toTutorialStateResponse(user: {
+  tutorialPromptSeen?: boolean | null;
+  tutorialRatings?: Map<string, number> | Record<string, number> | null;
+}): { tutorialPromptSeen: boolean; tutorialRatings: Record<string, number> } {
+  const tutorialRatings =
+    user.tutorialRatings instanceof Map
+      ? Object.fromEntries(user.tutorialRatings)
+      : (user.tutorialRatings ?? {});
+  return {
+    tutorialPromptSeen: !!user.tutorialPromptSeen,
+    tutorialRatings,
+  };
+}

@@ -11,6 +11,7 @@ const {
   deleteAgentCheckpoints,
   deleteAllSharedLinksWithCleanup,
   validateTutorialStateUpdate,
+  toTutorialStateResponse,
 } = require('@librechat/api');
 const {
   Tools,
@@ -119,10 +120,7 @@ const getTutorialStateController = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.status(200).json({
-      tutorialPromptSeen: !!user.tutorialPromptSeen,
-      tutorialRatings: user.tutorialRatings || {},
-    });
+    res.status(200).json(toTutorialStateResponse(user));
   } catch (error) {
     logger.error('Error fetching tutorial state:', error);
     res.status(500).json({ message: 'Error fetching tutorial state' });
@@ -160,10 +158,7 @@ const updateTutorialStateController = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.status(200).json({
-      tutorialPromptSeen: !!user.tutorialPromptSeen,
-      tutorialRatings: user.tutorialRatings || {},
-    });
+    res.status(200).json(toTutorialStateResponse(user));
   } catch (error) {
     logger.error('Error updating tutorial state:', error);
     res.status(500).json({ message: 'Error updating tutorial state' });
