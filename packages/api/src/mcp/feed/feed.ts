@@ -19,6 +19,8 @@ const FEED_ROOT_PATTERN = /^\s*(<\?xml[^>]*\?>\s*)?<(rss|feed)[\s>]/i;
  */
 const KNOWN_MCP_TOOLSET_PREFIXES = ['afr_', 'ibisworld_', 'desc_', 'gims_', 'kx_', 'sp_'];
 
+const SHAREPOINT_TOOL_PREFIX = 'sp_';
+
 function isKnownMcpToolset(toolName: string): boolean {
   return KNOWN_MCP_TOOLSET_PREFIXES.some((prefix) => toolName.startsWith(prefix));
 }
@@ -194,6 +196,8 @@ export function buildMCPResultSources({
     return entitySources;
   }
 
-  const sharePointSources = buildSharePointSources({ toolName, serverName, content });
+  const sharePointSources = toolName.startsWith(SHAREPOINT_TOOL_PREFIX)
+    ? buildSharePointSources({ toolName, serverName, content })
+    : undefined;
   return sharePointSources ?? fallback;
 }

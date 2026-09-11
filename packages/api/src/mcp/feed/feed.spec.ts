@@ -304,4 +304,18 @@ describe('buildMCPResultSources', () => {
 
     expect(result.sources).toEqual([]);
   });
+
+  it('does not reclassify a non-SharePoint tool result that happens to share a SharePoint payload shape', () => {
+    const content = JSON.stringify({
+      items: [{ id: '1', name: 'Report.pdf', webUrl: 'https://contoso.sharepoint.com/sites/finance/Report.pdf' }],
+      count: 1,
+    });
+    const result = buildMCPResultSources({
+      toolName: 'some_other_tool',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+    });
+
+    expect(result.sources).toEqual([{ toolName: 'some_other_tool', serverName: 'cleartrack-mcp-gateway', content }]);
+  });
 });
