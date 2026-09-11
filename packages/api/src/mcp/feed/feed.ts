@@ -139,10 +139,13 @@ export function buildMCPResultSources({
   toolName,
   serverName,
   content,
+  args,
 }: {
   toolName: string;
   serverName: string;
   content: string;
+  /** Deloitte Custom Change: original tool call args, forwarded to {@link buildReportSources} for link resolution (e.g. `code`/`country`). */
+  args?: Record<string, unknown>;
 }): MCPSourcesResult {
   const fallback: MCPSourcesResult = {
     sources: isKnownMcpToolset(toolName) ? [] : [{ toolName, serverName, content }],
@@ -171,7 +174,7 @@ export function buildMCPResultSources({
     }
   }
 
-  const reportSources = buildReportSources({ toolName, serverName, content });
+  const reportSources = buildReportSources({ toolName, serverName, content, args });
   if (reportSources) {
     return reportSources;
   }

@@ -769,15 +769,15 @@ describe('appendGuaranteedMCPCitations', () => {
   });
 
   it('is a no-op when the lexical pass already matched every source', () => {
-    const original = 'Nothing to see here.';
-    const parts = [textPart(original)];
-    appendGuaranteedMCPCitations(
-      parts,
-      [mcpAttachment([{ toolName: 'afr_search_news', serverName: 'afr', content: OTHER_ARTICLE }])],
-      0,
-      new Set(['0:0']),
-    );
-    expect(readText(parts[0])).toBe(original);
+    const parts = [textPart(`${OTHER_ARTICLE} And that's the news.`)];
+    const attachments = [
+      mcpAttachment([{ toolName: 'afr_search_news', serverName: 'afr', content: OTHER_ARTICLE }]),
+    ];
+    const usedCoords = insertMCPCitations(parts, attachments, 0);
+    const afterLexicalPass = readText(parts[0]);
+    expect(afterLexicalPass).toContain(`${MARKER}turn0mcp0`);
+    appendGuaranteedMCPCitations(parts, attachments, 0, usedCoords);
+    expect(readText(parts[0])).toBe(afterLexicalPass);
   });
 });
 

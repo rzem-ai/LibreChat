@@ -1,4 +1,5 @@
 import type { MCPResultSource, MCPSourcesResult } from 'librechat-data-provider';
+import { resolveMCPSourceLink } from '../linkTemplates';
 
 /** Upper bound on entities extracted from a single search/list result. */
 const MAX_ENTITY_ITEMS = 30;
@@ -18,34 +19,44 @@ interface EntityListPayload {
   };
 }
 
+/** Builds a single entity's {@link MCPResultSource}, or undefined if it has no identifiable field. */
 function buildEntitySource(
   toolName: string,
   serverName: string,
   entity: EntityRecord,
 ): MCPResultSource | undefined {
-  if (!entity.entityName) {
+  const entityName = typeof entity.entityName === 'string' ? entity.entityName.trim() : undefined;
+  const entityID =
+    typeof entity.entityID === 'string' ? entity.entityID.trim() || undefined : entity.entityID;
+  if (!entityName && entityID == null) {
     return undefined;
   }
+  const title = entityName || `Entity ${entityID}`;
   const metadataLines = [
-    entity.entityID != null ? `Entity ID: ${entity.entityID}` : undefined,
+    entityID != null ? `Entity ID: ${entityID}` : undefined,
     entity.lastApprovedDate ? `Last approved: ${entity.lastApprovedDate}` : undefined,
   ].filter(Boolean);
   return {
     toolName,
     serverName,
-    title: entity.entityName,
-    content: [entity.entityName, metadataLines.join('\n')].filter(Boolean).join('\n\n'),
+    title,
+    link: resolveMCPSourceLink(toolName, { entityID }),
+    content: [title, metadataLines.join('\n')].filter(Boolean).join('\n\n'),
   };
 }
 
 /**
+ * Deloitte Custom Change
  * Parses the DESC/GIMS entity search/list payload shape
  * (`{ data: { items: [{ entityID, entityName, lastApprovedDate }] } }`, or a
  * single entity directly under `data` for `get_entity_by_id`-style calls)
  * into one {@link MCPResultSource} per entity, so each citation can point at
- * the specific entity instead of the whole raw JSON blob. Returns undefined
- * (letting the caller fall back) when the content isn't this entity shape,
- * or no entity yields a usable name.
+ * the specific entity instead of the whole raw JSON blob. Falls back to
+ * `entityID` as the title when `entityName` is missing. Populates `link` once
+ * a matching entry exists in {@link resolveMCPSourceLink}'s template registry
+ * — until then it stays unset. Returns undefined (letting the caller fall
+ * back) when the content isn't this entity shape, or no entity has any
+ * identifiable field.
  */
 export function buildEntitySources({
   toolName,

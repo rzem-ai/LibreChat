@@ -55,6 +55,29 @@ function extractMCPTextContent(content) {
   return text || null;
 }
 
+/**
+ * Deloitte Custom Change
+ * Normalizes a ToolEnd callback's `data.input` (the tool's original call
+ * arguments) into a plain object, so citation-link builders can read fields
+ * like `code`/`country` that never appear in the tool's response body.
+ * @param {unknown} input
+ * @returns {Record<string, unknown> | undefined}
+ */
+function normalizeMCPToolArgs(input) {
+  if (input && typeof input === 'object' && !Array.isArray(input)) {
+    return input;
+  }
+  if (typeof input !== 'string') {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(input);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 class ModelEndHandler {
   /**
    * @param {Array<UsageMetadata>} collectedUsage
@@ -757,6 +780,7 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null, jo
     if (!output.artifact && !isMCPTool) {
       return;
     }
+    const args = normalizeMCPToolArgs(data?.input);
 
     if (output.artifact?.[Tools.file_search]) {
       artifactPromises.push(
@@ -860,6 +884,7 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null, jo
               toolName,
               serverName,
               content: rawContent,
+              args,
             });
             const attachment = {
               type: Tools.mcp_results,
@@ -1129,6 +1154,7 @@ function createResponsesToolEndCallback({ req, res, tracker, artifactPromises })
     if (!output.artifact && !isMCPTool) {
       return;
     }
+    const args = normalizeMCPToolArgs(data?.input);
 
     if (output.artifact?.[Tools.file_search]) {
       artifactPromises.push(
@@ -1206,6 +1232,7 @@ function createResponsesToolEndCallback({ req, res, tracker, artifactPromises })
               toolName,
               serverName,
               content: rawContent,
+              args,
             });
             const attachment = {
               type: Tools.mcp_results,
@@ -1460,4 +1487,5 @@ module.exports = {
   markSummarizationUsage,
   buildSummarizationHandlers,
   createResponsesToolEndCallback,
+  normalizeMCPToolArgs,
 };
