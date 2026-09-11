@@ -9,7 +9,6 @@ import { useLocalize } from '~/hooks';
 import { getStatusDotColor } from './MCPStatusBadge';
 import MCPServerDialog from './MCPServerDialog';
 import MCPCardActions from './MCPCardActions';
-import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
 interface MCPServerCardProps {
