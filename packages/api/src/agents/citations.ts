@@ -742,14 +742,19 @@ export function insertSharePointCitations(
       const coord: SharePointTitleCoord = { turn, fileIndex };
       const fullAlias = normalizeForMatch(source.title);
       registerAlias(fullAlias, coord);
+      const fullQueue = aliasQueues.get(fullAlias);
       const withoutExtension = stripExtension(source.title);
       if (withoutExtension) {
         const extensionStrippedAlias = normalizeForMatch(withoutExtension);
         if (extensionStrippedAlias !== fullAlias) {
-          registerAlias(extensionStrippedAlias, coord);
+          const existingQueue = aliasQueues.get(extensionStrippedAlias);
+          if (!existingQueue && fullQueue) {
+            aliasQueues.set(extensionStrippedAlias, fullQueue);
+          } else {
+            registerAlias(extensionStrippedAlias, coord);
+          }
         }
       }
-    });
     turn += 1;
   }
 
