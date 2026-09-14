@@ -293,6 +293,73 @@ function splitIntoSentences(text: string): string[] {
   return sentences;
 }
 
+/** A half-open `[start, end)` character range in the original text to exclude from anchoring. */
+interface ExcludedRange {
+  start: number;
+  end: number;
+}
+
+/** Matches a fenced-code opening line: 3+ backticks, optionally followed by a language tag. */
+const FENCE_OPEN_LINE = /^(`{3,})[^`\n]*$/;
+
+/**
+ * Finds fenced-code-block ranges (absolute character offsets into `text`) so citation
+ * anchors are never inserted inside them. An artifact body is always wrapped in a fence
+ * (see `api/app/clients/prompts/artifacts.js`), and the frontend's citation renderer only
+ * transforms markdown prose nodes, not fenced-code node content — an anchor placed inside
+ * a fence would render as literal text (e.g. `turn0file0`) instead of a citation chip.
+ *
+ * Closing-fence detection requires at least as many backticks as the opening fence, so a
+ * shorter nested fence inside an artifact's body (e.g. a 3-backtick example inside its
+ * 4-backtick outer fence) doesn't prematurely close the range. When an opening fence has no
+ * matching close (a truncated stream), no range is recorded for it — current behavior is
+ * left unchanged for that edge case rather than guessing where the fence would have ended.
+ */
+function findFencedCodeRanges(text: string): ExcludedRange[] {
+  const ranges: ExcludedRange[] = [];
+  const lines = text.split('\n');
+  const lineStarts: number[] = new Array(lines.length);
+  let offset = 0;
+  for (let i = 0; i < lines.length; i++) {
+    lineStarts[i] = offset;
+    offset += lines[i].length + 1;
+  }
+
+  let i = 0;
+  while (i < lines.length) {
+    const openMatch = lines[i].trimStart().match(FENCE_OPEN_LINE);
+    if (!openMatch) {
+      i += 1;
+      continue;
+    }
+
+    const fenceLen = openMatch[1].length;
+    const closeLineRegex = new RegExp(`^\`{${fenceLen},}$`);
+    let closeIndex = -1;
+    for (let j = i + 1; j < lines.length; j++) {
+      if (closeLineRegex.test(lines[j].trim())) {
+        closeIndex = j;
+        break;
+      }
+    }
+
+    if (closeIndex === -1) {
+      i += 1;
+      continue;
+    }
+
+    ranges.push({ start: lineStarts[i], end: lineStarts[closeIndex] + lines[closeIndex].length });
+    i = closeIndex + 1;
+  }
+
+  return ranges;
+}
+
+/** True when `offset` falls within any of `ranges` (few ranges per message — linear scan is fine). */
+function isWithinRanges(offset: number, ranges: ExcludedRange[]): boolean {
+  return ranges.some((range) => offset >= range.start && offset < range.end);
+}
+
 function containment(sentenceTokens: Set<string>, passageTokens: Set<string>): number {
   if (sentenceTokens.size === 0) {
     return 0;
@@ -414,6 +481,11 @@ function writeText(part: TMessageContentParts, value: string): void {
  * Deterministically inserts file citation anchors into the assistant's text
  * content parts by matching each sentence against the retrieved file_search
  * passages. Mutates the content parts in place. Pure and synchronous.
+ *
+ * A sentence sitting inside a fenced code block (e.g. an artifact body) is
+ * never anchored — the frontend's citation renderer only transforms markdown
+ * prose nodes, not fenced-code node content, so an anchor placed there would
+ * render as literal text (e.g. `turn0file0`) instead of a citation chip.
  */
 export function insertFileCitations(
   contentParts: TMessageContentParts[],
@@ -430,10 +502,21 @@ export function insertFileCitations(
       continue;
     }
 
+    const excludedRanges = findFencedCodeRanges(text);
     const sentences = splitIntoSentences(text);
     let lineCoords = new Set<string>();
+    let cursor = 0;
     const rebuilt = sentences
       .map((sentence) => {
+        const start = cursor;
+        cursor += sentence.length;
+        if (isWithinRanges(start, excludedRanges)) {
+          if (sentence.includes('\n')) {
+            lineCoords = new Set();
+          }
+          return sentence;
+        }
+
         const { anchors, coords } = anchorsForSentence(sentence, passages, {
           excludeCoords: lineCoords,
         });
@@ -505,10 +588,21 @@ export function insertMCPCitations(
       continue;
     }
 
+    const excludedRanges = findFencedCodeRanges(text);
     const sentences = splitIntoSentences(text);
     let lineCoords = new Set<string>();
+    let cursor = 0;
     const rebuilt = sentences
       .map((sentence) => {
+        const start = cursor;
+        cursor += sentence.length;
+        if (isWithinRanges(start, excludedRanges)) {
+          if (sentence.includes('\n')) {
+            lineCoords = new Set();
+          }
+          return sentence;
+        }
+
         const { anchors, coords } = anchorsForSentence(sentence, passages, {
           threshold: MCP_SIMILARITY_THRESHOLD,
           tokenizeFn: tokenizeStemmed,
@@ -800,7 +894,15 @@ export function insertSharePointCitations(
     }
 
     let changed = false;
+    const excludedRanges = findFencedCodeRanges(text);
+    let cursor = 0;
     const rebuiltLines = text.split('\n').map((line) => {
+      const lineStart = cursor;
+      cursor += line.length + 1;
+      if (isWithinRanges(lineStart, excludedRanges)) {
+        return line;
+      }
+
       const tableCells = splitTableRowCells(line);
       if (tableCells) {
         for (let cellIndex = 0; cellIndex < tableCells.length; cellIndex++) {

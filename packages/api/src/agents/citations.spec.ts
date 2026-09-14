@@ -216,6 +216,67 @@ describe('insertFileCitations', () => {
     ]);
     expect(parts[0]).toBe(ref);
   });
+
+  it('does not anchor text inside an artifact fenced code block, but still anchors surrounding prose', () => {
+    const original = [
+      'You can reserve a desk fourteen days in advance.',
+      '',
+      ':::artifact{identifier="desk-microsite" type="text/html" title="Desk Booking"}',
+      '````',
+      '<!-- You can reserve a desk fourteen days in advance. -->',
+      '<p>You can reserve a desk fourteen days in advance.</p>',
+      '````',
+      ':::',
+      '',
+      'Meeting rooms are booked via the calendar system.',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([
+        { fileId: 'fileA', content: DESK_CONTENT },
+        { fileId: 'fileB', content: MEETING_CONTENT },
+      ]),
+    ]);
+    const text = readText(parts[0]);
+    const lines = text.split('\n');
+
+    expect(lines[0]).toContain(`${MARKER}turn0file0`);
+    expect(lines[9]).toContain(`${MARKER}turn0file1`);
+    expect(lines[4]).not.toContain(MARKER);
+    expect(lines[5]).not.toContain(MARKER);
+  });
+
+  it('does not anchor text inside a plain (non-artifact) fenced code block', () => {
+    const original = [
+      '```',
+      'You can reserve a desk fourteen days in advance.',
+      '```',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('respects the outer fence length so a nested shorter fence does not close the range early', () => {
+    const original = [
+      ':::artifact{identifier="doc" type="text/markdown" title="Doc"}',
+      '````',
+      'Some intro text.',
+      '```',
+      'You can reserve a desk fourteen days in advance.',
+      '```',
+      'You can reserve a desk fourteen days in advance.',
+      '````',
+      ':::',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
 });
 
 describe('insertMCPCitations', () => {
@@ -335,6 +396,28 @@ describe('insertMCPCitations', () => {
       0,
     );
     expect(usedCoords).toEqual(new Set(['0:0']));
+  });
+
+  it('does not anchor MCP-matched text inside an artifact fenced code block', () => {
+    const original = [
+      'The Reserve Bank held the cash rate steady at its meeting today.',
+      '',
+      ':::artifact{identifier="rates-summary" type="text/markdown" title="Rates Summary"}',
+      '````',
+      'The Reserve Bank held the cash rate steady at its meeting today.',
+      '````',
+      ':::',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertMCPCitations(
+      parts,
+      [mcpAttachment([{ toolName: 'afr_get_latest_news', serverName: 'afr', content: AFR_ARTICLE }])],
+      0,
+    );
+    const text = readText(parts[0]);
+    const lines = text.split('\n');
+    expect(lines[0]).toContain(`${MARKER}turn0mcp0`);
+    expect(lines[4]).not.toContain(MARKER);
   });
 });
 
@@ -731,6 +814,36 @@ describe('insertSharePointCitations', () => {
     expect(rows[1]).toContain(`${MARKER}turn0mcp1`);
     expect(rows[2]).toContain(`${MARKER}turn0mcp2`);
   });
+
+  it('does not anchor a filename line inside an artifact fenced code block', () => {
+    const original = [
+      '- Consulting Graduate Induction Workbook.pptx',
+      '',
+      ':::artifact{identifier="listing" type="text/markdown" title="Listing"}',
+      '````',
+      '- Consulting Graduate Induction Workbook.pptx',
+      '````',
+      ':::',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    const lines = readText(parts[0]).split('\n');
+    expect(lines[0]).toContain(`${MARKER}turn0mcp0`);
+    expect(lines[4]).not.toContain(MARKER);
+  });
 });
 
 describe('appendGuaranteedMCPCitations', () => {
@@ -930,6 +1043,33 @@ describe('applyEndOfTraceCitations', () => {
       fileCitations: true,
     });
     expect(readText(parts[0])).toContain(`${MARKER}turn0file0`);
+  });
+
+  it('leaves a microsite reply entirely uncited when every matching sentence sits inside the artifact fence', async () => {
+    const original = [
+      "Here's your microsite based on the two documents!",
+      '',
+      ':::artifact{identifier="microsite" type="text/html" title="Microsite"}',
+      '````',
+      'You can reserve a desk fourteen days in advance.',
+      'Meeting rooms are booked via the calendar system.',
+      '````',
+      ':::',
+    ].join('\n');
+    const parts = [textPart(original)];
+    await applyEndOfTraceCitations({
+      contentParts: parts,
+      artifactPromises: [
+        Promise.resolve(
+          fileSearchAttachment([
+            { fileId: 'fileA', content: DESK_CONTENT },
+            { fileId: 'fileB', content: MEETING_CONTENT },
+          ]),
+        ),
+      ],
+      fileCitations: true,
+    });
+    expect(readText(parts[0])).toBe(original);
   });
 
   it('is a no-op when fileCitations is false', async () => {
