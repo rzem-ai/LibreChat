@@ -1,7 +1,6 @@
 const client = require('openid-client');
 const { logger } = require('@librechat/data-schemas');
 const { CacheKeys } = require('librechat-data-provider');
-const { getOpenIdConfig } = require('~/strategies/openidStrategy');
 const getLogStores = require('~/cache/getLogStores');
 
 const RETRYABLE_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
@@ -136,6 +135,8 @@ async function exchangeOboToken(user, accessToken, scopes, fromCache = true) {
     throw new Error('Scopes are required for OBO exchange');
   }
 
+  // Loading this after module initialization avoids a cycle through GraphTokenService.
+  const { getOpenIdConfig } = require('~/strategies/openidStrategy');
   const config = getOpenIdConfig();
   if (!config) {
     throw new Error('OpenID configuration not available');
