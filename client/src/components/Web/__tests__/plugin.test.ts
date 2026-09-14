@@ -86,7 +86,7 @@ describe('unicodeCitation - relocateCitations', () => {
     expect(summarize(tree)).toEqual(['text:Sentence ends here', 'citation:search0']);
   });
 
-  it('preserves left-to-right order when relocating multiple citations in one paragraph', () => {
+  it('merges multiple citations relocated to the same paragraph into one composite, preserving order', () => {
     const tree = run(
       paragraph([
         text(
@@ -100,9 +100,7 @@ describe('unicodeCitation - relocateCitations', () => {
       'text: B',
       'text: C',
       'text: end.',
-      'citation:search0',
-      'citation:search1',
-      'citation:search2',
+      'composite:search0,search1,search2',
     ]);
   });
 
@@ -117,6 +115,23 @@ describe('unicodeCitation - relocateCitations', () => {
       'text:Multiple sources agree',
       'text: on this fact.',
       'composite:search0,news1',
+    ]);
+  });
+
+  it('merges a standalone citation and a composite citation landing in the same paragraph', () => {
+    const tree = run(
+      paragraph([
+        text(
+          `First${STANDALONE('search', 0)} then multiple${COMPOSITE(['search', 1], ['news', 2])} end.`,
+        ),
+      ]),
+    );
+
+    expect(summarize(tree)).toEqual([
+      'text:First',
+      'text: then multiple',
+      'text: end.',
+      'composite:search0,search1,news2',
     ]);
   });
 
@@ -168,6 +183,34 @@ describe('unicodeCitation - relocateCitations', () => {
     ]);
   });
 
+  it('keeps each span pointing at its own citation entry inside a merged composite group, not a shared survivor id', () => {
+    const tree = run(
+      paragraph([
+        text(
+          `${SPAN('first quote')}${STANDALONE('search', 0)} and ${SPAN('second quote')}${STANDALONE('search', 1)} more text${STANDALONE('search', 2)} end.`,
+        ),
+      ]),
+    );
+
+    const merged = tree.children?.find((child) => child.type === 'composite-citation');
+    const citations = merged?.data?.hProperties?.citations ?? [];
+    expect(citations).toHaveLength(3);
+
+    const highlighted = tree.children?.filter((child) => child.type === 'highlighted-text') ?? [];
+    expect(highlighted).toHaveLength(2);
+
+    const idFor = (refType: string, index: number) =>
+      citations.find((c) => c.refType === refType && c.index === index)?.citationId;
+
+    // each span keeps the id of the citation it actually preceded...
+    expect(highlighted[0].data?.hProperties?.citationId).toBe(idFor('search', 0));
+    expect(highlighted[1].data?.hProperties?.citationId).toBe(idFor('search', 1));
+    // ...so hovering one chip in the merged group no longer highlights every span in the group
+    expect(highlighted[0].data?.hProperties?.citationId).not.toBe(
+      highlighted[1].data?.hProperties?.citationId,
+    );
+  });
+
   it('does not recurse into highlighted-text nodes, even if one were to contain a citation', () => {
     // highlighted-text is documented as opaque, real inline content -- extractCitations must
     // treat it as a leaf and never pull a citation out from underneath it.
@@ -216,6 +259,53 @@ describe('unicodeCitation - relocateCitations', () => {
     // citations must not leak into the other paragraph
     expect(summarize(firstParagraph)).not.toContain('citation:search1');
     expect(summarize(secondParagraph)).not.toContain('citation:search0');
+  });
+
+  it('generates distinct citationIds for identically-shaped citations in different paragraphs', () => {
+    const root: CitationNode = {
+      type: 'root',
+      children: [
+        paragraph([text(`First point${STANDALONE('search', 0)} has more text after it.`)]),
+        paragraph([text(`Second point${STANDALONE('search', 0)} has more text after it.`)]),
+      ],
+    };
+
+    const tree = run(root);
+    const [firstParagraph, secondParagraph] = tree.children ?? [];
+    const firstId = firstParagraph.children?.find((c) => c.type === 'citation')?.data?.hProperties
+      ?.citationId;
+    const secondId = secondParagraph.children?.find((c) => c.type === 'citation')?.data?.hProperties
+      ?.citationId;
+
+    expect(firstId).toBeTruthy();
+    expect(secondId).toBeTruthy();
+    // same refType/index, same relative offset within their own text node -- must not collide
+    expect(firstId).not.toBe(secondId);
+  });
+
+  it('generates distinct citationIds across separate plugin invocations, not just within one tree', () => {
+    // Production parses each top-level markdown block through its own ReactMarkdown/unified
+    // instance (see MarkdownBlocks.tsx), so this plugin runs once per block rather than once
+    // per message. A per-call counter would restart at 0 for every block and could collide;
+    // the id generator must stay unique across independent invocations too.
+    const firstBlockTree = paragraph([
+      text(`First block point${STANDALONE('search', 0)} has more text after it.`),
+    ]);
+    const secondBlockTree = paragraph([
+      text(`Second block point${STANDALONE('search', 0)} has more text after it.`),
+    ]);
+
+    unicodeCitation()(firstBlockTree as never);
+    unicodeCitation()(secondBlockTree as never);
+
+    const firstId = firstBlockTree.children?.find((c) => c.type === 'citation')?.data?.hProperties
+      ?.citationId;
+    const secondId = secondBlockTree.children?.find((c) => c.type === 'citation')?.data?.hProperties
+      ?.citationId;
+
+    expect(firstId).toBeTruthy();
+    expect(secondId).toBeTruthy();
+    expect(firstId).not.toBe(secondId);
   });
 
   it('relocates citations within each list item (dot point) paragraph independently', () => {
