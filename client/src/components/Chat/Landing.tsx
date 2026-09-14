@@ -207,7 +207,7 @@ export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: 
                 key={`split-text-${name}`}
                 text={name}
                 className={`${getTextSizeClass(name)} font-medium text-text-primary`}
-                delay={50}
+                delay={20}
                 textAlign="center"
                 animationFrom={greetingAnimationFrom}
                 animationTo={greetingAnimationTo}
@@ -222,7 +222,7 @@ export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: 
               key={`split-text-${greetingText}${user?.name ? '-user' : ''}`}
               text={greetingText}
               className={`${getTextSizeClass(greetingText)} font-medium text-text-primary`}
-              delay={50}
+              delay={20}
               textAlign="center"
               animationFrom={greetingAnimationFrom}
               animationTo={greetingAnimationTo}

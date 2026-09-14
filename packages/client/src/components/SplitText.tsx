@@ -61,7 +61,7 @@ const splitGraphemes = (text: string): string[] => {
 const SplitText: React.FC<SplitTextProps> = ({
   text = '',
   className = '',
-  delay = 100,
+  delay = 50,
   animationFrom = { opacity: 0, transform: 'translate3d(0,40px,0)' },
   animationTo = { opacity: 1, transform: 'translate3d(0,0,0)' },
   easing = (t: number) => t,
@@ -91,7 +91,7 @@ const SplitText: React.FC<SplitTextProps> = ({
           }
         : animationFrom,
       delay: i * delay,
-      config: { easing },
+      config: { easing, duration: 220 },
     }),
     [inView, text, delay, animationFrom, animationTo, easing, onLetterAnimationComplete],
   );
