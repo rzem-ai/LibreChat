@@ -138,7 +138,7 @@ const SplitText: React.FC<SplitTextProps> = ({
       <span className="sr-only">{text}</span>
       <p
         ref={ref}
-        className={`split-parent inline-block pb-[0.15em] leading-normal ${className}`}
+        className={`split-parent inline ${className}`}
         style={{ textAlign, whiteSpace: 'normal', wordWrap: 'break-word' }}
         aria-hidden="true"
       >
@@ -158,7 +158,9 @@ const SplitText: React.FC<SplitTextProps> = ({
                 </animated.span>
               );
             })}
-            {wordIndex < words.length - 1 && <span>&nbsp;</span>}
+            {wordIndex < words.length - 1 && (
+              <span style={{ display: 'inline-block', width: '0.3em' }}>&nbsp;</span>
+            )}
           </span>
         ))}
       </p>
