@@ -45,13 +45,21 @@ function fileSearchAttachment(sources: SourceInput[]): TAttachment {
   } as unknown as TAttachment;
 }
 
-function mcpAttachment(sources: MCPResultSource[], disclaimer?: string): TAttachment {
+function mcpAttachment(
+  sources: MCPResultSource[],
+  disclaimer?: string,
+  dpnUsageRestriction?: boolean,
+): TAttachment {
   return {
     type: Tools.mcp_results,
     messageId: 'msg-1',
     toolCallId: 'call-1',
     conversationId: 'conv-1',
-    [Tools.mcp_results]: disclaimer ? { sources, disclaimer } : { sources },
+    [Tools.mcp_results]: {
+      sources,
+      ...(disclaimer ? { disclaimer } : {}),
+      ...(dpnUsageRestriction ? { dpnUsageRestriction } : {}),
+    },
   } as unknown as TAttachment;
 }
 
@@ -819,8 +827,11 @@ describe('appendGuaranteedMCPCitations', () => {
 
 describe('appendMCPDisclaimers', () => {
   const DISCLAIMER = 'Please review accuracy of all the responses before reusing them.';
+  const STATIC_MESSAGE =
+    'Please note that this response uses data from the KX Connector. Review the accuracy of ' +
+    'all KX citations before reusing them.';
 
-  it('appends the disclaimer and a guidelines link once', () => {
+  it('appends the fixed KX disclaimer with a guidelines link once configured', () => {
     const parts = [textPart('Here is the answer.')];
     appendMCPDisclaimers(
       parts,
@@ -828,61 +839,31 @@ describe('appendMCPDisclaimers', () => {
       'https://resources.deloitte.com/sites/kx/usage-guidelines',
     );
     const text = readText(parts[0]);
-    expect(text).toContain(DISCLAIMER);
+    expect(text).toContain(STATIC_MESSAGE);
     expect(text).toContain(
-      '[usage guidelines](https://resources.deloitte.com/sites/kx/usage-guidelines)',
+      '[KX usage guidelines](https://resources.deloitte.com/sites/kx/usage-guidelines)',
     );
+    expect(text).not.toContain(DISCLAIMER);
   });
 
-  it('omits the guidelines link when the disclaimer already references usage guidelines itself', () => {
-    const parts = [textPart('Here is the answer.')];
-    const disclaimerWithOwnLink =
-      `${DISCLAIMER} See ` +
-      '[usage guidelines](https://resources.deloitte.com/sites/kx/SitePages/Prompt-Usage-Guidelines.aspx) ' +
-      'Citations [1](https://example.com/1) have usage restrictions.';
-    appendMCPDisclaimers(
-      parts,
-      [
-        mcpAttachment(
-          [{ toolName: 'kx_query', serverName: 'kx', content: 'x' }],
-          disclaimerWithOwnLink,
-        ),
-      ],
-      'https://resources.deloitte.com/sites/kx/SitePages/Prompt-Usage-Guidelines.aspx',
-    );
-    const text = readText(parts[0]) ?? '';
-    expect(anchorCount(text, 'usage guidelines')).toBe(1);
-  });
-
-  it('omits the link when no guidelines URL is configured', () => {
+  it('renders "KX usage guidelines" as plain text when no guidelines URL is configured', () => {
     const parts = [textPart('Here is the answer.')];
     appendMCPDisclaimers(parts, [
       mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'x' }], DISCLAIMER),
     ]);
-    const text = readText(parts[0]);
-    expect(text).toContain(DISCLAIMER);
-    expect(text).not.toContain('usage guidelines');
+    const text = readText(parts[0]) ?? '';
+    expect(text).toContain(STATIC_MESSAGE);
+    expect(text).toContain('See the KX usage guidelines to learn more.');
+    expect(text).not.toContain('](');
   });
 
-  it('dedupes identical disclaimer text across two attachments', () => {
+  it('appends the fixed disclaimer only once across two disclaimer-bearing attachments', () => {
     const parts = [textPart('Here is the answer.')];
     appendMCPDisclaimers(parts, [
       mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'x' }], DISCLAIMER),
       mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'y' }], DISCLAIMER),
     ]);
-    expect(anchorCount(readText(parts[0]), DISCLAIMER)).toBe(1);
-  });
-
-  it('uses only the first disclaimer when two attachments carry different-but-overlapping text', () => {
-    const parts = [textPart('Here is the answer.')];
-    const secondDisclaimer = `${DISCLAIMER} See usage guidelines.`;
-    appendMCPDisclaimers(parts, [
-      mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'x' }], DISCLAIMER),
-      mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'y' }], secondDisclaimer),
-    ]);
-    const text = readText(parts[0]);
-    expect(anchorCount(text, 'Please review accuracy')).toBe(1);
-    expect(text).not.toContain(secondDisclaimer);
+    expect(anchorCount(readText(parts[0]), STATIC_MESSAGE)).toBe(1);
   });
 
   it('is a no-op when no attachment carries a disclaimer', () => {
@@ -892,6 +873,43 @@ describe('appendMCPDisclaimers', () => {
       mcpAttachment([{ toolName: 'afr_search_news', serverName: 'afr', content: OTHER_ARTICLE }]),
     ]);
     expect(readText(parts[0])).toBe(original);
+  });
+
+  it('appends the fixed DPN disclaimer linking the terms-of-use page when a DPN source is present', () => {
+    const parts = [textPart('Here is the answer.')];
+    appendMCPDisclaimers(parts, [
+      mcpAttachment(
+        [{ toolName: 'kx_query', serverName: 'kx', content: 'x' }],
+        undefined,
+        true,
+      ),
+    ]);
+    const text = readText(parts[0]);
+    expect(text).toContain(
+      'Please note that this response uses data from the KX Connector. Review the accuracy ' +
+        'of all DPN profiles before reusing them.',
+    );
+    expect(text).toContain(
+      '[DPN usage guidelines](https://people.deloitte/legalcontent#termsofuse)',
+    );
+  });
+
+  it('appends both the KX and DPN disclaimers when a turn has quals and DPN sources', () => {
+    const parts = [textPart('Here is the answer.')];
+    appendMCPDisclaimers(
+      parts,
+      [
+        mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'x' }], DISCLAIMER, true),
+      ],
+      'https://resources.deloitte.com/sites/kx/usage-guidelines',
+    );
+    const text = readText(parts[0]);
+    expect(text).toContain(
+      '[KX usage guidelines](https://resources.deloitte.com/sites/kx/usage-guidelines)',
+    );
+    expect(text).toContain(
+      '[DPN usage guidelines](https://people.deloitte/legalcontent#termsofuse)',
+    );
   });
 });
 
@@ -998,12 +1016,13 @@ describe('applyEndOfTraceCitations', () => {
       mcpUsageGuidelinesUrl: 'https://resources.deloitte.com/sites/kx/usage-guidelines',
     });
     const text = readText(parts[0]);
+    const staticMessage = 'Please note that this response uses data from the KX Connector.';
     expect(text).toContain(`${MARKER}turn0mcp0`);
-    expect(text).toContain(disclaimer);
+    expect(text).toContain(staticMessage);
     expect(text).toContain(
-      '[usage guidelines](https://resources.deloitte.com/sites/kx/usage-guidelines)',
+      '[KX usage guidelines](https://resources.deloitte.com/sites/kx/usage-guidelines)',
     );
-    expect(text.indexOf(`${MARKER}turn0mcp0`)).toBeLessThan(text.indexOf(disclaimer));
+    expect(text.indexOf(`${MARKER}turn0mcp0`)).toBeLessThan(text.indexOf(staticMessage));
   });
 
   it('anchors SharePoint sources by line and other MCP sources by sentence in the same turn set', async () => {

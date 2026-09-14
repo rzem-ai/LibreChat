@@ -31,6 +31,7 @@ interface FileCitationSource {
   toolName?: string;
   serverName?: string;
   usageRestriction?: boolean;
+  usageRestrictionLink?: string;
 }
 
 // Deloitte Custom Change: max filename length shown on a file_search citation chip
@@ -236,7 +237,9 @@ function CitationChip({ source, citationIds }: CitationChipProps) {
               {source.snippet}
             </p>
           )}
-          {source.usageRestriction && <UsageRestrictionNotice link={source.link} />}
+          {source.usageRestriction && (
+            <UsageRestrictionNotice link={source.usageRestrictionLink ?? source.link} />
+          )}
         </TooltipContent>
       );
     }

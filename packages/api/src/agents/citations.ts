@@ -16,6 +16,7 @@
 import { Tools, ContentTypes } from 'librechat-data-provider';
 import type { TMessageContentParts, TAttachment, MCPResultSource } from 'librechat-data-provider';
 import type { Logger } from 'winston';
+import { DPN_USAGE_GUIDELINES_URL } from '../mcp/kx/kx';
 
 /**
  * Minimum content words a sentence must have before it is eligible for a
@@ -857,34 +858,34 @@ export function insertSharePointCitations(
 }
 
 /**
- * Appends a single deterministic trailing disclaimer paragraph when any MCP
- * attachment carries one (e.g. KX's `usage_guidelines`), plus a link to the
- * static usage-guidelines page when configured — unless the disclaimer text
- * already references "usage guidelines" itself (KX's own boilerplate already
- * links to this page), in which case the extra link would just repeat the
- * same sentence. Only the first disclaimer found is used — a turn with
- * multiple KX calls (e.g. a refined follow-up search) tends to repeat the
- * same boilerplate warning with minor wording differences (not exact
- * matches), so appending every distinct-looking one would repeat the same
- * warning rather than surface new information. Always appends to an existing
- * text part — never creates a new one — so downstream content-part filtering
- * can't drop it.
+ * Appends deterministic trailing disclaimer paragraphs whenever any MCP
+ * attachment warrants one — a fixed, branded message rather than KX's own
+ * boilerplate text. Two independent triggers, since a turn can carry either
+ * or both: any attachment with a `disclaimer` (KX's own `usage_guidelines`,
+ * typically surfaced for quals-type results) appends the "KX usage
+ * guidelines" sentence linking `mcpUsageGuidelinesUrl`; any attachment
+ * flagged `dpnUsageRestriction` (a DPN people-profile result) appends a
+ * separate "DPN usage guidelines" sentence linking the fixed
+ * {@link DPN_USAGE_GUIDELINES_URL} terms-of-use page. Always appends to an
+ * existing text part — never creates a new one — so downstream content-part
+ * filtering can't drop it.
  */
 export function appendMCPDisclaimers(
   contentParts: TMessageContentParts[],
   mcpAttachments: TAttachment[],
   mcpUsageGuidelinesUrl?: string,
 ): void {
-  let disclaimer: string | undefined;
+  let hasKxDisclaimer = false;
+  let hasDpnSource = false;
   for (const attachment of mcpAttachments) {
-    const payload = attachment[Tools.mcp_results] as { disclaimer?: string } | undefined;
-    if (payload?.disclaimer) {
-      disclaimer = payload.disclaimer;
-      break;
-    }
+    const payload = attachment[Tools.mcp_results] as
+      | { disclaimer?: string; dpnUsageRestriction?: boolean }
+      | undefined;
+    hasKxDisclaimer = hasKxDisclaimer || Boolean(payload?.disclaimer);
+    hasDpnSource = hasDpnSource || Boolean(payload?.dpnUsageRestriction);
   }
 
-  if (!disclaimer) {
+  if (!hasKxDisclaimer && !hasDpnSource) {
     return;
   }
 
@@ -893,15 +894,26 @@ export function appendMCPDisclaimers(
     return;
   }
 
-  const alreadyMentionsGuidelines = /usage guidelines/i.test(disclaimer);
-  const guidelinesLink =
-    mcpUsageGuidelinesUrl && !alreadyMentionsGuidelines
-      ? ` See [usage guidelines](${mcpUsageGuidelinesUrl}).`
-      : '';
-  const disclaimerText = `${disclaimer}${guidelinesLink}`;
+  const disclaimers: string[] = [];
+  if (hasKxDisclaimer) {
+    const guidelinesText = mcpUsageGuidelinesUrl
+      ? `[KX usage guidelines](${mcpUsageGuidelinesUrl})`
+      : 'KX usage guidelines';
+    disclaimers.push(
+      'Please note that this response uses data from the KX Connector. Review the accuracy ' +
+        `of all KX citations before reusing them. See the ${guidelinesText} to learn more.`,
+    );
+  }
+  if (hasDpnSource) {
+    disclaimers.push(
+      'Please note that this response uses data from the KX Connector. Review the accuracy ' +
+        'of all DPN profiles before reusing them. See the ' +
+        `[DPN usage guidelines](${DPN_USAGE_GUIDELINES_URL}) to learn more.`,
+    );
+  }
 
   const text = readText(targetPart) ?? '';
-  writeText(targetPart, `${text}\n\n${disclaimerText}`);
+  writeText(targetPart, `${text}\n\n${disclaimers.join('\n\n')}`);
 }
 
 /**
