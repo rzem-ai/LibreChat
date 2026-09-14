@@ -122,6 +122,7 @@ jest.mock('~/cache/getLogStores', () =>
   jest.fn(() => ({
     get: jest.fn(),
     set: jest.fn(),
+    delete: jest.fn(),
   })),
 );
 
@@ -226,6 +227,7 @@ describe('setupOpenId', () => {
     require('~/cache/getLogStores').mockImplementation(() => ({
       get: jest.fn(),
       set: jest.fn(),
+      delete: jest.fn(),
     }));
     getOpenIdProxyDispatcher.mockReturnValue(undefined);
     require('~/server/services/GraphTokenService').getGraphApiToken.mockResolvedValue({
@@ -1127,7 +1129,12 @@ describe('setupOpenId', () => {
         .fn()
         .mockResolvedValueOnce(undefined)
         .mockResolvedValueOnce({ access_token: 'exchanged_graph_token' });
-      getLogStores.mockReturnValue({ get: mockGet, set: mockSet });
+      const authUserDocStore = { get: jest.fn(), set: jest.fn(), delete: jest.fn() };
+      getLogStores.mockImplementation((cacheKey) =>
+        cacheKey === require('librechat-data-provider').CacheKeys.AUTH_USER_DOC
+          ? authUserDocStore
+          : { get: mockGet, set: mockSet },
+      );
 
       process.env.OPENID_REQUIRED_ROLE = 'group-required';
       process.env.OPENID_REQUIRED_ROLE_PARAMETER_PATH = 'groups';
@@ -1493,12 +1500,9 @@ describe('setupOpenId', () => {
     // Depending on your implementation, user.avatar may be undefined or an empty string.
   });
 
-  // Deloitte Custom Change: verifies Entra profile photos fall back to the Microsoft Graph endpoint.
-  it('should fetch and save a Microsoft Graph avatar when picture is not provided', async () => {
+  it('should prefer and save a Microsoft Graph avatar when an OpenID picture is provided', async () => {
     const { getStrategyFunctions } = require('~/server/services/Files/strategies');
     const { getGraphApiToken } = require('~/server/services/GraphTokenService');
-    const userinfo = { ...tokenset.claims() };
-    delete userinfo.picture;
     require('openid-client').discovery.mockResolvedValueOnce({
       clientId: 'fake_client_id',
       clientSecret: 'fake_client_secret',
@@ -1512,7 +1516,7 @@ describe('setupOpenId', () => {
     await setupOpenId();
     verifyCallback = require('openid-client/passport').__getVerifyCallbackByName('openid');
 
-    const { user } = await validate({ ...tokenset, claims: () => userinfo });
+    const { user } = await validate(tokenset);
     const strategyResult =
       getStrategyFunctions.mock.results[getStrategyFunctions.mock.results.length - 1];
     const { saveBuffer } = strategyResult.value;
@@ -1524,7 +1528,7 @@ describe('setupOpenId', () => {
       }),
     );
     expect(getGraphApiToken).toHaveBeenCalledWith(
-      expect.objectContaining({ openidId: userinfo.sub }),
+      expect.objectContaining({ openidId: tokenset.claims().sub }),
       'fake_access_token',
       'https://graph.microsoft.com/User.Read',
     );

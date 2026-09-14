@@ -23,6 +23,7 @@ const {
   getOpenIdRoleSyncOptions,
   getOpenIdRolesForOpenIdSync,
   getLibreChatRolesForOpenIdSync,
+  invalidateCachedAuthUserDoc,
 } = require('@librechat/api');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { resizeAvatar } = require('~/server/services/Files/images/avatar');
@@ -839,10 +840,10 @@ async function processOpenIDAuth(tokenset, existingUsersOnly = false) {
     }
   }
 
-  // Deloitte Custom Change: falls back to the Entra Graph profile photo while preserving manually uploaded avatars.
+  // Deloitte Custom Change: Prefer Entra's Graph profile photo because its OpenID picture claim can be stale or unusable.
   if (!user.avatar?.includes('manual=true')) {
-    /** @type {string | undefined} */
-    const image = userinfo.picture ?? (await getMicrosoftGraphAvatar(user, tokenset.access_token));
+    const image =
+      (await getMicrosoftGraphAvatar(user, tokenset.access_token)) ?? userinfo.picture;
     if (image) {
       let fileName;
       if (crypto) {
@@ -880,6 +881,9 @@ async function processOpenIDAuth(tokenset, existingUsersOnly = false) {
   }
 
   user = await updateUser(user._id, user);
+  await invalidateCachedAuthUserDoc(getLogStores(CacheKeys.AUTH_USER_DOC), {
+    userId: user._id.toString(),
+  });
 
   logger.info(
     `[openidStrategy] login success openidId: ${user.openidId} | email: ${user.email} | username: ${user.username} `,
