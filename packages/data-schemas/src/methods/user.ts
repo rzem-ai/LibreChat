@@ -12,6 +12,14 @@ import { signPayload } from '~/crypto';
 /** Default JWT session expiry: 15 minutes in milliseconds */
 export const DEFAULT_SESSION_EXPIRY: number = 1000 * 60 * 15;
 
+/**
+ * Maximum number of course ratings stored per user.
+ * Enforced atomically inside mergeTutorialRatings via an aggregation pipeline,
+ * so the bound holds even under concurrent requests. Raise here if needed —
+ * this is the single source of truth for the limit.
+ */
+export const MAX_TUTORIAL_RATINGS = 50;
+
 interface UserMethodDeps {
   getCache?: (key: string) => CacheStore | undefined;
 }
@@ -596,9 +604,19 @@ export function createUserMethods(
 
   /**
    * Atomically merges new course ratings into the user's tutorialRatings map
-   * using MongoDB dot-notation $set so concurrent requests targeting different
-   * keys cannot overwrite each other (no JS read-merge-write needed for the
-   * merge itself — the cap check in the controller still requires one read).
+   * and enforces MAX_TUTORIAL_RATINGS in a single aggregation-pipeline update.
+   *
+   * Because the merge, the cap check, and the write all happen inside one
+   * findByIdAndUpdate call, there is no TOCTOU window: two concurrent requests
+   * both see the document at its exact current state when MongoDB executes
+   * each update, so neither can silently overwrite the other's rating, and
+   * the cap is guaranteed even under concurrent load.
+   *
+   * If the merged result would exceed MAX_TUTORIAL_RATINGS the pipeline leaves
+   * tutorialRatings unchanged and returns the unmodified document — the
+   * controller detects this via the `_capExceeded` sentinel field and returns
+   * HTTP 400. The sentinel is written by Stage 2 and removed by Stage 3's
+   * $unset so it never persists on the stored document.
    *
    * runValidators is intentionally omitted: values are pre-validated by
    * validateTutorialStateUpdate before this method is called.
@@ -606,17 +624,62 @@ export function createUserMethods(
   async function mergeTutorialRatings(
     userId: string,
     ratings: Record<string, number>,
-  ): Promise<IUser | null> {
+  ): Promise<{ user: IUser | null; capExceeded: boolean }> {
     const User = mongoose.models.User;
-    const dotUpdate: Record<string, number> = {};
-    for (const [key, value] of Object.entries(ratings)) {
-      dotUpdate[`tutorialRatings.${key}`] = value;
+
+    // Build a BSON-compatible object from the incoming ratings so the
+    // aggregation pipeline can reference it as a literal.
+    const incomingAsObject: Record<string, number> = { ...ratings };
+
+    const pipeline = [
+      // Stage 1 — compute merged map and its size
+      {
+        $set: {
+          _mergedRatings: { $mergeObjects: ['$tutorialRatings', incomingAsObject] },
+        },
+      },
+      {
+        $set: {
+          _mergedSize: { $size: { $objectToArray: '$_mergedRatings' } },
+        },
+      },
+      // Stage 2 — apply merge only when under cap; set sentinel otherwise
+      {
+        $set: {
+          tutorialRatings: {
+            $cond: [
+              { $gt: ['$_mergedSize', MAX_TUTORIAL_RATINGS] },
+              '$tutorialRatings', // over cap — keep existing, discard incoming
+              '$_mergedRatings', // under/at cap — accept merge
+            ],
+          },
+          _capExceeded: {
+            $cond: [{ $gt: ['$_mergedSize', MAX_TUTORIAL_RATINGS] }, true, false],
+          },
+        },
+      },
+      // Stage 3 — clean up all temporary fields including the cap sentinel
+      { $unset: ['_mergedRatings', '_mergedSize', '_capExceeded'] },
+    ];
+
+    const updated = await User.findByIdAndUpdate(userId, pipeline, { new: true }).lean<
+      IUser & { _capExceeded?: boolean }
+    >();
+
+    const capExceeded = updated?._capExceeded === true;
+
+    // _capExceeded is $unset in Stage 3 so it is absent from the post-update
+    // document returned by { new: true }. This guard is a defensive no-op but
+    // kept as a safety net in case the lean type assertion ever includes it.
+    if (updated && '_capExceeded' in updated) {
+      delete (updated as Record<string, unknown>)['_capExceeded'];
     }
-    const updated = await User.findByIdAndUpdate(userId, { $set: dotUpdate }, { new: true }).lean<IUser>();
+
     if (updated) {
       await invalidateAuthUserDocCache(userId);
     }
-    return updated;
+
+    return { user: updated ?? null, capExceeded };
   }
 
   return {

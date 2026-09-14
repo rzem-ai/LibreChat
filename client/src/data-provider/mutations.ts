@@ -1,3 +1,4 @@
+import { useRecoilValue } from 'recoil';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { dataService, MutationKeys, QueryKeys, defaultOrderQuery } from 'librechat-data-provider';
 import {
@@ -19,6 +20,7 @@ import {
 import useUpdateTagsInConvo from '~/hooks/Conversations/useUpdateTagsInConvo';
 import { updateConversationTag } from '~/utils/conversationTags';
 import { useConversationTagsQuery } from './queries';
+import store from '~/store';
 
 export const useUpdateConversationMutation = (
   id: string,
@@ -1159,9 +1161,13 @@ export const useAcceptTermsMutation = (
   options?: t.AcceptTermsMutationOptions,
 ): UseMutationResult<t.TAcceptTermsResponse, unknown, void, unknown> => {
   const queryClient = useQueryClient();
+  // Must use the same user-scoped key as useUserTermsQuery so the cache update
+  // targets the correct per-user entry rather than a stale global key.
+  const user = useRecoilValue<t.TUser | undefined>(store.user);
+  const userId = user?.id;
   return useMutation(() => dataService.acceptTerms(), {
     onSuccess: (data, variables, context) => {
-      queryClient.setQueryData<t.TUserTermsResponse>([QueryKeys.userTerms], {
+      queryClient.setQueryData<t.TUserTermsResponse>([QueryKeys.userTerms, userId], {
         termsAccepted: true,
         termsAcceptedAt: data.termsAcceptedAt,
       });
@@ -1181,11 +1187,18 @@ export const useUpdateTutorialStateMutation = (
   unknown
 > => {
   const queryClient = useQueryClient();
+  // Must use the same user-scoped key as useTutorialStateQuery so the cache
+  // update targets the correct per-user entry rather than a stale global key.
+  const user = useRecoilValue<t.TUser | undefined>(store.user);
+  const userId = user?.id;
   return useMutation(
     (update: Partial<t.TTutorialStateResponse>) => dataService.updateUserTutorialState(update),
     {
       onSuccess: (data, variables, context) => {
-        queryClient.setQueryData<t.TTutorialStateResponse>([QueryKeys.userTutorialState], data);
+        queryClient.setQueryData<t.TTutorialStateResponse>(
+          [QueryKeys.userTutorialState, userId],
+          data,
+        );
         options?.onSuccess?.(data, variables, context);
       },
       onError: options?.onError,
@@ -1193,7 +1206,7 @@ export const useUpdateTutorialStateMutation = (
         // Optimistically update the cache so the bubble closes immediately
         // rather than waiting for the server round-trip to complete.
         queryClient.setQueryData<t.TTutorialStateResponse>(
-          [QueryKeys.userTutorialState],
+          [QueryKeys.userTutorialState, userId],
           (current) => ({
             ...current,
             tutorialPromptSeen:

@@ -16,22 +16,31 @@ jest.mock('librechat-data-provider', () => ({
   ResourceType: {},
 }));
 
-jest.mock('@librechat/api', () => ({
-  // Use the real validateTutorialStateUpdate and MAX_TUTORIAL_RATINGS so tests
-  // exercise the actual validation logic rather than a stub — consistent with
-  // SkillStatesController tests which also use the real validateSkillStatesPayload.
-  ...jest.requireActual('@librechat/api'),
-  // Override side-effectful imports that would require a running server:
-  MCPOAuthHandler: {},
-  MCPTokenStorage: {},
-  getAppConfigOptionsFromUser: jest.fn(),
-  normalizeHttpError: jest.fn((error) => error),
-  extractWebSearchEnvVars: jest.fn(),
-  needsRefresh: jest.fn(),
-  getNewS3URL: jest.fn(),
-  deleteAgentCheckpoints: jest.fn(),
-  deleteAllSharedLinksWithCleanup: jest.fn(),
-}));
+jest.mock('@librechat/api', () => {
+  // Import only the tutorial helpers directly from their source file to avoid
+  // loading the full @librechat/api module graph, which pulls in tokens.ts.
+  // tokens.ts references EModelEndpoint at module-eval time and crashes because
+  // librechat-data-provider is mocked without EModelEndpoint here.
+  // This matches the pattern used by deleteUser.spec.js and other sibling tests.
+  const { validateTutorialStateUpdate, toTutorialStateResponse, MAX_TUTORIAL_RATINGS } =
+    jest.requireActual('../../../../packages/api/src/tutorial/tutorialState');
+
+  return {
+    validateTutorialStateUpdate,
+    toTutorialStateResponse,
+    MAX_TUTORIAL_RATINGS,
+    // Side-effectful / server-runtime exports the controller imports but tests don't exercise:
+    MCPOAuthHandler: {},
+    MCPTokenStorage: {},
+    getAppConfigOptionsFromUser: jest.fn(),
+    normalizeHttpError: jest.fn((error) => error),
+    extractWebSearchEnvVars: jest.fn(),
+    needsRefresh: jest.fn(),
+    getNewS3URL: jest.fn(),
+    deleteAgentCheckpoints: jest.fn(),
+    deleteAllSharedLinksWithCleanup: jest.fn(),
+  };
+});
 
 jest.mock('~/server/services/PluginService', () => ({
   updateUserPluginAuth: jest.fn(),
@@ -143,11 +152,15 @@ describe('UserController tutorial state', () => {
       });
     });
 
-    it('uses mergeTutorialRatings (atomic per-key write) instead of overwriting the whole map', async () => {
-      mockGetUserById.mockResolvedValue({ tutorialRatings: { 'other-course': 5 } });
+    it('uses mergeTutorialRatings (atomic pipeline write) instead of overwriting the whole map', async () => {
+      // mergeTutorialRatings now returns { user, capExceeded } — the pipeline
+      // handles the merge and cap check atomically with no prior read needed.
       mockMergeTutorialRatings.mockResolvedValue({
-        tutorialPromptSeen: false,
-        tutorialRatings: { 'other-course': 5, 'landing-page-buttons': 4 },
+        user: {
+          tutorialPromptSeen: false,
+          tutorialRatings: { 'other-course': 5, 'landing-page-buttons': 4 },
+        },
+        capExceeded: false,
       });
       const req = createRequest({
         body: { tutorialRatings: { 'landing-page-buttons': 4 } },
@@ -156,11 +169,13 @@ describe('UserController tutorial state', () => {
 
       await updateTutorialStateController(req, res);
 
-      // Should call mergeTutorialRatings with only the incoming ratings (not pre-merged)
+      // Should call mergeTutorialRatings with only the incoming ratings
       expect(mockMergeTutorialRatings).toHaveBeenCalledWith('user-1', {
         'landing-page-buttons': 4,
       });
-      // Should NOT call updateUser for the ratings write
+      // No separate getUserById read needed — pipeline handles the cap check
+      expect(mockGetUserById).not.toHaveBeenCalled();
+      // No updateUser call for the ratings write
       expect(mockUpdateUser).not.toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({
         tutorialPromptSeen: false,
@@ -169,10 +184,9 @@ describe('UserController tutorial state', () => {
     });
 
     it('calls updateUser for non-ratings fields alongside mergeTutorialRatings for ratings', async () => {
-      mockGetUserById.mockResolvedValue({ tutorialRatings: {} });
       mockMergeTutorialRatings.mockResolvedValue({
-        tutorialPromptSeen: false,
-        tutorialRatings: { 'chat-basics': 5 },
+        user: { tutorialPromptSeen: false, tutorialRatings: { 'chat-basics': 5 } },
+        capExceeded: false,
       });
       mockUpdateUser.mockResolvedValue({
         tutorialPromptSeen: true,
@@ -189,12 +203,13 @@ describe('UserController tutorial state', () => {
       expect(mockUpdateUser).toHaveBeenCalledWith('user-1', { tutorialPromptSeen: true });
     });
 
-    it('returns 400 when merged ratings would exceed the cap', async () => {
-      // Existing ratings already at the cap
-      const existingRatings = Object.fromEntries(
-        Array.from({ length: MAX_TUTORIAL_RATINGS }, (_, i) => [`course-${i}`, 3]),
-      );
-      mockGetUserById.mockResolvedValue({ tutorialRatings: existingRatings });
+    it('returns 400 when the pipeline signals cap exceeded', async () => {
+      // The pipeline sets capExceeded=true and leaves tutorialRatings unchanged;
+      // no separate getUserById read is needed since the cap is enforced atomically.
+      mockMergeTutorialRatings.mockResolvedValue({
+        user: { tutorialPromptSeen: false, tutorialRatings: {} },
+        capExceeded: true,
+      });
       const req = createRequest({
         body: { tutorialRatings: { 'brand-new-course': 5 } },
       });
@@ -202,22 +217,18 @@ describe('UserController tutorial state', () => {
 
       await updateTutorialStateController(req, res);
 
+      expect(mockMergeTutorialRatings).toHaveBeenCalledWith('user-1', { 'brand-new-course': 5 });
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
         message: `tutorialRatings cannot exceed ${MAX_TUTORIAL_RATINGS} entries`,
       });
-      expect(mockMergeTutorialRatings).not.toHaveBeenCalled();
     });
 
-    it('accepts a request that updates existing keys without increasing the count', async () => {
-      // Existing ratings at the cap — but the request only re-rates an existing key
-      const existingRatings = Object.fromEntries(
-        Array.from({ length: MAX_TUTORIAL_RATINGS }, (_, i) => [`course-${i}`, 3]),
-      );
-      mockGetUserById.mockResolvedValue({ tutorialRatings: existingRatings });
+    it('succeeds when updating an existing key does not increase the stored count', async () => {
+      // Re-rating an already-stored course: merged count stays the same, no cap exceeded.
       mockMergeTutorialRatings.mockResolvedValue({
-        tutorialPromptSeen: false,
-        tutorialRatings: { ...existingRatings, 'course-0': 5 },
+        user: { tutorialPromptSeen: false, tutorialRatings: { 'course-0': 5 } },
+        capExceeded: false,
       });
       const req = createRequest({
         body: { tutorialRatings: { 'course-0': 5 } },
@@ -226,20 +237,15 @@ describe('UserController tutorial state', () => {
 
       await updateTutorialStateController(req, res);
 
-      // Merged count equals MAX_TUTORIAL_RATINGS (not over) — should succeed
       expect(res.status).toHaveBeenCalledWith(200);
       expect(mockMergeTutorialRatings).toHaveBeenCalledWith('user-1', { 'course-0': 5 });
     });
 
-    it('accepts a request when merged total is exactly at the cap', async () => {
-      // Existing has (cap - 1) entries; request adds 1 new key → total == cap
-      const existingRatings = Object.fromEntries(
-        Array.from({ length: MAX_TUTORIAL_RATINGS - 1 }, (_, i) => [`course-${i}`, 3]),
-      );
-      mockGetUserById.mockResolvedValue({ tutorialRatings: existingRatings });
+    it('succeeds when merged total is exactly at the cap', async () => {
+      // (cap - 1) existing + 1 new = cap exactly → pipeline does not set capExceeded.
       mockMergeTutorialRatings.mockResolvedValue({
-        tutorialPromptSeen: false,
-        tutorialRatings: { ...existingRatings, 'new-course': 4 },
+        user: { tutorialPromptSeen: false, tutorialRatings: { 'new-course': 4 } },
+        capExceeded: false,
       });
       const req = createRequest({
         body: { tutorialRatings: { 'new-course': 4 } },

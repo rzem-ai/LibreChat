@@ -144,24 +144,21 @@ const updateTutorialStateController = async (req, res) => {
     let user;
 
     if (update.tutorialRatings) {
-      // Read existing ratings solely for the cap check — the actual DB write
-      // uses per-key dot-notation $set (mergeTutorialRatings) so concurrent
-      // requests targeting different keys cannot overwrite each other.
-      const existing = await db.getUserById(req.user.id, 'tutorialRatings');
-      const existingRatings =
-        existing?.tutorialRatings instanceof Map
-          ? Object.fromEntries(existing.tutorialRatings)
-          : existing?.tutorialRatings || {};
-      const merged = { ...existingRatings, ...update.tutorialRatings };
-      if (Object.keys(merged).length > MAX_TUTORIAL_RATINGS) {
+      // mergeTutorialRatings enforces MAX_TUTORIAL_RATINGS and writes atomically
+      // in a single aggregation-pipeline update — no separate read or cap check
+      // is needed here, and there is no TOCTOU window between the count and the write.
+      const { user: merged, capExceeded } = await db.mergeTutorialRatings(
+        req.user.id,
+        update.tutorialRatings,
+      );
+      if (capExceeded) {
         return res.status(400).json({
           message: `tutorialRatings cannot exceed ${MAX_TUTORIAL_RATINGS} entries`,
         });
       }
 
-      // Write ratings atomically via per-key $set; write any other fields
-      // (e.g. tutorialPromptSeen) separately via updateUser if present.
-      user = await db.mergeTutorialRatings(req.user.id, update.tutorialRatings);
+      // Write any non-ratings fields (e.g. tutorialPromptSeen) separately.
+      user = merged;
       const { tutorialRatings: _omitted, ...rest } = update;
       if (Object.keys(rest).length > 0) {
         user = (await db.updateUser(req.user.id, rest)) ?? user;

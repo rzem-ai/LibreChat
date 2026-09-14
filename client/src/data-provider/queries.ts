@@ -1,3 +1,4 @@
+import { useRecoilValue } from 'recoil';
 import { useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import {
   QueryKeys,
@@ -32,6 +33,7 @@ import type {
 import type t from 'librechat-data-provider';
 import type { ConversationCursorData } from '~/utils/convos';
 import { findConversationInInfinite, isNotFoundError } from '~/utils';
+import store from '~/store';
 
 export const useGetPresetsQuery = (
   config?: UseQueryOptions<TPreset[]>,
@@ -528,21 +530,36 @@ export const useGetRandomPrompts = (
 export const useUserTermsQuery = (
   config?: UseQueryOptions<t.TUserTermsResponse>,
 ): QueryObserverResult<t.TUserTermsResponse> => {
-  return useQuery<t.TUserTermsResponse>([QueryKeys.userTerms], () => dataService.getUserTerms(), {
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchOnMount: false,
-    ...config,
-  });
+  // Scope the cache key by userId so a second account logging in within the
+  // same SPA session cannot reuse the previous account's terms-accepted state.
+  const user = useRecoilValue<t.TUser | undefined>(store.user);
+  const userId = user?.id;
+  return useQuery<t.TUserTermsResponse>(
+    [QueryKeys.userTerms, userId],
+    () => dataService.getUserTerms(),
+    {
+      enabled: !!userId && (config?.enabled ?? true),
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      ...config,
+    },
+  );
 };
 
 export const useTutorialStateQuery = (
   config?: UseQueryOptions<t.TTutorialStateResponse>,
 ): QueryObserverResult<t.TTutorialStateResponse> => {
+  // Scope the cache key by userId so a second account logging in within the
+  // same SPA session cannot reuse the previous account's tutorialPromptSeen
+  // or ratings data (the mutation writes back to this same scoped key).
+  const user = useRecoilValue<t.TUser | undefined>(store.user);
+  const userId = user?.id;
   return useQuery<t.TTutorialStateResponse>(
-    [QueryKeys.userTutorialState],
+    [QueryKeys.userTutorialState, userId],
     () => dataService.getUserTutorialState(),
     {
+      enabled: !!userId && (config?.enabled ?? true),
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       refetchOnMount: false,

@@ -5,19 +5,17 @@
  * the /api JS controller remains a thin HTTP wrapper with no business logic.
  */
 
+import { MAX_TUTORIAL_RATINGS } from '@librechat/data-schemas';
+
+// Re-export so callers that previously imported from @librechat/api continue to work.
+export { MAX_TUTORIAL_RATINGS };
+
 /** Keys that must never appear in a user-supplied object to prevent prototype pollution. */
 const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
 /** Valid star-rating range (inclusive). */
 const RATING_MIN = 1;
 const RATING_MAX = 5;
-
-/**
- * Maximum number of course ratings a user can store.
- * Prevents document bloat and limits unbounded writes.
- * Easy to raise in future — this is the only constant to change.
- */
-export const MAX_TUTORIAL_RATINGS = 50;
 
 export interface TutorialStateUpdate {
   tutorialPromptSeen?: boolean;
