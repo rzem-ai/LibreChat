@@ -571,8 +571,9 @@ describe('skill scanner', () => {
       expect(frontmatterText).toMatch(/alwaysApply/);
     });
 
-    // Deloitte Custom Change: Verify hidden files and artifact directories are stripped before
-    // scanning, without removing valid underscore-prefixed Python modules.
+    // Deloitte Custom Change: Verify hidden files and artifact directories are stripped
+    // before scanning by stripZipArtifacts, without removing valid underscore-prefixed
+    // Python modules.
     it('strips hidden files and artifact directories before scanning', async () => {
       const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
       global.fetch = fetchSpy as unknown as typeof fetch;

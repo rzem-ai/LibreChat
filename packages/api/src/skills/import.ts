@@ -15,7 +15,7 @@ import type { Types } from 'mongoose';
 import type { ImportLimits } from './limits';
 import { isSkillScanError, scanSkillMarkdown, scanSkillUpload } from './scanner';
 import { resolveRequestTenantId } from '~/middleware/tenant';
-import { readZipEntry, stripZipArtefacts } from './zip';
+import { readZipEntry, stripZipArtifacts } from './zip';
 import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
 import { isSafeSkillFilePath } from './path';
 import { parseSkillMarkdown } from './parse';
@@ -360,7 +360,7 @@ async function handleZip(
   // add new patterns there to extend behaviour.
   // This safety net runs even when the skill scanner is disabled (e.g. open source
   // / self-hosted deployments without SKILL_SCANNER_URL configured).
-  stripZipArtefacts(zip);
+  stripZipArtifacts(zip);
 
   const entries = Object.keys(zip.files);
 

@@ -23,8 +23,13 @@ export const STRIP_BASENAME_PREFIXES: readonly string[] = [
  * Strips unwanted filesystem artifacts from an in-memory JSZip object in-place.
  * Driven by STRIP_DIR_NAMES and STRIP_BASENAME_PREFIXES —
  * add new patterns to those constants to extend behaviour without touching this function.
+ *
+ * Removes any entry whose path contains a dot-prefixed segment (e.g. .DS_Store,
+ * .env, .venv, .git) at any depth, any segment matching STRIP_DIR_NAMES
+ * (e.g. __MACOSX, __pycache__, node_modules) at any depth, and any basename
+ * matching STRIP_BASENAME_PREFIXES (e.g. ._SKILL.md).
  */
-export function stripZipArtefacts(zip: JSZip): void {
+export function stripZipArtifacts(zip: JSZip): void {
   for (const entryPath of Object.keys(zip.files)) {
     const normalized = entryPath.replace(/\\/g, '/');
     const segments = normalized.split('/').filter(Boolean);

@@ -19,7 +19,7 @@ import JSZip from 'jszip';
 import { logger } from '@librechat/data-schemas';
 import { SKILL_SEVERITY_LEVELS } from 'librechat-data-provider';
 import { parseSkillMarkdown, extractSkillBody } from './parse';
-import { readZipEntry, stripZipArtefacts } from './zip';
+import { readZipEntry, stripZipArtifacts } from './zip';
 import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
 
 const SKILL_MD = 'SKILL.md';
@@ -705,21 +705,22 @@ export async function scanSkillUpload(params: {
   // Deloitte Custom Change: Strip unwanted filesystem artifacts in-place before
   // the entry count check so they do not inflate the count toward the limit.
   // Patterns are configured via STRIP_DIR_NAMES and STRIP_BASENAME_PREFIXES in zip.ts.
-  stripZipArtefacts(zip);
+  stripZipArtifacts(zip);
 
-  // Entry count guard — moved here from stripInternalFrontmatterFromZip and placed
-  // after stripping so the count reflects real skill files only.
+  // Entry count guard — placed after stripping so the count reflects real skill
+  // files only. Sends the original upload bytes rather than re-materialising the
+  // in-memory archive, avoiding unnecessary decompression/recompression of a
+  // potentially large or malicious archive. handleZip will enforce the same limit.
   if (Object.keys(zip.files).length > DEFAULT_SKILL_IMPORT_LIMITS.maxEntries) {
-    const oversizedBytes = await zip.generateAsync({ type: 'uint8array' });
-    await scanArchive(oversizedBytes, params.fileName, { token: params.token });
+    await scanArchive(bytes, params.fileName, { token: params.token });
     return;
   }
 
   const stripped = await stripInternalFrontmatterFromZip(zip);
   if (!stripped) {
-    // No parseable SKILL.md or other early exit — scan the already-cleaned zip.
-    const fallbackBytes = await zip.generateAsync({ type: 'uint8array' });
-    await scanArchive(fallbackBytes, params.fileName, { token: params.token });
+    // No parseable SKILL.md or other early exit — scan the original upload bytes
+    // directly rather than re-materialising the in-memory archive.
+    await scanArchive(bytes, params.fileName, { token: params.token });
     return;
   }
 

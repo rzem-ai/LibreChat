@@ -490,8 +490,8 @@ describe('createImportHandler', () => {
     }
   });
 
-  // Deloitte Custom Change: Verify that hidden files and accidentally included dependency
-  // directories are stripped at all levels when the scanner is not configured.
+  // Deloitte Custom Change: Verify stripZipArtifacts removes hidden files and accidentally
+  // included dependency directories at all levels when the scanner is not configured.
   it('strips hidden files and artifact directories at all levels when scanner is not configured', async () => {
     const savedScannerUrl = process.env.SKILL_SCANNER_URL;
     delete process.env.SKILL_SCANNER_URL;
