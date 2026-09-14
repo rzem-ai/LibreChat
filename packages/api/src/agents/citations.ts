@@ -322,9 +322,15 @@ function anchorsForSentence(
     threshold?: number;
     tokenizeFn?: (text: string) => string[];
     anchorTag?: string;
+    excludeCoords?: Set<string>;
   } = {},
 ): { anchors: string[]; coords: string[] } {
-  const { threshold = SIMILARITY_THRESHOLD, tokenizeFn = tokenize, anchorTag = 'file' } = options;
+  const {
+    threshold = SIMILARITY_THRESHOLD,
+    tokenizeFn = tokenize,
+    anchorTag = 'file',
+    excludeCoords,
+  } = options;
   const sentenceTokens = new Set(tokenizeFn(sentence));
   if (sentenceTokens.size < MIN_SENTENCE_CONTENT_WORDS) {
     return { anchors: [], coords: [] };
@@ -332,11 +338,14 @@ function anchorsForSentence(
 
   const bestByCoord = new Map<string, { turn: number; fileIndex: number; score: number }>();
   for (const passage of passages) {
+    const key = `${passage.turn}:${passage.fileIndex}`;
+    if (excludeCoords?.has(key)) {
+      continue;
+    }
     const score = containment(sentenceTokens, passage.tokens);
     if (score < threshold) {
       continue;
     }
-    const key = `${passage.turn}:${passage.fileIndex}`;
     const existing = bestByCoord.get(key);
     if (!existing || score > existing.score) {
       bestByCoord.set(key, { turn: passage.turn, fileIndex: passage.fileIndex, score });
@@ -422,8 +431,18 @@ export function insertFileCitations(
     }
 
     const sentences = splitIntoSentences(text);
+    let lineCoords = new Set<string>();
     const rebuilt = sentences
-      .map((sentence) => withAnchors(sentence, anchorsForSentence(sentence, passages).anchors))
+      .map((sentence) => {
+        const { anchors, coords } = anchorsForSentence(sentence, passages, {
+          excludeCoords: lineCoords,
+        });
+        coords.forEach((coord) => lineCoords.add(coord));
+        if (sentence.includes('\n')) {
+          lineCoords = new Set();
+        }
+        return withAnchors(sentence, anchors);
+      })
       .join('');
 
     if (rebuilt !== text) {
@@ -461,6 +480,13 @@ function buildMCPPassages(mcpAttachments: TAttachment[], turnOffset: number): Pa
  * lenient `MCP_SIMILARITY_THRESHOLD`. Mutates in place. Returns the
  * `"turn:fileIndex"` coordinates that received an anchor, so callers can
  * detect sources the lexical pass missed (see `appendGuaranteedMCPCitations`).
+ *
+ * A source already anchored earlier on the same line is excluded from later
+ * sentences on that line (reset at each `\n`). A single source's content can
+ * legitimately overlap several sentence-splitter fragments within one
+ * rendered bullet/paragraph — e.g. a filename's extension period splits it
+ * into an extra fragment — which would otherwise stack duplicate citations
+ * of the same source on what the user reads as one point.
  */
 export function insertMCPCitations(
   contentParts: TMessageContentParts[],
@@ -480,14 +506,22 @@ export function insertMCPCitations(
     }
 
     const sentences = splitIntoSentences(text);
+    let lineCoords = new Set<string>();
     const rebuilt = sentences
       .map((sentence) => {
         const { anchors, coords } = anchorsForSentence(sentence, passages, {
           threshold: MCP_SIMILARITY_THRESHOLD,
           tokenizeFn: tokenizeStemmed,
           anchorTag: 'mcp',
+          excludeCoords: lineCoords,
         });
-        coords.forEach((coord) => usedCoords.add(coord));
+        coords.forEach((coord) => {
+          usedCoords.add(coord);
+          lineCoords.add(coord);
+        });
+        if (sentence.includes('\n')) {
+          lineCoords = new Set();
+        }
         return withAnchors(sentence, anchors);
       })
       .join('');
@@ -501,13 +535,18 @@ export function insertMCPCitations(
 }
 
 /**
- * Force-appends a citation anchor for every MCP source that carries a
- * disclaimer (e.g. KX usage restrictions) but wasn't already anchored by the
- * lexical `insertMCPCitations` pass — so a qual with real usage restrictions
- * is always cited, not only when the model's phrasing happened to overlap.
- * Mirrors the exact turn-advancement rule `useSearchResultsByTurn` depends on:
- * the turn counter advances for every attachment whose `sources` array is
- * present, even an empty one.
+ * Deloitte Custom Change
+ * Force-appends a citation anchor for every disclaimer-bearing or SharePoint
+ * MCP source that wasn't already anchored by the lexical `insertMCPCitations`
+ * pass — so those sources are always cited, not only when the model's
+ * phrasing happened to overlap them. Scoped to disclaimer-bearing attachments
+ * (e.g. KX) and SharePoint sources specifically, rather than every MCP
+ * toolset: a source that never surfaces in the answer at all (e.g. an
+ * AFR/feed/entity search hit the model chose not to discuss) should not get a
+ * citation chip for text the user never reads about. Mirrors the exact
+ * turn-advancement rule `useSearchResultsByTurn` depends on: the turn counter
+ * advances for every attachment whose `sources` array is present, even an
+ * empty one.
  */
 export function appendGuaranteedMCPCitations(
   contentParts: TMessageContentParts[],
@@ -524,14 +563,16 @@ export function appendGuaranteedMCPCitations(
     if (!payload?.sources) {
       continue;
     }
-    if (payload.disclaimer) {
-      payload.sources.forEach((_source, fileIndex) => {
-        const coord = `${turn}:${fileIndex}`;
-        if (!usedCoords.has(coord)) {
-          missingAnchors.push(`${ANCHOR_MARKER}turn${turn}mcp${fileIndex}`);
-        }
-      });
-    }
+    const hasDisclaimer = Boolean(payload.disclaimer);
+    payload.sources.forEach((source, fileIndex) => {
+      if (!hasDisclaimer && !isSharePointSource(source)) {
+        return;
+      }
+      const coord = `${turn}:${fileIndex}`;
+      if (!usedCoords.has(coord)) {
+        missingAnchors.push(`${ANCHOR_MARKER}turn${turn}mcp${fileIndex}`);
+      }
+    });
     turn += 1;
   }
 
@@ -545,6 +586,274 @@ export function appendGuaranteedMCPCitations(
   }
   const text = readText(targetPart) ?? '';
   writeText(targetPart, withAnchors(text, missingAnchors));
+}
+
+/** Tool-name prefix identifying SharePoint MCP results (see `packages/api/src/mcp/sharepoint/sharepoint.ts` and `KNOWN_MCP_TOOLSET_PREFIXES` in `feed.ts`). */
+const SHAREPOINT_TOOL_PREFIX = 'sp_';
+
+/** The only SharePoint tool whose `content` is a document's full extracted text rather than a short filename/URL listing entry. */
+const SHAREPOINT_CONTENT_TOOL = 'sp_read_file';
+
+function isSharePointSource(source: MCPResultSource): boolean {
+  return source.toolName?.startsWith(SHAREPOINT_TOOL_PREFIX) ?? false;
+}
+
+/**
+ * True for `sp_search`/`sp_list_*`/`sp_get_*`-style sources: short
+ * filename+URL entries. Their `content` is unsafe input for the lexical
+ * pass's sentence splitter, which breaks at every period — including ones
+ * inside a listed file's URL or `.ext` — so a listing source that
+ * `insertSharePointCitations`'s line-matcher didn't anchor must still be
+ * excluded from the lexical fallback, not handed to it.
+ */
+function isSharePointListingSource(source: MCPResultSource): boolean {
+  return isSharePointSource(source) && source.toolName !== SHAREPOINT_CONTENT_TOOL;
+}
+
+/**
+ * Strips a leading list marker (`-`, `*`, `•`, `1.`) and markdown bold, so a
+ * rendered bullet line can be compared directly against a raw source title.
+ */
+function stripLineMarkers(line: string): string {
+  return line
+    .trim()
+    .replace(/\*\*/g, '')
+    .replace(/^[-*•]\s+/, '')
+    .replace(/^\d+[.)]\s+/, '')
+    .trim();
+}
+
+/** Matches a markdown table separator row (`| --- | :--: |`), which has no source names to match against. */
+const TABLE_SEPARATOR_LINE = /^\s*\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?\s*$/;
+
+/**
+ * Splits a markdown table row (`| a | b |`) into its cell contents, or
+ * returns undefined if the line isn't a table row (including separator
+ * rows), so a SharePoint answer rendered as a table can still be matched
+ * cell-by-cell the same way a bulleted line is matched whole.
+ */
+function splitTableRowCells(line: string): string[] | undefined {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith('|') || !trimmed.endsWith('|') || trimmed.length < 2) {
+    return undefined;
+  }
+  if (TABLE_SEPARATOR_LINE.test(trimmed)) {
+    return undefined;
+  }
+  return trimmed.slice(1, -1).split('|');
+}
+
+/**
+ * Lowercases and collapses `_`/`-`/whitespace runs to a single space, so
+ * titles and rendered lines compare equal despite cosmetic differences the
+ * model introduces when restating a name (e.g. `6.2.0_Release` vs
+ * `6.2.0 Release`).
+ */
+function normalizeForMatch(text: string): string {
+  return text.toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * True when `text` starts with `alias` and the alias ends there — the next
+ * character (if any) is not a letter/digit. A plain `startsWith` would let a
+ * short title like "Archive" consume an unrelated line like "Archived files"
+ * just because it's a string prefix. Requiring a boundary still allows the
+ * intended "title plus commentary" match (`- Foo.pptx – last modified today`),
+ * since a space or punctuation always follows the title there.
+ */
+function startsWithAliasBoundary(text: string, alias: string): boolean {
+  if (!text.startsWith(alias)) {
+    return false;
+  }
+  const nextChar = text[alias.length];
+  return nextChar === undefined || !/[a-z0-9]/i.test(nextChar);
+}
+
+/** Strips a real file extension (`.xlsx`, `.docx`, `.loop`, ...) off a title, or returns undefined if it has none. */
+function stripExtension(title: string): string | undefined {
+  const match = title.match(/^(.+)\.([a-z0-9]{1,6})$/i);
+  if (!match || !/[a-z]/i.test(match[2])) {
+    return undefined;
+  }
+  return match[1];
+}
+
+interface SharePointTitleCoord {
+  turn: number;
+  fileIndex: number;
+}
+
+/**
+ * Dequeues the next unused source for a matched alias, so when several
+ * sources share the exact same title (e.g. the same filename uploaded to
+ * different folders), each successive line that matches it is credited to
+ * a distinct source — in the same order those sources appeared in the tool
+ * result — instead of every occurrence pointing at the first duplicate.
+ */
+function nextCoordForAlias(
+  aliasQueues: Map<string, SharePointTitleCoord[]>,
+  alias: string,
+): SharePointTitleCoord | undefined {
+  const queue = aliasQueues.get(alias);
+  return queue && queue.length > 0 ? queue.shift() : undefined;
+}
+
+/**
+ * Inserts citation anchors for SharePoint MCP sources by matching each line
+ * against source titles, instead of the sentence-boundary heuristic
+ * `insertMCPCitations` uses. SharePoint answers are rendered as bulleted
+ * filename/folder lists, not paraphrased prose, and `splitIntoSentences`
+ * splits on `.`, which fractures a filename at its extension's period
+ * (`report.pdf` -> `report` + `pdf`), misplacing the anchor and dropping
+ * short names below `MIN_SENTENCE_CONTENT_WORDS`.
+ *
+ * A line is anchored when it *starts with* a source title (after stripping
+ * bullet/bold markers and normalizing case/punctuation) — not exact-equals —
+ * because the model frequently appends commentary after the name (`- Foo.pptx
+ * – last modified today`, `- Foo documentation`) or swaps the extension for a
+ * trailing parenthetical (`- Foo (xlsx)`), which an exact-line match misses.
+ * Each title also registers an extension-stripped alias to catch the latter.
+ * When more than one title prefixes the same line, the longest (most
+ * specific) one wins, so a short generic title (e.g. a folder literally named
+ * "Release") can't steal credit from a longer, more specific one that also
+ * matches (e.g. "Release Announcements"). Requiring a prefix match (not a
+ * substring) still keeps prose that merely *mentions* a filename mid-sentence
+ * from getting a spurious anchor.
+ *
+ * A markdown table row (`| Foo.pptx | Site | Date |`) is matched cell-by-cell
+ * instead of whole-line, since the model just as often renders SharePoint
+ * results as a table as a bulleted list, and a title normally sits alone in
+ * one cell rather than at the very start of the row. The anchor is appended
+ * inside the matched cell so the row's column count — and the table's
+ * rendering — stays intact.
+ *
+ * When several sources share the exact same title (e.g. the same filename
+ * uploaded to different folders), each is registered on a per-alias queue in
+ * source order; a line/cell match dequeues the next one, so the Nth line
+ * mentioning that title is credited to the Nth source with that title,
+ * instead of every occurrence pointing at the same duplicate.
+ *
+ * Scoped to sources whose `toolName` starts with `sp_` so every other MCP
+ * connector keeps using the existing lexical pass unchanged. Returns the
+ * `"turn:fileIndex"` coordinates it anchored, in the same format
+ * `insertMCPCitations` returns, so the caller can merge them into the same
+ * `usedCoords` set.
+ */
+export function insertSharePointCitations(
+  contentParts: TMessageContentParts[],
+  mcpAttachments: TAttachment[],
+  turnOffset: number,
+): Set<string> {
+  const usedCoords = new Set<string>();
+  const aliasQueues = new Map<string, SharePointTitleCoord[]>();
+
+  const registerAlias = (alias: string, coord: SharePointTitleCoord): void => {
+    const queue = aliasQueues.get(alias);
+    if (queue) {
+      queue.push(coord);
+    } else {
+      aliasQueues.set(alias, [coord]);
+    }
+  };
+
+  let turn = turnOffset;
+  for (const attachment of mcpAttachments) {
+    const payload = attachment[Tools.mcp_results];
+    if (!payload?.sources) {
+      continue;
+    }
+    payload.sources.forEach((source, fileIndex) => {
+      if (!source.title || !isSharePointSource(source)) {
+        return;
+      }
+      const coord: SharePointTitleCoord = { turn, fileIndex };
+      const fullAlias = normalizeForMatch(source.title);
+      registerAlias(fullAlias, coord);
+      const fullQueue = aliasQueues.get(fullAlias);
+      const withoutExtension = stripExtension(source.title);
+      if (withoutExtension) {
+        const extensionStrippedAlias = normalizeForMatch(withoutExtension);
+        if (extensionStrippedAlias !== fullAlias) {
+          const existingQueue = aliasQueues.get(extensionStrippedAlias);
+          if (existingQueue !== fullQueue) {
+            if (existingQueue) {
+              registerAlias(extensionStrippedAlias, coord);
+            } else if (fullQueue) {
+              aliasQueues.set(extensionStrippedAlias, fullQueue);
+            }
+          }
+        }
+      }
+    });
+    turn += 1;
+  }
+
+  if (aliasQueues.size === 0) {
+    return usedCoords;
+  }
+  const sortedAliases = Array.from(aliasQueues.keys()).sort((a, b) => b.length - a.length);
+
+  for (const part of contentParts) {
+    const text = readText(part);
+    if (text == null || text.length === 0) {
+      continue;
+    }
+
+    let changed = false;
+    const rebuiltLines = text.split('\n').map((line) => {
+      const tableCells = splitTableRowCells(line);
+      if (tableCells) {
+        for (let cellIndex = 0; cellIndex < tableCells.length; cellIndex++) {
+          const normalizedCell = normalizeForMatch(stripLineMarkers(tableCells[cellIndex]));
+          if (!normalizedCell) {
+            continue;
+          }
+          for (const alias of sortedAliases) {
+            if (!startsWithAliasBoundary(normalizedCell, alias)) {
+              continue;
+            }
+            const coord = nextCoordForAlias(aliasQueues, alias);
+            if (!coord) {
+              continue;
+            }
+            usedCoords.add(`${coord.turn}:${coord.fileIndex}`);
+            changed = true;
+            tableCells[cellIndex] = withAnchors(tableCells[cellIndex], [
+              `${ANCHOR_MARKER}turn${coord.turn}mcp${coord.fileIndex}`,
+            ]);
+            return `|${tableCells.join('|')}|`;
+          }
+        }
+        return line;
+      }
+
+      const base = stripLineMarkers(line);
+      if (!base) {
+        return line;
+      }
+      const normalizedLine = normalizeForMatch(base);
+
+      for (const alias of sortedAliases) {
+        if (!startsWithAliasBoundary(normalizedLine, alias)) {
+          continue;
+        }
+        const coord = nextCoordForAlias(aliasQueues, alias);
+        if (!coord) {
+          continue;
+        }
+        usedCoords.add(`${coord.turn}:${coord.fileIndex}`);
+        changed = true;
+        return withAnchors(line, [`${ANCHOR_MARKER}turn${coord.turn}mcp${coord.fileIndex}`]);
+      }
+      return line;
+    });
+
+    if (changed) {
+      writeText(part, rebuiltLines.join('\n'));
+    }
+  }
+
+  return usedCoords;
 }
 
 /**
@@ -639,8 +948,37 @@ export async function applyEndOfTraceCitations({
     }
     if (mcpAttachments.length > 0) {
       const turnOffset = fileSearchAttachments.length;
-      const usedCoords = insertMCPCitations(contentParts, mcpAttachments, turnOffset);
-      appendGuaranteedMCPCitations(contentParts, mcpAttachments, turnOffset, usedCoords);
+      const usedCoords = insertSharePointCitations(contentParts, mcpAttachments, turnOffset);
+      // Listing sources (sp_search/sp_list_*/sp_get_*) always skip the lexical pass —
+      // their short filename+URL content isn't safe input for a sentence splitter that
+      // breaks on periods, so one that the line-matcher missed should get no citation, not a
+      // garbled one. A `sp_read_file` source only skips the lexical pass if the
+      // line-matcher already anchored it (avoids double-citing); otherwise — e.g. answered
+      // as prose/a table instead of a filename-prefixed line — it still gets a shot at the
+      // lexical/token-overlap pass, same as every other MCP connector.
+      let turnCursor = turnOffset;
+      const lexicalPassAttachments = mcpAttachments.map((attachment) => {
+        const payload = attachment[Tools.mcp_results];
+        if (!payload?.sources) {
+          return attachment;
+        }
+        const turnNum = turnCursor;
+        turnCursor += 1;
+        const sources = payload.sources.map((source, fileIndex) => {
+          if (isSharePointListingSource(source)) {
+            return { ...source, content: '' };
+          }
+          if (!isSharePointSource(source) || !usedCoords.has(`${turnNum}:${fileIndex}`)) {
+            return source;
+          }
+          return { ...source, content: '' };
+        });
+        return { ...attachment, [Tools.mcp_results]: { ...payload, sources } };
+      });
+      insertMCPCitations(contentParts, lexicalPassAttachments, turnOffset).forEach((coord) =>
+        usedCoords.add(coord),
+      );
+      appendGuaranteedMCPCitations(contentParts, lexicalPassAttachments, turnOffset, usedCoords);
       appendMCPDisclaimers(contentParts, mcpAttachments, mcpUsageGuidelinesUrl);
     }
   } catch (error) {

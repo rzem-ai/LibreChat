@@ -1,11 +1,29 @@
 // Deloitte Custom Change: tests
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import type { SearchResultData } from 'librechat-data-provider';
-import { Citation, CompositeCitation } from '~/components/Web/Citation';
+import { Citation, CompositeCitation, HighlightedText } from '~/components/Web/Citation';
 import { CitationContext } from '~/components/Web/Context';
 import { SearchContext } from '~/Providers';
+
+/**
+ * A real, stateful provider (unlike `renderWithProviders`' static mock) — used to prove the
+ * hover-highlight wiring itself works end to end, mirroring how `ContentParts` mounts it.
+ */
+function StatefulCitationProvider({ children }: { children: React.ReactNode }) {
+  const [hoveredCitationIds, setHoveredCitationIdsState] = useState<Set<string> | null>(null);
+  const setHoveredCitationIds = useCallback(
+    (ids: Array<string> | null) =>
+      setHoveredCitationIdsState(ids && ids.length > 0 ? new Set(ids) : null),
+    [],
+  );
+  return (
+    <CitationContext.Provider value={{ hoveredCitationIds, setHoveredCitationIds }}>
+      {children}
+    </CitationContext.Provider>
+  );
+}
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string, values?: { label?: string; pages?: string }) => {
@@ -58,8 +76,8 @@ function renderWithProviders(
     <SearchContext.Provider value={{ searchResults }}>
       <CitationContext.Provider
         value={{
-          hoveredCitationId: null,
-          setHoveredCitationId: jest.fn(),
+          hoveredCitationIds: null,
+          setHoveredCitationIds: jest.fn(),
         }}
       >
         {children}
@@ -217,5 +235,51 @@ describe('Citation', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Some Article Title' })).toBeInTheDocument();
+  });
+
+  it('highlights the associated span on hover with a real stateful provider (not a static mock)', () => {
+    const searchResults = {
+      '0': {
+        organic: [
+          {
+            attribution: 'example.com',
+            link: 'https://example.com',
+            snippet: 'Example snippet',
+            title: 'Example',
+          },
+        ],
+      },
+    };
+
+    const quotedSpanText = 'quoted span';
+
+    render(
+      <SearchContext.Provider value={{ searchResults: searchResults as any }}>
+        <StatefulCitationProvider>
+          <HighlightedText citationId="cite-5">{quotedSpanText}</HighlightedText>
+          <Citation
+            citationId="cite-5"
+            citationType="standalone"
+            node={{
+              properties: {
+                citation: { turn: 0, refType: 'search', index: 0 },
+                citationId: 'cite-5',
+              },
+            }}
+          />
+        </StatefulCitationProvider>
+      </SearchContext.Provider>,
+    );
+
+    const span = screen.getByText(quotedSpanText);
+    const chip = screen.getByRole('link', { name: 'example.com' });
+
+    expect(span).not.toHaveClass('bg-amber-300/20');
+
+    fireEvent.mouseEnter(chip);
+    expect(span).toHaveClass('bg-amber-300/20');
+
+    fireEvent.mouseLeave(chip);
+    expect(span).not.toHaveClass('bg-amber-300/20');
   });
 });

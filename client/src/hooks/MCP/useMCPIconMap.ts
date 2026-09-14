@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import { isDark, useMediaQuery, useTheme } from '@librechat/client';
 import { normalizeServerName, buildServerNameAliases } from 'librechat-data-provider';
 import type { MCPServerDBObjectResponse } from 'librechat-data-provider';
-import { useMCPServersQuery } from '~/data-provider';
 import { resolveThemedIconPaths } from '~/components/MCP/mcpServerUtils';
+import { useMCPServersQuery } from '~/data-provider';
 
 /**
  * Deloitte Custom Change: maps each configured MCP server's normalized name (the
@@ -40,7 +40,7 @@ function useMCPServerConfigMap(): Map<string, MCPServerDBObjectResponse> {
  * re-render on that change must observe the media query themselves, via the
  * same shared `useMediaQuery` hook other theme-reactive components use.
  */
-function useIsDarkMode(): boolean {
+export function useIsDarkMode(): boolean {
   const { theme } = useTheme();
   const systemIsDark = useMediaQuery('(prefers-color-scheme: dark)');
   return theme === 'system' ? systemIsDark : isDark(theme);
@@ -52,8 +52,8 @@ function useIsDarkMode(): boolean {
  * currently active theme, using the same light/dark/legacy fallback precedence
  * as `MCPServerIcon`. Servers with no icon configured are omitted.
  */
-export function useMCPIconMap(): Map<string, string> {
-  const { data: servers } = useMCPServersQuery();
+export function useMCPIconMap({ enabled = true }: { enabled?: boolean } = {}): Map<string, string> {
+  const { data: servers } = useMCPServersQuery({ enabled });
   const dark = useIsDarkMode(); // Deloitte Custom Change: light/dark themed MCP server icons.
 
   return useMemo(() => {
@@ -89,7 +89,9 @@ export function useMCPServerNames(): string[] {
     }
     const rawNames = Object.keys(servers);
     const aliases = buildServerNameAliases(rawNames);
-    return Array.from(new Set([...rawNames.map(normalizeServerName), ...rawNames, ...aliases.keys()]));
+    return Array.from(
+      new Set([...rawNames.map(normalizeServerName), ...rawNames, ...aliases.keys()]),
+    );
   }, [servers]);
 }
 
@@ -107,4 +109,3 @@ export function useMCPServerTitleMap(): Map<string, string> {
     return map;
   }, [configMap]);
 }
-

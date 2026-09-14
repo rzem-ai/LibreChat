@@ -1,13 +1,13 @@
 // Deloitte Custom Change: tests
+import type { MCPOptions } from 'librechat-data-provider';
+import type { MCPServerDefinition } from '~/hooks/MCP/useMCPServerManager';
+import type { MCPServerStatusIconProps } from '../MCPServerStatusIcon';
 import {
   getSelectedServerIcons,
   hasConfiguredIcon,
   resolveThemedIconPaths,
   shouldShowActionButton,
 } from '../mcpServerUtils';
-import type { MCPServerStatusIconProps } from '../MCPServerStatusIcon';
-import type { MCPServerDefinition } from '~/hooks/MCP/useMCPServerManager';
-import type { MCPOptions } from 'librechat-data-provider';
 
 const makeServer = (
   serverName: string,
@@ -127,9 +127,10 @@ describe('resolveThemedIconPaths', () => {
       light: '/icon.png',
       dark: '/icon.png',
     });
-    expect(
-      resolveThemedIconPaths({ iconPath: '/icon.png', iconPathDark: '/dark.png' }),
-    ).toEqual({ light: '/icon.png', dark: '/dark.png' });
+    expect(resolveThemedIconPaths({ iconPath: '/icon.png', iconPathDark: '/dark.png' })).toEqual({
+      light: '/icon.png',
+      dark: '/dark.png',
+    });
   });
 
   it('falls back to the other theme variant when neither its own variant nor iconPath is set', () => {

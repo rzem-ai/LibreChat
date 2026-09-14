@@ -1420,7 +1420,7 @@ async function getServerConnectionStatus(
           /**
            * OBO servers use ephemeral in-memory cached tokens (not persistent DB storage).
            * User's upstream OpenID token is sufficient to display 'connected' status.
-           * 
+           *
            * Trustedness validation occurs later via oboTrustChecker during actual token exchange.
            * Token expiration/validity is checked during on-demand OBO token resolution at tool execution.
            * This allows green icon display on sign-in when upstream token is fresh.
