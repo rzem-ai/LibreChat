@@ -138,7 +138,7 @@ const SplitText: React.FC<SplitTextProps> = ({
       <span className="sr-only">{text}</span>
       <p
         ref={ref}
-        className={`split-parent inline-block overflow-hidden pb-[0.15em] leading-normal ${className}`}
+        className={`split-parent inline-block pb-[0.15em] leading-normal ${className}`}
         style={{ textAlign, whiteSpace: 'normal', wordWrap: 'break-word' }}
         aria-hidden="true"
       >
