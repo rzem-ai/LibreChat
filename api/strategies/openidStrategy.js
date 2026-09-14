@@ -842,8 +842,7 @@ async function processOpenIDAuth(tokenset, existingUsersOnly = false) {
 
   // Deloitte Custom Change: Prefer Entra's Graph profile photo because its OpenID picture claim can be stale or unusable.
   if (!user.avatar?.includes('manual=true')) {
-    const image =
-      (await getMicrosoftGraphAvatar(user, tokenset.access_token)) ?? userinfo.picture;
+    const image = (await getMicrosoftGraphAvatar(user, tokenset.access_token)) ?? userinfo.picture;
     if (image) {
       let fileName;
       if (crypto) {
