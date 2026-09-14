@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRecoilValue } from 'recoil';
 import { Outlet } from 'react-router-dom';
 import { useMediaQuery } from '@librechat/client';
+import { useGetModelsQuery } from 'librechat-data-provider/react-query';
 import type { CSSProperties } from 'react';
 import {
   AgentsMapContext,
@@ -12,13 +13,18 @@ import {
   SetConvoProvider,
 } from '~/Providers';
 import {
+  useGetStartupConfig,
+  useGetEndpointsQuery,
+  useHealthCheck,
+  useUserTermsQuery,
+} from '~/data-provider';
+import {
   useAgentsMap,
   useAssistantsMap,
   useAuthContext,
   useFileMap,
   useSearchEnabled,
 } from '~/hooks';
-import { useGetStartupConfig, useHealthCheck, useUserTermsQuery } from '~/data-provider';
 import { DeloitteHeader } from '~/components/DeloitteComponents/DeloitteTopHeader';
 import { LearningTourProvider } from '~/components/Learning/LearningTourContext';
 import CourseCompletionModal from '~/components/Learning/CourseCompletionModal';
@@ -58,9 +64,19 @@ export default function Root() {
 
   const { data: config } = useGetStartupConfig();
   const deloitteHeader = config?.interface?.deloitteHeader;
-  const { data: termsData } = useUserTermsQuery({
-    enabled: isAuthenticated && config?.interface?.termsOfService?.modalAcceptance === true,
+  const termsEnabled =
+    isAuthenticated && config?.interface?.termsOfService?.modalAcceptance === true;
+  const { data: termsData, isLoading: termsLoading } = useUserTermsQuery({
+    enabled: termsEnabled,
   });
+
+  // Read endpoints + models query status so the tutorial bubble only appears
+  // after the main chat UI has finished its initial data load (these are the
+  // same queries ChatRoute waits on before rendering — reading them here hits
+  // the React Query cache; no extra network requests are made).
+  const endpointsQuery = useGetEndpointsQuery({ enabled: isAuthenticated });
+  const modelsQuery = useGetModelsQuery({ enabled: isAuthenticated });
+  const chatReady = !!endpointsQuery.data && !!modelsQuery.data;
 
   useSearchEnabled(isAuthenticated);
 
@@ -135,7 +151,10 @@ export default function Root() {
                   modalContent={config.interface.termsOfService.modalContent}
                 />
               )}
-              <TutorialPromptModal termsVisible={showTerms} />
+              <TutorialPromptModal
+                termsVisible={showTerms || (termsEnabled && termsLoading)}
+                chatReady={chatReady}
+              />
               <CourseCompletionModal />
               <KeyboardShortcutsProvider />
             </LearningTourProvider>

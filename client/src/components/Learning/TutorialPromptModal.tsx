@@ -21,8 +21,8 @@ function getSidebarWidth(): number {
  *     virtualRef, appearing to the right of the Learning Hub icon with a
  *     pointed top-left corner aimed at the icon
  *
- * Ordering: Load page → disclaimer popup → close popup → landing page → 800ms
- * delay → this bubble appears.
+ * Ordering: Load page → disclaimer popup → close popup → chat UI fully loads
+ * (endpoints + models queries resolve) → 800ms delay → this bubble appears.
  *
  * Dismissal:
  *   - "Start Tour"  → opens the Learning panel and marks tutorialPromptSeen
@@ -41,9 +41,15 @@ const TUTORIAL_PROMPT_DELAY_MS = 800;
 interface TutorialPromptModalProps {
   /** Pass `showTerms` from Root so the tutorial bubble waits until terms are dismissed. */
   termsVisible?: boolean;
+  /** Pass true once the main chat UI has finished loading (endpoints + models resolved).
+   *  Prevents the bubble from appearing while the chat window is still rendering. */
+  chatReady?: boolean;
 }
 
-export default function TutorialPromptModal({ termsVisible = false }: TutorialPromptModalProps) {
+export default function TutorialPromptModal({
+  termsVisible = false,
+  chatReady = false,
+}: TutorialPromptModalProps) {
   const localize = useLocalize();
   const { setActive } = useActivePanel();
   const { shouldShowPrompt, markPromptSeen } = useTutorialPrompt();
@@ -54,16 +60,18 @@ export default function TutorialPromptModal({ termsVisible = false }: TutorialPr
   const [sidebarWidth, setSidebarWidth] = useState(52);
 
   useEffect(() => {
-    // While terms are open, reset the ready flag so the timer restarts from
-    // the moment the terms modal closes.
-    if (termsVisible) {
+    // Hold the bubble back while terms are visible OR while the chat UI hasn't
+    // finished loading yet (endpoints + models not resolved). This prevents the
+    // bubble appearing during the spinner phase and then disappearing when the
+    // chat window mounts.
+    if (termsVisible || !chatReady) {
       setReadyToShow(false);
       return;
     }
-    // Terms are gone (or never existed) — start the delay timer.
+    // Terms are gone and chat is ready — start the delay timer.
     const timer = window.setTimeout(() => setReadyToShow(true), TUTORIAL_PROMPT_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [termsVisible]);
+  }, [termsVisible, chatReady]);
 
   const isVisible = shouldShowPrompt && readyToShow;
 
@@ -114,7 +122,7 @@ export default function TutorialPromptModal({ termsVisible = false }: TutorialPr
   }
 
   return (
-    <Popover.Root open={isVisible} onOpenChange={(open) => !open && markPromptSeen()}>
+    <Popover.Root open={isVisible}>
       {/* virtualRef positions the bubble without touching ExpandedPanel */}
       <Popover.Anchor virtualRef={virtualRef} />
 

@@ -538,11 +538,13 @@ export const useUserTermsQuery = (
     [QueryKeys.userTerms, userId],
     () => dataService.getUserTerms(),
     {
-      enabled: !!userId && (config?.enabled ?? true),
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       refetchOnMount: false,
       ...config,
+      // userId guard must come after ...config so it cannot be overridden by
+      // a caller-supplied enabled condition that doesn't account for userId.
+      enabled: !!userId && (config?.enabled ?? true),
     },
   );
 };
@@ -559,11 +561,13 @@ export const useTutorialStateQuery = (
     [QueryKeys.userTutorialState, userId],
     () => dataService.getUserTutorialState(),
     {
-      enabled: !!userId && (config?.enabled ?? true),
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       refetchOnMount: false,
       ...config,
+      // userId guard must come after ...config so it cannot be overridden by
+      // a caller-supplied enabled condition that doesn't account for userId.
+      enabled: !!userId && (config?.enabled ?? true),
     },
   );
 };
