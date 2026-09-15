@@ -81,9 +81,7 @@ RUN \
     # React client build with configurable memory
     NODE_OPTIONS="--max-old-space-size=${NODE_MAX_OLD_SPACE_SIZE}" npm run frontend; \
     npm prune --production; \
-    npm cache clean --force; \
-    # Allow overwriting these files when the container runs as an arbitrary host UID/GID
-    chmod -R a+rwX /app/client/dist
+    npm cache clean --force
 
 # Optional build metadata surfaced in Settings -> About for support triage.
 # Declared here (after the heavy install/build steps) so that commit/date
