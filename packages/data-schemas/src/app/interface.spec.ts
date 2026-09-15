@@ -144,6 +144,31 @@ describe('loadDefaultInterface', () => {
     expect(interfaceConfig?.autoSubmitFromUrl).toBe(true);
   });
 
+  it('preserves disabled tutorial flag config', async () => {
+    const config: Partial<TCustomConfig> = {
+      interface: {
+        isTutorialEnabled: false,
+      },
+    };
+
+    const interfaceConfig = await loadDefaultInterface({
+      config,
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.isTutorialEnabled).toBe(false);
+  });
+
+  it('uses the schema default for tutorial flag when not configured', async () => {
+    const defaults = getConfigDefaults();
+    const interfaceConfig = await loadDefaultInterface({
+      config: {},
+      configDefaults: defaults,
+    });
+
+    expect(interfaceConfig?.isTutorialEnabled).toBe(defaults.interfaceConfig.isTutorialEnabled);
+  });
+
   it('preserves the configured temporary chat retention period', async () => {
     const config: Partial<TCustomConfig> = {
       interface: {

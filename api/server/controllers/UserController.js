@@ -144,16 +144,20 @@ const updateTutorialStateController = async (req, res) => {
     let user;
 
     if (update.tutorialRatings) {
-      // mergeTutorialRatings enforces MAX_TUTORIAL_RATINGS and writes atomically
-      // in a single aggregation-pipeline update — no separate read or cap check
-      // is needed here, and there is no TOCTOU window between the count and the write.
-      const { user: merged, capExceeded } = await db.mergeTutorialRatings(
+      // mergeTutorialRatings enforces MAX_TUTORIAL_RATINGS using guarded
+      // compare-and-swap writes compatible with DocumentDB.
+      const { user: merged, capExceeded, conflict } = await db.mergeTutorialRatings(
         req.user.id,
         update.tutorialRatings,
       );
       if (capExceeded) {
         return res.status(400).json({
           message: `tutorialRatings cannot exceed ${MAX_TUTORIAL_RATINGS} entries`,
+        });
+      }
+      if (conflict) {
+        return res.status(409).json({
+          message: 'tutorialRatings update conflict, please retry',
         });
       }
 

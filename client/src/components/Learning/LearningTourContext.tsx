@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import useLandingPageTour from './useLandingPageTour';
 import { useActivePanel } from '~/Providers';
+import useTutorialPrompt from '~/hooks/Learning/useTutorialPrompt';
 import store from '~/store';
 
 const LANDING_PAGE_COURSE_ID = 'landing-page-buttons';
@@ -32,10 +33,12 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
   const { setActive } = useActivePanel();
   const setSidebarExpanded = useSetRecoilState(store.sidebarExpanded);
   const [completedCourseId, setCompletedCourseId] = useState<string | null>(null);
+  const { markPromptSeen } = useTutorialPrompt();
 
   const { startTour } = useLandingPageTour(() => setCompletedCourseId(LANDING_PAGE_COURSE_ID));
 
   const startLandingPageTour = useCallback(() => {
+    markPromptSeen();
     // The tour highlights elements that only exist on the main chat route
     // (textarea, send button, header buttons) and inside the "conversations"
     // sidebar panel (search, projects) — switch to both before driving.
@@ -49,7 +52,7 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
       () => startTour(),
       isSmallScreen ? MOBILE_START_DELAY_MS : DESKTOP_START_DELAY_MS,
     );
-  }, [navigate, setActive, setSidebarExpanded, startTour]);
+  }, [markPromptSeen, navigate, setActive, setSidebarExpanded, startTour]);
 
   const dismissCompletion = useCallback(() => setCompletedCourseId(null), []);
 

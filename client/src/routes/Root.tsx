@@ -156,7 +156,7 @@ export default function Root() {
                 />
               )}
               <TutorialPromptModal
-                termsVisible={showTerms || (termsEnabled && termsLoading)}
+                termsVisible={showTerms || (termsEnabled && (termsLoading || !termsData))}
                 chatReady={chatReady}
               />
               <CourseCompletionModal />

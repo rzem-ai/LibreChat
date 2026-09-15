@@ -7,6 +7,7 @@ const mockNavigate = jest.fn();
 const mockSetActive = jest.fn();
 const mockSetSidebarExpanded = jest.fn();
 const mockStartTour = jest.fn();
+const mockMarkPromptSeen = jest.fn();
 let capturedOnComplete: (() => void) | undefined;
 
 jest.mock('react-router-dom', () => ({
@@ -27,6 +28,11 @@ jest.mock('../useLandingPageTour', () => ({
     capturedOnComplete = onComplete;
     return { startTour: mockStartTour };
   },
+}));
+
+jest.mock('~/hooks/Learning/useTutorialPrompt', () => ({
+  __esModule: true,
+  default: () => ({ markPromptSeen: mockMarkPromptSeen }),
 }));
 
 function wrapper({ children }: { children: React.ReactNode }) {
@@ -58,6 +64,7 @@ describe('LearningTourContext', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/c/new');
     expect(mockSetActive).toHaveBeenCalledWith('conversations');
     expect(mockSetSidebarExpanded).not.toHaveBeenCalled();
+    expect(mockMarkPromptSeen).toHaveBeenCalledTimes(1);
 
     act(() => {
       jest.runAllTimers();
@@ -74,6 +81,7 @@ describe('LearningTourContext', () => {
     });
 
     expect(mockSetSidebarExpanded).toHaveBeenCalledWith(false);
+    expect(mockMarkPromptSeen).toHaveBeenCalledTimes(1);
     act(() => {
       jest.advanceTimersByTime(299);
     });

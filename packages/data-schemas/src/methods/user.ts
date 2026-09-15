@@ -14,8 +14,8 @@ export const DEFAULT_SESSION_EXPIRY: number = 1000 * 60 * 15;
 
 /**
  * Maximum number of course ratings stored per user.
- * Enforced atomically inside mergeTutorialRatings via an aggregation pipeline,
- * so the bound holds even under concurrent requests. Raise here if needed —
+ * Enforced inside mergeTutorialRatings via guarded compare-and-swap updates
+ * compatible with Amazon DocumentDB. Raise here if needed —
  * this is the single source of truth for the limit.
  */
 export const MAX_TUTORIAL_RATINGS = 50;
@@ -134,7 +134,7 @@ export function createUserMethods(
   mergeTutorialRatings: (
     userId: string,
     ratings: Record<string, number>,
-  ) => Promise<{ user: IUser | null; capExceeded: boolean }>;
+  ) => Promise<{ user: IUser | null; capExceeded: boolean; conflict: boolean }>;
 } {
   /**
    * Normalizes email fields in search criteria to lowercase and trimmed.
@@ -615,7 +615,7 @@ export function createUserMethods(
   async function mergeTutorialRatings(
     userId: string,
     ratings: Record<string, number>,
-  ): Promise<{ user: IUser | null; capExceeded: boolean }> {
+  ): Promise<{ user: IUser | null; capExceeded: boolean; conflict: boolean }> {
     const User = mongoose.models.User;
 
     const maxAttempts = 3;
@@ -624,23 +624,37 @@ export function createUserMethods(
         .select('tutorialRatings')
         .lean<IUser | null>();
       if (!current) {
-        return { user: null, capExceeded: false };
+        return { user: null, capExceeded: false, conflict: false };
       }
 
+      const hasTutorialRatingsField = Object.prototype.hasOwnProperty.call(
+        current,
+        'tutorialRatings',
+      );
       const existingRatings = current.tutorialRatings ?? {};
       const mergedRatings = { ...existingRatings, ...ratings };
       if (Object.keys(mergedRatings).length > MAX_TUTORIAL_RATINGS) {
-        return { user: current, capExceeded: true };
+        return { user: current, capExceeded: true, conflict: false };
       }
 
+      const casFilter: FilterQuery<IUser> = hasTutorialRatingsField
+        ? { _id: userId, tutorialRatings: existingRatings }
+        : {
+            _id: userId,
+            $or: [
+              { tutorialRatings: { $exists: false } },
+              { tutorialRatings: existingRatings },
+            ],
+          };
+
       const updated = await User.findOneAndUpdate(
-        { _id: userId, tutorialRatings: existingRatings },
+        casFilter,
         { $set: { tutorialRatings: mergedRatings } },
         { new: true },
       ).lean<IUser>();
       if (updated) {
         await invalidateAuthUserDocCache(userId);
-        return { user: updated, capExceeded: false };
+        return { user: updated, capExceeded: false, conflict: false };
       }
     }
 
@@ -648,7 +662,7 @@ export function createUserMethods(
       .select('tutorialRatings tutorialPromptSeen')
       .lean<IUser | null>();
     if (!fallback) {
-      return { user: null, capExceeded: false };
+      return { user: null, capExceeded: false, conflict: false };
     }
 
     const fallbackRatings = fallback.tutorialRatings ?? {};
@@ -656,6 +670,7 @@ export function createUserMethods(
     return {
       user: fallback,
       capExceeded: Object.keys(fallbackMergedRatings).length > MAX_TUTORIAL_RATINGS,
+      conflict: true,
     };
   }
 

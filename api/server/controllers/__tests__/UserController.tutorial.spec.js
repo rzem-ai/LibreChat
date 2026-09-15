@@ -6,6 +6,7 @@ jest.mock('@librechat/data-schemas', () => ({
   logger: { error: jest.fn(), info: jest.fn(), warn: jest.fn() },
   getTenantId: jest.fn(),
   webSearchKeys: [],
+  MAX_TUTORIAL_RATINGS: 50,
 }));
 
 jest.mock('librechat-data-provider', () => ({
@@ -222,6 +223,26 @@ describe('UserController tutorial state', () => {
       expect(res.json).toHaveBeenCalledWith({
         message: `tutorialRatings cannot exceed ${MAX_TUTORIAL_RATINGS} entries`,
       });
+    });
+
+    it('returns 409 when mergeTutorialRatings reports a write conflict', async () => {
+      mockMergeTutorialRatings.mockResolvedValue({
+        user: { tutorialPromptSeen: false, tutorialRatings: {} },
+        capExceeded: false,
+        conflict: true,
+      });
+      const req = createRequest({
+        body: { tutorialRatings: { 'brand-new-course': 5 } },
+      });
+      const res = createResponse();
+
+      await updateTutorialStateController(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'tutorialRatings update conflict, please retry',
+      });
+      expect(mockUpdateUser).not.toHaveBeenCalled();
     });
 
     it('succeeds when updating an existing key does not increase the stored count', async () => {
