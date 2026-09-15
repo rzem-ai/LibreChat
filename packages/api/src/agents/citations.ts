@@ -16,7 +16,6 @@
 import { Tools, ContentTypes } from 'librechat-data-provider';
 import type { TMessageContentParts, TAttachment, MCPResultSource } from 'librechat-data-provider';
 import type { Logger } from 'winston';
-import { DPN_USAGE_GUIDELINES_URL } from '../mcp/kx/kx';
 
 /**
  * Minimum content words a sentence must have before it is eligible for a
@@ -858,34 +857,30 @@ export function insertSharePointCitations(
 }
 
 /**
- * Appends deterministic trailing disclaimer paragraphs whenever any MCP
+ * Appends a deterministic trailing disclaimer paragraph whenever any MCP
  * attachment warrants one — a fixed, branded message rather than KX's own
- * boilerplate text. Two independent triggers, since a turn can carry either
- * or both: any attachment with a `disclaimer` (KX's own `usage_guidelines`,
- * typically surfaced for quals-type results) appends the "KX usage
- * guidelines" sentence linking `mcpUsageGuidelinesUrl`; any attachment
- * flagged `dpnUsageRestriction` (a DPN people-profile result) appends a
- * separate "DPN usage guidelines" sentence linking the fixed
- * {@link DPN_USAGE_GUIDELINES_URL} terms-of-use page. Always appends to an
- * existing text part — never creates a new one — so downstream content-part
- * filtering can't drop it.
+ * boilerplate text. Two independent triggers share the same paragraph, since
+ * a turn can carry either or both: any attachment with a `disclaimer` (KX's
+ * own `usage_guidelines`, typically surfaced for quals-type results), or any
+ * attachment flagged `dpnUsageRestriction` (a DPN people-profile result).
+ * Always appends to an existing text part — never creates a new one — so
+ * downstream content-part filtering can't drop it.
  */
 export function appendMCPDisclaimers(
   contentParts: TMessageContentParts[],
   mcpAttachments: TAttachment[],
   mcpUsageGuidelinesUrl?: string,
 ): void {
-  let hasKxDisclaimer = false;
-  let hasDpnSource = false;
+  let hasDisclaimer = false;
   for (const attachment of mcpAttachments) {
     const payload = attachment[Tools.mcp_results] as
       | { disclaimer?: string; dpnUsageRestriction?: boolean }
       | undefined;
-    hasKxDisclaimer = hasKxDisclaimer || Boolean(payload?.disclaimer);
-    hasDpnSource = hasDpnSource || Boolean(payload?.dpnUsageRestriction);
+    hasDisclaimer =
+      hasDisclaimer || Boolean(payload?.disclaimer) || Boolean(payload?.dpnUsageRestriction);
   }
 
-  if (!hasKxDisclaimer && !hasDpnSource) {
+  if (!hasDisclaimer) {
     return;
   }
 
@@ -894,26 +889,15 @@ export function appendMCPDisclaimers(
     return;
   }
 
-  const disclaimers: string[] = [];
-  if (hasKxDisclaimer) {
-    const guidelinesText = mcpUsageGuidelinesUrl
-      ? `[KX usage guidelines](${mcpUsageGuidelinesUrl})`
-      : 'KX usage guidelines';
-    disclaimers.push(
-      'Please note that this response uses data from the KX Connector. Review the accuracy ' +
-        `of all KX citations before reusing them. See the ${guidelinesText} to learn more.`,
-    );
-  }
-  if (hasDpnSource) {
-    disclaimers.push(
-      'Please note that this response uses data from the KX Connector. Review the accuracy ' +
-        'of all DPN profiles before reusing them. See the ' +
-        `[DPN usage guidelines](${DPN_USAGE_GUIDELINES_URL}) to learn more.`,
-    );
-  }
+  const guidelinesText = mcpUsageGuidelinesUrl
+    ? `[KX usage guidelines](${mcpUsageGuidelinesUrl})`
+    : 'KX usage guidelines';
+  const disclaimer =
+    'Please note that this response uses data from the KX Connector. Review the accuracy ' +
+    `of all KX citations before reusing them. See the ${guidelinesText} to learn more.`;
 
   const text = readText(targetPart) ?? '';
-  writeText(targetPart, `${text}\n\n${disclaimers.join('\n\n')}`);
+  writeText(targetPart, `${text}\n\n${disclaimer}`);
 }
 
 /**
