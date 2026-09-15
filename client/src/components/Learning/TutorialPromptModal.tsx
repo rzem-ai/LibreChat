@@ -141,7 +141,6 @@ export default function TutorialPromptModal({
 
   const handleAccept = () => {
     startLandingPageTour();
-    markPromptSeen();
   };
 
   if (!canRenderPrompt) {
