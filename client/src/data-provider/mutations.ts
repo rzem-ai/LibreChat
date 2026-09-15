@@ -1184,7 +1184,7 @@ export const useUpdateTutorialStateMutation = (
   t.TTutorialStateResponse,
   unknown,
   Partial<t.TTutorialStateResponse>,
-  unknown
+  { previousTutorialState: t.TTutorialStateResponse | undefined }
 > => {
   const queryClient = useQueryClient();
   // Must use the same user-scoped key as useTutorialStateQuery so the cache
@@ -1201,8 +1201,18 @@ export const useUpdateTutorialStateMutation = (
         );
         options?.onSuccess?.(data, variables, context);
       },
-      onError: options?.onError,
+      onError: (error, variables, context) => {
+        queryClient.setQueryData<t.TTutorialStateResponse>(
+          [QueryKeys.userTutorialState, userId],
+          context?.previousTutorialState,
+        );
+        options?.onError?.(error, variables, context);
+      },
       onMutate: async (variables) => {
+        const previousTutorialState = queryClient.getQueryData<t.TTutorialStateResponse>([
+          QueryKeys.userTutorialState,
+          userId,
+        ]);
         // Optimistically update the cache so the bubble closes immediately
         // rather than waiting for the server round-trip to complete.
         queryClient.setQueryData<t.TTutorialStateResponse>(
@@ -1217,7 +1227,8 @@ export const useUpdateTutorialStateMutation = (
             },
           }),
         );
-        return options?.onMutate?.(variables);
+        await options?.onMutate?.(variables);
+        return { previousTutorialState };
       },
     },
   );
