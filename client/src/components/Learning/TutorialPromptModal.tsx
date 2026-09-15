@@ -1,10 +1,12 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useRecoilState } from 'recoil';
 import { Library } from 'lucide-react';
-import { Button } from '@librechat/client';
+import { Button, useMediaQuery } from '@librechat/client';
 import * as Popover from '@radix-ui/react-popover';
+import { useLearningTour } from './LearningTourContext';
 import useTutorialPrompt from '~/hooks/Learning/useTutorialPrompt';
-import { useActivePanel } from '~/Providers';
 import { useLocalize } from '~/hooks';
+import store from '~/store';
 
 /** Measure the sidebar's current pixel width from the DOM. */
 function getSidebarWidth(): number {
@@ -25,7 +27,7 @@ function getSidebarWidth(): number {
  * (endpoints + models queries resolve) → 800ms delay → this bubble appears.
  *
  * Dismissal:
- *   - "Start Tour"  → opens the Learning panel and marks tutorialPromptSeen
+ *   - "Start Tour"  → starts the guided tour and marks tutorialPromptSeen
  *   - "Skip"        → marks tutorialPromptSeen only
  *   - backdrop click → marks tutorialPromptSeen (B2)
  *   - clicking the Learning Hub icon while bubble is showing → marks seen (D1)
@@ -37,6 +39,7 @@ function getSidebarWidth(): number {
 
 /** Delay (ms) after the terms modal closes before the bubble appears. */
 const TUTORIAL_PROMPT_DELAY_MS = 800;
+const MOBILE_SIDEBAR_TRANSITION_MS = 300;
 
 interface TutorialPromptModalProps {
   /** Pass `showTerms` from Root so the tutorial bubble waits until terms are dismissed. */
@@ -51,13 +54,17 @@ export default function TutorialPromptModal({
   chatReady = false,
 }: TutorialPromptModalProps) {
   const localize = useLocalize();
-  const { setActive } = useActivePanel();
+  const { startLandingPageTour } = useLearningTour();
+  const isSmallScreen = useMediaQuery('(max-width: 768px)');
   const { shouldShowPrompt, markPromptSeen } = useTutorialPrompt();
+  const [sidebarExpanded, setSidebarExpanded] = useRecoilState(store.sidebarExpanded);
 
   // readyToShow gates the delay: starts false, flips true TUTORIAL_PROMPT_DELAY_MS
   // after termsVisible goes from true→false (or immediately if terms never showed).
   const [readyToShow, setReadyToShow] = useState(false);
+  const [mobilePromptReady, setMobilePromptReady] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(52);
+  const titleId = useId();
 
   useEffect(() => {
     // Hold the bubble back while terms are visible OR while the chat UI hasn't
@@ -74,14 +81,31 @@ export default function TutorialPromptModal({
   }, [termsVisible, chatReady]);
 
   const isVisible = shouldShowPrompt && readyToShow;
+  const canRenderPrompt = isVisible && (!isSmallScreen || mobilePromptReady);
+
+  useEffect(() => {
+    if (!isVisible) {
+      setMobilePromptReady(false);
+      return;
+    }
+    if (!isSmallScreen) {
+      setMobilePromptReady(true);
+      return;
+    }
+    if (!sidebarExpanded) {
+      setSidebarExpanded(true);
+    }
+    const timer = window.setTimeout(() => setMobilePromptReady(true), MOBILE_SIDEBAR_TRANSITION_MS);
+    return () => window.clearTimeout(timer);
+  }, [isVisible, isSmallScreen, sidebarExpanded, setSidebarExpanded]);
 
   // Measure sidebar width when the bubble becomes visible so the two-panel
   // backdrop splits correctly at the sidebar/content boundary.
   useEffect(() => {
-    if (isVisible) {
+    if (canRenderPrompt) {
       setSidebarWidth(getSidebarWidth());
     }
-  }, [isVisible]);
+  }, [canRenderPrompt, sidebarExpanded]);
 
   // virtualRef lets Radix Popover position the bubble relative to the learning
   // nav icon without wrapping or modifying ExpandedPanel at all.
@@ -91,19 +115,19 @@ export default function TutorialPromptModal({
   // before Radix's own anchor-measurement layout effect runs on this same
   // mount pass — otherwise the first position calculation sees a null anchor.
   useLayoutEffect(() => {
-    if (!isVisible) {
+    if (!canRenderPrompt) {
       return;
     }
     const el = document.querySelector<HTMLElement>('[data-testid="nav-panel-learning"]');
     if (el) {
       virtualRef.current = el;
     }
-  }, [isVisible]);
+  }, [canRenderPrompt]);
 
   // Decision D1: clicking the Learning Hub icon while the bubble is showing
   // counts as accepting — mark seen so the bubble doesn't reappear.
   useEffect(() => {
-    if (!isVisible) {
+    if (!canRenderPrompt) {
       return;
     }
     const el = document.querySelector<HTMLElement>('[data-testid="nav-panel-learning"]');
@@ -113,14 +137,14 @@ export default function TutorialPromptModal({
     const handleIconClick = () => markPromptSeen();
     el.addEventListener('click', handleIconClick, { once: true });
     return () => el.removeEventListener('click', handleIconClick);
-  }, [isVisible, markPromptSeen]);
+  }, [canRenderPrompt, markPromptSeen]);
 
   const handleAccept = () => {
-    setActive('learning');
+    startLandingPageTour();
     markPromptSeen();
   };
 
-  if (!isVisible) {
+  if (!canRenderPrompt) {
     return null;
   }
 
@@ -169,6 +193,7 @@ export default function TutorialPromptModal({
             sideOffset={8}
             align="start"
             avoidCollisions
+            aria-labelledby={titleId}
             onOpenAutoFocus={(e) => e.preventDefault()}
             // Decision C: pointed top-left corner aimed at the icon; all other
             // corners rounded — achieved purely with border-radius, no extra DOM.
@@ -184,9 +209,11 @@ export default function TutorialPromptModal({
                   <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
                     {localize('com_ui_learning_hub')}
                   </p>
-                  <p className="text-sm font-semibold text-text-primary">
-                    {localize('com_learning_prompt_title')}
-                  </p>
+                  <Popover.Title asChild>
+                    <p id={titleId} className="text-sm font-semibold text-text-primary">
+                      {localize('com_learning_prompt_title')}
+                    </p>
+                  </Popover.Title>
                 </div>
               </div>
 

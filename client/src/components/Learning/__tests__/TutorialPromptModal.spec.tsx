@@ -3,16 +3,30 @@ import '@testing-library/jest-dom';
 import { act, render, screen, fireEvent } from '@testing-library/react';
 import TutorialPromptModal from '../TutorialPromptModal';
 
-const mockSetActive = jest.fn();
+const mockStartLandingPageTour = jest.fn();
 const mockMarkPromptSeen = jest.fn();
 const mockUseTutorialPrompt = jest.fn();
+const mockSetSidebarExpanded = jest.fn();
+const mockUseMediaQuery = jest.fn();
+let mockSidebarExpanded = false;
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string) => key,
 }));
 
-jest.mock('~/Providers', () => ({
-  useActivePanel: () => ({ active: 'conversations', setActive: mockSetActive }),
+jest.mock('@librechat/client', () => ({
+  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button {...props}>{children}</button>
+  ),
+  useMediaQuery: () => mockUseMediaQuery(),
+}));
+
+jest.mock('recoil', () => ({
+  useRecoilState: () => [mockSidebarExpanded, mockSetSidebarExpanded],
+}));
+
+jest.mock('../LearningTourContext', () => ({
+  useLearningTour: () => ({ startLandingPageTour: mockStartLandingPageTour }),
 }));
 
 jest.mock('~/hooks/Learning/useTutorialPrompt', () => ({
@@ -24,6 +38,8 @@ describe('TutorialPromptModal', () => {
   beforeEach(() => {
     // Use fake timers so the 800ms readyToShow delay can be controlled in tests.
     jest.useFakeTimers();
+    mockUseMediaQuery.mockReturnValue(false);
+    mockSidebarExpanded = false;
   });
 
   afterEach(() => {
@@ -44,7 +60,7 @@ describe('TutorialPromptModal', () => {
     expect(screen.queryByText('com_learning_prompt_body')).not.toBeInTheDocument();
   });
 
-  it('renders the prompt and switches to the Learning Hub panel on accept', () => {
+  it('renders the prompt and starts the tour on accept', () => {
     mockUseTutorialPrompt.mockReturnValue({
       shouldShowPrompt: true,
       markPromptSeen: mockMarkPromptSeen,
@@ -60,7 +76,7 @@ describe('TutorialPromptModal', () => {
     fireEvent.click(screen.getByText('com_learning_prompt_accept'));
 
     expect(mockMarkPromptSeen).toHaveBeenCalledTimes(1);
-    expect(mockSetActive).toHaveBeenCalledWith('learning');
+    expect(mockStartLandingPageTour).toHaveBeenCalledTimes(1);
   });
 
   it('marks the prompt seen without switching panels on decline', () => {
@@ -77,6 +93,27 @@ describe('TutorialPromptModal', () => {
     fireEvent.click(screen.getByText('com_learning_prompt_decline'));
 
     expect(mockMarkPromptSeen).toHaveBeenCalledTimes(1);
-    expect(mockSetActive).not.toHaveBeenCalled();
+    expect(mockStartLandingPageTour).not.toHaveBeenCalled();
+  });
+
+  it('opens the mobile sidebar before rendering the prompt', () => {
+    mockUseMediaQuery.mockReturnValue(true);
+    mockUseTutorialPrompt.mockReturnValue({
+      shouldShowPrompt: true,
+      markPromptSeen: mockMarkPromptSeen,
+    });
+    render(<TutorialPromptModal chatReady />);
+
+    act(() => {
+      jest.advanceTimersByTime(800);
+    });
+
+    expect(mockSetSidebarExpanded).toHaveBeenCalledWith(true);
+    expect(screen.queryByText('com_learning_prompt_body')).not.toBeInTheDocument();
+
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+    expect(screen.getByText('com_learning_prompt_body')).toBeInTheDocument();
   });
 });

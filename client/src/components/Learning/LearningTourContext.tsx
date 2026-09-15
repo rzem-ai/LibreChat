@@ -1,10 +1,14 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { useSetRecoilState } from 'recoil';
 import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import useLandingPageTour from './useLandingPageTour';
 import { useActivePanel } from '~/Providers';
+import store from '~/store';
 
 const LANDING_PAGE_COURSE_ID = 'landing-page-buttons';
+const DESKTOP_START_DELAY_MS = 200;
+const MOBILE_START_DELAY_MS = 300;
 
 interface LearningTourContextType {
   startLandingPageTour: () => void;
@@ -26,6 +30,7 @@ const LearningTourContext = createContext<LearningTourContextType | undefined>(u
 export function LearningTourProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { setActive } = useActivePanel();
+  const setSidebarExpanded = useSetRecoilState(store.sidebarExpanded);
   const [completedCourseId, setCompletedCourseId] = useState<string | null>(null);
 
   const { startTour } = useLandingPageTour(() => setCompletedCourseId(LANDING_PAGE_COURSE_ID));
@@ -36,8 +41,15 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
     // sidebar panel (search, projects) — switch to both before driving.
     navigate('/c/new');
     setActive('conversations');
-    window.setTimeout(() => startTour(), 200);
-  }, [navigate, setActive, startTour]);
+    const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
+    if (isSmallScreen) {
+      setSidebarExpanded(false);
+    }
+    window.setTimeout(
+      () => startTour(),
+      isSmallScreen ? MOBILE_START_DELAY_MS : DESKTOP_START_DELAY_MS,
+    );
+  }, [navigate, setActive, setSidebarExpanded, startTour]);
 
   const dismissCompletion = useCallback(() => setCompletedCourseId(null), []);
 

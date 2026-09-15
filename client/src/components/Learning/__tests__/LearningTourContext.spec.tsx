@@ -5,6 +5,7 @@ import { LearningTourProvider, useLearningTour } from '../LearningTourContext';
 
 const mockNavigate = jest.fn();
 const mockSetActive = jest.fn();
+const mockSetSidebarExpanded = jest.fn();
 const mockStartTour = jest.fn();
 let capturedOnComplete: (() => void) | undefined;
 
@@ -14,6 +15,10 @@ jest.mock('react-router-dom', () => ({
 
 jest.mock('~/Providers', () => ({
   useActivePanel: () => ({ active: 'learning', setActive: mockSetActive }),
+}));
+
+jest.mock('recoil', () => ({
+  useSetRecoilState: () => mockSetSidebarExpanded,
 }));
 
 jest.mock('../useLandingPageTour', () => ({
@@ -31,6 +36,10 @@ function wrapper({ children }: { children: React.ReactNode }) {
 describe('LearningTourContext', () => {
   beforeEach(() => {
     jest.useFakeTimers();
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: jest.fn().mockReturnValue({ matches: false }),
+    });
   });
 
   afterEach(() => {
@@ -48,9 +57,29 @@ describe('LearningTourContext', () => {
 
     expect(mockNavigate).toHaveBeenCalledWith('/c/new');
     expect(mockSetActive).toHaveBeenCalledWith('conversations');
+    expect(mockSetSidebarExpanded).not.toHaveBeenCalled();
 
     act(() => {
       jest.runAllTimers();
+    });
+    expect(mockStartTour).toHaveBeenCalledTimes(1);
+  });
+
+  it('collapses the mobile sidebar and waits for the transition before starting the tour', () => {
+    window.matchMedia = jest.fn().mockReturnValue({ matches: true });
+    const { result } = renderHook(() => useLearningTour(), { wrapper });
+
+    act(() => {
+      result.current.startLandingPageTour();
+    });
+
+    expect(mockSetSidebarExpanded).toHaveBeenCalledWith(false);
+    act(() => {
+      jest.advanceTimersByTime(299);
+    });
+    expect(mockStartTour).not.toHaveBeenCalled();
+    act(() => {
+      jest.advanceTimersByTime(1);
     });
     expect(mockStartTour).toHaveBeenCalledTimes(1);
   });

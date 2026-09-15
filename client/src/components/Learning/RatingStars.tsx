@@ -13,8 +13,12 @@ export default function RatingStars({ courseId }: { courseId: string }) {
   const updateTutorialState = useUpdateTutorialStateMutation();
 
   const handleSelect = (value: number) => {
-    setSelected(value);
-    updateTutorialState.mutate({ tutorialRatings: { [courseId]: value } });
+    updateTutorialState.mutate(
+      { tutorialRatings: { [courseId]: value } },
+      {
+        onSuccess: () => setSelected(value),
+      },
+    );
   };
 
   if (selected != null) {
