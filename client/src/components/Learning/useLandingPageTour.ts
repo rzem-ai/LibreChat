@@ -43,6 +43,7 @@ export default function useLandingPageTour(onComplete?: () => void) {
   const localize = useLocalize();
 
   const startTour = useCallback(() => {
+    let completedFromLastStepNext = false;
     const tourDriver = driver({
       showProgress: true,
       allowClose: true,
@@ -50,15 +51,15 @@ export default function useLandingPageTour(onComplete?: () => void) {
       waitForElement: 600,
       stagePadding: 6,
       stageRadius: 8,
+      onNextClick: () => {
+        if (tourDriver.isLastStep()) {
+          completedFromLastStepNext = true;
+        }
+        tourDriver.moveNext();
+      },
       onDestroyStarted: () => {
-        // Driver.js calls this for every way a tour ends — Escape, the close
-        // button, an overlay click, or finishing the last step — with no
-        // built-in signal distinguishing "cancelled" from "finished". Check
-        // whether we were on the last step before destroying, so cancelling
-        // partway through never fires the completion popup.
-        const finishedTour = tourDriver.isLastStep();
         tourDriver.destroy();
-        if (finishedTour) {
+        if (completedFromLastStepNext) {
           onComplete?.();
         }
       },
