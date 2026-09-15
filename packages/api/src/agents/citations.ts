@@ -304,6 +304,14 @@ interface ExcludedRange {
 /** Matches a fenced-code opening line: 3+ backticks or 3+ tildes, optionally followed by an info string. */
 const FENCE_OPEN_LINE = /^(`{3,}|~{3,})(.*)$/;
 
+/**
+ * Matches a leading blockquote container prefix: one or more `>` markers (each with optional
+ * surrounding whitespace), e.g. `"> "` or `"> > "` for a nested quote. List-item indentation
+ * doesn't need an equivalent marker here — it's plain whitespace, already stripped below by
+ * `trimStart()`.
+ */
+const BLOCKQUOTE_PREFIX = /^(?:[ \t]*>[ \t]?)+/;
+
 interface FenceOpen {
   char: string;
   length: number;
@@ -346,6 +354,12 @@ function matchFenceOpen(line: string): FenceOpen | null {
  * versa. When an opening fence has no matching close (a truncated stream), no range is
  * recorded for it — current behavior is left unchanged for that edge case rather than
  * guessing where the fence would have ended.
+ *
+ * A fence can also sit inside a container — a blockquote or a list item — with the same
+ * prefix repeated on every line of the block. List-item indentation is plain whitespace and
+ * is already absorbed by `trimStart()`; blockquote markers are `>` characters, which
+ * whitespace-only trimming doesn't strip, so they're matched explicitly via
+ * `BLOCKQUOTE_PREFIX`, and the exact same prefix is then required on the closing line.
  */
 function findFencedCodeRanges(text: string): ExcludedRange[] {
   const ranges: ExcludedRange[] = [];
@@ -359,7 +373,8 @@ function findFencedCodeRanges(text: string): ExcludedRange[] {
 
   let i = 0;
   while (i < lines.length) {
-    const fenceOpen = matchFenceOpen(lines[i].trimStart());
+    const blockquotePrefix = lines[i].match(BLOCKQUOTE_PREFIX)?.[0] ?? '';
+    const fenceOpen = matchFenceOpen(lines[i].slice(blockquotePrefix.length).trimStart());
     if (!fenceOpen) {
       i += 1;
       continue;
@@ -368,7 +383,13 @@ function findFencedCodeRanges(text: string): ExcludedRange[] {
     const closeLineRegex = new RegExp(`^${fenceOpen.char}{${fenceOpen.length},}$`);
     let closeIndex = -1;
     for (let j = i + 1; j < lines.length; j++) {
-      if (closeLineRegex.test(lines[j].trim())) {
+      const line = lines[j];
+      if (blockquotePrefix && !line.startsWith(blockquotePrefix)) {
+        continue;
+      }
+
+      const candidate = blockquotePrefix ? line.slice(blockquotePrefix.length) : line;
+      if (closeLineRegex.test(candidate.trim())) {
         closeIndex = j;
         break;
       }

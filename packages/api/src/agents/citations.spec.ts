@@ -303,6 +303,48 @@ describe('insertFileCitations', () => {
     ]);
     expect(readText(parts[0])).toBe(original);
   });
+
+  it('does not anchor text inside a fenced code block quoted with a blockquote prefix', () => {
+    const original = [
+      '> ```js',
+      '> You can reserve a desk fourteen days in advance.',
+      '> ```',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not anchor text inside a nested blockquote fence, and does not let a shallower-quoted fence line close it', () => {
+    const original = [
+      '> > ```js',
+      '> ```',
+      '> > You can reserve a desk fourteen days in advance.',
+      '> > ```',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not anchor text inside a fenced code block indented under a list item', () => {
+    const original = [
+      '- Reservation policy:',
+      '',
+      '  ```js',
+      '  You can reserve a desk fourteen days in advance.',
+      '  ```',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
 });
 
 describe('insertMCPCitations', () => {
