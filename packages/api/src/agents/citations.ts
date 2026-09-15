@@ -312,19 +312,35 @@ const FENCE_OPEN_LINE = /^(`{3,}|~{3,})(.*)$/;
  */
 const BLOCKQUOTE_PREFIX = /^(?:[ \t]*>[ \t]?)+/;
 
+/**
+ * Matches a list-item marker consumed on the fence's own opening line — e.g. `"- "`, `"* "`,
+ * `"1. "`, `"12) "` — for a fence that opens immediately after the marker (`- \`\`\`js`) rather
+ * than on an indented continuation line under the item.
+ */
+const LIST_MARKER_PREFIX = /^[ \t]{0,3}(?:[-*+]|\d{1,9}[.)])[ \t]+/;
+
 interface FenceOpen {
   char: string;
   length: number;
 }
 
 /**
- * Parses a candidate opening-fence line into its delimiter character and run length, or
- * `null` if the line isn't a valid fence open. Per CommonMark, a backtick-fenced info string
- * cannot itself contain a backtick (it would be ambiguous with inline code spans); a
- * tilde-fenced info string has no such restriction.
+ * Parses a candidate opening-fence line (already past any blockquote/list-marker container
+ * prefix) into its delimiter character and run length, or `null` if the line isn't a valid
+ * fence open. Per CommonMark, a backtick-fenced info string cannot itself contain a backtick
+ * (it would be ambiguous with inline code spans); a tilde-fenced info string has no such
+ * restriction. A fence may be indented at most 3 spaces beyond its container prefix — beyond
+ * that it's indented code content, not a fence, so any further leading whitespace disqualifies
+ * the line rather than being trimmed away unconditionally.
  */
 function matchFenceOpen(line: string): FenceOpen | null {
-  const match = line.match(FENCE_OPEN_LINE);
+  const indent = line.match(/^[ \t]{0,3}/)?.[0].length ?? 0;
+  const remainder = line.slice(indent);
+  if (/^[ \t]/.test(remainder)) {
+    return null;
+  }
+
+  const match = remainder.match(FENCE_OPEN_LINE);
   if (!match) {
     return null;
   }
@@ -356,15 +372,18 @@ function matchFenceOpen(line: string): FenceOpen | null {
  * guessing where the fence would have ended.
  *
  * A fence can also sit inside a container — a blockquote or a list item — with the same
- * prefix repeated on every line of the block. List-item indentation is plain whitespace and
- * is already absorbed by `trimStart()`; blockquote markers are `>` characters, which
- * whitespace-only trimming doesn't strip, so they're matched explicitly via
- * `BLOCKQUOTE_PREFIX`, and the exact same prefix is then required on the closing line.
+ * prefix repeated on every line of the block. Blockquote markers are `>` characters, matched
+ * explicitly via `BLOCKQUOTE_PREFIX`, with the exact same prefix then required on the closing
+ * line. A list item's continuation lines carry no repeated marker, just indentation, but its
+ * opening line may put the fence directly after the marker (e.g. `- \`\`\`js`); that one-time
+ * marker is matched via `LIST_MARKER_PREFIX` before looking for the fence.
  *
- * Per CommonMark, a closing fence may only be indented up to 3 spaces — beyond that it's
- * still code content, not a close. The closing-fence check enforces that cap explicitly
- * (rather than trimming all leading whitespace) so an over-indented delimiter-looking line
- * inside the block doesn't end the range early.
+ * Per CommonMark, a fence delimiter — opening or closing — may only be indented up to 3
+ * spaces beyond its container prefix; beyond that it's still code content, not a fence. Both
+ * `matchFenceOpen` and the closing-fence check enforce that cap explicitly (rather than
+ * trimming all leading whitespace) so an over-indented delimiter-looking line is never
+ * mistaken for a fence boundary — which would otherwise let a stray indented line pair with a
+ * later, unrelated fence and swallow real prose (and its citations) in between.
  */
 function findFencedCodeRanges(text: string): ExcludedRange[] {
   const ranges: ExcludedRange[] = [];
@@ -379,7 +398,9 @@ function findFencedCodeRanges(text: string): ExcludedRange[] {
   let i = 0;
   while (i < lines.length) {
     const blockquotePrefix = lines[i].match(BLOCKQUOTE_PREFIX)?.[0] ?? '';
-    const fenceOpen = matchFenceOpen(lines[i].slice(blockquotePrefix.length).trimStart());
+    const afterBlockquote = lines[i].slice(blockquotePrefix.length);
+    const listMarkerPrefix = afterBlockquote.match(LIST_MARKER_PREFIX)?.[0] ?? '';
+    const fenceOpen = matchFenceOpen(afterBlockquote.slice(listMarkerPrefix.length));
     if (!fenceOpen) {
       i += 1;
       continue;

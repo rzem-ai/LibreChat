@@ -359,6 +359,35 @@ describe('insertFileCitations', () => {
     ]);
     expect(readText(parts[0])).toBe(original);
   });
+
+  it('recognizes a fence that opens directly after a list marker on the same line', () => {
+    const original = [
+      '- ```js',
+      'You can reserve a desk fourteen days in advance.',
+      '```',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not treat a 4-space-indented backtick line as a fence open, so real prose before a later fence still gets cited', () => {
+    const original = [
+      '    ```',
+      'You can reserve a desk fourteen days in advance.',
+      '```',
+      'unrelated code',
+      '```',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const lines = readText(parts[0]).split('\n');
+    expect(lines[1]).toContain(`${MARKER}turn0file0`);
+  });
 });
 
 describe('insertMCPCitations', () => {
