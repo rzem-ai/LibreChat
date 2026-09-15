@@ -4,6 +4,8 @@ import {
   ReasoningParameterFormat,
   removeNullishValues,
   supportsAdaptiveThinking,
+  modelSupportsNativeWebSearch,
+  unsupportedNativeWebSearchMessage,
 } from 'librechat-data-provider';
 import type { BindToolsInput } from '@librechat/agents/langchain/language_models/chat_models';
 import type { AzureOpenAIInput } from '@librechat/agents/langchain/openai';
@@ -510,6 +512,7 @@ export function getOpenAILLMConfig({
   useOpenRouter,
   reasoningFormat = ReasoningParameterFormat.reasoningEffort,
   modelOptions: _modelOptions,
+  supportedWebSearchModels,
 }: {
   apiKey: string;
   streaming: boolean;
@@ -522,6 +525,7 @@ export function getOpenAILLMConfig({
   useOpenRouter?: boolean;
   reasoningFormat?: ReasoningParameterFormat;
   azure?: false | t.AzureOptions;
+  supportedWebSearchModels?: string[];
 }): Pick<t.LLMConfigResult, 'llmConfig' | 'tools'> & {
   azure?: t.AzureOptions;
 } {
@@ -753,6 +757,10 @@ export function getOpenAILLMConfig({
     modelKwargs.plugins = [{ id: 'web' }];
     hasModelKwargs = true;
   } else if (enableWebSearch) {
+    // Deloitte Custom Change: reject models the admin allowlist excludes from native web search
+    if (!modelSupportsNativeWebSearch(modelOptions.model, supportedWebSearchModels)) {
+      throw new Error(unsupportedNativeWebSearchMessage(modelOptions.model));
+    }
     /** Standard OpenAI web search uses tools API */
     llmConfig.useResponsesApi = true;
     tools.push({ type: 'web_search' });

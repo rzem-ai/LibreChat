@@ -36,6 +36,8 @@ export function loadCustomEndpointsConfig(
         modelDisplayLabel,
         customParams,
         provider,
+        // Deloitte Custom Change: surface the native web-search allowlist to the client
+        nativeWebSearch,
       } = endpoint;
       const name = normalizeEndpointName(configName);
 
@@ -63,6 +65,7 @@ export function loadCustomEndpointsConfig(
         customParams: resolvedCustomParams,
         modelDisplayLabel,
         iconURL,
+        nativeWebSearch,
       };
     }
   }

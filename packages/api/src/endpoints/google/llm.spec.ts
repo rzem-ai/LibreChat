@@ -1298,6 +1298,38 @@ describe('getGoogleConfig', () => {
 
       expect(result.tools).not.toContainEqual({ googleSearch: {} });
     });
+
+    it('should enable web search for any model when supportedWebSearchModels is not configured', () => {
+      const credentials = { [AuthKeys.GOOGLE_API_KEY]: 'test-api-key' };
+
+      const result = getGoogleConfig(credentials, {
+        modelOptions: { model: 'gemini-1.5-flash', web_search: true },
+      });
+
+      expect(result.tools).toContainEqual({ googleSearch: {} });
+    });
+
+    it('should enable web search for a model matching the configured supportedWebSearchModels list', () => {
+      const credentials = { [AuthKeys.GOOGLE_API_KEY]: 'test-api-key' };
+
+      const result = getGoogleConfig(credentials, {
+        modelOptions: { model: 'gemini-2.5-pro', web_search: true },
+        supportedWebSearchModels: ['gemini-2.5'],
+      });
+
+      expect(result.tools).toContainEqual({ googleSearch: {} });
+    });
+
+    it('should throw for a model not in the configured supportedWebSearchModels list', () => {
+      const credentials = { [AuthKeys.GOOGLE_API_KEY]: 'test-api-key' };
+
+      expect(() =>
+        getGoogleConfig(credentials, {
+          modelOptions: { model: 'gemini-1.5-flash', web_search: true },
+          supportedWebSearchModels: ['gemini-2.5'],
+        }),
+      ).toThrow(/web search is not available/i);
+    });
   });
 
   describe('URL Context Functionality', () => {

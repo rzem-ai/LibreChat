@@ -11,6 +11,7 @@ import {
   SettingDefinition,
   agentParamSettings,
   applyModelAwareDefaults,
+  modelSupportsNativeWebSearch,
 } from 'librechat-data-provider';
 import type * as t from 'librechat-data-provider';
 import type { AgentForm, AgentModelPanelProps, StringOption } from '~/common';
@@ -88,9 +89,15 @@ export default function ModelPanel({
       overriddenEndpointKey,
       model ?? '',
     );
-    return modelAwareParams.map(
-      (param) => (overriddenParamsMap[param.key] as SettingDefinition) ?? param,
-    );
+    // Deloitte Custom Change: hide the web_search param on models the admin allowlist excludes
+    const supportedWebSearchModels = endpointsConfig[provider]?.nativeWebSearch?.supportedModels;
+    return modelAwareParams
+      .filter(
+        (param) =>
+          param.key !== 'web_search' ||
+          modelSupportsNativeWebSearch(model ?? '', supportedWebSearchModels),
+      )
+      .map((param) => (overriddenParamsMap[param.key] as SettingDefinition) ?? param);
   }, [endpointType, endpointsConfig, model, provider]);
 
   const setOption = (optionKey: keyof t.AgentModelParameters) => (value: t.AgentParameterValue) => {

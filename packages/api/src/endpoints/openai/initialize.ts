@@ -88,6 +88,15 @@ export async function initializeOpenAI({
   const azureConfig = isAzureOpenAI && appConfig?.endpoints?.[EModelEndpoint.azureOpenAI];
   let isServerless = false;
 
+  /**
+   * Azure deployment names frequently don't match base OpenAI model strings, so an
+   * admin's OpenAI `supportedModels` list can't reliably gate Azure — stay permissive
+   * there rather than risk silently disabling a working Azure setup.
+   */
+  if (!isAzureOpenAI) {
+    clientOptions.supportedWebSearchModels = openAIConfig?.nativeWebSearch?.supportedModels;
+  }
+
   if (isAzureOpenAI && azureConfig) {
     const { modelGroupMap, groupMap } = azureConfig;
     const {

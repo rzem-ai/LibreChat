@@ -16,6 +16,14 @@ type PartialEndpointEntry = Partial<TConfig> & Record<string, unknown>;
 type DefaultEndpointsResult = Record<string, PartialEndpointEntry | false | null>;
 type MutableEndpointsConfig = Record<string, PartialEndpointEntry | false | null | undefined>;
 
+/** Deloitte Custom Change: built-in endpoints whose `nativeWebSearch` gate is surfaced to the client. */
+const NATIVE_WEB_SEARCH_ENDPOINTS = [
+  EModelEndpoint.openAI,
+  EModelEndpoint.google,
+  EModelEndpoint.anthropic,
+  EModelEndpoint.bedrock,
+] as const;
+
 export interface EndpointsConfigDeps {
   getAppConfig: (params: GetAppConfigOptions) => Promise<AppConfig>;
   loadDefaultEndpointsConfig: (appConfig: AppConfig) => Promise<DefaultEndpointsResult>;
@@ -95,10 +103,20 @@ export function createEndpointsConfigService(deps: EndpointsConfigDeps): {
       };
     }
 
-    if (mergedConfig[EModelEndpoint.bedrock] && appConfig?.endpoints?.[EModelEndpoint.bedrock]) {
-      const { availableRegions } = appConfig.endpoints[EModelEndpoint.bedrock] as {
-        availableRegions?: string[];
+    // Deloitte Custom Change: ship each endpoint's native web-search allowlist to the client
+    for (const endpoint of NATIVE_WEB_SEARCH_ENDPOINTS) {
+      const endpointConfig = appConfig?.endpoints?.[endpoint];
+      if (!mergedConfig[endpoint] || !endpointConfig) {
+        continue;
+      }
+      mergedConfig[endpoint] = {
+        ...mergedConfig[endpoint],
+        nativeWebSearch: endpointConfig.nativeWebSearch,
       };
+    }
+
+    if (mergedConfig[EModelEndpoint.bedrock] && appConfig?.endpoints?.[EModelEndpoint.bedrock]) {
+      const { availableRegions } = appConfig.endpoints[EModelEndpoint.bedrock];
       mergedConfig[EModelEndpoint.bedrock] = {
         ...mergedConfig[EModelEndpoint.bedrock],
         availableRegions,

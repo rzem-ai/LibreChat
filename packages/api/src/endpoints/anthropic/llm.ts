@@ -9,6 +9,8 @@ import {
   removeNullishValues,
   ThinkingDisplay,
   AuthKeys,
+  modelSupportsNativeWebSearch,
+  unsupportedNativeWebSearchMessage,
 } from 'librechat-data-provider';
 import type { Dispatcher } from 'undici';
 import type {
@@ -379,6 +381,10 @@ function getLLMConfig(
   const tools = [];
 
   if (enableWebSearch) {
+    // Deloitte Custom Change: reject models the admin allowlist excludes from native web search
+    if (!modelSupportsNativeWebSearch(resolvedModel, options.supportedWebSearchModels)) {
+      throw new Error(unsupportedNativeWebSearchMessage(resolvedModel));
+    }
     tools.push({
       type: 'web_search_20250305',
       name: 'web_search',

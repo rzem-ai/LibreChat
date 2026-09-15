@@ -4,6 +4,8 @@ export * from './bedrock';
 export * from './balance';
 export * from './config';
 export * from './file-config';
+/* Deloitte Custom Change: native (provider) web-search model gating */
+export * from './nativeWebSearch';
 /* messages  */
 export * from './messages';
 /* artifacts  */

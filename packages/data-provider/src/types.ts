@@ -528,6 +528,10 @@ export type TConfig = {
   disableBuilder?: boolean;
   retrievalModels?: string[];
   capabilities?: string[];
+  /** Deloitte Custom Change: per-model gating for the native provider web-search tool */
+  nativeWebSearch?: {
+    supportedModels?: string[];
+  };
   customParams?: {
     defaultParamsEndpoint?: string;
     reasoningFormat?: ReasoningParameterFormat;
