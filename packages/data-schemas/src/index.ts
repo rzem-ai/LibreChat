@@ -29,6 +29,7 @@ export {
   MAX_AUDIT_LOG_LIMIT,
   MAX_AUDIT_VERIFY_ROWS,
   MAX_TOOL_FAVORITES,
+  MAX_TUTORIAL_RATINGS,
 } from './methods';
 export { FAVORITE_ITEM_TYPES } from './types/favorite';
 export type * from './types';

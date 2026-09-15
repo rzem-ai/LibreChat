@@ -49,7 +49,7 @@ describe('TutorialPromptModal', () => {
       shouldShowPrompt: true,
       markPromptSeen: mockMarkPromptSeen,
     });
-    render(<TutorialPromptModal />);
+    render(<TutorialPromptModal chatReady />);
     // Advance past the 800ms readyToShow delay so isVisible becomes true.
     act(() => {
       jest.advanceTimersByTime(800);
@@ -68,7 +68,7 @@ describe('TutorialPromptModal', () => {
       shouldShowPrompt: true,
       markPromptSeen: mockMarkPromptSeen,
     });
-    render(<TutorialPromptModal />);
+    render(<TutorialPromptModal chatReady />);
     // Advance past the 800ms readyToShow delay so isVisible becomes true.
     act(() => {
       jest.advanceTimersByTime(800);

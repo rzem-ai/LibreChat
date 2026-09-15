@@ -131,6 +131,10 @@ export function createUserMethods(
     action: 'install' | 'uninstall',
   ) => Promise<IUser | null>;
   toggleUserMemories: (userId: string, memoriesEnabled: boolean) => Promise<IUser | null>;
+  mergeTutorialRatings: (
+    userId: string,
+    ratings: Record<string, number>,
+  ) => Promise<{ user: IUser | null; capExceeded: boolean }>;
 } {
   /**
    * Normalizes email fields in search criteria to lowercase and trimmed.
@@ -615,8 +619,11 @@ export function createUserMethods(
    * If the merged result would exceed MAX_TUTORIAL_RATINGS the pipeline leaves
    * tutorialRatings unchanged and returns the unmodified document — the
    * controller detects this via the `_capExceeded` sentinel field and returns
-   * HTTP 400. The sentinel is written by Stage 2 and removed by Stage 3's
-   * $unset so it never persists on the stored document.
+   * HTTP 400. The sentinel is deliberately *not* unset inside this pipeline —
+   * findByIdAndUpdate's `{ new: true }` reflects the document only as of after
+   * the full pipeline runs, so unsetting it in the same update would make it
+   * unobservable by the caller. It's instead removed by a small best-effort
+   * follow-up write after the atomic merge has already completed.
    *
    * runValidators is intentionally omitted: values are pre-validated by
    * validateTutorialStateUpdate before this method is called.
@@ -658,8 +665,9 @@ export function createUserMethods(
           },
         },
       },
-      // Stage 3 — clean up all temporary fields including the cap sentinel
-      { $unset: ['_mergedRatings', '_mergedSize', '_capExceeded'] },
+      // Stage 3 — clean up the merge scratch fields only; `_capExceeded` stays
+      // on the returned document so the caller can read it (see below).
+      { $unset: ['_mergedRatings', '_mergedSize'] },
     ];
 
     const updated = await User.findByIdAndUpdate(userId, pipeline, { new: true }).lean<
@@ -668,15 +676,12 @@ export function createUserMethods(
 
     const capExceeded = updated?._capExceeded === true;
 
-    // _capExceeded is $unset in Stage 3 so it is absent from the post-update
-    // document returned by { new: true }. This guard is a defensive no-op but
-    // kept as a safety net in case the lean type assertion ever includes it.
-    if (updated && '_capExceeded' in updated) {
-      delete (updated as Record<string, unknown>)['_capExceeded'];
-    }
-
     if (updated) {
       await invalidateAuthUserDocCache(userId);
+      // Best-effort cleanup of the scalar sentinel field — not awaited-and-blocking
+      // the response, and safe to lose: nothing else ever reads `_capExceeded`,
+      // and the next successful merge overwrites/removes it again regardless.
+      User.updateOne({ _id: userId }, { $unset: { _capExceeded: '' } }).catch(() => {});
     }
 
     return { user: updated ?? null, capExceeded };

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Library } from 'lucide-react';
 import { Button } from '@librechat/client';
 import * as Popover from '@radix-ui/react-popover';
@@ -87,7 +87,10 @@ export default function TutorialPromptModal({
   // nav icon without wrapping or modifying ExpandedPanel at all.
   const virtualRef = useRef<{ getBoundingClientRect: () => DOMRect } | null>(null);
 
-  useEffect(() => {
+  // useLayoutEffect (not useEffect) so the ref is populated synchronously
+  // before Radix's own anchor-measurement layout effect runs on this same
+  // mount pass — otherwise the first position calculation sees a null anchor.
+  useLayoutEffect(() => {
     if (!isVisible) {
       return;
     }
@@ -122,7 +125,17 @@ export default function TutorialPromptModal({
   }
 
   return (
-    <Popover.Root open={isVisible}>
+    <Popover.Root
+      open={isVisible}
+      onOpenChange={(open) => {
+        // Covers Radix's own dismiss paths (Escape, its own outside-click
+        // detection) with the same effect as the manual backdrop/button
+        // dismiss handlers below.
+        if (!open) {
+          markPromptSeen();
+        }
+      }}
+    >
       {/* virtualRef positions the bubble without touching ExpandedPanel */}
       <Popover.Anchor virtualRef={virtualRef} />
 
