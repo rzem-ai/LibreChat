@@ -443,7 +443,7 @@ export type UpdateTutorialStateMutationOptions = MutationOptions<
   types.TTutorialStateResponse,
   Partial<types.TTutorialStateResponse>,
   unknown,
-  void
+  unknown
 >;
 
 /* Tools */
