@@ -76,8 +76,11 @@ export default function Root() {
   // the React Query cache; no extra network requests are made).
   const endpointsQuery = useGetEndpointsQuery({ enabled: isAuthenticated });
   const modelsQuery = useGetModelsQuery({ enabled: isAuthenticated });
-const chatReady =
-    endpointsQuery.isFetched && endpointsQuery.isSuccess && modelsQuery.isFetched && modelsQuery.isSuccess;
+  const chatReady =
+    endpointsQuery.isFetched &&
+    endpointsQuery.isSuccess &&
+    modelsQuery.isFetched &&
+    modelsQuery.isSuccess;
 
   useSearchEnabled(isAuthenticated);
 
