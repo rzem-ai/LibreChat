@@ -299,8 +299,35 @@ interface ExcludedRange {
   end: number;
 }
 
-/** Matches a fenced-code opening line: 3+ backticks, optionally followed by a language tag. */
-const FENCE_OPEN_LINE = /^(`{3,})[^`\n]*$/;
+/** Matches a fenced-code opening line: 3+ backticks or 3+ tildes, optionally followed by an info string. */
+const FENCE_OPEN_LINE = /^(`{3,}|~{3,})(.*)$/;
+
+interface FenceOpen {
+  char: string;
+  length: number;
+}
+
+/**
+ * Parses a candidate opening-fence line into its delimiter character and run length, or
+ * `null` if the line isn't a valid fence open. Per CommonMark, a backtick-fenced info string
+ * cannot itself contain a backtick (it would be ambiguous with inline code spans); a
+ * tilde-fenced info string has no such restriction.
+ */
+function matchFenceOpen(line: string): FenceOpen | null {
+  const match = line.match(FENCE_OPEN_LINE);
+  if (!match) {
+    return null;
+  }
+
+  const fence = match[1];
+  const info = match[2];
+  const char = fence[0];
+  if (char === '`' && info.includes('`')) {
+    return null;
+  }
+
+  return { char, length: fence.length };
+}
 
 /**
  * Finds fenced-code-block ranges (absolute character offsets into `text`) so citation
@@ -309,11 +336,14 @@ const FENCE_OPEN_LINE = /^(`{3,})[^`\n]*$/;
  * transforms markdown prose nodes, not fenced-code node content — an anchor placed inside
  * a fence would render as literal text (e.g. `turn0file0`) instead of a citation chip.
  *
- * Closing-fence detection requires at least as many backticks as the opening fence, so a
- * shorter nested fence inside an artifact's body (e.g. a 3-backtick example inside its
- * 4-backtick outer fence) doesn't prematurely close the range. When an opening fence has no
- * matching close (a truncated stream), no range is recorded for it — current behavior is
- * left unchanged for that edge case rather than guessing where the fence would have ended.
+ * Markdown recognizes both backtick and tilde fences, and the frontend renders both as code
+ * nodes, so both must be tracked here. A closing fence must use the same delimiter character
+ * as its opener and have at least as many characters, so a shorter nested fence inside an
+ * artifact's body (e.g. a 3-backtick example inside its 4-backtick outer fence) doesn't
+ * prematurely close the range, and a tilde fence can't be closed by a backtick run or vice
+ * versa. When an opening fence has no matching close (a truncated stream), no range is
+ * recorded for it — current behavior is left unchanged for that edge case rather than
+ * guessing where the fence would have ended.
  */
 function findFencedCodeRanges(text: string): ExcludedRange[] {
   const ranges: ExcludedRange[] = [];
@@ -327,14 +357,13 @@ function findFencedCodeRanges(text: string): ExcludedRange[] {
 
   let i = 0;
   while (i < lines.length) {
-    const openMatch = lines[i].trimStart().match(FENCE_OPEN_LINE);
-    if (!openMatch) {
+    const fenceOpen = matchFenceOpen(lines[i].trimStart());
+    if (!fenceOpen) {
       i += 1;
       continue;
     }
 
-    const fenceLen = openMatch[1].length;
-    const closeLineRegex = new RegExp(`^\`{${fenceLen},}$`);
+    const closeLineRegex = new RegExp(`^${fenceOpen.char}{${fenceOpen.length},}$`);
     let closeIndex = -1;
     for (let j = i + 1; j < lines.length; j++) {
       if (closeLineRegex.test(lines[j].trim())) {

@@ -277,6 +277,32 @@ describe('insertFileCitations', () => {
     ]);
     expect(readText(parts[0])).toBe(original);
   });
+
+  it('does not anchor text inside a plain tilde-fenced code block', () => {
+    const original = ['~~~', 'You can reserve a desk fourteen days in advance.', '~~~'].join(
+      '\n',
+    );
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not close a tilde fence with a same-length backtick line', () => {
+    const original = [
+      '~~~',
+      'You can reserve a desk fourteen days in advance.',
+      '```',
+      'You can reserve a desk fourteen days in advance.',
+      '~~~',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
 });
 
 describe('insertMCPCitations', () => {
