@@ -166,7 +166,7 @@ describe('loadDefaultInterface', () => {
       configDefaults: defaults,
     });
 
-    expect(interfaceConfig?.isTutorialEnabled).toBe(defaults.interfaceConfig.isTutorialEnabled);
+    expect(interfaceConfig?.isTutorialEnabled).toBe(defaults.interface.isTutorialEnabled);
   });
 
   it('preserves the configured temporary chat retention period', async () => {
