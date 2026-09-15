@@ -607,26 +607,10 @@ export function createUserMethods(
   }
 
   /**
-   * Atomically merges new course ratings into the user's tutorialRatings map
-   * and enforces MAX_TUTORIAL_RATINGS in a single aggregation-pipeline update.
+   * Merges new course ratings into tutorialRatings with cap enforcement.
    *
-   * Because the merge, the cap check, and the write all happen inside one
-   * findByIdAndUpdate call, there is no TOCTOU window: two concurrent requests
-   * both see the document at its exact current state when MongoDB executes
-   * each update, so neither can silently overwrite the other's rating, and
-   * the cap is guaranteed even under concurrent load.
-   *
-   * If the merged result would exceed MAX_TUTORIAL_RATINGS the pipeline leaves
-   * tutorialRatings unchanged and returns the unmodified document — the
-   * controller detects this via the `_capExceeded` sentinel field and returns
-   * HTTP 400. The sentinel is deliberately *not* unset inside this pipeline —
-   * findByIdAndUpdate's `{ new: true }` reflects the document only as of after
-   * the full pipeline runs, so unsetting it in the same update would make it
-   * unobservable by the caller. It's instead removed by a small best-effort
-   * follow-up write after the atomic merge has already completed.
-   *
-   * runValidators is intentionally omitted: values are pre-validated by
-   * validateTutorialStateUpdate before this method is called.
+   * Uses a guarded compare-and-swap write to stay compatible with Amazon
+   * DocumentDB, which rejects aggregation-pipeline updates.
    */
   async function mergeTutorialRatings(
     userId: string,
@@ -634,57 +618,45 @@ export function createUserMethods(
   ): Promise<{ user: IUser | null; capExceeded: boolean }> {
     const User = mongoose.models.User;
 
-    // Build a BSON-compatible object from the incoming ratings so the
-    // aggregation pipeline can reference it as a literal.
-    const incomingAsObject: Record<string, number> = { ...ratings };
+    const maxAttempts = 3;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const current = await User.findById(userId)
+        .select('tutorialRatings')
+        .lean<IUser | null>();
+      if (!current) {
+        return { user: null, capExceeded: false };
+      }
 
-    const pipeline = [
-      // Stage 1 — compute merged map and its size
-      {
-        $set: {
-          _mergedRatings: { $mergeObjects: ['$tutorialRatings', incomingAsObject] },
-        },
-      },
-      {
-        $set: {
-          _mergedSize: { $size: { $objectToArray: '$_mergedRatings' } },
-        },
-      },
-      // Stage 2 — apply merge only when under cap; set sentinel otherwise
-      {
-        $set: {
-          tutorialRatings: {
-            $cond: [
-              { $gt: ['$_mergedSize', MAX_TUTORIAL_RATINGS] },
-              '$tutorialRatings', // over cap — keep existing, discard incoming
-              '$_mergedRatings', // under/at cap — accept merge
-            ],
-          },
-          _capExceeded: {
-            $cond: [{ $gt: ['$_mergedSize', MAX_TUTORIAL_RATINGS] }, true, false],
-          },
-        },
-      },
-      // Stage 3 — clean up the merge scratch fields only; `_capExceeded` stays
-      // on the returned document so the caller can read it (see below).
-      { $unset: ['_mergedRatings', '_mergedSize'] },
-    ];
+      const existingRatings = current.tutorialRatings ?? {};
+      const mergedRatings = { ...existingRatings, ...ratings };
+      if (Object.keys(mergedRatings).length > MAX_TUTORIAL_RATINGS) {
+        return { user: current, capExceeded: true };
+      }
 
-    const updated = await User.findByIdAndUpdate(userId, pipeline, { new: true }).lean<
-      IUser & { _capExceeded?: boolean }
-    >();
-
-    const capExceeded = updated?._capExceeded === true;
-
-    if (updated) {
-      await invalidateAuthUserDocCache(userId);
-      // Best-effort cleanup of the scalar sentinel field — not awaited-and-blocking
-      // the response, and safe to lose: nothing else ever reads `_capExceeded`,
-      // and the next successful merge overwrites/removes it again regardless.
-      User.updateOne({ _id: userId }, { $unset: { _capExceeded: '' } }).catch(() => {});
+      const updated = await User.findOneAndUpdate(
+        { _id: userId, tutorialRatings: existingRatings },
+        { $set: { tutorialRatings: mergedRatings } },
+        { new: true },
+      ).lean<IUser>();
+      if (updated) {
+        await invalidateAuthUserDocCache(userId);
+        return { user: updated, capExceeded: false };
+      }
     }
 
-    return { user: updated ?? null, capExceeded };
+    const fallback = await User.findById(userId)
+      .select('tutorialRatings tutorialPromptSeen')
+      .lean<IUser | null>();
+    if (!fallback) {
+      return { user: null, capExceeded: false };
+    }
+
+    const fallbackRatings = fallback.tutorialRatings ?? {};
+    const fallbackMergedRatings = { ...fallbackRatings, ...ratings };
+    return {
+      user: fallback,
+      capExceeded: Object.keys(fallbackMergedRatings).length > MAX_TUTORIAL_RATINGS,
+    };
   }
 
   return {
