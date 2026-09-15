@@ -293,6 +293,8 @@ function splitIntoSentences(text: string): string[] {
   return sentences;
 }
 
+// Deloitte Custom Change: Exclude fenced code blocks (backtick and tilde) from citation
+// anchoring so anchors never land inside artifact/code content and render as literal text.
 /** A half-open `[start, end)` character range in the original text to exclude from anchoring. */
 interface ExcludedRange {
   start: number;
