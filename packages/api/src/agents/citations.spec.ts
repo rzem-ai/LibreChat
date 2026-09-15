@@ -345,6 +345,20 @@ describe('insertFileCitations', () => {
     ]);
     expect(readText(parts[0])).toBe(original);
   });
+
+  it('does not let a 4-space-indented backtick line inside the block close the fence early', () => {
+    const original = [
+      '```js',
+      '    ```',
+      'You can reserve a desk fourteen days in advance.',
+      '```',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
 });
 
 describe('insertMCPCitations', () => {
@@ -1276,6 +1290,64 @@ describe('applyEndOfTraceCitations', () => {
     const text = readText(parts[0]);
     expect(anchorCount(text, `${MARKER}turn0mcp0`)).toBe(1);
     expect(text).toBe(`${original} ${MARKER}turn0mcp0`);
+  });
+
+  it('does not force-append a citation when a SharePoint listing source is mentioned only inside an artifact fence', async () => {
+    const original = [
+      "Here's the file you asked about.",
+      '',
+      ':::artifact{identifier="listing" type="text/markdown" title="Listing"}',
+      '````',
+      '- GFS_style-guide.pptx',
+      '````',
+      ':::',
+    ].join('\n');
+    const parts = [textPart(original)];
+    await applyEndOfTraceCitations({
+      contentParts: parts,
+      artifactPromises: [
+        Promise.resolve(
+          mcpAttachment([
+            {
+              toolName: 'sp_list_recent',
+              serverName: 'sharepoint',
+              title: 'GFS_style-guide.pptx',
+              link: 'https://resources.deloitte.com/sites/Intellihub/SiteAssets/GFS_style-guide.pptx',
+              content: 'GFS_style-guide.pptx',
+            },
+          ]),
+        ),
+      ],
+      fileCitations: true,
+    });
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not force-append a citation when a disclaimer-bearing MCP source is matched only inside an artifact fence', async () => {
+    const original = [
+      "Here's a summary.",
+      '',
+      ':::artifact{identifier="rates-summary" type="text/markdown" title="Rates Summary"}',
+      '````',
+      AFR_ARTICLE,
+      '````',
+      ':::',
+    ].join('\n');
+    const parts = [textPart(original)];
+    await applyEndOfTraceCitations({
+      contentParts: parts,
+      artifactPromises: [
+        Promise.resolve(
+          mcpAttachment(
+            [{ toolName: 'kx_search', serverName: 'kx', content: AFR_ARTICLE }],
+            'This information may not be current.',
+          ),
+        ),
+      ],
+      fileCitations: true,
+    });
+    const text = readText(parts[0]);
+    expect(anchorCount(text, MARKER)).toBe(0);
   });
 
   it('falls back to the lexical pass for a SharePoint source answered as prose instead of a filename line', async () => {

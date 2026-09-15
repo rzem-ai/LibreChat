@@ -360,6 +360,11 @@ function matchFenceOpen(line: string): FenceOpen | null {
  * is already absorbed by `trimStart()`; blockquote markers are `>` characters, which
  * whitespace-only trimming doesn't strip, so they're matched explicitly via
  * `BLOCKQUOTE_PREFIX`, and the exact same prefix is then required on the closing line.
+ *
+ * Per CommonMark, a closing fence may only be indented up to 3 spaces — beyond that it's
+ * still code content, not a close. The closing-fence check enforces that cap explicitly
+ * (rather than trimming all leading whitespace) so an over-indented delimiter-looking line
+ * inside the block doesn't end the range early.
  */
 function findFencedCodeRanges(text: string): ExcludedRange[] {
   const ranges: ExcludedRange[] = [];
@@ -380,7 +385,7 @@ function findFencedCodeRanges(text: string): ExcludedRange[] {
       continue;
     }
 
-    const closeLineRegex = new RegExp(`^${fenceOpen.char}{${fenceOpen.length},}$`);
+    const closeLineRegex = new RegExp(`^ {0,3}${fenceOpen.char}{${fenceOpen.length},}[ \t\r]*$`);
     let closeIndex = -1;
     for (let j = i + 1; j < lines.length; j++) {
       const line = lines[j];
@@ -389,7 +394,7 @@ function findFencedCodeRanges(text: string): ExcludedRange[] {
       }
 
       const candidate = blockquotePrefix ? line.slice(blockquotePrefix.length) : line;
-      if (closeLineRegex.test(candidate.trim())) {
+      if (closeLineRegex.test(candidate)) {
         closeIndex = j;
         break;
       }
@@ -613,8 +618,11 @@ function buildMCPPassages(mcpAttachments: TAttachment[], turnOffset: number): Pa
  * Inserts MCP citation anchors (`turn{N}mcp0`) into assistant text parts by
  * matching each sentence against the MCP tool result content, using the more
  * lenient `MCP_SIMILARITY_THRESHOLD`. Mutates in place. Returns the
- * `"turn:fileIndex"` coordinates that received an anchor, so callers can
- * detect sources the lexical pass missed (see `appendGuaranteedMCPCitations`).
+ * `"turn:fileIndex"` coordinates that matched, so callers can detect sources
+ * the lexical pass missed entirely (see `appendGuaranteedMCPCitations`) — a
+ * sentence inside an excluded (fenced-code) range still contributes its
+ * coordinate here even though no anchor is written for it, so a source
+ * mentioned only inside a fence isn't force-cited again outside it.
  *
  * A source already anchored earlier on the same line is excluded from later
  * sentences on that line (reset at each `\n`). A single source's content can
@@ -648,12 +656,11 @@ export function insertMCPCitations(
       .map((sentence) => {
         const start = cursor;
         cursor += sentence.length;
-        if (isWithinRanges(start, excludedRanges)) {
-          if (sentence.includes('\n')) {
-            lineCoords = new Set();
-          }
-          return sentence;
-        }
+        // Deloitte Custom Change: still score the sentence inside an excluded (fenced) range
+        // so a source matched only there is marked used and doesn't get force-appended later
+        // by appendGuaranteedMCPCitations — but never insert the anchor markup, since it
+        // would render as literal text inside the fence.
+        const withinExcludedRange = isWithinRanges(start, excludedRanges);
 
         const { anchors, coords } = anchorsForSentence(sentence, passages, {
           threshold: MCP_SIMILARITY_THRESHOLD,
@@ -667,6 +674,9 @@ export function insertMCPCitations(
         });
         if (sentence.includes('\n')) {
           lineCoords = new Set();
+        }
+        if (withinExcludedRange) {
+          return sentence;
         }
         return withAnchors(sentence, anchors);
       })
@@ -881,9 +891,12 @@ function nextCoordForAlias(
  *
  * Scoped to sources whose `toolName` starts with `sp_` so every other MCP
  * connector keeps using the existing lexical pass unchanged. Returns the
- * `"turn:fileIndex"` coordinates it anchored, in the same format
+ * `"turn:fileIndex"` coordinates it matched, in the same format
  * `insertMCPCitations` returns, so the caller can merge them into the same
- * `usedCoords` set.
+ * `usedCoords` set — a title matched on a line inside an excluded (fenced-code)
+ * range still contributes its coordinate here even though no anchor is
+ * written for it, so `appendGuaranteedMCPCitations` doesn't force-cite that
+ * source again outside the fence.
  */
 export function insertSharePointCitations(
   contentParts: TMessageContentParts[],
@@ -951,9 +964,11 @@ export function insertSharePointCitations(
     const rebuiltLines = text.split('\n').map((line) => {
       const lineStart = cursor;
       cursor += line.length + 1;
-      if (isWithinRanges(lineStart, excludedRanges)) {
-        return line;
-      }
+      // Deloitte Custom Change: still match aliases inside an excluded (fenced) range so a
+      // source mentioned only there is marked used and doesn't get force-appended later by
+      // appendGuaranteedMCPCitations — but never mutate the line, since an anchor placed
+      // inside a fence would render as literal text.
+      const withinExcludedRange = isWithinRanges(lineStart, excludedRanges);
 
       const tableCells = splitTableRowCells(line);
       if (tableCells) {
@@ -971,6 +986,9 @@ export function insertSharePointCitations(
               continue;
             }
             usedCoords.add(`${coord.turn}:${coord.fileIndex}`);
+            if (withinExcludedRange) {
+              return line;
+            }
             changed = true;
             tableCells[cellIndex] = withAnchors(tableCells[cellIndex], [
               `${ANCHOR_MARKER}turn${coord.turn}mcp${coord.fileIndex}`,
@@ -996,6 +1014,9 @@ export function insertSharePointCitations(
           continue;
         }
         usedCoords.add(`${coord.turn}:${coord.fileIndex}`);
+        if (withinExcludedRange) {
+          return line;
+        }
         changed = true;
         return withAnchors(line, [`${ANCHOR_MARKER}turn${coord.turn}mcp${coord.fileIndex}`]);
       }
