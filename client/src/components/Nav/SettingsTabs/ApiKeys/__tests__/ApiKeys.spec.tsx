@@ -30,6 +30,7 @@ const createdKey = {
 function openManageDialog() {
   const utils = render(<ApiKeys />);
   fireEvent.click(utils.getByRole('button', { name: 'Agent API Keys' }));
+  // Deloitte Custom Change: select the account whose API keys an administrator manages.
   fireEvent.change(utils.getByLabelText(/email address/i), {
     target: { value: 'eval@example.com' },
   });
