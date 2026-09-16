@@ -216,6 +216,60 @@ describe('insertFileCitations', () => {
     ]);
     expect(parts[0]).toBe(ref);
   });
+
+  // Deloitte Custom Change: a file_search answer rendered as a markdown table must keep its
+  // pipe/column count intact — a citation anchor must land inside a cell, never after the row's
+  // closing pipe.
+  it('anchors a markdown table row inside its last cell without corrupting the row', () => {
+    const parts = [
+      textPart(
+        '| Topic | Summary |\n' +
+          '| --- | --- |\n' +
+          '| Desk Booking | You can reserve a desk fourteen days in advance through the booking portal |',
+      ),
+    ];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const rows = readText(parts[0]).split('\n');
+    expect(rows).toHaveLength(3);
+    expect(rows[2]).toContain(`${MARKER}turn0file0`);
+    expect(rows[2].trim().endsWith('|')).toBe(true);
+    expect(rows[2].split('|')).toHaveLength(4);
+  });
+
+  it('does not split a table row at a filename extension period', () => {
+    const parts = [
+      textPart(
+        '| File | Summary |\n' +
+          '| --- | --- |\n' +
+          '| report.pdf | You can reserve a desk fourteen days in advance through the booking portal |',
+      ),
+    ];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const text = readText(parts[0]);
+    const rows = text.split('\n');
+    expect(rows).toHaveLength(3);
+    expect(text).toContain('report.pdf');
+    expect(rows[2].split('|')).toHaveLength(4);
+  });
+
+  it('leaves a markdown table separator row untouched', () => {
+    const parts = [
+      textPart(
+        '| Topic | Summary |\n' +
+          '| --- | --- |\n' +
+          '| Desk Booking | You can reserve a desk fourteen days in advance through the booking portal |',
+      ),
+    ];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const rows = readText(parts[0]).split('\n');
+    expect(rows[1]).toBe('| --- | --- |');
+  });
 });
 
 describe('insertMCPCitations', () => {
@@ -335,6 +389,32 @@ describe('insertMCPCitations', () => {
       0,
     );
     expect(usedCoords).toEqual(new Set(['0:0']));
+  });
+
+  // Deloitte Custom Change: table-row protection is shared infrastructure, not SharePoint-only —
+  // any MCP connector's answer rendered as a table must keep its column count intact too.
+  it('anchors a non-SharePoint MCP table row inside its last cell without corrupting the row', () => {
+    const parts = [
+      textPart(
+        '| Topic | Summary |\n' +
+          '| --- | --- |\n' +
+          '| RBA Rates | The Reserve Bank held the cash rate steady at its meeting today |',
+      ),
+    ];
+    insertMCPCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'afr_get_latest_news', serverName: 'afr', content: AFR_ARTICLE },
+        ]),
+      ],
+      0,
+    );
+    const rows = readText(parts[0]).split('\n');
+    expect(rows).toHaveLength(3);
+    expect(rows[2]).toContain(`${MARKER}turn0mcp0`);
+    expect(rows[2].trim().endsWith('|')).toBe(true);
+    expect(rows[2].split('|')).toHaveLength(4);
   });
 });
 
@@ -591,7 +671,11 @@ describe('insertSharePointCitations', () => {
     const parts = [textPart(original)];
     insertSharePointCitations(
       parts,
-      [mcpAttachment([{ toolName: 'sp_search', serverName: 'sharepoint', title: 'Archive', content: 'a' }])],
+      [
+        mcpAttachment([
+          { toolName: 'sp_search', serverName: 'sharepoint', title: 'Archive', content: 'a' },
+        ]),
+      ],
       0,
     );
     expect(readText(parts[0])).toBe(original);
@@ -637,7 +721,11 @@ describe('insertSharePointCitations', () => {
     const parts = [textPart(original)];
     insertSharePointCitations(
       parts,
-      [mcpAttachment([{ toolName: 'sp_search', serverName: 'sharepoint', title: 'Archive', content: 'a' }])],
+      [
+        mcpAttachment([
+          { toolName: 'sp_search', serverName: 'sharepoint', title: 'Archive', content: 'a' },
+        ]),
+      ],
       0,
     );
     expect(readText(parts[0])).toBe(original);

@@ -373,6 +373,64 @@ function withAnchors(sentence: string, anchors: string[]): string {
   return `${trimmed} ${anchors.join(' ')}${trailing}`;
 }
 
+/**
+ * Anchors a single text blob against `passages`, line by line. A line that parses as a markdown
+ * table row (via `splitTableRowCells`) is scored as one unit and its anchors are inserted into the
+ * last non-empty cell, preserving column count — the same placement `insertSharePointCitations`
+ * uses. Every other line (prose, or a table separator row, which `splitTableRowCells` also treats
+ * as non-data) falls back to the existing sentence-boundary pass. Splitting/rejoining on `\n` is
+ * always lossless, so this never alters surrounding whitespace beyond the anchors themselves.
+ */
+function anchorTextPart(
+  text: string,
+  passages: Passage[],
+  options: {
+    threshold?: number;
+    tokenizeFn?: (text: string) => string[];
+    anchorTag?: string;
+  },
+): { text: string; usedCoords: Set<string> } {
+  const usedCoords = new Set<string>();
+
+  const rebuiltLines = text.split('\n').map((line) => {
+    const lineCoords = new Set<string>();
+    const cells = splitTableRowCells(line);
+
+    if (cells) {
+      const { anchors, coords } = anchorsForSentence(line, passages, {
+        ...options,
+        excludeCoords: lineCoords,
+      });
+      coords.forEach((coord) => usedCoords.add(coord));
+      if (anchors.length === 0) {
+        return line;
+      }
+      const lastCellIndex = findLastNonEmptyCellIndex(cells);
+      if (lastCellIndex === -1) {
+        return line;
+      }
+      cells[lastCellIndex] = withAnchors(cells[lastCellIndex], anchors);
+      return `|${cells.join('|')}|`;
+    }
+
+    return splitIntoSentences(line)
+      .map((sentence) => {
+        const { anchors, coords } = anchorsForSentence(sentence, passages, {
+          ...options,
+          excludeCoords: lineCoords,
+        });
+        coords.forEach((coord) => {
+          usedCoords.add(coord);
+          lineCoords.add(coord);
+        });
+        return withAnchors(sentence, anchors);
+      })
+      .join('');
+  });
+
+  return { text: rebuiltLines.join('\n'), usedCoords };
+}
+
 function findLastTextPart(contentParts: TMessageContentParts[]): TMessageContentParts | undefined {
   for (let i = contentParts.length - 1; i >= 0; i--) {
     const text = readText(contentParts[i]);
@@ -430,21 +488,7 @@ export function insertFileCitations(
       continue;
     }
 
-    const sentences = splitIntoSentences(text);
-    let lineCoords = new Set<string>();
-    const rebuilt = sentences
-      .map((sentence) => {
-        const { anchors, coords } = anchorsForSentence(sentence, passages, {
-          excludeCoords: lineCoords,
-        });
-        coords.forEach((coord) => lineCoords.add(coord));
-        if (sentence.includes('\n')) {
-          lineCoords = new Set();
-        }
-        return withAnchors(sentence, anchors);
-      })
-      .join('');
-
+    const { text: rebuilt } = anchorTextPart(text, passages, {});
     if (rebuilt !== text) {
       writeText(part, rebuilt);
     }
@@ -505,26 +549,12 @@ export function insertMCPCitations(
       continue;
     }
 
-    const sentences = splitIntoSentences(text);
-    let lineCoords = new Set<string>();
-    const rebuilt = sentences
-      .map((sentence) => {
-        const { anchors, coords } = anchorsForSentence(sentence, passages, {
-          threshold: MCP_SIMILARITY_THRESHOLD,
-          tokenizeFn: tokenizeStemmed,
-          anchorTag: 'mcp',
-          excludeCoords: lineCoords,
-        });
-        coords.forEach((coord) => {
-          usedCoords.add(coord);
-          lineCoords.add(coord);
-        });
-        if (sentence.includes('\n')) {
-          lineCoords = new Set();
-        }
-        return withAnchors(sentence, anchors);
-      })
-      .join('');
+    const { text: rebuilt, usedCoords: partCoords } = anchorTextPart(text, passages, {
+      threshold: MCP_SIMILARITY_THRESHOLD,
+      tokenizeFn: tokenizeStemmed,
+      anchorTag: 'mcp',
+    });
+    partCoords.forEach((coord) => usedCoords.add(coord));
 
     if (rebuilt !== text) {
       writeText(part, rebuilt);
@@ -641,6 +671,16 @@ function splitTableRowCells(line: string): string[] | undefined {
     return undefined;
   }
   return trimmed.slice(1, -1).split('|');
+}
+
+/** Index of the last non-blank cell, or -1 if every cell is empty — the safe place to append an anchor without disturbing column count. */
+function findLastNonEmptyCellIndex(cells: string[]): number {
+  for (let i = cells.length - 1; i >= 0; i--) {
+    if (cells[i].trim().length > 0) {
+      return i;
+    }
+  }
+  return -1;
 }
 
 /**
