@@ -48,7 +48,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           # Post-merge runs validate destination-side code (merge commit), not the PR source branch.
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.event.inputs.target_ref || github.sha }}
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || (github.event.inputs.target_ref == 'uat' && 'uat' || github.event.inputs.target_ref == 'main' && 'main' || 'develop') }}
 
       - name: Use Node.js 24.16.0
         uses: actions/setup-node@v4
