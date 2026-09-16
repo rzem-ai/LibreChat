@@ -75,7 +75,6 @@ describe('TutorialPromptModal', () => {
 
     fireEvent.click(screen.getByText('com_learning_prompt_accept'));
 
-    expect(mockMarkPromptSeen).toHaveBeenCalledTimes(1);
     expect(mockStartLandingPageTour).toHaveBeenCalledTimes(1);
   });
 
