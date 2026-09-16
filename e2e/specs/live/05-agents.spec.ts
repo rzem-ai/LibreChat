@@ -131,7 +131,7 @@ test.describe.serial('live agents', { tag: ['@live'] }, () => {
       await expect(reply).not.toBeEmpty();
 
       // Assertion D: the real LLM honored this agent's own instructions.
-      await expectCanaryReply(page, reply, CANARY);
+      await expect(reply).toContainText(new RegExp(CANARY, 'i'), { timeout: 30000 });
 
       // Assertion E: editing the agent's instructions actually takes effect,
       // not just that the form re-saves. Close out this conversation first —

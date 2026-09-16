@@ -47,7 +47,8 @@ export async function expectCanaryReply(page: Page, reply: Locator, word: string
     .catch(() => false);
   if (!hasCanary) {
     await sendMessage(page, canaryNudge(word));
-    await expect(reply).toContainText(new RegExp(word, 'i'), { timeout: 30000 });
+    const nudgedReply = page.getByTestId('messages-view').locator('.text-message').last();
+    await expect(nudgedReply).toContainText(new RegExp(word, 'i'), { timeout: 30000 });
   }
 }
 
