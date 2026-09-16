@@ -49,7 +49,7 @@ export default function ApiKeys() {
               type="email"
               value={serviceAccountEmail}
               onChange={(event) => setServiceAccountEmail(event.target.value)}
-              placeholder="service-account@example.com"
+              placeholder={localize('com_auth_email_address')}
             />
           </div>
           {serviceAccountEmail ? (

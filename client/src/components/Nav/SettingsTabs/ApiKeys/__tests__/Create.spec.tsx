@@ -29,7 +29,7 @@ describe('Create', () => {
 
   it('keeps Create disabled until a non-empty name is entered', () => {
     const { getByRole, getByLabelText } = render(
-      <Create onCreated={jest.fn()} onCancel={jest.fn()} />,
+      <Create userEmail="eval@example.com" onCreated={jest.fn()} onCancel={jest.fn()} />,
     );
     expect(getByRole('button', { name: 'Create' })).toBeDisabled();
 
@@ -44,7 +44,7 @@ describe('Create', () => {
   it('submits the trimmed name with the default 30-day expiration', async () => {
     const onCreated = jest.fn();
     const { getByRole, getByLabelText } = render(
-      <Create onCreated={onCreated} onCancel={jest.fn()} />,
+      <Create userEmail="eval@example.com" onCreated={onCreated} onCancel={jest.fn()} />,
     );
 
     fireEvent.change(getByLabelText('Key Name'), { target: { value: '  CI key  ' } });
@@ -54,6 +54,7 @@ describe('Create', () => {
 
     const payload = mutateAsync.mock.calls[0][0];
     expect(payload.name).toBe('CI key');
+    expect(payload.userEmail).toBe('eval@example.com');
     const diffDays = (new Date(payload.expiresAt).getTime() - Date.now()) / 86400000;
     expect(diffDays).toBeGreaterThan(29.9);
     expect(diffDays).toBeLessThanOrEqual(30.1);
@@ -61,7 +62,9 @@ describe('Create', () => {
 
   it('calls onCancel from the cancel button', () => {
     const onCancel = jest.fn();
-    const { getByRole } = render(<Create onCreated={jest.fn()} onCancel={onCancel} />);
+    const { getByRole } = render(
+      <Create userEmail="eval@example.com" onCreated={jest.fn()} onCancel={onCancel} />,
+    );
     fireEvent.click(getByRole('button', { name: 'Cancel' }));
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
@@ -70,7 +73,7 @@ describe('Create', () => {
     mutateAsync.mockRejectedValue(new Error('boom'));
     const onCreated = jest.fn();
     const { getByRole, getByLabelText } = render(
-      <Create onCreated={onCreated} onCancel={jest.fn()} />,
+      <Create userEmail="eval@example.com" onCreated={onCreated} onCancel={jest.fn()} />,
     );
     fireEvent.change(getByLabelText('Key Name'), { target: { value: 'CI key' } });
     fireEvent.click(getByRole('button', { name: 'Create' }));
@@ -80,7 +83,9 @@ describe('Create', () => {
 
   it('disables actions while creating', () => {
     mockCreate.mockReturnValue({ mutateAsync, isLoading: true });
-    const { getByRole } = render(<Create onCreated={jest.fn()} onCancel={jest.fn()} />);
+    const { getByRole } = render(
+      <Create userEmail="eval@example.com" onCreated={jest.fn()} onCancel={jest.fn()} />,
+    );
     expect(getByRole('button', { name: 'Create' })).toBeDisabled();
     expect(getByRole('button', { name: 'Cancel' })).toBeDisabled();
   });

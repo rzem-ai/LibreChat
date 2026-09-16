@@ -1,6 +1,5 @@
 const express = require('express');
 const { createApiKeyHandlers } = require('@librechat/api');
-const { SystemCapabilities } = require('@librechat/data-schemas');
 const {
   getAgentApiKeyById,
   createAgentApiKey,
@@ -9,7 +8,7 @@ const {
   findUser,
 } = require('~/models');
 const { requireJwtAuth } = require('~/server/middleware');
-const { requireCapability } = require('~/server/middleware/roles/capabilities');
+const { checkAdmin } = require('~/server/middleware/roles');
 
 const router = express.Router();
 
@@ -22,7 +21,7 @@ const handlers = createApiKeyHandlers({
 });
 
 // Deloitte Custom Change: only administrators can issue or revoke service account API keys.
-const requireAdminAccess = requireCapability(SystemCapabilities.ACCESS_ADMIN);
+const requireAdminAccess = checkAdmin;
 
 router.use(requireJwtAuth, requireAdminAccess);
 

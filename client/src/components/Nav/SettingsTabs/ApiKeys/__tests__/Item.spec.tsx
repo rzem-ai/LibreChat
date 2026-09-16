@@ -22,7 +22,7 @@ const baseKey: TAgentApiKeyListItem = {
 function renderItem(apiKey = baseKey) {
   return render(
     <ul>
-      <Item apiKey={apiKey} />
+      <Item apiKey={apiKey} userEmail="eval@example.com" />
     </ul>,
   );
 }
