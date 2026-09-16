@@ -34,6 +34,7 @@ function openManageDialog() {
   fireEvent.change(utils.getByLabelText(/email address/i), {
     target: { value: 'eval@example.com' },
   });
+  fireEvent.click(utils.getByRole('button', { name: 'Select' }));
   return utils;
 }
 
@@ -66,7 +67,7 @@ describe('ApiKeys', () => {
     expect(mockQuery).toHaveBeenLastCalledWith('eval@example.com');
   });
 
-  it('requires an account email before allowing key creation', () => {
+  it('requires selecting an account before allowing key creation', () => {
     const utils = render(<ApiKeys />);
     fireEvent.click(utils.getByRole('button', { name: 'Agent API Keys' }));
 
@@ -75,6 +76,10 @@ describe('ApiKeys', () => {
     fireEvent.change(utils.getByLabelText(/email address/i), {
       target: { value: 'eval@example.com' },
     });
+
+    expect(utils.getByRole('button', { name: 'Create API Key' })).toBeDisabled();
+
+    fireEvent.click(utils.getByRole('button', { name: 'Select' }));
 
     expect(utils.getAllByRole('button', { name: 'Create API Key' })[0]).toBeEnabled();
   });

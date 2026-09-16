@@ -41,20 +41,44 @@ describe('API key routes', () => {
     jest.clearAllMocks();
   });
 
-  // Deloitte Custom Change: verifies that API key management remains administrator-only.
-  it('allows an administrator to list API keys', async () => {
-    const app = createApp();
+  const routes = [
+    ['post', '/api/api-keys', 201],
+    ['get', '/api/api-keys', 200],
+    ['get', '/api/api-keys/key-1', 200],
+    ['delete', '/api/api-keys/key-1', 204],
+  ];
 
-    await request(app).get('/api/api-keys').set('x-user-role', 'ADMIN').expect(200);
+  // Deloitte Custom Change: verifies that every API key lifecycle route remains administrator-only.
+  it.each(routes)(
+    'allows an administrator to access %s %s',
+    async (method, path, expectedStatus) => {
+      const app = createApp();
 
-    expect(mockHandlers.listApiKeys).toHaveBeenCalledTimes(1);
-  });
+      const response = await request(app)[method](path).set('x-user-role', 'ADMIN');
 
-  it('denies a non-administrator before an API key handler runs', async () => {
+      expect(response.status).toBe(expectedStatus);
+    },
+  );
+
+  it.each(routes)(
+    'denies a non-administrator before a handler runs: %s %s',
+    async (method, path) => {
+      const app = createApp();
+
+      const response = await request(app)[method](path).set('x-user-role', 'USER');
+
+      expect(response.status).toBe(403);
+    },
+  );
+
+  it('does not invoke any handler for a non-administrator', async () => {
     const app = createApp();
 
     await request(app).get('/api/api-keys').set('x-user-role', 'USER').expect(403);
 
+    expect(mockHandlers.createApiKey).not.toHaveBeenCalled();
     expect(mockHandlers.listApiKeys).not.toHaveBeenCalled();
+    expect(mockHandlers.getApiKey).not.toHaveBeenCalled();
+    expect(mockHandlers.deleteApiKey).not.toHaveBeenCalled();
   });
 });

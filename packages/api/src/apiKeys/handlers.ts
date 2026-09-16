@@ -40,7 +40,10 @@ export interface ApiKeyHandlerDependencies {
     expiresAt?: Date;
     createdAt: Date;
   } | null>;
-  findUser: (query: { email: string }) => Promise<{ _id: Types.ObjectId } | null>;
+  findUser: (
+    query: { email: string },
+    fieldsToSelect: '_id',
+  ) => Promise<{ _id: Types.ObjectId } | null>;
 }
 
 interface AuthenticatedRequest extends Request {
@@ -63,7 +66,7 @@ export function createApiKeyHandlers(deps: ApiKeyHandlerDependencies): {
       return null;
     }
 
-    const user = await deps.findUser({ email: userEmail.trim().toLowerCase() });
+    const user = await deps.findUser({ email: userEmail.trim().toLowerCase() }, '_id');
     return user?._id.toString() ?? null;
   }
 

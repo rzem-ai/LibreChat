@@ -537,7 +537,6 @@ export const useGetAgentApiKeysQuery = (
       enabled: !!userEmail,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
-      refetchOnMount: false,
       ...config,
     },
   );
