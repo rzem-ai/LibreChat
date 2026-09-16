@@ -394,9 +394,9 @@ function anchorTextPart(
 
   const rebuiltLines = text.split('\n').map((line) => {
     const lineCoords = new Set<string>();
-    const cells = splitTableRowCells(line);
+    const tableRow = splitTableRowCells(line);
 
-    if (cells) {
+    if (tableRow) {
       const { anchors, coords } = anchorsForSentence(line, passages, {
         ...options,
         excludeCoords: lineCoords,
@@ -405,12 +405,12 @@ function anchorTextPart(
       if (anchors.length === 0) {
         return line;
       }
-      const lastCellIndex = findLastNonEmptyCellIndex(cells);
+      const lastCellIndex = findLastNonEmptyCellIndex(tableRow.cells);
       if (lastCellIndex === -1) {
         return line;
       }
-      cells[lastCellIndex] = withAnchors(cells[lastCellIndex], anchors);
-      return `|${cells.join('|')}|`;
+      tableRow.cells[lastCellIndex] = withAnchors(tableRow.cells[lastCellIndex], anchors);
+      return joinTableRowCells(tableRow);
     }
 
     return splitIntoSentences(line)
@@ -657,20 +657,44 @@ function stripLineMarkers(line: string): string {
 const TABLE_SEPARATOR_LINE = /^\s*\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?\s*$/;
 
 /**
- * Splits a markdown table row (`| a | b |`) into its cell contents, or
- * returns undefined if the line isn't a table row (including separator
- * rows), so a SharePoint answer rendered as a table can still be matched
- * cell-by-cell the same way a bulleted line is matched whole.
+ * A table row's cells plus which edge pipes the original line actually had, so a caller that
+ * rebuilds the row can reproduce the exact same leading/trailing pipe formatting instead of
+ * always adding both.
  */
-function splitTableRowCells(line: string): string[] | undefined {
+interface TableRowCells {
+  cells: string[];
+  hasLeadingPipe: boolean;
+  hasTrailingPipe: boolean;
+}
+
+/**
+ * Splits a markdown table row (`| a | b |`) into its cell contents, or returns undefined if the
+ * line isn't a table row (including separator rows), so a SharePoint or file_search answer
+ * rendered as a table can still be matched cell-by-cell the same way a bulleted line is matched
+ * whole.
+ *
+ * GFM permits omitting the leading and/or trailing pipe on a multi-column row (`File | Summary`
+ * is as valid as `| File | Summary |`), so a row qualifies either when both edge pipes are present
+ * (covers single-column rows, which need both to be unambiguous) or when at least one `|`
+ * separates cells in the interior — a lone stray `|` with nothing to separate is not a table row.
+ */
+function splitTableRowCells(line: string): TableRowCells | undefined {
   const trimmed = line.trim();
-  if (!trimmed.startsWith('|') || !trimmed.endsWith('|') || trimmed.length < 2) {
+  if (trimmed.length === 0 || TABLE_SEPARATOR_LINE.test(trimmed)) {
     return undefined;
   }
-  if (TABLE_SEPARATOR_LINE.test(trimmed)) {
+  const hasLeadingPipe = trimmed.startsWith('|');
+  const hasTrailingPipe = trimmed.length > 1 && trimmed.endsWith('|');
+  const core = trimmed.slice(hasLeadingPipe ? 1 : 0, hasTrailingPipe ? -1 : undefined);
+  if (!(hasLeadingPipe && hasTrailingPipe) && !core.includes('|')) {
     return undefined;
   }
-  return trimmed.slice(1, -1).split('|');
+  return { cells: core.split('|'), hasLeadingPipe, hasTrailingPipe };
+}
+
+/** Rebuilds a table row from `splitTableRowCells`'s output, restoring only the edge pipes the original line had. */
+function joinTableRowCells({ cells, hasLeadingPipe, hasTrailingPipe }: TableRowCells): string {
+  return `${hasLeadingPipe ? '|' : ''}${cells.join('|')}${hasTrailingPipe ? '|' : ''}`;
 }
 
 /** Index of the last non-blank cell, or -1 if every cell is empty — the safe place to append an anchor without disturbing column count. */
@@ -841,8 +865,9 @@ export function insertSharePointCitations(
 
     let changed = false;
     const rebuiltLines = text.split('\n').map((line) => {
-      const tableCells = splitTableRowCells(line);
-      if (tableCells) {
+      const tableRow = splitTableRowCells(line);
+      if (tableRow) {
+        const { cells: tableCells } = tableRow;
         for (let cellIndex = 0; cellIndex < tableCells.length; cellIndex++) {
           const normalizedCell = normalizeForMatch(stripLineMarkers(tableCells[cellIndex]));
           if (!normalizedCell) {
@@ -861,7 +886,7 @@ export function insertSharePointCitations(
             tableCells[cellIndex] = withAnchors(tableCells[cellIndex], [
               `${ANCHOR_MARKER}turn${coord.turn}mcp${coord.fileIndex}`,
             ]);
-            return `|${tableCells.join('|')}|`;
+            return joinTableRowCells(tableRow);
           }
         }
         return line;

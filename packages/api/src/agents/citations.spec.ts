@@ -256,6 +256,30 @@ describe('insertFileCitations', () => {
     expect(rows[2].split('|')).toHaveLength(4);
   });
 
+  // GFM permits a table row without edge pipes (`File | Summary` is as valid as
+  // `| File | Summary |`) — that row must still be recognized as a table row, not fall through to
+  // sentence splitting, which would split a filename like `report.pdf` mid-word.
+  it('anchors a table row that omits the leading and trailing pipes', () => {
+    const parts = [
+      textPart(
+        'File | Summary\n' +
+          '--- | ---\n' +
+          'report.pdf | You can reserve a desk fourteen days in advance through the booking portal',
+      ),
+    ];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const text = readText(parts[0]);
+    const rows = text.split('\n');
+    expect(rows).toHaveLength(3);
+    expect(text).toContain('report.pdf');
+    expect(rows[2]).toContain(`${MARKER}turn0file0`);
+    expect(rows[2].startsWith('|')).toBe(false);
+    expect(rows[2].endsWith('|')).toBe(false);
+    expect(rows[2].split('|')).toHaveLength(2);
+  });
+
   it('leaves a markdown table separator row untouched', () => {
     const parts = [
       textPart(
@@ -711,6 +735,41 @@ describe('insertSharePointCitations', () => {
     expect(rows).toHaveLength(3);
     expect(rows[2].split('|')).toHaveLength(5);
     expect(rows[2]).toContain('| AISolutionStudio |');
+  });
+
+  // GFM permits a table row without edge pipes — this must still be recognized as a table row
+  // (matched cell-by-cell) instead of falling through to the line-prefix matcher, which would
+  // split the filename at its extension period and miss it entirely.
+  it('anchors a markdown table row that omits the leading and trailing pipes', () => {
+    const parts = [
+      textPart(
+        'File Name | Location | Last Modified\n' +
+          '--- | --- | ---\n' +
+          'Consulting Graduate Induction Workbook.pptx | AISolutionStudio | 9 Sep 2026',
+      ),
+    ];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    const text = readText(parts[0]);
+    expect(text).toContain(`${MARKER}turn0mcp0`);
+    const rows = text.split('\n');
+    expect(rows).toHaveLength(3);
+    expect(rows[2].startsWith('|')).toBe(false);
+    expect(rows[2].endsWith('|')).toBe(false);
+    expect(rows[2].split('|')).toHaveLength(3);
+    expect(rows[2]).toContain(' AISolutionStudio ');
   });
 
   it('does not anchor a table row whose cell match is only a partial word', () => {
