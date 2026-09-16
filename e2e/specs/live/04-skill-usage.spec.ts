@@ -17,8 +17,8 @@ import {
  * Overrides: LIVE_SKILL_USAGE (skill name), LIVE_ENDPOINT, LIVE_MODEL.
  */
 const SKILL = process.env.LIVE_SKILL_USAGE?.trim() || 'capability-builder';
-const ENDPOINT = process.env.LIVE_ENDPOINT?.trim() || 'Azure US';
-const MODEL = process.env.LIVE_MODEL?.trim() || 'gpt-5-nano';
+const ENDPOINT = process.env.LIVE_ENDPOINT?.trim() || 'Azure Global';
+const MODEL = process.env.LIVE_MODEL?.trim() || 'gpt-56-luna';
 const QUESTION = 'If you can see this skill, just reply with "Yes"';
 
 test.describe.serial('live skill usage', { tag: ['@live'] }, () => {
