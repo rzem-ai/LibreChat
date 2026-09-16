@@ -93,6 +93,7 @@ describe('settings registry', () => {
     });
   });
 
+  // Deloitte Custom Change: verifies that only enabled administrators see Agent API key management.
   describe('Agent API key visibility', () => {
     const agentApiKeysEntry = registry.find((entry) => entry.id === 'agentApiKeys');
 

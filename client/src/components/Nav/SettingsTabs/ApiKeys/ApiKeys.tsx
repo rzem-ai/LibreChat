@@ -20,6 +20,7 @@ export default function ApiKeys() {
   const localize = useLocalize();
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  // Deloitte Custom Change: tracks the service account selected for API key management.
   const [serviceAccountEmail, setServiceAccountEmail] = useState('');
   const [selectedAccountEmail, setSelectedAccountEmail] = useState('');
 

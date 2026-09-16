@@ -542,6 +542,7 @@ export const useGetAgentApiKeysQuery = (
   );
 };
 
+// Deloitte Custom Change: includes service account identity when creating an integration key.
 export const useCreateAgentApiKeyMutation = (): UseMutationResult<
   t.TAgentApiKeyCreateResponse,
   unknown,
@@ -558,6 +559,7 @@ export const useCreateAgentApiKeyMutation = (): UseMutationResult<
   );
 };
 
+// Deloitte Custom Change: sends owner scope when deleting an integration key.
 export const useDeleteAgentApiKeyMutation = (): UseMutationResult<
   void,
   unknown,

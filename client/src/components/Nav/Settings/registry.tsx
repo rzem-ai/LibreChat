@@ -505,6 +505,7 @@ export const registry: SettingEntry[] = [
     tab: DATA,
     section: 'apiKeys',
     labelKey: 'com_ui_settings_label_agent_api_keys',
+    // Deloitte Custom Change: exposes Agent API key management only to enabled administrators.
     show: (ctx) => ctx.adminAgentApiKeysEnabled && ctx.isAdmin,
     Component: ApiKeys,
   },

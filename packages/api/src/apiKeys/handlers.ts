@@ -40,6 +40,7 @@ export interface ApiKeyHandlerDependencies {
     expiresAt?: Date;
     createdAt: Date;
   } | null>;
+  /** Deloitte Custom Change: resolves the selected service account with only its identifier. */
   findUser: (
     query: { email: string },
     fieldsToSelect: '_id',
@@ -75,6 +76,7 @@ export function createApiKeyHandlers(deps: ApiKeyHandlerDependencies): {
     res: Response,
   ): Promise<Response | undefined> {
     try {
+      // Deloitte Custom Change: creates integration keys for the email-selected service account.
       const { name, expiresAt } = req.body;
 
       if (!name || typeof name !== 'string' || name.trim() === '') {
@@ -110,6 +112,7 @@ export function createApiKeyHandlers(deps: ApiKeyHandlerDependencies): {
 
   async function listApiKeys(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
+      // Deloitte Custom Change: lists keys only for the email-selected service account.
       const userId = await getTargetUserId(req);
       if (!userId) {
         res.status(400).json({ error: 'A valid service account email is required' });
@@ -128,6 +131,7 @@ export function createApiKeyHandlers(deps: ApiKeyHandlerDependencies): {
     res: Response,
   ): Promise<Response | undefined> {
     try {
+      // Deloitte Custom Change: scopes key lookup to the email-selected service account.
       const userId = await getTargetUserId(req);
       if (!userId) {
         return res.status(400).json({ error: 'A valid service account email is required' });
@@ -150,6 +154,7 @@ export function createApiKeyHandlers(deps: ApiKeyHandlerDependencies): {
     res: Response,
   ): Promise<Response | undefined> {
     try {
+      // Deloitte Custom Change: scopes key revocation to the email-selected service account.
       const userId = await getTargetUserId(req);
       if (!userId) {
         return res.status(400).json({ error: 'A valid service account email is required' });

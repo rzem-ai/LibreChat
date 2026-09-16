@@ -12,6 +12,7 @@ jest.mock('librechat-data-provider/react-query', () => ({
 
 const mockDelete = useDeleteAgentApiKeyMutation as jest.Mock;
 
+// Deloitte Custom Change: renders API key metadata in a selected service account context.
 const baseKey: TAgentApiKeyListItem = {
   id: 'key-1',
   name: 'CI Pipeline',

@@ -139,6 +139,7 @@ export function createAgentApiKey(
   return request.post(endpoints.apiKeys(), payload);
 }
 
+// Deloitte Custom Change: sends the selected service account when revoking a key.
 export function deleteAgentApiKey(id: string, userEmail: string): Promise<void> {
   return request.delete(endpoints.apiKeyById(id, userEmail));
 }

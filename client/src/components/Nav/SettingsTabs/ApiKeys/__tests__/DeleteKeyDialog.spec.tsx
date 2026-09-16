@@ -11,6 +11,7 @@ jest.mock('librechat-data-provider/react-query', () => ({
 
 const mockDelete = useDeleteAgentApiKeyMutation as jest.Mock;
 
+// Deloitte Custom Change: verifies service account scope is preserved for key revocation.
 describe('DeleteKeyDialog', () => {
   let mutate: jest.Mock;
 

@@ -67,6 +67,7 @@ describe('ApiKeys', () => {
     expect(mockQuery).toHaveBeenLastCalledWith('eval@example.com');
   });
 
+  // Deloitte Custom Change: verifies account selection gates API key creation.
   it('requires selecting an account before allowing key creation', () => {
     const utils = render(<ApiKeys />);
     fireEvent.click(utils.getByRole('button', { name: 'Agent API Keys' }));

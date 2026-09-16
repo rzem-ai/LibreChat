@@ -12,6 +12,7 @@ const { checkAdmin } = require('~/server/middleware/roles');
 
 const router = express.Router();
 
+// Deloitte Custom Change: inject service account lookup into API key lifecycle handlers.
 const handlers = createApiKeyHandlers({
   createAgentApiKey,
   listAgentApiKeys,
@@ -25,6 +26,7 @@ const requireAdminAccess = checkAdmin;
 
 router.use(requireJwtAuth, requireAdminAccess);
 
+// Deloitte Custom Change: expose service-account-scoped API key lifecycle endpoints.
 router.post('/', handlers.createApiKey);
 
 router.get('/', handlers.listApiKeys);
