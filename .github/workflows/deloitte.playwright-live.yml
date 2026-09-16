@@ -12,10 +12,14 @@ on:
         default: ''
         type: string
       target_ref:
-        description: 'Git ref to test (manual runs only)'
-        required: false
+        description: 'Target branch to test (manual runs only)'
+        required: true
         default: 'develop'
-        type: string
+        type: choice
+        options:
+          - develop
+          - uat
+          - main
 
 permissions:
   contents: read
