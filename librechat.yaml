@@ -138,7 +138,7 @@ interface:
     conversationIcon: true # Set to false to hide model or endpoint icons in conversation history
     accountsTab: false # Set to false to hide the Account settings tab
     dataApiKeys: false # Set to false to hide the API keys section under Data controls settings
-    adminAgentApiKeys: true # Deloitte Custom Change: allow administrators to manage service account Agent API keys
+    adminAgentApiKeys: true # Set to true to allow administrators to manage service account Agent API keys
     dataDangerZone: false # Set to false to hide the Danger zone section under Data controls settings
     externalVoiceProvider: false # Set to false to hide the external voice provider option in Speech settings (browser voice only)
     artifactsShadcnOnly: true # Set to true to force the shadcn/ui artifacts mode and hide other artifact mode options

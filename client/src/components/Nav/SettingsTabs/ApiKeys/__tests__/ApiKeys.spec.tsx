@@ -30,6 +30,9 @@ const createdKey = {
 function openManageDialog() {
   const utils = render(<ApiKeys />);
   fireEvent.click(utils.getByRole('button', { name: 'Agent API Keys' }));
+  fireEvent.change(utils.getByLabelText(/email address/i), {
+    target: { value: 'eval@example.com' },
+  });
   return utils;
 }
 
@@ -59,6 +62,20 @@ describe('ApiKeys', () => {
   it('opens the management dialog with the empty state', () => {
     const { getByText } = openManageDialog();
     expect(getByText('Connect your agents to external apps')).toBeInTheDocument();
+    expect(mockQuery).toHaveBeenLastCalledWith('eval@example.com');
+  });
+
+  it('requires an account email before allowing key creation', () => {
+    const utils = render(<ApiKeys />);
+    fireEvent.click(utils.getByRole('button', { name: 'Agent API Keys' }));
+
+    expect(utils.getByRole('button', { name: 'Create API Key' })).toBeDisabled();
+
+    fireEvent.change(utils.getByLabelText(/email address/i), {
+      target: { value: 'eval@example.com' },
+    });
+
+    expect(utils.getAllByRole('button', { name: 'Create API Key' })[0]).toBeEnabled();
   });
 
   it('opens the create dialog from within the management dialog', () => {
