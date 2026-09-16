@@ -40,6 +40,7 @@ export interface ApiKeyHandlerDependencies {
     expiresAt?: Date;
     createdAt: Date;
   } | null>;
+  findUser: (query: { email: string }) => Promise<{ _id: Types.ObjectId } | null>;
 }
 
 interface AuthenticatedRequest extends Request {
@@ -55,6 +56,17 @@ export function createApiKeyHandlers(deps: ApiKeyHandlerDependencies): {
   getApiKey: (req: AuthenticatedRequest, res: Response) => Promise<Response | undefined>;
   deleteApiKey: (req: AuthenticatedRequest, res: Response) => Promise<Response | undefined>;
 } {
+  // Deloitte Custom Change: API keys authenticate integrations as a dedicated service account.
+  async function getTargetUserId(req: AuthenticatedRequest): Promise<string | null> {
+    const userEmail = req.body?.userEmail ?? req.query.userEmail;
+    if (typeof userEmail !== 'string' || userEmail.trim() === '') {
+      return null;
+    }
+
+    const user = await deps.findUser({ email: userEmail.trim().toLowerCase() });
+    return user?._id.toString() ?? null;
+  }
+
   async function createApiKey(
     req: AuthenticatedRequest,
     res: Response,
@@ -68,8 +80,13 @@ export function createApiKeyHandlers(deps: ApiKeyHandlerDependencies): {
         });
       }
 
+      const userId = await getTargetUserId(req);
+      if (!userId) {
+        return res.status(400).json({ error: 'A valid service account email is required' });
+      }
+
       const result = await deps.createAgentApiKey({
-        userId: req.user?.id || '',
+        userId,
         name: name.trim(),
         expiresAt: expiresAt ? new Date(expiresAt) : null,
       });
@@ -90,7 +107,12 @@ export function createApiKeyHandlers(deps: ApiKeyHandlerDependencies): {
 
   async function listApiKeys(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const keys = await deps.listAgentApiKeys(req.user?.id || '');
+      const userId = await getTargetUserId(req);
+      if (!userId) {
+        res.status(400).json({ error: 'A valid service account email is required' });
+        return;
+      }
+      const keys = await deps.listAgentApiKeys(userId);
       res.status(200).json({ keys });
     } catch (error) {
       logger.error('[listApiKeys] Error listing API keys:', error);
@@ -103,7 +125,11 @@ export function createApiKeyHandlers(deps: ApiKeyHandlerDependencies): {
     res: Response,
   ): Promise<Response | undefined> {
     try {
-      const key = await deps.getAgentApiKeyById(req.params.id, req.user?.id || '');
+      const userId = await getTargetUserId(req);
+      if (!userId) {
+        return res.status(400).json({ error: 'A valid service account email is required' });
+      }
+      const key = await deps.getAgentApiKeyById(req.params.id, userId);
 
       if (!key) {
         return res.status(404).json({ error: 'API key not found' });
@@ -121,7 +147,11 @@ export function createApiKeyHandlers(deps: ApiKeyHandlerDependencies): {
     res: Response,
   ): Promise<Response | undefined> {
     try {
-      const deleted = await deps.deleteAgentApiKey(req.params.id, req.user?.id || '');
+      const userId = await getTargetUserId(req);
+      if (!userId) {
+        return res.status(400).json({ error: 'A valid service account email is required' });
+      }
+      const deleted = await deps.deleteAgentApiKey(req.params.id, userId);
 
       if (!deleted) {
         return res.status(404).json({ error: 'API key not found' });

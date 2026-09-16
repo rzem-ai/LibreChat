@@ -7,11 +7,13 @@ import { computeExpiresAt, formatDate, DEFAULT_EXPIRY, EXPIRY_OPTIONS } from './
 import { useLocalize } from '~/hooks';
 
 type CreateProps = {
+  /** Deloitte Custom Change: creates the integration key for the selected service account. */
+  userEmail: string;
   onCreated: (result: TAgentApiKeyCreateResponse) => void;
   onCancel: () => void;
 };
 
-export default function Create({ onCreated, onCancel }: CreateProps) {
+export default function Create({ userEmail, onCreated, onCancel }: CreateProps) {
   const localize = useLocalize();
   const { showToast } = useToastContext();
   const [name, setName] = useState('');
@@ -35,6 +37,7 @@ export default function Create({ onCreated, onCancel }: CreateProps) {
     try {
       const result = await createMutation.mutateAsync({
         name: name.trim(),
+        userEmail,
         expiresAt: computeExpiresAt(expiry),
       });
       onCreated(result);

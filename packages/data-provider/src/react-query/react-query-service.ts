@@ -525,13 +525,16 @@ export const useMCPServerConnectionStatusQuery = (
   );
 };
 
+// Deloitte Custom Change: isolates API key query and mutation state by service account.
 export const useGetAgentApiKeysQuery = (
+  userEmail: string,
   config?: UseQueryOptions<t.TAgentApiKeyListResponse>,
 ): QueryObserverResult<t.TAgentApiKeyListResponse> => {
   return useQuery<t.TAgentApiKeyListResponse>(
-    [QueryKeys.agentApiKeys],
-    () => dataService.getAgentApiKeys(),
+    [QueryKeys.agentApiKeys, userEmail],
+    () => dataService.getAgentApiKeys(userEmail),
     {
+      enabled: !!userEmail,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       refetchOnMount: false,
@@ -556,11 +559,19 @@ export const useCreateAgentApiKeyMutation = (): UseMutationResult<
   );
 };
 
-export const useDeleteAgentApiKeyMutation = (): UseMutationResult<void, unknown, string> => {
+export const useDeleteAgentApiKeyMutation = (): UseMutationResult<
+  void,
+  unknown,
+  { id: string; userEmail: string }
+> => {
   const queryClient = useQueryClient();
-  return useMutation((id: string) => dataService.deleteAgentApiKey(id), {
-    onSuccess: () => {
-      queryClient.invalidateQueries([QueryKeys.agentApiKeys]);
+  return useMutation(
+    ({ id, userEmail }: { id: string; userEmail: string }) =>
+      dataService.deleteAgentApiKey(id, userEmail),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries([QueryKeys.agentApiKeys]);
+      },
     },
-  });
+  );
 };

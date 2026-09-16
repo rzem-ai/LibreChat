@@ -329,6 +329,8 @@ export type TUpdateUserKeyRequest = {
 
 export type TAgentApiKeyCreateRequest = {
   name: string;
+  /** Deloitte Custom Change: identifies the service account that owns the integration key. */
+  userEmail: string;
   expiresAt?: string | null;
 };
 

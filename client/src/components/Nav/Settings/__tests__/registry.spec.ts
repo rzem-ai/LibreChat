@@ -5,6 +5,7 @@ import en from '~/locales/en/translation.json';
 import { registry } from '../registry';
 import { TABS } from '../types';
 
+// Deloitte Custom Change: verifies administrator-only service account API key visibility.
 const validTabSections = new Map(TABS.map((t) => [t.id, new Set(t.sections.map((s) => s.id))]));
 
 const settingsContext: SettingsContextValue = {
@@ -21,7 +22,9 @@ const settingsContext: SettingsContextValue = {
   aboutEnabled: false,
   accountsTabEnabled: true,
   dataApiKeysEnabled: true,
+  adminAgentApiKeysEnabled: false,
   dataDangerZoneEnabled: true,
+  isAdmin: false,
   engineTTS: 'browser',
   langfuseConnectionAccess: false,
 };
@@ -87,6 +90,30 @@ describe('settings registry', () => {
           langfuseConnectionAccess: true,
         }),
       ).toBe(true);
+    });
+  });
+
+  describe('Agent API key visibility', () => {
+    const agentApiKeysEntry = registry.find((entry) => entry.id === 'agentApiKeys');
+
+    it('shows service-account key management only to administrators when enabled', () => {
+      expect(
+        agentApiKeysEntry?.show?.({
+          ...settingsContext,
+          adminAgentApiKeysEnabled: true,
+          isAdmin: true,
+        }),
+      ).toBe(true);
+    });
+
+    it('hides service-account key management from non-administrators', () => {
+      expect(
+        agentApiKeysEntry?.show?.({
+          ...settingsContext,
+          adminAgentApiKeysEnabled: true,
+          isAdmin: false,
+        }),
+      ).toBe(false);
     });
   });
 });

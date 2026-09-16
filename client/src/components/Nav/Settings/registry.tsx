@@ -489,7 +489,7 @@ export const registry: SettingEntry[] = [
     labelKey: 'com_ui_settings_label_shared_links',
     Component: SharedLinks,
   },
-  // Deloitte Custom Change: `dataApiKeys` controls the Data controls API keys settings.
+  // Deloitte Custom Change: provider keys remain hidden while admin-managed service keys are enabled.
   // Data controls · API keys
   {
     id: 'providerApiKeys',
@@ -505,7 +505,7 @@ export const registry: SettingEntry[] = [
     tab: DATA,
     section: 'apiKeys',
     labelKey: 'com_ui_settings_label_agent_api_keys',
-    show: (ctx) => ctx.dataApiKeysEnabled && ctx.hasRemoteAgents,
+    show: (ctx) => ctx.adminAgentApiKeysEnabled && ctx.isAdmin,
     Component: ApiKeys,
   },
   {

@@ -1,14 +1,15 @@
 const express = require('express');
-const { generateCheckAccess, createApiKeyHandlers } = require('@librechat/api');
-const { PermissionTypes, Permissions } = require('librechat-data-provider');
+const { createApiKeyHandlers } = require('@librechat/api');
+const { SystemCapabilities } = require('@librechat/data-schemas');
 const {
   getAgentApiKeyById,
   createAgentApiKey,
   deleteAgentApiKey,
   listAgentApiKeys,
-  getRoleByName,
+  findUser,
 } = require('~/models');
 const { requireJwtAuth } = require('~/server/middleware');
+const { requireCapability } = require('~/server/middleware/roles/capabilities');
 
 const router = express.Router();
 
@@ -17,20 +18,20 @@ const handlers = createApiKeyHandlers({
   listAgentApiKeys,
   deleteAgentApiKey,
   getAgentApiKeyById,
+  findUser,
 });
 
-const checkRemoteAgentsUse = generateCheckAccess({
-  permissionType: PermissionTypes.REMOTE_AGENTS,
-  permissions: [Permissions.USE],
-  getRoleByName,
-});
+// Deloitte Custom Change: only administrators can issue or revoke service account API keys.
+const requireAdminAccess = requireCapability(SystemCapabilities.ACCESS_ADMIN);
 
-router.post('/', requireJwtAuth, checkRemoteAgentsUse, handlers.createApiKey);
+router.use(requireJwtAuth, requireAdminAccess);
 
-router.get('/', requireJwtAuth, checkRemoteAgentsUse, handlers.listApiKeys);
+router.post('/', handlers.createApiKey);
 
-router.get('/:id', requireJwtAuth, checkRemoteAgentsUse, handlers.getApiKey);
+router.get('/', handlers.listApiKeys);
 
-router.delete('/:id', requireJwtAuth, checkRemoteAgentsUse, handlers.deleteApiKey);
+router.get('/:id', handlers.getApiKey);
+
+router.delete('/:id', handlers.deleteApiKey);
 
 module.exports = router;

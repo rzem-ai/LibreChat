@@ -1447,6 +1447,7 @@ export const interfaceSchema = z
         isTutorialEnabled: z.boolean().optional(),
         accountsTab: z.boolean().optional(),
         dataApiKeys: z.boolean().optional(),
+        adminAgentApiKeys: z.boolean().optional(), // Deloitte Custom Change: admin-only service account API key management.
         dataDangerZone: z.boolean().optional(),
         externalVoiceProvider: z.boolean().optional(),
         artifactsShadcnOnly: z.boolean().optional(),

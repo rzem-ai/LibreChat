@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import {
   Label,
+  Input,
   Button,
   OGDialog,
   OGDialogTitle,
@@ -19,6 +20,7 @@ export default function ApiKeys() {
   const localize = useLocalize();
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [serviceAccountEmail, setServiceAccountEmail] = useState('');
 
   return (
     <div className="flex items-center justify-between">
@@ -39,15 +41,37 @@ export default function ApiKeys() {
               <InfoHoverCard text={localize('com_ui_api_keys_description')} />
             </div>
           </OGDialogHeader>
-          <List onCreate={() => setCreateOpen(true)} />
+          {/* Deloitte Custom Change: administrators manage keys on behalf of a service account. */}
+          <div className="space-y-2">
+            <Label htmlFor="service-account-email">{localize('com_auth_email_address')}</Label>
+            <Input
+              id="service-account-email"
+              type="email"
+              value={serviceAccountEmail}
+              onChange={(event) => setServiceAccountEmail(event.target.value)}
+              placeholder="service-account@example.com"
+            />
+          </div>
+          {serviceAccountEmail ? (
+            <List userEmail={serviceAccountEmail} onCreate={() => setCreateOpen(true)} />
+          ) : null}
           <div className="flex items-center gap-2">
             <Admin />
-            <Button size="sm" className="ml-auto gap-1.5" onClick={() => setCreateOpen(true)}>
+            <Button
+              size="sm"
+              className="ml-auto gap-1.5"
+              onClick={() => setCreateOpen(true)}
+              disabled={!serviceAccountEmail}
+            >
               <Plus className="h-4 w-4" aria-hidden="true" />
               {localize('com_ui_create_api_key')}
             </Button>
           </div>
-          <CreateKeyDialog open={createOpen} onOpenChange={setCreateOpen} />
+          <CreateKeyDialog
+            open={createOpen}
+            onOpenChange={setCreateOpen}
+            userEmail={serviceAccountEmail}
+          />
         </OGDialogContent>
       </OGDialog>
     </div>
