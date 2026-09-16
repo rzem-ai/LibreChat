@@ -1,7 +1,8 @@
 import React from 'react';
-import { Pencil, PlugZap, SlidersHorizontal, RefreshCw, X, Trash2 } from 'lucide-react';
 import { Spinner, TooltipAnchor } from '@librechat/client';
+import { Pencil, PlugZap, SlidersHorizontal, RefreshCw, X, Trash2 } from 'lucide-react';
 import type { MCPServerStatus } from 'librechat-data-provider';
+import { isSilentlyConnectableOboServer } from '~/components/MCP/mcpServerUtils';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -10,7 +11,7 @@ interface MCPCardActionsProps {
   serverStatus?: MCPServerStatus;
   isInitializing: boolean;
   canCancel: boolean;
-  hasCustomUserVars: boolean;
+  hasCustomUserVars?: boolean;
   canEdit: boolean;
   editButtonRef?: React.RefObject<HTMLDivElement>;
   onEditClick: (e: React.MouseEvent) => void;
@@ -52,6 +53,7 @@ export default function MCPCardActions({
   const isConnecting = connectionState === 'connecting';
   const isDisconnected = connectionState === 'disconnected';
   const isError = connectionState === 'error';
+  const isSilentlyConnectable = isSilentlyConnectableOboServer(serverStatus, hasCustomUserVars);
 
   const buttonBaseClass = cn(
     'flex size-7 items-center justify-center rounded-md',
@@ -124,8 +126,8 @@ export default function MCPCardActions({
         </TooltipAnchor>
       )}
 
-      {/* Connect button - for disconnected or error states */}
-      {(isDisconnected || isError) && (
+      {/* Connect button - for disconnected or error states, unless silently connectable */}
+      {(isError || (isDisconnected && !isSilentlyConnectable)) && (
         <TooltipAnchor
           description={localize('com_nav_mcp_connect')}
           side="top"

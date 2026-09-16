@@ -1,5 +1,6 @@
-import { Terminal, Type, Database } from 'lucide-react';
+import { Search, Terminal, Type } from 'lucide-react';
 import { EModelEndpoint, FileSources } from 'librechat-data-provider';
+import type React from 'react';
 import { MinimalIcon } from '~/components/Endpoints';
 import { cn } from '~/utils';
 
@@ -20,20 +21,27 @@ const sourceToClassname = {
 const defaultClassName =
   'absolute right-0 bottom-0 rounded-full p-[0.15rem] text-gray-600 transition-colors';
 
+// Deloitte Custom Change: # Visible icons for file uploads- PR #402
 export default function SourceIcon({
   source,
   isCodeFile,
+  isFileSearch,
   className = defaultClassName,
+  ...divProps
 }: {
   source?: FileSources;
   isCodeFile?: boolean;
+  isFileSearch?: boolean;
   className?: string;
-}) {
+} & Omit<React.HTMLAttributes<HTMLDivElement>, 'className'>) {
   if (isCodeFile === true) {
     return (
-      <div className={cn(className, sourceToClassname[FileSources.execute_code] ?? '')}>
-        <span className="flex items-center justify-center">
-          <Terminal className="h-3 w-3" aria-hidden="true" />
+      <div
+        className={cn(className, sourceToClassname[FileSources.execute_code] ?? '')}
+        {...divProps}
+      >
+        <span className="flex items-center justify-center text-white" aria-hidden="true">
+          <Terminal className="h-3 w-3 stroke-[2.5]" />
         </span>
       </div>
     );
@@ -41,7 +49,7 @@ export default function SourceIcon({
 
   if (source === FileSources.text) {
     return (
-      <div className={cn(className, sourceToClassname[source] ?? '')}>
+      <div className={cn(className, sourceToClassname[source] ?? '')} {...divProps}>
         <span className="flex items-center justify-center">
           <Type className="h-3 w-3" aria-hidden="true" />
         </span>
@@ -49,11 +57,12 @@ export default function SourceIcon({
     );
   }
 
-  if (source === FileSources.vectordb) {
+  // Deloitte Custom Change: # Visible icons for file uploads- PR #402
+  if (isFileSearch === true || source === FileSources.vectordb) {
     return (
-      <div className={cn(className, sourceToClassname[source] ?? '')}>
-        <span className="flex items-center justify-center">
-          <Database className="h-3 w-3" aria-hidden="true" />
+      <div className={cn(className, sourceToClassname[FileSources.vectordb] ?? '')} {...divProps}>
+        <span className="flex items-center justify-center text-white" aria-hidden="true">
+          <Search className="h-3 w-3 stroke-[2.5]" />
         </span>
       </div>
     );
@@ -65,7 +74,7 @@ export default function SourceIcon({
     return null;
   }
   return (
-    <div className={cn(className, sourceToClassname[source ?? ''] ?? '')}>
+    <div className={cn(className, sourceToClassname[source ?? ''] ?? '')} {...divProps}>
       <span className="flex items-center justify-center">
         <MinimalIcon
           endpoint={endpoint}

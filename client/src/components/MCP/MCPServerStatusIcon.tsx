@@ -2,6 +2,7 @@ import React from 'react';
 import { Spinner } from '@librechat/client';
 import { PlugZap, SlidersHorizontal, X } from 'lucide-react';
 import type { MCPServerStatus } from 'librechat-data-provider';
+import { isSilentlyConnectableOboServer } from './mcpServerUtils';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -33,7 +34,7 @@ export interface MCPServerStatusIconProps {
  * Renders the appropriate status icon for an MCP server based on its state.
  *
  * Unified icon system:
- * - PlugZap: Connect/Authenticate (for disconnected servers that need connection)
+ * - PlugZap: Connect/Authenticate (disconnected/error servers, unless OBO)
  * - SlidersHorizontal: Configure (for connected servers with custom vars)
  * - Spinner: Loading state (during connection)
  * - X: Cancel (during OAuth flow, shown on hover over spinner)
@@ -45,7 +46,7 @@ export default function MCPServerStatusIcon({
   isInitializing,
   canCancel,
   onCancel,
-  hasCustomUserVars = false,
+  hasCustomUserVars,
   compact = false,
 }: MCPServerStatusIconProps) {
   localize = useLocalize();
@@ -89,8 +90,16 @@ export default function MCPServerStatusIcon({
     return <ConnectingSpinner serverName={serverName} />;
   }
 
-  // Disconnected or Error: show connect button (PlugZap icon)
+  // Deloitte Custom Change: Disconnected OBO servers connect transparently via the
+  // checkbox, so no separate action is needed — but an errored OBO server still needs
+  // an explicit retry, since silent auto-connect won't keep retrying on its own.
   if (connectionState === 'disconnected' || connectionState === 'error') {
+    if (
+      connectionState === 'disconnected' &&
+      isSilentlyConnectableOboServer(serverStatus, hasCustomUserVars)
+    ) {
+      return null;
+    }
     return <ConnectButton serverName={serverName} onConfigClick={onConfigClick} />;
   }
 
@@ -178,7 +187,7 @@ function ConnectingSpinner({ serverName }: { serverName: string }) {
   );
 }
 
-/** Connect button - shown for disconnected/error states. Uses PlugZap icon. */
+/** Deloitte Custom Change: Connect button - shown for disconnected/error states (non-OBO). Uses PlugZap icon. */
 function ConnectButton({ serverName, onConfigClick }: StatusIconProps) {
   return (
     <button

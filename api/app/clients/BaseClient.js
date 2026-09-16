@@ -1396,6 +1396,7 @@ class BaseClient {
       });
     }
 
+    const currentConversationId = this.conversationId ?? this.options.req?.body?.conversationId;
     for (const file of attachments) {
       /** @type {FileSources} */
       const source = file.source ?? FileSources.local;
@@ -1405,7 +1406,13 @@ class BaseClient {
       }
       if (
         file.embedded === true ||
-        file.metadata?.codeEnvRef != null ||
+        // Deloitte Custom Change: only skip codeEnvRef files via the priming path when they
+        // belong to the current conversation (same-session files) or have no conversation
+        // binding (agent-level tool resources). Cross-conversation files attached from the
+        // Files panel fall through to normal document processing so their content is fetched
+        // from LibreChat's Azure Blob and injected into the model context directly.
+        (file.metadata?.codeEnvRef != null &&
+          (!file.conversationId || file.conversationId === currentConversationId)) ||
         file.metadata?.fileIdentifier != null
       ) {
         allFiles.push(file);

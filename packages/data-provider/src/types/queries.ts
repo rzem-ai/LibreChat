@@ -213,7 +213,15 @@ export interface MCPServerStatus {
   requiresOAuth: boolean;
   connectionState: 'disconnected' | 'connecting' | 'connected' | 'error';
   authorizationState?:
-    'not_required' | 'authorizing' | 'authorized' | 'needs_authorization' | 'error';
+    | 'not_required'
+    | 'authorizing'
+    | 'authorized'
+    | 'needs_authorization'
+    | 'error';
+  /** True when the server is configured for OBO (on-behalf-of) token exchange —
+   *  it authenticates silently on every tool call, so a disconnected state
+   *  never needs a manual "Connect" click. */
+  configuredObo?: boolean;
 }
 
 export interface MCPConnectionStatusResponse {

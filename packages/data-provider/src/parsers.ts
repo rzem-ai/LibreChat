@@ -264,11 +264,11 @@ export const getResponseSender = (endpointOption: Partial<t.TEndpointOption>): s
   }
 
   if (endpoint === EModelEndpoint.anthropic) {
-    return modelLabel || 'Claude';
+    return modelLabel || modelDisplayLabel || 'Claude';
   }
 
   if (endpoint === EModelEndpoint.bedrock) {
-    return modelLabel || alternateName[endpoint];
+    return modelLabel || modelDisplayLabel || alternateName[endpoint];
   }
 
   if (endpoint === EModelEndpoint.google) {
@@ -287,6 +287,8 @@ export const getResponseSender = (endpointOption: Partial<t.TEndpointOption>): s
     } else if (chatGptLabel) {
       // @deprecated - prefer modelLabel
       return chatGptLabel;
+    } else if (modelDisplayLabel) {
+      return modelDisplayLabel;
     } else if (model && extractOmniVersion(model)) {
       return extractOmniVersion(model);
     } else if (model && (model.includes('mistral') || model.includes('codestral'))) {
@@ -300,8 +302,6 @@ export const getResponseSender = (endpointOption: Partial<t.TEndpointOption>): s
     } else if (model && model.includes('gpt-')) {
       const gptVersion = extractGPTVersion(model);
       return gptVersion || 'GPT';
-    } else if (modelDisplayLabel) {
-      return modelDisplayLabel;
     }
 
     return 'AI';

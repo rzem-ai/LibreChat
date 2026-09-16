@@ -1,8 +1,8 @@
 import React, { createRef } from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom/extend-expect';
-import BookmarkForm from '../BookmarkForm';
 import type { TConversationTag } from 'librechat-data-provider';
+import BookmarkForm from '../BookmarkForm';
 
 const mockMutate = jest.fn();
 const mockShowToast = jest.fn();
@@ -20,7 +20,7 @@ jest.mock('~/hooks', () => ({
       com_ui_bookmarks_add_to_conversation: 'Add to current conversation',
       com_ui_bookmarks_tag_exists: 'A bookmark with this title already exists',
       com_ui_field_required: 'This field is required',
-      com_ui_field_max_length: `${params?.field || 'Field'} must be less than ${params?.length || 0} characters`,
+      com_ui_field_max_length: `${params?.field || 'Field'} must be no more than ${params?.length || 0} characters`,
     };
     return translations[key] || key;
   },

@@ -7,6 +7,7 @@ const {
   FileContext,
   ErrorTypes,
   UsageEvents,
+  Constants,
 } = require('librechat-data-provider');
 const {
   GraphEvents,
@@ -19,6 +20,7 @@ const {
   computeUsageCostUSD,
   GenerationJobManager,
   writeAttachmentEvent,
+  buildMCPResultSources,
   createToolExecuteHandler,
   createBackgroundCodeResultHandler: createCodeHarvestHandler,
   HOST_FILE_AUTHORING_ARTIFACT_KEY,
@@ -36,6 +38,44 @@ function isHostFileAuthoringArtifact(artifact) {
 
 function isCodeArtifactToolOutput(output) {
   return isCodeSessionToolName(output.name) || isHostFileAuthoringArtifact(output.artifact);
+}
+
+/** Extracts plain text from a FormattedContent array or raw string returned by an MCP tool. */
+function extractMCPTextContent(content) {
+  if (typeof content === 'string') {
+    return content.trim() || null;
+  }
+  if (!Array.isArray(content)) {
+    return null;
+  }
+  const text = content
+    .map((part) => (typeof part === 'string' ? part : (part?.text ?? JSON.stringify(part))))
+    .join('\n')
+    .trim();
+  return text || null;
+}
+
+/**
+ * Deloitte Custom Change
+ * Normalizes a ToolEnd callback's `data.input` (the tool's original call
+ * arguments) into a plain object, so citation-link builders can read fields
+ * like `code`/`country` that never appear in the tool's response body.
+ * @param {unknown} input
+ * @returns {Record<string, unknown> | undefined}
+ */
+function normalizeMCPToolArgs(input) {
+  if (input && typeof input === 'object' && !Array.isArray(input)) {
+    return input;
+  }
+  if (typeof input !== 'string') {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(input);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 class ModelEndHandler {
@@ -736,11 +776,13 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null, jo
       return;
     }
 
-    if (!output.artifact) {
+    const isMCPTool = output.name?.includes(Constants.mcp_delimiter);
+    if (!output.artifact && !isMCPTool) {
       return;
     }
+    const args = normalizeMCPToolArgs(data?.input);
 
-    if (output.artifact[Tools.file_search]) {
+    if (output.artifact?.[Tools.file_search]) {
       artifactPromises.push(
         (async () => {
           const user = req.user;
@@ -766,7 +808,7 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null, jo
       );
     }
 
-    if (output.artifact[Tools.ui_resources]) {
+    if (output.artifact?.[Tools.ui_resources]) {
       artifactPromises.push(
         (async () => {
           const attachment = {
@@ -788,7 +830,7 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null, jo
       );
     }
 
-    if (output.artifact[Tools.web_search]) {
+    if (output.artifact?.[Tools.web_search]) {
       artifactPromises.push(
         (async () => {
           const attachment = {
@@ -810,7 +852,7 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null, jo
       );
     }
 
-    if (output.artifact[Tools.memory]) {
+    if (output.artifact?.[Tools.memory]) {
       artifactPromises.push(
         (async () => {
           const attachment = {
@@ -832,7 +874,39 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null, jo
       );
     }
 
-    if (output.artifact.content) {
+    if (isMCPTool) {
+      const rawContent = extractMCPTextContent(output.content);
+      if (rawContent) {
+        const [toolName, serverName] = (output.name ?? '').split(Constants.mcp_delimiter);
+        artifactPromises.push(
+          (async () => {
+            const { sources, disclaimer } = buildMCPResultSources({
+              toolName,
+              serverName,
+              content: rawContent,
+              args,
+            });
+            const attachment = {
+              type: Tools.mcp_results,
+              messageId: metadata.run_id,
+              toolCallId: output.tool_call_id,
+              conversationId: metadata.thread_id,
+              [Tools.mcp_results]: disclaimer ? { sources, disclaimer } : { sources },
+            };
+            if (!streamId && !res.headersSent) {
+              return attachment;
+            }
+            writeAttachment(res, streamId, attachment);
+            return attachment;
+          })().catch((error) => {
+            logger.error('Error processing MCP citations:', error);
+            return null;
+          }),
+        );
+      }
+    }
+
+    if (output.artifact?.content) {
       /** @type {FormattedContent[]} */
       const content = output.artifact.content;
       for (let i = 0; i < content.length; i++) {
@@ -1076,11 +1150,13 @@ function createResponsesToolEndCallback({ req, res, tracker, artifactPromises })
       return;
     }
 
-    if (!output.artifact) {
+    const isMCPTool = output.name?.includes(Constants.mcp_delimiter);
+    if (!output.artifact && !isMCPTool) {
       return;
     }
+    const args = normalizeMCPToolArgs(data?.input);
 
-    if (output.artifact[Tools.file_search]) {
+    if (output.artifact?.[Tools.file_search]) {
       artifactPromises.push(
         (async () => {
           const user = req.user;
@@ -1106,7 +1182,7 @@ function createResponsesToolEndCallback({ req, res, tracker, artifactPromises })
       );
     }
 
-    if (output.artifact[Tools.ui_resources]) {
+    if (output.artifact?.[Tools.ui_resources]) {
       artifactPromises.push(
         (async () => {
           const attachment = {
@@ -1126,7 +1202,7 @@ function createResponsesToolEndCallback({ req, res, tracker, artifactPromises })
       );
     }
 
-    if (output.artifact[Tools.web_search]) {
+    if (output.artifact?.[Tools.web_search]) {
       artifactPromises.push(
         (async () => {
           const attachment = {
@@ -1146,7 +1222,36 @@ function createResponsesToolEndCallback({ req, res, tracker, artifactPromises })
       );
     }
 
-    if (output.artifact.content) {
+    if (isMCPTool) {
+      const rawContent = extractMCPTextContent(output.content);
+      if (rawContent) {
+        const [toolName, serverName] = (output.name ?? '').split(Constants.mcp_delimiter);
+        artifactPromises.push(
+          (async () => {
+            const { sources, disclaimer } = buildMCPResultSources({
+              toolName,
+              serverName,
+              content: rawContent,
+              args,
+            });
+            const attachment = {
+              type: Tools.mcp_results,
+              toolCallId: output.tool_call_id,
+              [Tools.mcp_results]: disclaimer ? { sources, disclaimer } : { sources },
+            };
+            if (res.headersSent && !res.writableEnded) {
+              writeResponsesAttachment(res, tracker, attachment, metadata);
+            }
+            return attachment;
+          })().catch((error) => {
+            logger.error('Error processing MCP citations:', error);
+            return null;
+          }),
+        );
+      }
+    }
+
+    if (output.artifact?.content) {
       /** @type {FormattedContent[]} */
       const content = output.artifact.content;
       for (let i = 0; i < content.length; i++) {
@@ -1382,4 +1487,5 @@ module.exports = {
   markSummarizationUsage,
   buildSummarizationHandlers,
   createResponsesToolEndCallback,
+  normalizeMCPToolArgs,
 };

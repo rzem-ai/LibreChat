@@ -268,6 +268,8 @@ export type TError = {
   response?: {
     data?: {
       message?: string;
+      /** DELOITTE SPECIFIC CHANGE: error code (e.g. FILE_CONTENT_MISMATCH) for client-side mapping */
+      code?: string;
     };
     status?: number;
   };
@@ -524,6 +526,8 @@ export type TConfig = {
   userProvideSessionToken?: boolean;
   userProvideBearerToken?: boolean;
   disableBuilder?: boolean;
+  /** Deloitte Custom Change: hides the File Context upload section in the Agent Builder UI. */
+  hideFileContext?: boolean;
   retrievalModels?: string[];
   capabilities?: string[];
   customParams?: {
@@ -537,7 +541,8 @@ export type TConfig = {
 };
 
 export type TEndpointsConfig =
-  Record<EModelEndpoint | string, TConfig | null | undefined> | undefined;
+  | Record<EModelEndpoint | string, TConfig | null | undefined>
+  | undefined;
 
 export type TModelsConfig = Record<string, string[]>;
 
@@ -935,4 +940,5 @@ export type TLangfuseConnectionTestErrorCode =
   | 'unexpected_response';
 
 export type TLangfuseConnectionTestResponse =
-  { success: true } | { success: false; errorCode: TLangfuseConnectionTestErrorCode };
+  | { success: true }
+  | { success: false; errorCode: TLangfuseConnectionTestErrorCode };

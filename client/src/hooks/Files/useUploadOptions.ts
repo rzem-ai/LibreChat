@@ -11,7 +11,7 @@ import type { EToolResources } from 'librechat-data-provider';
 import useAgentToolPermissions from '~/hooks/Agents/useAgentToolPermissions';
 import useAgentCapabilities from '~/hooks/Agents/useAgentCapabilities';
 import useGetAgentsConfig from '~/hooks/Agents/useGetAgentsConfig';
-import { useGetFileConfig } from '~/data-provider';
+import { useGetFileConfig, useGetStartupConfig } from '~/data-provider';
 import { ephemeralAgentByConvoId } from '~/store';
 import { getViableUploadOptions } from '~/utils';
 import { useDragDropContext } from '~/Providers';
@@ -30,9 +30,12 @@ export default function useUploadOptions() {
     ephemeralAgentByConvoId(conversationId ?? Constants.NEW_CONVO),
   );
   const { provider, tools } = useAgentToolPermissions(agentId, ephemeralAgent);
+  const { data: startupConfig } = useGetStartupConfig();
   const { data: fileConfig = null } = useGetFileConfig({
     select: (data) => mergeFileConfig(data),
   });
+  // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+  const providerUploadEnabled = startupConfig?.interface?.providerUpload === true;
 
   /**
    * Tools are offerable unless a saved agent omits them; in direct/ephemeral chats selecting
@@ -58,6 +61,8 @@ export default function useUploadOptions() {
         contextEnabled: capabilities.contextEnabled,
         fileSearchAllowedByAgent,
         codeAllowedByAgent,
+        // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
+        providerUploadEnabled,
         fileConfig,
         endpointSupportedMimeTypes,
       }),
@@ -71,6 +76,7 @@ export default function useUploadOptions() {
       capabilities.contextEnabled,
       fileSearchAllowedByAgent,
       codeAllowedByAgent,
+      providerUploadEnabled,
       fileConfig,
       endpointSupportedMimeTypes,
     ],

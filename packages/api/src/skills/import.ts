@@ -13,7 +13,9 @@ import type {
 import type { Request, Response } from 'express';
 import type { Types } from 'mongoose';
 import type { ImportLimits } from './limits';
+import { isSkillScanError, scanSkillMarkdown, scanSkillUpload } from './scanner';
 import { resolveRequestTenantId } from '~/middleware/tenant';
+import { readZipEntry, stripZipArtifacts } from './zip';
 import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
 import { isSafeSkillFilePath } from './path';
 import { parseSkillMarkdown } from './parse';
@@ -129,6 +131,13 @@ export interface ImportSkillDeps {
     accessRoleId: string;
     grantedBy: string;
   }) => Promise<unknown>;
+
+  /**
+   * Resolves an OBO-derived skill scanner token for the requesting user, or
+   * `undefined` if none can be obtained (e.g. non-OpenID users, or before
+   * OBO admin consent is granted).
+   */
+  resolveScannerToken: (user: ServerRequest['user']) => Promise<string | undefined>;
 }
 
 interface ServerRequest extends Request {
@@ -139,6 +148,8 @@ interface ServerRequest extends Request {
     name?: string;
     username?: string;
     tenantId?: string;
+    openidId?: string;
+    federatedTokens?: { access_token?: string };
   };
   file?: Express.Multer.File;
 }
@@ -161,13 +172,38 @@ export function createImportHandler(deps: ImportSkillDeps) {
 
     try {
       if (ext === '.md') {
+        const scannerToken = process.env.SKILL_SCANNER_URL
+          ? await deps.resolveScannerToken(req.user)
+          : undefined;
+        // Deloitte custom feature: scan skills
+        await scanSkillMarkdown({
+          content: file.buffer.toString('utf-8'),
+          fileName: `${file.originalname}.zip`,
+          token: scannerToken,
+        });
         return await handleMarkdown(req, res, deps, file);
       }
       if (ext === '.zip' || ext === '.skill') {
+        const scannerToken = process.env.SKILL_SCANNER_URL
+          ? await deps.resolveScannerToken(req.user)
+          : undefined;
+        // Deloitte custom feature: scan skills
+        await scanSkillUpload({
+          archive: file.buffer,
+          fileName: file.originalname,
+          token: scannerToken,
+        });
         return await handleZip(req, res, deps, file);
       }
       return res.status(400).json({ error: `Unsupported file type: ${ext}` });
     } catch (error) {
+      if (isSkillScanError(error)) {
+        return res.status(error.statusCode).json({
+          error: 'Skill scan failed',
+          message: error.message,
+          issues: error.issues,
+        });
+      }
       // Surface validation errors as 400 instead of generic 500
       if (isValidationError(error)) {
         return res.status(400).json({
@@ -318,6 +354,14 @@ async function handleZip(
   } catch {
     return res.status(400).json({ error: 'Invalid or corrupt archive' });
   }
+
+  // Deloitte Custom Change: Strip unwanted filesystem artifacts before processing.
+  // Patterns are configured via STRIP_DIR_NAMES and STRIP_BASENAME_PREFIXES in zip.ts —
+  // add new patterns there to extend behaviour.
+  // This safety net runs even when the skill scanner is disabled (e.g. open source
+  // / self-hosted deployments without SKILL_SCANNER_URL configured).
+  stripZipArtifacts(zip);
+
   const entries = Object.keys(zip.files);
 
   if (entries.length > limits.maxEntries) {
@@ -345,6 +389,10 @@ async function handleZip(
   }
 
   const skillMdEntry = zip.file(skillMdPath);
+  if (skillMdEntry == null) {
+    return res.status(400).json({ error: 'Could not read SKILL.md from archive' });
+  }
+
   const declaredSize =
     (skillMdEntry as unknown as { _data?: { uncompressedSize?: number } })?._data
       ?.uncompressedSize ?? 0;
@@ -353,7 +401,17 @@ async function handleZip(
       .status(400)
       .json({ error: `SKILL.md too large (${Math.round(declaredSize / 1024 / 1024)}MB)` });
   }
-  const skillMdContent = await skillMdEntry?.async('string');
+
+  //Deloitte added readZipEntry to read the SKILL.md file with a hard limit on bytes read,
+  //to prevent zip bombs and other malicious archives from causing memory exhaustion.
+  // This is a security measure to ensure that even if the declared size is small, we don't read more than the allowed limit.
+  const skillMdLimit = Math.min(limits.maxSingleFileBytes, limits.maxDecompressedBytes);
+  const { buffer: skillMdBuffer } = await readZipEntry(skillMdEntry, skillMdLimit);
+  if (skillMdBuffer == null) {
+    return res.status(400).json({ error: 'SKILL.md exceeds maximum file size' });
+  }
+
+  const skillMdContent = skillMdBuffer.toString('utf-8');
   if (!skillMdContent) {
     return res.status(400).json({ error: 'Could not read SKILL.md from archive' });
   }

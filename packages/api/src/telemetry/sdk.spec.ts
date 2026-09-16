@@ -119,8 +119,9 @@ interface OtlpTraceExporterOptions {
 const mockOtlpTraceExporter = jest.fn((_options: OtlpTraceExporterOptions) => ({
   name: 'otlp-trace-exporter',
 }));
-const mockGetToken = jest.fn((_scopes: string | string[]): Promise<{ token: string } | null> =>
-  Promise.resolve({ token: 'test-access-token' }),
+const mockGetToken = jest.fn(
+  (_scopes: string | string[]): Promise<{ token: string } | null> =>
+    Promise.resolve({ token: 'test-access-token' }),
 );
 const mockDefaultAzureCredential = jest.fn((_opts?: { managedIdentityClientId?: string }) => ({
   type: 'DefaultAzureCredential',
@@ -556,7 +557,8 @@ describe('telemetry SDK lifecycle', () => {
 
     const shutdownTaskCalls = (registerShutdownTask as jest.Mock).mock.calls;
     const taskFn = shutdownTaskCalls[shutdownTaskCalls.length - 1]?.[1] as
-      (() => Promise<void>) | undefined;
+      | (() => Promise<void>)
+      | undefined;
     expect(taskFn).toBeDefined();
     await taskFn?.();
 

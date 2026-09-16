@@ -1,7 +1,8 @@
 import React from 'react';
 import { RefreshCw, Trash2 } from 'lucide-react';
 import { Button, Spinner } from '@librechat/client';
-import { useLocalize, useMCPServerManager, useMCPConnectionStatus } from '~/hooks';
+import { isSilentlyConnectableOboServer } from './mcpServerUtils';
+import { useLocalize, useMCPServerManager } from '~/hooks';
 
 interface ServerInitializationSectionProps {
   sidePanel?: boolean;
@@ -18,7 +19,7 @@ export default function ServerInitializationSection({
   conversationId,
   storageContextKey,
   sidePanel = false,
-  hasCustomUserVars = false,
+  hasCustomUserVars,
 }: ServerInitializationSectionProps) {
   const localize = useLocalize();
 
@@ -28,15 +29,11 @@ export default function ServerInitializationSection({
     isInitializing,
     cancelOAuthFlow,
     initializeServer,
-    availableMCPServers,
     revokeOAuthForServer,
+    getEffectiveServerStatus,
   } = useMCPServerManager({ conversationId, storageContextKey });
 
-  const { connectionStatus } = useMCPConnectionStatus({
-    enabled: !!availableMCPServers && availableMCPServers.length > 0,
-  });
-
-  const serverStatus = connectionStatus?.[serverName];
+  const serverStatus = getEffectiveServerStatus(serverName);
   const isConnected = serverStatus?.connectionState === 'connected';
   const hasPendingOAuth =
     requiresOAuth &&
@@ -47,7 +44,9 @@ export default function ServerInitializationSection({
   const serverOAuthUrl = getOAuthUrl(serverName);
 
   const shouldShowReinit = isConnected && (requiresOAuth || hasCustomUserVars);
-  const shouldShowInit = !isConnected && !serverOAuthUrl && !hasPendingOAuth;
+  const isSilentlyConnectable = isSilentlyConnectableOboServer(serverStatus, hasCustomUserVars);
+  const shouldShowInit =
+    !isConnected && !serverOAuthUrl && !hasPendingOAuth && !isSilentlyConnectable;
 
   if (!shouldShowReinit && !shouldShowInit && !serverOAuthUrl) {
     if (!hasPendingOAuth) {

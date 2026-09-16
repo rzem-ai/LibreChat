@@ -67,7 +67,9 @@ type ConfigAssignCapability = `assign:configs:${ConfigAssignTarget}`;
  * - Config assignment capabilities (assign:configs:<user|group|role>)
  */
 export type SystemCapability =
-  BaseSystemCapability | ConfigSectionCapability | ConfigAssignCapability;
+  | BaseSystemCapability
+  | ConfigSectionCapability
+  | ConfigAssignCapability;
 
 /** UI grouping of capabilities for the admin panel's capability editor. */
 export type CapabilityCategory = {

@@ -10,6 +10,7 @@ import type {
   TMessageContentParts,
 } from 'librechat-data-provider';
 import type { ReactNode, ReactElement } from 'react';
+import { CitationHighlightProvider } from '~/components/Web/Context';
 import { UnfinishedMessage } from './MessageContent';
 import { cn, mapAttachments } from '~/utils';
 import { SearchContext } from '~/Providers';
@@ -43,52 +44,54 @@ const SearchContent = ({
      *  `ContentParts`' `postSteerAuthors` scan. */
     let activeAgentId: string | undefined;
     return (
-      <SearchContext.Provider value={{ searchResults }}>
-        {parts.map((part: TMessageContentParts, idx: number) => {
-          const toolCallId =
-            (part?.[ContentTypes.TOOL_CALL] as Agents.ToolCall | undefined)?.id ?? '';
-          const partAttachments = attachmentMap[toolCallId];
-          const resumesAfterSteer =
-            authorHeader != null &&
-            idx > 0 &&
-            parts[idx - 1].type === ContentTypes.STEER &&
-            part.type !== ContentTypes.STEER;
-          const resumeAgentId = resumesAfterSteer ? activeAgentId : undefined;
-          if (part.type === ContentTypes.AGENT_UPDATE) {
-            activeAgentId = part[ContentTypes.AGENT_UPDATE]?.agentId || undefined;
-          }
-          const rendered: ReactElement = (
-            <Part
-              key={`display-${messageId}-${idx}`}
-              showCursor={false}
-              isSubmitting={false}
-              isCreatedByUser={message.isCreatedByUser}
-              attachments={partAttachments}
-              part={part}
-            />
-          );
-          if (!resumesAfterSteer) {
-            return rendered;
-          }
-          return (
-            <Fragment key={`display-${messageId}-${idx}`}>
-              {resumeAgentId != null ? (
-                <AgentUpdate currentAgentId={resumeAgentId} />
-              ) : (
-                authorHeader
-              )}
-              {rendered}
-            </Fragment>
-          );
-        })}
-        {message.unfinished === true && (
-          <Suspense>
-            <DelayedRender delay={250}>
-              <UnfinishedMessage message={message} key={`unfinished-${messageId}`} />
-            </DelayedRender>
-          </Suspense>
-        )}
-      </SearchContext.Provider>
+      <CitationHighlightProvider>
+        <SearchContext.Provider value={{ searchResults }}>
+          {parts.map((part: TMessageContentParts, idx: number) => {
+            const toolCallId =
+              (part?.[ContentTypes.TOOL_CALL] as Agents.ToolCall | undefined)?.id ?? '';
+            const partAttachments = attachmentMap[toolCallId];
+            const resumesAfterSteer =
+              authorHeader != null &&
+              idx > 0 &&
+              parts[idx - 1].type === ContentTypes.STEER &&
+              part.type !== ContentTypes.STEER;
+            const resumeAgentId = resumesAfterSteer ? activeAgentId : undefined;
+            if (part.type === ContentTypes.AGENT_UPDATE) {
+              activeAgentId = part[ContentTypes.AGENT_UPDATE]?.agentId || undefined;
+            }
+            const rendered: ReactElement = (
+              <Part
+                key={`display-${messageId}-${idx}`}
+                showCursor={false}
+                isSubmitting={false}
+                isCreatedByUser={message.isCreatedByUser}
+                attachments={partAttachments}
+                part={part}
+              />
+            );
+            if (!resumesAfterSteer) {
+              return rendered;
+            }
+            return (
+              <Fragment key={`display-${messageId}-${idx}`}>
+                {resumeAgentId != null ? (
+                  <AgentUpdate currentAgentId={resumeAgentId} />
+                ) : (
+                  authorHeader
+                )}
+                {rendered}
+              </Fragment>
+            );
+          })}
+          {message.unfinished === true && (
+            <Suspense>
+              <DelayedRender delay={250}>
+                <UnfinishedMessage message={message} key={`unfinished-${messageId}`} />
+              </DelayedRender>
+            </Suspense>
+          )}
+        </SearchContext.Provider>
+      </CitationHighlightProvider>
     );
   }
 

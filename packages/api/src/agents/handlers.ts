@@ -57,6 +57,12 @@ export interface ToolEndCallbackData {
     content: string | unknown;
     artifact?: unknown;
   };
+  /** Deloitte Custom Change: the tool's original call arguments, e.g. `{ code, country }` for an
+   * IBISWorld report tool — needed by citation-link builders since some
+   * tools' responses don't carry their own identifying fields. May arrive as a
+   * JSON string or a plain object depending on the callback path; see
+   * `normalizeMCPToolArgs` in `api/server/controllers/agents/callbacks.js`. */
+  input?: string | Record<string, unknown>;
 }
 
 export interface ToolEndCallbackMetadata {
@@ -3703,7 +3709,8 @@ export function createToolExecuteHandler(options: ToolExecuteOptions): EventHand
              * per-tool opt-in (a tool not in the set never had the param).
              */
             const backgroundToolNames = mergedConfigurable?.backgroundToolNames as
-              string[] | undefined;
+              | string[]
+              | undefined;
             const backgroundEnabledForRun = (backgroundToolNames?.length ?? 0) > 0;
             const backgroundToolSet: ReadonlySet<string> = backgroundEnabledForRun
               ? new Set(backgroundToolNames)
@@ -3728,7 +3735,8 @@ export function createToolExecuteHandler(options: ToolExecuteOptions): EventHand
              * `toolCallId` so graph re-execution (resume/replay) never double-fires.
              */
             const backgroundRunId = (metadata as Record<string, unknown>)?.run_id as
-              string | undefined;
+              | string
+              | undefined;
             const dispatchBackgroundToolCall = (tc: ToolCallRequest): ToolExecuteResult => {
               /** A tool that failed to load must error immediately (matching the
                *  foreground path) — a synthetic "started" handle would tell the
@@ -4154,9 +4162,11 @@ export function createToolExecuteHandler(options: ToolExecuteOptions): EventHand
                         },
                         {
                           run_id: (metadata as Record<string, unknown>)?.run_id as
-                            string | undefined,
+                            | string
+                            | undefined,
                           thread_id: (metadata as Record<string, unknown>)?.thread_id as
-                            string | undefined,
+                            | string
+                            | undefined,
                           ...metadata,
                         },
                       );
@@ -4202,9 +4212,11 @@ export function createToolExecuteHandler(options: ToolExecuteOptions): EventHand
                       tc.name === Constants.PROGRAMMATIC_TOOL_CALLING
                     ) {
                       const toolRegistry = mergedConfigurable?.toolRegistry as
-                        LCToolRegistry | undefined;
+                        | LCToolRegistry
+                        | undefined;
                       const ptcToolMap = mergedConfigurable?.ptcToolMap as
-                        Map<string, StructuredToolInterface> | undefined;
+                        | Map<string, StructuredToolInterface>
+                        | undefined;
                       if (toolRegistry) {
                         const fileAuthoringToolNames =
                           getFileAuthoringToolNames(mergedConfigurable) ?? new Set<string>();
@@ -4286,12 +4298,16 @@ export function createToolExecuteHandler(options: ToolExecuteOptions): EventHand
                             content: cleanedContent,
                             artifact: result.artifact,
                           },
+                          // Deloitte Custom Change: pass through the call args (see `ToolEndCallbackData.input`).
+                          input: tc.args,
                         },
                         {
                           run_id: (metadata as Record<string, unknown>)?.run_id as
-                            string | undefined,
+                            | string
+                            | undefined,
                           thread_id: (metadata as Record<string, unknown>)?.thread_id as
-                            string | undefined,
+                            | string
+                            | undefined,
                           ...metadata,
                         },
                       );

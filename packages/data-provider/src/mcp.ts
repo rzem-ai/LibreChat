@@ -151,7 +151,18 @@ const UserOAuthOptionsSchema = OAuthOptionsBaseSchema.omit({
 
 const OboOptionsSchema = z.object({
   /** Scopes to request for the downstream MCP server (e.g., "api://<client-id>/Mcp.Tools.ReadWrite") */
-  scopes: z.string().min(1),
+  // Deloitte Custom Change: resolve `${VAR}` placeholders the same way the transport `url`
+  // schemas do — without this, an unset/templated scope is sent to the IdP literally
+  // (e.g. "${MCP_GATEWAY_OBO_SCOPE}"), and the OBO token exchange fails. The `refine` below
+  // fails config validation fast when the placeholder is still unresolved after expansion,
+  // instead of deferring to a less actionable IdP error at OBO exchange time.
+  scopes: z
+    .string()
+    .min(1)
+    .transform((val) => extractEnvVariable(val))
+    .refine((val) => !envVarPattern.test(val), {
+      message: 'MCP OBO scopes contains an unresolved environment variable placeholder',
+    }),
 });
 
 const BaseOptionsSchema = z.object({
@@ -162,6 +173,8 @@ const BaseOptionsSchema = z.object({
     .optional(),
   /** Description of the MCP server */
   description: z.string().optional(),
+  /** Deloitte Custom Change: parent brand/grouping name shown as `${title} - ${parentGroup}` in the Tool Library. */
+  parentGroup: z.string().optional(),
   /**
    * Controls whether the MCP server is initialized during application startup.
    * - true (default): Server is initialized during app startup and included in app-level connections
@@ -169,7 +182,18 @@ const BaseOptionsSchema = z.object({
    *   requiring manual authentication (e.g., GitHub PAT tokens) that need to be configured through the UI after startup
    */
   startup: z.boolean().optional(),
+  // Deloitte Custom Change: light/dark themed MCP server icons.
+  /**
+   * Icon shown in both themes. Set this alone when the server's logo doesn't change
+   * between light/dark mode; set `iconPathLight`/`iconPathDark` instead when it does.
+   */
   iconPath: z.string().optional(),
+  // Deloitte Custom Change: light/dark themed MCP server icons.
+  /** Icon shown when the app is in light mode. Falls back to `iconPath`, then `iconPathDark`, if unset. */
+  iconPathLight: z.string().optional(),
+  // Deloitte Custom Change: light/dark themed MCP server icons.
+  /** Icon shown when the app is in dark mode. Falls back to `iconPath`, then `iconPathLight`, if unset. */
+  iconPathDark: z.string().optional(),
   timeout: z.number().int().nonnegative().optional(),
   /** Timeout (ms) for the long-lived SSE GET stream body before undici aborts it. Default: 300_000 (5 min). */
   sseReadTimeout: z.number().int().positive().optional(),

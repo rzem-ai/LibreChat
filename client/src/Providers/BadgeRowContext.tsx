@@ -1,13 +1,26 @@
+// Deloitte Custom Change: added new imports
 import React, { createContext, useContext, useEffect, useMemo, useRef } from 'react';
 import { useSetRecoilState } from 'recoil';
-import { Tools, Constants, LocalStorageKeys, AgentCapabilities } from 'librechat-data-provider';
+import {
+  Tools,
+  Constants,
+  ArtifactModes,
+  Permissions,
+  LocalStorageKeys,
+  AgentCapabilities,
+  PermissionTypes,
+  defaultAgentCapabilities,
+} from 'librechat-data-provider';
 import type { TAgentsEndpoint, TEphemeralAgent } from 'librechat-data-provider';
 import {
+  useHasAccess,
+  useAgentCapabilities,
   useMCPServerManager,
   useSearchApiKeyForm,
   useGetAgentsConfig,
   useToolToggle,
 } from '~/hooks';
+import useArtifactsShadcnOnly from '~/hooks/Artifacts/useArtifactsShadcnOnly';
 import { getTimestampedValue } from '~/utils/timestamps';
 import { useGetStartupConfig } from '~/data-provider';
 import { ephemeralAgentByConvoId } from '~/store';
@@ -21,6 +34,7 @@ interface BadgeRowContextType {
   webSearch: ReturnType<typeof useToolToggle>;
   artifacts: ReturnType<typeof useToolToggle>;
   fileSearch: ReturnType<typeof useToolToggle>;
+  canUseFileSearchPill: boolean;
   codeInterpreter: ReturnType<typeof useToolToggle>;
   searchApiKeyForm: ReturnType<typeof useSearchApiKeyForm>;
   mcpServerManager: ReturnType<typeof useMCPServerManager>;
@@ -243,6 +257,43 @@ export default function BadgeRowProvider({
     isAuthenticated: true,
   });
 
+  // Deloitte Custom Change: enable fileSearch without showing button
+  const canUseFileSearch = useHasAccess({
+    permissionType: PermissionTypes.FILE_SEARCH,
+    permission: Permissions.USE,
+  });
+
+  const { fileSearchEnabled } = useAgentCapabilities(
+    agentsConfig?.capabilities ?? defaultAgentCapabilities,
+  );
+
+  const canUseFileSearchPill = canUseFileSearch && fileSearchEnabled;
+  const { toggleState: fileSearchToggleState, setEphemeralAgent: setFileSearchEphemeralAgent } =
+    fileSearch;
+
+  useEffect(() => {
+    if (startupConfig?.interface?.customDeloitteFeatureFlags?.alwaysEnableFileSearch !== true) {
+      return;
+    }
+    if (!canUseFileSearchPill || fileSearchToggleState === true) {
+      return;
+    }
+    setFileSearchEphemeralAgent((prev) => {
+      if (prev?.[Tools.file_search] === true) {
+        return prev;
+      }
+      return {
+        ...(prev ?? {}),
+        [Tools.file_search]: true,
+      };
+    });
+  }, [
+    canUseFileSearchPill,
+    fileSearchToggleState,
+    setFileSearchEphemeralAgent,
+    startupConfig?.interface?.customDeloitteFeatureFlags?.alwaysEnableFileSearch,
+  ]);
+
   /** Artifacts hook - using a custom key since it's not a Tool but a capability */
   const artifacts = useToolToggle({
     conversationId,
@@ -251,6 +302,22 @@ export default function BadgeRowProvider({
     localStorageKey: LocalStorageKeys.LAST_ARTIFACTS_TOGGLE_,
     isAuthenticated: true,
   });
+
+  /** Deloitte Custom Change: force any persisted non-shadcn artifacts mode back to
+   *  shadcn/ui-only when `artifactsShadcnOnly` is enabled, so a stale localStorage
+   *  value can't keep the mode picker's hidden options active. */
+  const shadcnOnly = useArtifactsShadcnOnly();
+  const { toggleState: artifactsToggleState, handleChange: handleArtifactsChange } = artifacts;
+  useEffect(() => {
+    if (
+      shadcnOnly &&
+      typeof artifactsToggleState === 'string' &&
+      artifactsToggleState !== '' &&
+      artifactsToggleState !== ArtifactModes.SHADCNUI
+    ) {
+      handleArtifactsChange({ value: ArtifactModes.SHADCNUI });
+    }
+  }, [shadcnOnly, artifactsToggleState, handleArtifactsChange]);
 
   /** Skills hook - using a custom key since it's not a Tool but a capability */
   const skills = useToolToggle({
@@ -278,6 +345,7 @@ export default function BadgeRowProvider({
     webSearch,
     artifacts,
     fileSearch,
+    canUseFileSearchPill, // Deloitte Custom Change
     agentsConfig,
     conversationId,
     storageContextKey,

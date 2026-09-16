@@ -68,7 +68,10 @@ const {
   getCachedTools,
 } = require('~/server/services/Config');
 const { processFileURL, uploadImageBuffer } = require('~/server/services/Files/process');
-const { primeFiles: primeSearchFiles } = require('~/app/clients/tools/util/fileSearch');
+const {
+  primeFiles: primeSearchFiles,
+  hasFileSearchAttachments,
+} = require('~/app/clients/tools/util/fileSearch');
 const { primeFiles: primeCodeFiles } = require('~/server/services/Files/Code/process');
 const { manifestToolMap, toolkits } = require('~/app/clients/tools/manifest');
 const { createOnSearchResults } = require('~/server/services/Tools/search');
@@ -85,6 +88,8 @@ const { loadTools } = require('~/app/clients/tools/util');
 const { findPluginAuthsByKeys } = require('~/models');
 const { getFlowStateManager, getMCPServersRegistry } = require('~/config');
 const { getLogStores } = require('~/cache');
+// Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+const { areCustomActionsEnabled } = require('~/server/middleware/rejectDisabledActions');
 
 const domainSeparatorRegex = new RegExp(actionDomainSeparator, 'g');
 
@@ -355,6 +360,17 @@ async function processRequiredActions(client, requiredActions) {
       };
     };
 
+    // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+    const actionIndex = currentAction.tool.indexOf(actionDelimiter);
+    const mcpIndex = currentAction.tool.indexOf(Constants.mcp_delimiter);
+    const isCustomAction = actionIndex >= 0 && (mcpIndex < 0 || mcpIndex < actionIndex);
+    if (isCustomAction && !areCustomActionsEnabled(appConfig)) {
+      logger.warn(
+        `[processRequiredActions] Custom Action disabled. User: ${client.req.user.id} | Tool: ${currentAction.tool}`,
+      );
+      throw new Error(`{"type":"${ErrorTypes.INVALID_ACTION}"}`);
+    }
+
     if (!tool) {
       // throw new Error(`Tool ${currentAction.tool} not found.`);
 
@@ -551,8 +567,8 @@ const createExpectedMCPToolsUnavailableError = (agentName, cause) => {
 const isBuiltInTool = (toolName) =>
   Boolean(
     manifestToolMap[toolName] ||
-    toolkits.some((t) => t.pluginKey === toolName) ||
-    nativeTools.has(toolName),
+      toolkits.some((t) => t.pluginKey === toolName) ||
+      nativeTools.has(toolName),
   );
 
 /**
@@ -601,7 +617,9 @@ async function loadToolDefinitionsWrapper({
 
   const checkCapability = (capability) => enabledCapabilities.has(capability);
   const areToolsEnabled = checkCapability(AgentCapabilities.tools);
-  const actionsEnabled = checkCapability(AgentCapabilities.actions);
+  // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+  const actionsEnabled =
+    checkCapability(AgentCapabilities.actions) && areCustomActionsEnabled(appConfig);
   const deferredToolsEnabled = checkCapability(AgentCapabilities.deferred_tools);
   const programmaticToolsEnabled = enabledCapabilities.has(AgentCapabilities.programmatic_tools);
   const codeExecutionEnabled =
@@ -613,7 +631,12 @@ async function loadToolDefinitionsWrapper({
 
   const filteredTools = agent.tools?.filter((tool) => {
     if (tool === Tools.file_search) {
-      return checkCapability(AgentCapabilities.file_search);
+      // Deloitte Custom Change: exclude file_search when no files are attached, since file search is enabled by default.
+      // Require an actual attachment in addition to the capability check, so the tool
+      // is only offered to the model when there is something for it to search.
+      return (
+        checkCapability(AgentCapabilities.file_search) && hasFileSearchAttachments(tool_resources)
+      );
     }
     if (tool === Tools.execute_code) {
       return checkCapability(AgentCapabilities.execute_code);
@@ -1183,6 +1206,20 @@ async function loadToolDefinitionsWrapper({
     } catch (error) {
       logger.error('[loadToolDefinitionsWrapper] Error priming search files:', error);
     }
+  } else if (agent.tools?.includes(Tools.file_search)) {
+    // Deloitte Custom Change: guard against false file-search claims, since file search is enabled by default.
+    /**
+     * file_search is configured for this agent but unavailable this turn —
+     * either the capability is off, or it's on but got filtered out of
+     * `filteredTools` because there are no eligible files to search. Guard
+     * against the model claiming to have searched documents regardless of
+     * which reason applies. Scoped to agents that actually reference
+     * file_search, so agents without it never see this note. Deliberately
+     * avoids asserting whether other (non-file_search) attachments exist.
+     */
+    dynamicToolContextMap.file_search_guardrail =
+      '- Note: File search is unavailable this turn. Do not tell the user you searched any documents, and do not proactively suggest uploading a file. ' +
+      'Only if the user explicitly asks you to look something up in an uploaded file should you say that file search is not available right now.';
   }
 
   const imageFiles = tool_resources?.[EToolResources.image_edit]?.files ?? [];
@@ -1305,7 +1342,9 @@ async function loadAgentTools({
     return enabled;
   };
   const areToolsEnabled = checkCapability(AgentCapabilities.tools);
-  const actionsEnabled = checkCapability(AgentCapabilities.actions);
+  // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+  const actionsEnabled =
+    checkCapability(AgentCapabilities.actions) && areCustomActionsEnabled(appConfig);
   const hasMCPTools = agent.tools?.some((tool) => tool?.includes(Constants.mcp_delimiter));
   const mcpPermissionContext = createMCPPermissionContext(req);
   const canUseMCP = hasMCPTools ? await mcpPermissionContext.canUseServers(req.user) : true;
@@ -1313,7 +1352,12 @@ async function loadAgentTools({
   let includesWebSearch = false;
   const _agentTools = agent.tools?.filter((tool) => {
     if (tool === Tools.file_search) {
-      return checkCapability(AgentCapabilities.file_search);
+      // Deloitte Custom Change: exclude file_search when no files are attached, since file search is enabled by default.
+      // Mirrors the same attachment check applied when building the tool definitions above,
+      // so the constructed tool instance is only created when there is something to search.
+      return (
+        checkCapability(AgentCapabilities.file_search) && hasFileSearchAttachments(tool_resources)
+      );
     } else if (tool === Tools.execute_code) {
       return checkCapability(AgentCapabilities.execute_code);
     } else if (tool === Tools.web_search) {
@@ -1693,12 +1737,14 @@ async function loadToolsForExecution({
   const isCodeExecutionToolRequested = isBashToolRequested || isLegacyExecuteCodeRequested;
 
   let enabledCapabilities;
-  if (actionsEnabled === undefined || isPTCRequested || isCodeExecutionToolRequested) {
+  if (actionsEnabled !== false || isPTCRequested || isCodeExecutionToolRequested) {
     enabledCapabilities = await resolveAgentCapabilities(req, appConfig, agent?.id);
   }
-  if (actionsEnabled === undefined) {
-    actionsEnabled = enabledCapabilities.has(AgentCapabilities.actions);
-  }
+  // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+  actionsEnabled =
+    actionsEnabled !== false &&
+    enabledCapabilities?.has(AgentCapabilities.actions) === true &&
+    areCustomActionsEnabled(appConfig);
   const codeExecutionEnabled =
     enabledCapabilities?.has(AgentCapabilities.execute_code) === true &&
     agent?.tools?.includes(Tools.execute_code) === true;

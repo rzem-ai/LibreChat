@@ -10,7 +10,7 @@ ARG BUILD_BRANCH=
 ARG BUILD_DATE=
 
 # Base for all builds
-FROM node:24.16.0-alpine AS base-min
+FROM node:24.17.0-alpine AS base-min
 ARG NPM_CI_TIMEOUT_SECONDS=1500
 ARG NPM_CI_ATTEMPTS=2
 RUN apk upgrade --no-cache
@@ -125,6 +125,9 @@ ARG BUILD_DATE
 ENV BUILD_COMMIT=${BUILD_COMMIT}
 ENV BUILD_BRANCH=${BUILD_BRANCH}
 ENV BUILD_DATE=${BUILD_DATE}
+# Run as the non-root `node` user shipped with the base image
+RUN chown -R node:node /app
+USER node
 WORKDIR /app/api
 EXPOSE 3080
 ENV HOST=0.0.0.0

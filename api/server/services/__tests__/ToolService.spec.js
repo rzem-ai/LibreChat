@@ -2,6 +2,7 @@ const { Constants: AgentConstants } = require('@librechat/agents');
 const {
   Tools,
   Constants,
+  ErrorTypes,
   ResourceType,
   EModelEndpoint,
   isActionTool,
@@ -63,6 +64,9 @@ jest.mock('~/server/services/Files/process', () => ({
 }));
 jest.mock('~/app/clients/tools/util/fileSearch', () => ({
   primeFiles: jest.fn().mockResolvedValue({}),
+  hasFileSearchAttachments: (tool_resources) =>
+    (tool_resources?.file_search?.file_ids?.length ?? 0) > 0 ||
+    (tool_resources?.file_search?.files?.length ?? 0) > 0,
 }));
 jest.mock('~/server/services/Files/Code/process', () => ({
   primeFiles: jest.fn().mockResolvedValue({}),
@@ -279,6 +283,25 @@ describe('ToolService - Action Capability Gating', () => {
       });
 
       expect(mockLoadToolDefinitions).toHaveBeenCalledTimes(1);
+      const [callArgs] = mockLoadToolDefinitions.mock.calls[0];
+      expect(callArgs.tools).toContain(regularTool);
+      expect(callArgs.tools).not.toContain(actionToolName);
+    });
+
+    // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+    it('keeps regular tools when createActions is false', async () => {
+      const capabilities = [AgentCapabilities.tools, AgentCapabilities.actions];
+      const req = createMockReq(capabilities);
+      req.config.interfaceConfig = { customDeloitteFeatureFlags: { createActions: false } };
+      mockGetEndpointsConfig.mockResolvedValue(createEndpointsConfig(capabilities));
+
+      await loadAgentTools({
+        req,
+        res: {},
+        agent: { id: 'agent_123', tools: [regularTool, actionToolName] },
+        definitionsOnly: true,
+      });
+
       const [callArgs] = mockLoadToolDefinitions.mock.calls[0];
       expect(callArgs.tools).toContain(regularTool);
       expect(callArgs.tools).not.toContain(actionToolName);
@@ -1475,6 +1498,22 @@ describe('ToolService - Action Capability Gating', () => {
       expect(mockLoadActionSets).toHaveBeenCalledWith({ agent_id: 'agent_123' });
     });
 
+    // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+    it('does not load action tools when createActions is false despite actionsEnabled=true', async () => {
+      const req = createMockReq([AgentCapabilities.actions]);
+      req.config = { interfaceConfig: { customDeloitteFeatureFlags: { createActions: false } } };
+
+      await loadToolsForExecution({
+        req,
+        res: {},
+        agent: { id: 'agent_123' },
+        toolNames: [actionToolName],
+        actionsEnabled: true,
+      });
+
+      expect(mockLoadActionSets).not.toHaveBeenCalled();
+    });
+
     it('should resolve actionsEnabled from capabilities when not explicitly provided', async () => {
       const capabilities = [AgentCapabilities.tools];
       const req = createMockReq(capabilities);
@@ -1888,6 +1927,71 @@ describe('ToolService - Action Capability Gating', () => {
       // Each call must carry a distinct builder — guards against the bug
       // where the surviving action's builders got routed to every tool.
       expect(builderPaths[0]).not.toBe(builderPaths[1]);
+    });
+
+    // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+    it('rejects a required custom Action when createActions is false', async () => {
+      const client = {
+        req: {
+          user: { id: 'user_123' },
+          body: { assistant_id: 'assistant_disabled', model: 'gpt-4o-mini', endpoint: 'openAI' },
+          config: { interfaceConfig: { customDeloitteFeatureFlags: { createActions: false } } },
+        },
+        res: {},
+        apiKey: 'sk-test',
+        mappedOrder: new Map(),
+        seenToolCalls: new Map(),
+        addContentData: jest.fn(),
+      };
+
+      await expect(
+        processRequiredActions(client, [
+          {
+            tool: `sendData${actionDelimiter}webhook---site`,
+            toolInput: {},
+            toolCallId: 'call_disabled',
+            thread_id: 'thread_1',
+            run_id: 'run_1',
+          },
+        ]),
+      ).rejects.toThrow(`"type":"${ErrorTypes.INVALID_ACTION}"`);
+
+      expect(mockLoadActionSets).not.toHaveBeenCalled();
+    });
+
+    // Deloitte Custom Change: disable custom Actions when customDeloitteFeatureFlags.createActions is false.
+    it('rejects an already-loaded custom Action when createActions is false', async () => {
+      const actionTool = {
+        name: `sendData${actionDelimiter}webhook---site`,
+        _call: jest.fn(),
+      };
+      mockLoadToolsUtil.mockResolvedValue({ loadedTools: [actionTool] });
+      const client = {
+        req: {
+          user: { id: 'user_123' },
+          body: { assistant_id: 'assistant_disabled', model: 'gpt-4o-mini', endpoint: 'openAI' },
+          config: { interfaceConfig: { customDeloitteFeatureFlags: { createActions: false } } },
+        },
+        res: {},
+        apiKey: 'sk-test',
+        mappedOrder: new Map(),
+        seenToolCalls: new Map(),
+        addContentData: jest.fn(),
+      };
+
+      await expect(
+        processRequiredActions(client, [
+          {
+            tool: actionTool.name,
+            toolInput: {},
+            toolCallId: 'call_loaded_disabled',
+            thread_id: 'thread_1',
+            run_id: 'run_1',
+          },
+        ]),
+      ).rejects.toThrow(`"type":"${ErrorTypes.INVALID_ACTION}"`);
+
+      expect(actionTool._call).not.toHaveBeenCalled();
     });
 
     it('loadAgentTools resolves legacy-format tool names via the legacy encoding branch', async () => {

@@ -1,5 +1,11 @@
 import { useMemo } from 'react';
 import { TAttachment, Tools, SearchResultData } from 'librechat-data-provider';
+import type {
+  MCPResultReference,
+  MCPResultSource,
+  FileReferenceMetadata,
+  ResultReference,
+} from 'librechat-data-provider';
 import { useLocalize } from '~/hooks';
 
 interface FileSource {
@@ -8,7 +14,11 @@ interface FileSource {
   pages?: number[];
   relevance?: number;
   pageRelevance?: Record<string, number>;
-  metadata?: any;
+  metadata?: FileReferenceMetadata;
+}
+
+interface MCPAttachmentPayload {
+  sources?: MCPResultSource[];
 }
 
 interface DeduplicatedSource {
@@ -17,7 +27,19 @@ interface DeduplicatedSource {
   pages: number[];
   relevance: number;
   pageRelevance: Record<string, number>;
-  metadata?: any;
+  metadata?: FileReferenceMetadata;
+}
+
+/**
+ * `MCPResultSource.content` is `title + description` joined for server-side citation
+ * matching; strip the leading title back off so the chip doesn't show it twice.
+ */
+function getMCPSnippet(source: MCPResultSource): string {
+  const description =
+    source.title && source.content.startsWith(source.title)
+      ? source.content.slice(source.title.length).replace(/^\n+/, '')
+      : source.content;
+  return description.length > 300 ? `${description.slice(0, 300)}…` : description;
 }
 
 /**
@@ -32,7 +54,8 @@ function getFileSearchSources(data: FileSearchAttachmentData): FileSource[] {
 }
 
 /**
- * Hook that creates a map of turn numbers to SearchResultData from web search and agent file search attachments
+ * Hook that creates a map of turn numbers to SearchResultData from web search,
+ * agent file search, and MCP tool result attachments.
  * @param attachments Array of attachment metadata
  * @returns A map of turn numbers to their corresponding search result data
  */
@@ -41,6 +64,9 @@ export function useSearchResultsByTurn(attachments?: TAttachment[]) {
   const searchResultsByTurn = useMemo(() => {
     const turnMap: { [key: string]: SearchResultData } = {};
     let agentFileSearchTurn = 0;
+    let mcpTurn = 0;
+    // Pre-count file_search attachments to match the backend's turn offset for MCP
+    const fileSearchTotal = attachments?.filter((a) => a.type === Tools.file_search).length ?? 0;
 
     attachments?.forEach((attachment) => {
       // Handle web search attachments (existing functionality)
@@ -67,14 +93,11 @@ export function useSearchResultsByTurn(attachments?: TAttachment[]) {
               const existingPages = existing.pages || [];
               const newPages = source.pages || [];
               const allPages = [...existingPages, ...newPages];
-              // Remove duplicates and sort
               const uniquePages = [...new Set(allPages)].sort((a, b) => a - b);
-
-              // Merge page relevance mappings
-              const existingPageRelevance = existing.pageRelevance || {};
-              const newPageRelevance = source.pageRelevance || {};
-              const mergedPageRelevance = { ...existingPageRelevance, ...newPageRelevance };
-
+              const mergedPageRelevance = {
+                ...existing.pageRelevance,
+                ...source.pageRelevance,
+              };
               existing.pages = uniquePages;
               existing.relevance = Math.max(existing.relevance || 0, source.relevance || 0);
               existing.pageRelevance = mergedPageRelevance;
@@ -91,35 +114,66 @@ export function useSearchResultsByTurn(attachments?: TAttachment[]) {
           }
         });
 
-        // Convert agent file sources to SearchResultData format
         const agentSearchData: SearchResultData = {
           turn: agentFileSearchTurn,
-          organic: [], // Agent file search doesn't have organic web results
-          topStories: [], // No top stories for file search
-          images: [], // No images for file search
           references: Array.from(deduplicatedSources.values()).map(
             (source) =>
               ({
                 title: source.fileName || localize('com_file_unknown'),
-                link: `#file-${source.fileId}`, // Create a pseudo-link for file references
-                attribution: source.fileName || localize('com_file_unknown'), // Show filename in inline display
+                link: `#file-${source.fileId}`,
+                attribution: source.fileName || localize('com_file_unknown'),
                 snippet:
                   source.pages && source.pages.length > 0
                     ? localize('com_file_pages', { pages: source.pages.join(', ') })
-                    : '', // Only page numbers for hover
+                    : '',
                 type: 'file' as const,
-                // Store additional agent-specific data as properties on the reference
                 fileId: source.fileId,
                 fileName: source.fileName,
                 pages: source.pages,
                 pageRelevance: source.pageRelevance,
+                relevance: source.relevance,
                 metadata: source.metadata,
-              }) as any,
+              }) as ResultReference,
           ),
         };
 
         turnMap[agentFileSearchTurn.toString()] = agentSearchData;
         agentFileSearchTurn++;
+      }
+
+      // Handle MCP tool result attachments — turns are offset by file_search count.
+      // The backend (buildMCPPassages) advances its turn counter for every MCP
+      // attachment whose `sources` array is present — even an empty one, e.g. a
+      // suppressed error response — so this must advance on the exact same
+      // condition, not just when there happen to be refs to render. Otherwise a
+      // failed call ahead of a successful one desyncs the turn index and the
+      // successful call's citations point at a turn the client never populated.
+      if (attachment.type === Tools.mcp_results && attachment[Tools.mcp_results]) {
+        const payload = attachment[Tools.mcp_results] as MCPAttachmentPayload;
+        if (payload?.sources) {
+          const mcpRefs: MCPResultReference[] = payload.sources.map((source) => ({
+            toolName: source.toolName,
+            serverName: source.serverName,
+            title: source.title || `${source.serverName}: ${source.toolName}`,
+            attribution: source.serverName,
+            snippet: getMCPSnippet(source),
+            link: source.link || `#mcp-${source.serverName}-${source.toolName}`,
+            type: 'mcp' as const,
+            usageRestriction: source.usageRestriction,
+          }));
+
+          if (mcpRefs.length > 0) {
+            // The backend sets MCP turn = fileSearchTotal + mcpTurn, so mirror that here
+            const turnKey = (fileSearchTotal + mcpTurn).toString();
+            const existing = turnMap[turnKey];
+            if (existing) {
+              existing.mcp_results = [...(existing.mcp_results ?? []), ...mcpRefs];
+            } else {
+              turnMap[turnKey] = { turn: fileSearchTotal + mcpTurn, mcp_results: mcpRefs };
+            }
+          }
+          mcpTurn++;
+        }
       }
     });
 

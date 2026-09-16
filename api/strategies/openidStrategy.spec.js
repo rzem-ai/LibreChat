@@ -29,6 +29,10 @@ jest.mock('~/server/services/Files/strategies', () => ({
 jest.mock('~/server/services/Files/images/avatar', () => ({
   resizeAvatar: jest.fn().mockResolvedValue(Buffer.from('safe avatar')),
 }));
+// Deloitte Custom Change: Mock the GraphTokenService for testing purposes.
+jest.mock('~/server/services/GraphTokenService', () => ({
+  getGraphApiToken: jest.fn(),
+}));
 jest.mock('~/server/services/Config', () => ({
   getAppConfig: jest.fn().mockResolvedValue({}),
 }));
@@ -118,6 +122,7 @@ jest.mock('~/cache/getLogStores', () =>
   jest.fn(() => ({
     get: jest.fn(),
     set: jest.fn(),
+    delete: jest.fn(),
   })),
 );
 
@@ -128,6 +133,8 @@ jest.mock('openid-client', () => {
       clientId: 'fake_client_id',
       clientSecret: 'fake_client_secret',
       issuer: 'https://fake-issuer.com',
+      // Deloitte Custom Change: exposes server metadata for the Entra issuer detector.
+      serverMetadata: () => ({ issuer: 'https://fake-issuer.com' }),
       // Add any other properties needed by the implementation
     }),
     fetchUserInfo: jest.fn().mockImplementation(() => {
@@ -220,8 +227,12 @@ describe('setupOpenId', () => {
     require('~/cache/getLogStores').mockImplementation(() => ({
       get: jest.fn(),
       set: jest.fn(),
+      delete: jest.fn(),
     }));
     getOpenIdProxyDispatcher.mockReturnValue(undefined);
+    require('~/server/services/GraphTokenService').getGraphApiToken.mockResolvedValue({
+      access_token: 'graph_access_token',
+    });
     require('openid-client').genericGrantRequest.mockReset();
     require('openid-client').genericGrantRequest.mockResolvedValue({
       access_token: 'exchanged_graph_token',
@@ -1118,7 +1129,12 @@ describe('setupOpenId', () => {
         .fn()
         .mockResolvedValueOnce(undefined)
         .mockResolvedValueOnce({ access_token: 'exchanged_graph_token' });
-      getLogStores.mockReturnValue({ get: mockGet, set: mockSet });
+      const authUserDocStore = { get: jest.fn(), set: jest.fn(), delete: jest.fn() };
+      getLogStores.mockImplementation((cacheKey) =>
+        cacheKey === require('librechat-data-provider').CacheKeys.AUTH_USER_DOC
+          ? authUserDocStore
+          : { get: mockGet, set: mockSet },
+      );
 
       process.env.OPENID_REQUIRED_ROLE = 'group-required';
       process.env.OPENID_REQUIRED_ROLE_PARAMETER_PATH = 'groups';
@@ -1468,6 +1484,7 @@ describe('setupOpenId', () => {
   });
 
   it('should not attempt to download avatar if picture is not provided', async () => {
+    const { getGraphApiToken } = require('~/server/services/GraphTokenService');
     // Arrange – remove picture
     const userinfo = { ...tokenset.claims() };
     delete userinfo.picture;
@@ -1478,7 +1495,70 @@ describe('setupOpenId', () => {
     // Assert – fetch should not be called and avatar should remain undefined or empty
     expect(fetch).not.toHaveBeenCalled();
     expect(resizeAvatar).not.toHaveBeenCalled();
+    // Deloitte Custom Change: Ensure that the Graph API token is not fetched when no picture is provided.
+    expect(getGraphApiToken).not.toHaveBeenCalled();
     // Depending on your implementation, user.avatar may be undefined or an empty string.
+  });
+
+  it('should prefer and save a Microsoft Graph avatar when an OpenID picture is provided', async () => {
+    const { getStrategyFunctions } = require('~/server/services/Files/strategies');
+    const { getGraphApiToken } = require('~/server/services/GraphTokenService');
+    require('openid-client').discovery.mockResolvedValueOnce({
+      clientId: 'fake_client_id',
+      clientSecret: 'fake_client_secret',
+      issuer: 'https://login.microsoftonline.com/tenant/v2.0',
+      serverMetadata: () => ({ issuer: 'https://login.microsoftonline.com/tenant/v2.0' }),
+    });
+    undici.fetch.mockResolvedValueOnce({
+      ok: true,
+      arrayBuffer: async () => Buffer.from('graph avatar'),
+    });
+    await setupOpenId();
+    verifyCallback = require('openid-client/passport').__getVerifyCallbackByName('openid');
+
+    const { user } = await validate(tokenset);
+    const strategyResult =
+      getStrategyFunctions.mock.results[getStrategyFunctions.mock.results.length - 1];
+    const { saveBuffer } = strategyResult.value;
+
+    expect(undici.fetch).toHaveBeenCalledWith(
+      'https://graph.microsoft.com/v1.0/me/photo/$value',
+      expect.objectContaining({
+        headers: { Authorization: 'Bearer graph_access_token' },
+      }),
+    );
+    expect(getGraphApiToken).toHaveBeenCalledWith(
+      expect.objectContaining({ openidId: tokenset.claims().sub }),
+      'fake_access_token',
+      'https://graph.microsoft.com/User.Read',
+    );
+    expect(resizeAvatar).not.toHaveBeenCalled();
+    expect(saveBuffer).toHaveBeenCalledWith(
+      expect.objectContaining({ buffer: Buffer.from('graph avatar') }),
+    );
+    expect(user.avatar).toBe('/fake/path/to/avatar.png');
+  });
+
+  // Deloitte Custom Change: verifies unavailable Entra profile photos do not block authentication.
+  it('continues login without an avatar when Microsoft Graph returns an error', async () => {
+    const { getStrategyFunctions } = require('~/server/services/Files/strategies');
+    const userinfo = { ...tokenset.claims() };
+    delete userinfo.picture;
+    require('openid-client').discovery.mockResolvedValueOnce({
+      clientId: 'fake_client_id',
+      clientSecret: 'fake_client_secret',
+      issuer: 'https://login.microsoftonline.com/tenant/v2.0',
+      serverMetadata: () => ({ issuer: 'https://login.microsoftonline.com/tenant/v2.0' }),
+    });
+    undici.fetch.mockResolvedValueOnce({ ok: false, status: 401 });
+    await setupOpenId();
+    verifyCallback = require('openid-client/passport').__getVerifyCallbackByName('openid');
+
+    const { user } = await validate({ ...tokenset, claims: () => userinfo });
+
+    expect(user).toBeTruthy();
+    expect(user.avatar).toBeUndefined();
+    expect(getStrategyFunctions).not.toHaveBeenCalled();
   });
 
   it('should support comma-separated multiple roles', async () => {

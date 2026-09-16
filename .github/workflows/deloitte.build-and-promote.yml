@@ -42,6 +42,7 @@ on:
       - uat
       - develop
     paths:
+      - librechat.yaml
       - api/**
       - client/**
       - packages/**
@@ -49,7 +50,8 @@ on:
       - rag_api
       - rag_api/**
       - Dockerfile
-      - Dockerfile.meilisearch
+#      - Dockerfile.meilisearch
+      - src/redis/**
       - package.json
 # Limit to one concurrent workflow run per workflow, event, and ref
 concurrency:
@@ -96,18 +98,28 @@ jobs:
             dockerFilePath: rag_api/Dockerfile.lite
             yamlKeyPath: '.pods.librechat.containers.rag-api.image'
             submodule: true
-          # Meilisearch image — derived from upstream image and published to ACR
-          - imageNameAlias: meilisearch
-            buildContext: .
-            dockerFilePath: Dockerfile.meilisearch
-            yamlKeyPath: '.pods.librechat.containers.meilisearch.image'
+          # Meilisearch image — derived from upstream image and published to ACR # TODO: enable meilisearch
+#          - imageNameAlias: meilisearch
+#            buildContext: .
+#            dockerFilePath: Dockerfile.meilisearch
+#            yamlKeyPath: '.pods.librechat.containers.meilisearch.image'
+#            submodule: false
+          # Valkey image — in-cluster Redis-compatible store (StatefulSet, AOF persistence)
+          - imageNameAlias: valkey
+            buildContext: src/redis
+            dockerFilePath: src/redis/Dockerfile
+            yamlKeyPath: '.valkey.image'
             submodule: false
-            # buildArgs: |
-            #   ARG1=value
-            # unitTestScript: |
-            #   echo "Running unit tests"
+          # Admin Panel image — built from admin_panel submodule Dockerfile with VITE_BASE_PATH=/admin
+          # The admin panel is a Vite SPA where the base path must be baked in at build time.
+          - imageNameAlias: admin
+            buildContext: admin_panel
+            dockerFilePath: admin_panel/Dockerfile
+            yamlKeyPath: '.pods.admin.containers.admin.image'
+            buildArgs: VITE_BASE_PATH=/admin
+            submodule: true
         #####################################################################################
-    uses: Deloitte-Australia/ct-devops-resources/.github/workflows/build-and-promote.yml@V2
+    uses: Deloitte-Australia/ct-devops-resources/.github/workflows/build-and-promote.yml@feature/commit_validation_librechat
     secrets: inherit
     with:
       imageNameSuffix: ${{ matrix.imageNameAlias }}
@@ -118,16 +130,53 @@ jobs:
       customBuildSetupScript: |
         ${{ matrix.customBuildSetupScript }}
         set -euo pipefail
-        rm -f charts/config/librechat.yaml
-        cp librechat.yaml charts/config/librechat.yaml
+        
+        git config --global url."https://x-access-token:${SUBMODULE_GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+ 
+        echo "Preparing to switch branch in submodules"
+        
+        BRANCH="${GITHUB_BASE_REF:-${GITHUB_REF_NAME}}"
+
+        echo "BRANCH - ${BRANCH}"
+
+        case "${BRANCH}" in
+          main|uat|develop)
+            SUBMODULE_BRANCH="${BRANCH}"
+            ;;
+          *)
+            SUBMODULE_BRANCH="main"
+            ;;
+        esac
+
+        echo "SUBMODULE BRANCH - ${SUBMODULE_BRANCH}"
+        git config submodule.rag_api.branch "${SUBMODULE_BRANCH}"
+        
+        echo "1. Submodule branch for rag_api set to ${SUBMODULE_BRANCH}"
+        
+        git config submodule.admin_panel.branch "${SUBMODULE_BRANCH}"
+        
+        echo "2. Submodule branch for admin_panel set to ${SUBMODULE_BRANCH}"
+        
+        git submodule sync --recursive
+        
+        echo "3. Submodules synchronized with the latest configuration"
+
+        if [ "${{ matrix.submodule }}" = "true" ]; then
+          git submodule update --init --remote --recursive
+          git -C rag_api checkout -B "${SUBMODULE_BRANCH}" "origin/${SUBMODULE_BRANCH}"
+          git -C admin_panel checkout -B "${SUBMODULE_BRANCH}" "origin/${SUBMODULE_BRANCH}"
+        fi
+        
+        echo "5. Both submodules rag_api and admin_panel updated the chosen SUBMODULE_BRANCH"
+        
         python3 - <<'PY'
         import re
         from pathlib import Path
 
-        path = Path("charts/config/librechat.yaml")
+        path = Path("librechat.yaml")
         content = path.read_text()
         content = re.sub(
-          r'(?m)^[ \t]*(?:#\s*Local-only identity token header; build-and-promote strips this from deployment chart config\.\s*\n[ \t]*)?x-id-token:\s*"?\$\{LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION\}"?[ \t]*\n?',
+          r'(?m)^[ \t]*x-id-token:\s*[\'"]?\$\{LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION\}[\'"]?[ \t]*\n?',
           '',
           content,
         )
@@ -136,15 +185,15 @@ jobs:
           match = re.search(r"^cache:\s*true(?:\s*#.*)?$", content, flags=re.MULTILINE)
           if match is None:
             raise SystemExit("Unable to inject fileStrategy: cache:true entry not found")
-          content = content[:match.end()] + '\n\nfileStrategy: "azure_blob"' + content[match.end():]
+          content = content[:match.end()] + "\n\nfileStrategy: 'azure_blob'" + content[match.end():]
 
         path.write_text(content)
         PY
-        if grep -q 'LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION' charts/config/librechat.yaml; then
+        if grep -q 'LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION' librechat.yaml; then
           echo 'Unable to remove x-id-token headers from deployment config'
           exit 1
         fi
-        grep -q '^fileStrategy:' charts/config/librechat.yaml || { echo 'Unable to inject fileStrategy'; exit 1; }
+        grep -q '^fileStrategy:' librechat.yaml || { echo 'Unable to inject fileStrategy'; exit 1; }
       skipPromotionOnFail: false
       parentHelmValuesFile: 'values.yaml'
       helmFolderPath: 'charts'

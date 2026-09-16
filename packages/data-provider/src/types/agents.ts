@@ -395,7 +395,8 @@ export namespace Agents {
    * so the SDK's `Run.getInterrupt()` output can be embedded directly.
    */
   export type HumanInterruptPayload =
-    ToolApprovalInterruptPayload | AskUserQuestionInterruptPayload;
+    | ToolApprovalInterruptPayload
+    | AskUserQuestionInterruptPayload;
 
   /**
    * Server-side record of a job that is waiting for user input.

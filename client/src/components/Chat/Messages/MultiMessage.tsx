@@ -4,6 +4,7 @@ import { isAssistantsEndpoint } from 'librechat-data-provider';
 import type { TMessage } from 'librechat-data-provider';
 import type { ReactElement } from 'react';
 import type { TMessageProps } from '~/common';
+import { CitationHighlightProvider } from '~/components/Web/Context';
 import MessageContent from '~/components/Messages/MessageContent';
 import MessageParts from './MessageParts';
 import Message from './Message';
@@ -173,6 +174,13 @@ function MultiMessage({
   } else {
     row = <Message {...sharedProps} />;
   }
+  /**
+   * Deloitte Custom Change: single mounting point for citation hover-highlight state,
+   * covering all three row variants (`MessageParts`/`ContentParts`, `MessageContent`/
+   * `ContentRender`, and the legacy `Message`/`MessageRender` path) instead of each
+   * duplicating its own provider.
+   */
+  row = <CitationHighlightProvider>{row}</CitationHighlightProvider>;
 
   /**
    * The child recursion is a sibling of the row (not rendered inside it), so a

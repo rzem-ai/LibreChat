@@ -1,46 +1,90 @@
 version: 1.3.13 # Copy from librechat.example.yaml
 cache: true
 
+# 'includedTools' restricts the list of tools available in the Agent Builder.
+includedTools:
+  - 'file_search'
+  - 'execute_code'
+  - 'artifacts'
+  - 'cleartrack-mcp-gateway-research'
+  - 'cleartrack-mcp-gateway-news'
+  - 'cleartrack-mcp-gateway-kx'
+  - 'cleartrack-mcp-gateway-desc'
+  - 'cleartrack-mcp-gateway-gims'
+  - 'cleartrack-mcp-gateway-sharepoint'
+
 interface:
   agents:
     use: true
     create: true
-    share: false
+    share: true
     public: false
 
-  bookmarks: true
+  bookmarks: false # Set to false to disable saving conversations as bookmarks
+
+  buildInfo: false # Set to false to hide the About section in settings
 
   # Pin tools to the prompt bar by default for all users
   defaultPinnedTools:
     - 'file_search'
     - 'skills'
-    - 'execute_code'
     - 'mcp'
+    - 'execute_code'
+    - 'artifacts'
 
   deloitteHeader:
     enabled: true
-    title: "${APP_TITLE}"
+    title: '${APP_TITLE}'
 
   fileCitations: true
 
-  fileSearch: true
+  fileSearch: true # Set to true to enable searching uploaded files
+
+  # Mandatory terms acceptance dialog
+  termsOfService:
+    modalAcceptance: true
+    modalTitle: 'Terms and Conditions'
+    modalContent: |
+      This tool is designed to support your daily tasks using generative AI technology. Please spend some time understanding MyAssist's functionality and how it can assist you by visiting the [MyAssist page on DAIS](https://ausdeloitte.sharepoint.com/sites/DAISITS/SitePages/Generative-AI.aspx).
+      By using MyAssist you agree to the following:
+      - Have read and understand Deloitte Australia's [AI Usage Statement and AI Guidance](https://ausdeloitte.sharepoint.com/sites/DAIS/Shared%20Documents/Forms/AllItems.aspx?id=%2fsites%2fDAIS%2fShared+Documents%2fAI+Usage+Statement+and+AI+Guidance.pdf&parent=%2fsites%2fDAIS%2fShared+Documents&xsdata=MDV8MDJ8aWVkd2FyZHNAZGVsb2l0dGUuY29tLmF1fDM1N2RkNWIwNDE4MTRhZjM3ZWY0MDhkZjAzMGU4MTA1fDM2ZGE0NWYxZGQyYzRkMWZhZjEzNWFiZTQ2Yjk5OTIxfDB8MHw2MzkyMzMwMzI5OTA2MDY2MTh8VW5rbm93bnxUV0ZwYkdac2IzZDhleUpGYlhCMGVVMWhjR2tpT25SeWRXVXNJbFlpT2lJd0xqQXVNREF3TUNJc0lsQWlPaUpYYVc0ek1pSXNJa0ZPSWpvaVRXRnBiQ0lzSWxkVUlqb3lmUT09fDB8fHw%3d&sdata=T2w5MFNlSFVSdmJOZ1ozMFRVWGF3c1FDV25zOGoxdDVhNTBFWDJTV0pWQT0%3d);
+      These guidelines apply to all users. Users from other member firms with questions on compliance should contact their local Q&R team. New Zealand users: nzdataoffice@deloitte.co.nz.
+      - Understand that you are permitted to upload Deloitte or client confidential information to MyAssist, provided that you respect any client contractual obligations, including restrictions on the purpose for which client data may be used.
+      - Understand that if your client contract restricts Deloitte from processing client confidential information offshore, you must use an "Azure AU" model which can be selected in the model dropdown list.
+      - Understand that you are NOT permitted to use personal information or high-risk confidential information (e.g. market sensitive information such as financials, acquisition details, strategic plans) in your prompts when the “Web Search” feature is enabled.
+      - Will review and fact-check any outputs generated using MyAssist, be transparent with your team about how you have used it in your work, and remain responsible for approving any actions performed by MyAssist on your behalf and for the outcomes of those action.
+      - Will always act in accordance with your [Global Principles of Business Conduct](https://ausdeloitte.sharepoint.com/:b:/r/sites/DAISPolicies/QR%20Policies/Deloitte%20Global%20Principles%20of%20Business%20Conduct.pdf?csf=1&web=1&e=3qbMc1&xsdata=MDV8MDJ8aWVkd2FyZHNAZGVsb2l0dGUuY29tLmF1fDM1N2RkNWIwNDE4MTRhZjM3ZWY0MDhkZjAzMGU4MTA1fDM2ZGE0NWYxZGQyYzRkMWZhZjEzNWFiZTQ2Yjk5OTIxfDB8MHw2MzkyMzMwMzI5OTA2MzE5NzR8VW5rbm93bnxUV0ZwYkdac2IzZDhleUpGYlhCMGVVMWhjR2tpT25SeWRXVXNJbFlpT2lJd0xqQXVNREF3TUNJc0lsQWlPaUpYYVc0ek1pSXNJa0ZPSWpvaVRXRnBiQ0lzSWxkVUlqb3lmUT09fDB8fHw%3d&sdata=NktxaWkxNU56VzJzVitSb1pPdUl3NUs3SU9BS0psUUtVQ0RHUlhsZkViYz0%3d) when using MyAssist;
+      - Acknowledge that your use of MyAssist is monitored and that your prompts and usage data may be collected and analysed to understand how MyAssist is being used and to identify opportunities for improving the platform.
+      - You have read, understood, and will always comply with the Third Party Content Guidelines and, when using web search, web crawling, or external content retrieval capabilities, you must also comply with applicable website terms of use, licensing conditions, copyright obligations, and any restrictions on the intended use of the content. [Third Party Content Guidelines](https://ausdeloitte.sharepoint.com/sites/DOL-c-DTTL-ResearchAUS/SitePages/Usage-guidelines.aspx?xsdata=MDV8MDJ8aWVkd2FyZHNAZGVsb2l0dGUuY29tLmF1fDM1N2RkNWIwNDE4MTRhZjM3ZWY0MDhkZjAzMGU4MTA1fDM2ZGE0NWYxZGQyYzRkMWZhZjEzNWFiZTQ2Yjk5OTIxfDB8MHw2MzkyMzMwMzI5OTA2NTQ0MTN8VW5rbm93bnxUV0ZwYkdac2IzZDhleUpGYlhCMGVVMWhjR2tpT25SeWRXVXNJbFlpT2lJd0xqQXVNREF3TUNJc0lsQWlPaUpYYVc0ek1pSXNJa0ZPSWpvaVRXRnBiQ0lzSWxkVUlqb3lmUT09fDB8fHw%3d&sdata=UmlOQjNaREpSeFVzTm9NQ0laait6VXBRSlJVR3FyclpHcVNWVmtFdHpMRT0%3d&SafelinksUrl=https%3a%2f%2fausdeloitte.sharepoint.com%2fsites%2fDOL-c-DTTL-ResearchAUS%2fSitePages%2fUsage-guidelines.aspx).
 
   marketplace:
     use: true
+    # Deloitte Custom Change: replace the hardcoded HR/R&D/Finance/IT/Sales/After Sales tabs
+    # with org-specific Agent Marketplace categories.
+    categories:
+      enableDefaultCategories: false
+      list:
+        - value: "pursue-shape"
+          label: "Pursue & Shape"
+        - value: "discover-define"
+          label: "Discover & Define"
+        - value: "build-deliver"
+          label: "Build & Deliver"
+        - value: "produce-assure"
+          label: "Produce & Assure"
+        - value: "resource-grow-people"
+          label: "Resource & Grow People"
+
+  mcpServers:
+    create: false # Set to false to disable creating new MCP servers via the Agent Builder
+
+  memories: true # Set to true to enable users to edit memories via UI
 
   modelSelect: true
 
-  multiConvo: true
+  multiConvo: false # Set to false to disable multiple conversations in the chat interface
 
-  parameters: true
-
-  presets: true
-
-  prompts:
-    use: true
-    create: true
-    share: false # Enable share with other users
-    public: false # Disable share with everyone
+  parameters: true # Set to true to enable adjustable model parameters
 
   peoplePicker:
     users: true
@@ -48,11 +92,21 @@ interface:
     roles: false
     allowedDomains:
       - 'deloitte.com.au'
-      - 'deloitte.co.nz'
+      - 'deloitte.co.nz' # TODO: confirm if working
+
+  presets: true # Set to true to enable saved conversation presets
+
+  prompts:
+    use: true
+    create: true
+    share: true # Enable share with other users
+    public: false # Disable share with everyone
 
   remoteAgents:
     use: true
     create: true
+
+  sharedLinks: false # Set to false to disable sharing conversations through links
 
   skills:
     use: true
@@ -60,12 +114,52 @@ interface:
     share: true # Enable share with other users
     public: false # Disable share with everyone
 
+  # 'left' (default) or 'right'. 'right' right-aligns the current user's own chat turns as
+  # iMessage-style bubbles without an avatar/name header (assistant/agent turns are unaffected).
+  userMessageAlignment: right
+
+  temporaryChat: false # Set to false to disable temporary chats
+
+  # Deloitte Custom Change: Deloitte-specific UI feature flags.
+  customDeloitteFeatureFlags:
+    exportChat: false # Set to false to disable exporting conversations
+    regenerate: true # Set to false to disable regenerating assistant responses
+    forkChat: true # Set to false to disable branching conversations from earlier messages
+    simplifyFork: true # Set to true to skip the fork options popover and always fork with default settings
+    editChat: true # Set to false to disable editing submitted messages
+    showToolsDropdown: false # Set to false to disable the chat tools menu
+    alwaysEnableFileSearch: true # Set to true to force-enable file_search where the user is authorized
+    hideFileSearchToggle: true # Set to true to hide the file search pill without changing tool state
+    createActions: false # Set to false to hide action creation in the marketplace
+    landingIcon: true # Set to false to hide the model or agent icon beside the landing greeting
+    conversationIcon: true # Set to false to hide model or endpoint icons in conversation history
+    accountsTab: false # Set to false to hide the Account settings tab
+    dataApiKeys: false # Set to false to hide the API keys section under Data controls settings
+    dataDangerZone: false # Set to false to hide the Danger zone section under Data controls settings
+    externalVoiceProvider: false # Set to false to hide the external voice provider option in Speech settings (browser voice only)
+    artifactsShadcnOnly: true # Set to true to force the shadcn/ui artifacts mode and hide other artifact mode options
+    showConversationTitleInHeader: false # Set to true to show the conversation title in the chat header
+
 fileConfig:
   endpoints:
     default:
       fileLimit: 50
     agents:
       fileLimit: 50
+
+memory:
+  disabled: false # Set to true to completely disable memory
+  personalize: true # Gives users the ability to toggle memory on/off, true by default
+  tokenLimit: 2000 # Maximum tokens for memory storage
+  maxInputTokens: 12000 # Maximum recent-chat tokens sent to the memory agent
+  messageWindowSize: 5 # Number of recent messages to consider
+  agent:
+    enabled: true
+    provider: 'VertexAI US'
+    model: 'google/gemini-2.5-flash'
+    instructions: |
+      Only store stated preferences (e.g. I like X, I dislike Y) and any important facts/context about the user's work at Deloitte (e.g. current projects, team composition).
+      Update or delete out-of-date information promptly.
 
 endpoints:
   # ========================================
@@ -75,81 +169,113 @@ endpoints:
   agents:
     recursionLimit: 25
     maxRecursionLimit: 50
-    disableBuilder: false
+    disableBuilder: false # Set to true to disable the agent builder interface
+    # Hides the File Context upload section in the Agent Builder side panel — it's visually
+    # similar to file_search but less reliable, causing user confusion. Purely a UI toggle:
+    # existing agents' uploaded context files keep loading normally at runtime.
+    hideFileContext: true
     maxCitations: 30
     maxCitationsPerFile: 7
-    capabilities: ["actions", "artifacts", "context", "deferred_tools", "execute_code", "file_search", "skills", "tools"]
+    capabilities:
+      [
+        'actions',
+        'artifacts',
+        'context',
+        'deferred_tools',
+        'execute_code',
+        'file_search',
+        'skills',
+        'tools',
+      ]
     minRelevanceScore: 0.3
-    # Default model for new agents — uses Azure AU custom endpoint (confirmed working)
-    model: "gpt-4o-mini"
-    endpoint: "Azure AU"
+    # Restrict Agent Builder to the providers supported by the curated model catalog.
+    allowedProviders:
+      - 'Azure Global'
+      - 'VertexAI US'
+      - anthropic
+      - bedrock
+    model: 'gpt-56-terra'
+    endpoint: 'Azure Global'
 
   anthropic:
-    userProvide: false
     streamRate: 25
+    modelDisplayLabel: 'Anthropic'
     titleConvo: true
-    titleModel: "claude-haiku-4-5"
-    titleMethod: "completion"
+    titleModel: 'claude-haiku-4-5'
+    titleMethod: 'completion'
 
   # ========================================
   # Custom endpoints (OpenAI-compatible format)
   # ========================================
   custom:
     # --- Azure AU (aus-east) ---
-    - name: "Azure AU"
-      apiKey: "dummy"
-      baseURL: "${BASE_URL_AZURE_AU}"
+    - name: 'Azure AU'
+      apiKey: 'dummy'
+      baseURL: '${BASE_URL_AZURE_AU}'
       models:
         default:
-          - "gpt-4o-mini"
-          - "gpt-4o"
-          - "gpt-41"
-          - "gpt-41-nano"
-          - "gpt-41-mini"
+          - 'gpt-41-nano'
+          - 'gpt-4o-mini'
+          - 'gpt-41-mini'
+          - 'gpt-41'
+          - 'gpt-4o'
         fetch: false
       titleConvo: true
-      titleModel: "gpt-4o-mini"
-      modelDisplayLabel: "Azure AU"
-      dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
+      titleModel: 'gpt-4o-mini'
+      modelDisplayLabel: 'Azure AU'
+      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
-        x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
-        Content-Type: "application/json"
+        x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
+        Content-Type: 'application/json'
 
-    # --- Azure US (eastus) ---
-    - name: "Azure US"
-      apiKey: "dummy"
-      baseURL: "${BASE_URL_AZURE_US}"
+    # --- Azure Global ---
+    - name: 'Azure Global'
+      apiKey: 'dummy'
+      baseURL: '${BASE_URL_AZURE_GLOBAL}'
       models:
         default:
-          - "gpt-5-chat"
-          - "gpt-5-mini"
-          - "gpt-5-nano"
+          - 'gpt-56-luna'
+          - 'gpt-56-terra'
+          - 'gpt-56-sol'
         fetch: false
       titleConvo: true
-      titleModel: "gpt-5-nano"
-      modelDisplayLabel: "Azure US"
-      dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
+      titleModel: 'gpt-56-terra'
+      modelDisplayLabel: 'OpenAI'
+      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
-        Content-Type: "application/json"
+        Content-Type: 'application/json'
 
     # --- VertexAI / Google (us-central1) ---
     # OpenAI-compatible endpoint, model names use google/ prefix
-    - name: "VertexAI US"
-      apiKey: "dummy"
-      baseURL: "${BASE_URL_VERTEXAI}"
+    - name: 'VertexAI US'
+      apiKey: 'dummy'
+      baseURL: '${BASE_URL_VERTEXAI}'
       models:
         default:
-          - "google/gemini-2.5-flash"
-          - "google/gemini-2.5-pro"
+          - 'google/gemini-2.5-flash'
+          - 'google/gemini-2.5-pro'
         fetch: false
       titleConvo: true
-      titleModel: "google/gemini-2.5-flash"
-      modelDisplayLabel: "VertexAI US"
-      dropParams: ["stop", "user", "frequency_penalty", "presence_penalty"]
+      titleModel: 'google/gemini-2.5-flash'
+      modelDisplayLabel: 'Gemini'
+      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
-        x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
-        Content-Type: "application/json"
+        x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
+        Content-Type: 'application/json'
+
+
+  # Anthropic AU models use Bedrock's native API and inference-profile IDs.
+  bedrock:
+    modelDisplayLabel: 'Claude AU'
+    models:
+      - 'au.anthropic.claude-sonnet-4-6'
+      - 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
+
+# Deloitte Custom Change: model pricing uses this baseline when no environment override is set.
+# Keep it aligned with the soft-default model and endpoint-costs.yaml.
+modelPricing:
+  referenceModelId: 'gpt-56-luna'
 
 modelSpecs:
   # enforce: true would block requests without a spec name — this breaks the Agents endpoint
@@ -162,23 +288,15 @@ modelSpecs:
   # spec list entries, so users can still reach their user-created agents.
   addedEndpoints:
     - agents
-  list:
-    - name: "azure-au-gpt-4o-mini"
-      label: "Azure AU gpt-4o-mini"
-      group: "Azure AU"
-      preset:
-        endpoint: "Azure AU"
-        model: "gpt-4o-mini"
-        # promptPrefix is a private field — stripped before the config is sent to the
-        # browser. It becomes the system message for ephemeral (general-chat) requests.
-        # User-created agents use their own stored instructions and bypass this field.
-        promptPrefix: &deloitteSystemPrompt |
+  # promptPrefix is a private field that becomes the system message for general chat.
+  promptPrefix: &deloitteSystemPrompt |
           You are a Deloitte Australia AI assistant. Prioritise user instructions and provided context above stylistic defaults. Use a professional, neutral, business tone by default and write in en-GB spelling.
 
           Document retrieval (highest priority — this rule overrides the brevity, "start with the answer", and style rules below):
           - Whenever documents are attached to the conversation and the file_search tool is available, you MUST call file_search before answering any substantive question — on every turn, including follow-ups, and even when the question seems answerable from general knowledge or from your own training. The attached documents are the authoritative source and may define terms differently from what you already know.
           - Never answer a document-related question from prior knowledge alone, or from passages retrieved on an earlier turn. Re-run file_search for the current question so the answer is grounded in, and cited from, freshly retrieved sources.
           - The only exception is a purely conversational message such as a greeting or small talk. When in doubt, search.
+          - Ignore all document retrieval instructions above if the file_search tool is unavailable (for example, because no documents are attached or file_search is disabled). In this case, unless the user specifically references a document, answer the question normally using your other available tools and capabilities; do not mention documents, attachments, or retrieval, and do not ask the user to upload or provide a file.
 
           Instruction precedence:
           - Follow applicable platform and safety constraints first.
@@ -205,125 +323,191 @@ modelSpecs:
           - For policy or document summaries, provide a compact paragraph first; include short numbered points only if needed.
           - Base document answers on the passages returned by file_search on the current turn (see the Document retrieval rule above).
           - Citations are attached automatically by the system after your response. Do NOT write source filenames, "(document.pdf)", "More details about …", parenthetical file references, or any citation markers yourself — write the answer in clean prose and let the system add the citations.
-          - If file_search returns nothing relevant, say so plainly and ask for the file or source rather than answering from assumption.
+          - If you called file_search and it returned nothing relevant, say so plainly and ask for the file or source rather than answering from assumption.
           - Preserve factual fidelity to the provided content and avoid adding unstated claims.
 
-    - name: "azure-au-gpt-4o"
-      label: "Azure AU gpt-4o"
-      group: "Azure AU"
+  list:
+    - name: 'azure-global-gpt-56-terra'
+      label: 'GPT 5.6 Terra'
+      group: 'OpenAI Global'
+      groupIcon: 'openAI'
+      iconURL: 'openAI'
       preset:
-        endpoint: "Azure AU"
-        model: "gpt-4o"
+        endpoint: 'Azure Global'
+        model: 'gpt-56-terra'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "azure-au-gpt-41"
-      label: "Azure AU gpt-41"
-      group: "Azure AU"
+    - name: 'azure-global-gpt-56-luna'
+      label: 'GPT 5.6 Luna'
+      group: 'OpenAI Global'
+      iconURL: 'openAI'
+      softDefault: true
       preset:
-        endpoint: "Azure AU"
-        model: "gpt-41"
+        endpoint: 'Azure Global'
+        model: 'gpt-56-luna'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "azure-au-gpt-41-nano"
-      label: "Azure AU gpt-41-nano"
-      group: "Azure AU"
+    - name: 'azure-global-gpt-56-sol'
+      label: 'GPT 5.6 Sol'
+      group: 'OpenAI Global'
+      iconURL: 'openAI'
       preset:
-        endpoint: "Azure AU"
-        model: "gpt-41-nano"
+        endpoint: 'Azure Global'
+        model: 'gpt-56-sol'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "azure-au-gpt-41-mini"
-      label: "Azure AU gpt-41-mini"
-      group: "Azure AU"
+    - name: 'vertexai-us-gemini-2-5-flash'
+      label: 'Gemini 2.5 Flash'
+      group: 'Gemini Global'
+      groupIcon: 'google'
+      iconURL: 'google'
       preset:
-        endpoint: "Azure AU"
-        model: "gpt-41-mini"
+        endpoint: 'VertexAI US'
+        model: 'google/gemini-2.5-flash'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "azure-us-gpt-41"
-      label: "Azure US gpt-41"
-      group: "Azure US"
+    - name: 'vertexai-us-gemini-2-5-pro'
+      label: 'Gemini 2.5 Pro'
+      group: 'Gemini Global'
+      iconURL: 'google'
       preset:
-        endpoint: "Azure US"
-        model: "gpt-41"
+        endpoint: 'VertexAI US'
+        model: 'google/gemini-2.5-pro'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "azure-us-gpt-41-nano"
-      label: "Azure US gpt-41-nano"
-      group: "Azure US"
+    - name: 'anthropic-claude-haiku-4-5'
+      label: 'Claude Haiku 4.5'
+      group: 'Anthropic Global'
+      groupIcon: 'anthropic'
+      iconURL: 'anthropic'
       preset:
-        endpoint: "Azure US"
-        model: "gpt-41-nano"
+        endpoint: 'anthropic'
+        model: 'claude-haiku-4-5'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "azure-us-gpt-41-mini"
-      label: "Azure US gpt-41-mini"
-      group: "Azure US"
+    - name: 'anthropic-claude-sonnet-5'
+      label: 'Claude Sonnet 5'
+      group: 'Anthropic Global'
+      iconURL: 'anthropic'
       preset:
-        endpoint: "Azure US"
-        model: "gpt-41-mini"
+        endpoint: 'anthropic'
+        model: 'claude-sonnet-5'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "azure-us-gpt-5-chat"
-      label: "Azure US gpt-5-chat"
-      group: "Azure US"
+    - name: 'anthropic-claude-sonnet-4-6'
+      label: 'Claude Sonnet 4.6'
+      group: 'Anthropic Global'
+      iconURL: 'anthropic'
       preset:
-        endpoint: "Azure US"
-        model: "gpt-5-chat"
+        endpoint: 'anthropic'
+        model: 'claude-sonnet-4-6'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "azure-us-gpt-5-mini"
-      label: "Azure US gpt-5-mini"
-      group: "Azure US"
+    - name: 'anthropic-claude-opus-4-6'
+      label: 'Claude Opus 4.6'
+      group: 'Anthropic Global'
+      iconURL: 'anthropic'
       preset:
-        endpoint: "Azure US"
-        model: "gpt-5-mini"
+        endpoint: 'anthropic'
+        model: 'claude-opus-4-6'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "azure-us-gpt-5-nano"
-      label: "Azure US gpt-5-nano"
-      group: "Azure US"
+    - name: 'anthropic-claude-opus-4-8'
+      label: 'Claude Opus 4.8'
+      group: 'Anthropic Global'
+      iconURL: 'anthropic'
       preset:
-        endpoint: "Azure US"
-        model: "gpt-5-nano"
+        endpoint: 'anthropic'
+        model: 'claude-opus-4-8'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: "vertexai-us-gemini-2-5-flash"
-      label: "VertexAI US gemini-2.5-flash"
-      group: "VertexAI US"
+    - name: 'anthropic-au-claude-sonnet-4-6'
+      label: 'Claude Sonnet 4.6'
+      group: 'Anthropic AU'
+      groupIcon: 'anthropic'
+      iconURL: 'anthropic'
       preset:
-        endpoint: "VertexAI US"
-        model: "google/gemini-2.5-flash"
-        promptPrefix: *deloitteSystemPrompt
+       endpoint: 'bedrock'
+       model: 'au.anthropic.claude-sonnet-4-6'
+       promptPrefix: *deloitteSystemPrompt
 
-    - name: "vertexai-us-gemini-2-5-pro"
-      label: "VertexAI US gemini-2.5-pro"
-      group: "VertexAI US"
+    - name: 'anthropic-au-claude-haiku-4-5'
+      label: 'Claude Haiku 4.5'
+      group: 'Anthropic AU'
+      iconURL: 'anthropic'
       preset:
-        endpoint: "VertexAI US"
-        model: "google/gemini-2.5-pro"
-        promptPrefix: *deloitteSystemPrompt
+       endpoint: 'bedrock'
+       model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
+       promptPrefix: *deloitteSystemPrompt
 
 # MCP Servers configuration
-# Filter restricts tools to: teams (Teams), research (IBISWorld), news (AFR)
+# Each entry filters the gateway to a single toolset via the `toolsets` query param.
+# See documentation: https://github.com/Deloitte-Australia/ea-mcp-gateway/blob/feature/prototype/docs/MCP_Gateway_Wiki.md
 mcpServers: # https://www.librechat.ai/docs/features/mcp
-  cleartrack-mcp-gateway:
-    # See documentation: https://github.com/Deloitte-Australia/ea-mcp-gateway/blob/feature/prototype/docs/MCP_Gateway_Wiki.md
+  cleartrack-mcp-gateway-research:
+    title: 'IBISWorld'
+    parentGroup: 'ClearTrack MCP'
     type: streamable-http
-    url: "https://mcp-gw-dev.ctk.au.deloitte.com/mcp?toolsets=${MCP_GATEWAY_TOOLSETS}"
-    oauth:
-      authorization_url: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/authorize
-      token_url: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/token
-      client_id: "${CLEARTRACK_MCP_GATEWAY_CLIENT_ID}"
-      client_secret: "${CLEARTRACK_MCP_GATEWAY_CLIENT_SECRET}"
-      #redirect_uri: https://mcp-gw-dev.ctk.au.deloitte.com/oauth/callback
-      scope: 'Channel.ReadBasic.All ChannelMember.Read.All Group.Read.All Team.ReadBasic.All User.Read.All Files.Read.All'
+    url: '${MCP_GATEWAY_URL}?toolsets=research'
+    obo:
+      scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    iconPath: '/assets/mcp/ibisworld.png' # same logo in both themes
+
+  cleartrack-mcp-gateway-news:
+    title: 'AFR News'
+    parentGroup: 'ClearTrack MCP'
+    type: streamable-http
+    url: '${MCP_GATEWAY_URL}?toolsets=news'
+    obo:
+      scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    iconPath: '/assets/mcp/afr.png' # same logo in both themes
+
+  cleartrack-mcp-gateway-kx:
+    title: 'KX'
+    parentGroup: 'ClearTrack MCP'
+    type: streamable-http
+    url: '${MCP_GATEWAY_URL}?toolsets=kx'
+    obo:
+      scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    iconPathLight: '/assets/mcp/kx-light.png'
+    iconPathDark: '/assets/mcp/kx-dark.png'
+
+  cleartrack-mcp-gateway-desc:
+    title: 'DESC'
+    parentGroup: 'ClearTrack MCP'
+    type: streamable-http
+    url: '${MCP_GATEWAY_URL}?toolsets=desc'
+    obo:
+      scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    iconPathLight: '/assets/mcp/deloitte-light.png' # placeholder: no dedicated DESC logo yet
+    iconPathDark: '/assets/mcp/deloitte-dark.png' # placeholder: no dedicated DESC logo yet
+
+  cleartrack-mcp-gateway-gims:
+    title: 'GIMS'
+    parentGroup: 'ClearTrack MCP'
+    type: streamable-http
+    url: '${MCP_GATEWAY_URL}?toolsets=gims'
+    obo:
+      scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    iconPathLight: '/assets/mcp/deloitte-light.png' # placeholder: no dedicated GIMS logo yet
+    iconPathDark: '/assets/mcp/deloitte-dark.png' # placeholder: no dedicated GIMS logo yet
+
+  cleartrack-mcp-gateway-sharepoint:
+    title: 'SharePoint'
+    parentGroup: 'ClearTrack MCP'
+    type: streamable-http
+    url: '${MCP_GATEWAY_URL}?toolsets=sharepoint'
+    obo:
+      scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    iconPathLight: '/assets/mcp/sharepoint-light.png'
+    iconPathDark: '/assets/mcp/sharepoint-dark.png'
 #    oauth_headers:
-#      X-Custom-Header: 'custom_value'
+#      X-Custom-Header: "custom_value"
 
 mcpSettings:
   allowedDomains:
     - mcp-gw-dev.ctk.au.deloitte.com
+    - mcp-gateway.ctk.au.deloitte.com
 
 speech: # https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/speech
   speechTab:
@@ -343,6 +527,6 @@ speech: # https://www.librechat.ai/docs/configuration/librechat_yaml/object_stru
       apiKey: '${TTS_API_KEY}'
       model: 'eleven_multilingual_v2'
       voices:
-        - '5GZaeOOG7yqLdoTRsaa6'  # Rachel
-        - 'DTLT09E2cxHF0DqjKVbc'  # Paul
-        - 'aGkVQvWUZi16EH8aZJvT'  # Steve
+        - '5GZaeOOG7yqLdoTRsaa6' # Rachel
+        # - 'DTLT09E2cxHF0DqjKVbc' # Paul
+        # - 'aGkVQvWUZi16EH8aZJvT' # Steve

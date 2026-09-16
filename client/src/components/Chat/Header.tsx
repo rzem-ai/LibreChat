@@ -2,9 +2,11 @@ import { memo, useMemo } from 'react';
 import { useRecoilValue } from 'recoil';
 import { useMediaQuery } from '@librechat/client';
 import { getConfigDefaults, PermissionTypes, Permissions } from 'librechat-data-provider';
+import type { TConversation } from 'librechat-data-provider';
 import ModelSelector from './Menus/Endpoints/ModelSelector';
 import { useGetStartupConfig } from '~/data-provider';
 import ExportAndShareMenu from './ExportAndShareMenu';
+import ConversationTitle from './ConversationTitle';
 import { OpenSidebar, PresetsMenu } from './Menus';
 import BookmarkMenu from './Menus/BookmarkMenu';
 import { TemporaryChat } from './TemporaryChat';
@@ -15,7 +17,7 @@ import store from '~/store';
 
 const defaultInterface = getConfigDefaults().interface;
 
-function Header() {
+function Header({ conversation = null }: { conversation?: TConversation | null }) {
   const { data: startupConfig } = useGetStartupConfig();
   const navVisible = useRecoilValue(store.sidebarExpanded);
 
@@ -23,6 +25,7 @@ function Header() {
     () => startupConfig?.interface ?? defaultInterface,
     [startupConfig],
   );
+  const customFlags = interfaceConfig.customDeloitteFeatureFlags;
 
   const hasAccessToBookmarks = useHasAccess({
     permissionType: PermissionTypes.BOOKMARKS,
@@ -39,10 +42,21 @@ function Header() {
     permission: Permissions.USE,
   });
 
+  const hasAccessToSharedLinks = useHasAccess({
+    permissionType: PermissionTypes.SHARED_LINKS,
+    permission: Permissions.CREATE,
+  });
+
+  const showConversationTitle = customFlags?.showConversationTitleInHeader === true;
+  const isExportEnabled = customFlags?.exportChat === true;
+  const isSharedButtonEnabled =
+    (startupConfig?.sharedLinksEnabled ?? false) && hasAccessToSharedLinks;
+  const showExportAndShareMenu = isExportEnabled || isSharedButtonEnabled;
+
   const isSmallScreen = useMediaQuery('(max-width: 768px)');
 
   return (
-    <div className="via-presentation/70 md:from-presentation/80 md:via-presentation/50 2xl:from-presentation/0 absolute top-0 z-10 flex h-[52px] w-full items-center justify-between bg-gradient-to-b from-presentation to-transparent p-2 font-semibold text-text-primary 2xl:via-transparent">
+    <div className="absolute top-0 z-10 flex h-[52px] w-full items-center justify-between bg-gradient-to-b from-presentation via-presentation/70 to-transparent p-2 font-semibold text-text-primary md:from-presentation/80 md:via-presentation/50 2xl:from-presentation/0 2xl:via-transparent">
       <div className="hide-scrollbar flex w-full items-center justify-between gap-2 overflow-x-auto">
         <div className="mx-1 flex items-center">
           {isSmallScreen ? <OpenSidebar /> : null}
@@ -53,15 +67,19 @@ function Header() {
                 !isSmallScreen ? 'transition-all duration-200 ease-in-out' : '',
               )}
             >
+              {showConversationTitle && <ConversationTitle conversation={conversation} />}
               <ModelSelector startupConfig={startupConfig} />
               {interfaceConfig.presets === true && interfaceConfig.modelSelect && <PresetsMenu />}
               {hasAccessToBookmarks === true && <BookmarkMenu />}
               {hasAccessToMultiConvo === true && <AddMultiConvo />}
               {isSmallScreen && (
                 <>
-                  <ExportAndShareMenu
-                    isSharedButtonEnabled={startupConfig?.sharedLinksEnabled ?? false}
-                  />
+                  {showExportAndShareMenu && (
+                    <ExportAndShareMenu
+                      isExportEnabled={isExportEnabled}
+                      isSharedButtonEnabled={isSharedButtonEnabled}
+                    />
+                  )}
                   {hasAccessToTemporaryChat === true && <TemporaryChat />}
                 </>
               )}
@@ -71,9 +89,12 @@ function Header() {
 
         {!isSmallScreen && (
           <div className="flex items-center gap-2">
-            <ExportAndShareMenu
-              isSharedButtonEnabled={startupConfig?.sharedLinksEnabled ?? false}
-            />
+            {showExportAndShareMenu && (
+              <ExportAndShareMenu
+                isExportEnabled={isExportEnabled}
+                isSharedButtonEnabled={isSharedButtonEnabled}
+              />
+            )}
             {hasAccessToTemporaryChat === true && <TemporaryChat />}
           </div>
         )}
