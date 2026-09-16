@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import './driver-theme.css';
@@ -42,6 +42,22 @@ import { useLocalize } from '~/hooks';
 export default function useLandingPageTour(onComplete?: () => void) {
   const localize = useLocalize();
 
+  // Retain the active Driver.js instance so it can be destroyed on unmount.
+  // Driver.js manipulates the DOM directly (body-level overlay + popover), so
+  // React unmounting the provider tree (e.g. on logout) does NOT remove those
+  // nodes automatically — we must call destroy() ourselves.
+  const tourRef = useRef<ReturnType<typeof driver> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      // Unmount cleanup: destroy any active tour so the overlay/popover are
+      // removed before the login page renders. tourRef is nulled after each
+      // destroy (both here and in onDestroyStarted) to prevent double-destroy.
+      tourRef.current?.destroy();
+      tourRef.current = null;
+    };
+  }, []);
+
   const startTour = useCallback(() => {
     let completedFromLastStepNext = false;
     const tourDriver = driver({
@@ -59,6 +75,8 @@ export default function useLandingPageTour(onComplete?: () => void) {
       },
       onDestroyStarted: () => {
         tourDriver.destroy();
+        // Null the ref so the useEffect cleanup won't attempt a second destroy.
+        tourRef.current = null;
         if (completedFromLastStepNext) {
           onComplete?.();
         }
@@ -327,6 +345,8 @@ export default function useLandingPageTour(onComplete?: () => void) {
       ],
     });
 
+    // Store the instance so the useEffect cleanup can destroy it on unmount.
+    tourRef.current = tourDriver;
     tourDriver.drive();
   }, [localize, onComplete]);
 

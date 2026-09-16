@@ -1,10 +1,18 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useSetRecoilState } from 'recoil';
 import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import useTutorialPrompt from '~/hooks/Learning/useTutorialPrompt';
 import useLandingPageTour from './useLandingPageTour';
 import { useActivePanel } from '~/Providers';
-import useTutorialPrompt from '~/hooks/Learning/useTutorialPrompt';
 import store from '~/store';
 
 const LANDING_PAGE_COURSE_ID = 'landing-page-buttons';
@@ -37,6 +45,20 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
 
   const { startTour } = useLandingPageTour(() => setCompletedCourseId(LANDING_PAGE_COURSE_ID));
 
+  // Track the pending delayed-start timeout so it can be cancelled on unmount.
+  // Without this, a fast logout within the delay window would fire startTour()
+  // after the provider (and the DOM it targets) has already torn down.
+  const startTimeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (startTimeoutRef.current !== null) {
+        window.clearTimeout(startTimeoutRef.current);
+        startTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   const startLandingPageTour = useCallback(() => {
     markPromptSeen();
     // The tour highlights elements that only exist on the main chat route
@@ -48,8 +70,11 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
     if (isSmallScreen) {
       setSidebarExpanded(false);
     }
-    window.setTimeout(
-      () => startTour(),
+    startTimeoutRef.current = window.setTimeout(
+      () => {
+        startTimeoutRef.current = null;
+        startTour();
+      },
       isSmallScreen ? MOBILE_START_DELAY_MS : DESKTOP_START_DELAY_MS,
     );
   }, [markPromptSeen, navigate, setActive, setSidebarExpanded, startTour]);

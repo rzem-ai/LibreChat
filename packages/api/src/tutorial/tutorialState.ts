@@ -17,6 +17,17 @@ const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 const RATING_MIN = 1;
 const RATING_MAX = 5;
 
+/**
+ * Maximum byte-length for a single rating key (course ID).
+ *
+ * The entry-count cap (MAX_TUTORIAL_RATINGS = 50) bounds the number of keys
+ * but not their size — an authenticated caller could otherwise submit very
+ * long IDs and bloat the user document. Real course IDs are short slugs
+ * (e.g. "landing-page-buttons" = 20 chars); 64 chars gives ample headroom.
+ * Mirrors the MAX_KEY_LENGTH = 64 pattern used in skillStates.ts.
+ */
+export const MAX_RATING_KEY_LENGTH = 64;
+
 export interface TutorialStateUpdate {
   tutorialPromptSeen?: boolean;
   tutorialRatings?: Record<string, number>;
@@ -66,6 +77,13 @@ export function validateTutorialStateUpdate(body: unknown): TutorialStateValidat
       // Enforce cap on total number of ratings
       if (Object.keys(sanitised).length >= MAX_TUTORIAL_RATINGS) {
         return { error: `tutorialRatings cannot exceed ${MAX_TUTORIAL_RATINGS} entries` };
+      }
+
+      // Reject empty or oversized keys — bounds per-entry storage so an
+      // authenticated caller cannot bloat the user document by submitting
+      // arbitrarily large course IDs (document-size limit is 16 MB BSON).
+      if (key.length === 0 || key.length > MAX_RATING_KEY_LENGTH) {
+        return { error: `Invalid rating key: "${key}"` };
       }
 
       // Reject MongoDB-illegal key characters: leading $ (operator injection)

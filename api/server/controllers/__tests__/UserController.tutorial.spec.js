@@ -23,13 +23,18 @@ jest.mock('@librechat/api', () => {
   // tokens.ts references EModelEndpoint at module-eval time and crashes because
   // librechat-data-provider is mocked without EModelEndpoint here.
   // This matches the pattern used by deleteUser.spec.js and other sibling tests.
-  const { validateTutorialStateUpdate, toTutorialStateResponse, MAX_TUTORIAL_RATINGS } =
-    jest.requireActual('../../../../packages/api/src/tutorial/tutorialState');
+  const {
+    validateTutorialStateUpdate,
+    toTutorialStateResponse,
+    MAX_TUTORIAL_RATINGS,
+    MAX_RATING_KEY_LENGTH,
+  } = jest.requireActual('../../../../packages/api/src/tutorial/tutorialState');
 
   return {
     validateTutorialStateUpdate,
     toTutorialStateResponse,
     MAX_TUTORIAL_RATINGS,
+    MAX_RATING_KEY_LENGTH,
     // Side-effectful / server-runtime exports the controller imports but tests don't exercise:
     MCPOAuthHandler: {},
     MCPTokenStorage: {},
@@ -90,7 +95,7 @@ const {
   updateTutorialStateController,
 } = require('~/server/controllers/UserController');
 
-const { MAX_TUTORIAL_RATINGS } = require('@librechat/api');
+const { MAX_TUTORIAL_RATINGS, MAX_RATING_KEY_LENGTH } = require('@librechat/api');
 
 function createResponse() {
   const res = {};
@@ -243,6 +248,33 @@ describe('UserController tutorial state', () => {
         message: 'tutorialRatings update conflict, please retry',
       });
       expect(mockUpdateUser).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when a rating key exceeds MAX_RATING_KEY_LENGTH characters', async () => {
+      // validateTutorialStateUpdate rejects the key before reaching mergeTutorialRatings.
+      const oversizedKey = 'x'.repeat(MAX_RATING_KEY_LENGTH + 1);
+      const req = createRequest({ body: { tutorialRatings: { [oversizedKey]: 3 } } });
+      const res = createResponse();
+
+      await updateTutorialStateController(req, res);
+
+      expect(mockMergeTutorialRatings).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it('accepts a rating key exactly at MAX_RATING_KEY_LENGTH characters', async () => {
+      const maxKey = 'x'.repeat(MAX_RATING_KEY_LENGTH);
+      mockMergeTutorialRatings.mockResolvedValue({
+        user: { tutorialPromptSeen: false, tutorialRatings: { [maxKey]: 3 } },
+        capExceeded: false,
+      });
+      const req = createRequest({ body: { tutorialRatings: { [maxKey]: 3 } } });
+      const res = createResponse();
+
+      await updateTutorialStateController(req, res);
+
+      expect(mockMergeTutorialRatings).toHaveBeenCalledWith('user-1', { [maxKey]: 3 });
+      expect(res.status).toHaveBeenCalledWith(200);
     });
 
     it('succeeds when updating an existing key does not increase the stored count', async () => {
