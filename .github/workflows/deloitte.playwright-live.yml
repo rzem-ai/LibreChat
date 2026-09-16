@@ -42,7 +42,7 @@ jobs:
     timeout-minutes: 60
 
     env:
-      E2E_BASE_URL: ${{ vars.E2E_BASE_URL }}
+      E2E_BASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.base_url || vars.E2E_BASE_URL }}
       # Drive the runner's preinstalled Edge; the bundled Chromium download
       # stalls behind TLS inspection on this build server.
       E2E_CHROMIUM_CHANNEL: msedge
