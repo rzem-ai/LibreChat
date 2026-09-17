@@ -97,11 +97,13 @@ function redactUrlForLog(url) {
  * changes between the check and the request (rebinding) could still land on
  * a private address. `createSSRFSafeAgents` re-validates at connect time.
  *
- * `proxy: false` is required alongside `httpAgent`/`httpsAgent`: if
- * `codeFileDownloadAxios` picked up `process.env.proxy` (via
- * `createAxiosInstance`), axios would connect to that proxy instead of the
- * target, and the *proxy* — not our SSRF-safe agents — would resolve
- * `currentUrl`'s hostname, bypassing the connect-time recheck entirely.
+ * `proxy` is pinned to whatever `codeFileDownloadAxios` was explicitly
+ * configured with (`process.env.proxy` via `createAxiosInstance`), or `false`
+ * otherwise: axios silently auto-detects `HTTP_PROXY`/`HTTPS_PROXY`-style env
+ * vars when `proxy` is left unset, and in that case the *proxy* — not our
+ * SSRF-safe agents — would resolve `currentUrl`'s hostname, bypassing the
+ * connect-time recheck entirely. Deployments that deliberately configure
+ * `process.env.proxy` for egress still get routed through it.
  * @param {string} url
  * @param {string[] | null | undefined} allowedDomains
  * @param {string[] | null | undefined} allowedAddresses
@@ -117,7 +119,7 @@ async function fetchAllowedCodeFileStream(url, allowedDomains, allowedAddresses)
       responseType: 'stream',
       timeout: CODE_FILE_DOWNLOAD_TIMEOUT_MS,
       maxRedirects: 0,
-      proxy: false,
+      proxy: codeFileDownloadAxios.defaults.proxy || false,
       httpAgent,
       httpsAgent,
       validateStatus: (status) =>

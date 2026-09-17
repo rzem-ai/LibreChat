@@ -101,9 +101,11 @@ jest.mock('./GraphTokenService', () => ({
 
 jest.mock('axios', () => {
   const get = jest.fn();
-  return { create: jest.fn(() => ({ get })), __mockGet: get };
+  const defaults = {};
+  return { create: jest.fn(() => ({ get, defaults })), __mockGet: get, __mockDefaults: defaults };
 });
 const mockCodeFileDownloadGet = require('axios').__mockGet;
+const mockCodeFileDownloadDefaults = require('axios').__mockDefaults;
 
 jest.mock('~/server/services/Files/Code/crud', () => ({
   uploadCodeEnvFile: jest.fn(),
@@ -118,6 +120,7 @@ describe('tests for the new helper functions used by the MCP connection status e
 
   beforeEach(() => {
     jest.clearAllMocks();
+    delete mockCodeFileDownloadDefaults.proxy;
     jest.spyOn(MCPOAuthHandler, 'generateFlowId');
     mockGetTenantId.mockReturnValue(undefined);
     mockIsMCPDomainAllowed.mockResolvedValue(true);
@@ -2037,6 +2040,7 @@ describe('User parameter passing tests', () => {
         expect.objectContaining({
           responseType: 'stream',
           maxRedirects: 0,
+          proxy: false,
           validateStatus: expect.any(Function),
         }),
       );
@@ -2059,6 +2063,69 @@ describe('User parameter passing tests', () => {
           kind: 'user',
         },
       ]);
+    });
+
+    it('should preserve a deliberately configured egress proxy when downloading a codeFile', async () => {
+      const mockUser = { id: 'code-file-user-proxy', role: 'USER' };
+      const mockReq = { user: mockUser };
+      const mockRes = { write: jest.fn(), flush: jest.fn(), req: mockReq };
+      const { getRoleByName } = require('~/models');
+      getRoleByName.mockResolvedValue({
+        permissions: {
+          [PermissionTypes.MCP_SERVERS]: {
+            [Permissions.USE]: true,
+          },
+        },
+      });
+
+      const configuredProxy = { host: 'corp-proxy.internal', port: 8080, protocol: 'http' };
+      mockCodeFileDownloadDefaults.proxy = configuredProxy;
+
+      const artifacts = {
+        codeFile: {
+          name: 'report.pdf',
+          mimeType: 'application/pdf',
+          url: 'https://contoso.sharepoint.com/_layouts/download.aspx?sig=abc',
+        },
+      };
+      mockGetMCPManager.mockReturnValue({
+        callTool: jest.fn().mockResolvedValue(['downloaded report.pdf', artifacts]),
+      });
+      mockCodeFileDownloadGet.mockResolvedValue({ status: 200, data: 'fake-stream' });
+      mockUploadCodeEnvFile.mockResolvedValue({
+        storage_session_id: 'session-123',
+        file_id: 'file-456',
+      });
+
+      const mcpTool = await createMCPTool({
+        res: mockRes,
+        user: mockUser,
+        toolKey: `sp_download_file${D}sharepoint`,
+        provider: 'openai',
+        userMCPAuthMap: {},
+        availableTools: {
+          [`sp_download_file${D}sharepoint`]: {
+            function: {
+              description: 'Download a SharePoint file',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+        },
+      });
+
+      await mcpTool.invoke(
+        {},
+        {
+          configurable: { user: mockUser },
+          metadata: { provider: 'openai', thread_id: 'thread-1', run_id: 'run-1' },
+          toolCall: {},
+        },
+      );
+
+      expect(mockCodeFileDownloadGet).toHaveBeenCalledWith(
+        'https://contoso.sharepoint.com/_layouts/download.aspx?sig=abc',
+        expect.objectContaining({ proxy: configuredProxy }),
+      );
     });
 
     it('should drop a codeFile artifact and warn when Code Interpreter is not enabled for the agent', async () => {
