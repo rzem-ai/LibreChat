@@ -396,6 +396,7 @@ function FavoritesList({
             {showAgentMarketplace && (
               <div
                 ref={marketplaceRef}
+                id="nav-agents-marketplace-button"
                 role="button"
                 tabIndex={0}
                 aria-label={localize('com_agents_marketplace')}

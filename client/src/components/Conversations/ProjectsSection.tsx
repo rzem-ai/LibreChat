@@ -494,8 +494,7 @@ const ProjectsSection = ({ toggleNav, isAuthenticated }: ProjectsSectionProps) =
   }
 
   return (
-    <div data-testid="nav-projects-section" className="flex flex-col px-3 text-sm">
-      {/* Deloitte Custom Change: data-testid added as a stable anchor for the guided tour spotlight */}
+    <div id="nav-projects-section" className="flex flex-col px-3 text-sm">
       <div className="flex h-8 w-full items-center gap-0.5 pr-2">
         <button
           onClick={() => {

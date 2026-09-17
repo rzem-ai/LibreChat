@@ -540,14 +540,14 @@ export function useShortcutActions(): ShortcutAction[] {
   }, [setSidebarExpanded]);
 
   const handleOpenModelSelector = useCallback(
-    () => clickElement('[data-testid="model-selector-button"]'),
+    () => clickElement('#model-selector-button'),
     [],
   );
 
   const handleFocusSearch = useCallback(() => {
     const focusSearchInput = () => {
       const input = document.querySelector<HTMLInputElement>(
-        'input[data-testid="nav-search-input"]',
+        '#nav-search-input',
       );
       if (!input) {
         return false;
@@ -557,7 +557,7 @@ export function useShortcutActions(): ShortcutAction[] {
     };
 
     const panelButton = document.querySelector<HTMLButtonElement>(
-      '[data-testid="nav-panel-conversations"]',
+      '#nav-panel-conversations',
     );
     let switchedPanel = false;
     if (
@@ -667,7 +667,7 @@ export function useShortcutActions(): ShortcutAction[] {
   }, []);
 
   const handleOpenSettings = useCallback(() => {
-    const btn = document.querySelector<HTMLElement>('[data-testid="nav-user"]');
+    const btn = document.querySelector<HTMLElement>('#nav-user');
     if (!btn || isUnavailableElement(btn)) {
       return false;
     }
@@ -781,9 +781,7 @@ export function useShortcutActions(): ShortcutAction[] {
   const handleOpenPanel = useCallback(
     (panelId: string) => {
       const activatePanel = () => {
-        const btn = document.querySelector<HTMLButtonElement>(
-          `[data-testid="nav-panel-${panelId}"]`,
-        );
+        const btn = document.querySelector<HTMLButtonElement>(`#nav-panel-${panelId}`);
         if (!btn || isUnavailableElement(btn)) {
           return false;
         }
@@ -794,7 +792,7 @@ export function useShortcutActions(): ShortcutAction[] {
         return false;
       };
 
-      const btn = document.querySelector<HTMLButtonElement>(`[data-testid="nav-panel-${panelId}"]`);
+      const btn = document.querySelector<HTMLButtonElement>(`#nav-panel-${panelId}`);
       if (!btn || isUnavailableElement(btn)) {
         return false;
       }

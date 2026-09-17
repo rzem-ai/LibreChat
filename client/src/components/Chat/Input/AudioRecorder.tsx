@@ -109,7 +109,6 @@ export default memo(function AudioRecorder({
       render={
         <button
           id="audio-recorder"
-          // Deloitte Custom Change: data-testid added as a stable anchor for the guided tour spotlight
           data-testid="audio-recorder-button"
           type="button"
           aria-label={localize('com_ui_use_micrphone')}

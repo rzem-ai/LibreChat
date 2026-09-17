@@ -10,34 +10,33 @@ import '../driver-theme.css';
  * make each step tolerant of elements that are conditionally rendered (permissions,
  * feature flags, viewport) or that need a moment to mount after a panel switch.
  *
- * Step order (27 steps, voice input removed):
+ * Step order (26 steps):
  *   1  Welcome to MyAssist
  *   2  New Chat
- *   3  Model Selector          (AU hosting note added)
- *   4  Agent Marketplace       (moved up — choose a pre-configured agent)
- *   5  Message Box             (moved up — core interaction)
- *   6  Attach Files            (moved up — dropdown explainer)
- *   7  Run Code                (document manipulation added)
- *   8  Skills toolbar          (updated to agent instructions)
- *   9  Artifacts
- *   10 More Toggles
- *   11 Send
- *   12 Compare Chats
- *   13 Bookmark
- *   14 Sidebar Toggle
- *   15 Conversations
- *   16 Agent Builder
- *   17 Skills nav              (updated to agent instructions)
- *   18 Prompts
- *   19 Memories
- *   20 Bookmarks nav
- *   21 Files
- *   22 Parameters
- *   23 MCP Connectors          (business-friendly description)
- *   24 Learning Hub
- *   25 Search Conversations
- *   26 Projects
- *   27 Account Menu
+ *   3  Model Selector
+ *   4  Message Box
+ *   5  Attach Files
+ *   6  Run Code
+ *   7  Skills toolbar
+ *   8  Artifacts
+ *   9  Connectors
+ *   10 Send
+ *   11 Sidebar Toggle
+ *   12 Conversations
+ *   13 Search Conversations
+ *   14 Projects
+ *   15 Agent Builder
+ *   16 Skill Library
+ *   17 Prompt Library
+ *   18 Memories
+ *   19 Bookmarks
+ *   20 Files
+ *   21 Parameters
+ *   22 Connectors List
+ *   23 Agent Marketplace
+ *   24 Switch Back to a Model
+ *   25 Learning Hub
+ *   26 Account Menu
  */
 export default function useGettingStartedTour(onComplete?: () => void) {
   // Retain the active Driver.js instance so it can be destroyed on unmount.
@@ -80,9 +79,8 @@ export default function useGettingStartedTour(onComplete?: () => void) {
         }
       },
       steps: [
-        // ── 1. Welcome to MyAssist ───────────────────────────────────────────
         {
-          element: "[data-testid='new-chat-button']",
+          element: '#new-chat-button',
           popover: {
             title: 'Welcome to MyAssist',
             description:
@@ -90,10 +88,8 @@ export default function useGettingStartedTour(onComplete?: () => void) {
             side: 'right',
           },
         },
-
-        // ── 2. New Chat ──────────────────────────────────────────────────────
         {
-          element: "[data-testid='new-chat-button']",
+          element: '#new-chat-button',
           popover: {
             title: 'New Chat',
             description:
@@ -101,30 +97,15 @@ export default function useGettingStartedTour(onComplete?: () => void) {
             side: 'right',
           },
         },
-
-        // ── 3. Model Selector ────────────────────────────────────────────────
         {
-          element: "[data-testid='model-selector-button']",
+          element: '#model-selector-button',
           popover: {
             title: 'Model',
             description:
-              'Pick which AI model answers your messages. Different models are better at different tasks — some are faster, some handle longer documents, some are better at reasoning.<br/><br/><strong>Note: not all models are hosted in Australia — check with your administrator if data residency is a concern.</strong>',
+              'Pick which model or agent answers your messages. Different options are better at different tasks — some are faster, some handle longer documents, and some are better at reasoning.<br/><br/><strong>If you are not sure where to start, choose a model provider with "AU" in the title.</strong>',
             side: 'bottom',
           },
         },
-
-        // ── 4. Agent Marketplace ─────────────────────────────────────────────
-        {
-          element: "[data-testid='nav-agents-marketplace-button']",
-          popover: {
-            title: 'Agent Marketplace',
-            description:
-              'Browse agents built for specific tasks and select the one that best fits what you need — no setup required.',
-            side: 'right',
-          },
-        },
-
-        // ── 5. Message Box ───────────────────────────────────────────────────
         {
           element: "[data-testid='text-input']",
           popover: {
@@ -134,8 +115,6 @@ export default function useGettingStartedTour(onComplete?: () => void) {
             side: 'top',
           },
         },
-
-        // ── 6. Attach Files ──────────────────────────────────────────────────
         {
           element: '#attach-file-menu-button',
           popover: {
@@ -145,32 +124,26 @@ export default function useGettingStartedTour(onComplete?: () => void) {
             side: 'top',
           },
         },
-
-        // ── 7. Run Code ──────────────────────────────────────────────────────
         {
-          element: "[data-testid='toolbar-toggle-code-interpreter']",
+          element: '#toolbar-toggle-code-interpreter',
           popover: {
             title: 'Run Code',
             description:
-              'Lets the model write and execute real code (Python, JS, and more) to solve a problem — great for calculations, data processing, document transformation, or generating a chart.',
+              'Gives MyAssist a secure working area to analyse data, work through calculations, transform files, and produce charts or tables for you behind the scenes.',
             side: 'top',
           },
         },
-
-        // ── 8. Skills (toolbar) ──────────────────────────────────────────────
         {
-          element: "[data-testid='toolbar-toggle-skills']",
+          element: '#toolbar-toggle-skills',
           popover: {
             title: 'Skills',
             description:
-              'Attaches agent instructions to this message — use it to define how the model should behave or what it should know for this task.',
+              'Skills are instruction files which give the AI access to repeatable patterns. If a skill is enabled, the AI will auto-select it when you send a relevant query.<br/><br/>For example, if you ask the AI to summarise a meeting, you may see the meeting-summariser skill get called.',
             side: 'top',
           },
         },
-
-        // ── 9. Artifacts ─────────────────────────────────────────────────────
         {
-          element: "[data-testid='toolbar-toggle-artifacts']",
+          element: '#toolbar-toggle-artifacts',
           popover: {
             title: 'Artifacts',
             description:
@@ -178,20 +151,16 @@ export default function useGettingStartedTour(onComplete?: () => void) {
             side: 'top',
           },
         },
-
-        // ── 10. More Toggles ─────────────────────────────────────────────────
         {
           element:
-            "[data-testid='toolbar-toggle-web-search'], [data-testid='toolbar-toggle-memory'], [data-testid='toolbar-toggle-file-search'], [data-testid='toolbar-toggle-mcp-servers']",
+            '#toolbar-toggle-mcp-servers, #toolbar-toggle-web-search, #toolbar-toggle-memory, #toolbar-toggle-file-search',
           popover: {
             title: 'Connectors',
             description:
-              'Connect MyAssist to external tools and platforms — including KX, GIMS, and AFR — to bring real-time data and external functionality directly into your conversations.',
+              'Use connectors to give MyAssist access to approved data sources and systems, so it can answer questions with information beyond the current chat.',
             side: 'top',
           },
         },
-
-        // ── 11. Send ─────────────────────────────────────────────────────────
         {
           element: "[data-testid='send-button']",
           popover: {
@@ -200,32 +169,8 @@ export default function useGettingStartedTour(onComplete?: () => void) {
             side: 'top',
           },
         },
-
-        // ── 12. Compare Chats ────────────────────────────────────────────────
         {
-          element: "[data-testid='add-multi-convo-button']",
-          popover: {
-            title: 'Compare Chats',
-            description:
-              'Opens a second conversation side-by-side so you can compare how two models (or two prompts) respond to the same question.',
-            side: 'bottom',
-          },
-        },
-
-        // ── 13. Bookmark ─────────────────────────────────────────────────────
-        {
-          element: "[data-testid='bookmark-menu']",
-          popover: {
-            title: 'Bookmark This Chat',
-            description:
-              'Tag the current conversation so you can find it again quickly — useful for grouping chats by project or topic.',
-            side: 'bottom',
-          },
-        },
-
-        // ── 14. Sidebar Toggle ───────────────────────────────────────────────
-        {
-          element: "[data-testid='open-sidebar-button'], [data-testid='close-sidebar-button']",
+          element: '#open-sidebar-button, #close-sidebar-button',
           popover: {
             title: 'Sidebar Toggle',
             description:
@@ -233,118 +178,16 @@ export default function useGettingStartedTour(onComplete?: () => void) {
             side: 'right',
           },
         },
-
-        // ── 15. Conversations ────────────────────────────────────────────────
         {
-          element: "[data-testid='nav-panel-conversations']",
+          element: '#nav-panel-conversations',
           popover: {
             title: 'Conversations',
             description: 'The default panel — your chat history, search, and projects all live here.',
             side: 'right',
           },
         },
-
-        // ── 16. Agent Builder ────────────────────────────────────────────────
         {
-          element: "[data-testid='nav-panel-agents']",
-          popover: {
-            title: 'Agent Builder',
-            description:
-              'Create and configure your own custom agents — give them instructions, tools, and knowledge tailored to a specific job.',
-            side: 'right',
-          },
-        },
-
-        // ── 17. Skills (nav) ─────────────────────────────────────────────────
-        {
-          element: "[data-testid='nav-panel-skills']",
-          popover: {
-            title: 'Skills',
-            description:
-              'Manage reusable instructions and knowledge for your agents — define how they behave and what they know.',
-            side: 'right',
-          },
-        },
-
-        // ── 18. Prompts ──────────────────────────────────────────────────────
-        {
-          element: "[data-testid='nav-panel-prompts']",
-          popover: {
-            title: 'Prompts',
-            description:
-              'Save prompt templates you use often, then trigger them in chat with a /command instead of retyping them.',
-            side: 'right',
-          },
-        },
-
-        // ── 19. Memories ─────────────────────────────────────────────────────
-        {
-          element: "[data-testid='nav-panel-memories']",
-          popover: {
-            title: 'Memories',
-            description:
-              'Review and manage what the assistant remembers about you across conversations.',
-            side: 'right',
-          },
-        },
-
-        // ── 20. Bookmarks (nav) ──────────────────────────────────────────────
-        {
-          element: "[data-testid='nav-panel-bookmarks']",
-          popover: {
-            title: 'Bookmarks',
-            description:
-              'Browse every conversation you have tagged, grouped by your own bookmark labels.',
-            side: 'right',
-          },
-        },
-
-        // ── 21. Files ────────────────────────────────────────────────────────
-        {
-          element: "[data-testid='nav-panel-files']",
-          popover: {
-            title: 'Files',
-            description: 'See every file you have uploaded across all your conversations in one place.',
-            side: 'right',
-          },
-        },
-
-        // ── 22. Parameters ───────────────────────────────────────────────────
-        {
-          element: "[data-testid='nav-panel-parameters']",
-          popover: {
-            title: 'Parameters',
-            description:
-              'Fine-tune model settings like temperature and max tokens for the current conversation.',
-            side: 'right',
-          },
-        },
-
-        // ── 23. MCP Connectors ───────────────────────────────────────────────
-        {
-          element: "[data-testid='nav-panel-mcp-builder']",
-          popover: {
-            title: 'Connectors',
-            description:
-              'Connect to external tools and data sources — such as KX, GIMS, or AFR — to bring live information directly into your conversations.',
-            side: 'right',
-          },
-        },
-
-        // ── 24. Learning Hub ─────────────────────────────────────────────────
-        {
-          element: "[data-testid='nav-panel-learning']",
-          popover: {
-            title: 'Learning Hub',
-            description:
-              "You're here right now! Come back any time to replay this tour or check for new ones.",
-            side: 'right',
-          },
-        },
-
-        // ── 25. Search Conversations ─────────────────────────────────────────
-        {
-          element: "[data-testid='nav-search-input']",
+          element: '#nav-search-input',
           popover: {
             title: 'Search Conversations',
             description:
@@ -352,21 +195,113 @@ export default function useGettingStartedTour(onComplete?: () => void) {
             side: 'bottom',
           },
         },
-
-        // ── 26. Projects ─────────────────────────────────────────────────────
         {
-          element: "[data-testid='nav-projects-section']",
+          element: '#nav-projects-section',
           popover: {
             title: 'Projects',
             description:
-              'Group related conversations into a project folder to keep long-running work organized and easy to find later.',
+              'Group related conversations into a project folder to keep long-running work organised and easy to find later.',
             side: 'bottom',
           },
         },
-
-        // ── 27. Account Menu ─────────────────────────────────────────────────
         {
-          element: "[data-testid='nav-user']",
+          element: '#nav-panel-agents',
+          popover: {
+            title: 'Agent Builder',
+            description:
+              'Agents are a collection of skills, connectors, files, and instructions grouped together for a specific job. Build and configure your own here.',
+            side: 'right',
+          },
+        },
+        {
+          element: '#nav-panel-skills',
+          popover: {
+            title: 'Skill Library',
+            description:
+              'This is where you can create, edit and share skills. Skills are reusable instruction files that help the AI follow repeatable patterns.',
+            side: 'right',
+          },
+        },
+        {
+          element: '#nav-panel-prompts',
+          popover: {
+            title: 'Prompt Library',
+            description:
+              'This is where you can create, edit and share prompts. Save prompt templates you use often, then trigger them in chat with a /command instead of retyping them.',
+            side: 'right',
+          },
+        },
+        {
+          element: '#nav-panel-memories',
+          popover: {
+            title: 'Memories',
+            description:
+              'Review and manage what the assistant remembers about you across conversations.',
+            side: 'right',
+          },
+        },
+        {
+          element: '#nav-panel-bookmarks',
+          popover: {
+            title: 'Bookmarks',
+            description:
+              'Browse every conversation you have tagged, grouped by your own bookmark labels.',
+            side: 'right',
+          },
+        },
+        {
+          element: '#nav-panel-files',
+          popover: {
+            title: 'Files',
+            description: 'See every file you have uploaded across all your conversations in one place.',
+            side: 'right',
+          },
+        },
+        {
+          element: '#nav-panel-parameters',
+          popover: {
+            title: 'Parameters',
+            description: 'Adjust advanced response settings for the current conversation.',
+            side: 'right',
+          },
+        },
+        {
+          element: '#nav-panel-mcp-builder',
+          popover: {
+            title: 'Connectors',
+            description: 'This is where you see the list of connectors available to you.',
+            side: 'right',
+          },
+        },
+        {
+          element: '#nav-agents-marketplace-button',
+          popover: {
+            title: 'Agent Marketplace',
+            description:
+              'Browse pre-built agents for common tasks. Each agent combines instructions, skills, connectors, files, and guidance so you can get started faster.',
+            side: 'right',
+          },
+        },
+        {
+          element: '#model-selector-button',
+          popover: {
+            title: 'Switch Back to a Model',
+            description:
+              'If you are using an agent and want to return to a general model, open this selector and choose a standard model instead.',
+            side: 'bottom',
+          },
+        },
+        {
+          element: '#nav-panel-learning',
+          popover: {
+            title: 'Learning Hub',
+            description:
+              "You're here right now! Come back any time to replay this tour or check for new learning content.",
+            side: 'right',
+          },
+        },
+        {
+          element: '#nav-user',
           popover: {
             title: 'Account Menu',
             description: 'Access your profile, settings, theme, and sign-out option from here.',

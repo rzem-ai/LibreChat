@@ -140,8 +140,6 @@ function UnifiedSidebar() {
             'fixed left-0 top-0 z-[110] flex h-full bg-surface-primary-alt',
             expanded ? 'translate-x-0' : '-translate-x-full',
           )}
-          // Deloitte Custom Change: data-sidebar-container used by the tutorial popup's
-          // getSidebarWidth() to measure the sidebar for backdrop split positioning
           data-sidebar-container
           style={{
             width: 'min(85vw, 380px)',
@@ -179,8 +177,6 @@ function UnifiedSidebar() {
     <SidebarChatProvider>
       <aside
         className="relative flex h-full flex-shrink-0 overflow-hidden"
-        // Deloitte Custom Change: data-sidebar-container used by the tutorial popup's
-        // getSidebarWidth() to measure the sidebar for backdrop split positioning
         data-sidebar-container
         style={{
           width: expanded ? sidebarWidth : COLLAPSED_WIDTH,

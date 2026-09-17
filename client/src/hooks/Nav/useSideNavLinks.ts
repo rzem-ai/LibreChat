@@ -4,7 +4,7 @@ import {
   Bot,
   Brain,
   Bookmark,
-  Library,
+  GraduationCap,
   NotebookPen,
   ScrollText,
   ArrowRightToLine,
@@ -218,7 +218,7 @@ export default function useSideNavLinks({
       links.push({
         title: 'com_ui_learning_hub',
         label: '',
-        icon: Library,
+        icon: GraduationCap,
         id: 'learning',
         Component: LearningPanel,
       });

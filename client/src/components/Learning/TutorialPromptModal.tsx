@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { useRecoilState } from 'recoil';
-import { Library } from 'lucide-react';
+import { GraduationCap } from 'lucide-react';
 import { Button, useMediaQuery } from '@librechat/client';
 import * as Popover from '@radix-ui/react-popover';
 import { useLearningTour } from './LearningTourContext';
@@ -19,7 +19,7 @@ function getSidebarWidth(): number {
  * renders with a short delay:
  *   - a bg-black/60 backdrop rendered inside Popover.Portal so it escapes the
  *     `relative z-0` stacking context in Root.tsx and covers the full viewport
- *   - a Radix Popover bubble anchored to [data-testid="nav-panel-learning"] via
+ *   - a Radix Popover bubble anchored to #nav-panel-learning via
  *     virtualRef, appearing to the right of the Learning Hub icon with a
  *     pointed top-left corner aimed at the icon
  *
@@ -118,7 +118,7 @@ export default function TutorialPromptModal({
     if (!canRenderPrompt) {
       return;
     }
-    const el = document.querySelector<HTMLElement>('[data-testid="nav-panel-learning"]');
+    const el = document.getElementById('nav-panel-learning');
     if (el) {
       virtualRef.current = el;
     }
@@ -130,7 +130,7 @@ export default function TutorialPromptModal({
     if (!canRenderPrompt) {
       return;
     }
-    const el = document.querySelector<HTMLElement>('[data-testid="nav-panel-learning"]');
+    const el = document.getElementById('nav-panel-learning');
     if (!el) {
       return;
     }
@@ -194,15 +194,13 @@ export default function TutorialPromptModal({
             avoidCollisions
             aria-labelledby={titleId}
             onOpenAutoFocus={(e) => e.preventDefault()}
-            // Decision C: pointed top-left corner aimed at the icon; all other
-            // corners rounded — achieved purely with border-radius, no extra DOM.
             style={{ zIndex: 300, borderRadius: '0 12px 12px 12px' }}
             className="w-64 border border-border-medium bg-surface-primary p-4 shadow-lg outline-none"
           >
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
                 <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-surface-tertiary">
-                  <Library className="size-4 text-text-secondary" aria-hidden="true" />
+                  <GraduationCap className="size-4 text-text-secondary" aria-hidden="true" />
                 </div>
                 <div className="flex flex-col gap-1">
                   <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">

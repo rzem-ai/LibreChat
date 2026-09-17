@@ -49,6 +49,7 @@ const NewChatButton = memo(function NewChatButton({
       render={
         <a
           href="/c/new"
+          id="new-chat-button"
           data-testid="new-chat-button"
           aria-label={localize('com_ui_new_chat')}
           aria-keyshortcuts={ariaKey}
@@ -105,11 +106,11 @@ const NavIconButton = memo(function NavIconButton({
       side="right"
       render={
         <Button
+          id={`nav-panel-${link.id}`}
           size="icon"
           variant="ghost"
           aria-label={localize(link.title)}
           aria-pressed={isActive}
-          data-testid={`nav-panel-${link.id}`}
           className={cn(
             'h-9 w-9 rounded-lg',
             isActive ? 'bg-surface-active-alt text-text-primary' : 'text-text-secondary',
@@ -150,7 +151,7 @@ function ExpandedPanel({
         description={toggleSidebarHint}
         render={
           <Button
-            id={expanded ? CLOSE_SIDEBAR_ID : undefined}
+            id={expanded ? CLOSE_SIDEBAR_ID : 'open-sidebar-button'}
             data-testid={expanded ? 'close-sidebar-button' : 'open-sidebar-button'}
             size="icon"
             variant="ghost"

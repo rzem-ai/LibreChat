@@ -87,7 +87,7 @@ describe('useGettingStartedTour', () => {
     result.current.startTour();
 
     expect(capturedConfig?.steps?.[0]).toEqual({
-      element: "[data-testid='new-chat-button']",
+      element: '#new-chat-button',
       popover: {
         title: 'Welcome to MyAssist',
         description:
@@ -96,5 +96,22 @@ describe('useGettingStartedTour', () => {
       },
     });
     expect(capturedConfig?.steps?.[1]?.popover.title).toBe('New Chat');
+  });
+
+  it('defines 26 steps and revisits the model selector to explain exiting an agent', () => {
+    const { result } = renderHook(() => useGettingStartedTour());
+    result.current.startTour();
+
+    expect(capturedConfig?.steps).toHaveLength(26);
+    expect(capturedConfig?.steps?.[22]?.popover.title).toBe('Agent Marketplace');
+    expect(capturedConfig?.steps?.[23]).toEqual({
+      element: '#model-selector-button',
+      popover: {
+        title: 'Switch Back to a Model',
+        description:
+          'If you are using an agent and want to return to a general model, open this selector and choose a standard model instead.',
+        side: 'bottom',
+      },
+    });
   });
 });

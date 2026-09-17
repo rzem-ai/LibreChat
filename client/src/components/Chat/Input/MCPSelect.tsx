@@ -73,8 +73,7 @@ function MCPSelectContent() {
           disabled={isOpen}
           render={
             <Ariakit.MenuButton
-              // Deloitte Custom Change: data-testid added as a stable anchor for the guided tour spotlight
-              data-testid="toolbar-toggle-mcp-servers"
+              id="toolbar-toggle-mcp-servers"
               className={cn(
                 'group relative inline-flex items-center justify-center gap-1.5',
                 'border border-border-medium text-sm font-medium transition-all',

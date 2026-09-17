@@ -6,6 +6,7 @@ import { cn } from '~/utils';
 const CheckboxButton: React.ForwardRefExoticComponent<
   {
     icon?: React.ReactNode;
+    id?: string;
     label: string;
     className?: string;
     checked?: boolean;
@@ -22,6 +23,7 @@ const CheckboxButton: React.ForwardRefExoticComponent<
   HTMLInputElement,
   {
     icon?: React.ReactNode;
+    id?: string;
     label: string;
     className?: string;
     checked?: boolean;
@@ -35,7 +37,7 @@ const CheckboxButton: React.ForwardRefExoticComponent<
   }
 >(
   (
-    { icon, label, setValue, className, checked, defaultChecked, isCheckedClassName, testId },
+    { icon, id, label, setValue, className, checked, defaultChecked, isCheckedClassName, testId },
     ref,
   ) => {
     const checkbox = useCheckboxStore();
@@ -80,7 +82,7 @@ const CheckboxButton: React.ForwardRefExoticComponent<
           // Additional custom classes
           className,
         )}
-        render={<button type="button" aria-label={label} data-testid={testId} />}
+        render={<button type="button" id={id} aria-label={label} data-testid={testId} />}
       >
         {/* Icon if provided */}
         {icon && <span className="icon-md text-text-primary">{icon as React.JSX.Element}</span>}

@@ -109,8 +109,8 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
     <Menu.MenuProvider placement={collapsed ? 'right-end' : undefined}>
       <Menu.MenuButton
         ref={accountSettingsButtonRef}
+        id="nav-user"
         aria-label={localize('com_nav_account_settings')}
-        data-testid="nav-user"
         className={
           collapsed
             ? 'flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-surface-active-alt aria-[expanded=true]:bg-surface-active-alt'
