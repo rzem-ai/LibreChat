@@ -40,10 +40,14 @@ jest.mock('driver.js', () => ({
 
 describe('useGettingStartedTour', () => {
   beforeEach(() => {
-    const button = document.createElement('button');
-    button.id = 'nav-panel-conversations';
-    button.setAttribute('aria-pressed', 'true');
-    document.body.appendChild(button);
+    const conversationsButton = document.createElement('button');
+    conversationsButton.id = 'nav-panel-conversations';
+    conversationsButton.setAttribute('aria-pressed', 'true');
+    document.body.appendChild(conversationsButton);
+
+    const marketplaceButton = document.createElement('button');
+    marketplaceButton.id = 'nav-agents-marketplace-button';
+    document.body.appendChild(marketplaceButton);
   });
 
   afterEach(() => {
@@ -157,6 +161,21 @@ describe('useGettingStartedTour', () => {
 
   it('omits agent-selection steps when the conversations panel target is unavailable', () => {
     document.body.innerHTML = '';
+    const { result } = renderHook(() => useGettingStartedTour());
+    result.current.startTour();
+
+    expect(capturedConfig?.steps).toHaveLength(24);
+    expect(
+      capturedConfig?.steps?.some(
+        (step) =>
+          step.popover.title === 'Agent Marketplace' ||
+          step.popover.title === 'Switch Back to a Model',
+      ),
+    ).toBe(false);
+  });
+
+  it('omits agent-selection steps when the marketplace trigger is unavailable', () => {
+    document.getElementById('nav-agents-marketplace-button')?.remove();
     const { result } = renderHook(() => useGettingStartedTour());
     result.current.startTour();
 

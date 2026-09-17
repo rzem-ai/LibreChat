@@ -60,7 +60,9 @@ export default function useGettingStartedTour(onComplete?: () => void) {
   const startTour = useCallback(() => {
     let completedFromLastStepNext = false;
     const canShowAgentSelectionSteps =
-      showMarketplace && document.getElementById('nav-panel-conversations') != null;
+      showMarketplace &&
+      document.getElementById('nav-panel-conversations') != null &&
+      document.getElementById('nav-agents-marketplace-button') != null;
     const ensureConversationsPanel = () => {
       const button = document.getElementById('nav-panel-conversations');
       if (button?.getAttribute('aria-pressed') !== 'true') {
