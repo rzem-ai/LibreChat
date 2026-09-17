@@ -8,17 +8,17 @@ The Learning Hub is currently a **static frontend implementation**. It does not 
 
 The main files are:
 
-- `/home/runner/work/tt-librechat/tt-librechat/client/src/components/Learning/courses.ts` — course catalog
-- `/home/runner/work/tt-librechat/tt-librechat/client/src/components/Learning/LearningPanel.tsx` — renders the course list in the sidebar
-- `/home/runner/work/tt-librechat/tt-librechat/client/src/components/Learning/useLandingPageTour.ts` — step-by-step content and ordering for the current guided tour
-- `/home/runner/work/tt-librechat/tt-librechat/client/src/components/Learning/LearningTourContext.tsx` — starts the tour and tracks in-session completion UI state
-- `/home/runner/work/tt-librechat/tt-librechat/client/src/locales/en/translation.json` — user-facing English strings used by the Learning Hub UI and tour
+- `client/src/components/Learning/courses.ts` — course catalog
+- `client/src/components/Learning/LearningPanel.tsx` — renders the course list in the sidebar
+- `client/src/components/Learning/Courses/useGettingStartedTour.ts` — step-by-step content and ordering for the current guided tour
+- `client/src/components/Learning/LearningTourContext.tsx` — starts the tour and tracks in-session completion UI state
+- `client/src/locales/en/translation.json` — user-facing English strings used by the Learning Hub UI and tour
 
 ## 1. How to add to the course list
 
 Add a new entry to the `COURSES` array in:
 
-- `/home/runner/work/tt-librechat/tt-librechat/client/src/components/Learning/courses.ts`
+- `client/src/components/Learning/courses.ts`
 
 Each course currently has:
 
@@ -42,7 +42,7 @@ Each course currently has:
 
 You would then add the matching English strings in:
 
-- `/home/runner/work/tt-librechat/tt-librechat/client/src/locales/en/translation.json`
+- `client/src/locales/en/translation.json`
 
 ## Is it safe to reuse an old course ID?
 
@@ -62,7 +62,7 @@ Reasons:
 
 ## 2. How to populate a course with content
 
-Today, the only fully implemented course is the Platform Basics tour.
+Today, the only fully implemented course is the Getting Started Tour.
 
 ### Course card content
 
@@ -75,7 +75,7 @@ The card shown in the Learning Hub sidebar comes from:
 
 The actual tour steps live in:
 
-- `/home/runner/work/tt-librechat/tt-librechat/client/src/components/Learning/useLandingPageTour.ts`
+- `client/src/components/Learning/Courses/useGettingStartedTour.ts`
 
 That file defines:
 
@@ -93,9 +93,9 @@ To add a new real course, you currently need to:
 
 ## Important current limitation
 
-Right now `LearningPanel.tsx` starts the existing landing page tour for the active course button via `startLandingPageTour()`.
+Right now `LearningPanel.tsx` starts the current Getting Started course via `startGettingStartedTour()`.
 
-That means adding a course to `courses.ts` alone does **not** create a working new tutorial. A second real course would require additional wiring so the selected course starts its own tour definition instead of always starting the Platform Basics tour.
+That means adding a course to `courses.ts` alone does **not** create a working new tutorial. A second real course would require additional wiring so the selected course starts its own tour definition instead of always starting the Getting Started Tour.
 
 ## 3. How course completion and ratings are stored
 
@@ -107,7 +107,7 @@ The “show this tutorial prompt once” state is stored on the MongoDB user doc
 
 Schema location:
 
-- `/home/runner/work/tt-librechat/tt-librechat/packages/data-schemas/src/schema/user.ts`
+- `packages/data-schemas/src/schema/user.ts`
 
 The frontend updates it through:
 
@@ -115,7 +115,7 @@ The frontend updates it through:
 
 Controller location:
 
-- `/home/runner/work/tt-librechat/tt-librechat/api/server/controllers/UserController.js`
+- `api/server/controllers/UserController.js`
 
 ### Ratings
 

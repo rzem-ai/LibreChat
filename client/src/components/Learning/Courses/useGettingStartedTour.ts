@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
-import './driver-theme.css';
+import '../driver-theme.css';
 import { useLocalize } from '~/hooks';
 
 /**
- * Builds a Driver.js tour over the elements on the default landing page.
+ * Builds the Driver.js Getting Started tour over the default chat interface.
  * Driver.js owns the spotlight overlay, popover, and next/prev/progress
  * controls — no custom tour engine needed. `skipMissingElement` + `waitForElement`
  * make each step tolerant of elements that are conditionally rendered (permissions,
@@ -39,7 +39,7 @@ import { useLocalize } from '~/hooks';
  *   25 Projects
  *   26 Account Menu
  */
-export default function useLandingPageTour(onComplete?: () => void) {
+export default function useGettingStartedTour(onComplete?: () => void) {
   const localize = useLocalize();
 
   // Retain the active Driver.js instance so it can be destroyed on unmount.

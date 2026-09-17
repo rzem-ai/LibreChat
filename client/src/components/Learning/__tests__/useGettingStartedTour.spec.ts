@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react';
-import useLandingPageTour from '../useLandingPageTour';
+import useGettingStartedTour from '../Courses/useGettingStartedTour';
 
 const mockDrive = jest.fn();
 const mockDestroy = jest.fn();
@@ -23,7 +23,7 @@ jest.mock('driver.js', () => ({
   },
 }));
 
-describe('useLandingPageTour', () => {
+describe('useGettingStartedTour', () => {
   afterEach(() => {
     jest.clearAllMocks();
     mockIsLastStep = jest.fn();
@@ -31,7 +31,7 @@ describe('useLandingPageTour', () => {
 
   it('does not report completion when the tour is cancelled before the last step', () => {
     const onComplete = jest.fn();
-    const { result } = renderHook(() => useLandingPageTour(onComplete));
+    const { result } = renderHook(() => useGettingStartedTour(onComplete));
     result.current.startTour();
 
     mockIsLastStep.mockReturnValue(false);
@@ -44,7 +44,7 @@ describe('useLandingPageTour', () => {
 
   it('does not report completion when the tour is destroyed on the last step without Next', () => {
     const onComplete = jest.fn();
-    const { result } = renderHook(() => useLandingPageTour(onComplete));
+    const { result } = renderHook(() => useGettingStartedTour(onComplete));
     result.current.startTour();
 
     mockIsLastStep.mockReturnValue(true);
@@ -57,7 +57,7 @@ describe('useLandingPageTour', () => {
 
   it('reports completion when the last step is advanced with Next', () => {
     const onComplete = jest.fn();
-    const { result } = renderHook(() => useLandingPageTour(onComplete));
+    const { result } = renderHook(() => useGettingStartedTour(onComplete));
     result.current.startTour();
 
     mockIsLastStep.mockReturnValue(true);

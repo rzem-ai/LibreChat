@@ -64,7 +64,7 @@ function ComingSoonRow({ course, isFirst }: { course: LearningCourse; isFirst: b
 
 export default function LearningPanel() {
   const localize = useLocalize();
-  const { startLandingPageTour } = useLearningTour();
+  const { startGettingStartedTour } = useLearningTour();
 
   return (
     <div data-testid="learning-panel" className="flex h-full flex-col">
@@ -79,7 +79,7 @@ export default function LearningPanel() {
               {localize('com_learning_courses_title')}
             </p>
             {activeCourses.map((course) => (
-              <CourseHeroCard key={course.id} course={course} onSelect={startLandingPageTour} />
+              <CourseHeroCard key={course.id} course={course} onSelect={startGettingStartedTour} />
             ))}
           </div>
         )}

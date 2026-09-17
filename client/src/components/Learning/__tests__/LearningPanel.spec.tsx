@@ -3,7 +3,7 @@ import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
 import LearningPanel from '../LearningPanel';
 
-const mockStartLandingPageTour = jest.fn();
+const mockStartGettingStartedTour = jest.fn();
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string) => key,
@@ -11,7 +11,7 @@ jest.mock('~/hooks', () => ({
 
 jest.mock('../LearningTourContext', () => ({
   useLearningTour: () => ({
-    startLandingPageTour: mockStartLandingPageTour,
+    startGettingStartedTour: mockStartGettingStartedTour,
     completedCourseId: null,
     dismissCompletion: jest.fn(),
   }),
@@ -34,7 +34,7 @@ describe('LearningPanel', () => {
     expect(activeRow.tagName).toBe('BUTTON');
 
     fireEvent.click(activeRow);
-    expect(mockStartLandingPageTour).toHaveBeenCalledTimes(1);
+    expect(mockStartGettingStartedTour).toHaveBeenCalledTimes(1);
   });
 
   it('renders coming-soon courses as muted, non-clickable rows under a heading', () => {

@@ -22,7 +22,12 @@ jest.mock('recoil', () => ({
   useSetRecoilState: () => mockSetSidebarExpanded,
 }));
 
-jest.mock('../useLandingPageTour', () => ({
+jest.mock('~/store', () => ({
+  __esModule: true,
+  default: { sidebarExpanded: 'sidebarExpanded' },
+}));
+
+jest.mock('../Courses/useGettingStartedTour', () => ({
   __esModule: true,
   default: (onComplete?: () => void) => {
     capturedOnComplete = onComplete;
@@ -58,7 +63,7 @@ describe('LearningTourContext', () => {
     const { result } = renderHook(() => useLearningTour(), { wrapper });
 
     act(() => {
-      result.current.startLandingPageTour();
+      result.current.startGettingStartedTour();
     });
 
     expect(mockNavigate).toHaveBeenCalledWith('/c/new');
@@ -77,7 +82,7 @@ describe('LearningTourContext', () => {
     const { result } = renderHook(() => useLearningTour(), { wrapper });
 
     act(() => {
-      result.current.startLandingPageTour();
+      result.current.startGettingStartedTour();
     });
 
     expect(mockSetSidebarExpanded).toHaveBeenCalledWith(false);

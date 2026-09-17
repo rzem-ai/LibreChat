@@ -54,7 +54,7 @@ export default function TutorialPromptModal({
   chatReady = false,
 }: TutorialPromptModalProps) {
   const localize = useLocalize();
-  const { startLandingPageTour } = useLearningTour();
+  const { startGettingStartedTour } = useLearningTour();
   const isSmallScreen = useMediaQuery('(max-width: 768px)');
   const { shouldShowPrompt, markPromptSeen } = useTutorialPrompt();
   const [sidebarExpanded, setSidebarExpanded] = useRecoilState(store.sidebarExpanded);
@@ -140,7 +140,7 @@ export default function TutorialPromptModal({
   }, [canRenderPrompt, markPromptSeen]);
 
   const handleAccept = () => {
-    startLandingPageTour();
+    startGettingStartedTour();
   };
 
   if (!canRenderPrompt) {
@@ -208,11 +208,9 @@ export default function TutorialPromptModal({
                   <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
                     {localize('com_ui_learning_hub')}
                   </p>
-                  <Popover.Title asChild>
-                    <p id={titleId} className="text-sm font-semibold text-text-primary">
-                      {localize('com_learning_prompt_title')}
-                    </p>
-                  </Popover.Title>
+                  <p id={titleId} className="text-sm font-semibold text-text-primary">
+                    {localize('com_learning_prompt_title')}
+                  </p>
                 </div>
               </div>
 

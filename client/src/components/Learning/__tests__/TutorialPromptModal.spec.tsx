@@ -3,7 +3,7 @@ import '@testing-library/jest-dom';
 import { act, render, screen, fireEvent } from '@testing-library/react';
 import TutorialPromptModal from '../TutorialPromptModal';
 
-const mockStartLandingPageTour = jest.fn();
+const mockStartGettingStartedTour = jest.fn();
 const mockMarkPromptSeen = jest.fn();
 const mockUseTutorialPrompt = jest.fn();
 const mockSetSidebarExpanded = jest.fn();
@@ -25,8 +25,13 @@ jest.mock('recoil', () => ({
   useRecoilState: () => [mockSidebarExpanded, mockSetSidebarExpanded],
 }));
 
+jest.mock('~/store', () => ({
+  __esModule: true,
+  default: { sidebarExpanded: 'sidebarExpanded' },
+}));
+
 jest.mock('../LearningTourContext', () => ({
-  useLearningTour: () => ({ startLandingPageTour: mockStartLandingPageTour }),
+  useLearningTour: () => ({ startGettingStartedTour: mockStartGettingStartedTour }),
 }));
 
 jest.mock('~/hooks/Learning/useTutorialPrompt', () => ({
@@ -75,7 +80,7 @@ describe('TutorialPromptModal', () => {
 
     fireEvent.click(screen.getByText('com_learning_prompt_accept'));
 
-    expect(mockStartLandingPageTour).toHaveBeenCalledTimes(1);
+    expect(mockStartGettingStartedTour).toHaveBeenCalledTimes(1);
   });
 
   it('marks the prompt seen without switching panels on decline', () => {
@@ -92,7 +97,7 @@ describe('TutorialPromptModal', () => {
     fireEvent.click(screen.getByText('com_learning_prompt_decline'));
 
     expect(mockMarkPromptSeen).toHaveBeenCalledTimes(1);
-    expect(mockStartLandingPageTour).not.toHaveBeenCalled();
+    expect(mockStartGettingStartedTour).not.toHaveBeenCalled();
   });
 
   it('opens the mobile sidebar before rendering the prompt', () => {
