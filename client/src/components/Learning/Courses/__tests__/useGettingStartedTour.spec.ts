@@ -6,6 +6,7 @@ type DriverConfig = {
   onNextClick?: () => void;
   steps?: Array<{
     element: string;
+    onHighlightStarted?: () => void;
     popover: {
       title: string;
       description: string;
@@ -112,8 +113,11 @@ describe('useGettingStartedTour', () => {
     expect(
       capturedConfig?.steps?.slice(21, 25).map((step) => step.popover.title),
     ).toEqual(['Connectors', 'Agent Marketplace', 'Switch Back to a Model', 'Learning Hub']);
+    expect(capturedConfig?.steps?.[22]?.onHighlightStarted).toBeDefined();
+    expect(capturedConfig?.steps?.[23]?.onHighlightStarted).toBeDefined();
     expect(capturedConfig?.steps?.[23]).toEqual({
       element: '#model-selector-button',
+      onHighlightStarted: expect.any(Function),
       popover: {
         title: 'Switch Back to a Model',
         description:
