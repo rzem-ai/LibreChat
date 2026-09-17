@@ -2350,7 +2350,7 @@ describe('User parameter passing tests', () => {
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Failed to register codeFile artifact'),
-        expect.any(Error),
+        expect.objectContaining({ message: 'download URL expired' }),
       );
       expect(result).toBe('downloaded report.pdf');
     });

@@ -70,6 +70,23 @@ const CODE_FILE_DOWNLOAD_TIMEOUT_MS = 120000;
 const CODE_FILE_MAX_REDIRECTS = 5;
 
 /**
+ * Renders a URL for logging with credentials and query string stripped.
+ * These download URLs are short-lived, pre-authorized (signed) SharePoint/
+ * Graph links, so their query string (and any userinfo) is a bearer
+ * credential in its own right — only the host/path/status are safe to log.
+ * @param {string} url
+ * @returns {string}
+ */
+function redactUrlForLog(url) {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.protocol}//${parsed.host}${parsed.pathname}`;
+  } catch {
+    return '[unparseable URL]';
+  }
+}
+
+/**
  * Streams a codeFile artifact's download URL, re-validating the domain
  * allowlist on every redirect hop. Axios follows redirects by default, which
  * would let an allowed URL 30x to a disallowed/internal address and bypass
@@ -79,6 +96,12 @@ const CODE_FILE_MAX_REDIRECTS = 5;
  * protect the TCP connection actually made by axios, so a DNS answer that
  * changes between the check and the request (rebinding) could still land on
  * a private address. `createSSRFSafeAgents` re-validates at connect time.
+ *
+ * `proxy: false` is required alongside `httpAgent`/`httpsAgent`: if
+ * `codeFileDownloadAxios` picked up `process.env.proxy` (via
+ * `createAxiosInstance`), axios would connect to that proxy instead of the
+ * target, and the *proxy* — not our SSRF-safe agents — would resolve
+ * `currentUrl`'s hostname, bypassing the connect-time recheck entirely.
  * @param {string} url
  * @param {string[] | null | undefined} allowedDomains
  * @param {string[] | null | undefined} allowedAddresses
@@ -88,12 +111,13 @@ async function fetchAllowedCodeFileStream(url, allowedDomains, allowedAddresses)
   let currentUrl = url;
   for (let hop = 0; hop <= CODE_FILE_MAX_REDIRECTS; hop++) {
     if (!(await isMCPDomainAllowed({ url: currentUrl }, allowedDomains, allowedAddresses))) {
-      throw new Error(`codeFile download URL domain is not allowed: ${currentUrl}`);
+      throw new Error(`codeFile download URL domain is not allowed: ${redactUrlForLog(currentUrl)}`);
     }
     const response = await codeFileDownloadAxios.get(currentUrl, {
       responseType: 'stream',
       timeout: CODE_FILE_DOWNLOAD_TIMEOUT_MS,
       maxRedirects: 0,
+      proxy: false,
       httpAgent,
       httpsAgent,
       validateStatus: (status) =>
@@ -105,11 +129,13 @@ async function fetchAllowedCodeFileStream(url, allowedDomains, allowedAddresses)
     response.data?.destroy?.();
     const location = response.headers?.location;
     if (!location) {
-      throw new Error(`codeFile download redirected without a Location header: ${currentUrl}`);
+      throw new Error(
+        `codeFile download redirected without a Location header: ${redactUrlForLog(currentUrl)}`,
+      );
     }
     currentUrl = new URL(location, currentUrl).toString();
   }
-  throw new Error(`Too many redirects while downloading codeFile: ${url}`);
+  throw new Error(`Too many redirects while downloading codeFile: ${redactUrlForLog(url)}`);
 }
 
 const MAX_CACHE_SIZE = 1000;
@@ -1219,7 +1245,12 @@ function createToolInstance({
              *  expired short-lived download URL. */
             logger.warn(
               `[MCP][${serverName}][${toolName}][User: ${userId}] Failed to register codeFile artifact "${name}" with Code Interpreter:`,
-              codeFileError,
+              /** Axios attaches the raw (signed) request URL to `error.config`/
+               *  `error.request`; logging `codeFileError` directly would leak
+               *  that credential-bearing query string, so only the message
+               *  and stack (already redacted at the throw site above) are
+               *  logged here. */
+              { message: codeFileError?.message, stack: codeFileError?.stack },
             );
           }
         }

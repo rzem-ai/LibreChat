@@ -120,26 +120,32 @@ function extractCodeFile(content: t.ToolContentPart[]): {
 
   for (const item of content) {
     if (
-      !codeFile &&
       item.type === 'resource' &&
       item.resource.uri.startsWith(CODE_FILE_DOWNLOAD_SCHEME) &&
       'text' in item.resource &&
       item.resource.text
     ) {
-      const { uri, mimeType, text } = item.resource;
-      const rawName = uri.slice(CODE_FILE_DOWNLOAD_SCHEME.length) || uri;
-      // Producers percent-encode the filename component (e.g. ea-mcp-gateway's
-      // sharepoint-graph-mcp server) since raw names commonly contain spaces
-      // or characters like '#' that would otherwise be parsed as URI syntax.
-      // decodeURIComponent is a no-op for names with no such characters, so
-      // this is safe even against producers that don't encode.
-      let name = rawName;
-      try {
-        name = decodeURIComponent(rawName);
-      } catch {
-        // Malformed percent-encoding: fall back to the raw (undecoded) name.
+      // Every valid marker is consumed here (not pushed into `remaining`),
+      // even beyond the first: only the first becomes the codeFile artifact,
+      // but a second one left in `remaining` would have its signed download
+      // URL stringified into the model's context by parseAsString below,
+      // defeating the whole point of this marker scheme.
+      if (!codeFile) {
+        const { uri, mimeType, text } = item.resource;
+        const rawName = uri.slice(CODE_FILE_DOWNLOAD_SCHEME.length) || uri;
+        // Producers percent-encode the filename component (e.g. ea-mcp-gateway's
+        // sharepoint-graph-mcp server) since raw names commonly contain spaces
+        // or characters like '#' that would otherwise be parsed as URI syntax.
+        // decodeURIComponent is a no-op for names with no such characters, so
+        // this is safe even against producers that don't encode.
+        let name = rawName;
+        try {
+          name = decodeURIComponent(rawName);
+        } catch {
+          // Malformed percent-encoding: fall back to the raw (undecoded) name.
+        }
+        codeFile = { name, mimeType, url: text };
       }
-      codeFile = { name, mimeType, url: text };
       continue;
     }
     remaining.push(item);

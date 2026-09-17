@@ -414,6 +414,38 @@ describe('formatToolContent', () => {
       expect(artifacts?.codeFile?.name).toBe('50% off report.pdf');
     });
 
+    it('should never leak a second download marker into the stringified content', () => {
+      const result: t.MCPToolCallResponse = {
+        content: [
+          {
+            type: 'resource',
+            resource: {
+              uri: `${CODE_FILE_DOWNLOAD_SCHEME}first.pdf`,
+              mimeType: 'application/pdf',
+              text: 'https://contoso.sharepoint.com/download?sig=first-secret',
+            },
+          },
+          {
+            type: 'resource',
+            resource: {
+              uri: `${CODE_FILE_DOWNLOAD_SCHEME}second.pdf`,
+              mimeType: 'application/pdf',
+              text: 'https://contoso.sharepoint.com/download?sig=second-secret',
+            },
+          },
+        ],
+      };
+
+      const [content, artifacts] = formatToolContent(result, 'openai');
+      expect(artifacts?.codeFile).toEqual({
+        name: 'first.pdf',
+        mimeType: 'application/pdf',
+        url: 'https://contoso.sharepoint.com/download?sig=first-secret',
+      });
+      expect(content).not.toContain('second-secret');
+      expect(content).not.toContain('second.pdf');
+    });
+
     it('should not treat a librechat-download:// resource without text as a codeFile', () => {
       const result: t.MCPToolCallResponse = {
         content: [
