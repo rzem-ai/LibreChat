@@ -25,6 +25,7 @@ export * from './mcp/request';
 export * from './mcp/feed/feed';
 /* Utilities */
 export * from './mcp/utils';
+export * from './mcp/codeFile';
 export * from './mcp/context';
 export * from './utils';
 export { default as Tokenizer, countTokens } from './utils/tokenizer';

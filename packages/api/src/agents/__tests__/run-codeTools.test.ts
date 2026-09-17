@@ -115,6 +115,7 @@ describe('createRun code-tool eager/session wiring', () => {
 
   it('includes MCP-delimited tools from toolRegistry but excludes non-MCP and action-collision tools', async () => {
     const agent = makeAgent({
+      codeEnvAvailable: true,
       toolRegistry: new Map([
         ['sp_download_file_mcp_sharepoint', {}],
         ['create_file', {}],
@@ -135,10 +136,12 @@ describe('createRun code-tool eager/session wiring', () => {
   it('recursively collects MCP tools from nested subagentAgentConfigs', async () => {
     const grandchild = makeAgent({
       id: 'agent_grandchild',
+      codeEnvAvailable: true,
       toolRegistry: new Map([['nested_download_mcp_sharepoint', {}]]),
     });
     const child = makeAgent({
       id: 'agent_child',
+      codeEnvAvailable: true,
       toolRegistry: new Map([['child_download_mcp_onedrive', {}]]),
       subagentAgentConfigs: [grandchild],
     });
@@ -146,6 +149,21 @@ describe('createRun code-tool eager/session wiring', () => {
     const runConfig = await captureRunConfig([root]);
     expect(runConfig.codeSessionToolNames).toEqual(
       expect.arrayContaining(['child_download_mcp_onedrive', 'nested_download_mcp_sharepoint']),
+    );
+  });
+
+  it('excludes MCP tools from an agent without codeEnvAvailable, even if a nested subagent has one', async () => {
+    const grandchild = makeAgent({
+      id: 'agent_grandchild_no_env',
+      toolRegistry: new Map([['nested_download_mcp_sharepoint', {}]]),
+    });
+    const root = makeAgent({
+      toolRegistry: new Map([['root_download_mcp_onedrive', {}]]),
+      subagentAgentConfigs: [grandchild],
+    });
+    const runConfig = await captureRunConfig([root]);
+    expect(runConfig.codeSessionToolNames).not.toEqual(
+      expect.arrayContaining(['root_download_mcp_onedrive', 'nested_download_mcp_sharepoint']),
     );
   });
 });

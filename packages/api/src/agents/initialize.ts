@@ -4,6 +4,7 @@ import {
   Tools,
   Constants,
   ErrorTypes,
+  isActionTool,
   EModelEndpoint,
   EToolResources,
   paramEndpoints,
@@ -332,6 +333,13 @@ export type InitializedAgent = Agent & {
   skillAuthoringAvailable: boolean;
   /** Host-side file authoring tool names registered for this run. */
   fileAuthoringToolNames?: Set<string>;
+  /**
+   * This agent's own MCP tool names that participate in the shared code
+   * session (only set when `execute_code` is available to this agent).
+   * Lets `isCodeSessionAwareToolCall` in handlers.ts recognize a backgrounded
+   * MCP call as harvestable, mirroring `collectMCPToolNames` in run.ts.
+   */
+  mcpCodeSessionToolNames?: Set<string>;
   /** Accessible skill IDs for ACL checking at execute time */
   accessibleSkillIds?: import('mongoose').Types.ObjectId[];
   /**
@@ -1503,6 +1511,26 @@ export async function initializeAgent(
       .filter((toolDefinition) => isFileAuthoringToolDefinition(toolDefinition))
       .map((toolDefinition) => toolDefinition.name),
   );
+  /**
+   * Mirrors `collectMCPToolNames` in run.ts, but scoped to this agent's own
+   * `toolRegistry` rather than the whole run graph: `isCodeSessionAwareToolCall`
+   * in handlers.ts (used to decide whether a *backgrounded* tool call's result
+   * should be harvested into the shared code session) only ever looks up a
+   * tool call dispatched by this agent, so per-agent scope is sufficient —
+   * a subagent's own MCP tool is covered when that subagent initializes.
+   * Only populated when `execute_code` is actually available to this agent:
+   * MCP.js drops any codeFile artifact before uploading it otherwise, so an
+   * unreachable-to-Code-Interpreter agent gains no session benefit from
+   * treating its MCP calls as code-session participants.
+   */
+  const mcpCodeSessionToolNames =
+    effectiveCodeEnvAvailable === true
+      ? new Set(
+          Array.from(toolRegistry?.keys() ?? []).filter(
+            (name) => name.includes(Constants.mcp_delimiter) && !isActionTool(name),
+          ),
+        )
+      : undefined;
 
   const initializedAgent: InitializedAgent = {
     ...agent,
@@ -1526,6 +1554,10 @@ export async function initializeAgent(
     includeReasoningHistory: customEndpointConfig?.customParams?.includeReasoningHistory,
     skillAuthoringAvailable,
     fileAuthoringToolNames: fileAuthoringToolNames.size > 0 ? fileAuthoringToolNames : undefined,
+    mcpCodeSessionToolNames:
+      mcpCodeSessionToolNames != null && mcpCodeSessionToolNames.size > 0
+        ? mcpCodeSessionToolNames
+        : undefined,
     skillCount,
     accessibleSkillIds: executableSkillIds,
     activeSkillNames,

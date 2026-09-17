@@ -266,6 +266,48 @@ describe('createToolExecuteHandler', () => {
       expect(capturedConfigs[0].session_id).toBeUndefined();
       expect(capturedConfigs[0]._injected_files).toBeUndefined();
     });
+
+    it('passes session context to an MCP tool registered in mcpCodeSessionToolNames', async () => {
+      const capturedConfigs: Record<string, unknown>[] = [];
+      const handler = createHandler(capturedConfigs, ['sp_download_file_mcp_sharepoint']);
+
+      await invokeHandlerWithConfig(
+        handler,
+        [
+          {
+            id: 'call_mcp',
+            name: 'sp_download_file_mcp_sharepoint',
+            args: { fileId: 'abc' },
+            codeSessionContext: { session_id: 'session-mcp' },
+          },
+        ],
+        { mcpCodeSessionToolNames: new Set(['sp_download_file_mcp_sharepoint']) },
+      );
+
+      expect(capturedConfigs).toHaveLength(1);
+      expect(capturedConfigs[0].session_id).toBe('session-mcp');
+    });
+
+    it('does not pass session context to an MCP tool absent from mcpCodeSessionToolNames', async () => {
+      const capturedConfigs: Record<string, unknown>[] = [];
+      const handler = createHandler(capturedConfigs, ['sp_download_file_mcp_sharepoint']);
+
+      await invokeHandlerWithConfig(
+        handler,
+        [
+          {
+            id: 'call_mcp_unregistered',
+            name: 'sp_download_file_mcp_sharepoint',
+            args: { fileId: 'abc' },
+            codeSessionContext: { session_id: 'session-mcp' },
+          },
+        ],
+        { mcpCodeSessionToolNames: new Set(['other_tool_mcp_x']) },
+      );
+
+      expect(capturedConfigs).toHaveLength(1);
+      expect(capturedConfigs[0].session_id).toBeUndefined();
+    });
   });
 
   describe('tool argument normalization', () => {

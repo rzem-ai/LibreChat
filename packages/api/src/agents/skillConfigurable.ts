@@ -49,6 +49,12 @@ export interface SkillConfigurableContext {
   skillAuthoringAvailable?: boolean;
   /** Host file-authoring names registered by initializeAgent for this run. */
   fileAuthoringToolNames?: Set<string>;
+  /**
+   * This agent's own MCP tool names that participate in the shared code
+   * session, registered by initializeAgent. Lets `isCodeSessionAwareToolCall`
+   * in handlers.ts recognize a backgrounded MCP call as harvestable.
+   */
+  mcpCodeSessionToolNames?: Set<string>;
 }
 
 export interface SkillConfigurableLoadResult {
@@ -74,6 +80,7 @@ export function enrichWithSkillConfigurable(
   activeSkillNames?: Set<string>,
   skillAuthoringAvailable?: boolean,
   fileAuthoringToolNames?: Set<string>,
+  mcpCodeSessionToolNames?: Set<string>,
 ): { loadedTools: unknown[]; configurable: Record<string, unknown> };
 export function enrichWithSkillConfigurable(
   first: EnrichWithSkillConfigurableParams | SkillConfigurableLoadResult,
@@ -84,6 +91,7 @@ export function enrichWithSkillConfigurable(
   activeSkillNames?: Set<string>,
   skillAuthoringAvailable?: boolean,
   fileAuthoringToolNames?: Set<string>,
+  mcpCodeSessionToolNames?: Set<string>,
 ): { loadedTools: unknown[]; configurable: Record<string, unknown> } {
   const { result, context } =
     'result' in first && 'context' in first
@@ -98,6 +106,7 @@ export function enrichWithSkillConfigurable(
             activeSkillNames,
             skillAuthoringAvailable,
             fileAuthoringToolNames,
+            mcpCodeSessionToolNames,
           },
         };
 
@@ -112,6 +121,7 @@ export function enrichWithSkillConfigurable(
       activeSkillNames: context.activeSkillNames,
       skillAuthoringAvailable: context.skillAuthoringAvailable,
       fileAuthoringToolNames: context.fileAuthoringToolNames,
+      mcpCodeSessionToolNames: context.mcpCodeSessionToolNames,
     },
   };
 }

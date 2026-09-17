@@ -900,6 +900,15 @@ export function anyAgentReplaysReasoningContent(
  * Filters out action tools via {@link isActionTool}: an action's operationId
  * may itself contain `mcp_delimiter` (e.g. `sync_mcp_state_action_...`),
  * which would otherwise misclassify it as an MCP tool.
+ *
+ * Only collects from agents with `codeEnvAvailable === true`: `MCP.js` drops
+ * any `codeFile` artifact before uploading it when the handling agent has no
+ * code environment, so listing that agent's MCP tools here would provide no
+ * session benefit while still forcing the SDK to treat every one of its MCP
+ * calls as side-effecting (losing eager execution) for nothing. A subagent
+ * without its own code environment is still walked for its children, since a
+ * deeper nested subagent may have `codeEnvAvailable` even when its parent
+ * doesn't.
  */
 function collectMCPToolNames(agents: Array<RunAgent | null | undefined>): string[] {
   const visited = new Set<string>();
@@ -912,9 +921,11 @@ function collectMCPToolNames(agents: Array<RunAgent | null | undefined>): string
       continue;
     }
     visited.add(agent.id);
-    for (const name of agent.toolRegistry?.keys() ?? []) {
-      if (name.includes(DataProviderConstants.mcp_delimiter) && !isActionTool(name)) {
-        mcpToolNames.push(name);
+    if (agent.codeEnvAvailable === true) {
+      for (const name of agent.toolRegistry?.keys() ?? []) {
+        if (name.includes(DataProviderConstants.mcp_delimiter) && !isActionTool(name)) {
+          mcpToolNames.push(name);
+        }
       }
     }
     for (const child of agent.subagentAgentConfigs ?? []) {
