@@ -1,7 +1,6 @@
 import { Clock, Lightbulb, ArrowRight } from 'lucide-react';
 import { COURSES, type LearningCourse } from './courses';
 import { useLearningTour } from './LearningTourContext';
-import DiffPopoverButton from './DiffPopover';
 import { useLocalize } from '~/hooks';
 
 const activeCourses = COURSES.filter((course) => !course.comingSoon);
@@ -61,10 +60,6 @@ export default function LearningPanel() {
 
   return (
     <div data-testid="learning-panel" className="flex h-full flex-col">
-      <div className="flex items-center justify-end px-3 pt-2">
-        <DiffPopoverButton />
-      </div>
-
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-3">
         {activeCourses.length > 0 && (
           <div className="flex flex-col gap-3">

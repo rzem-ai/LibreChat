@@ -17,11 +17,6 @@ jest.mock('../LearningTourContext', () => ({
   }),
 }));
 
-jest.mock('../DiffPopover', () => ({
-  __esModule: true,
-  default: () => <div data-testid="diff-popover-button" />,
-}));
-
 describe('LearningPanel', () => {
   afterEach(() => {
     jest.clearAllMocks();
