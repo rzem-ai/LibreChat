@@ -1474,7 +1474,7 @@ export const interfaceSchema = z
     // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
     providerUpload: z.boolean().optional(),
     fileCitations: z.boolean().optional(),
-    /** Legacy fallback during config migration to `customDeloitteFeatureFlags.isTutorialEnabled`. */
+    /** Legacy fallback during config migration to `interface.customDeloitteFeatureFlags.isTutorialEnabled`. */
     isTutorialEnabled: z.boolean().optional(),
     /** Horizontal alignment of the current user's own chat turns. `'right'` right-aligns
      * the user's messages as iMessage-style bubbles without an avatar/name header
@@ -1559,9 +1559,6 @@ export const interfaceSchema = z
     providerUpload: false,
     fileCitations: true,
     isTutorialEnabled: true,
-    customDeloitteFeatureFlags: {
-      isTutorialEnabled: true,
-    },
     userMessageAlignment: 'left',
     buildInfo: true,
     remoteAgents: {

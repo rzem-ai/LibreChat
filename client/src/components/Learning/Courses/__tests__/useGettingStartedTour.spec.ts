@@ -36,6 +36,7 @@ describe('useGettingStartedTour', () => {
   afterEach(() => {
     jest.clearAllMocks();
     mockIsLastStep = jest.fn();
+    capturedConfig = undefined;
   });
 
   it('does not report completion when the tour is cancelled before the last step', () => {

@@ -158,6 +158,7 @@ describe('loadDefaultInterface', () => {
       configDefaults: getConfigDefaults(),
     });
 
+    expect(interfaceConfig?.isTutorialEnabled).toBe(false);
     expect(interfaceConfig?.customDeloitteFeatureFlags?.isTutorialEnabled).toBe(false);
   });
 
@@ -173,6 +174,26 @@ describe('loadDefaultInterface', () => {
       configDefaults: getConfigDefaults(),
     });
 
+    expect(interfaceConfig?.isTutorialEnabled).toBe(false);
+    expect(interfaceConfig?.customDeloitteFeatureFlags?.isTutorialEnabled).toBe(false);
+  });
+
+  it('prefers customDeloitteFeatureFlags over the legacy tutorial flag when both are set', async () => {
+    const config: Partial<TCustomConfig> = {
+      interface: {
+        isTutorialEnabled: true,
+        customDeloitteFeatureFlags: {
+          isTutorialEnabled: false,
+        },
+      },
+    };
+
+    const interfaceConfig = await loadDefaultInterface({
+      config,
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.isTutorialEnabled).toBe(false);
     expect(interfaceConfig?.customDeloitteFeatureFlags?.isTutorialEnabled).toBe(false);
   });
 
@@ -183,9 +204,21 @@ describe('loadDefaultInterface', () => {
       configDefaults: defaults,
     });
 
-    expect(interfaceConfig?.customDeloitteFeatureFlags?.isTutorialEnabled).toBe(
-      defaults.interface.customDeloitteFeatureFlags?.isTutorialEnabled,
-    );
+    expect(interfaceConfig?.isTutorialEnabled).toBe(defaults.interface.isTutorialEnabled);
+    expect(interfaceConfig?.customDeloitteFeatureFlags?.isTutorialEnabled).toBeUndefined();
+  });
+
+  it('maps the legacy tutorial default when the nested default is unavailable', async () => {
+    const defaults = getConfigDefaults();
+    defaults.interface.customDeloitteFeatureFlags = undefined;
+    defaults.interface.isTutorialEnabled = false;
+    const interfaceConfig = await loadDefaultInterface({
+      config: {},
+      configDefaults: defaults,
+    });
+
+    expect(interfaceConfig?.isTutorialEnabled).toBe(false);
+    expect(interfaceConfig?.customDeloitteFeatureFlags?.isTutorialEnabled).toBeUndefined();
   });
 
   it('preserves the configured temporary chat retention period', async () => {

@@ -42,11 +42,15 @@ export async function loadDefaultInterface({
   const isTutorialEnabled =
     interfaceConfig?.customDeloitteFeatureFlags?.isTutorialEnabled ??
     interfaceConfig?.isTutorialEnabled ??
-    defaults.customDeloitteFeatureFlags?.isTutorialEnabled;
+    defaults.customDeloitteFeatureFlags?.isTutorialEnabled ??
+    defaults.isTutorialEnabled;
+  const shouldMaterializeNestedTutorialFlag =
+    interfaceConfig?.customDeloitteFeatureFlags?.isTutorialEnabled !== undefined ||
+    interfaceConfig?.isTutorialEnabled !== undefined;
   const customDeloitteFeatureFlags = removeNullishValues({
     ...(defaults.customDeloitteFeatureFlags ?? {}),
     ...(interfaceConfig?.customDeloitteFeatureFlags ?? {}),
-    isTutorialEnabled,
+    ...(shouldMaterializeNestedTutorialFlag ? { isTutorialEnabled } : {}),
   });
 
   const loadedInterface: AppConfig['interfaceConfig'] = removeNullishValues({
@@ -67,6 +71,7 @@ export async function loadDefaultInterface({
     contextCost: interfaceConfig?.contextCost ?? defaults.contextCost,
     currency: interfaceConfig?.currency ?? defaults.currency,
     userMessageAlignment: interfaceConfig?.userMessageAlignment ?? defaults.userMessageAlignment,
+    isTutorialEnabled,
 
     // Permissions and related settings - only include if explicitly configured
     bookmarks: interfaceConfig?.bookmarks,
