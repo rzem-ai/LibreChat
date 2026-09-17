@@ -552,8 +552,8 @@ export const useCreateAgentApiKeyMutation = (): UseMutationResult<
   return useMutation(
     (payload: t.TAgentApiKeyCreateRequest) => dataService.createAgentApiKey(payload),
     {
-      onSuccess: () => {
-        queryClient.invalidateQueries([QueryKeys.agentApiKeys]);
+      onSuccess: (_data, payload) => {
+        queryClient.invalidateQueries([QueryKeys.agentApiKeys, payload.userEmail]);
       },
     },
   );
@@ -570,8 +570,8 @@ export const useDeleteAgentApiKeyMutation = (): UseMutationResult<
     ({ id, userEmail }: { id: string; userEmail: string }) =>
       dataService.deleteAgentApiKey(id, userEmail),
     {
-      onSuccess: () => {
-        queryClient.invalidateQueries([QueryKeys.agentApiKeys]);
+      onSuccess: (_data, variables) => {
+        queryClient.invalidateQueries([QueryKeys.agentApiKeys, variables.userEmail]);
       },
     },
   );
