@@ -10,33 +10,34 @@ import '../driver-theme.css';
  * make each step tolerant of elements that are conditionally rendered (permissions,
  * feature flags, viewport) or that need a moment to mount after a panel switch.
  *
- * Step order (26 steps, voice input removed):
- *   1  New Chat
- *   2  Model Selector          (AU hosting note added)
- *   3  Agent Marketplace       (moved up — choose a pre-configured agent)
- *   4  Message Box             (moved up — core interaction)
- *   5  Attach Files            (moved up — dropdown explainer)
- *   6  Run Code                (document manipulation added)
- *   7  Skills toolbar          (updated to agent instructions)
- *   8  Artifacts
- *   9  More Toggles
- *   10 Send
- *   11 Compare Chats
- *   12 Bookmark
- *   13 Sidebar Toggle
- *   14 Conversations
- *   15 Agent Builder
- *   16 Skills nav              (updated to agent instructions)
- *   17 Prompts
- *   18 Memories
- *   19 Bookmarks nav
- *   20 Files
- *   21 Parameters
- *   22 MCP Connectors          (business-friendly description)
- *   23 Learning Hub
- *   24 Search Conversations
- *   25 Projects
- *   26 Account Menu
+ * Step order (27 steps, voice input removed):
+ *   1  Welcome to MyAssist
+ *   2  New Chat
+ *   3  Model Selector          (AU hosting note added)
+ *   4  Agent Marketplace       (moved up — choose a pre-configured agent)
+ *   5  Message Box             (moved up — core interaction)
+ *   6  Attach Files            (moved up — dropdown explainer)
+ *   7  Run Code                (document manipulation added)
+ *   8  Skills toolbar          (updated to agent instructions)
+ *   9  Artifacts
+ *   10 More Toggles
+ *   11 Send
+ *   12 Compare Chats
+ *   13 Bookmark
+ *   14 Sidebar Toggle
+ *   15 Conversations
+ *   16 Agent Builder
+ *   17 Skills nav              (updated to agent instructions)
+ *   18 Prompts
+ *   19 Memories
+ *   20 Bookmarks nav
+ *   21 Files
+ *   22 Parameters
+ *   23 MCP Connectors          (business-friendly description)
+ *   24 Learning Hub
+ *   25 Search Conversations
+ *   26 Projects
+ *   27 Account Menu
  */
 export default function useGettingStartedTour(onComplete?: () => void) {
   // Retain the active Driver.js instance so it can be destroyed on unmount.
@@ -79,7 +80,18 @@ export default function useGettingStartedTour(onComplete?: () => void) {
         }
       },
       steps: [
-        // ── 1. New Chat ──────────────────────────────────────────────────────
+        // ── 1. Welcome to MyAssist ───────────────────────────────────────────
+        {
+          element: "[data-testid='new-chat-button']",
+          popover: {
+            title: 'Welcome to MyAssist',
+            description:
+              "Welcome to the new and improved MyAssist. We've rebuilt from the ground up to give you access to more powerful AI tools.<br><br>In this guided tour, we'll take you through the chat interface and side panel, so you are comfortable navigating through the platform.",
+            side: 'right',
+          },
+        },
+
+        // ── 2. New Chat ──────────────────────────────────────────────────────
         {
           element: "[data-testid='new-chat-button']",
           popover: {
@@ -90,7 +102,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 2. Model Selector ────────────────────────────────────────────────
+        // ── 3. Model Selector ────────────────────────────────────────────────
         {
           element: "[data-testid='model-selector-button']",
           popover: {
@@ -101,7 +113,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 3. Agent Marketplace ─────────────────────────────────────────────
+        // ── 4. Agent Marketplace ─────────────────────────────────────────────
         {
           element: "[data-testid='nav-agents-marketplace-button']",
           popover: {
@@ -112,7 +124,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 4. Message Box ───────────────────────────────────────────────────
+        // ── 5. Message Box ───────────────────────────────────────────────────
         {
           element: "[data-testid='text-input']",
           popover: {
@@ -123,7 +135,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 5. Attach Files ──────────────────────────────────────────────────
+        // ── 6. Attach Files ──────────────────────────────────────────────────
         {
           element: "[data-testid='attach-file-menu-button']",
           popover: {
@@ -134,7 +146,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 6. Run Code ──────────────────────────────────────────────────────
+        // ── 7. Run Code ──────────────────────────────────────────────────────
         {
           element: "[data-testid='toolbar-toggle-code-interpreter']",
           popover: {
@@ -145,7 +157,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 7. Skills (toolbar) ──────────────────────────────────────────────
+        // ── 8. Skills (toolbar) ──────────────────────────────────────────────
         {
           element: "[data-testid='toolbar-toggle-skills']",
           popover: {
@@ -156,7 +168,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 8. Artifacts ─────────────────────────────────────────────────────
+        // ── 9. Artifacts ─────────────────────────────────────────────────────
         {
           element: "[data-testid='toolbar-toggle-artifacts']",
           popover: {
@@ -167,7 +179,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 9. More Toggles ──────────────────────────────────────────────────
+        // ── 10. More Toggles ─────────────────────────────────────────────────
         {
           element:
             "[data-testid='toolbar-toggle-web-search'], [data-testid='toolbar-toggle-memory'], [data-testid='toolbar-toggle-file-search'], [data-testid='toolbar-toggle-mcp-servers']",
@@ -179,7 +191,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 10. Send ─────────────────────────────────────────────────────────
+        // ── 11. Send ─────────────────────────────────────────────────────────
         {
           element: "[data-testid='send-button']",
           popover: {
@@ -189,7 +201,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 11. Compare Chats ────────────────────────────────────────────────
+        // ── 12. Compare Chats ────────────────────────────────────────────────
         {
           element: "[data-testid='add-multi-convo-button']",
           popover: {
@@ -200,7 +212,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 12. Bookmark ─────────────────────────────────────────────────────
+        // ── 13. Bookmark ─────────────────────────────────────────────────────
         {
           element: "[data-testid='bookmark-menu']",
           popover: {
@@ -211,7 +223,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 13. Sidebar Toggle ───────────────────────────────────────────────
+        // ── 14. Sidebar Toggle ───────────────────────────────────────────────
         {
           element: "[data-testid='open-sidebar-button'], [data-testid='close-sidebar-button']",
           popover: {
@@ -222,7 +234,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 14. Conversations ────────────────────────────────────────────────
+        // ── 15. Conversations ────────────────────────────────────────────────
         {
           element: "[data-testid='nav-panel-conversations']",
           popover: {
@@ -232,7 +244,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 15. Agent Builder ────────────────────────────────────────────────
+        // ── 16. Agent Builder ────────────────────────────────────────────────
         {
           element: "[data-testid='nav-panel-agents']",
           popover: {
@@ -243,7 +255,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 16. Skills (nav) ─────────────────────────────────────────────────
+        // ── 17. Skills (nav) ─────────────────────────────────────────────────
         {
           element: "[data-testid='nav-panel-skills']",
           popover: {
@@ -254,7 +266,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 17. Prompts ──────────────────────────────────────────────────────
+        // ── 18. Prompts ──────────────────────────────────────────────────────
         {
           element: "[data-testid='nav-panel-prompts']",
           popover: {
@@ -265,7 +277,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 18. Memories ─────────────────────────────────────────────────────
+        // ── 19. Memories ─────────────────────────────────────────────────────
         {
           element: "[data-testid='nav-panel-memories']",
           popover: {
@@ -276,7 +288,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 19. Bookmarks (nav) ──────────────────────────────────────────────
+        // ── 20. Bookmarks (nav) ──────────────────────────────────────────────
         {
           element: "[data-testid='nav-panel-bookmarks']",
           popover: {
@@ -287,7 +299,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 20. Files ────────────────────────────────────────────────────────
+        // ── 21. Files ────────────────────────────────────────────────────────
         {
           element: "[data-testid='nav-panel-files']",
           popover: {
@@ -297,7 +309,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 21. Parameters ───────────────────────────────────────────────────
+        // ── 22. Parameters ───────────────────────────────────────────────────
         {
           element: "[data-testid='nav-panel-parameters']",
           popover: {
@@ -308,7 +320,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 22. MCP Connectors ───────────────────────────────────────────────
+        // ── 23. MCP Connectors ───────────────────────────────────────────────
         {
           element: "[data-testid='nav-panel-mcp-builder']",
           popover: {
@@ -319,7 +331,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 23. Learning Hub ─────────────────────────────────────────────────
+        // ── 24. Learning Hub ─────────────────────────────────────────────────
         {
           element: "[data-testid='nav-panel-learning']",
           popover: {
@@ -330,7 +342,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 24. Search Conversations ─────────────────────────────────────────
+        // ── 25. Search Conversations ─────────────────────────────────────────
         {
           element: "[data-testid='nav-search-input']",
           popover: {
@@ -341,7 +353,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 25. Projects ─────────────────────────────────────────────────────
+        // ── 26. Projects ─────────────────────────────────────────────────────
         {
           element: "[data-testid='nav-projects-section']",
           popover: {
@@ -352,7 +364,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           },
         },
 
-        // ── 26. Account Menu ─────────────────────────────────────────────────
+        // ── 27. Account Menu ─────────────────────────────────────────────────
         {
           element: "[data-testid='nav-user']",
           popover: {

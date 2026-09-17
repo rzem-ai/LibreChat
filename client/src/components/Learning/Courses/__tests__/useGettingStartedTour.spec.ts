@@ -4,6 +4,14 @@ import useGettingStartedTour from '../useGettingStartedTour';
 type DriverConfig = {
   onDestroyStarted?: () => void;
   onNextClick?: () => void;
+  steps?: Array<{
+    element: string;
+    popover: {
+      title: string;
+      description: string;
+      side: string;
+    };
+  }>;
 };
 
 const mockDrive = jest.fn();
@@ -71,5 +79,21 @@ describe('useGettingStartedTour', () => {
     expect(mockMoveNext).toHaveBeenCalledTimes(1);
     expect(mockDestroy).toHaveBeenCalledTimes(1);
     expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts with the welcome step before new chat guidance', () => {
+    const { result } = renderHook(() => useGettingStartedTour());
+    result.current.startTour();
+
+    expect(capturedConfig?.steps?.[0]).toEqual({
+      element: "[data-testid='new-chat-button']",
+      popover: {
+        title: 'Welcome to MyAssist',
+        description:
+          "Welcome to the new and improved MyAssist. We've rebuilt from the ground up to give you access to more powerful AI tools.<br><br>In this guided tour, we'll take you through the chat interface and side panel, so you are comfortable navigating through the platform.",
+        side: 'right',
+      },
+    });
+    expect(capturedConfig?.steps?.[1]?.popover.title).toBe('New Chat');
   });
 });
