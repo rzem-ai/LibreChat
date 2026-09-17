@@ -39,12 +39,13 @@ export function getCleanDomain(url: string) {
 // Deloitte Custom Change: decorative — the domain is always rendered as adjacent text, so an
 // accessible name here would cause screen readers to announce it twice.
 export function FaviconImage({ domain, className = '' }: { domain: string; className?: string }) {
+  // Deloitte Custom Change: rounded corners to match the Connector logos in the admin panel
   return (
     <img
       src={getFaviconUrl(domain)}
       alt=""
       aria-hidden="true"
-      className={cn('size-4 shrink-0 rounded-sm', className)}
+      className={cn('size-4 shrink-0 rounded-md', className)}
       loading="lazy"
     />
   );
