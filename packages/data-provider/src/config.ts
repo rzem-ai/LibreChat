@@ -1558,6 +1558,7 @@ export const interfaceSchema = z
     // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
     providerUpload: false,
     fileCitations: true,
+    isTutorialEnabled: true,
     customDeloitteFeatureFlags: {
       isTutorialEnabled: true,
     },
