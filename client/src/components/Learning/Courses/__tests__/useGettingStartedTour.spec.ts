@@ -19,9 +19,10 @@ const mockDestroy = jest.fn();
 const mockMoveNext = jest.fn();
 let mockIsLastStep = jest.fn();
 let capturedConfig: DriverConfig | undefined;
+let mockShowMarketplace = true;
 
 jest.mock('~/hooks', () => ({
-  useShowMarketplace: () => true,
+  useShowMarketplace: () => mockShowMarketplace,
 }));
 
 jest.mock('driver.js', () => ({
@@ -41,6 +42,7 @@ describe('useGettingStartedTour', () => {
     jest.clearAllMocks();
     mockIsLastStep = jest.fn();
     capturedConfig = undefined;
+    mockShowMarketplace = true;
   });
 
   it('does not report completion when the tour is cancelled before the last step', () => {
@@ -117,5 +119,17 @@ describe('useGettingStartedTour', () => {
         side: 'bottom',
       },
     });
+  });
+
+  it('omits the marketplace step when the marketplace is hidden', () => {
+    mockShowMarketplace = false;
+    const { result } = renderHook(() => useGettingStartedTour());
+    result.current.startTour();
+
+    expect(capturedConfig?.steps).toHaveLength(25);
+    expect(capturedConfig?.steps?.some((step) => step.popover.title === 'Agent Marketplace')).toBe(
+      false,
+    );
+    expect(capturedConfig?.steps?.[22]?.popover.title).toBe('Switch Back to a Model');
   });
 });
