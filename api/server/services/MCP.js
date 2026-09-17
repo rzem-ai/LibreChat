@@ -1131,6 +1131,12 @@ function createToolInstance({
          * fail closed the same way an explicit "not enabled" result does. */
         let capabilityCheckFailed = false;
         let hasExecuteCodeCapability = false;
+        /* `formatToolContent` returns an empty `result[0]` for a marker-only
+         * download response, deferring all user-visible content to the
+         * codeFile artifact. If that artifact is then dropped below without
+         * a substitute message, the model sees a completely empty tool
+         * result with no indication the download happened (or failed). */
+        let codeFileRegistrationFailed = false;
         if (req) {
           try {
             hasExecuteCodeCapability = await checkCapability(req, AgentCapabilities.execute_code);
@@ -1143,12 +1149,15 @@ function createToolInstance({
           }
         }
         if (!req) {
+          codeFileRegistrationFailed = true;
           logger.warn(
             `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": no request context available to register it with Code Interpreter.`,
           );
         } else if (capabilityCheckFailed) {
+          codeFileRegistrationFailed = true;
           // Already logged above.
         } else if (!hasExecuteCodeCapability) {
+          codeFileRegistrationFailed = true;
           logger.warn(
             `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": Code Interpreter is not enabled for this endpoint.`,
           );
@@ -1158,6 +1167,7 @@ function createToolInstance({
            * its own tool list (`effectiveCodeEnvAvailable` in initialize.ts),
            * in which case it has no Code Interpreter session to use this file
            * from. */
+          codeFileRegistrationFailed = true;
           logger.warn(
             `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": this agent does not have Code Interpreter (execute_code) available.`,
           );
@@ -1199,6 +1209,7 @@ function createToolInstance({
              *  already succeeded) instead of failing the whole call over a
              *  transient network blip, a disallowed/redirected URL, or an
              *  expired short-lived download URL. */
+            codeFileRegistrationFailed = true;
             logger.warn(
               `[MCP][${serverName}][${toolName}][User: ${userId}] Failed to register codeFile artifact "${name}" with Code Interpreter:`,
               /** Axios attaches the raw (signed) request URL to `error.config`/
@@ -1218,6 +1229,13 @@ function createToolInstance({
               stream.destroy();
             }
           }
+        }
+        /* Marker-only tool responses (`result[0] === ''`) rely entirely on the
+         * codeFile artifact to tell the model anything happened. Losing that
+         * artifact above without a substitute leaves the model with no signal
+         * at all, so fall back to a plain, non-secret status line instead. */
+        if (codeFileRegistrationFailed && Array.isArray(result) && !result[0]) {
+          result[0] = `File "${name}" was downloaded but could not be attached to this conversation for use in Code Interpreter.`;
         }
       }
 

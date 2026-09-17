@@ -85,6 +85,31 @@ describe('fetchAllowedCodeFileStream', () => {
     expect(mockIsAddressAllowed).not.toHaveBeenCalled();
   });
 
+  it('does not build connect-time SSRF agents when a proxy is configured', async () => {
+    mockAxiosInstance.defaults.proxy = { host: 'corp-proxy.internal', port: 8080 };
+    mockIsAddressAllowed.mockReturnValue(true);
+    mockGet.mockResolvedValue({ status: 200, data: 'stream' });
+
+    await fetchAllowedCodeFileStream('https://internal.example/report.pdf', null, [
+      'internal.example:443',
+    ]);
+
+    expect(mockCreateSSRFSafeAgents).not.toHaveBeenCalled();
+    expect(mockGet).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ httpAgent: undefined, httpsAgent: undefined }),
+    );
+  });
+
+  it('builds connect-time SSRF agents when there is no proxy configured', async () => {
+    mockAxiosInstance.defaults.proxy = false;
+    mockGet.mockResolvedValue({ status: 200, data: 'stream' });
+
+    await fetchAllowedCodeFileStream('https://contoso.sharepoint.com/report.pdf', null, null);
+
+    expect(mockCreateSSRFSafeAgents).toHaveBeenCalledWith(null);
+  });
+
   it('destroys the response stream when the download rejects with a non-2xx/3xx status', async () => {
     const destroy = jest.fn();
     const axiosError = Object.assign(new Error('Request failed with status code 403'), {

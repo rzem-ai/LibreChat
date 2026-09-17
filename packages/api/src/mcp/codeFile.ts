@@ -92,10 +92,20 @@ export async function fetchAllowedCodeFileStream(
    * below so the preflight check and the connect-time enforcement never
    * disagree about whether this is an admin-vetted allowlist. */
   const useSSRFProtection = !Array.isArray(allowedDomains) || allowedDomains.length === 0;
-  const { httpAgent, httpsAgent } = useSSRFProtection
-    ? createSSRFSafeAgents(allowedAddresses)
-    : { httpAgent: undefined, httpsAgent: undefined };
   const proxy = codeFileDownloadAxios.defaults.proxy || false;
+  /** Connect-time agents validate whatever hostname axios actually dials — the
+   * real target when unproxied, but the *proxy's own* address once a proxy is
+   * configured (axios rewrites `options.hostname` to the proxy for plaintext
+   * HTTP, and swaps in its own CONNECT-tunneling agent entirely for HTTPS, so
+   * `httpsAgent` never even runs). Attaching them in the proxied case doesn't
+   * protect the download target — it just risks blocking a legitimate
+   * corporate proxy that happens to live on a private address. `assertHopSafeForProxy`
+   * is the sole SSRF gate once a proxy is in play, so the agents are only
+   * built for the direct-connection path. */
+  const { httpAgent, httpsAgent } =
+    useSSRFProtection && proxy === false
+      ? createSSRFSafeAgents(allowedAddresses)
+      : { httpAgent: undefined, httpsAgent: undefined };
   /** Shared across every hop (rather than reset per hop) so a chain of slow
    * redirects can't run the timeout up to `CODE_FILE_MAX_REDIRECTS *
    * CODE_FILE_DOWNLOAD_TIMEOUT_MS` before failing. */
