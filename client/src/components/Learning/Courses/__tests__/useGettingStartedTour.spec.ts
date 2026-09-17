@@ -109,7 +109,9 @@ describe('useGettingStartedTour', () => {
     result.current.startTour();
 
     expect(capturedConfig?.steps).toHaveLength(26);
-    expect(capturedConfig?.steps?.[22]?.popover.title).toBe('Agent Marketplace');
+    expect(
+      capturedConfig?.steps?.slice(21, 25).map((step) => step.popover.title),
+    ).toEqual(['Connectors', 'Agent Marketplace', 'Switch Back to a Model', 'Learning Hub']);
     expect(capturedConfig?.steps?.[23]).toEqual({
       element: '#model-selector-button',
       popover: {
@@ -130,6 +132,8 @@ describe('useGettingStartedTour', () => {
     expect(capturedConfig?.steps?.some((step) => step.popover.title === 'Agent Marketplace')).toBe(
       false,
     );
-    expect(capturedConfig?.steps?.[22]?.popover.title).toBe('Switch Back to a Model');
+    expect(
+      capturedConfig?.steps?.slice(21, 24).map((step) => step.popover.title),
+    ).toEqual(['Connectors', 'Switch Back to a Model', 'Learning Hub']);
   });
 });
