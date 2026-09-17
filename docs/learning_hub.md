@@ -23,9 +23,8 @@ Add a new entry to the `COURSES` array in:
 
 Each course currently has:
 
-- `id` — stable internal identifier
-- `titleKey` — localization key for the course title
-- `descriptionKey` — localization key for the course summary
+- `title` — stable user-facing course title
+- `description` — user-facing course summary
 - `estimatedMinutes` — optional duration shown in the UI
 - `comingSoon` — whether the course is available yet
 
