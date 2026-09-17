@@ -376,7 +376,12 @@ function matchFenceOpen(line: string): FenceOpen | null {
  * explicitly via `BLOCKQUOTE_PREFIX`, with the exact same prefix then required on the closing
  * line. A list item's continuation lines carry no repeated marker, just indentation, but its
  * opening line may put the fence directly after the marker (e.g. `- \`\`\`js`); that one-time
- * marker is matched via `LIST_MARKER_PREFIX` before looking for the fence.
+ * marker is matched via `LIST_MARKER_PREFIX` before looking for the fence. Per CommonMark, a
+ * list item's continuation lines must be indented to at least the marker's own width to remain
+ * part of the item — code blocks don't get the lazy-continuation exception paragraphs do — so
+ * a line that falls short ends the item there: the range stops at the last sufficiently
+ * indented line, and that short line itself is re-scanned as ordinary top-level text (it may
+ * even open its own, unrelated fence).
  *
  * Per CommonMark, a fence delimiter — opening or closing — may only be indented up to 3
  * spaces beyond its container prefix; beyond that it's still code content, not a fence. Both
@@ -384,6 +389,11 @@ function matchFenceOpen(line: string): FenceOpen | null {
  * trimming all leading whitespace) so an over-indented delimiter-looking line is never
  * mistaken for a fence boundary — which would otherwise let a stray indented line pair with a
  * later, unrelated fence and swallow real prose (and its citations) in between.
+ *
+ * When no closing fence is found anywhere in the rest of the text (a stream truncated
+ * mid-code-block), the range still extends to the end of the text — CommonMark renders an
+ * unclosed fence as code through to the end of the document, so leaving it un-excluded would
+ * let a citation anchor land inside what actually renders as a code block.
  */
 function findFencedCodeRanges(text: string): ExcludedRange[] {
   const ranges: ExcludedRange[] = [];
@@ -407,7 +417,10 @@ function findFencedCodeRanges(text: string): ExcludedRange[] {
     }
 
     const closeLineRegex = new RegExp(`^ {0,3}${fenceOpen.char}{${fenceOpen.length},}[ \t\r]*$`);
+    const requiredIndent = listMarkerPrefix.length;
     let closeIndex = -1;
+    let listItemEndIndex = -1;
+
     for (let j = i + 1; j < lines.length; j++) {
       const line = lines[j];
       if (blockquotePrefix && !line.startsWith(blockquotePrefix)) {
@@ -415,19 +428,47 @@ function findFencedCodeRanges(text: string): ExcludedRange[] {
       }
 
       const candidate = blockquotePrefix ? line.slice(blockquotePrefix.length) : line;
+
+      if (requiredIndent > 0 && candidate.trim() !== '') {
+        const lineIndent = candidate.match(/^[ \t]*/)?.[0].length ?? 0;
+        if (lineIndent < requiredIndent) {
+          listItemEndIndex = j;
+          break;
+        }
+        if (closeLineRegex.test(candidate.slice(requiredIndent))) {
+          closeIndex = j;
+          break;
+        }
+        continue;
+      }
+
       if (closeLineRegex.test(candidate)) {
         closeIndex = j;
         break;
       }
     }
 
-    if (closeIndex === -1) {
-      i += 1;
+    if (closeIndex !== -1) {
+      ranges.push({
+        start: lineStarts[i],
+        end: lineStarts[closeIndex] + lines[closeIndex].length,
+      });
+      i = closeIndex + 1;
       continue;
     }
 
-    ranges.push({ start: lineStarts[i], end: lineStarts[closeIndex] + lines[closeIndex].length });
-    i = closeIndex + 1;
+    if (listItemEndIndex !== -1) {
+      const lastContentIndex = listItemEndIndex - 1;
+      ranges.push({
+        start: lineStarts[i],
+        end: lineStarts[lastContentIndex] + lines[lastContentIndex].length,
+      });
+      i = listItemEndIndex;
+      continue;
+    }
+
+    ranges.push({ start: lineStarts[i], end: text.length });
+    break;
   }
 
   return ranges;

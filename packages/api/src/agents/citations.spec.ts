@@ -247,11 +247,7 @@ describe('insertFileCitations', () => {
   });
 
   it('does not anchor text inside a plain (non-artifact) fenced code block', () => {
-    const original = [
-      '```',
-      'You can reserve a desk fourteen days in advance.',
-      '```',
-    ].join('\n');
+    const original = ['```', 'You can reserve a desk fourteen days in advance.', '```'].join('\n');
     const parts = [textPart(original)];
     insertFileCitations(parts, [
       fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
@@ -279,9 +275,7 @@ describe('insertFileCitations', () => {
   });
 
   it('does not anchor text inside a plain tilde-fenced code block', () => {
-    const original = ['~~~', 'You can reserve a desk fourteen days in advance.', '~~~'].join(
-      '\n',
-    );
+    const original = ['~~~', 'You can reserve a desk fourteen days in advance.', '~~~'].join('\n');
     const parts = [textPart(original)];
     insertFileCitations(parts, [
       fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
@@ -360,17 +354,30 @@ describe('insertFileCitations', () => {
     expect(readText(parts[0])).toBe(original);
   });
 
-  it('recognizes a fence that opens directly after a list marker on the same line', () => {
+  it('closes a list-item fence whose continuation lines are indented to the marker width', () => {
     const original = [
       '- ```js',
-      'You can reserve a desk fourteen days in advance.',
-      '```',
+      '  You can reserve a desk fourteen days in advance.',
+      '  ```',
     ].join('\n');
     const parts = [textPart(original)];
     insertFileCitations(parts, [
       fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
     ]);
     expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not treat an unindented line after a list-marker-prefixed fence as fence content, per CommonMark', () => {
+    const original = ['- ```js', 'You can reserve a desk fourteen days in advance.', '```'].join(
+      '\n',
+    );
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const lines = readText(parts[0]).split('\n');
+    expect(lines[0]).toBe('- ```js');
+    expect(lines[1]).toContain(`${MARKER}turn0file0`);
   });
 
   it('does not treat a 4-space-indented backtick line as a fence open, so real prose before a later fence still gets cited', () => {
@@ -387,6 +394,32 @@ describe('insertFileCitations', () => {
     ]);
     const lines = readText(parts[0]).split('\n');
     expect(lines[1]).toContain(`${MARKER}turn0file0`);
+  });
+
+  it('excludes through the end of the text when a fence is never closed (truncated response)', () => {
+    const original = [
+      'Some intro prose.',
+      '```js',
+      'You can reserve a desk fourteen days in advance.',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('excludes through the end of the text when a tilde fence is never closed', () => {
+    const original = [
+      'Some intro prose.',
+      '~~~js',
+      'You can reserve a desk fourteen days in advance.',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
   });
 });
 
@@ -522,13 +555,53 @@ describe('insertMCPCitations', () => {
     const parts = [textPart(original)];
     insertMCPCitations(
       parts,
-      [mcpAttachment([{ toolName: 'afr_get_latest_news', serverName: 'afr', content: AFR_ARTICLE }])],
+      [
+        mcpAttachment([
+          { toolName: 'afr_get_latest_news', serverName: 'afr', content: AFR_ARTICLE },
+        ]),
+      ],
       0,
     );
     const text = readText(parts[0]);
     const lines = text.split('\n');
     expect(lines[0]).toContain(`${MARKER}turn0mcp0`);
     expect(lines[4]).not.toContain(MARKER);
+  });
+
+  it('does not anchor MCP-matched text when a fence is never closed (truncated response)', () => {
+    const original = [
+      '```',
+      'The Reserve Bank held the cash rate steady at its meeting today.',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertMCPCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'afr_get_latest_news', serverName: 'afr', content: AFR_ARTICLE },
+        ]),
+      ],
+      0,
+    );
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not anchor MCP-matched text when a tilde fence is never closed', () => {
+    const original = [
+      '~~~',
+      'The Reserve Bank held the cash rate steady at its meeting today.',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertMCPCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'afr_get_latest_news', serverName: 'afr', content: AFR_ARTICLE },
+        ]),
+      ],
+      0,
+    );
+    expect(readText(parts[0])).toBe(original);
   });
 });
 
@@ -785,7 +858,11 @@ describe('insertSharePointCitations', () => {
     const parts = [textPart(original)];
     insertSharePointCitations(
       parts,
-      [mcpAttachment([{ toolName: 'sp_search', serverName: 'sharepoint', title: 'Archive', content: 'a' }])],
+      [
+        mcpAttachment([
+          { toolName: 'sp_search', serverName: 'sharepoint', title: 'Archive', content: 'a' },
+        ]),
+      ],
       0,
     );
     expect(readText(parts[0])).toBe(original);
@@ -831,7 +908,11 @@ describe('insertSharePointCitations', () => {
     const parts = [textPart(original)];
     insertSharePointCitations(
       parts,
-      [mcpAttachment([{ toolName: 'sp_search', serverName: 'sharepoint', title: 'Archive', content: 'a' }])],
+      [
+        mcpAttachment([
+          { toolName: 'sp_search', serverName: 'sharepoint', title: 'Archive', content: 'a' },
+        ]),
+      ],
       0,
     );
     expect(readText(parts[0])).toBe(original);
@@ -954,6 +1035,46 @@ describe('insertSharePointCitations', () => {
     const lines = readText(parts[0]).split('\n');
     expect(lines[0]).toContain(`${MARKER}turn0mcp0`);
     expect(lines[4]).not.toContain(MARKER);
+  });
+
+  it('does not anchor a filename line when a fence is never closed (truncated response)', () => {
+    const original = ['````', '- Consulting Graduate Induction Workbook.pptx'].join('\n');
+    const parts = [textPart(original)];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not anchor a filename line when a tilde fence is never closed', () => {
+    const original = ['~~~~', '- Consulting Graduate Induction Workbook.pptx'].join('\n');
+    const parts = [textPart(original)];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    expect(readText(parts[0])).toBe(original);
   });
 
   it('anchors a later prose mention when the same filename appeared earlier inside a fence', () => {
