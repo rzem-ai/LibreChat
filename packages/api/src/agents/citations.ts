@@ -659,12 +659,16 @@ const TABLE_SEPARATOR_LINE = /^\s*\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?\s*$/;
 /**
  * A table row's cells plus which edge pipes the original line actually had, so a caller that
  * rebuilds the row can reproduce the exact same leading/trailing pipe formatting instead of
- * always adding both.
+ * always adding both. `prefix`/`suffix` are the whitespace trimmed off the original line
+ * (indentation, trailing spaces, a CRLF's `\r`) so the rebuilt line reproduces it exactly instead
+ * of silently normalizing it away.
  */
 interface TableRowCells {
   cells: string[];
   hasLeadingPipe: boolean;
   hasTrailingPipe: boolean;
+  prefix: string;
+  suffix: string;
 }
 
 /**
@@ -689,12 +693,23 @@ function splitTableRowCells(line: string): TableRowCells | undefined {
   if (!(hasLeadingPipe && hasTrailingPipe) && !core.includes('|')) {
     return undefined;
   }
-  return { cells: core.split('|'), hasLeadingPipe, hasTrailingPipe };
+  const prefix = line.slice(0, line.indexOf(trimmed));
+  const suffix = line.slice(prefix.length + trimmed.length);
+  return { cells: core.split('|'), hasLeadingPipe, hasTrailingPipe, prefix, suffix };
 }
 
-/** Rebuilds a table row from `splitTableRowCells`'s output, restoring only the edge pipes the original line had. */
-function joinTableRowCells({ cells, hasLeadingPipe, hasTrailingPipe }: TableRowCells): string {
-  return `${hasLeadingPipe ? '|' : ''}${cells.join('|')}${hasTrailingPipe ? '|' : ''}`;
+/**
+ * Rebuilds a table row from `splitTableRowCells`'s output, restoring the edge pipes and the
+ * leading/trailing whitespace (including a CRLF's `\r`) the original line had.
+ */
+function joinTableRowCells({
+  cells,
+  hasLeadingPipe,
+  hasTrailingPipe,
+  prefix,
+  suffix,
+}: TableRowCells): string {
+  return `${prefix}${hasLeadingPipe ? '|' : ''}${cells.join('|')}${hasTrailingPipe ? '|' : ''}${suffix}`;
 }
 
 /** Index of the last non-blank cell, or -1 if every cell is empty — the safe place to append an anchor without disturbing column count. */
