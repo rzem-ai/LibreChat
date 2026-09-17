@@ -10,6 +10,8 @@ const GENERATED_JWT_SECRET = crypto.randomBytes(32).toString('hex');
 const GENERATED_JWT_REFRESH_SECRET = crypto.randomBytes(32).toString('hex');
 const DEFAULT_REDIS_URI = 'redis://127.0.0.1:6379/15';
 const DEFAULT_REDIS_KEY_PREFIX = 'LibreChatE2E';
+const DEFAULT_E2E_CONFIG_URL = 'http://127.0.0.1:65535';
+const DEFAULT_E2E_MCP_SCOPE = 'api://e2e/mcp';
 const PASSTHROUGH_ENV_KEYS = [
   'APPDATA',
   'CI',
@@ -109,6 +111,13 @@ export function getBaseE2EEnv(): Record<string, string> {
     MONGO_URI: process.env.MONGO_URI ?? DEFAULT_MONGO_URI,
     DOMAIN_CLIENT: process.env.E2E_DOMAIN_CLIENT ?? baseURL,
     DOMAIN_SERVER: process.env.E2E_DOMAIN_SERVER ?? baseURL,
+    // Deloitte Custom Change: The checked-in configuration references deployment-only URLs.
+    // Keep E2E hermetic while satisfying configuration validation in CI, which has no `.env` file.
+    BASE_URL_AZURE_AU: process.env.BASE_URL_AZURE_AU ?? DEFAULT_E2E_CONFIG_URL,
+    BASE_URL_AZURE_GLOBAL: process.env.BASE_URL_AZURE_GLOBAL ?? DEFAULT_E2E_CONFIG_URL,
+    BASE_URL_VERTEXAI: process.env.BASE_URL_VERTEXAI ?? DEFAULT_E2E_CONFIG_URL,
+    MCP_GATEWAY_URL: process.env.MCP_GATEWAY_URL ?? DEFAULT_E2E_CONFIG_URL,
+    MCP_GATEWAY_OBO_SCOPE: process.env.MCP_GATEWAY_OBO_SCOPE ?? DEFAULT_E2E_MCP_SCOPE,
     E2E_RUNTIME_ENV_PATH: getRuntimeEnvPath(),
     E2E_USE_MEMORY_MONGO: process.env.E2E_USE_MEMORY_MONGO ?? 'auto',
     NO_INDEX: process.env.NO_INDEX ?? 'true',
