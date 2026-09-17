@@ -198,7 +198,7 @@ function FavoritesList({
     [_onSelectSpec, isSmallScreen, toggleNav],
   );
 
-  const marketplaceRef = useRef<HTMLDivElement>(null);
+  const marketplaceRef = useRef<HTMLButtonElement>(null);
   const listContainerRef = useRef<HTMLDivElement>(null);
 
   const handleAgentMarketplace = useCallback(() => {
@@ -394,20 +394,13 @@ function FavoritesList({
           <>
             {/* Agent Marketplace button */}
             {showAgentMarketplace && (
-              <div
+              <button
                 ref={marketplaceRef}
+                type="button"
                 id="nav-agents-marketplace-button"
-                role="button"
-                tabIndex={0}
                 aria-label={localize('com_agents_marketplace')}
                 className="group relative flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-sm text-text-primary outline-none hover:bg-surface-active-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-black dark:focus-visible:ring-white"
                 onClick={handleAgentMarketplace}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleAgentMarketplace();
-                  }
-                }}
                 data-testid="nav-agents-marketplace-button"
               >
                 <div className="flex flex-1 items-center truncate pr-6">
@@ -416,7 +409,7 @@ function FavoritesList({
                   </div>
                   <span className="truncate">{localize('com_agents_marketplace')}</span>
                 </div>
-              </div>
+              </button>
             )}
             {safeFavorites.map((fav, index) => {
               if (fav.agentId) {

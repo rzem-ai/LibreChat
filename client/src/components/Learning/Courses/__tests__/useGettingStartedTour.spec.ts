@@ -20,6 +20,10 @@ const mockMoveNext = jest.fn();
 let mockIsLastStep = jest.fn();
 let capturedConfig: DriverConfig | undefined;
 
+jest.mock('~/hooks', () => ({
+  useShowMarketplace: () => true,
+}));
+
 jest.mock('driver.js', () => ({
   driver: (config: DriverConfig) => {
     capturedConfig = config;

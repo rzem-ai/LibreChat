@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import '../driver-theme.css';
+import { useShowMarketplace } from '~/hooks';
 
 /**
  * Builds the Driver.js Getting Started tour over the default chat interface.
@@ -10,7 +11,7 @@ import '../driver-theme.css';
  * make each step tolerant of elements that are conditionally rendered (permissions,
  * feature flags, viewport) or that need a moment to mount after a panel switch.
  *
- * Step order (26 steps):
+ * Step order (25 core steps, plus Agent Marketplace when available):
  *   1  Welcome to MyAssist
  *   2  New Chat
  *   3  Model Selector
@@ -39,6 +40,7 @@ import '../driver-theme.css';
  *   26 Account Menu
  */
 export default function useGettingStartedTour(onComplete?: () => void) {
+  const showMarketplace = useShowMarketplace();
   // Retain the active Driver.js instance so it can be destroyed on unmount.
   // Driver.js manipulates the DOM directly (body-level overlay + popover), so
   // React unmounting the provider tree (e.g. on logout) does NOT remove those
@@ -273,15 +275,19 @@ export default function useGettingStartedTour(onComplete?: () => void) {
             side: 'right',
           },
         },
-        {
-          element: '#nav-agents-marketplace-button',
-          popover: {
-            title: 'Agent Marketplace',
-            description:
-              'Browse pre-built agents for common tasks. Each agent combines instructions, skills, connectors, files, and guidance so you can get started faster.',
-            side: 'right',
-          },
-        },
+        ...(showMarketplace
+          ? [
+              {
+                element: '#nav-agents-marketplace-button',
+                popover: {
+                  title: 'Agent Marketplace',
+                  description:
+                    'Browse pre-built agents for common tasks. Each agent combines instructions, skills, connectors, files, and guidance so you can get started faster.',
+                  side: 'right',
+                },
+              },
+            ]
+          : []),
         {
           element: '#model-selector-button',
           popover: {
@@ -314,7 +320,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
     // Store the instance so the useEffect cleanup can destroy it on unmount.
     tourRef.current = tourDriver;
     tourDriver.drive();
-  }, [onComplete]);
+  }, [onComplete, showMarketplace]);
 
   return { startTour };
 }
