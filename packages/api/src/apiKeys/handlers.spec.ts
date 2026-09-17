@@ -1,8 +1,8 @@
+// Deloitte Custom Change: handler coverage for administrator-managed service account API keys.
 import { Types } from 'mongoose';
 import { createApiKeyHandlers } from './handlers';
 import type { ApiKeyHandlerDependencies } from './handlers';
 
-// Deloitte Custom Change: covers administrator-managed service account API key handlers.
 function createResponse() {
   const response = {
     status: jest.fn(),
