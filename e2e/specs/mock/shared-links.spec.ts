@@ -66,7 +66,7 @@ async function waitForSharedLink(
   throw new Error(`Timed out waiting for persisted shared link ${shareId}`);
 }
 
-test.describe('shared links', () => {
+test.describe('shared links', { tag: ['@mock', '@conversations'] }, () => {
   test.setTimeout(120000);
 
   test('creates a shared link and preserves legacy public links through runtime migration', async ({

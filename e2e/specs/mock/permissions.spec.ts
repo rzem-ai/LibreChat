@@ -180,7 +180,7 @@ async function seedAccessRole(
   return role;
 }
 
-test.describe('permission principal details', () => {
+test.describe('permission principal details', { tag: ['@mock', '@permissions'] }, () => {
   test.setTimeout(120000);
 
   test('keeps permission details and local principal writes in the authenticated context', async ({

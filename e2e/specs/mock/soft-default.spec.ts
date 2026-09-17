@@ -78,7 +78,7 @@ async function newChat(page: Page) {
   await expect(page).toHaveURL(/\/c\/new/, { timeout: 15000 });
 }
 
-test.describe('soft default model spec', () => {
+test.describe('soft default model spec', { tag: ['@mock', '@model-specs'] }, () => {
   test('applies the soft default on a fresh instance and stays applied across reloads', async ({
     page,
   }) => {
