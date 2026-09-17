@@ -1121,9 +1121,23 @@ function createToolInstance({
         const { name, url } = artifacts.codeFile;
         delete artifacts.codeFile;
         const req = res?.req;
+        const appConfig = await getAppConfig({
+          role: effectiveUser?.role,
+          tenantId: effectiveUser?.tenantId,
+          userId,
+        });
+        const isUrlAllowed = await isMCPDomainAllowed(
+          { url },
+          appConfig?.mcpSettings?.allowedDomains,
+          appConfig?.mcpSettings?.allowedAddresses,
+        );
         if (!req) {
           logger.warn(
             `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": no request context available to register it with Code Interpreter.`,
+          );
+        } else if (!isUrlAllowed) {
+          logger.warn(
+            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": download URL domain is not allowed.`,
           );
         } else {
           try {

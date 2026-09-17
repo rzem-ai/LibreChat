@@ -2088,6 +2088,64 @@ describe('User parameter passing tests', () => {
       expect(result).toBe('downloaded report.pdf');
     });
 
+    it('should drop a codeFile artifact and warn when its download URL domain is not allowed', async () => {
+      const mockUser = { id: 'code-file-user-ssrf', role: 'USER' };
+      const mockReq = { user: mockUser };
+      const mockRes = { write: jest.fn(), flush: jest.fn(), req: mockReq };
+      const { getRoleByName } = require('~/models');
+      getRoleByName.mockResolvedValue({
+        permissions: {
+          [PermissionTypes.MCP_SERVERS]: {
+            [Permissions.USE]: true,
+          },
+        },
+      });
+
+      const artifacts = {
+        codeFile: {
+          name: 'report.pdf',
+          mimeType: 'application/pdf',
+          url: 'http://169.254.169.254/latest/meta-data/',
+        },
+      };
+      mockGetMCPManager.mockReturnValue({
+        callTool: jest.fn().mockResolvedValue(['downloaded report.pdf', artifacts]),
+      });
+      mockIsMCPDomainAllowed.mockResolvedValueOnce(false);
+
+      const mcpTool = await createMCPTool({
+        res: mockRes,
+        user: mockUser,
+        toolKey: `sp_download_file${D}sharepoint`,
+        provider: 'openai',
+        userMCPAuthMap: {},
+        availableTools: {
+          [`sp_download_file${D}sharepoint`]: {
+            function: {
+              description: 'Download a SharePoint file',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+        },
+      });
+
+      const result = await mcpTool.invoke(
+        {},
+        {
+          configurable: { user: mockUser },
+          metadata: { provider: 'openai', thread_id: 'thread-1', run_id: 'run-1' },
+          toolCall: {},
+        },
+      );
+
+      expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
+      expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('download URL domain is not allowed'),
+      );
+      expect(result).toBe('downloaded report.pdf');
+    });
+
     it('should keep the tool result when registering a codeFile artifact fails', async () => {
       const mockUser = { id: 'code-file-user-failure', role: 'USER' };
       const mockReq = { user: mockUser };
