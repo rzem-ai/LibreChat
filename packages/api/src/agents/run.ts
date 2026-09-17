@@ -8,6 +8,7 @@ import {
   extractEnvVariable,
   providerEndpointMap,
   normalizeEndpointName,
+  Constants as DataProviderConstants,
 } from 'librechat-data-provider';
 import type {
   SummarizationConfig as AgentSummarizationConfig,
@@ -1609,6 +1610,17 @@ export async function createRun({
       EDIT_FILE_TOOL_NAME,
       Constants.READ_FILE,
       CHECK_BACKGROUND_TASK_NAME,
+      // MCP tool names are dynamic (`${toolName}${mcp_delimiter}${serverName}`),
+      // so any MCP tool is opted in here; the SDK only merges a session when a
+      // result's artifact actually carries a `session_id` (e.g. the SharePoint
+      // codeFile bridge in MCP.js), so non-code MCP tools are unaffected.
+      ...agents.flatMap((agent) =>
+        agent.toolRegistry
+          ? Array.from(agent.toolRegistry.keys()).filter((name) =>
+              name.includes(DataProviderConstants.mcp_delimiter),
+            )
+          : [],
+      ),
     ],
     // Derive the Langfuse trace id deterministically from runId so message
     // feedback can be scored against the trace without a lookup (see the

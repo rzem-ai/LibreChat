@@ -27,6 +27,7 @@ const mockRegistryInstance = {
 const mockIsMCPDomainAllowed = jest.fn(() => Promise.resolve(true));
 
 const mockGetAppConfig = jest.fn(() => Promise.resolve({}));
+const mockCheckCapability = jest.fn(() => Promise.resolve(true));
 
 jest.mock('@librechat/api', () => {
   const actual = jest.requireActual('@librechat/api');
@@ -43,7 +44,11 @@ jest.mock('@librechat/api', () => {
 });
 
 const { logger } = require('@librechat/data-schemas');
-const { MCPOAuthHandler, GenerationJobManager } = require('@librechat/api');
+const {
+  MCPOAuthHandler,
+  GenerationJobManager,
+  HOST_FILE_AUTHORING_ARTIFACT_KEY,
+} = require('@librechat/api');
 const { CacheKeys, Constants, Permissions, PermissionTypes } = require('librechat-data-provider');
 const D = Constants.mcp_delimiter;
 const {
@@ -61,6 +66,9 @@ jest.mock('./Config', () => ({
   loadCustomConfig: jest.fn(),
   get getAppConfig() {
     return mockGetAppConfig;
+  },
+  get checkCapability() {
+    return mockCheckCapability;
   },
 }));
 
@@ -1389,6 +1397,10 @@ describe('User parameter passing tests', () => {
     // Reset getAppConfig mock to default (no restrictions)
     mockGetAppConfig.mockReset();
     mockGetAppConfig.mockResolvedValue({});
+
+    // Reset checkCapability mock to default (Code Interpreter enabled)
+    mockCheckCapability.mockReset();
+    mockCheckCapability.mockResolvedValue(true);
   });
 
   describe('createMCPTools', () => {
@@ -1989,7 +2001,7 @@ describe('User parameter passing tests', () => {
       mockGetMCPManager.mockReturnValue({
         callTool: jest.fn().mockResolvedValue(['downloaded report.pdf', artifacts]),
       });
-      mockCodeFileDownloadGet.mockResolvedValue({ data: 'fake-stream' });
+      mockCodeFileDownloadGet.mockResolvedValue({ status: 200, data: 'fake-stream' });
       mockUploadCodeEnvFile.mockResolvedValue({
         storage_session_id: 'session-123',
         file_id: 'file-456',
@@ -2022,7 +2034,11 @@ describe('User parameter passing tests', () => {
 
       expect(mockCodeFileDownloadGet).toHaveBeenCalledWith(
         'https://contoso.sharepoint.com/_layouts/download.aspx?sig=abc',
-        { responseType: 'stream' },
+        expect.objectContaining({
+          responseType: 'stream',
+          maxRedirects: 0,
+          validateStatus: expect.any(Function),
+        }),
       );
       expect(mockUploadCodeEnvFile).toHaveBeenCalledWith({
         req: mockReq,
@@ -2031,6 +2047,69 @@ describe('User parameter passing tests', () => {
         kind: 'user',
         id: mockUser.id,
       });
+      expect(result).toBe('downloaded report.pdf');
+      expect(artifacts[HOST_FILE_AUTHORING_ARTIFACT_KEY]).toBe(true);
+      expect(artifacts.session_id).toBe('session-123');
+      expect(artifacts.files).toEqual([
+        { id: 'file-456', name: 'report.pdf', storage_session_id: 'session-123' },
+      ]);
+    });
+
+    it('should drop a codeFile artifact and warn when Code Interpreter is not enabled for the agent', async () => {
+      const mockUser = { id: 'code-file-user-no-capability', role: 'USER' };
+      const mockReq = { user: mockUser };
+      const mockRes = { write: jest.fn(), flush: jest.fn(), req: mockReq };
+      const { getRoleByName } = require('~/models');
+      getRoleByName.mockResolvedValue({
+        permissions: {
+          [PermissionTypes.MCP_SERVERS]: {
+            [Permissions.USE]: true,
+          },
+        },
+      });
+
+      const artifacts = {
+        codeFile: {
+          name: 'report.pdf',
+          mimeType: 'application/pdf',
+          url: 'https://contoso.sharepoint.com/_layouts/download.aspx?sig=abc',
+        },
+      };
+      mockGetMCPManager.mockReturnValue({
+        callTool: jest.fn().mockResolvedValue(['downloaded report.pdf', artifacts]),
+      });
+      mockCheckCapability.mockResolvedValue(false);
+
+      const mcpTool = await createMCPTool({
+        res: mockRes,
+        user: mockUser,
+        toolKey: `sp_download_file${D}sharepoint`,
+        provider: 'openai',
+        userMCPAuthMap: {},
+        availableTools: {
+          [`sp_download_file${D}sharepoint`]: {
+            function: {
+              description: 'Download a SharePoint file',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+        },
+      });
+
+      const result = await mcpTool.invoke(
+        {},
+        {
+          configurable: { user: mockUser },
+          metadata: { provider: 'openai', thread_id: 'thread-1', run_id: 'run-1' },
+          toolCall: {},
+        },
+      );
+
+      expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
+      expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Code Interpreter is not enabled'),
+      );
       expect(result).toBe('downloaded report.pdf');
     });
 
@@ -2141,7 +2220,73 @@ describe('User parameter passing tests', () => {
       expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('download URL domain is not allowed'),
+        expect.stringContaining('Failed to register codeFile artifact'),
+        expect.objectContaining({ message: expect.stringContaining('domain is not allowed') }),
+      );
+      expect(result).toBe('downloaded report.pdf');
+    });
+
+    it('should not follow a redirect to a disallowed domain when downloading a codeFile', async () => {
+      const mockUser = { id: 'code-file-user-redirect-ssrf', role: 'USER' };
+      const mockReq = { user: mockUser };
+      const mockRes = { write: jest.fn(), flush: jest.fn(), req: mockReq };
+      const { getRoleByName } = require('~/models');
+      getRoleByName.mockResolvedValue({
+        permissions: {
+          [PermissionTypes.MCP_SERVERS]: {
+            [Permissions.USE]: true,
+          },
+        },
+      });
+
+      const artifacts = {
+        codeFile: {
+          name: 'report.pdf',
+          mimeType: 'application/pdf',
+          url: 'https://contoso.sharepoint.com/_layouts/download.aspx?sig=abc',
+        },
+      };
+      mockGetMCPManager.mockReturnValue({
+        callTool: jest.fn().mockResolvedValue(['downloaded report.pdf', artifacts]),
+      });
+      // Allowed on the initial hop, then the redirect target is disallowed.
+      mockIsMCPDomainAllowed.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+      mockCodeFileDownloadGet.mockResolvedValue({
+        status: 302,
+        headers: { location: 'http://169.254.169.254/latest/meta-data/' },
+        data: undefined,
+      });
+
+      const mcpTool = await createMCPTool({
+        res: mockRes,
+        user: mockUser,
+        toolKey: `sp_download_file${D}sharepoint`,
+        provider: 'openai',
+        userMCPAuthMap: {},
+        availableTools: {
+          [`sp_download_file${D}sharepoint`]: {
+            function: {
+              description: 'Download a SharePoint file',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+        },
+      });
+
+      const result = await mcpTool.invoke(
+        {},
+        {
+          configurable: { user: mockUser },
+          metadata: { provider: 'openai', thread_id: 'thread-1', run_id: 'run-1' },
+          toolCall: {},
+        },
+      );
+
+      expect(mockCodeFileDownloadGet).toHaveBeenCalledTimes(1);
+      expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to register codeFile artifact'),
+        expect.objectContaining({ message: expect.stringContaining('domain is not allowed') }),
       );
       expect(result).toBe('downloaded report.pdf');
     });

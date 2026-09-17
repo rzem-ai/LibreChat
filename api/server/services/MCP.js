@@ -35,6 +35,7 @@ const {
   isOAuthServer,
   isOboServer,
   createAxiosInstance,
+  sanitizeFilename,
   HOST_FILE_AUTHORING_ARTIFACT_KEY,
 } = require('@librechat/api');
 const { extractOpenIDTokenInfo, isOpenIDTokenValid } = require('@librechat/api');
@@ -44,6 +45,7 @@ const {
   Constants,
   Permissions,
   PermissionTypes,
+  AgentCapabilities,
   isAssistantsEndpoint,
 } = require('librechat-data-provider');
 const {
@@ -58,11 +60,47 @@ const { getGraphApiToken } = require('./GraphTokenService');
 const { exchangeOboToken } = require('./OboTokenService');
 const { createOboTrustChecker } = require('./OboPolicyService');
 const { reinitMCPServer } = require('./Tools/mcp');
-const { getAppConfig } = require('./Config');
+const { getAppConfig, checkCapability } = require('./Config');
 const { getLogStores } = require('~/cache');
 const { uploadCodeEnvFile } = require('~/server/services/Files/Code/crud');
 
 const codeFileDownloadAxios = createAxiosInstance();
+const CODE_FILE_DOWNLOAD_TIMEOUT_MS = 120000;
+const CODE_FILE_MAX_REDIRECTS = 5;
+
+/**
+ * Streams a codeFile artifact's download URL, re-validating the domain
+ * allowlist on every redirect hop. Axios follows redirects by default, which
+ * would let an allowed URL 30x to a disallowed/internal address and bypass
+ * `isMCPDomainAllowed` entirely, so redirects are followed manually here.
+ * @param {string} url
+ * @param {string[] | null | undefined} allowedDomains
+ * @param {string[] | null | undefined} allowedAddresses
+ */
+async function fetchAllowedCodeFileStream(url, allowedDomains, allowedAddresses) {
+  let currentUrl = url;
+  for (let hop = 0; hop <= CODE_FILE_MAX_REDIRECTS; hop++) {
+    if (!(await isMCPDomainAllowed({ url: currentUrl }, allowedDomains, allowedAddresses))) {
+      throw new Error(`codeFile download URL domain is not allowed: ${currentUrl}`);
+    }
+    const response = await codeFileDownloadAxios.get(currentUrl, {
+      responseType: 'stream',
+      timeout: CODE_FILE_DOWNLOAD_TIMEOUT_MS,
+      maxRedirects: 0,
+      validateStatus: (status) =>
+        (status >= 200 && status < 300) || (status >= 300 && status < 400),
+    });
+    if (response.status < 300) {
+      return response;
+    }
+    const location = response.headers?.location;
+    if (!location) {
+      throw new Error(`codeFile download redirected without a Location header: ${currentUrl}`);
+    }
+    currentUrl = new URL(location, currentUrl).toString();
+  }
+  throw new Error(`Too many redirects while downloading codeFile: ${url}`);
+}
 
 const MAX_CACHE_SIZE = 1000;
 const lastReconnectAttempts = new Map();
@@ -1121,41 +1159,48 @@ function createToolInstance({
         const { name, url } = artifacts.codeFile;
         delete artifacts.codeFile;
         const req = res?.req;
-        const appConfig = await getAppConfig({
-          role: effectiveUser?.role,
-          tenantId: effectiveUser?.tenantId,
-          userId,
-        });
-        const isUrlAllowed = await isMCPDomainAllowed(
-          { url },
-          appConfig?.mcpSettings?.allowedDomains,
-          appConfig?.mcpSettings?.allowedAddresses,
-        );
         if (!req) {
           logger.warn(
             `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": no request context available to register it with Code Interpreter.`,
           );
-        } else if (!isUrlAllowed) {
+        } else if (!(await checkCapability(req, AgentCapabilities.execute_code))) {
           logger.warn(
-            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": download URL domain is not allowed.`,
+            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": Code Interpreter is not enabled for this agent.`,
           );
         } else {
           try {
-            const download = await codeFileDownloadAxios.get(url, { responseType: 'stream' });
+            const appConfig = await getAppConfig({
+              role: effectiveUser?.role,
+              tenantId: effectiveUser?.tenantId,
+              userId,
+            });
+            const download = await fetchAllowedCodeFileStream(
+              url,
+              appConfig?.mcpSettings?.allowedDomains,
+              appConfig?.mcpSettings?.allowedAddresses,
+            );
+            const sandboxFilename = sanitizeFilename(name);
             const uploaded = await uploadCodeEnvFile({
               req,
               stream: download.data,
-              filename: name,
+              filename: sandboxFilename,
               kind: 'user',
               id: userId,
             });
             artifacts[HOST_FILE_AUTHORING_ARTIFACT_KEY] = true;
             artifacts.session_id = uploaded.storage_session_id;
-            artifacts.files = [{ id: uploaded.file_id, name }];
+            artifacts.files = [
+              {
+                id: uploaded.file_id,
+                name: sandboxFilename,
+                storage_session_id: uploaded.storage_session_id,
+              },
+            ];
           } catch (codeFileError) {
             /** Keep the underlying tool result (e.g. the SharePoint download
              *  already succeeded) instead of failing the whole call over a
-             *  transient network blip or an expired short-lived download URL. */
+             *  transient network blip, a disallowed/redirected URL, or an
+             *  expired short-lived download URL. */
             logger.warn(
               `[MCP][${serverName}][${toolName}][User: ${userId}] Failed to register codeFile artifact "${name}" with Code Interpreter:`,
               codeFileError,
