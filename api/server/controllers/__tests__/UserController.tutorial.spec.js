@@ -164,12 +164,12 @@ describe('UserController tutorial state', () => {
       mockMergeTutorialRatings.mockResolvedValue({
         user: {
           tutorialPromptSeen: false,
-          tutorialRatings: { 'other-course': 5, 'landing-page-buttons': 4 },
+          tutorialRatings: { 'other-course': 5, 'getting-started-guide': 4 },
         },
         capExceeded: false,
       });
       const req = createRequest({
-        body: { tutorialRatings: { 'landing-page-buttons': 4 } },
+        body: { tutorialRatings: { 'getting-started-guide': 4 } },
       });
       const res = createResponse();
 
@@ -177,7 +177,7 @@ describe('UserController tutorial state', () => {
 
       // Should call mergeTutorialRatings with only the incoming ratings
       expect(mockMergeTutorialRatings).toHaveBeenCalledWith('user-1', {
-        'landing-page-buttons': 4,
+        'getting-started-guide': 4,
       });
       // No separate getUserById read needed — pipeline handles the cap check
       expect(mockGetUserById).not.toHaveBeenCalled();
@@ -185,7 +185,7 @@ describe('UserController tutorial state', () => {
       expect(mockUpdateUser).not.toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({
         tutorialPromptSeen: false,
-        tutorialRatings: { 'other-course': 5, 'landing-page-buttons': 4 },
+        tutorialRatings: { 'other-course': 5, 'getting-started-guide': 4 },
       });
     });
 

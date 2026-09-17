@@ -30,7 +30,7 @@ describe('LearningPanel', () => {
   it('renders the active course as a clickable row that starts the shared tour', () => {
     render(<LearningPanel />);
 
-    const activeRow = screen.getByTestId('learning-course-row-landing-page-buttons');
+    const activeRow = screen.getByTestId('learning-course-row-getting-started-guide');
     expect(activeRow.tagName).toBe('BUTTON');
 
     fireEvent.click(activeRow);

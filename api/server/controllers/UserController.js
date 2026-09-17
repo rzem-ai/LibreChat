@@ -10,6 +10,7 @@ const {
   extractWebSearchEnvVars,
   deleteAgentCheckpoints,
   deleteAllSharedLinksWithCleanup,
+  // Deloitte Custom Change
   validateTutorialStateUpdate,
   toTutorialStateResponse,
   MAX_TUTORIAL_RATINGS,
@@ -116,6 +117,7 @@ const acceptTermsController = async (req, res) => {
 };
 
 const getTutorialStateController = async (req, res) => {
+  // Deloitte Custom Change
   try {
     const user = await db.getUserById(req.user.id, 'tutorialPromptSeen tutorialRatings');
     if (!user) {
@@ -129,6 +131,7 @@ const getTutorialStateController = async (req, res) => {
 };
 
 const updateTutorialStateController = async (req, res) => {
+  // Deloitte Custom Change
   try {
     const result = validateTutorialStateUpdate(req.body);
 

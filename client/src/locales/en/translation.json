@@ -2174,11 +2174,8 @@
   "com_learning_prompt_decline": "Skip",
   "com_learning_coming_soon": "More tutorials coming soon",
   "com_learning_courses_title": "Courses",
-  "com_learning_coming_soon_short": "Coming soon",
   "com_learning_estimated_minutes": "{{0}} min",
   "com_learning_estimated_minutes_plural": "{{0}} mins",
-  "com_learning_course_landing_page_title": "Getting Started Tour",
-  "com_learning_course_landing_page_description": "Learn how to get started with MyAssist in this quick introductory tour, highly recommended for new users",
   "com_learning_rate_prompt": "How helpful was this tutorial?",
   "com_learning_rate_thanks": "Thanks for your feedback!",
   "com_learning_start_tour": "Start tour",
@@ -2202,5 +2199,5 @@
   "com_learning_diff_skill": "Skill",
   "com_learning_diff_skill_what": "A reusable knowledge document",
   "com_learning_diff_skill_when": "Sharing knowledge across multiple agents",
-  "com_learning_diff_skill_trigger": "Attach to an agent",
+  "com_learning_diff_skill_trigger": "Attach to an agent"
 }

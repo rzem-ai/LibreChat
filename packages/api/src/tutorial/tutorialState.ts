@@ -23,7 +23,7 @@ const RATING_MAX = 5;
  * The entry-count cap (MAX_TUTORIAL_RATINGS = 50) bounds the number of keys
  * but not their size — an authenticated caller could otherwise submit very
  * long IDs and bloat the user document. Real course IDs are short slugs
- * (e.g. "landing-page-buttons" = 20 chars); 64 chars gives ample headroom.
+ * (e.g. "getting-started-guide" = 21 chars); 64 chars gives ample headroom.
  * Mirrors the MAX_KEY_LENGTH = 64 pattern used in skillStates.ts.
  */
 export const MAX_RATING_KEY_LENGTH = 64;

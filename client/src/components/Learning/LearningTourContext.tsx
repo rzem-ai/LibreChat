@@ -15,7 +15,7 @@ import { useActivePanel } from '~/Providers';
 import store from '~/store';
 import useGettingStartedTour from './Courses/useGettingStartedTour';
 
-const GETTING_STARTED_COURSE_ID = 'landing-page-buttons';
+const GETTING_STARTED_COURSE_ID = 'getting-started-guide';
 const DESKTOP_START_DELAY_MS = 200;
 const MOBILE_START_DELAY_MS = 300;
 

@@ -23,7 +23,7 @@ describe('RatingStars', () => {
   });
 
   it('submits the selected rating for the given course and shows a thank-you state', () => {
-    render(<RatingStars courseId="landing-page-buttons" />);
+    render(<RatingStars courseId="getting-started-guide" />);
 
     const stars = screen.getAllByRole('radio');
     expect(stars).toHaveLength(5);
@@ -31,7 +31,7 @@ describe('RatingStars', () => {
     fireEvent.click(stars[3]);
 
     expect(mockMutate).toHaveBeenCalledWith({
-      tutorialRatings: { 'landing-page-buttons': 4 },
+      tutorialRatings: { 'getting-started-guide': 4 },
     }, expect.any(Object));
     expect(screen.getByText('com_learning_rate_thanks')).toBeInTheDocument();
     expect(screen.queryAllByRole('radio')).toHaveLength(0);
@@ -39,7 +39,7 @@ describe('RatingStars', () => {
 
   it('keeps the rating controls visible when the mutation does not succeed', () => {
     mockMutate.mockImplementation(() => undefined);
-    render(<RatingStars courseId="landing-page-buttons" />);
+    render(<RatingStars courseId="getting-started-guide" />);
 
     const stars = screen.getAllByRole('radio');
     fireEvent.click(stars[3]);

@@ -1,9 +1,7 @@
-import type { TranslationKeys } from '~/hooks';
-
 export interface LearningCourse {
   id: string;
-  titleKey: TranslationKeys;
-  descriptionKey: TranslationKeys;
+  title: string;
+  description: string;
   estimatedMinutes?: number;
   comingSoon: boolean;
 }
@@ -11,22 +9,22 @@ export interface LearningCourse {
 /** Static MVP course catalog — no backend content system, just a plain list. */
 export const COURSES: LearningCourse[] = [
   {
-    id: 'landing-page-buttons',
-    titleKey: 'com_learning_course_landing_page_title',
-    descriptionKey: 'com_learning_course_landing_page_description',
+    id: 'getting-started-guide',
+    title: 'Getting Started Tour',
+    description: 'Learn how to get started with MyAssist in this quick introductory tour, highly recommended for new users',
     estimatedMinutes: 3,
     comingSoon: false,
   },
   {
     id: 'mcp-server-guide',
-    titleKey: 'com_ui_mcp_servers',
-    descriptionKey: 'com_learning_coming_soon',
+    title: 'Connectors',
+    description: 'Coming soon',
     comingSoon: true,
   },
   {
     id: 'agents-guide',
-    titleKey: 'com_ui_agents',
-    descriptionKey: 'com_learning_coming_soon',
+    title: 'Agents',
+    description: 'Coming soon',
     comingSoon: true,
   },
 ];

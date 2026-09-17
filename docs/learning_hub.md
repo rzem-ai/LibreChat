@@ -130,7 +130,7 @@ In MongoDB this is persisted as a map keyed by `courseId`, for example:
 {
   "tutorialPromptSeen": true,
   "tutorialRatings": {
-    "landing-page-buttons": 5
+    "getting-started-guide": 5
   }
 }
 ```

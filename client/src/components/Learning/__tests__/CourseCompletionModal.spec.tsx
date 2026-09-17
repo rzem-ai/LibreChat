@@ -35,13 +35,13 @@ describe('CourseCompletionModal', () => {
 
   it('shows a completion message and the rating prompt once a course finishes, dismissing on Done', () => {
     mockUseLearningTour.mockReturnValue({
-      completedCourseId: 'landing-page-buttons',
+      completedCourseId: 'getting-started-guide',
       dismissCompletion: mockDismissCompletion,
     });
     render(<CourseCompletionModal />);
 
     expect(screen.getByText('com_learning_complete_title')).toBeInTheDocument();
-    expect(screen.getByTestId('rating-stars')).toHaveTextContent('landing-page-buttons');
+    expect(screen.getByTestId('rating-stars')).toHaveTextContent('getting-started-guide');
 
     fireEvent.click(screen.getByText('com_learning_complete_done'));
     expect(mockDismissCompletion).toHaveBeenCalledTimes(1);

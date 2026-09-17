@@ -109,7 +109,7 @@ describe('LearningTourContext', () => {
       capturedOnComplete?.();
     });
 
-    expect(result.current.completedCourseId).toBe('landing-page-buttons');
+    expect(result.current.completedCourseId).toBe('getting-started-guide');
 
     act(() => {
       result.current.dismissCompletion();
