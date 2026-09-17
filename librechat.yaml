@@ -40,8 +40,6 @@ interface:
 
   fileSearch: true # Set to true to enable searching uploaded files
 
-  isTutorialEnabled: true # Set to false to disable the in-app Learning Hub tutorials and guided tour
-
   # Mandatory terms acceptance dialog
   termsOfService:
     modalAcceptance: true
@@ -124,6 +122,7 @@ interface:
 
   # Deloitte Custom Change: Deloitte-specific UI feature flags.
   customDeloitteFeatureFlags:
+    isTutorialEnabled: true # Set to false to disable the in-app Learning Hub tutorials and guided tour
     exportChat: false # Set to false to disable exporting conversations
     regenerate: true # Set to false to disable regenerating assistant responses
     forkChat: true # Set to false to disable branching conversations from earlier messages

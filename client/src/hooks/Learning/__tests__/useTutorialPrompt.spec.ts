@@ -2,9 +2,12 @@ import { renderHook } from '@testing-library/react';
 import useTutorialPrompt from '../useTutorialPrompt';
 
 const mockMutate = jest.fn();
-let mockStartupConfig: { interface?: { isTutorialEnabled?: boolean } } = {
-  interface: { isTutorialEnabled: true },
+let mockStartupConfig:
+  | { interface?: { customDeloitteFeatureFlags?: { isTutorialEnabled?: boolean } } }
+  | undefined = {
+  interface: { customDeloitteFeatureFlags: { isTutorialEnabled: true } },
 };
+let mockTutorialQueryArgs: { enabled: boolean } | undefined;
 let mockTutorialState: { tutorialPromptSeen: boolean } | undefined = {
   tutorialPromptSeen: false,
 };
@@ -16,14 +19,18 @@ jest.mock('~/hooks/AuthContext', () => ({
 
 jest.mock('~/data-provider', () => ({
   useGetStartupConfig: () => ({ data: mockStartupConfig }),
-  useTutorialStateQuery: () => ({ data: mockTutorialState }),
+  useTutorialStateQuery: (args: { enabled: boolean }) => {
+    mockTutorialQueryArgs = args;
+    return { data: mockTutorialState };
+  },
   useUpdateTutorialStateMutation: () => ({ mutate: mockMutate }),
 }));
 
 describe('useTutorialPrompt', () => {
   afterEach(() => {
     jest.clearAllMocks();
-    mockStartupConfig = { interface: { isTutorialEnabled: true } };
+    mockStartupConfig = { interface: { customDeloitteFeatureFlags: { isTutorialEnabled: true } } };
+    mockTutorialQueryArgs = undefined;
     mockTutorialState = { tutorialPromptSeen: false };
     mockIsAuthenticated = true;
   });
@@ -40,9 +47,16 @@ describe('useTutorialPrompt', () => {
   });
 
   it('does not show the prompt when the admin has disabled tutorials', () => {
-    mockStartupConfig = { interface: { isTutorialEnabled: false } };
+    mockStartupConfig = { interface: { customDeloitteFeatureFlags: { isTutorialEnabled: false } } };
     const { result } = renderHook(() => useTutorialPrompt());
     expect(result.current.shouldShowPrompt).toBe(false);
+  });
+
+  it('waits for startup config before enabling the tutorial-state query', () => {
+    mockStartupConfig = undefined;
+    const { result } = renderHook(() => useTutorialPrompt());
+    expect(result.current.shouldShowPrompt).toBe(false);
+    expect(mockTutorialQueryArgs).toEqual({ enabled: false });
   });
 
   it('marks the prompt seen via the update mutation', () => {

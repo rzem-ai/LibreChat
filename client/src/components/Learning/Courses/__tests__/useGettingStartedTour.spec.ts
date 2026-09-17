@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react';
-import useGettingStartedTour from '../Courses/useGettingStartedTour';
+import useGettingStartedTour from '../useGettingStartedTour';
 
 const mockDrive = jest.fn();
 const mockDestroy = jest.fn();

@@ -13,6 +13,7 @@ The main files are:
 - `client/src/components/Learning/Courses/useGettingStartedTour.ts` — step-by-step content and ordering for the current guided tour
 - `client/src/components/Learning/LearningTourContext.tsx` — starts the tour and tracks in-session completion UI state
 - `client/src/locales/en/translation.json` — user-facing English strings used by the Learning Hub UI and tour
+- `librechat.yaml` → `interface.customDeloitteFeatureFlags.isTutorialEnabled` — deployment kill switch for the Learning Hub
 
 ## 1. How to add to the course list
 

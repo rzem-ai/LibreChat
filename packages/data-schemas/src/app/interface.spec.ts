@@ -147,7 +147,9 @@ describe('loadDefaultInterface', () => {
   it('preserves disabled tutorial flag config', async () => {
     const config: Partial<TCustomConfig> = {
       interface: {
-        isTutorialEnabled: false,
+        customDeloitteFeatureFlags: {
+          isTutorialEnabled: false,
+        },
       },
     };
 
@@ -156,7 +158,7 @@ describe('loadDefaultInterface', () => {
       configDefaults: getConfigDefaults(),
     });
 
-    expect(interfaceConfig?.isTutorialEnabled).toBe(false);
+    expect(interfaceConfig?.customDeloitteFeatureFlags?.isTutorialEnabled).toBe(false);
   });
 
   it('uses the schema default for tutorial flag when not configured', async () => {
@@ -166,7 +168,9 @@ describe('loadDefaultInterface', () => {
       configDefaults: defaults,
     });
 
-    expect(interfaceConfig?.isTutorialEnabled).toBe(defaults.interface.isTutorialEnabled);
+    expect(interfaceConfig?.customDeloitteFeatureFlags?.isTutorialEnabled).toBe(
+      defaults.interface.customDeloitteFeatureFlags?.isTutorialEnabled,
+    );
   });
 
   it('preserves the configured temporary chat retention period', async () => {

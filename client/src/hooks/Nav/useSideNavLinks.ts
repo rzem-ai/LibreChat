@@ -210,7 +210,7 @@ export default function useSideNavLinks({
 
     // Deloitte Custom Change: conditionally add the Learning Hub nav panel when
     // the tutorial/learning-hub feature is enabled via interface config
-    if (interfaceConfig.isTutorialEnabled !== false) {
+    if (interfaceConfig.customDeloitteFeatureFlags?.isTutorialEnabled !== false) {
       links.push({
         title: 'com_ui_learning_hub',
         label: '',
@@ -248,7 +248,7 @@ export default function useSideNavLinks({
     availableMCPServers,
     hasAccessToUseMCPSettings,
     hasAccessToCreateMCP,
-    interfaceConfig.isTutorialEnabled,
+    interfaceConfig.customDeloitteFeatureFlags?.isTutorialEnabled,
     includeHidePanel,
     hidePanel,
   ]);
