@@ -23,6 +23,7 @@ Add a new entry to the `COURSES` array in:
 
 Each course currently has:
 
+- `id` — stable internal identifier used for completion and ratings
 - `title` — stable user-facing course title
 - `description` — user-facing course summary
 - `estimatedMinutes` — optional duration shown in the UI
@@ -33,8 +34,8 @@ Each course currently has:
 ```ts
 {
   id: 'new-course-id',
-  titleKey: 'com_learning_course_new_title',
-  descriptionKey: 'com_learning_course_new_description',
+  title: 'New Course',
+  description: 'What this course helps the user learn',
   estimatedMinutes: 5,
   comingSoon: false,
 }
