@@ -1394,6 +1394,7 @@ export const interfaceSchema = z
         createActions: z.boolean().optional(),
         landingIcon: z.boolean().optional(),
         conversationIcon: z.boolean().optional(),
+        /** Enable/disable the in-app Learning Hub tutorials (first-run prompt, guided tours). */
         isTutorialEnabled: z.boolean().optional(),
         accountsTab: z.boolean().optional(),
         dataApiKeys: z.boolean().optional(),
