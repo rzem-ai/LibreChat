@@ -463,7 +463,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     iconPath: '/assets/mcp/afr.png' # same logo in both themes
 
   cleartrack-mcp-gateway-kx:
-    title: 'KX & DPN'
+    title: 'KX and DPN'
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=kx'
