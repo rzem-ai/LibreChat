@@ -137,7 +137,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
 
         // ── 6. Attach Files ──────────────────────────────────────────────────
         {
-          element: "[data-testid='attach-file-menu-button']",
+          element: '#attach-file-menu-button',
           popover: {
             title: 'Attach Files',
             description:
