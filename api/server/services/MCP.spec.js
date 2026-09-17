@@ -2438,7 +2438,7 @@ describe('User parameter passing tests', () => {
       expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(result).toBe(
-        'File "report.pdf" was downloaded but could not be attached to this conversation for use in Code Interpreter.',
+        'File "report.pdf" could not be attached to this conversation for use in Code Interpreter.',
       );
     });
 
@@ -2945,6 +2945,59 @@ describe('User parameter passing tests', () => {
       expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(result).toBe('downloaded report.pdf');
+    });
+
+    it('should substitute a status message for the Assistants endpoint when a marker-only response would otherwise return nothing', async () => {
+      const mockUser = { id: 'code-file-user-assistants-empty', role: 'USER' };
+      const mockReq = { user: mockUser };
+      const mockRes = { write: jest.fn(), flush: jest.fn(), req: mockReq };
+      const { getRoleByName } = require('~/models');
+      getRoleByName.mockResolvedValue({
+        permissions: {
+          [PermissionTypes.MCP_SERVERS]: {
+            [Permissions.USE]: true,
+          },
+        },
+      });
+
+      const artifacts = {
+        codeFile: {
+          name: 'report.pdf',
+          mimeType: 'application/pdf',
+          url: 'https://contoso.sharepoint.com/_layouts/download.aspx?sig=abc',
+        },
+      };
+      mockGetMCPManager.mockReturnValue({
+        callTool: jest.fn().mockResolvedValue(['', artifacts]),
+      });
+
+      const mcpTool = await createMCPTool({
+        res: mockRes,
+        user: mockUser,
+        toolKey: `sp_download_file${D}sharepoint`,
+        provider: 'assistants',
+        userMCPAuthMap: {},
+        availableTools: {
+          [`sp_download_file${D}sharepoint`]: {
+            function: {
+              description: 'Download a SharePoint file',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+        },
+      });
+
+      const result = await mcpTool.func({}, undefined, {
+        configurable: { user: mockUser },
+        metadata: { provider: 'assistants', thread_id: 'thread-1', run_id: 'run-1' },
+        toolCall: {},
+      });
+
+      expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
+      expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
+      expect(result).toBe(
+        'File "report.pdf" could not be attached to this conversation for use in Code Interpreter.',
+      );
     });
 
     it('should pass the captured user to MCPManager.callTool when invocation config omits configurable.user', async () => {

@@ -93,36 +93,49 @@ export async function fetchAllowedCodeFileStream(
    * disagree about whether this is an admin-vetted allowlist. */
   const useSSRFProtection = !Array.isArray(allowedDomains) || allowedDomains.length === 0;
   const proxy = codeFileDownloadAxios.defaults.proxy || false;
-  /** Connect-time agents validate whatever hostname axios actually dials — the
-   * real target when unproxied, but the *proxy's own* address once a proxy is
-   * configured (axios rewrites `options.hostname` to the proxy for plaintext
-   * HTTP, and swaps in its own CONNECT-tunneling agent entirely for HTTPS, so
-   * `httpsAgent` never even runs). Attaching them in the proxied case doesn't
-   * protect the download target — it just risks blocking a legitimate
-   * corporate proxy that happens to live on a private address. `assertHopSafeForProxy`
-   * is the sole SSRF gate once a proxy is in play, so the agents are only
-   * built for the direct-connection path. */
-  const { httpAgent, httpsAgent } =
-    useSSRFProtection && proxy === false
-      ? createSSRFSafeAgents(allowedAddresses)
-      : { httpAgent: undefined, httpsAgent: undefined };
   /** Shared across every hop (rather than reset per hop) so a chain of slow
    * redirects can't run the timeout up to `CODE_FILE_MAX_REDIRECTS *
    * CODE_FILE_DOWNLOAD_TIMEOUT_MS` before failing. */
   const deadline = Date.now() + CODE_FILE_DOWNLOAD_TIMEOUT_MS;
+  const originalOrigin = new URL(url).origin;
+  /** Sticky once a server-controlled redirect crosses origin, mirroring
+   * `connection.ts`'s cross-origin redirect handling: `allowedAddresses` is
+   * an admin exemption scoped to the originally-configured URL, not a grant
+   * that should follow wherever a redirect chain leads. Without this, a
+   * `Location` header could redirect an approved endpoint to a different
+   * private host/port that also happens to be on the exemption list. */
+  let crossOriginSeen = false;
   let currentUrl = url;
   for (let hop = 0; hop <= CODE_FILE_MAX_REDIRECTS; hop++) {
-    if (!(await isMCPDomainAllowed({ url: currentUrl }, allowedDomains, allowedAddresses))) {
+    const parsedUrl = new URL(currentUrl);
+    if (hop > 0 && parsedUrl.origin !== originalOrigin) {
+      crossOriginSeen = true;
+    }
+    const effectiveAllowedAddresses = crossOriginSeen ? null : allowedAddresses;
+    if (!(await isMCPDomainAllowed({ url: currentUrl }, allowedDomains, effectiveAllowedAddresses))) {
       throw new Error(`codeFile download URL domain is not allowed: ${redactUrlForLog(currentUrl)}`);
     }
-    const parsedUrl = new URL(currentUrl);
     assertHopSafeForProxy(
       parsedUrl.hostname,
       getEffectivePort(parsedUrl.protocol, parsedUrl.port),
       proxy !== false,
       useSSRFProtection,
-      allowedAddresses,
+      effectiveAllowedAddresses,
     );
+    /** Connect-time agents validate whatever hostname axios actually dials — the
+     * real target when unproxied, but the *proxy's own* address once a proxy is
+     * configured (axios rewrites `options.hostname` to the proxy for plaintext
+     * HTTP, and swaps in its own CONNECT-tunneling agent entirely for HTTPS, so
+     * `httpsAgent` never even runs). Attaching them in the proxied case doesn't
+     * protect the download target — it just risks blocking a legitimate
+     * corporate proxy that happens to live on a private address. `assertHopSafeForProxy`
+     * is the sole SSRF gate once a proxy is in play, so the agents are only
+     * built for the direct-connection path. Rebuilt every hop so a cross-origin
+     * redirect's dropped exemption also applies at the connect-time layer. */
+    const { httpAgent, httpsAgent } =
+      useSSRFProtection && proxy === false
+        ? createSSRFSafeAgents(effectiveAllowedAddresses)
+        : { httpAgent: undefined, httpsAgent: undefined };
     const remainingMs = deadline - Date.now();
     if (remainingMs <= 0) {
       throw new Error(`codeFile download timed out following redirects: ${redactUrlForLog(url)}`);

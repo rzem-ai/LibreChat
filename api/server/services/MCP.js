@@ -1120,8 +1120,15 @@ function createToolInstance({
       /* The Assistants endpoint (and any other non-agent caller returning
        * only `result[0]` below) has no code-session pipeline to hand this
        * artifact to; registering it there would upload the file to Code
-       * Interpreter storage for no consumer. */
-      if (artifacts?.codeFile && !isAssistantsEndpoint(provider)) {
+       * Interpreter storage for no consumer. `formatToolContent` still empties
+       * `result[0]` for a marker-only response regardless of provider, so
+       * without a substitute the Assistants endpoint would return nothing at
+       * all for a tool call that otherwise succeeded. */
+      if (artifacts?.codeFile && isAssistantsEndpoint(provider)) {
+        if (Array.isArray(result) && !result[0]) {
+          result[0] = `File "${artifacts.codeFile.name}" could not be attached to this conversation for use in Code Interpreter.`;
+        }
+      } else if (artifacts?.codeFile) {
         const { name, url } = artifacts.codeFile;
         delete artifacts.codeFile;
         const req = res?.req;
@@ -1176,7 +1183,7 @@ function createToolInstance({
           try {
             const appConfig = await getAppConfig({
               role: effectiveUser?.role,
-              tenantId: effectiveUser?.tenantId,
+              tenantId: effectiveUser?.tenantId ?? getTenantId(),
               userId,
             });
             const download = await fetchAllowedCodeFileStream(
@@ -1233,9 +1240,13 @@ function createToolInstance({
         /* Marker-only tool responses (`result[0] === ''`) rely entirely on the
          * codeFile artifact to tell the model anything happened. Losing that
          * artifact above without a substitute leaves the model with no signal
-         * at all, so fall back to a plain, non-secret status line instead. */
+         * at all, so fall back to a plain, non-secret status line instead.
+         * This also fires when `fetchAllowedCodeFileStream`/`uploadCodeEnvFile`
+         * themselves failed (disallowed/expired URL, network error), so the
+         * wording must stay neutral about whether the download itself
+         * succeeded. */
         if (codeFileRegistrationFailed && Array.isArray(result) && !result[0]) {
-          result[0] = `File "${name}" was downloaded but could not be attached to this conversation for use in Code Interpreter.`;
+          result[0] = `File "${name}" could not be attached to this conversation for use in Code Interpreter.`;
         }
       }
 

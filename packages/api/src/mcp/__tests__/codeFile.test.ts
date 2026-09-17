@@ -110,6 +110,55 @@ describe('fetchAllowedCodeFileStream', () => {
     expect(mockCreateSSRFSafeAgents).toHaveBeenCalledWith(null);
   });
 
+  it('drops the allowedAddresses exemption once a redirect crosses origin', async () => {
+    mockGet
+      .mockResolvedValueOnce({
+        status: 302,
+        headers: { location: 'https://attacker.example/report.pdf' },
+        data: { destroy: jest.fn() },
+      })
+      .mockResolvedValueOnce({ status: 200, data: 'stream' });
+
+    await fetchAllowedCodeFileStream('https://internal.example/report.pdf', null, [
+      'internal.example:443',
+      'attacker.example:443',
+    ]);
+
+    expect(mockIsMCPDomainAllowed).toHaveBeenNthCalledWith(
+      1,
+      { url: 'https://internal.example/report.pdf' },
+      null,
+      ['internal.example:443', 'attacker.example:443'],
+    );
+    expect(mockIsMCPDomainAllowed).toHaveBeenNthCalledWith(
+      2,
+      { url: 'https://attacker.example/report.pdf' },
+      null,
+      null,
+    );
+    expect(mockCreateSSRFSafeAgents).toHaveBeenNthCalledWith(1, [
+      'internal.example:443',
+      'attacker.example:443',
+    ]);
+    expect(mockCreateSSRFSafeAgents).toHaveBeenNthCalledWith(2, null);
+  });
+
+  it('keeps the allowedAddresses exemption across a same-origin redirect', async () => {
+    mockGet
+      .mockResolvedValueOnce({
+        status: 302,
+        headers: { location: 'https://internal.example/renamed.pdf' },
+        data: { destroy: jest.fn() },
+      })
+      .mockResolvedValueOnce({ status: 200, data: 'stream' });
+
+    await fetchAllowedCodeFileStream('https://internal.example/report.pdf', null, [
+      'internal.example:443',
+    ]);
+
+    expect(mockCreateSSRFSafeAgents).toHaveBeenNthCalledWith(2, ['internal.example:443']);
+  });
+
   it('destroys the response stream when the download rejects with a non-2xx/3xx status', async () => {
     const destroy = jest.fn();
     const axiosError = Object.assign(new Error('Request failed with status code 403'), {
