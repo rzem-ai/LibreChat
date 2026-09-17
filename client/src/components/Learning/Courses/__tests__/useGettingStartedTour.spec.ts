@@ -21,6 +21,23 @@ let mockIsLastStep = jest.fn();
 let capturedConfig: DriverConfig | undefined;
 let mockShowMarketplace = true;
 
+function appendAnchor(
+  tagName: keyof HTMLElementTagNameMap,
+  options: { id?: string; testId?: string; ariaPressed?: string } = {},
+) {
+  const element = document.createElement(tagName);
+  if (options.id) {
+    element.id = options.id;
+  }
+  if (options.testId) {
+    element.setAttribute('data-testid', options.testId);
+  }
+  if (options.ariaPressed) {
+    element.setAttribute('aria-pressed', options.ariaPressed);
+  }
+  document.body.appendChild(element);
+}
+
 jest.mock('~/hooks', () => ({
   useShowMarketplace: () => mockShowMarketplace,
 }));
@@ -39,14 +56,30 @@ jest.mock('driver.js', () => ({
 
 describe('useGettingStartedTour', () => {
   beforeEach(() => {
-    const conversationsButton = document.createElement('button');
-    conversationsButton.id = 'nav-panel-conversations';
-    conversationsButton.setAttribute('aria-pressed', 'true');
-    document.body.appendChild(conversationsButton);
-
-    const marketplaceButton = document.createElement('button');
-    marketplaceButton.id = 'nav-agents-marketplace-button';
-    document.body.appendChild(marketplaceButton);
+    appendAnchor('button', { id: 'new-chat-button' });
+    appendAnchor('button', { id: 'model-selector-button' });
+    appendAnchor('div', { testId: 'text-input' });
+    appendAnchor('button', { id: 'attach-file-menu-button' });
+    appendAnchor('button', { id: 'toolbar-toggle-code-interpreter' });
+    appendAnchor('button', { id: 'toolbar-toggle-skills' });
+    appendAnchor('button', { id: 'toolbar-toggle-artifacts' });
+    appendAnchor('button', { id: 'toolbar-toggle-mcp-servers' });
+    appendAnchor('button', { testId: 'send-button' });
+    appendAnchor('button', { id: 'close-sidebar-button' });
+    appendAnchor('button', { id: 'nav-panel-conversations', ariaPressed: 'true' });
+    appendAnchor('input', { id: 'nav-search-input' });
+    appendAnchor('div', { id: 'nav-projects-section' });
+    appendAnchor('button', { id: 'nav-panel-agents' });
+    appendAnchor('button', { id: 'nav-panel-skills' });
+    appendAnchor('button', { id: 'nav-panel-prompts' });
+    appendAnchor('button', { id: 'nav-panel-memories' });
+    appendAnchor('button', { id: 'nav-panel-bookmarks' });
+    appendAnchor('button', { id: 'nav-panel-files' });
+    appendAnchor('button', { id: 'nav-panel-parameters' });
+    appendAnchor('button', { id: 'nav-panel-mcp-builder' });
+    appendAnchor('button', { id: 'nav-agents-marketplace-button' });
+    appendAnchor('button', { id: 'nav-panel-learning' });
+    appendAnchor('button', { id: 'nav-user' });
   });
 
   afterEach(() => {
@@ -156,7 +189,7 @@ describe('useGettingStartedTour', () => {
   });
 
   it('omits agent-selection steps when the conversations panel target is unavailable', () => {
-    document.body.innerHTML = '';
+    document.getElementById('nav-panel-conversations')?.remove();
     const { result } = renderHook(() => useGettingStartedTour());
     result.current.startTour();
 
