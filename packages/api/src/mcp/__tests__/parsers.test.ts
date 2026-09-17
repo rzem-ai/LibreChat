@@ -399,6 +399,32 @@ describe('formatToolContent', () => {
       expect(content).toContain(`Resource URI: ${CODE_FILE_DOWNLOAD_SCHEME}report.pdf`);
     });
 
+    it('should extract a code-interpreter download link into artifacts.codeFile for an unrecognized provider', () => {
+      const result: t.MCPToolCallResponse = {
+        content: [
+          { type: 'text', text: '{"status":"downloaded","fileName":"report.pdf"}' },
+          {
+            type: 'resource',
+            resource: {
+              uri: `${CODE_FILE_DOWNLOAD_SCHEME}report.pdf`,
+              mimeType: 'application/pdf',
+              text: 'https://contoso.sharepoint.com/_layouts/download.aspx?sig=abc',
+            },
+          },
+        ],
+      };
+
+      const [content, artifacts] = formatToolContent(result, 'vertexai' as t.Provider);
+      expect(content).toBe('{"status":"downloaded","fileName":"report.pdf"}');
+      expect(content).not.toContain('Resource URI');
+      expect(content).not.toContain('sharepoint.com');
+      expect(artifacts?.codeFile).toEqual({
+        name: 'report.pdf',
+        mimeType: 'application/pdf',
+        url: 'https://contoso.sharepoint.com/_layouts/download.aspx?sig=abc',
+      });
+    });
+
     it('should handle mixed UI and regular resources', () => {
       const result: t.MCPToolCallResponse = {
         content: [

@@ -1605,15 +1605,32 @@ export async function createRun({
     // into the shared code session, keeping same-run continuity for later
     // foreground code calls. Poll results carry an artifact only for code
     // tasks, so non-code polls never touch the session.
+    //
+    // MCP tool names are dynamic (`${toolName}${mcp_delimiter}${serverName}`)
+    // and any MCP tool may hand back a `librechat-download://` codeFile (the
+    // SharePoint bridge in MCP.js is one example, not the only one), so every
+    // MCP tool is opted into this list — there's no static per-tool metadata
+    // to narrow it further. Membership here has two real, but bounded, side
+    // effects on MCP tools that never return a codeFile:
+    //   1. They lose SDK eager/speculative execution (isEagerExecutionExcludedTool
+    //      in @librechat/agents treats any codeSessionToolNames member as
+    //      side-effecting). This only delays that one call to the normal
+    //      (non-speculative) path; it changes no behavior or output.
+    //   2. Once *any* MCP call has produced a session (via MCP.js setting
+    //      `artifacts.session_id`), the SDK's ToolNode also computes
+    //      `session_id`/`_injected_files` for every later call to a listed MCP
+    //      tool and attaches them to `config.toolCall` (outside `args`, so Zod
+    //      validation never sees them). This is inert here: MCP.js's `_call`
+    //      only forwards the model-provided `toolArguments` to
+    //      `mcpManager.callTool`, never `config.toolCall`, so no session/file
+    //      metadata is exposed to the downstream MCP server. If MCP.js is ever
+    //      changed to forward `config.toolCall` into the outgoing tool
+    //      arguments, that invariant needs to be re-checked.
     codeSessionToolNames: [
       CREATE_FILE_TOOL_NAME,
       EDIT_FILE_TOOL_NAME,
       Constants.READ_FILE,
       CHECK_BACKGROUND_TASK_NAME,
-      // MCP tool names are dynamic (`${toolName}${mcp_delimiter}${serverName}`),
-      // so any MCP tool is opted in here; the SDK only merges a session when a
-      // result's artifact actually carries a `session_id` (e.g. the SharePoint
-      // codeFile bridge in MCP.js), so non-code MCP tools are unaffected.
       ...agents.flatMap((agent) =>
         agent.toolRegistry
           ? Array.from(agent.toolRegistry.keys()).filter((name) =>

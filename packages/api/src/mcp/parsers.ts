@@ -103,8 +103,38 @@ function isImageContent(item: t.ToolContentPart): item is t.ImageContent {
   return item.type === 'image';
 }
 
-function parseAsString(result: t.MCPToolCallResponse): string {
-  const content = result?.content ?? [];
+/**
+ * Pulls a `librechat-download://` marker resource out of the content array
+ * regardless of provider, so it's never stringified into the model's
+ * context even for providers outside `RECOGNIZED_PROVIDERS`.
+ */
+function extractCodeFile(content: t.ToolContentPart[]): {
+  codeFile?: NonNullable<t.Artifacts>['codeFile'];
+  content: t.ToolContentPart[];
+} {
+  let codeFile: NonNullable<t.Artifacts>['codeFile'];
+  const remaining: t.ToolContentPart[] = [];
+
+  for (const item of content) {
+    if (
+      !codeFile &&
+      item.type === 'resource' &&
+      item.resource.uri.startsWith(CODE_FILE_DOWNLOAD_SCHEME) &&
+      'text' in item.resource &&
+      item.resource.text
+    ) {
+      const { uri, mimeType, text } = item.resource;
+      const name = uri.slice(CODE_FILE_DOWNLOAD_SCHEME.length) || uri;
+      codeFile = { name, mimeType, url: text };
+      continue;
+    }
+    remaining.push(item);
+  }
+
+  return { codeFile, content: remaining };
+}
+
+function parseAsString(content: t.ToolContentPart[]): string {
   if (!content.length) {
     return '(No response)';
   }
@@ -151,19 +181,20 @@ export function formatToolContent(
   result: t.MCPToolCallResponse,
   provider: t.Provider,
 ): t.FormattedContentResult {
+  const { codeFile, content } = extractCodeFile(result?.content ?? []);
+
   if (!RECOGNIZED_PROVIDERS.has(provider)) {
-    return [parseAsString(result), undefined];
+    const text = content.length ? parseAsString(content) : codeFile ? '' : '(No response)';
+    return [text, codeFile ? { codeFile } : undefined];
   }
 
-  const content = result?.content ?? [];
   if (!content.length) {
-    return ['(No response)', undefined];
+    return codeFile ? ['', { codeFile }] : ['(No response)', undefined];
   }
 
   const imageUrls: t.FormattedContent[] = [];
   const uiResources: UIResource[] = [];
   let currentTextBlock = '';
-  let codeFile: NonNullable<t.Artifacts>['codeFile'];
 
   type ContentHandler = undefined | ((item: t.ToolContentPart) => void);
 
@@ -190,17 +221,6 @@ export function formatToolContent(
     },
 
     resource: (item) => {
-      if (
-        item.resource.uri.startsWith(CODE_FILE_DOWNLOAD_SCHEME) &&
-        'text' in item.resource &&
-        item.resource.text
-      ) {
-        const { uri, mimeType, text } = item.resource;
-        const name = uri.slice(CODE_FILE_DOWNLOAD_SCHEME.length) || uri;
-        codeFile = { name, mimeType, url: text };
-        return;
-      }
-
       const isUiResource = item.resource.uri.startsWith('ui://');
       const resourceText: string[] = [];
 
@@ -275,5 +295,5 @@ UI Resource Markers Available:
     artifacts = { ...artifacts, codeFile };
   }
 
-  return [currentTextBlock || (artifacts !== undefined ? '' : '(No response)'), artifacts];
+  return [currentTextBlock || (artifacts != null ? '' : '(No response)'), artifacts];
 }

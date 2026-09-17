@@ -2051,7 +2051,13 @@ describe('User parameter passing tests', () => {
       expect(artifacts[HOST_FILE_AUTHORING_ARTIFACT_KEY]).toBe(true);
       expect(artifacts.session_id).toBe('session-123');
       expect(artifacts.files).toEqual([
-        { id: 'file-456', name: 'report.pdf', storage_session_id: 'session-123' },
+        {
+          id: 'file-456',
+          name: 'report.pdf',
+          storage_session_id: 'session-123',
+          resource_id: 'code-file-user',
+          kind: 'user',
+        },
       ]);
     });
 
@@ -2346,6 +2352,62 @@ describe('User parameter passing tests', () => {
         expect.stringContaining('Failed to register codeFile artifact'),
         expect.any(Error),
       );
+      expect(result).toBe('downloaded report.pdf');
+    });
+
+    it('should not upload a codeFile artifact for the Assistants endpoint', async () => {
+      const mockUser = { id: 'code-file-user-assistants', role: 'USER' };
+      const mockReq = { user: mockUser };
+      const mockRes = { write: jest.fn(), flush: jest.fn(), req: mockReq };
+      const { getRoleByName } = require('~/models');
+      getRoleByName.mockResolvedValue({
+        permissions: {
+          [PermissionTypes.MCP_SERVERS]: {
+            [Permissions.USE]: true,
+          },
+        },
+      });
+
+      const artifacts = {
+        codeFile: {
+          name: 'report.pdf',
+          mimeType: 'application/pdf',
+          url: 'https://contoso.sharepoint.com/_layouts/download.aspx?sig=abc',
+        },
+      };
+      mockGetMCPManager.mockReturnValue({
+        callTool: jest.fn().mockResolvedValue(['downloaded report.pdf', artifacts]),
+      });
+
+      const mcpTool = await createMCPTool({
+        res: mockRes,
+        user: mockUser,
+        toolKey: `sp_download_file${D}sharepoint`,
+        provider: 'assistants',
+        userMCPAuthMap: {},
+        availableTools: {
+          [`sp_download_file${D}sharepoint`]: {
+            function: {
+              description: 'Download a SharePoint file',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+        },
+      });
+
+      // The Assistants endpoint's `isAssistantsEndpoint(provider)` shortcut
+      // unwraps the two-tuple to a bare string before returning, which
+      // LangChain's CONTENT_AND_ARTIFACT `.invoke()` validation would reject
+      // as "not a two-tuple" — so call the underlying `_call` (`.func`)
+      // directly, matching how the Assistants runner uses this tool.
+      const result = await mcpTool.func({}, undefined, {
+        configurable: { user: mockUser },
+        metadata: { provider: 'assistants', thread_id: 'thread-1', run_id: 'run-1' },
+        toolCall: {},
+      });
+
+      expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
+      expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(result).toBe('downloaded report.pdf');
     });
 

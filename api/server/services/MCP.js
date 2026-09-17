@@ -35,6 +35,7 @@ const {
   isOAuthServer,
   isOboServer,
   createAxiosInstance,
+  createSSRFSafeAgents,
   sanitizeFilename,
   HOST_FILE_AUTHORING_ARTIFACT_KEY,
 } = require('@librechat/api');
@@ -73,11 +74,17 @@ const CODE_FILE_MAX_REDIRECTS = 5;
  * allowlist on every redirect hop. Axios follows redirects by default, which
  * would let an allowed URL 30x to a disallowed/internal address and bypass
  * `isMCPDomainAllowed` entirely, so redirects are followed manually here.
+ *
+ * `isMCPDomainAllowed` is only a preflight hostname/DNS check; it doesn't
+ * protect the TCP connection actually made by axios, so a DNS answer that
+ * changes between the check and the request (rebinding) could still land on
+ * a private address. `createSSRFSafeAgents` re-validates at connect time.
  * @param {string} url
  * @param {string[] | null | undefined} allowedDomains
  * @param {string[] | null | undefined} allowedAddresses
  */
 async function fetchAllowedCodeFileStream(url, allowedDomains, allowedAddresses) {
+  const { httpAgent, httpsAgent } = createSSRFSafeAgents(allowedAddresses);
   let currentUrl = url;
   for (let hop = 0; hop <= CODE_FILE_MAX_REDIRECTS; hop++) {
     if (!(await isMCPDomainAllowed({ url: currentUrl }, allowedDomains, allowedAddresses))) {
@@ -87,12 +94,15 @@ async function fetchAllowedCodeFileStream(url, allowedDomains, allowedAddresses)
       responseType: 'stream',
       timeout: CODE_FILE_DOWNLOAD_TIMEOUT_MS,
       maxRedirects: 0,
+      httpAgent,
+      httpsAgent,
       validateStatus: (status) =>
         (status >= 200 && status < 300) || (status >= 300 && status < 400),
     });
     if (response.status < 300) {
       return response;
     }
+    response.data?.destroy?.();
     const location = response.headers?.location;
     if (!location) {
       throw new Error(`codeFile download redirected without a Location header: ${currentUrl}`);
@@ -1155,7 +1165,11 @@ function createToolInstance({
       });
 
       const artifacts = Array.isArray(result) ? result[1] : undefined;
-      if (artifacts?.codeFile) {
+      /* The Assistants endpoint (and any other non-agent caller returning
+       * only `result[0]` below) has no code-session pipeline to hand this
+       * artifact to; registering it there would upload the file to Code
+       * Interpreter storage for no consumer. */
+      if (artifacts?.codeFile && !isAssistantsEndpoint(provider)) {
         const { name, url } = artifacts.codeFile;
         delete artifacts.codeFile;
         const req = res?.req;
@@ -1194,6 +1208,8 @@ function createToolInstance({
                 id: uploaded.file_id,
                 name: sandboxFilename,
                 storage_session_id: uploaded.storage_session_id,
+                resource_id: userId,
+                kind: 'user',
               },
             ];
           } catch (codeFileError) {
