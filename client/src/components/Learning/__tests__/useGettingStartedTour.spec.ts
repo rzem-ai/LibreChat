@@ -7,10 +7,6 @@ const mockMoveNext = jest.fn();
 let mockIsLastStep = jest.fn();
 let capturedConfig: Record<string, unknown> | undefined;
 
-jest.mock('~/hooks', () => ({
-  useLocalize: () => (key: string) => key,
-}));
-
 jest.mock('driver.js', () => ({
   driver: (config: Record<string, unknown>) => {
     capturedConfig = config;
