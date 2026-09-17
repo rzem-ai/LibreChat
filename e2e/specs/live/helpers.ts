@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+import yaml from 'js-yaml';
 import { expect } from '@playwright/test';
 import type { Locator, Page } from '@playwright/test';
 
@@ -8,6 +11,40 @@ import type { Locator, Page } from '@playwright/test';
  */
 
 const SKILL_ACTIVE_SWITCH = 'Toggle skill active state';
+
+interface ModelSpecConfig {
+  name: string;
+  label?: string;
+  preset: { endpoint: string; model: string };
+}
+
+interface LiveYamlConfig {
+  modelSpecs?: { list?: ModelSpecConfig[] };
+}
+
+export interface ModelSpecCase {
+  endpoint: string;
+  model: string;
+  label: string;
+}
+
+let cachedModelSpecs: ModelSpecCase[] | undefined;
+
+/** Every modelSpec in librechat.yaml, i.e. every model actually reachable through the picker. */
+export function loadModelSpecs(): ModelSpecCase[] {
+  if (cachedModelSpecs) {
+    return cachedModelSpecs;
+  }
+  const yamlPath =
+    process.env.LIVE_MODELS_YAML?.trim() || path.resolve(__dirname, '../../../librechat.yaml');
+  const config = yaml.load(fs.readFileSync(yamlPath, 'utf8')) as LiveYamlConfig;
+  cachedModelSpecs = (config.modelSpecs?.list ?? []).map((spec) => ({
+    endpoint: spec.preset.endpoint,
+    model: spec.preset.model,
+    label: spec.label ?? spec.preset.model,
+  }));
+  return cachedModelSpecs;
+}
 
 /**
  * Append-style canary marker (OWASP LLM guidance / LangChain4j's guardrail
@@ -105,13 +142,23 @@ export async function selectModel(page: Page, endpoint: string, model: string) {
   // search box, which flattens results and renders the matching model option
   // at the top level (see renderSearchResults in ModelSelector.tsx).
   const search = page.locator('#model-search');
-  // The modelSpec label for VertexAI strips the provider prefix
-  // (e.g. "google/gemini-2.5-flash" is labelled "gemini-2.5-flash"), so
-  // searching the raw id returns nothing.
-  const searchTerm = model.includes('/') ? model.split('/').pop()! : model;
+
+  // A modelSpec-backed option renders with its display label as the option's
+  // accessible name (e.g. "gpt-56-luna" renders as "GPT 5.6 Luna" — see
+  // SearchResults.tsx), never the raw model id. Search and match on that
+  // label when the endpoint/model pair is behind a spec; otherwise (a bare
+  // endpoint/model with no spec) the option's name is the raw model id.
+  const spec = loadModelSpecs().find((s) => s.endpoint === endpoint && s.model === model);
+  const searchTerm = spec
+    ? spec.label
+    : model.includes('/')
+      ? model.split('/').pop()!
+      : model;
   await search.fill(searchTerm);
   const escapedSearch = escapeRegExp(searchTerm);
-  const namePattern = new RegExp(`^(${escapeRegExp(endpoint)} )?${escapedSearch}(\\s|$)`);
+  const namePattern = spec
+    ? new RegExp(`^${escapedSearch}(\\s|$)`)
+    : new RegExp(`^(${escapeRegExp(endpoint)} )?${escapedSearch}(\\s|$)`);
   await page.getByRole('option', { name: namePattern }).first().click();
 }
 
