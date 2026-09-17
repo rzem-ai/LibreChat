@@ -128,12 +128,18 @@ describe('useGettingStartedTour', () => {
     const { result } = renderHook(() => useGettingStartedTour());
     result.current.startTour();
 
-    expect(capturedConfig?.steps).toHaveLength(25);
-    expect(capturedConfig?.steps?.some((step) => step.popover.title === 'Agent Marketplace')).toBe(
-      false,
-    );
+    expect(capturedConfig?.steps).toHaveLength(24);
     expect(
-      capturedConfig?.steps?.slice(21, 24).map((step) => step.popover.title),
-    ).toEqual(['Connectors', 'Switch Back to a Model', 'Learning Hub']);
+      capturedConfig?.steps?.some(
+        (step) =>
+          step.popover.title === 'Agent Marketplace' ||
+          step.popover.title === 'Switch Back to a Model',
+      ),
+    ).toBe(false);
+    expect(capturedConfig?.steps?.slice(21, 24).map((step) => step.popover.title)).toEqual([
+      'Connectors',
+      'Learning Hub',
+      'Account Menu',
+    ]);
   });
 });

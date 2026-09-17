@@ -11,7 +11,7 @@ import { useShowMarketplace } from '~/hooks';
  * make each step tolerant of elements that are conditionally rendered (permissions,
  * feature flags, viewport) or that need a moment to mount after a panel switch.
  *
- * Step order (25 core steps, plus Agent Marketplace when available):
+ * Step order (24 core steps, plus agent-selection steps when available):
  *   1  Welcome to MyAssist
  *   2  New Chat
  *   3  Model Selector
@@ -286,17 +286,17 @@ export default function useGettingStartedTour(onComplete?: () => void) {
                   side: 'right',
                 },
               },
+              {
+                element: '#model-selector-button',
+                popover: {
+                  title: 'Switch Back to a Model',
+                  description:
+                    'If you are using an agent and want to return to a general model, open this selector and choose a standard model instead.',
+                  side: 'bottom',
+                },
+              },
             ]
           : []),
-        {
-          element: '#model-selector-button',
-          popover: {
-            title: 'Switch Back to a Model',
-            description:
-              'If you are using an agent and want to return to a general model, open this selector and choose a standard model instead.',
-            side: 'bottom',
-          },
-        },
         {
           element: '#nav-panel-learning',
           popover: {
