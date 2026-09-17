@@ -72,12 +72,6 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           !isUnavailableElement(marketplaceButton)
         );
       })();
-    const ensureConversationsPanel = () => {
-      const button = document.getElementById('nav-panel-conversations');
-      if (button?.getAttribute('aria-pressed') !== 'true') {
-        button.click();
-      }
-    };
     const tourDriver = driver({
       showProgress: true,
       allowClose: true,
@@ -298,7 +292,6 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           ? [
               {
                 element: '#nav-agents-marketplace-button',
-                onHighlightStarted: ensureConversationsPanel,
                 popover: {
                   title: 'Agent Marketplace',
                   description:
@@ -308,7 +301,6 @@ export default function useGettingStartedTour(onComplete?: () => void) {
               },
               {
                 element: '#model-selector-button',
-                onHighlightStarted: ensureConversationsPanel,
                 popover: {
                   title: 'Switch Back to a Model',
                   description:
