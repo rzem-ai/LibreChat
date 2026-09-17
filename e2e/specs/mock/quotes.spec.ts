@@ -105,7 +105,7 @@ async function addQuote(page: Page, needle: string, expectedCount: number) {
   }).toPass({ timeout: 30000 });
 }
 
-test.describe('quote references', () => {
+test.describe('quote references', { tag: ['@mock', '@chat'] }, () => {
   test('merges a quoted excerpt into the model turn, pins it to the message, and persists across reload', async ({
     page,
   }) => {

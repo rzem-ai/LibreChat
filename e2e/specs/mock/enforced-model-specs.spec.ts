@@ -91,7 +91,7 @@ async function waitForStreamReply(page: Page, token: string, streamId: string, e
   );
 }
 
-test.describe('enforced model specs', () => {
+test.describe('enforced model specs', { tag: ['@mock', '@model-specs'] }, () => {
   test.skip(
     process.env.E2E_MODEL_SPECS_ENFORCE !== 'true',
     'requires E2E_MODEL_SPECS_ENFORCE=true',

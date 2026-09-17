@@ -46,7 +46,7 @@ async function renameConversation(page: Page, conversation: Locator, title: stri
   await expect(conversation).toContainText(title);
 }
 
-test.describe('conversation management', () => {
+test.describe('conversation management', { tag: ['@mock', '@conversations'] }, () => {
   test('loads a past sidebar conversation with its message history', async ({ page }) => {
     const firstLabel = uniqueLabel('sidebar-history-first');
     const secondLabel = uniqueLabel('sidebar-history-second');

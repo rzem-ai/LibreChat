@@ -1,18 +1,35 @@
-name: Deloitte Playwright Tests
+name: Playwright CI/Mock
 on:
-  # push:
-  #   branches: [ develop ]
-  # pull_request:
-  #   branches: [ develop ]
+  pull_request:
+    branches: [develop, uat, main]
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
+    inputs:
+      run_ci:
+        description: 'Run e2e:ci'
+        required: true
+        default: true
+        type: boolean
+      run_mock:
+        description: 'Run e2e:mock'
+        required: true
+        default: true
+        type: boolean
 permissions:
   contents: read
 
 jobs:
-  test:
+  ci:
+    # Runs on push/PR (once enabled) and whenever the dispatch input isn't
+    # explicitly set to false.
+    if: ${{ github.event.inputs.run_ci != 'false' }}
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
       - name: Use Node.js 24.17.0
         uses: actions/setup-node@v4
@@ -21,9 +38,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-
       - name: Run Playwright tests
         run: npm run e2e:ci
 
@@ -31,6 +45,36 @@ jobs:
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
-          name: playwright-report
+          name: playwright-report-ci
+          path: e2e/playwright-report/**
+          retention-days: 30
+
+  mock:
+    # Runs after ci regardless of whether ci ran or was skipped, but not if it failed.
+    needs: ci
+    if: ${{ !cancelled() && needs.ci.result != 'failure' && github.event.inputs.run_mock != 'false' }}
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - name: Use Node.js 24.16.0
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.16.0'
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Playwright tests
+        run: npm run e2e:mock
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-mock
           path: e2e/playwright-report/**
           retention-days: 30

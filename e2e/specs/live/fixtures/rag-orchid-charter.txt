@@ -1,0 +1,12 @@
+Project ORCHID-7749 - Internal Program Charter
+
+FICTIONAL TEST DATA - not a real Deloitte engagement.
+
+ORCHID-7749 is the internal codename for the Q3 2026 telemetry pipeline
+migration. Program lead: Priya Ramanathan, Platform Reliability practice,
+Sydney. Charter approved 14 March 2026.
+
+Approved budget: AUD 2,480,000.
+
+Section 7 - Codename Ledger: an earlier proposal used the codename
+LOTUS-3320; that proposal was rejected on 02 February 2026.
