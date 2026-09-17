@@ -1,14 +1,19 @@
 import { renderHook } from '@testing-library/react';
 import useGettingStartedTour from '../useGettingStartedTour';
 
+type DriverConfig = {
+  onDestroyStarted?: () => void;
+  onNextClick?: () => void;
+};
+
 const mockDrive = jest.fn();
 const mockDestroy = jest.fn();
 const mockMoveNext = jest.fn();
 let mockIsLastStep = jest.fn();
-let capturedConfig: Record<string, unknown> | undefined;
+let capturedConfig: DriverConfig | undefined;
 
 jest.mock('driver.js', () => ({
-  driver: (config: Record<string, unknown>) => {
+  driver: (config: DriverConfig) => {
     capturedConfig = config;
     return {
       drive: mockDrive,
