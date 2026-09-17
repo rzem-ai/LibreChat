@@ -3,6 +3,7 @@ import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import '../driver-theme.css';
 import { useShowMarketplace } from '~/hooks';
+import { isUnavailableElement } from '~/utils/elements';
 
 /**
  * Builds the Driver.js Getting Started tour over the default chat interface.
@@ -61,8 +62,16 @@ export default function useGettingStartedTour(onComplete?: () => void) {
     let completedFromLastStepNext = false;
     const canShowAgentSelectionSteps =
       showMarketplace &&
-      document.getElementById('nav-panel-conversations') != null &&
-      document.getElementById('nav-agents-marketplace-button') != null;
+      (() => {
+        const conversationsButton = document.getElementById('nav-panel-conversations');
+        const marketplaceButton = document.getElementById('nav-agents-marketplace-button');
+        return (
+          conversationsButton != null &&
+          marketplaceButton != null &&
+          !isUnavailableElement(conversationsButton) &&
+          !isUnavailableElement(marketplaceButton)
+        );
+      })();
     const ensureConversationsPanel = () => {
       const button = document.getElementById('nav-panel-conversations');
       if (button?.getAttribute('aria-pressed') !== 'true') {

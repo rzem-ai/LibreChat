@@ -18,6 +18,7 @@ import {
 import { mainTextareaId, NotificationSeverity } from '~/common';
 import { useArchiveConvoMutation } from '~/data-provider';
 import { useHasAccess, useLocalize } from '~/hooks';
+import { isUnavailableElement } from '~/utils/elements';
 import { clearMessagesCache } from '~/utils';
 import useNewConvo from './useNewConvo';
 import store from '~/store';
@@ -345,14 +346,6 @@ function anyModalOpen(): boolean {
  */
 function isWithinOpenMenu(target: HTMLElement | null): boolean {
   return target instanceof Element && target.closest('[role="menu"], [role="listbox"]') != null;
-}
-
-function isUnavailableElement(el: HTMLElement): boolean {
-  return (
-    el.getAttribute('aria-disabled') === 'true' ||
-    (el instanceof HTMLButtonElement && el.disabled) ||
-    (el instanceof HTMLInputElement && el.disabled)
-  );
 }
 
 function clickTarget(el: HTMLElement | null | undefined): boolean {
