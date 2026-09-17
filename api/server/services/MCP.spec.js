@@ -1557,6 +1557,10 @@ describe('User parameter passing tests', () => {
   });
 
   describe('createMCPTool', () => {
+    afterEach(() => {
+      delete mockCodeFileDownloadDefaults.proxy;
+    });
+
     it.each(['OAuth flow initiated - return early', 'Pending OAuth flow reused - return early'])(
       'preserves runtime-detected OAuth for the internal signal: %s',
       async (oauthSignal) => {
@@ -2080,6 +2084,13 @@ describe('User parameter passing tests', () => {
 
       const configuredProxy = { host: 'corp-proxy.internal', port: 8080, protocol: 'http' };
       mockCodeFileDownloadDefaults.proxy = configuredProxy;
+      /* A proxy resolves the target hostname itself, so routing an un-vetted
+       * hostname through it while SSRF protection is on can't be trusted
+       * (see the codeFile.ts proxy+SSRF test below) — the admin must vet the
+       * tenant's SharePoint domain via allowedDomains to use both together. */
+      mockGetAppConfig.mockResolvedValue({
+        mcpSettings: { allowedDomains: ['contoso.sharepoint.com'] },
+      });
 
       const artifacts = {
         codeFile: {
@@ -2124,6 +2135,135 @@ describe('User parameter passing tests', () => {
 
       expect(mockCodeFileDownloadGet).toHaveBeenCalledWith(
         'https://contoso.sharepoint.com/_layouts/download.aspx?sig=abc',
+        expect.objectContaining({ proxy: configuredProxy }),
+      );
+    });
+
+    it('should drop a codeFile artifact and warn when a configured proxy would resolve an un-vetted hostname under SSRF protection', async () => {
+      const mockUser = { id: 'code-file-user-proxy-ssrf', role: 'USER' };
+      const mockReq = { user: mockUser };
+      const mockRes = { write: jest.fn(), flush: jest.fn(), req: mockReq };
+      const { getRoleByName } = require('~/models');
+      getRoleByName.mockResolvedValue({
+        permissions: {
+          [PermissionTypes.MCP_SERVERS]: {
+            [Permissions.USE]: true,
+          },
+        },
+      });
+
+      const configuredProxy = { host: 'corp-proxy.internal', port: 8080, protocol: 'http' };
+      mockCodeFileDownloadDefaults.proxy = configuredProxy;
+      // No allowedDomains configured: useSSRFProtection stays on for this hostname.
+
+      const artifacts = {
+        codeFile: {
+          name: 'report.pdf',
+          mimeType: 'application/pdf',
+          url: 'https://not-vetted.example.com/download?sig=abc',
+        },
+      };
+      mockGetMCPManager.mockReturnValue({
+        callTool: jest.fn().mockResolvedValue(['downloaded report.pdf', artifacts]),
+      });
+
+      const mcpTool = await createMCPTool({
+        res: mockRes,
+        user: mockUser,
+        toolKey: `sp_download_file${D}sharepoint`,
+        provider: 'openai',
+        userMCPAuthMap: {},
+        availableTools: {
+          [`sp_download_file${D}sharepoint`]: {
+            function: {
+              description: 'Download a SharePoint file',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+        },
+      });
+
+      const result = await mcpTool.invoke(
+        {},
+        {
+          configurable: { user: mockUser, codeEnvAvailable: true },
+          metadata: { provider: 'openai', thread_id: 'thread-1', run_id: 'run-1' },
+          toolCall: {},
+        },
+      );
+
+      expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
+      expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to register codeFile artifact'),
+        expect.objectContaining({
+          message: expect.stringContaining('requires an IP-literal or explicitly allowed host'),
+        }),
+      );
+      expect(result).toBe('downloaded report.pdf');
+    });
+
+    it('should route a proxied codeFile download to a public IP-literal host under SSRF protection', async () => {
+      const mockUser = { id: 'code-file-user-proxy-ip', role: 'USER' };
+      const mockReq = { user: mockUser };
+      const mockRes = { write: jest.fn(), flush: jest.fn(), req: mockReq };
+      const { getRoleByName } = require('~/models');
+      getRoleByName.mockResolvedValue({
+        permissions: {
+          [PermissionTypes.MCP_SERVERS]: {
+            [Permissions.USE]: true,
+          },
+        },
+      });
+
+      const configuredProxy = { host: 'corp-proxy.internal', port: 8080, protocol: 'http' };
+      mockCodeFileDownloadDefaults.proxy = configuredProxy;
+
+      const artifacts = {
+        codeFile: {
+          name: 'report.pdf',
+          mimeType: 'application/pdf',
+          // 203.0.113.10 is a public documentation-range (TEST-NET-3) address,
+          // not a private/reserved one — should be allowed as an IP literal.
+          url: 'http://203.0.113.10/download?sig=abc',
+        },
+      };
+      mockGetMCPManager.mockReturnValue({
+        callTool: jest.fn().mockResolvedValue(['downloaded report.pdf', artifacts]),
+      });
+      mockCodeFileDownloadGet.mockResolvedValue({ status: 200, data: 'fake-stream' });
+      mockUploadCodeEnvFile.mockResolvedValue({
+        storage_session_id: 'session-123',
+        file_id: 'file-456',
+      });
+
+      const mcpTool = await createMCPTool({
+        res: mockRes,
+        user: mockUser,
+        toolKey: `sp_download_file${D}sharepoint`,
+        provider: 'openai',
+        userMCPAuthMap: {},
+        availableTools: {
+          [`sp_download_file${D}sharepoint`]: {
+            function: {
+              description: 'Download a SharePoint file',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+        },
+      });
+
+      await mcpTool.invoke(
+        {},
+        {
+          configurable: { user: mockUser, codeEnvAvailable: true },
+          metadata: { provider: 'openai', thread_id: 'thread-1', run_id: 'run-1' },
+          toolCall: {},
+        },
+      );
+
+      expect(mockCodeFileDownloadGet).toHaveBeenCalledWith(
+        'http://203.0.113.10/download?sig=abc',
         expect.objectContaining({ proxy: configuredProxy }),
       );
     });

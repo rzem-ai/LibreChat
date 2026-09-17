@@ -1,5 +1,6 @@
+import { isIP } from 'node:net';
 import type { AxiosInstance, AxiosResponse } from 'axios';
-import { createSSRFSafeAgents, isMCPDomainAllowed } from '~/auth';
+import { isAddressAllowed, isMCPDomainAllowed, createSSRFSafeAgents } from '~/auth';
 import { createAxiosInstance } from '~/utils/axios';
 
 const codeFileDownloadAxios: AxiosInstance = createAxiosInstance();
@@ -46,8 +47,35 @@ function redactUrlForLog(url: string): string {
  * vars when `proxy` is left unset, and in that case the *proxy* — not our
  * SSRF-safe agents — would resolve `currentUrl`'s hostname, bypassing the
  * connect-time recheck entirely. Deployments that deliberately configure
- * `process.env.proxy` for egress still get routed through it.
+ * `process.env.proxy` for egress still get routed through it, but only for
+ * hosts that don't need per-request DNS trust: when `useSSRFProtection` is on,
+ * a configured proxy resolves the target hostname itself, so our connect-time
+ * agents (which only see the proxy's own address) can't catch a private
+ * address the proxy's resolver returns (DNS rebinding). `assertHopSafeForProxy`
+ * closes that gap the same way `assertProxiedRequestTargetAllowed` does for
+ * MCP server connections in `connection.ts`: a proxied hop under SSRF
+ * protection must target an IP literal (checked for privateness like any
+ * other target) or an admin-exempted `allowedAddresses` entry — an admin who
+ * wants to reach a named host (e.g. their tenant's SharePoint domain) through
+ * the proxy should add it to `allowedDomains`, which turns `useSSRFProtection`
+ * off for this call the same way it does for every other MCP connection path.
  */
+function assertHopSafeForProxy(
+  hostname: string,
+  proxyConfigured: boolean,
+  useSSRFProtection: boolean,
+  allowedAddresses: string[] | null | undefined,
+): void {
+  if (!proxyConfigured || !useSSRFProtection || isIP(hostname) !== 0) {
+    return;
+  }
+  if (isAddressAllowed(hostname, allowedAddresses)) {
+    return;
+  }
+  throw new Error(
+    `codeFile download via a configured proxy requires an IP-literal or explicitly allowed host while SSRF protection is on: ${hostname}`,
+  );
+}
 export async function fetchAllowedCodeFileStream(
   url: string,
   allowedDomains: string[] | null | undefined,
@@ -61,16 +89,23 @@ export async function fetchAllowedCodeFileStream(
   const { httpAgent, httpsAgent } = useSSRFProtection
     ? createSSRFSafeAgents(allowedAddresses)
     : { httpAgent: undefined, httpsAgent: undefined };
+  const proxy = codeFileDownloadAxios.defaults.proxy || false;
   let currentUrl = url;
   for (let hop = 0; hop <= CODE_FILE_MAX_REDIRECTS; hop++) {
     if (!(await isMCPDomainAllowed({ url: currentUrl }, allowedDomains, allowedAddresses))) {
       throw new Error(`codeFile download URL domain is not allowed: ${redactUrlForLog(currentUrl)}`);
     }
+    assertHopSafeForProxy(
+      new URL(currentUrl).hostname,
+      proxy !== false,
+      useSSRFProtection,
+      allowedAddresses,
+    );
     const response = await codeFileDownloadAxios.get(currentUrl, {
       responseType: 'stream',
       timeout: CODE_FILE_DOWNLOAD_TIMEOUT_MS,
       maxRedirects: 0,
-      proxy: codeFileDownloadAxios.defaults.proxy || false,
+      proxy,
       httpAgent,
       httpsAgent,
       validateStatus: (status: number) =>
