@@ -380,6 +380,40 @@ describe('formatToolContent', () => {
       expect(artifacts?.codeFile?.name).toBe('Report 100%.xlsx');
     });
 
+    it('should decode a percent-encoded filename from a code-interpreter download link', () => {
+      const result: t.MCPToolCallResponse = {
+        content: [
+          {
+            type: 'resource',
+            resource: {
+              uri: `${CODE_FILE_DOWNLOAD_SCHEME}${encodeURIComponent('Q4 report #final.pdf')}`,
+              text: 'https://contoso.sharepoint.com/download',
+            },
+          },
+        ],
+      };
+
+      const [, artifacts] = formatToolContent(result, 'openai');
+      expect(artifacts?.codeFile?.name).toBe('Q4 report #final.pdf');
+    });
+
+    it('should fall back to the raw filename when it is not validly percent-encoded', () => {
+      const result: t.MCPToolCallResponse = {
+        content: [
+          {
+            type: 'resource',
+            resource: {
+              uri: `${CODE_FILE_DOWNLOAD_SCHEME}50% off report.pdf`,
+              text: 'https://contoso.sharepoint.com/download',
+            },
+          },
+        ],
+      };
+
+      const [, artifacts] = formatToolContent(result, 'openai');
+      expect(artifacts?.codeFile?.name).toBe('50% off report.pdf');
+    });
+
     it('should not treat a librechat-download:// resource without text as a codeFile', () => {
       const result: t.MCPToolCallResponse = {
         content: [

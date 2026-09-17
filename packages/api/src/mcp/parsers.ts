@@ -9,8 +9,11 @@ export const DEFAULT_MCP_IMAGE_DATA_MAX_BYTES: number = 10 * 1024 * 1024;
  * Marker URI scheme a tool can use to hand back a download link for a file
  * meant for Code Interpreter, instead of a resource block a caller might
  * otherwise stringify into the model's context. `resource.text` carries the
- * actual URL; the scheme + filename lives in `resource.uri`, taken verbatim
- * (no URI encoding/decoding — this scheme is internal-only).
+ * actual URL; the filename lives in `resource.uri` after the scheme, percent-
+ * encoded by the producer (e.g. ea-mcp-gateway's sharepoint-graph-mcp server
+ * via `url.PathEscape`) since SharePoint names routinely contain spaces or
+ * other characters that would otherwise be parsed as URI syntax. Consumers
+ * must `decodeURIComponent` it back out.
  */
 export const CODE_FILE_DOWNLOAD_SCHEME = 'librechat-download://';
 
@@ -124,7 +127,18 @@ function extractCodeFile(content: t.ToolContentPart[]): {
       item.resource.text
     ) {
       const { uri, mimeType, text } = item.resource;
-      const name = uri.slice(CODE_FILE_DOWNLOAD_SCHEME.length) || uri;
+      const rawName = uri.slice(CODE_FILE_DOWNLOAD_SCHEME.length) || uri;
+      // Producers percent-encode the filename component (e.g. ea-mcp-gateway's
+      // sharepoint-graph-mcp server) since raw names commonly contain spaces
+      // or characters like '#' that would otherwise be parsed as URI syntax.
+      // decodeURIComponent is a no-op for names with no such characters, so
+      // this is safe even against producers that don't encode.
+      let name = rawName;
+      try {
+        name = decodeURIComponent(rawName);
+      } catch {
+        // Malformed percent-encoding: fall back to the raw (undecoded) name.
+      }
       codeFile = { name, mimeType, url: text };
       continue;
     }
