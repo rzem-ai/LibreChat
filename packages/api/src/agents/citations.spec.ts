@@ -955,6 +955,35 @@ describe('insertSharePointCitations', () => {
     expect(lines[0]).toContain(`${MARKER}turn0mcp0`);
     expect(lines[4]).not.toContain(MARKER);
   });
+
+  it('anchors a later prose mention when the same filename appeared earlier inside a fence', () => {
+    const original = [
+      '````',
+      '- Consulting Graduate Induction Workbook.pptx',
+      '````',
+      '',
+      '- Consulting Graduate Induction Workbook.pptx',
+    ].join('\n');
+    const parts = [textPart(original)];
+    const usedCoords = insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    const lines = readText(parts[0]).split('\n');
+    expect(lines[1]).not.toContain(MARKER);
+    expect(lines[4]).toContain(`${MARKER}turn0mcp0`);
+    expect(usedCoords.has('0:0')).toBe(true);
+  });
 });
 
 describe('appendGuaranteedMCPCitations', () => {

@@ -981,16 +981,15 @@ export function insertSharePointCitations(
 
     let changed = false;
     const excludedRanges = findFencedCodeRanges(text);
+    const lines = text.split('\n');
     let cursor = 0;
-    const rebuiltLines = text.split('\n').map((line) => {
+    const withinExcludedRange = lines.map((line) => {
       const lineStart = cursor;
       cursor += line.length + 1;
-      // Deloitte Custom Change: still match aliases inside an excluded (fenced) range so a
-      // source mentioned only there is marked used and doesn't get force-appended later by
-      // appendGuaranteedMCPCitations — but never mutate the line, since an anchor placed
-      // inside a fence would render as literal text.
-      const withinExcludedRange = isWithinRanges(lineStart, excludedRanges);
+      return isWithinRanges(lineStart, excludedRanges);
+    });
 
+    const matchLine = (line: string, insertAnchor: boolean): string => {
       const tableCells = splitTableRowCells(line);
       if (tableCells) {
         for (let cellIndex = 0; cellIndex < tableCells.length; cellIndex++) {
@@ -1007,7 +1006,7 @@ export function insertSharePointCitations(
               continue;
             }
             usedCoords.add(`${coord.turn}:${coord.fileIndex}`);
-            if (withinExcludedRange) {
+            if (!insertAnchor) {
               return line;
             }
             changed = true;
@@ -1035,13 +1034,29 @@ export function insertSharePointCitations(
           continue;
         }
         usedCoords.add(`${coord.turn}:${coord.fileIndex}`);
-        if (withinExcludedRange) {
+        if (!insertAnchor) {
           return line;
         }
         changed = true;
         return withAnchors(line, [`${ANCHOR_MARKER}turn${coord.turn}mcp${coord.fileIndex}`]);
       }
       return line;
+    };
+
+    // Deloitte Custom Change: claim queued sources for visible prose lines first, in document
+    // order, before any fenced-code line gets a chance to — so a filename appearing both inside
+    // a fence and later in prose still credits (and anchors) the prose mention instead of the
+    // fence silently consuming the only queued source. Fenced lines are matched in a second pass
+    // purely to mark any leftover source as used, without writing an anchor, so a source
+    // mentioned only inside a fence still isn't force-appended later by
+    // appendGuaranteedMCPCitations.
+    const rebuiltLines = lines.map((line, index) =>
+      withinExcludedRange[index] ? line : matchLine(line, true),
+    );
+    lines.forEach((line, index) => {
+      if (withinExcludedRange[index]) {
+        matchLine(line, false);
+      }
     });
 
     if (changed) {
