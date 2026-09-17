@@ -208,9 +208,13 @@ export default function useSideNavLinks({
       });
     }
 
+    const isTutorialEnabled =
+      (interfaceConfig.customDeloitteFeatureFlags?.isTutorialEnabled ??
+        interfaceConfig.isTutorialEnabled) !== false;
+
     // Deloitte Custom Change: conditionally add the Learning Hub nav panel when
     // the tutorial/learning-hub feature is enabled via interface config
-    if (interfaceConfig.customDeloitteFeatureFlags?.isTutorialEnabled !== false) {
+    if (isTutorialEnabled) {
       links.push({
         title: 'com_ui_learning_hub',
         label: '',
@@ -249,6 +253,7 @@ export default function useSideNavLinks({
     hasAccessToUseMCPSettings,
     hasAccessToCreateMCP,
     interfaceConfig.customDeloitteFeatureFlags?.isTutorialEnabled,
+    interfaceConfig.isTutorialEnabled,
     includeHidePanel,
     hidePanel,
   ]);

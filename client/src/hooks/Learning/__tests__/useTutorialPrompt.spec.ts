@@ -3,7 +3,12 @@ import useTutorialPrompt from '../useTutorialPrompt';
 
 const mockMutate = jest.fn();
 let mockStartupConfig:
-  | { interface?: { customDeloitteFeatureFlags?: { isTutorialEnabled?: boolean } } }
+  | {
+      interface?: {
+        customDeloitteFeatureFlags?: { isTutorialEnabled?: boolean };
+        isTutorialEnabled?: boolean;
+      };
+    }
   | undefined = {
   interface: { customDeloitteFeatureFlags: { isTutorialEnabled: true } },
 };
@@ -48,6 +53,12 @@ describe('useTutorialPrompt', () => {
 
   it('does not show the prompt when the admin has disabled tutorials', () => {
     mockStartupConfig = { interface: { customDeloitteFeatureFlags: { isTutorialEnabled: false } } };
+    const { result } = renderHook(() => useTutorialPrompt());
+    expect(result.current.shouldShowPrompt).toBe(false);
+  });
+
+  it('respects the legacy tutorial flag during config migration', () => {
+    mockStartupConfig = { interface: { isTutorialEnabled: false } };
     const { result } = renderHook(() => useTutorialPrompt());
     expect(result.current.shouldShowPrompt).toBe(false);
   });

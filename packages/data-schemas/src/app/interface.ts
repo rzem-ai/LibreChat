@@ -39,9 +39,14 @@ export async function loadDefaultInterface({
   const memoryEnabled = isMemoryEnabled(memoryConfig);
   /** Only disable memories if memory config is present and explicitly disabled */
   const shouldDisableMemories = memoryConfig && !memoryEnabled;
+  const isTutorialEnabled =
+    interfaceConfig?.customDeloitteFeatureFlags?.isTutorialEnabled ??
+    interfaceConfig?.isTutorialEnabled ??
+    defaults.customDeloitteFeatureFlags?.isTutorialEnabled;
   const customDeloitteFeatureFlags = removeNullishValues({
     ...(defaults.customDeloitteFeatureFlags ?? {}),
     ...(interfaceConfig?.customDeloitteFeatureFlags ?? {}),
+    isTutorialEnabled,
   });
 
   const loadedInterface: AppConfig['interfaceConfig'] = removeNullishValues({

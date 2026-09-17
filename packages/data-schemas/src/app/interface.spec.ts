@@ -161,6 +161,21 @@ describe('loadDefaultInterface', () => {
     expect(interfaceConfig?.customDeloitteFeatureFlags?.isTutorialEnabled).toBe(false);
   });
 
+  it('maps the legacy tutorial flag into customDeloitteFeatureFlags during migration', async () => {
+    const config: Partial<TCustomConfig> = {
+      interface: {
+        isTutorialEnabled: false,
+      },
+    };
+
+    const interfaceConfig = await loadDefaultInterface({
+      config,
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.customDeloitteFeatureFlags?.isTutorialEnabled).toBe(false);
+  });
+
   it('uses the schema default for tutorial flag when not configured', async () => {
     const defaults = getConfigDefaults();
     const interfaceConfig = await loadDefaultInterface({

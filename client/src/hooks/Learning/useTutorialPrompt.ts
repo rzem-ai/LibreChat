@@ -12,7 +12,8 @@ export default function useTutorialPrompt() {
   const { data: startupConfig } = useGetStartupConfig();
   const tutorialFlags = startupConfig?.interface?.customDeloitteFeatureFlags;
   const hasStartupConfig = startupConfig != null;
-  const isTutorialEnabled = tutorialFlags?.isTutorialEnabled !== false;
+  const isTutorialEnabled =
+    (tutorialFlags?.isTutorialEnabled ?? startupConfig?.interface?.isTutorialEnabled) !== false;
 
   const { data: tutorialState } = useTutorialStateQuery({
     enabled: isAuthenticated && hasStartupConfig && isTutorialEnabled,
