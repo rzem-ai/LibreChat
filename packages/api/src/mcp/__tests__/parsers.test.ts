@@ -1,5 +1,10 @@
+import { logger } from '@librechat/data-schemas';
 import { formatToolContent, CODE_FILE_DOWNLOAD_SCHEME } from '../parsers';
 import type * as t from '../types';
+
+jest.mock('@librechat/data-schemas', () => ({
+  logger: { warn: jest.fn() },
+}));
 
 describe('formatToolContent', () => {
   describe('unrecognized providers', () => {
@@ -444,6 +449,10 @@ describe('formatToolContent', () => {
       });
       expect(content).not.toContain('second-secret');
       expect(content).not.toContain('second.pdf');
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining(`${CODE_FILE_DOWNLOAD_SCHEME}second.pdf`),
+      );
+      expect(logger.warn).not.toHaveBeenCalledWith(expect.stringContaining('second-secret'));
     });
 
     it('should not treat a librechat-download:// resource without text as a codeFile', () => {

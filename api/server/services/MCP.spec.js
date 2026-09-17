@@ -2381,7 +2381,7 @@ describe('User parameter passing tests', () => {
       expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Code Interpreter is not enabled'),
+        expect.stringContaining('does not have Code Interpreter (execute_code) available'),
       );
       expect(result).toBe('downloaded report.pdf');
     });
@@ -2562,6 +2562,159 @@ describe('User parameter passing tests', () => {
         expect.objectContaining({ message: expect.stringContaining('domain is not allowed') }),
       );
       expect(result).toBe('downloaded report.pdf');
+    });
+
+    it('should shrink the download timeout budget across redirect hops instead of resetting it', async () => {
+      const mockUser = { id: 'code-file-user-redirect-timeout', role: 'USER' };
+      const mockReq = { user: mockUser };
+      const mockRes = { write: jest.fn(), flush: jest.fn(), req: mockReq };
+      const { getRoleByName } = require('~/models');
+      getRoleByName.mockResolvedValue({
+        permissions: {
+          [PermissionTypes.MCP_SERVERS]: {
+            [Permissions.USE]: true,
+          },
+        },
+      });
+
+      const artifacts = {
+        codeFile: {
+          name: 'report.pdf',
+          mimeType: 'application/pdf',
+          url: 'https://contoso.sharepoint.com/_layouts/download.aspx?sig=abc',
+        },
+      };
+      mockGetMCPManager.mockReturnValue({
+        callTool: jest.fn().mockResolvedValue(['downloaded report.pdf', artifacts]),
+      });
+      mockUploadCodeEnvFile.mockResolvedValue({
+        storage_session_id: 'session-123',
+        file_id: 'file-456',
+      });
+
+      let now = 1_000_000;
+      jest.spyOn(Date, 'now').mockImplementation(() => now);
+      // First hop consumes most of the 120s budget before redirecting; if the
+      // timeout were reset per hop (the pre-fix behavior) the second hop
+      // would still see a fresh ~120s timeout instead of a shrunk one.
+      mockCodeFileDownloadGet.mockImplementationOnce(async () => {
+        now += 90_000;
+        return {
+          status: 302,
+          headers: { location: 'https://contoso.sharepoint.com/hop2' },
+          data: { destroy: jest.fn() },
+        };
+      });
+      mockCodeFileDownloadGet.mockImplementationOnce(async () => ({
+        status: 200,
+        data: 'fake-stream',
+      }));
+
+      const mcpTool = await createMCPTool({
+        res: mockRes,
+        user: mockUser,
+        toolKey: `sp_download_file${D}sharepoint`,
+        provider: 'openai',
+        userMCPAuthMap: {},
+        availableTools: {
+          [`sp_download_file${D}sharepoint`]: {
+            function: {
+              description: 'Download a SharePoint file',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+        },
+      });
+
+      const result = await mcpTool.invoke(
+        {},
+        {
+          configurable: { user: mockUser, codeEnvAvailable: true },
+          metadata: { provider: 'openai', thread_id: 'thread-1', run_id: 'run-1' },
+          toolCall: {},
+        },
+      );
+
+      expect(mockCodeFileDownloadGet).toHaveBeenCalledTimes(2);
+      const [, secondHopOptions] = mockCodeFileDownloadGet.mock.calls[1];
+      expect(secondHopOptions.timeout).toBeLessThan(120_000);
+      expect(secondHopOptions.timeout).toBeCloseTo(30_000, -3);
+      expect(result).toBe('downloaded report.pdf');
+
+      Date.now.mockRestore();
+    });
+
+    it('should fail fast once the aggregate redirect-chain timeout budget is exhausted', async () => {
+      const mockUser = { id: 'code-file-user-redirect-timeout-exhausted', role: 'USER' };
+      const mockReq = { user: mockUser };
+      const mockRes = { write: jest.fn(), flush: jest.fn(), req: mockReq };
+      const { getRoleByName } = require('~/models');
+      getRoleByName.mockResolvedValue({
+        permissions: {
+          [PermissionTypes.MCP_SERVERS]: {
+            [Permissions.USE]: true,
+          },
+        },
+      });
+
+      const artifacts = {
+        codeFile: {
+          name: 'report.pdf',
+          mimeType: 'application/pdf',
+          url: 'https://contoso.sharepoint.com/_layouts/download.aspx?sig=abc',
+        },
+      };
+      mockGetMCPManager.mockReturnValue({
+        callTool: jest.fn().mockResolvedValue(['downloaded report.pdf', artifacts]),
+      });
+
+      let now = 1_000_000;
+      jest.spyOn(Date, 'now').mockImplementation(() => now);
+      // First hop alone exceeds the whole 120s budget, so the second hop must
+      // never be attempted.
+      mockCodeFileDownloadGet.mockImplementationOnce(async () => {
+        now += 125_000;
+        return {
+          status: 302,
+          headers: { location: 'https://contoso.sharepoint.com/hop2' },
+          data: { destroy: jest.fn() },
+        };
+      });
+
+      const mcpTool = await createMCPTool({
+        res: mockRes,
+        user: mockUser,
+        toolKey: `sp_download_file${D}sharepoint`,
+        provider: 'openai',
+        userMCPAuthMap: {},
+        availableTools: {
+          [`sp_download_file${D}sharepoint`]: {
+            function: {
+              description: 'Download a SharePoint file',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+        },
+      });
+
+      const result = await mcpTool.invoke(
+        {},
+        {
+          configurable: { user: mockUser, codeEnvAvailable: true },
+          metadata: { provider: 'openai', thread_id: 'thread-1', run_id: 'run-1' },
+          toolCall: {},
+        },
+      );
+
+      expect(mockCodeFileDownloadGet).toHaveBeenCalledTimes(1);
+      expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to register codeFile artifact'),
+        expect.objectContaining({ message: expect.stringContaining('timed out following redirects') }),
+      );
+      expect(result).toBe('downloaded report.pdf');
+
+      Date.now.mockRestore();
     });
 
     it('should keep the tool result when registering a codeFile artifact fails', async () => {

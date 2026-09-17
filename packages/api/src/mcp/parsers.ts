@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { logger } from '@librechat/data-schemas';
 import { Tools } from 'librechat-data-provider';
 import type { UIResource } from 'librechat-data-provider';
 import type * as t from './types';
@@ -145,6 +146,14 @@ function extractCodeFile(content: t.ToolContentPart[]): {
           // Malformed percent-encoding: fall back to the raw (undecoded) name.
         }
         codeFile = { name, mimeType, url: text };
+      } else {
+        /* Only the first download marker survives as a codeFile artifact;
+         * a second one is dropped rather than leaked into text (see above).
+         * That's silent data loss for a tool that returns multiple files in
+         * one call, so at least surface it here for operators. */
+        logger.warn(
+          `[MCP][parsers] Dropped a second librechat-download:// marker (only one codeFile per tool result is supported): ${item.resource.uri}`,
+        );
       }
       continue;
     }

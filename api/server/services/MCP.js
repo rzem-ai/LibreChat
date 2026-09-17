@@ -1131,7 +1131,7 @@ function createToolInstance({
           );
         } else if (!(await checkCapability(req, AgentCapabilities.execute_code))) {
           logger.warn(
-            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": Code Interpreter is not enabled for this agent.`,
+            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": Code Interpreter is not enabled for this endpoint.`,
           );
         } else if (config?.configurable?.codeEnvAvailable !== true) {
           /* `checkCapability` above is only the endpoint-level admin gate; the
@@ -1140,7 +1140,7 @@ function createToolInstance({
            * in which case it has no Code Interpreter session to use this file
            * from. */
           logger.warn(
-            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": Code Interpreter is not enabled for this agent.`,
+            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": this agent does not have Code Interpreter (execute_code) available.`,
           );
         } else {
           let stream;

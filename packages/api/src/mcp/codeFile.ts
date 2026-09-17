@@ -90,6 +90,10 @@ export async function fetchAllowedCodeFileStream(
     ? createSSRFSafeAgents(allowedAddresses)
     : { httpAgent: undefined, httpsAgent: undefined };
   const proxy = codeFileDownloadAxios.defaults.proxy || false;
+  /** Shared across every hop (rather than reset per hop) so a chain of slow
+   * redirects can't run the timeout up to `CODE_FILE_MAX_REDIRECTS *
+   * CODE_FILE_DOWNLOAD_TIMEOUT_MS` before failing. */
+  const deadline = Date.now() + CODE_FILE_DOWNLOAD_TIMEOUT_MS;
   let currentUrl = url;
   for (let hop = 0; hop <= CODE_FILE_MAX_REDIRECTS; hop++) {
     if (!(await isMCPDomainAllowed({ url: currentUrl }, allowedDomains, allowedAddresses))) {
@@ -101,9 +105,13 @@ export async function fetchAllowedCodeFileStream(
       useSSRFProtection,
       allowedAddresses,
     );
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) {
+      throw new Error(`codeFile download timed out following redirects: ${redactUrlForLog(url)}`);
+    }
     const response = await codeFileDownloadAxios.get(currentUrl, {
       responseType: 'stream',
-      timeout: CODE_FILE_DOWNLOAD_TIMEOUT_MS,
+      timeout: remainingMs,
       maxRedirects: 0,
       proxy,
       httpAgent,
