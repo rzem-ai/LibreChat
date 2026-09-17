@@ -39,11 +39,19 @@ jest.mock('driver.js', () => ({
 }));
 
 describe('useGettingStartedTour', () => {
+  beforeEach(() => {
+    const button = document.createElement('button');
+    button.id = 'nav-panel-conversations';
+    button.setAttribute('aria-pressed', 'true');
+    document.body.appendChild(button);
+  });
+
   afterEach(() => {
     jest.clearAllMocks();
     mockIsLastStep = jest.fn();
     capturedConfig = undefined;
     mockShowMarketplace = true;
+    document.body.innerHTML = '';
   });
 
   it('does not report completion when the tour is cancelled before the last step', () => {
@@ -145,5 +153,20 @@ describe('useGettingStartedTour', () => {
       'Learning Hub',
       'Account Menu',
     ]);
+  });
+
+  it('omits agent-selection steps when the conversations panel target is unavailable', () => {
+    document.body.innerHTML = '';
+    const { result } = renderHook(() => useGettingStartedTour());
+    result.current.startTour();
+
+    expect(capturedConfig?.steps).toHaveLength(24);
+    expect(
+      capturedConfig?.steps?.some(
+        (step) =>
+          step.popover.title === 'Agent Marketplace' ||
+          step.popover.title === 'Switch Back to a Model',
+      ),
+    ).toBe(false);
   });
 });

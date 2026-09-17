@@ -59,6 +59,8 @@ export default function useGettingStartedTour(onComplete?: () => void) {
 
   const startTour = useCallback(() => {
     let completedFromLastStepNext = false;
+    const canShowAgentSelectionSteps =
+      showMarketplace && document.getElementById('nav-panel-conversations') != null;
     const ensureConversationsPanel = () => {
       const button = document.getElementById('nav-panel-conversations');
       if (button?.getAttribute('aria-pressed') !== 'true') {
@@ -281,7 +283,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
             side: 'right',
           },
         },
-        ...(showMarketplace
+        ...(canShowAgentSelectionSteps
           ? [
               {
                 element: '#nav-agents-marketplace-button',
