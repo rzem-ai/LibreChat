@@ -5,6 +5,15 @@ import type * as t from './types';
 
 export const DEFAULT_MCP_IMAGE_DATA_MAX_BYTES: number = 10 * 1024 * 1024;
 
+/**
+ * Marker URI scheme a tool can use to hand back a download link for a file
+ * meant for Code Interpreter, instead of a resource block a caller might
+ * otherwise stringify into the model's context. `resource.text` carries the
+ * actual URL; the scheme + filename lives in `resource.uri`, taken verbatim
+ * (no URI encoding/decoding — this scheme is internal-only).
+ */
+export const CODE_FILE_DOWNLOAD_SCHEME = 'librechat-download://';
+
 function generateResourceId(text: string): string {
   return crypto.createHash('sha256').update(text).digest('hex').substring(0, 10);
 }
@@ -154,6 +163,7 @@ export function formatToolContent(
   const imageUrls: t.FormattedContent[] = [];
   const uiResources: UIResource[] = [];
   let currentTextBlock = '';
+  let codeFile: NonNullable<t.Artifacts>['codeFile'];
 
   type ContentHandler = undefined | ((item: t.ToolContentPart) => void);
 
@@ -180,6 +190,17 @@ export function formatToolContent(
     },
 
     resource: (item) => {
+      if (
+        item.resource.uri.startsWith(CODE_FILE_DOWNLOAD_SCHEME) &&
+        'text' in item.resource &&
+        item.resource.text
+      ) {
+        const { uri, mimeType, text } = item.resource;
+        const name = uri.slice(CODE_FILE_DOWNLOAD_SCHEME.length) || uri;
+        codeFile = { name, mimeType, url: text };
+        return;
+      }
+
       const isUiResource = item.resource.uri.startsWith('ui://');
       const resourceText: string[] = [];
 
@@ -248,6 +269,10 @@ UI Resource Markers Available:
       ...artifacts,
       [Tools.ui_resources]: { data: uiResources },
     };
+  }
+
+  if (codeFile) {
+    artifacts = { ...artifacts, codeFile };
   }
 
   return [currentTextBlock || (artifacts !== undefined ? '' : '(No response)'), artifacts];

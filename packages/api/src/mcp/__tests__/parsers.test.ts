@@ -1,4 +1,4 @@
-import { formatToolContent } from '../parsers';
+import { formatToolContent, CODE_FILE_DOWNLOAD_SCHEME } from '../parsers';
 import type * as t from '../types';
 
 describe('formatToolContent', () => {
@@ -319,6 +319,84 @@ describe('formatToolContent', () => {
       const [content, artifacts] = formatToolContent(result, 'openai');
       expect(content).toBe('Resource URI: https://example.com/resource');
       expect(artifacts).toBeUndefined();
+    });
+
+    it('should extract a code-interpreter download link into artifacts.codeFile instead of text', () => {
+      const result: t.MCPToolCallResponse = {
+        content: [
+          { type: 'text', text: '{"status":"downloaded","fileName":"report.pdf"}' },
+          {
+            type: 'resource',
+            resource: {
+              uri: `${CODE_FILE_DOWNLOAD_SCHEME}report.pdf`,
+              mimeType: 'application/pdf',
+              text: 'https://contoso.sharepoint.com/_layouts/download.aspx?sig=abc',
+            },
+          },
+        ],
+      };
+
+      const [content, artifacts] = formatToolContent(result, 'openai');
+      expect(content).toBe('{"status":"downloaded","fileName":"report.pdf"}');
+      expect(content).not.toContain('Resource URI');
+      expect(artifacts?.codeFile).toEqual({
+        name: 'report.pdf',
+        mimeType: 'application/pdf',
+        url: 'https://contoso.sharepoint.com/_layouts/download.aspx?sig=abc',
+      });
+    });
+
+    it('should take the filename verbatim from a code-interpreter download link', () => {
+      const result: t.MCPToolCallResponse = {
+        content: [
+          {
+            type: 'resource',
+            resource: {
+              uri: `${CODE_FILE_DOWNLOAD_SCHEME}quarterly report.xlsx`,
+              text: 'https://contoso.sharepoint.com/download',
+            },
+          },
+        ],
+      };
+
+      const [, artifacts] = formatToolContent(result, 'openai');
+      expect(artifacts?.codeFile?.name).toBe('quarterly report.xlsx');
+    });
+
+    it('should not throw or misinterpret a filename containing a literal % character', () => {
+      const result: t.MCPToolCallResponse = {
+        content: [
+          {
+            type: 'resource',
+            resource: {
+              uri: `${CODE_FILE_DOWNLOAD_SCHEME}Report 100%.xlsx`,
+              text: 'https://contoso.sharepoint.com/download',
+            },
+          },
+        ],
+      };
+
+      const [, artifacts] = formatToolContent(result, 'openai');
+      expect(artifacts?.codeFile?.name).toBe('Report 100%.xlsx');
+    });
+
+    it('should not treat a librechat-download:// resource without text as a codeFile', () => {
+      const result: t.MCPToolCallResponse = {
+        content: [
+          {
+            type: 'resource',
+            resource: {
+              uri: `${CODE_FILE_DOWNLOAD_SCHEME}report.pdf`,
+              mimeType: 'application/pdf',
+              text: '',
+            },
+          },
+        ],
+      };
+
+      const [content, artifacts] = formatToolContent(result, 'openai');
+      expect(artifacts?.codeFile).toBeUndefined();
+      expect(content).toContain(`Resource URI: ${CODE_FILE_DOWNLOAD_SCHEME}report.pdf`);
     });
 
     it('should handle mixed UI and regular resources', () => {

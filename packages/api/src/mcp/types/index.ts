@@ -152,6 +152,7 @@ export type Artifacts =
       files?: Array<{ id: string; name: string }>;
       session_id?: string;
       file_ids?: string[];
+      codeFile?: { name: string; mimeType?: string; url: string };
     }
   | undefined;
 

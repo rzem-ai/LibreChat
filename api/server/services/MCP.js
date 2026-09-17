@@ -34,6 +34,8 @@ const {
   containsGraphTokenPlaceholder,
   isOAuthServer,
   isOboServer,
+  createAxiosInstance,
+  HOST_FILE_AUTHORING_ARTIFACT_KEY,
 } = require('@librechat/api');
 const { extractOpenIDTokenInfo, isOpenIDTokenValid } = require('@librechat/api');
 const {
@@ -58,6 +60,9 @@ const { createOboTrustChecker } = require('./OboPolicyService');
 const { reinitMCPServer } = require('./Tools/mcp');
 const { getAppConfig } = require('./Config');
 const { getLogStores } = require('~/cache');
+const { uploadCodeEnvFile } = require('~/server/services/Files/Code/crud');
+
+const codeFileDownloadAxios = createAxiosInstance();
 
 const MAX_CACHE_SIZE = 1000;
 const lastReconnectAttempts = new Map();
@@ -1110,6 +1115,40 @@ function createToolInstance({
         oboTokenResolver: exchangeOboToken,
         oboTrustChecker: createOboTrustChecker(),
       });
+
+      const artifacts = Array.isArray(result) ? result[1] : undefined;
+      if (artifacts?.codeFile) {
+        const { name, url } = artifacts.codeFile;
+        delete artifacts.codeFile;
+        const req = res?.req;
+        if (!req) {
+          logger.warn(
+            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": no request context available to register it with Code Interpreter.`,
+          );
+        } else {
+          try {
+            const download = await codeFileDownloadAxios.get(url, { responseType: 'stream' });
+            const uploaded = await uploadCodeEnvFile({
+              req,
+              stream: download.data,
+              filename: name,
+              kind: 'user',
+              id: userId,
+            });
+            artifacts[HOST_FILE_AUTHORING_ARTIFACT_KEY] = true;
+            artifacts.session_id = uploaded.storage_session_id;
+            artifacts.files = [{ id: uploaded.file_id, name }];
+          } catch (codeFileError) {
+            /** Keep the underlying tool result (e.g. the SharePoint download
+             *  already succeeded) instead of failing the whole call over a
+             *  transient network blip or an expired short-lived download URL. */
+            logger.warn(
+              `[MCP][${serverName}][${toolName}][User: ${userId}] Failed to register codeFile artifact "${name}" with Code Interpreter:`,
+              codeFileError,
+            );
+          }
+        }
+      }
 
       if (isAssistantsEndpoint(provider) && Array.isArray(result)) {
         return result[0];
