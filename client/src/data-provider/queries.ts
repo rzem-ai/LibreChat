@@ -527,6 +527,9 @@ export const useGetRandomPrompts = (
   );
 };
 
+// Deloitte Custom Change: userId-scoped cache key and guard added so a second
+// account logging in within the same SPA session cannot reuse the previous
+// account's terms-accepted or tutorial state (cross-user cache leak fix).
 export const useUserTermsQuery = (
   config?: UseQueryOptions<t.TUserTermsResponse>,
 ): QueryObserverResult<t.TUserTermsResponse> => {

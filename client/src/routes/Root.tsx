@@ -70,6 +70,9 @@ export default function Root() {
     enabled: termsEnabled,
   });
 
+  // Deloitte Custom Change: chatReady gates the tutorial bubble so it only appears
+  // once the main chat UI has finished loading (same queries ChatRoute waits on
+  // before rendering — hits the React Query cache, no extra network requests).
   // Read endpoints + models query status so the tutorial bubble only appears
   // after the main chat UI has finished its initial data load (these are the
   // same queries ChatRoute waits on before rendering — reading them here hits
@@ -155,6 +158,7 @@ export default function Root() {
                   modalContent={config.interface.termsOfService.modalContent}
                 />
               )}
+              {/* Deloitte Custom Change: Learning Hub tutorial prompt bubble and course completion modal */}
               <TutorialPromptModal
                 termsVisible={showTerms || (termsEnabled && (termsLoading || !termsData))}
                 chatReady={chatReady}

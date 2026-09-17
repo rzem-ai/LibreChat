@@ -313,6 +313,7 @@ const AttachFileMenu = ({
       render={
         <Ariakit.MenuButton
           disabled={isUploadDisabled}
+          // Deloitte Custom Change: id/data-testid added as a stable anchor for the guided tour spotlight
           id="attach-file-menu-button"
           data-testid="attach-file-menu-button"
           aria-label="Attach File Options"
@@ -327,6 +328,7 @@ const AttachFileMenu = ({
           </div>
         </Ariakit.MenuButton>
       }
+      // Deloitte Custom Change: id added as a stable anchor for the guided tour spotlight
       id="attach-file-menu-button"
       description={uploadFileTooltip}
       disabled={isUploadDisabled}
