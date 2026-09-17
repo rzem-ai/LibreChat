@@ -95,7 +95,15 @@ function redactUrlForLog(url) {
  * `isMCPDomainAllowed` is only a preflight hostname/DNS check; it doesn't
  * protect the TCP connection actually made by axios, so a DNS answer that
  * changes between the check and the request (rebinding) could still land on
- * a private address. `createSSRFSafeAgents` re-validates at connect time.
+ * a private address. `createSSRFSafeAgents` re-validates at connect time —
+ * but only when `useSSRFProtection` is on. `MCPServersRegistry.resolveAllowlists`
+ * turns it off once an explicit `allowedDomains` allowlist is configured (the
+ * admin already vetted those hosts, which may legitimately be private/internal),
+ * and every other MCP connection path (`UserConnectionManager`, `MCPManager`,
+ * `ConnectionsRepository`) honors that same exemption. Always installing the
+ * restrictive agents here would contradict that: an admin-approved internal
+ * download host could pass `isMCPDomainAllowed` and still get its connection
+ * blocked unless separately listed in `allowedAddresses` too.
  *
  * `proxy` is pinned to whatever `codeFileDownloadAxios` was explicitly
  * configured with (`process.env.proxy` via `createAxiosInstance`), or `false`
@@ -109,7 +117,14 @@ function redactUrlForLog(url) {
  * @param {string[] | null | undefined} allowedAddresses
  */
 async function fetchAllowedCodeFileStream(url, allowedDomains, allowedAddresses) {
-  const { httpAgent, httpsAgent } = createSSRFSafeAgents(allowedAddresses);
+  // Mirrors MCPServersRegistry.resolveAllowlists's useSSRFProtection formula,
+  // computed from the same allowedDomains value used by isMCPDomainAllowed
+  // below so the preflight check and the connect-time enforcement never
+  // disagree about whether this is an admin-vetted allowlist.
+  const useSSRFProtection = !Array.isArray(allowedDomains) || allowedDomains.length === 0;
+  const { httpAgent, httpsAgent } = useSSRFProtection
+    ? createSSRFSafeAgents(allowedAddresses)
+    : {};
   let currentUrl = url;
   for (let hop = 0; hop <= CODE_FILE_MAX_REDIRECTS; hop++) {
     if (!(await isMCPDomainAllowed({ url: currentUrl }, allowedDomains, allowedAddresses))) {
@@ -1209,7 +1224,17 @@ function createToolInstance({
           logger.warn(
             `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": Code Interpreter is not enabled for this agent.`,
           );
+        } else if (config?.configurable?.codeEnvAvailable !== true) {
+          /* `checkCapability` above is only the endpoint-level admin gate; the
+           * agent actually handling this call may not have `execute_code` in
+           * its own tool list (`effectiveCodeEnvAvailable` in initialize.ts),
+           * in which case it has no Code Interpreter session to use this file
+           * from. */
+          logger.warn(
+            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": Code Interpreter is not enabled for this agent.`,
+          );
         } else {
+          let stream;
           try {
             const appConfig = await getAppConfig({
               role: effectiveUser?.role,
@@ -1221,10 +1246,11 @@ function createToolInstance({
               appConfig?.mcpSettings?.allowedDomains,
               appConfig?.mcpSettings?.allowedAddresses,
             );
+            stream = download.data;
             const sandboxFilename = sanitizeFilename(name);
             const uploaded = await uploadCodeEnvFile({
               req,
-              stream: download.data,
+              stream,
               filename: sandboxFilename,
               kind: 'user',
               id: userId,
@@ -1254,6 +1280,15 @@ function createToolInstance({
                *  logged here. */
               { message: codeFileError?.message, stack: codeFileError?.stack },
             );
+          } finally {
+            /* If `uploadCodeEnvFile` threw/rejected before fully consuming
+             * `stream` (e.g. it validates the filename before reading the
+             * body), the underlying socket is left open — Node does not
+             * clean this up on its own. `destroy()` on an already-consumed
+             * or already-destroyed stream is a safe no-op. */
+            if (typeof stream?.destroy === 'function' && !stream.destroyed) {
+              stream.destroy();
+            }
           }
         }
       }

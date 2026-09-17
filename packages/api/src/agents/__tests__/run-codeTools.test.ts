@@ -77,9 +77,11 @@ function makeAgent(overrides?: Record<string, unknown>) {
   };
 }
 
-async function captureRunConfig(): Promise<Record<string, unknown>> {
+async function captureRunConfig(
+  agents: Array<Record<string, unknown>> = [makeAgent()],
+): Promise<Record<string, unknown>> {
   await createRun({
-    agents: [makeAgent()] as never,
+    agents: agents as never,
     signal: new AbortController().signal,
     streaming: true,
     streamUsage: true,
@@ -108,6 +110,42 @@ describe('createRun code-tool eager/session wiring', () => {
     const runConfig = await captureRunConfig();
     expect(runConfig.codeSessionToolNames).toEqual(
       expect.arrayContaining(['create_file', 'edit_file', 'read_file']),
+    );
+  });
+
+  it('includes MCP-delimited tools from toolRegistry but excludes non-MCP and action-collision tools', async () => {
+    const agent = makeAgent({
+      toolRegistry: new Map([
+        ['sp_download_file_mcp_sharepoint', {}],
+        ['create_file', {}],
+        // An action whose operationId itself contains "_mcp_", preceding
+        // "_action_" — isActionTool must classify this as an action, not MCP.
+        ['sync_mcp_state_action_api---example---com', {}],
+      ]),
+    });
+    const runConfig = await captureRunConfig([agent]);
+    expect(runConfig.codeSessionToolNames).toEqual(
+      expect.arrayContaining(['sp_download_file_mcp_sharepoint']),
+    );
+    expect(runConfig.codeSessionToolNames).not.toEqual(
+      expect.arrayContaining(['sync_mcp_state_action_api---example---com']),
+    );
+  });
+
+  it('recursively collects MCP tools from nested subagentAgentConfigs', async () => {
+    const grandchild = makeAgent({
+      id: 'agent_grandchild',
+      toolRegistry: new Map([['nested_download_mcp_sharepoint', {}]]),
+    });
+    const child = makeAgent({
+      id: 'agent_child',
+      toolRegistry: new Map([['child_download_mcp_onedrive', {}]]),
+      subagentAgentConfigs: [grandchild],
+    });
+    const root = makeAgent({ subagentAgentConfigs: [child] });
+    const runConfig = await captureRunConfig([root]);
+    expect(runConfig.codeSessionToolNames).toEqual(
+      expect.arrayContaining(['child_download_mcp_onedrive', 'nested_download_mcp_sharepoint']),
     );
   });
 });

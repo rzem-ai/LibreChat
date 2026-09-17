@@ -2029,7 +2029,7 @@ describe('User parameter passing tests', () => {
       const result = await mcpTool.invoke(
         {},
         {
-          configurable: { user: mockUser },
+          configurable: { user: mockUser, codeEnvAvailable: true },
           metadata: { provider: 'openai', thread_id: 'thread-1', run_id: 'run-1' },
           toolCall: {},
         },
@@ -2116,7 +2116,7 @@ describe('User parameter passing tests', () => {
       await mcpTool.invoke(
         {},
         {
-          configurable: { user: mockUser },
+          configurable: { user: mockUser, codeEnvAvailable: true },
           metadata: { provider: 'openai', thread_id: 'thread-1', run_id: 'run-1' },
           toolCall: {},
         },
@@ -2169,6 +2169,66 @@ describe('User parameter passing tests', () => {
         },
       });
 
+      const result = await mcpTool.invoke(
+        {},
+        {
+          configurable: { user: mockUser },
+          metadata: { provider: 'openai', thread_id: 'thread-1', run_id: 'run-1' },
+          toolCall: {},
+        },
+      );
+
+      expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
+      expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Code Interpreter is not enabled'),
+      );
+      expect(result).toBe('downloaded report.pdf');
+    });
+
+    it('should drop a codeFile artifact and warn when the handling agent has no execute_code tool', async () => {
+      const mockUser = { id: 'code-file-user-no-code-env', role: 'USER' };
+      const mockReq = { user: mockUser };
+      const mockRes = { write: jest.fn(), flush: jest.fn(), req: mockReq };
+      const { getRoleByName } = require('~/models');
+      getRoleByName.mockResolvedValue({
+        permissions: {
+          [PermissionTypes.MCP_SERVERS]: {
+            [Permissions.USE]: true,
+          },
+        },
+      });
+
+      const artifacts = {
+        codeFile: {
+          name: 'report.pdf',
+          mimeType: 'application/pdf',
+          url: 'https://contoso.sharepoint.com/_layouts/download.aspx?sig=abc',
+        },
+      };
+      mockGetMCPManager.mockReturnValue({
+        callTool: jest.fn().mockResolvedValue(['downloaded report.pdf', artifacts]),
+      });
+
+      const mcpTool = await createMCPTool({
+        res: mockRes,
+        user: mockUser,
+        toolKey: `sp_download_file${D}sharepoint`,
+        provider: 'openai',
+        userMCPAuthMap: {},
+        availableTools: {
+          [`sp_download_file${D}sharepoint`]: {
+            function: {
+              description: 'Download a SharePoint file',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+        },
+      });
+
+      // checkCapability (endpoint-level admin gate) allows Code Interpreter,
+      // but this invocation's agent never opted into execute_code, so
+      // codeEnvAvailable is absent from configurable.
       const result = await mcpTool.invoke(
         {},
         {
@@ -2284,7 +2344,7 @@ describe('User parameter passing tests', () => {
       const result = await mcpTool.invoke(
         {},
         {
-          configurable: { user: mockUser },
+          configurable: { user: mockUser, codeEnvAvailable: true },
           metadata: { provider: 'openai', thread_id: 'thread-1', run_id: 'run-1' },
           toolCall: {},
         },
@@ -2349,7 +2409,7 @@ describe('User parameter passing tests', () => {
       const result = await mcpTool.invoke(
         {},
         {
-          configurable: { user: mockUser },
+          configurable: { user: mockUser, codeEnvAvailable: true },
           metadata: { provider: 'openai', thread_id: 'thread-1', run_id: 'run-1' },
           toolCall: {},
         },
@@ -2408,7 +2468,7 @@ describe('User parameter passing tests', () => {
       const result = await mcpTool.invoke(
         {},
         {
-          configurable: { user: mockUser },
+          configurable: { user: mockUser, codeEnvAvailable: true },
           metadata: { provider: 'openai', thread_id: 'thread-1', run_id: 'run-1' },
           toolCall: {},
         },

@@ -5,6 +5,7 @@ import {
   EModelEndpoint,
   MAX_SUBAGENT_DEPTH,
   MAX_SUBAGENT_RUN_CONFIGS,
+  isActionTool,
   extractEnvVariable,
   providerEndpointMap,
   normalizeEndpointName,
@@ -889,6 +890,43 @@ export function anyAgentReplaysReasoningContent(
 }
 
 /**
+ * Collects MCP tool names (`${toolName}${mcp_delimiter}${serverName}`) from
+ * every agent reachable in the run — primary, handoff/parallel, or a nested
+ * subagent — for `codeSessionToolNames`. Walks `subagentAgentConfigs` like
+ * {@link anyAgentHasStatefulSessions}, since a subagent's own MCP download
+ * tool must also share the code session for its returned artifact to be
+ * visible to a later `execute_code` call.
+ *
+ * Filters out action tools via {@link isActionTool}: an action's operationId
+ * may itself contain `mcp_delimiter` (e.g. `sync_mcp_state_action_...`),
+ * which would otherwise misclassify it as an MCP tool.
+ */
+function collectMCPToolNames(agents: Array<RunAgent | null | undefined>): string[] {
+  const visited = new Set<string>();
+  const pending = [...agents];
+  const mcpToolNames: string[] = [];
+
+  for (let index = 0; index < pending.length; index++) {
+    const agent = pending[index];
+    if (agent == null || visited.has(agent.id)) {
+      continue;
+    }
+    visited.add(agent.id);
+    for (const name of agent.toolRegistry?.keys() ?? []) {
+      if (name.includes(DataProviderConstants.mcp_delimiter) && !isActionTool(name)) {
+        mcpToolNames.push(name);
+      }
+    }
+    for (const child of agent.subagentAgentConfigs ?? []) {
+      if (child != null && !visited.has(child.id)) {
+        pending.push(child);
+      }
+    }
+  }
+  return mcpToolNames;
+}
+
+/**
  * Builds SubagentConfig entries for an agent: optional self-spawn plus any
  * explicit child agents loaded in `agent.subagentAgentConfigs`. Returns an empty
  * array when subagents are disabled or no spawn targets are available.
@@ -1609,9 +1647,12 @@ export async function createRun({
     // MCP tool names are dynamic (`${toolName}${mcp_delimiter}${serverName}`)
     // and any MCP tool may hand back a `librechat-download://` codeFile (the
     // SharePoint bridge in MCP.js is one example, not the only one), so every
-    // MCP tool is opted into this list — there's no static per-tool metadata
-    // to narrow it further. Membership here has two real, but bounded, side
-    // effects on MCP tools that never return a codeFile:
+    // MCP tool reachable from the run — including nested subagents' — is
+    // opted into this list via `collectMCPToolNames` (there's no static
+    // per-tool metadata to narrow it further; `isActionTool` excludes action
+    // operationIds that happen to contain `mcp_delimiter`). Membership here
+    // has two real, but bounded, side effects on MCP tools that never return
+    // a codeFile:
     //   1. They lose SDK eager/speculative execution (isEagerExecutionExcludedTool
     //      in @librechat/agents treats any codeSessionToolNames member as
     //      side-effecting). This only delays that one call to the normal
@@ -1631,13 +1672,7 @@ export async function createRun({
       EDIT_FILE_TOOL_NAME,
       Constants.READ_FILE,
       CHECK_BACKGROUND_TASK_NAME,
-      ...agents.flatMap((agent) =>
-        agent.toolRegistry
-          ? Array.from(agent.toolRegistry.keys()).filter((name) =>
-              name.includes(DataProviderConstants.mcp_delimiter),
-            )
-          : [],
-      ),
+      ...collectMCPToolNames(agents),
     ],
     // Derive the Langfuse trace id deterministically from runId so message
     // feedback can be scored against the trace without a lookup (see the
