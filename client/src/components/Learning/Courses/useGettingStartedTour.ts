@@ -296,7 +296,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           popover: {
             title: 'Learning Hub',
             description:
-              "You're here right now! Come back any time to replay this tour or check for new learning content.",
+              "You're here right now! Come back any time to revisit this tour or check for new learning content.",
             side: 'right',
           },
         },
