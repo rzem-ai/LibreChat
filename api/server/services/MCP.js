@@ -1125,11 +1125,30 @@ function createToolInstance({
         const { name, url } = artifacts.codeFile;
         delete artifacts.codeFile;
         const req = res?.req;
+        /* `checkCapability` hits the DB/role-permissions layer, so a transient
+         * failure there must not turn an already-successful tool call (e.g.
+         * the SharePoint download) into a hard error via the outer catch —
+         * fail closed the same way an explicit "not enabled" result does. */
+        let capabilityCheckFailed = false;
+        let hasExecuteCodeCapability = false;
+        if (req) {
+          try {
+            hasExecuteCodeCapability = await checkCapability(req, AgentCapabilities.execute_code);
+          } catch (capabilityError) {
+            capabilityCheckFailed = true;
+            logger.warn(
+              `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": failed to check Code Interpreter capability.`,
+              { message: capabilityError?.message, stack: capabilityError?.stack },
+            );
+          }
+        }
         if (!req) {
           logger.warn(
             `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": no request context available to register it with Code Interpreter.`,
           );
-        } else if (!(await checkCapability(req, AgentCapabilities.execute_code))) {
+        } else if (capabilityCheckFailed) {
+          // Already logged above.
+        } else if (!hasExecuteCodeCapability) {
           logger.warn(
             `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": Code Interpreter is not enabled for this endpoint.`,
           );

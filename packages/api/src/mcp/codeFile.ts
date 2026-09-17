@@ -1,6 +1,6 @@
 import { isIP } from 'node:net';
 import type { AxiosInstance, AxiosResponse } from 'axios';
-import { isAddressAllowed, isMCPDomainAllowed, createSSRFSafeAgents } from '~/auth';
+import { isAddressAllowed, isMCPDomainAllowed, createSSRFSafeAgents, getEffectivePort } from '~/auth';
 import { createAxiosInstance } from '~/utils/axios';
 
 const codeFileDownloadAxios: AxiosInstance = createAxiosInstance();
@@ -62,14 +62,20 @@ function redactUrlForLog(url: string): string {
  */
 function assertHopSafeForProxy(
   hostname: string,
+  port: string,
   proxyConfigured: boolean,
   useSSRFProtection: boolean,
   allowedAddresses: string[] | null | undefined,
 ): void {
-  if (!proxyConfigured || !useSSRFProtection || isIP(hostname) !== 0) {
+  /** `URL.hostname` keeps the brackets around an IPv6 literal (e.g.
+   * `[2001:db8::1]`), but `node:net.isIP` doesn't accept them — strip them
+   * first so a public IPv6 download target isn't misclassified as a
+   * hostname and rejected. */
+  const unbracketedHostname = hostname.replace(/^\[|\]$/g, '');
+  if (!proxyConfigured || !useSSRFProtection || isIP(unbracketedHostname) !== 0) {
     return;
   }
-  if (isAddressAllowed(hostname, allowedAddresses)) {
+  if (isAddressAllowed(hostname, allowedAddresses, port)) {
     return;
   }
   throw new Error(
@@ -99,8 +105,10 @@ export async function fetchAllowedCodeFileStream(
     if (!(await isMCPDomainAllowed({ url: currentUrl }, allowedDomains, allowedAddresses))) {
       throw new Error(`codeFile download URL domain is not allowed: ${redactUrlForLog(currentUrl)}`);
     }
+    const parsedUrl = new URL(currentUrl);
     assertHopSafeForProxy(
-      new URL(currentUrl).hostname,
+      parsedUrl.hostname,
+      getEffectivePort(parsedUrl.protocol, parsedUrl.port),
       proxy !== false,
       useSSRFProtection,
       allowedAddresses,
@@ -109,16 +117,22 @@ export async function fetchAllowedCodeFileStream(
     if (remainingMs <= 0) {
       throw new Error(`codeFile download timed out following redirects: ${redactUrlForLog(url)}`);
     }
-    const response = await codeFileDownloadAxios.get(currentUrl, {
-      responseType: 'stream',
-      timeout: remainingMs,
-      maxRedirects: 0,
-      proxy,
-      httpAgent,
-      httpsAgent,
-      validateStatus: (status: number) =>
-        (status >= 200 && status < 300) || (status >= 300 && status < 400),
-    });
+    let response: AxiosResponse;
+    try {
+      response = await codeFileDownloadAxios.get(currentUrl, {
+        responseType: 'stream',
+        timeout: remainingMs,
+        maxRedirects: 0,
+        proxy,
+        httpAgent,
+        httpsAgent,
+        validateStatus: (status: number) =>
+          (status >= 200 && status < 300) || (status >= 300 && status < 400),
+      });
+    } catch (error) {
+      (error as { response?: AxiosResponse })?.response?.data?.destroy?.();
+      throw error;
+    }
     if (response.status < 300) {
       return response;
     }
