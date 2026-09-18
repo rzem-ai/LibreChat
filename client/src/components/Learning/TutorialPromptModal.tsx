@@ -1,10 +1,10 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { useRecoilState } from 'recoil';
 import { GraduationCap } from 'lucide-react';
-import { Button, useMediaQuery } from '@librechat/client';
 import * as Popover from '@radix-ui/react-popover';
-import { useLearningTour } from './LearningTourContext';
+import { Button, useMediaQuery } from '@librechat/client';
 import useTutorialPrompt from '~/hooks/Learning/useTutorialPrompt';
+import { useLearningTour } from './LearningTourContext';
 import { useLocalize } from '~/hooks';
 import store from '~/store';
 
@@ -99,12 +99,27 @@ export default function TutorialPromptModal({
     return () => window.clearTimeout(timer);
   }, [isVisible, isSmallScreen, sidebarExpanded, setSidebarExpanded]);
 
-  // Measure sidebar width when the bubble becomes visible so the two-panel
-  // backdrop splits correctly at the sidebar/content boundary.
+  // iconRect holds the Learning Hub icon's bounding rect so we can carve a
+  // clip-path hole in the sidebar overlay directly over it (Decision D1 fix:
+  // the single full-sidebar overlay previously intercepted every click on the
+  // icon before it reached the icon's own button/listener).
+  const [iconRect, setIconRect] = useState<DOMRect | null>(null);
+
+  // Consolidated measurement: sidebar width + icon rect, re-run on visibility/
+  // sidebar-expand changes AND on window resize, so the clip-path hole can't
+  // drift after a resize or zoom while the prompt is visible.
   useEffect(() => {
-    if (canRenderPrompt) {
-      setSidebarWidth(getSidebarWidth());
+    if (!canRenderPrompt) {
+      return;
     }
+    const measure = () => {
+      setSidebarWidth(getSidebarWidth());
+      const el = document.getElementById('nav-panel-learning');
+      setIconRect(el ? el.getBoundingClientRect() : null);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
   }, [canRenderPrompt, sidebarExpanded]);
 
   // virtualRef lets Radix Popover position the bubble relative to the learning
@@ -171,10 +186,41 @@ export default function TutorialPromptModal({
               `relative z-0` stacking context.
               Decision B2: clicking either panel marks seen and dismisses. */}
 
-          {/* Sidebar overlay — light dim (10%) so the nav icons stay visible */}
+          {/* Sidebar overlay — light dim (10%) so the nav icons stay visible.
+              When iconRect is known and valid, clip-path carves a rectangular
+              hole exactly over the Learning Hub icon so clicks reach the icon's
+              own button (Decision D1) rather than being captured here. The hole
+              uses a keyhole polygon (outer rect wound CW, inner rect wound CCW
+              connected via a shared edge point) — standard CSS cutout technique.
+              Falls back to a solid overlay (no hole, prior behaviour) if the
+              icon hasn't been measured yet or its rect is degenerate/zero-size. */}
           <div
             className="fixed inset-y-0 left-0 bg-black/10"
-            style={{ zIndex: 200, width: sidebarWidth }}
+            style={{
+              zIndex: 200,
+              width: sidebarWidth,
+              clipPath:
+                iconRect != null && iconRect.width > 0 && iconRect.height > 0
+                  ? [
+                      'polygon(',
+                      // Outer rect (clockwise) — covers the whole sidebar
+                      '0px 0px,',
+                      `${sidebarWidth}px 0px,`,
+                      `${sidebarWidth}px 100vh,`,
+                      '0px 100vh,',
+                      // Return to top-left to close the outer shape, then
+                      // immediately start the inner cutout (counter-clockwise)
+                      '0px 0px,',
+                      // Inner rect (counter-clockwise) — the hole over the icon
+                      `${iconRect.left}px ${iconRect.top}px,`,
+                      `${iconRect.left + iconRect.width}px ${iconRect.top}px,`,
+                      `${iconRect.left + iconRect.width}px ${iconRect.top + iconRect.height}px,`,
+                      `${iconRect.left}px ${iconRect.top + iconRect.height}px,`,
+                      `${iconRect.left}px ${iconRect.top}px`,
+                      ')',
+                    ].join(' ')
+                  : undefined,
+            }}
             onClick={markPromptSeen}
             aria-hidden="true"
           />

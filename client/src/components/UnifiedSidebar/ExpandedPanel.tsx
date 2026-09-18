@@ -167,21 +167,39 @@ function ExpandedPanel({
       />
       <NewChatButton setActive={setActive} />
       <div className="mx-2 border-b border-border-light" />
+      {/* Deloitte Custom Change: Learning Hub is pinned to the bottom group
+          (directly above the account settings icon) so exclude it here */}
       <div className="flex flex-col gap-1 overflow-y-auto">
-        {links.map((link) => (
+        {links
+          .filter((link) => link.id !== 'learning')
+          .map((link) => (
+            <NavIconButton
+              key={link.id}
+              link={link}
+              isActive={link.id === effectiveActive}
+              expanded={expanded ?? true}
+              setActive={setActive}
+              onExpand={onExpand}
+              onCollapse={onCollapse}
+            />
+          ))}
+      </div>
+
+      {/* Deloitte Custom Change: Learning Hub pinned directly above the account
+          settings icon rather than floating at the end of the scrollable list
+          with a large mt-auto gap between them */}
+      <div className="mt-auto flex flex-col gap-1">
+        {links.find((link) => link.id === 'learning') && (
           <NavIconButton
-            key={link.id}
-            link={link}
-            isActive={link.id === effectiveActive}
+            key="learning"
+            link={links.find((link) => link.id === 'learning')!}
+            isActive={'learning' === effectiveActive}
             expanded={expanded ?? true}
             setActive={setActive}
             onExpand={onExpand}
             onCollapse={onCollapse}
           />
-        ))}
-      </div>
-
-      <div className="mt-auto">
+        )}
         <Suspense fallback={<Skeleton className="h-9 w-9 rounded-lg" />}>
           <AccountSettings collapsed />
         </Suspense>

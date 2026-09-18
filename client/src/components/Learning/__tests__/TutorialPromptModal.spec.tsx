@@ -120,4 +120,147 @@ describe('TutorialPromptModal', () => {
     });
     expect(screen.getByText('com_learning_prompt_body')).toBeInTheDocument();
   });
+
+  describe('sidebar overlay clip-path cutout (Decision D1)', () => {
+    function renderVisible() {
+      mockUseTutorialPrompt.mockReturnValue({
+        shouldShowPrompt: true,
+        markPromptSeen: mockMarkPromptSeen,
+      });
+      render(<TutorialPromptModal chatReady />);
+      act(() => {
+        jest.advanceTimersByTime(800);
+      });
+    }
+
+    it('renders a solid sidebar overlay (no clip-path) when the icon element is absent', () => {
+      // Default jsdom DOM has no #nav-panel-learning — iconRect stays null.
+      renderVisible();
+      // Find the sidebar overlay (the bg-black/10 fixed div).
+
+      const overlays = document.querySelectorAll<HTMLElement>('[aria-hidden="true"]');
+      const sidebarOverlay = Array.from(overlays).find((el) =>
+        el.className.includes('bg-black/10'),
+      );
+      expect(sidebarOverlay).toBeTruthy();
+      // No clip-path applied when iconRect is null (fallback to prior behaviour).
+      expect(sidebarOverlay?.style.clipPath).toBeFalsy();
+    });
+
+    it('applies a clip-path cutout when the icon element has a valid bounding rect', () => {
+      // Inject a stub icon element with a realistic rect so iconRect is non-null/non-zero.
+      const iconEl = document.createElement('button');
+      iconEl.id = 'nav-panel-learning';
+      document.body.appendChild(iconEl);
+
+      const ICON_TOP = 400;
+      const ICON_LEFT = 6;
+      const ICON_W = 36;
+      const ICON_H = 36;
+      jest.spyOn(iconEl, 'getBoundingClientRect').mockReturnValue({
+        top: ICON_TOP,
+        left: ICON_LEFT,
+        width: ICON_W,
+        height: ICON_H,
+        right: ICON_LEFT + ICON_W,
+        bottom: ICON_TOP + ICON_H,
+        x: ICON_LEFT,
+        y: ICON_TOP,
+        toJSON: () => ({}),
+      } as DOMRect);
+
+      renderVisible();
+
+      const overlays = document.querySelectorAll<HTMLElement>('[aria-hidden="true"]');
+      const sidebarOverlay = Array.from(overlays).find((el) =>
+        el.className.includes('bg-black/10'),
+      );
+      expect(sidebarOverlay).toBeTruthy();
+
+      const clipPath = sidebarOverlay?.style.clipPath ?? '';
+      expect(clipPath).toContain('polygon(');
+      // The cutout's top-left corner must appear in the polygon string.
+      expect(clipPath).toContain(`${ICON_LEFT}px ${ICON_TOP}px`);
+      // The cutout's bottom-right corner must appear.
+      expect(clipPath).toContain(`${ICON_LEFT + ICON_W}px ${ICON_TOP + ICON_H}px`);
+
+      document.body.removeChild(iconEl);
+    });
+
+    it('falls back to a solid overlay when the icon rect is degenerate (zero-size)', () => {
+      const iconEl = document.createElement('button');
+      iconEl.id = 'nav-panel-learning';
+      document.body.appendChild(iconEl);
+
+      // jsdom default: all-zero rect — should trigger the degenerate-rect guard.
+      jest.spyOn(iconEl, 'getBoundingClientRect').mockReturnValue({
+        top: 0,
+        left: 0,
+        width: 0,
+        height: 0,
+        right: 0,
+        bottom: 0,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      } as DOMRect);
+
+      renderVisible();
+
+      const overlays = document.querySelectorAll<HTMLElement>('[aria-hidden="true"]');
+      const sidebarOverlay = Array.from(overlays).find((el) =>
+        el.className.includes('bg-black/10'),
+      );
+      expect(sidebarOverlay?.style.clipPath).toBeFalsy();
+
+      document.body.removeChild(iconEl);
+    });
+
+    it('updates the clip-path on window resize', () => {
+      const iconEl = document.createElement('button');
+      iconEl.id = 'nav-panel-learning';
+      document.body.appendChild(iconEl);
+
+      const mockGetBoundingClientRect = jest.spyOn(iconEl, 'getBoundingClientRect');
+      mockGetBoundingClientRect.mockReturnValue({
+        top: 400,
+        left: 6,
+        width: 36,
+        height: 36,
+        right: 42,
+        bottom: 436,
+        x: 6,
+        y: 400,
+        toJSON: () => ({}),
+      } as DOMRect);
+
+      renderVisible();
+
+      // Simulate resize — icon moves down (e.g. user zooms in).
+      mockGetBoundingClientRect.mockReturnValue({
+        top: 500,
+        left: 6,
+        width: 36,
+        height: 36,
+        right: 42,
+        bottom: 536,
+        x: 6,
+        y: 500,
+        toJSON: () => ({}),
+      } as DOMRect);
+
+      act(() => {
+        window.dispatchEvent(new Event('resize'));
+      });
+
+      const overlays = document.querySelectorAll<HTMLElement>('[aria-hidden="true"]');
+      const sidebarOverlay = Array.from(overlays).find((el) =>
+        el.className.includes('bg-black/10'),
+      );
+      // After resize, clip-path should reflect the new icon position (top=500).
+      expect(sidebarOverlay?.style.clipPath).toContain('6px 500px');
+
+      document.body.removeChild(iconEl);
+    });
+  });
 });
