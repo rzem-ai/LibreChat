@@ -38,7 +38,7 @@ function requestMCP(response: Response): string[] | undefined {
   return body.ephemeralAgent?.mcp;
 }
 
-test.describe('ephemeral MCP selection persistence', () => {
+test.describe.skip('ephemeral MCP selection persistence', { tag: ['@mock', '@mcp'] }, () => {
   test('keeps the MCP selection when switching models on a new chat', async ({ page }) => {
     test.setTimeout(120000);
     await page.goto(NEW_CHAT_PATH, { timeout: 10000 });

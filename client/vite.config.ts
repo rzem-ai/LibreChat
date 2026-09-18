@@ -100,6 +100,7 @@ export default defineConfig(({ command }) => ({
         globPatterns: [
           '**/*.{js,css,html}',
           'assets/favicon*.png',
+          'assets/fav-*.svg',
           'assets/icon-*.png',
           'assets/apple-touch-icon*.png',
           'assets/maskable-icon.png',

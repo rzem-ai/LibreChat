@@ -1,10 +1,13 @@
 ---
-# ExternalSecret: pulls Valkey auth password from Azure Key Vault.
+# ExternalSecret: pulls Valkey auth password from Azure Key Vault into a
+# dedicated K8s secret consumed only by the Valkey pod. Kept separate from
+# the app container secrets to avoid cross-pod secret drift.
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
 metadata:
   name: librechat-valkey-secret
 spec:
+  refreshInterval: 1h
   secretStoreRef:
     name: app-secret-store
     kind: SecretStore

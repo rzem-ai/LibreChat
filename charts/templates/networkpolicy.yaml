@@ -1,8 +1,5 @@
 {{- $enabled := true -}}
-{{- $llmGatewayNamespace := "llm-gateway-ctnp" -}}
-{{- if and (hasKey .Values "llmGateway") (hasKey .Values.llmGateway "namespace") -}}
-  {{- $llmGatewayNamespace = .Values.llmGateway.namespace -}}
-{{- end -}}
+{{- $llmGatewayNamespace := dig "llmGateway" "namespace" "llm-gateway-ctnp" (merge (dict) .Values) -}}
 {{- if and (hasKey .Values "networkPolicy") (eq (toString .Values.networkPolicy.enabled) "false") -}}
   {{- $enabled = false -}}
 {{- end -}}
@@ -203,6 +200,58 @@ spec:
       toPorts:
         - ports:
             - port: "3080"
+              protocol: TCP
+---
+# =====================================================================
+# 3. Valkey — Ingress
+# =====================================================================
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "helm.fullname" . }}-valkey-ingress
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+    component: redis
+spec:
+  endpointSelector:
+    matchLabels:
+      app: librechat-valkey
+      component: redis
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            component: librechat
+            k8s:io.kubernetes.pod.namespace: {{ .Release.Namespace | quote }}
+      toPorts:
+        - ports:
+            - port: "{{ .Values.valkey.port }}"
+              protocol: TCP
+---
+# =====================================================================
+# 4. Valkey — Egress
+# =====================================================================
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "helm.fullname" . }}-valkey-egress
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+    component: redis
+spec:
+  endpointSelector:
+    matchLabels:
+      app: librechat-valkey
+      component: redis
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s:k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
               protocol: TCP
 ---
 {{- end }}

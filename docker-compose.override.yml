@@ -58,6 +58,7 @@ services:
     env_file:
       - .env
     environment:
+      - BEDROCK_REVERSE_PROXY=${BEDROCK_REVERSE_PROXY:-au-bedrock-exp.ctk.au.deloitte.com}
       - AZURE_OPENAI_HOST=${AZURE_OPENAI_HOST:-au-openai-exp.ctk.au.deloitte.com}
     volumes:
       - ./nginx-gateway-proxy.conf.template:/etc/nginx/templates/default.conf.template:ro

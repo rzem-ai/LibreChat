@@ -64,6 +64,9 @@ jest.mock('~/server/services/Files/process', () => ({
 }));
 jest.mock('~/app/clients/tools/util/fileSearch', () => ({
   primeFiles: jest.fn().mockResolvedValue({}),
+  hasFileSearchAttachments: (tool_resources) =>
+    (tool_resources?.file_search?.file_ids?.length ?? 0) > 0 ||
+    (tool_resources?.file_search?.files?.length ?? 0) > 0,
 }));
 jest.mock('~/server/services/Files/Code/process', () => ({
   primeFiles: jest.fn().mockResolvedValue({}),

@@ -7,13 +7,20 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta
-      name="description"
-      content="LibreChat - An open source chat application with support for multiple AI models"
+    <meta name="description" content="MyAssist - AI workspace and chat application" />
+    <title>MyAssist</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="assets/fav-dark.svg"
+      media="(prefers-color-scheme: light)"
     />
-    <title>LibreChat</title>
-    <link id="favicon-dark" rel="icon" type="image/svg+xml" href="assets/fav-dark.svg" />
-    <link id="favicon-light" rel="icon" type="image/svg+xml" href="assets/fav-light.svg" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="assets/fav-light.svg"
+      media="(prefers-color-scheme: dark)"
+    />
     <link rel="apple-touch-icon" href="assets/apple-touch-icon-180x180.png" />
     <meta
       name="viewport"
@@ -53,26 +60,6 @@
         }
       `;
       document.head.appendChild(loadingContainerStyle);
-
-      // Swap favicons based on theme
-      let isDarkTheme;
-      if (theme === 'dark') {
-        isDarkTheme = true;
-      } else if (theme === 'light') {
-        isDarkTheme = false;
-      } else if (theme === 'system') {
-        isDarkTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      } else {
-        isDarkTheme = false;
-      }
-
-      const faviconLight = document.getElementById('favicon-light');
-      const faviconDark = document.getElementById('favicon-dark');
-      if (isDarkTheme) {
-        faviconLight.parentNode.removeChild(faviconLight);
-      } else {
-        faviconDark.parentNode.removeChild(faviconDark);
-      }
     </script>
     <script>
       (function () {

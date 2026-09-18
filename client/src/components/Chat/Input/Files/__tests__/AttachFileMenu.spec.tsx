@@ -1,8 +1,8 @@
 import React from 'react';
 import { RecoilRoot } from 'recoil';
+import { EModelEndpoint } from 'librechat-data-provider';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { EModelEndpoint } from 'librechat-data-provider';
 import AttachFileMenu from '../AttachFileMenu';
 
 jest.mock('~/hooks', () => ({
@@ -314,12 +314,18 @@ describe('AttachFileMenu', () => {
       expect(screen.queryByText('Upload to Provider')).not.toBeInTheDocument();
       expect(screen.queryByText('Upload as Image')).not.toBeInTheDocument();
     });
-
   });
 
   describe('SharePoint Integration', () => {
     it('shows SharePoint option when enabled', () => {
       setupMocks();
+      // Deloitte Custom Change: explicit mock so this test doesn't depend on the
+      // useAgentCapabilities default across unrelated fixture changes.
+      mockUseAgentCapabilities.mockReturnValue({
+        contextEnabled: true,
+        fileSearchEnabled: false,
+        codeEnabled: false,
+      });
       mockUseGetStartupConfig.mockReturnValue({
         data: { sharePointFilePickerEnabled: true },
       });

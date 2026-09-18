@@ -23,9 +23,11 @@ const {
   getOpenIdRoleSyncOptions,
   getOpenIdRolesForOpenIdSync,
   getLibreChatRolesForOpenIdSync,
+  invalidateCachedAuthUserDoc,
 } = require('@librechat/api');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { resizeAvatar } = require('~/server/services/Files/images/avatar');
+const { getGraphApiToken } = require('~/server/services/GraphTokenService');
 const { findUser, createUser, updateUser, findRolesByNames } = require('~/models');
 const { getAppConfig } = require('~/server/services/Config');
 const getLogStores = require('~/cache/getLogStores');
@@ -253,6 +255,63 @@ async function getOpenIDAvatarFetchOptions(url, config, accessToken, sub) {
       Authorization: `Bearer ${exchangedAccessToken}`,
     },
   };
+}
+
+// Deloitte Custom Change: fetches Entra profile photos from Microsoft Graph when OpenID userinfo omits picture.
+// The base implementation only supports a `userinfo.picture` URL, but Entra serves profile photos through
+// Microsoft Graph instead of including them in standard OpenID Connect userinfo claims.
+function isMicrosoftOpenIDProvider(config) {
+  const issuer = config?.serverMetadata?.().issuer;
+  return getUrlOrigin(issuer) === 'https://login.microsoftonline.com';
+}
+
+async function getMicrosoftGraphAvatar(user, accessToken) {
+  if (!accessToken || !isMicrosoftOpenIDProvider(openidConfig)) {
+    logger.debug('[openidStrategy] Microsoft Graph avatar fetch skipped');
+    return null;
+  }
+
+  try {
+    logger.debug('[openidStrategy] Requesting Microsoft Graph token for avatar fetch');
+    const tokenResponse = await getGraphApiToken(
+      user,
+      accessToken,
+      'https://graph.microsoft.com/User.Read',
+    );
+    if (!tokenResponse.access_token) {
+      logger.warn('[openidStrategy] Microsoft Graph OBO exchange returned no access token');
+      return null;
+    }
+    logger.debug('[openidStrategy] Microsoft Graph token acquired for avatar fetch');
+    const fetchOptions = {
+      headers: {
+        Authorization: `Bearer ${tokenResponse.access_token}`,
+      },
+    };
+    const dispatcher = getOpenIdProxyDispatcher();
+    if (dispatcher) {
+      fetchOptions.dispatcher = dispatcher;
+    }
+
+    const response = await undici.fetch(
+      'https://graph.microsoft.com/v1.0/me/photo/$value',
+      fetchOptions,
+    );
+    if (!response.ok) {
+      if (response.status !== 404) {
+        logger.warn(
+          `[openidStrategy] Failed to fetch Microsoft Graph profile photo: ${response.status}`,
+        );
+      }
+      return null;
+    }
+
+    logger.debug('[openidStrategy] Microsoft Graph avatar fetched successfully');
+    return Buffer.from(await response.arrayBuffer());
+  } catch (error) {
+    logger.warn(`[openidStrategy] Failed to fetch Microsoft Graph profile photo: ${error.message}`);
+    return null;
+  }
 }
 
 const resizeIdentityProviderAvatar = async (url, userId, config, accessToken, sub) => {
@@ -785,41 +844,66 @@ async function processOpenIDAuth(tokenset, existingUsersOnly = false) {
     }
   }
 
-  if (!!userinfo && userinfo.picture && !user.avatar?.includes('manual=true')) {
-    /** @type {string | undefined} */
-    const imageUrl = userinfo.picture;
-
-    let fileName;
-    if (crypto) {
-      fileName = (await hashToken(userinfo.sub)) + '.png';
-    } else {
-      fileName = userinfo.sub + '.png';
-    }
-
-    const userId = user._id.toString();
-    const imageBuffer = await resizeIdentityProviderAvatar(
-      imageUrl,
-      userId,
-      openidConfig,
-      tokenset.access_token,
-      userinfo.sub,
-    );
-    if (imageBuffer) {
-      const fileStrategy = getAvatarFileStrategy(appConfig, process.env.CDN_PROVIDER);
-      const { saveBuffer } = getStrategyFunctions(fileStrategy);
-      const imagePath = await saveBuffer(
-        getAvatarSaveParams(fileStrategy, {
-          fileName,
-          userId,
-          buffer: imageBuffer,
-          tenantId: user.tenantId,
-        }),
+  // Deloitte Custom Change: Prefer Entra's Graph profile photo because its OpenID picture claim can be stale or unusable.
+  if (!user.avatar?.includes('manual=true')) {
+    logger.debug('[openidStrategy] Resolving OpenID avatar image');
+    const graphImage = await getMicrosoftGraphAvatar(user, tokenset.access_token);
+    const image = graphImage ?? userinfo.picture;
+    if (image) {
+      logger.debug(
+        `[openidStrategy] Avatar image resolved from ${graphImage ? 'Microsoft Graph' : 'OpenID userinfo'}`,
       );
-      user.avatar = imagePath ?? '';
+      let fileName;
+      if (crypto) {
+        fileName = (await hashToken(userinfo.sub)) + '.png';
+      } else {
+        fileName = userinfo.sub + '.png';
+      }
+
+      const userId = user._id.toString();
+      // Deloitte Custom Change: falls back to the Entra Graph profile photo while preserving manually uploaded avatars.
+      const imageBuffer =
+        typeof image === 'string'
+          ? await resizeIdentityProviderAvatar(
+              image,
+              userId,
+              openidConfig,
+              tokenset.access_token,
+              userinfo.sub,
+            )
+          : image;
+      if (imageBuffer) {
+        logger.debug('[openidStrategy] Avatar image processed; saving avatar');
+        const fileStrategy = getAvatarFileStrategy(appConfig, process.env.CDN_PROVIDER);
+        const { saveBuffer } = getStrategyFunctions(fileStrategy);
+        const imagePath = await saveBuffer(
+          getAvatarSaveParams(fileStrategy, {
+            fileName,
+            userId,
+            buffer: imageBuffer,
+            tenantId: user.tenantId,
+          }),
+        );
+        user.avatar = imagePath ?? '';
+        logger.debug(
+          `[openidStrategy] Avatar save ${user.avatar ? 'succeeded' : 'did not return a path'}`,
+        );
+      } else {
+        logger.debug('[openidStrategy] Avatar image processing returned no image');
+      }
+    } else {
+      logger.debug(
+        '[openidStrategy] No avatar image available from Microsoft Graph or OpenID userinfo',
+      );
     }
+  } else {
+    logger.debug('[openidStrategy] Avatar update skipped because a manual avatar is set');
   }
 
   user = await updateUser(user._id, user);
+  await invalidateCachedAuthUserDoc(getLogStores(CacheKeys.AUTH_USER_DOC), {
+    userId: user._id.toString(),
+  });
 
   logger.info(
     `[openidStrategy] login success openidId: ${user.openidId} | email: ${user.email} | username: ${user.username} `,

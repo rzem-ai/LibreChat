@@ -4,14 +4,52 @@ import type { MCPServerStatusIconProps } from './MCPServerStatusIcon';
 
 export type { MCPServerStatus };
 
-export interface SelectedIconInfo {
+// Deloitte Custom Change: light/dark themed MCP server icons.
+/** The set of icon-path fields a server's config can provide, shared across icon-related types. */
+export interface ThemedIconPaths {
+  iconPath: string | null;
+  iconPathLight: string | null;
+  iconPathDark: string | null;
+}
+
+// Deloitte Custom Change: light/dark themed MCP server icons.
+const NO_ICON_PATHS: ThemedIconPaths = {
+  iconPath: null,
+  iconPathLight: null,
+  iconPathDark: null,
+};
+
+// Deloitte Custom Change: SelectedIconInfo now carries the light/dark icon variants too.
+export interface SelectedIconInfo extends ThemedIconPaths {
   key: string;
   serverName: string;
-  iconPath: string | null;
   displayName: string;
 }
 
 export type ConnectionStatusMap = Record<string, MCPServerStatus>;
+
+// Deloitte Custom Change: light/dark themed MCP server icons.
+/** Whether any icon path is configured for a server, i.e. it shouldn't fall back to the generic icon. */
+export function hasConfiguredIcon(icons: Partial<ThemedIconPaths>): boolean {
+  return Boolean(icons.iconPath || icons.iconPathLight || icons.iconPathDark);
+}
+
+// Deloitte Custom Change: light/dark themed MCP server icons.
+/**
+ * Resolves the icon path to show in each theme, given a server's configured icon fields.
+ * Precedence per theme: its own variant, then the shared `iconPath`, then (as a last resort,
+ * so a themed icon is never simply missing) the other theme's variant.
+ */
+export function resolveThemedIconPaths(icons: Partial<ThemedIconPaths>): {
+  light: string | null;
+  dark: string | null;
+} {
+  const { iconPath, iconPathLight, iconPathDark } = icons;
+  return {
+    light: iconPathLight || iconPath || iconPathDark || null,
+    dark: iconPathDark || iconPath || iconPathLight || null,
+  };
+}
 
 /**
  * Generates a list of icons to display for selected MCP servers.
@@ -28,11 +66,16 @@ export function getSelectedServerIcons(
 
   for (const server of selectedServers) {
     const displayName = server.config?.title || server.serverName;
-    if (server.config?.iconPath) {
+    // Deloitte Custom Change: light/dark themed MCP server icons.
+    const { iconPath, iconPathLight, iconPathDark } = server.config ?? {};
+    if (hasConfiguredIcon({ iconPath, iconPathLight, iconPathDark })) {
       customIcons.push({
         key: server.serverName,
         serverName: server.serverName,
-        iconPath: server.config.iconPath,
+        iconPath: iconPath ?? null,
+        // Deloitte Custom Change: light/dark themed MCP server icons.
+        iconPathLight: iconPathLight ?? null,
+        iconPathDark: iconPathDark ?? null,
         displayName,
       });
     } else {
@@ -49,8 +92,8 @@ export function getSelectedServerIcons(
           {
             key: '_default_',
             serverName: defaultServerNames[0],
-            iconPath: null,
             displayName: 'MCP',
+            ...NO_ICON_PATHS, // Deloitte Custom Change: light/dark themed MCP server icons.
           },
         ]
       : customIcons;
@@ -169,6 +212,30 @@ export function serverNeedsAction(
 }
 
 /**
+ * Whether a disconnected server is an OBO (on-behalf-of) server that
+ * authenticates silently on every tool call — so it never needs a manual
+ * "Connect" click, unless it also has custom vars still to be filled in.
+ * A server can be configured for both OBO and OAuth at once; `requiresOAuth`
+ * is the authoritative "needs interactive user action" flag, so it must be
+ * false too, or a server stuck behind OAuth would have its only Connect
+ * affordance hidden. Shared by every surface that decides whether to show a
+ * Connect button.
+ */
+export function isSilentlyConnectableOboServer(
+  serverStatus:
+    | Pick<MCPServerStatus, 'connectionState' | 'configuredObo' | 'requiresOAuth'>
+    | undefined,
+  hasCustomUserVars: boolean | undefined,
+): boolean {
+  return (
+    serverStatus?.connectionState === 'disconnected' &&
+    serverStatus?.configuredObo === true &&
+    serverStatus?.requiresOAuth === false &&
+    hasCustomUserVars === false
+  );
+}
+
+/**
  * Determines if an action button should be shown for a server status.
  * Returns true only when the button would be actionable (not just informational).
  */
@@ -185,14 +252,21 @@ export function shouldShowActionButton(statusIconProps?: MCPServerStatusIconProp
   if (!serverStatus) return false;
   const { connectionState, requiresOAuth } = serverStatus;
 
-  // Show for disconnected/error (can reconnect/configure)
-  if (connectionState === 'disconnected' || connectionState === 'error') return true;
+  // Error always needs a retry action.
+  if (connectionState === 'error') return true;
+  // Disconnected: OBO servers connect silently, so no button is needed unless
+  // custom vars still need to be entered.
+  if (connectionState === 'disconnected') {
+    return !isSilentlyConnectableOboServer(serverStatus, hasCustomUserVars);
+  }
   // Show a cancel action for pending OAuth connections.
   if (connectionState === 'connecting' && requiresOAuth && canCancel) return true;
   // Don't show connecting spinner when no action is available.
   if (connectionState === 'connecting') return false;
-  // Connected: only show if there's config to manage
-  if (connectionState === 'connected') return hasCustomUserVars || requiresOAuth;
+  // Deloitte Custom Change: Connected: only show if there's custom-var config to manage
+  // (matches the ConfigureButton condition in MCPServerStatusIcon — requiresOAuth alone
+  // renders nothing).
+  if (connectionState === 'connected') return Boolean(hasCustomUserVars);
 
   return false;
 }

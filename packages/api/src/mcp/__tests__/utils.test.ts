@@ -18,6 +18,7 @@ import {
   getRuntimeBodyPlaceholderFields,
   getMissingRuntimeBodyPlaceholderFields,
   isUserSourced,
+  isOboServer,
   requiresEphemeralUserConnection,
 } from '~/mcp/utils';
 
@@ -963,5 +964,16 @@ describe('getMissingCustomUserVars', () => {
     expect(
       getMissingCustomUserVars(config, { THINGY_TOKEN: 'abc123', UNRELATED: 'value' }),
     ).toEqual([]);
+  });
+});
+
+describe('isOboServer', () => {
+  it('returns false when no obo config is present', () => {
+    expect(isOboServer({})).toBe(false);
+    expect(isOboServer({ obo: undefined })).toBe(false);
+  });
+
+  it('returns true when an obo config is present', () => {
+    expect(isOboServer({ obo: { scopes: 'api://example/Mcp.Tools.ReadWrite' } })).toBe(true);
   });
 });

@@ -1,0 +1,13 @@
+{
+  "kind": "skill",
+  "name": "deloitte-kickoff-pack",
+  "version": "1.0.0",
+  "added": "2026-05-21",
+  "contributors": ["ahmed.elsayed@deloitte.com.au"],
+  "source": "deloitte-internal",
+  "ip": "deloitte-confidential",
+  "featured": true,
+  "solutionArchetypes": [],
+  "stages": ["Specify"],
+  "technologies": []
+}
