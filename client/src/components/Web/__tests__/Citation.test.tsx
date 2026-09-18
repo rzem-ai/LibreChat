@@ -47,7 +47,16 @@ jest.mock('~/hooks', () => ({
     }
     return key;
   },
-  useMCPServerTitleMap: () => new Map<string, string>([['kx', 'KX']]),
+  useMCPServerMaps: () => ({
+    titleMap: new Map<string, string>([
+      ['kx', 'KX'],
+      ['KX_Connector', 'KX Connector Display Name'],
+    ]),
+    iconMap: new Map<string, string>([
+      ['kx', 'https://cdn.example.com/kx-icon.png'],
+      ['KX_Connector', 'https://cdn.example.com/kx-connector-icon.png'],
+    ]),
+  }),
 }));
 
 jest.mock('~/components/Chat/Messages/Content/FilePreviewDialog', () => ({
@@ -203,6 +212,43 @@ describe('Citation', () => {
     expect(chip).toHaveAttribute('title', 'KX');
   });
 
+  it('resolves the configured server title for a raw server name with special characters', () => {
+    // Regression test: the title map is keyed by normalized server name (same
+    // contract as the icon map), so a raw serverName like "KX Connector" must be
+    // normalized before the title lookup, not just the icon lookup.
+    const searchResults = {
+      '0': {
+        mcp_results: [
+          {
+            attribution: 'KX Connector',
+            link: 'https://stagequals.deloitteresources.com/quals/view/1/description/',
+            serverName: 'KX Connector',
+            snippet: 'Qualification summary text.',
+            title: 'Digital Twin Implementation',
+            toolName: 'kx_query',
+            type: 'mcp',
+          },
+        ],
+      },
+    };
+
+    renderWithProviders(
+      <Citation
+        citationId="cite-3b"
+        citationType="standalone"
+        node={{
+          properties: {
+            citation: { turn: 0, refType: 'mcp', index: 0 },
+            citationId: 'cite-3b',
+          },
+        }}
+      />,
+      searchResults as any,
+    );
+
+    expect(screen.getByRole('button', { name: 'KX Connector Display Name' })).toBeInTheDocument();
+  });
+
   it('falls back to the source title when the MCP server has no configured title', () => {
     const searchResults = {
       '0': {
@@ -237,6 +283,235 @@ describe('Citation', () => {
     expect(screen.getByRole('button', { name: 'Some Article Title' })).toBeInTheDocument();
   });
 
+  it('renders the configured server logo for an MCP citation chip', () => {
+    const searchResults: Record<string, SearchResultData> = {
+      '0': {
+        mcp_results: [
+          {
+            attribution: 'kx',
+            link: 'https://stagequals.deloitteresources.com/quals/view/1/description/',
+            serverName: 'kx',
+            snippet: 'Qualification summary text.',
+            title: 'Digital Twin Implementation',
+            toolName: 'kx_query',
+            type: 'mcp',
+          },
+        ],
+      },
+    };
+
+    const { container } = renderWithProviders(
+      <Citation
+        citationId="cite-5"
+        citationType="standalone"
+        node={{
+          properties: {
+            citation: { turn: 0, refType: 'mcp', index: 0 },
+            citationId: 'cite-5',
+          },
+        }}
+      />,
+      searchResults,
+    );
+
+    const icon = container.querySelector('img[src="https://cdn.example.com/kx-icon.png"]');
+    expect(icon).toBeInTheDocument();
+  });
+
+  it('falls back to the generic document icon when the MCP server has no configured logo', () => {
+    const searchResults: Record<string, SearchResultData> = {
+      '0': {
+        mcp_results: [
+          {
+            attribution: 'unknown-server',
+            link: 'https://example.com/article',
+            serverName: 'unknown-server',
+            snippet: 'Article snippet.',
+            title: 'Some Article Title',
+            toolName: 'afr_search_news',
+            type: 'mcp',
+          },
+        ],
+      },
+    };
+
+    const { container } = renderWithProviders(
+      <Citation
+        citationId="cite-6"
+        citationType="standalone"
+        node={{
+          properties: {
+            citation: { turn: 0, refType: 'mcp', index: 0 },
+            citationId: 'cite-6',
+          },
+        }}
+      />,
+      searchResults,
+    );
+
+    expect(container.querySelector('img')).not.toBeInTheDocument();
+    expect(container.querySelector('svg.lucide-file-text')).toBeInTheDocument();
+  });
+
+  it('falls back to the generic document icon after the configured logo fails to load', () => {
+    const searchResults: Record<string, SearchResultData> = {
+      '0': {
+        mcp_results: [
+          {
+            attribution: 'kx',
+            link: 'https://stagequals.deloitteresources.com/quals/view/1/description/',
+            serverName: 'kx',
+            snippet: 'Qualification summary text.',
+            title: 'Digital Twin Implementation',
+            toolName: 'kx_query',
+            type: 'mcp',
+          },
+        ],
+      },
+    };
+
+    const { container } = renderWithProviders(
+      <Citation
+        citationId="cite-7"
+        citationType="standalone"
+        node={{
+          properties: {
+            citation: { turn: 0, refType: 'mcp', index: 0 },
+            citationId: 'cite-7',
+          },
+        }}
+      />,
+      searchResults,
+    );
+
+    const icon = container.querySelector('img[src="https://cdn.example.com/kx-icon.png"]');
+    expect(icon).toBeInTheDocument();
+
+    fireEvent.error(icon as HTMLImageElement);
+
+    expect(container.querySelector('img')).not.toBeInTheDocument();
+    expect(container.querySelector('svg.lucide-file-text')).toBeInTheDocument();
+  });
+
+  it('renders the configured server logo for a composite MCP citation chip', () => {
+    const searchResults: Record<string, SearchResultData> = {
+      '0': {
+        mcp_results: [
+          {
+            attribution: 'kx',
+            link: 'https://stagequals.deloitteresources.com/quals/view/1/description/',
+            serverName: 'kx',
+            snippet: 'Qualification summary text.',
+            title: 'Digital Twin Implementation',
+            toolName: 'kx_query',
+            type: 'mcp',
+          },
+        ],
+      },
+    };
+
+    renderWithProviders(
+      <CompositeCitation
+        node={{
+          properties: {
+            citationId: 'cite-8',
+            citations: [{ turn: 0, refType: 'mcp', index: 0 }],
+          },
+        }}
+      />,
+      searchResults,
+    );
+
+    const chip = screen.getByRole('button', { name: 'KX' });
+    expect(
+      chip.querySelector('img[src="https://cdn.example.com/kx-icon.png"]'),
+    ).toBeInTheDocument();
+  });
+
+  it('renders the configured server logo in the standalone MCP tooltip header', () => {
+    const searchResults: Record<string, SearchResultData> = {
+      '0': {
+        mcp_results: [
+          {
+            attribution: 'kx',
+            link: 'https://stagequals.deloitteresources.com/quals/view/1/description/',
+            serverName: 'kx',
+            snippet: 'Qualification summary text.',
+            title: 'Digital Twin Implementation',
+            toolName: 'kx_query',
+            type: 'mcp',
+          },
+        ],
+      },
+    };
+
+    renderWithProviders(
+      <Citation
+        citationId="cite-9"
+        citationType="standalone"
+        node={{
+          properties: {
+            citation: { turn: 0, refType: 'mcp', index: 0 },
+            citationId: 'cite-9',
+          },
+        }}
+      />,
+      searchResults,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'More details about KX' }));
+
+    const dialog = screen.getByRole('dialog');
+    const icon = dialog.querySelector('img[src="https://cdn.example.com/kx-icon.png"]');
+    expect(icon).toBeInTheDocument();
+
+    fireEvent.error(icon as HTMLImageElement);
+
+    expect(dialog.querySelector('img')).not.toBeInTheDocument();
+    expect(dialog.querySelector('svg.lucide-file-text')).toBeInTheDocument();
+  });
+
+  it('renders the configured server logo in the composite MCP tooltip header', () => {
+    const searchResults: Record<string, SearchResultData> = {
+      '0': {
+        mcp_results: [
+          {
+            attribution: 'kx',
+            link: 'https://stagequals.deloitteresources.com/quals/view/1/description/',
+            serverName: 'kx',
+            snippet: 'Qualification summary text.',
+            title: 'Digital Twin Implementation',
+            toolName: 'kx_query',
+            type: 'mcp',
+          },
+        ],
+      },
+    };
+
+    renderWithProviders(
+      <CompositeCitation
+        node={{
+          properties: {
+            citationId: 'cite-10',
+            citations: [{ turn: 0, refType: 'mcp', index: 0 }],
+          },
+        }}
+      />,
+      searchResults,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'More details about KX' }));
+
+    const dialog = screen.getByRole('dialog');
+    const icon = dialog.querySelector('img[src="https://cdn.example.com/kx-icon.png"]');
+    expect(icon).toBeInTheDocument();
+
+    fireEvent.error(icon as HTMLImageElement);
+
+    expect(dialog.querySelector('img')).not.toBeInTheDocument();
+    expect(dialog.querySelector('svg.lucide-file-text')).toBeInTheDocument();
+  });
+
   it('highlights the associated span on hover with a real stateful provider (not a static mock)', () => {
     const searchResults = {
       '0': {
@@ -256,14 +531,14 @@ describe('Citation', () => {
     render(
       <SearchContext.Provider value={{ searchResults: searchResults as any }}>
         <StatefulCitationProvider>
-          <HighlightedText citationId="cite-5">{quotedSpanText}</HighlightedText>
+          <HighlightedText citationId="cite-11">{quotedSpanText}</HighlightedText>
           <Citation
-            citationId="cite-5"
+            citationId="cite-11"
             citationType="standalone"
             node={{
               properties: {
                 citation: { turn: 0, refType: 'search', index: 0 },
-                citationId: 'cite-5',
+                citationId: 'cite-11',
               },
             }}
           />

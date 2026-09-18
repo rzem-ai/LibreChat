@@ -22,7 +22,7 @@ async function createProject(page: Page, name: string): Promise<string> {
 
 const uniqueName = (prefix: string) => `${prefix} ${Date.now()}-${Math.floor(Math.random() * 1e4)}`;
 
-test.describe('chat projects', () => {
+test.describe('chat projects', { tag: ['@mock', '@conversations'] }, () => {
   test('creates a project and lists it on the all-projects page', async ({ page }) => {
     test.setTimeout(60000);
     const name = uniqueName('E2E Project');

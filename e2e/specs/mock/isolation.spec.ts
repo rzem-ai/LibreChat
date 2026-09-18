@@ -60,7 +60,7 @@ async function ensureSecondaryUser(browser: Browser, page: Page, user: User, bas
   await page.waitForURL(/\/c\/new/, { timeout: 10000 });
 }
 
-test.describe('user isolation', () => {
+test.describe('user isolation', { tag: ['@mock', '@auth'] }, () => {
   test('user B cannot see user A conversations', async ({ page, browser, baseURL }) => {
     test.setTimeout(90000);
     if (typeof baseURL !== 'string') {

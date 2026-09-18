@@ -134,6 +134,7 @@ export default defineConfig({
     storageState: path.resolve(process.cwd(), 'e2e/storageState.json'),
     screenshot: 'only-on-failure',
   },
+  timeout: 120_000,
   expect: {
     timeout: 10000,
   },

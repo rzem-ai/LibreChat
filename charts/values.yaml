@@ -78,7 +78,7 @@ pods:
           OPENID_REQUIRED_ROLE_TOKEN_KIND: 'id'
           OPENID_REUSE_TOKENS: 'true'
           OPENID_USE_END_SESSION_ENDPOINT: 'true'
-          OPENID_BUTTON_LABEL: 'Login with SSO'
+          OPENID_BUTTON_LABEL: 'Continue with SSO'
           OPENID_IMAGE_URL: '/assets/favicon.svg'
           MODEL_PRICING_MIN_MULTIPLIER: '0.1'
           MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT: '0.1'

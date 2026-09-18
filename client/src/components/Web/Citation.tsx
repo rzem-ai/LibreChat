@@ -1,4 +1,5 @@
 import { memo, useState, useContext, useCallback } from 'react';
+import { normalizeServerName } from 'librechat-data-provider';
 import { FileText, Folder, TriangleAlert } from 'lucide-react';
 import type { ReactNode, MouseEvent } from 'react';
 import type { SourceData } from '~/components/Web/SourceHovercard';
@@ -6,7 +7,8 @@ import type { CitationProps } from './types';
 import { SourceHovercard, TooltipContent, getCleanDomain } from '~/components/Web/SourceHovercard';
 import { CitationContext, useCitation, useCompositeCitations, useHighlightState } from './Context';
 import FilePreviewDialog from '~/components/Chat/Messages/Content/FilePreviewDialog';
-import { useMCPServerTitleMap, useLocalize } from '~/hooks';
+import { useMCPServerMaps, useLocalize } from '~/hooks';
+import { cn } from '~/utils';
 
 interface FileCitationMetadata {
   fileBytes?: number;
@@ -41,9 +43,14 @@ function isHttpLink(link?: string): link is string {
   return typeof link === 'string' && (link.startsWith('http://') || link.startsWith('https://'));
 }
 
-/** Deloitte Custom Change: configured display name for an MCP citation's server, if one is set. */
+/**
+ * Deloitte Custom Change: configured display name for an MCP citation's server, if
+ * one is set. `mcpServerTitles` is keyed by normalized server name (same contract as
+ * `mcpIconMap`), so the lookup key must be normalized too — otherwise a server name
+ * with special characters would resolve its icon but not its title.
+ */
 function getMCPServerLabel(mcpServerTitles: Map<string, string>, serverName?: string) {
-  return serverName ? mcpServerTitles.get(serverName) : undefined;
+  return serverName ? mcpServerTitles.get(normalizeServerName(serverName)) : undefined;
 }
 
 /**
@@ -58,13 +65,55 @@ function getMCPSubtitle(mcpServerTitles: Map<string, string>, serverName?: strin
   );
 }
 
-/** Deloitte Custom Change: chip icon — a folder for file_search citations, a document for all MCP citations. */
-function getChipIcon(isFileType: boolean, isMCPType: boolean) {
+/**
+ * Deloitte Custom Change: MCP citation icon — the server's configured logo when
+ * one exists, falling back to a generic document icon otherwise. Shared by chips
+ * (size-3.5) and tooltip headers (size-4).
+ */
+function MCPIcon({
+  mcpIconMap,
+  serverName,
+  className,
+}: {
+  mcpIconMap: Map<string, string>;
+  serverName: string | undefined;
+  className: string;
+}) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const iconPath = serverName ? mcpIconMap.get(normalizeServerName(serverName)) : undefined;
+  if (!iconPath || failedSrc === iconPath) {
+    return <FileText className={className} aria-hidden="true" />;
+  }
+  return (
+    <img
+      src={iconPath}
+      alt=""
+      aria-hidden="true"
+      className={cn(className, 'object-contain')}
+      onError={() => setFailedSrc(iconPath)}
+    />
+  );
+}
+
+/** Deloitte Custom Change: chip icon — a folder for file_search citations, an MCP server logo (or fallback) for MCP citations. */
+function getChipIcon(
+  isFileType: boolean,
+  isMCPType: boolean,
+  mcpIconMap: Map<string, string>,
+  serverName?: string,
+) {
   if (isFileType) {
     return <Folder className="size-2.5 shrink-0 text-text-secondary" aria-hidden="true" />;
   }
   if (isMCPType) {
-    return <FileText className="size-2.5 shrink-0 text-text-secondary" aria-hidden="true" />;
+    // Deloitte Custom Change: round corners to match Connector logos
+    return (
+      <MCPIcon
+        mcpIconMap={mcpIconMap}
+        serverName={serverName}
+        className="size-3.5 shrink-0 rounded-sm text-text-secondary"
+      />
+    );
   }
   return undefined;
 }
@@ -143,7 +192,7 @@ interface CitationChipProps {
  */
 function CitationChip({ source, citationIds }: CitationChipProps) {
   const localize = useLocalize();
-  const mcpServerTitles = useMCPServerTitleMap();
+  const { titleMap: mcpServerTitles, iconMap: mcpIconMap } = useMCPServerMaps();
   const { setHoveredCitationIds } = useContext(CitationContext);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -225,9 +274,16 @@ function CitationChip({ source, citationIds }: CitationChipProps) {
     }
 
     if (isMCPType) {
+      // Deloitte Custom Change: round corners to match Connector logos
       return (
         <TooltipContent
-          icon={<FileText className="size-4 shrink-0 text-text-secondary" aria-hidden="true" />}
+          icon={
+            <MCPIcon
+              mcpIconMap={mcpIconMap}
+              serverName={source.serverName}
+              className="size-4 shrink-0 rounded-md text-text-secondary"
+            />
+          }
           title={source.title || getCitationLabel()}
           href={isHttpLink(source.link) ? source.link : undefined}
           subtitle={getMCPSubtitle(mcpServerTitles, source.serverName, source.link)}
@@ -256,7 +312,7 @@ function CitationChip({ source, citationIds }: CitationChipProps) {
         onMouseLeave={() => setHoveredCitationIds(null)}
         onClick={isFileType ? handleFileClick : undefined}
         isFile={isFileType || isMCPType}
-        chipIcon={getChipIcon(isFileType, isMCPType)}
+        chipIcon={getChipIcon(isFileType, isMCPType, mcpIconMap, source.serverName)}
         filePages={filePages}
         fileRelevance={fileRelevance}
       >
