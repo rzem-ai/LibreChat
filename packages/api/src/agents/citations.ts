@@ -40,6 +40,8 @@ const MCP_SIMILARITY_THRESHOLD = 0.35;
 const MAX_ANCHORS_PER_SENTENCE = 3;
 /** Citation marker character (U+E202) the frontend parses; see client citations.ts. */
 const ANCHOR_MARKER = '\ue202';
+/** Default KX usage-guidelines link, used when `KX_USAGE_GUIDELINES_URL` isn't configured. */
+const DEFAULT_KX_USAGE_GUIDELINES_URL = 'https://resources.deloitte.com/sites/kx/usage-guidelines';
 
 const STOPWORDS = new Set([
   'the',
@@ -536,12 +538,14 @@ export function insertMCPCitations(
 
 /**
  * Deloitte Custom Change
- * Force-appends a citation anchor for every disclaimer-bearing or SharePoint
- * MCP source that wasn't already anchored by the lexical `insertMCPCitations`
- * pass — so those sources are always cited, not only when the model's
- * phrasing happened to overlap them. Scoped to disclaimer-bearing attachments
- * (e.g. KX) and SharePoint sources specifically, rather than every MCP
- * toolset: a source that never surfaces in the answer at all (e.g. an
+ * Force-appends a citation anchor for every disclaimer- or usage-restricted
+ * SharePoint MCP source that wasn't already anchored by the lexical
+ * `insertMCPCitations` pass — so those sources are always cited, not only
+ * when the model's phrasing happened to overlap them. Scoped to a source's
+ * own `usageRestriction` flag (KX quals or DPN profiles specifically — not
+ * every source in an attachment that merely contains one DPN hit) or the
+ * attachment's top-level `disclaimer`, plus SharePoint sources, rather than
+ * every MCP toolset: a source that never surfaces in the answer at all (e.g. an
  * AFR/feed/entity search hit the model chose not to discuss) should not get a
  * citation chip for text the user never reads about. Mirrors the exact
  * turn-advancement rule `useSearchResultsByTurn` depends on: the turn counter
@@ -565,7 +569,8 @@ export function appendGuaranteedMCPCitations(
     }
     const hasDisclaimer = Boolean(payload.disclaimer);
     payload.sources.forEach((source, fileIndex) => {
-      if (!hasDisclaimer && !isSharePointSource(source)) {
+      const requiresAnchor = hasDisclaimer || Boolean(source.usageRestriction);
+      if (!requiresAnchor && !isSharePointSource(source)) {
         return;
       }
       const coord = `${turn}:${fileIndex}`;
@@ -864,7 +869,10 @@ export function insertSharePointCitations(
  * own `usage_guidelines`, typically surfaced for quals-type results), or any
  * attachment flagged `dpnUsageRestriction` (a DPN people-profile result).
  * Always appends to an existing text part — never creates a new one — so
- * downstream content-part filtering can't drop it.
+ * downstream content-part filtering can't drop it. The guidelines link falls
+ * back to `DEFAULT_KX_USAGE_GUIDELINES_URL` when `KX_USAGE_GUIDELINES_URL`
+ * isn't configured, so the default `.env.example` setup never renders
+ * non-clickable placeholder text.
  */
 export function appendMCPDisclaimers(
   contentParts: TMessageContentParts[],
@@ -889,9 +897,7 @@ export function appendMCPDisclaimers(
     return;
   }
 
-  const guidelinesText = mcpUsageGuidelinesUrl
-    ? `[KX usage guidelines](${mcpUsageGuidelinesUrl})`
-    : 'KX usage guidelines';
+  const guidelinesText = `[KX usage guidelines](${mcpUsageGuidelinesUrl || DEFAULT_KX_USAGE_GUIDELINES_URL})`;
   const disclaimer =
     'Please note that this response uses data from the KX Connector. Review the accuracy ' +
     `of all KX citations before reusing them. See the ${guidelinesText} to learn more.`;

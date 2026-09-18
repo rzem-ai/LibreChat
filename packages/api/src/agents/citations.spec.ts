@@ -806,6 +806,52 @@ describe('appendGuaranteedMCPCitations', () => {
     expect(readText(parts[0])).toBe(original);
   });
 
+  // Deloitte Custom Change: a DPN source carries its restriction via its own
+  // `usageRestriction` flag rather than `disclaimer`, so it must still be force-anchored
+  // when unmatched, even with no top-level `usage_guidelines`/disclaimer.
+  it('force-anchors an unmatched DPN source that has no disclaimer', () => {
+    const original = 'The weather today has nothing to do with any of the sources.';
+    const parts = [textPart(original)];
+    const attachments = [
+      mcpAttachment([
+        {
+          toolName: 'dpn_search',
+          serverName: 'dpn',
+          content: 'Jane Doe, Partner',
+          usageRestriction: true,
+        },
+      ]),
+    ];
+    const usedCoords = insertMCPCitations(parts, attachments, 0);
+    appendGuaranteedMCPCitations(parts, attachments, 0, usedCoords);
+    expect(readText(parts[0])).toContain(`${MARKER}turn0mcp0`);
+  });
+
+  // Deloitte Custom Change: `dpnUsageRestriction` on the payload is an aggregate ("some
+  // source in this batch is a DPN profile") and must not force-anchor every other,
+  // unrelated source in the same attachment — only the specific source flagged
+  // `usageRestriction` needs the guarantee.
+  it('only force-anchors the specific usage-restricted source, not every source in the attachment', () => {
+    const original = 'The weather today has nothing to do with any of the sources.';
+    const parts = [textPart(original)];
+    const attachments = [
+      mcpAttachment([
+        {
+          toolName: 'kx_query',
+          serverName: 'kx',
+          content: 'Jane Doe, Partner',
+          usageRestriction: true,
+        },
+        { toolName: 'kx_query', serverName: 'kx', content: 'Unrelated quals result' },
+      ]),
+    ];
+    const usedCoords = insertMCPCitations(parts, attachments, 0);
+    appendGuaranteedMCPCitations(parts, attachments, 0, usedCoords);
+    const text = readText(parts[0]);
+    expect(text).toContain(`${MARKER}turn0mcp0`);
+    expect(text).not.toContain(`${MARKER}turn0mcp1`);
+  });
+
   it('does not duplicate an anchor for a source the lexical pass already matched', () => {
     const parts = [textPart(`${KX_QUAL}.`)];
     const attachments = [
@@ -854,15 +900,18 @@ describe('appendMCPDisclaimers', () => {
     expect(text).not.toContain(DISCLAIMER);
   });
 
-  it('renders "KX usage guidelines" as plain text when no guidelines URL is configured', () => {
+  // Deloitte Custom Change: KX_USAGE_GUIDELINES_URL is empty in .env.example, so a default
+  // setup must still render a clickable link rather than non-clickable placeholder text.
+  it('falls back to the default guidelines URL when none is configured', () => {
     const parts = [textPart('Here is the answer.')];
     appendMCPDisclaimers(parts, [
       mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'x' }], DISCLAIMER),
     ]);
     const text = readText(parts[0]) ?? '';
     expect(text).toContain(STATIC_MESSAGE);
-    expect(text).toContain('See the KX usage guidelines to learn more.');
-    expect(text).not.toContain('](');
+    expect(text).toContain(
+      '[KX usage guidelines](https://resources.deloitte.com/sites/kx/usage-guidelines)',
+    );
   });
 
   it('appends the fixed disclaimer only once across two disclaimer-bearing attachments', () => {
