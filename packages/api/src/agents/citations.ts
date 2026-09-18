@@ -367,9 +367,8 @@ function matchFenceOpen(line: string): FenceOpen | null {
  * as its opener and have at least as many characters, so a shorter nested fence inside an
  * artifact's body (e.g. a 3-backtick example inside its 4-backtick outer fence) doesn't
  * prematurely close the range, and a tilde fence can't be closed by a backtick run or vice
- * versa. When an opening fence has no matching close (a truncated stream), no range is
- * recorded for it — current behavior is left unchanged for that edge case rather than
- * guessing where the fence would have ended.
+ * versa. When an opening fence has no matching close (a truncated stream), the excluded range
+ * extends from the opening fence through the end of `text`.
  *
  * A fence can also sit inside a container — a blockquote or a list item — with the same
  * prefix repeated on every line of the block. Blockquote markers are `>` characters, matched
