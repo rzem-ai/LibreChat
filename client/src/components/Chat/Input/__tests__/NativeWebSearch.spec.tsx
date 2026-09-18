@@ -69,7 +69,7 @@ describe('NativeWebSearch', () => {
     const user = userEvent.setup();
     render(<NativeWebSearch />);
 
-    const pinButton = screen.getByRole('button', { name: 'com_ui_pin' });
+    const pinButton = screen.getByRole('button', { name: 'com_ui_native_web_search com_ui_pin' });
     expect(pinButton).toHaveAttribute('aria-pressed', 'true');
 
     await user.click(pinButton);
