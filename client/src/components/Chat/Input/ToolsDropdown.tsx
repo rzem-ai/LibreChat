@@ -80,7 +80,6 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     skills,
     memory,
     webSearch,
-    nativeWebSearch,
     artifacts,
     fileSearch,
     mcpServerManager,
@@ -95,11 +94,6 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     setIsPinned: setIsSearchPinned,
     authData: webSearchAuthData,
   } = webSearch ?? {};
-  const {
-    isPinned: isNativeWebSearchPinned,
-    setIsPinned: setIsNativeWebSearchPinned,
-    isSupported: isNativeWebSearchSupported,
-  } = nativeWebSearch ?? {};
   const { isPinned: isCodePinned, setIsPinned: setIsCodePinned } = codeInterpreter ?? {};
   const { isPinned: isFileSearchPinned, setIsPinned: setIsFileSearchPinned } = fileSearch ?? {};
   const { isPinned: isArtifactsPinned, setIsPinned: setIsArtifactsPinned } = artifacts ?? {};
@@ -116,11 +110,6 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     const newValue = !webSearch?.toggleState;
     webSearch?.debouncedChange({ value: newValue });
   }, [webSearch]);
-
-  const handleNativeWebSearchToggle = useCallback(() => {
-    const newValue = !nativeWebSearch?.toggleState;
-    nativeWebSearch?.debouncedChange({ value: newValue });
-  }, [nativeWebSearch]);
 
   const handleCodeInterpreterToggle = useCallback(() => {
     const newValue = !codeInterpreter?.toggleState;
@@ -256,40 +245,6 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
               </div>
             </button>
           </div>
-        </div>
-      ),
-    });
-  }
-
-  if (isNativeWebSearchSupported) {
-    dropdownItems.push({
-      onClick: handleNativeWebSearchToggle,
-      hideOnClick: false,
-      render: (props) => (
-        <div {...props} data-testid="tools-menu-native-web-search">
-          <div className="flex items-center gap-2">
-            <Globe className="icon-md" aria-hidden="true" />
-            <span>{localize('com_ui_native_web_search')}</span>
-          </div>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsNativeWebSearchPinned?.(!isNativeWebSearchPinned);
-            }}
-            className={cn(
-              'rounded p-1 transition-all duration-200',
-              'hover:bg-surface-secondary hover:shadow-sm',
-              !isNativeWebSearchPinned && 'text-text-secondary hover:text-text-primary',
-            )}
-            aria-label={
-              isNativeWebSearchPinned ? localize('com_ui_unpin') : localize('com_ui_pin')
-            }
-          >
-            <div className="h-4 w-4">
-              <PinIcon unpin={isNativeWebSearchPinned} />
-            </div>
-          </button>
         </div>
       ),
     });
