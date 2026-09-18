@@ -76,6 +76,12 @@ export default function ModelPanel({
     [provider, endpointsConfig],
   );
 
+  // Deloitte Custom Change: admin allowlist gating the native web_search param
+  const supportedWebSearchModels = useMemo(
+    () => endpointsConfig[provider]?.nativeWebSearch?.supportedModels,
+    [endpointsConfig, provider],
+  );
+
   const parameters = useMemo((): SettingDefinition[] => {
     const customParams = endpointsConfig[provider]?.customParams ?? {};
     const [combinedKey, endpointKey] = getSettingsKeys(endpointType ?? provider, model ?? '');
@@ -90,7 +96,6 @@ export default function ModelPanel({
       model ?? '',
     );
     // Deloitte Custom Change: hide the web_search param on models the admin allowlist excludes
-    const supportedWebSearchModels = endpointsConfig[provider]?.nativeWebSearch?.supportedModels;
     return modelAwareParams
       .filter(
         (param) =>
@@ -98,7 +103,17 @@ export default function ModelPanel({
           modelSupportsNativeWebSearch(model ?? '', supportedWebSearchModels),
       )
       .map((param) => (overriddenParamsMap[param.key] as SettingDefinition) ?? param);
-  }, [endpointType, endpointsConfig, model, provider]);
+  }, [endpointType, endpointsConfig, model, provider, supportedWebSearchModels]);
+
+  /** Deloitte Custom Change: a hidden control can't be unchecked, so force-clear a stale
+   *  `web_search: true` left over from a model switch — otherwise every run of this agent
+   *  fails against the backend allowlist enforcement with no way to fix it from the UI. */
+  useEffect(() => {
+    const stillSupported = modelSupportsNativeWebSearch(model ?? '', supportedWebSearchModels);
+    if (modelParameters?.web_search && !stillSupported) {
+      setValue('model_parameters.web_search', false);
+    }
+  }, [model, supportedWebSearchModels, modelParameters?.web_search, setValue]);
 
   const setOption = (optionKey: keyof t.AgentModelParameters) => (value: t.AgentParameterValue) => {
     setValue(`model_parameters.${optionKey}`, value);

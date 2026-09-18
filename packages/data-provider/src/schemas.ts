@@ -1534,6 +1534,8 @@ export const compactAgentsBaseSchema = tConversationSchema.pick({
   agent_id: true,
   instructions: true,
   additional_instructions: true,
+  // Deloitte Custom Change: preserve the native web-search override instead of stripping it
+  web_search: true,
 });
 
 export const compactAgentsSchema = compactAgentsBaseSchema
