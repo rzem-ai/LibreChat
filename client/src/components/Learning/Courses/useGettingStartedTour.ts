@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import '../driver-theme.css';
-import { useShowMarketplace } from '~/hooks';
 import { isUnavailableElement } from '~/utils/elements';
+import { useShowMarketplace } from '~/hooks';
 
 /**
  * Builds the Driver.js Getting Started tour over the default chat interface.
@@ -64,6 +64,19 @@ export default function useGettingStartedTour(onComplete?: () => void) {
       try {
         const targets = document.querySelectorAll<HTMLElement>(selector);
         return Array.from(targets).some((target) => !isUnavailableElement(target));
+      } catch {
+        return false;
+      }
+    };
+    // Checks only that a matching element exists in the DOM, regardless of
+    // disabled state. Used by the step filter so steps like Send — whose button
+    // is deliberately disabled on an empty textarea but whose popover explains
+    // exactly that — are not silently dropped before Driver.js receives them.
+    // hasAvailableTarget (above) is kept for canShowAgentSelectionSteps, which
+    // genuinely requires the target to be actionable, not just present.
+    const hasElement = (selector: string) => {
+      try {
+        return document.querySelector(selector) !== null;
       } catch {
         return false;
       }
@@ -247,7 +260,8 @@ export default function useGettingStartedTour(onComplete?: () => void) {
         element: '#nav-panel-files',
         popover: {
           title: 'Files',
-          description: 'See every file you have uploaded across all your conversations in one place.',
+          description:
+            'See every file you have uploaded across all your conversations in one place.',
           side: 'right',
         },
       },
@@ -306,7 +320,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           side: 'top',
         },
       },
-    ].filter((step) => hasAvailableTarget(step.element));
+    ].filter((step) => hasElement(step.element));
     const tourDriver = driver({
       showProgress: true,
       allowClose: true,

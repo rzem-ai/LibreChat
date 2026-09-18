@@ -154,9 +154,12 @@ describe('useGettingStartedTour', () => {
     result.current.startTour();
 
     expect(capturedConfig?.steps).toHaveLength(26);
-    expect(
-      capturedConfig?.steps?.slice(21, 25).map((step) => step.popover.title),
-    ).toEqual(['Connectors', 'Agent Marketplace', 'Switch Back to a Model', 'Learning Hub']);
+    expect(capturedConfig?.steps?.slice(21, 25).map((step) => step.popover.title)).toEqual([
+      'Connectors',
+      'Agent Marketplace',
+      'Switch Back to a Model',
+      'Learning Hub',
+    ]);
     expect(capturedConfig?.steps?.[23]).toEqual({
       element: '#model-selector-button',
       popover: {
@@ -216,5 +219,28 @@ describe('useGettingStartedTour', () => {
           step.popover.title === 'Switch Back to a Model',
       ),
     ).toBe(false);
+  });
+
+  it('retains the Send step even when the send button is disabled', () => {
+    // On a blank /c/new conversation the send button is always disabled — the
+    // step explains this to the user ("lights up once you have typed something"),
+    // so it must not be filtered out just because the element is currently disabled.
+    const sendButton = document.querySelector('[data-testid="send-button"]') as HTMLButtonElement;
+    sendButton.disabled = true;
+
+    const { result } = renderHook(() => useGettingStartedTour());
+    result.current.startTour();
+
+    expect(capturedConfig?.steps?.some((step) => step.popover.title === 'Send')).toBe(true);
+  });
+
+  it('omits a step when its target element is absent from the DOM entirely', () => {
+    // Removing the send button (rather than disabling it) should still drop the step.
+    document.querySelector('[data-testid="send-button"]')?.remove();
+
+    const { result } = renderHook(() => useGettingStartedTour());
+    result.current.startTour();
+
+    expect(capturedConfig?.steps?.some((step) => step.popover.title === 'Send')).toBe(false);
   });
 });
