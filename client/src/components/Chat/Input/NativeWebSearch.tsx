@@ -36,13 +36,14 @@ function NativeWebSearch() {
         <button
           type="button"
           onClick={() => setIsPinned(!isPinned)}
+          aria-pressed={isPinned}
           className={cn(
             'flex size-9 items-center justify-center rounded-full border border-border-medium bg-transparent p-2 shadow-sm transition-all',
             'hover:bg-surface-hover hover:shadow-md active:shadow-inner',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-opacity-50',
             !isPinned && 'text-text-secondary hover:text-text-primary',
           )}
-          aria-label={isPinned ? localize('com_ui_unpin') : localize('com_ui_pin')}
+          aria-label={localize('com_ui_pin')}
         >
           <PinIcon unpin={isPinned} />
         </button>
