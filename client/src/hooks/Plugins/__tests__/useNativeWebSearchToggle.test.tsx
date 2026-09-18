@@ -28,11 +28,18 @@ jest.mock('~/hooks/Conversations/useSetIndexOptions', () => ({
   default: () => ({ setOption: mockSetOption }),
 }));
 
+const OPENAI_ENDPOINT = 'openAI' as TConversation['endpoint'];
+const AGENTS_ENDPOINT = 'agents' as TConversation['endpoint'];
+
 describe('useNativeWebSearchToggle', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
-    mockConversation = { endpoint: 'openAI', model: 'gpt-56-luna', web_search: false };
+    mockConversation = {
+      endpoint: OPENAI_ENDPOINT,
+      model: 'gpt-56-luna',
+      web_search: false,
+    };
     mockEndpointsConfig = undefined;
     mockAgentData = undefined;
     mockAgentsMap = undefined;
@@ -61,14 +68,18 @@ describe('useNativeWebSearchToggle', () => {
       const { result, rerender } = renderHook(() => useNativeWebSearchToggle());
       expect(result.current.isSupported).toBe(true);
 
-      mockConversation = { endpoint: 'openAI', model: 'gpt-41-nano', web_search: false };
+      mockConversation = {
+        endpoint: OPENAI_ENDPOINT,
+        model: 'gpt-41-nano',
+        web_search: false,
+      };
       rerender();
       expect(result.current.isSupported).toBe(false);
     });
 
     it('gates on the agent provider and model for the agents endpoint', () => {
       mockConversation = {
-        endpoint: 'agents',
+        endpoint: AGENTS_ENDPOINT,
         agent_id: 'agent-1',
         model: 'gpt-56-luna',
         web_search: false,
@@ -96,7 +107,11 @@ describe('useNativeWebSearchToggle', () => {
 
   describe('stale flag clearing', () => {
     it('clears a flag already set on an unsupported model at mount', async () => {
-      mockConversation = { endpoint: 'openAI', model: 'gpt-41-nano', web_search: true };
+      mockConversation = {
+        endpoint: OPENAI_ENDPOINT,
+        model: 'gpt-41-nano',
+        web_search: true,
+      };
       mockEndpointsConfig = {
         openAI: { nativeWebSearch: { supportedModels: ['gpt-56-luna'] } },
       } as unknown as TEndpointsConfig;
@@ -107,7 +122,11 @@ describe('useNativeWebSearchToggle', () => {
     });
 
     it('leaves the flag alone while the model is supported', () => {
-      mockConversation = { endpoint: 'openAI', model: 'gpt-56-luna', web_search: true };
+      mockConversation = {
+        endpoint: OPENAI_ENDPOINT,
+        model: 'gpt-56-luna',
+        web_search: true,
+      };
       mockEndpointsConfig = {
         openAI: { nativeWebSearch: { supportedModels: ['gpt-56-luna'] } },
       } as unknown as TEndpointsConfig;
