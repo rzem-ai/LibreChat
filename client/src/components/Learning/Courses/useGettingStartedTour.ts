@@ -7,6 +7,17 @@ import { useShowMarketplace } from '~/hooks';
 import { mainTextareaId } from '~/common';
 
 /**
+ * Index of the first step that requires the sidebar to be in its EXPANDED
+ * state (panel body visible). Steps 0–10 target chat-area elements; from
+ * step 11 (Conversations) onward the sidebar nav/content must be accessible.
+ * Mobile: the sidebar is collapsed before the tour starts so chat steps are
+ * unobstructed; it is re-expanded just before this index is reached.
+ * Desktop: the sidebar panel body is hidden when collapsed, so we also
+ * expand before this step regardless of the user's initial state.
+ */
+const FIRST_NAV_STEP_INDEX = 11;
+
+/**
  * Builds the Driver.js Getting Started tour over the default chat interface.
  * Driver.js owns the spotlight overlay, popover, and next/prev/progress
  * controls — no custom tour engine needed. `skipMissingElement` + `waitForElement`
@@ -41,7 +52,16 @@ import { mainTextareaId } from '~/common';
  *   25 Learning Hub
  *   26 Account Menu
  */
-export default function useGettingStartedTour(onComplete?: () => void) {
+interface TourOptions {
+  /** Called when the tour ends (completed or cancelled). The caller uses this
+   *  to restore the sidebar to its pre-tour expanded/collapsed state. */
+  onEnd?: () => void;
+  /** Setter for sidebar expanded state — used to expand before nav steps. */
+  setSidebarExpanded?: (expanded: boolean) => void;
+}
+
+export default function useGettingStartedTour(onComplete?: () => void, options: TourOptions = {}) {
+  const { onEnd, setSidebarExpanded } = options;
   const showMarketplace = useShowMarketplace();
   // Retain the active Driver.js instance so it can be destroyed on unmount.
   // Driver.js manipulates the DOM directly (body-level overlay + popover), so
@@ -65,19 +85,6 @@ export default function useGettingStartedTour(onComplete?: () => void) {
       try {
         const targets = document.querySelectorAll<HTMLElement>(selector);
         return Array.from(targets).some((target) => !isUnavailableElement(target));
-      } catch {
-        return false;
-      }
-    };
-    // Checks only that a matching element exists in the DOM, regardless of
-    // disabled state. Used by the step filter so steps like Send — whose button
-    // is deliberately disabled on an empty textarea but whose popover explains
-    // exactly that — are not silently dropped before Driver.js receives them.
-    // hasAvailableTarget (above) is kept for canShowAgentSelectionSteps, which
-    // genuinely requires the target to be actionable, not just present.
-    const hasElement = (selector: string) => {
-      try {
-        return document.querySelector(selector) !== null;
       } catch {
         return false;
       }
@@ -321,7 +328,15 @@ export default function useGettingStartedTour(onComplete?: () => void) {
           side: 'top',
         },
       },
-    ].filter((step) => hasElement(step.element));
+    ];
+    // Do NOT eagerly filter steps here. Driver.js's own skipMissingElement +
+    // waitForElement handles two cases correctly at runtime as each step is
+    // reached: (a) genuinely absent elements (e.g. feature-flagged buttons not
+    // rendered) are skipped automatically; (b) elements that are present but
+    // not yet visible due to slow route/render are waited for up to
+    // waitForElement ms. Filtering synchronously at construction time with a
+    // fixed delay (200-300ms) causes steps to be permanently removed before
+    // the UI has had time to render them, which waitForElement cannot recover.
     const tourDriver = driver({
       showProgress: true,
       allowClose: true,
@@ -329,6 +344,18 @@ export default function useGettingStartedTour(onComplete?: () => void) {
       waitForElement: 600,
       stagePadding: 6,
       stageRadius: 8,
+      onHighlightStarted: (_element, step, opts) => {
+        // Expand the sidebar exactly when the tour transitions from chat-area
+        // steps (0–10) to sidebar-nav steps (11+). This ensures:
+        // - Mobile: sidebar was collapsed before step 0 so chat steps are
+        //   unobstructed; re-expanded here so nav elements are visible.
+        // - Desktop: sidebar panel body is opacity-0/pointer-events-none when
+        //   collapsed; expand so #nav-search-input, #nav-projects-section,
+        //   and #nav-user are accessible/visible during their steps.
+        if (opts.state.activeIndex === FIRST_NAV_STEP_INDEX && setSidebarExpanded) {
+          setSidebarExpanded(true);
+        }
+      },
       onNextClick: () => {
         if (tourDriver.isLastStep()) {
           completedFromLastStepNext = true;
@@ -342,6 +369,8 @@ export default function useGettingStartedTour(onComplete?: () => void) {
         if (completedFromLastStepNext) {
           onComplete?.();
         }
+        // Notify the caller so it can restore the pre-tour sidebar state.
+        onEnd?.();
       },
       steps,
     });

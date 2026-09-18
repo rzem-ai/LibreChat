@@ -566,7 +566,9 @@ export const useTutorialStateQuery = (
     {
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
-      refetchOnMount: false,
+      // refetchOnMount: true (default) so the same user always gets a fresh
+      // read after sign-out/sign-in or changes made from another device/tab,
+      // regardless of which auth path was taken (OAuth, SSO, token refresh).
       ...config,
       // userId guard must come after ...config so it cannot be overridden by
       // a caller-supplied enabled condition that doesn't account for userId.

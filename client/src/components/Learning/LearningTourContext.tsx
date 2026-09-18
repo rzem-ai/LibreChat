@@ -7,13 +7,13 @@ import {
   useRef,
   useState,
 } from 'react';
-import { useSetRecoilState } from 'recoil';
+import { useRecoilState } from 'recoil';
 import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import useGettingStartedTour from './Courses/useGettingStartedTour';
 import useTutorialPrompt from '~/hooks/Learning/useTutorialPrompt';
 import { useActivePanel } from '~/Providers';
 import store from '~/store';
-import useGettingStartedTour from './Courses/useGettingStartedTour';
 
 const GETTING_STARTED_COURSE_ID = 'getting-started-guide';
 const DESKTOP_START_DELAY_MS = 200;
@@ -39,11 +39,22 @@ const LearningTourContext = createContext<LearningTourContextType | undefined>(u
 export function LearningTourProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { setActive } = useActivePanel();
-  const setSidebarExpanded = useSetRecoilState(store.sidebarExpanded);
+  const [sidebarExpanded, setSidebarExpanded] = useRecoilState(store.sidebarExpanded);
   const [completedCourseId, setCompletedCourseId] = useState<string | null>(null);
   const { markPromptSeen } = useTutorialPrompt();
 
-  const { startTour } = useGettingStartedTour(() => setCompletedCourseId(GETTING_STARTED_COURSE_ID));
+  // Capture the user's sidebar state before the tour starts so we can restore
+  // it when the tour ends or is cancelled.
+  const preTourSidebarExpandedRef = useRef<boolean>(false);
+
+  const { startTour } = useGettingStartedTour(
+    () => setCompletedCourseId(GETTING_STARTED_COURSE_ID),
+    {
+      // Restore sidebar to its pre-tour state when the tour ends/is cancelled.
+      onEnd: () => setSidebarExpanded(preTourSidebarExpandedRef.current),
+      setSidebarExpanded,
+    },
+  );
 
   // Track the pending delayed-start timeout so it can be cancelled on unmount.
   // Without this, a fast logout within the delay window would fire startTour()
@@ -61,15 +72,27 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
 
   const startGettingStartedTour = useCallback(() => {
     markPromptSeen();
+    // Capture the user's current sidebar state so it can be restored when the
+    // tour finishes or is cancelled — preTourSidebarExpanded is read by
+    // useGettingStartedTour's onDestroyStarted callback via the ref.
+    preTourSidebarExpandedRef.current = sidebarExpanded;
+
     // The tour highlights elements that only exist on the main chat route
     // (textarea, send button, header buttons) and inside the "conversations"
     // sidebar panel (search, projects) — switch to both before driving.
     navigate('/c/new');
     setActive('conversations');
+
     const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
     if (isSmallScreen) {
+      // On mobile, collapse the sidebar so chat-area steps (0–10) are
+      // unobstructed by the sidebar overlay. The tour will re-expand it
+      // via onHighlightStarted when step 11 (Conversations) is reached.
       setSidebarExpanded(false);
     }
+    // On desktop, leave the sidebar in whatever state the user had it — the
+    // tour's onHighlightStarted will ensure it's expanded before step 11.
+
     startTimeoutRef.current = window.setTimeout(
       () => {
         startTimeoutRef.current = null;
@@ -77,7 +100,7 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
       },
       isSmallScreen ? MOBILE_START_DELAY_MS : DESKTOP_START_DELAY_MS,
     );
-  }, [markPromptSeen, navigate, setActive, setSidebarExpanded, startTour]);
+  }, [markPromptSeen, navigate, setActive, setSidebarExpanded, sidebarExpanded, startTour]);
 
   const dismissCompletion = useCallback(() => setCompletedCourseId(null), []);
 
