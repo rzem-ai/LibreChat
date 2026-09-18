@@ -326,6 +326,7 @@ const AttachFileMenu = ({
           </div>
         </Ariakit.MenuButton>
       }
+      id="attach-file-menu-button"
       description={uploadFileTooltip}
       disabled={isUploadDisabled}
     />

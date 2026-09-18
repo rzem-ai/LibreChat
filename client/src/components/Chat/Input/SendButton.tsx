@@ -25,7 +25,6 @@ const SubmitButton = React.memo(
             className={cn(
               'rounded-full bg-primary p-1.5 text-primary-foreground outline-offset-4 transition-all duration-200 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary',
             )}
-            data-testid="send-button"
             type="submit"
           >
             <span className="" data-state="closed">

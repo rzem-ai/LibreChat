@@ -4,6 +4,7 @@ import 'driver.js/dist/driver.css';
 import '../driver-theme.css';
 import { isUnavailableElement } from '~/utils/elements';
 import { useShowMarketplace } from '~/hooks';
+import { mainTextareaId } from '~/common';
 
 /**
  * Builds the Driver.js Getting Started tour over the default chat interface.
@@ -114,7 +115,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
         },
       },
       {
-        element: "[data-testid='text-input']",
+        element: `#${mainTextareaId}`,
         popover: {
           title: 'Message Box',
           description:
@@ -169,7 +170,7 @@ export default function useGettingStartedTour(onComplete?: () => void) {
         },
       },
       {
-        element: "[data-testid='send-button']",
+        element: '#send-button',
         popover: {
           title: 'Send',
           description: 'Sends your message. This button lights up once you have typed something.',

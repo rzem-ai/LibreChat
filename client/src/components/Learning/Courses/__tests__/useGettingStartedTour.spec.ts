@@ -58,13 +58,13 @@ describe('useGettingStartedTour', () => {
   beforeEach(() => {
     appendAnchor('button', { id: 'new-chat-button' });
     appendAnchor('button', { id: 'model-selector-button' });
-    appendAnchor('div', { testId: 'text-input' });
+    appendAnchor('div', { id: 'prompt-textarea' });
     appendAnchor('button', { id: 'attach-file-menu-button' });
     appendAnchor('button', { id: 'toolbar-toggle-code-interpreter' });
     appendAnchor('button', { id: 'toolbar-toggle-skills' });
     appendAnchor('button', { id: 'toolbar-toggle-artifacts' });
     appendAnchor('button', { id: 'toolbar-toggle-mcp-servers' });
-    appendAnchor('button', { testId: 'send-button' });
+    appendAnchor('button', { id: 'send-button' });
     appendAnchor('button', { id: 'close-sidebar-button' });
     appendAnchor('button', { id: 'nav-panel-conversations', ariaPressed: 'true' });
     appendAnchor('input', { id: 'nav-search-input' });
@@ -225,7 +225,7 @@ describe('useGettingStartedTour', () => {
     // On a blank /c/new conversation the send button is always disabled — the
     // step explains this to the user ("lights up once you have typed something"),
     // so it must not be filtered out just because the element is currently disabled.
-    const sendButton = document.querySelector('[data-testid="send-button"]') as HTMLButtonElement;
+    const sendButton = document.getElementById('send-button') as HTMLButtonElement;
     sendButton.disabled = true;
 
     const { result } = renderHook(() => useGettingStartedTour());
@@ -236,7 +236,7 @@ describe('useGettingStartedTour', () => {
 
   it('omits a step when its target element is absent from the DOM entirely', () => {
     // Removing the send button (rather than disabling it) should still drop the step.
-    document.querySelector('[data-testid="send-button"]')?.remove();
+    document.getElementById('send-button')?.remove();
 
     const { result } = renderHook(() => useGettingStartedTour());
     result.current.startTour();

@@ -110,6 +110,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
       <Menu.MenuButton
         ref={accountSettingsButtonRef}
         id="nav-user"
+        data-testid="nav-user"
         aria-label={localize('com_nav_account_settings')}
         className={
           collapsed
