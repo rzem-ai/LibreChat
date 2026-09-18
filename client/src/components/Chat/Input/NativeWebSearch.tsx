@@ -36,7 +36,6 @@ function NativeWebSearch() {
         <button
           type="button"
           onClick={() => setIsPinned(!isPinned)}
-          aria-pressed={isPinned}
           className={cn(
             'flex size-9 items-center justify-center rounded-full border border-border-medium bg-transparent p-2 shadow-sm transition-all',
             'hover:bg-surface-hover hover:shadow-md active:shadow-inner',
