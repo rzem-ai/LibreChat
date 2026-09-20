@@ -22,6 +22,16 @@ jest.mock('~/utils/axios', () => {
   };
 });
 
+const mockGetProxyUrlForUrl = jest.fn(() => undefined);
+const mockApplyAxiosProxyConfig = jest.fn((config: Record<string, unknown>) => config);
+
+jest.mock('~/utils/proxy', () => {
+  return {
+    getProxyUrlForUrl: (...args: unknown[]) => mockGetProxyUrlForUrl(...args),
+    applyAxiosProxyConfig: (...args: unknown[]) => mockApplyAxiosProxyConfig(...args),
+  };
+});
+
 const mockIsMCPDomainAllowed = jest.fn(async () => true);
 const mockIsAddressAllowed = jest.fn(() => false);
 const mockCreateSSRFSafeAgents = jest.fn(() => ({ httpAgent: undefined, httpsAgent: undefined }));
@@ -62,11 +72,13 @@ describe('fetchAllowedCodeFileStream', () => {
       (protocol: string, port: string) => port || (protocol === 'https:' ? '443' : '80'),
     );
     mockIsPrivateIP.mockImplementation((hostname: string) => hostname === '169.254.169.254');
+    mockGetProxyUrlForUrl.mockReturnValue(undefined);
+    mockApplyAxiosProxyConfig.mockImplementation((config: Record<string, unknown>) => config);
     mockAxiosInstance.defaults.proxy = false;
   });
 
   it('passes the effective port through to the allowedAddresses exemption check', async () => {
-    mockAxiosInstance.defaults.proxy = { host: 'corp-proxy.internal', port: 8080 };
+    mockGetProxyUrlForUrl.mockReturnValue('http://corp-proxy.internal:8080');
     mockIsAddressAllowed.mockReturnValue(true);
     mockGet.mockResolvedValue({ status: 200, data: 'stream' });
 
@@ -82,7 +94,7 @@ describe('fetchAllowedCodeFileStream', () => {
   });
 
   it('rejects a proxied hostname when allowedAddresses does not match the effective port', async () => {
-    mockAxiosInstance.defaults.proxy = { host: 'corp-proxy.internal', port: 8080 };
+    mockGetProxyUrlForUrl.mockReturnValue('http://corp-proxy.internal:8080');
     mockIsAddressAllowed.mockReturnValue(false);
 
     await expect(
@@ -94,7 +106,7 @@ describe('fetchAllowedCodeFileStream', () => {
   });
 
   it('allows a public IPv6-literal host under a configured proxy without treating it as a hostname', async () => {
-    mockAxiosInstance.defaults.proxy = { host: 'corp-proxy.internal', port: 8080 };
+    mockGetProxyUrlForUrl.mockReturnValue('http://corp-proxy.internal:8080');
     mockGet.mockResolvedValue({ status: 200, data: 'stream' });
 
     await expect(
@@ -104,7 +116,7 @@ describe('fetchAllowedCodeFileStream', () => {
   });
 
   it('rejects a private IP literal under a configured proxy unless explicitly allowed', async () => {
-    mockAxiosInstance.defaults.proxy = { host: 'corp-proxy.internal', port: 8080 };
+    mockGetProxyUrlForUrl.mockReturnValue('http://corp-proxy.internal:8080');
 
     await expect(
       fetchAllowedCodeFileStream('https://169.254.169.254/latest/meta-data', null, null),
@@ -113,9 +125,14 @@ describe('fetchAllowedCodeFileStream', () => {
     expect(mockGet).not.toHaveBeenCalled();
   });
 
-  it('does not build connect-time SSRF agents when a proxy is configured', async () => {
-    mockAxiosInstance.defaults.proxy = { host: 'corp-proxy.internal', port: 8080 };
+  it('does not build connect-time SSRF agents when proxy env resolution routes the request through a proxy', async () => {
+    mockGetProxyUrlForUrl.mockReturnValue('http://corp-proxy.internal:8080');
     mockIsAddressAllowed.mockReturnValue(true);
+    mockApplyAxiosProxyConfig.mockImplementation((config: Record<string, unknown>) => ({
+      ...config,
+      proxy: false,
+      httpsAgent: 'proxy-agent',
+    }));
     mockGet.mockResolvedValue({ status: 200, data: 'stream' });
 
     await fetchAllowedCodeFileStream('https://internal.example/report.pdf', null, [
@@ -125,7 +142,7 @@ describe('fetchAllowedCodeFileStream', () => {
     expect(mockCreateSSRFSafeAgents).not.toHaveBeenCalled();
     expect(mockGet).toHaveBeenCalledWith(
       expect.any(String),
-      expect.objectContaining({ httpAgent: undefined, httpsAgent: undefined }),
+      expect.objectContaining({ httpAgent: undefined, httpsAgent: 'proxy-agent', proxy: false }),
     );
   });
 
@@ -185,6 +202,27 @@ describe('fetchAllowedCodeFileStream', () => {
     ]);
 
     expect(mockCreateSSRFSafeAgents).toHaveBeenNthCalledWith(2, ['internal.example:443']);
+  });
+
+  it('allows a same-origin redirect on an allowlisted host even when DNS resolves private', async () => {
+    mockResolveHostnameSSRF.mockResolvedValue(true);
+    mockGet
+      .mockResolvedValueOnce({
+        status: 302,
+        headers: { location: 'https://internal.example/renamed.pdf' },
+        data: { destroy: jest.fn() },
+      })
+      .mockResolvedValueOnce({ status: 200, data: 'stream' });
+
+    await expect(
+      fetchAllowedCodeFileStream(
+        'https://internal.example/report.pdf',
+        ['https://internal.example'],
+        null,
+      ),
+    ).resolves.toEqual({ status: 200, data: 'stream' });
+
+    expect(mockResolveHostnameSSRF).not.toHaveBeenCalled();
   });
 
   it('rejects a redirect to a private/reserved target even when allowlist mode is active', async () => {

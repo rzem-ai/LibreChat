@@ -10,6 +10,7 @@ import {
   resolveHostnameSSRF,
 } from '~/auth';
 import { createAxiosInstance } from '~/utils/axios';
+import { applyAxiosProxyConfig, getProxyUrlForUrl } from '~/utils/proxy';
 
 const codeFileDownloadAxios: AxiosInstance = createAxiosInstance();
 const CODE_FILE_DOWNLOAD_TIMEOUT_MS = 120_000;
@@ -49,24 +50,20 @@ function redactUrlForLog(url: string): string {
  * download host could pass `isMCPDomainAllowed` and still get its connection
  * blocked unless separately listed in `allowedAddresses` too.
  *
- * `proxy` is pinned to whatever `codeFileDownloadAxios` was explicitly
- * configured with (`process.env.proxy` via `createAxiosInstance`), or `false`
- * otherwise: axios silently auto-detects `HTTP_PROXY`/`HTTPS_PROXY`-style env
- * vars when `proxy` is left unset, and in that case the *proxy* — not our
- * SSRF-safe agents — would resolve `currentUrl`'s hostname, bypassing the
- * connect-time recheck entirely. Deployments that deliberately configure
- * `process.env.proxy` for egress still get routed through it, but only for
- * hosts that don't need per-request DNS trust: when `useSSRFProtection` is on,
- * a configured proxy resolves the target hostname itself, so our connect-time
- * agents (which only see the proxy's own address) can't catch a private
- * address the proxy's resolver returns (DNS rebinding). `assertHopSafeForProxy`
- * closes that gap the same way `assertProxiedRequestTargetAllowed` does for
- * MCP server connections in `connection.ts`: a proxied hop under SSRF
- * protection must target an IP literal (checked for privateness like any
- * other target) or an admin-exempted `allowedAddresses` entry — an admin who
- * wants to reach a named host (e.g. their tenant's SharePoint domain) through
- * the proxy should add it to `allowedDomains`, which turns `useSSRFProtection`
- * off for this call the same way it does for every other MCP connection path.
+ * Proxy routing is resolved per hop through the shared proxy helpers so
+ * `PROXY`/`proxy` and standard `HTTP_PROXY`/`HTTPS_PROXY`/`NO_PROXY`
+ * environment settings all behave the same way they do elsewhere in the app.
+ * When SSRF protection is on and a proxy would be used, the proxy — not our
+ * connect-time agents — resolves `currentUrl`'s hostname, so those agents
+ * cannot catch a private address the proxy's resolver returns (DNS rebinding).
+ * `assertHopSafeForProxy` closes that gap the same way
+ * `assertProxiedRequestTargetAllowed` does for MCP server connections in
+ * `connection.ts`: a proxied hop under SSRF protection must target an IP
+ * literal (checked for privateness like any other target) or an
+ * admin-exempted `allowedAddresses` entry — an admin who wants to reach a
+ * named host (e.g. their tenant's SharePoint domain) through the proxy should
+ * add it to `allowedDomains`, which turns `useSSRFProtection` off for this
+ * call the same way it does for every other MCP connection path.
  */
 function assertHopSafeForProxy(
   hostname: string,
@@ -113,7 +110,6 @@ export async function fetchAllowedCodeFileStream(
    * below so the preflight check and the connect-time enforcement never
    * disagree about whether this is an admin-vetted allowlist. */
   const useSSRFProtection = !Array.isArray(allowedDomains) || allowedDomains.length === 0;
-  const proxy = codeFileDownloadAxios.defaults.proxy || false;
   /** Shared across every hop (rather than reset per hop) so a chain of slow
    * redirects can't run the timeout up to `CODE_FILE_MAX_REDIRECTS *
    * CODE_FILE_DOWNLOAD_TIMEOUT_MS` before failing. */
@@ -129,13 +125,15 @@ export async function fetchAllowedCodeFileStream(
   let currentUrl = url;
   for (let hop = 0; hop <= CODE_FILE_MAX_REDIRECTS; hop++) {
     const parsedUrl = new URL(currentUrl);
+    const isCrossOriginRedirect = hop > 0 && parsedUrl.origin !== originalOrigin;
+    const proxyConfigured = Boolean(getProxyUrlForUrl(currentUrl));
     if (parsedUrl.protocol !== 'https:') {
       throw new Error(`codeFile download URL must use HTTPS: ${redactUrlForLog(currentUrl)}`);
     }
-    if (hop > 0) {
+    if (isCrossOriginRedirect) {
       await assertRedirectTargetSafe(currentUrl);
     }
-    if (hop > 0 && parsedUrl.origin !== originalOrigin) {
+    if (isCrossOriginRedirect) {
       crossOriginSeen = true;
     }
     const effectiveAllowedAddresses = crossOriginSeen ? null : allowedAddresses;
@@ -149,7 +147,7 @@ export async function fetchAllowedCodeFileStream(
     assertHopSafeForProxy(
       parsedUrl.hostname,
       getEffectivePort(parsedUrl.protocol, parsedUrl.port),
-      proxy !== false,
+      proxyConfigured,
       useSSRFProtection,
       effectiveAllowedAddresses,
     );
@@ -164,7 +162,7 @@ export async function fetchAllowedCodeFileStream(
      * built for the direct-connection path. Rebuilt every hop so a cross-origin
      * redirect's dropped exemption also applies at the connect-time layer. */
     const { httpAgent, httpsAgent } =
-      useSSRFProtection && proxy === false
+      useSSRFProtection && !proxyConfigured
         ? createSSRFSafeAgents(effectiveAllowedAddresses)
         : { httpAgent: undefined, httpsAgent: undefined };
     const remainingMs = deadline - Date.now();
@@ -174,14 +172,18 @@ export async function fetchAllowedCodeFileStream(
     let response: AxiosResponse;
     try {
       response = await codeFileDownloadAxios.get(currentUrl, {
-        responseType: 'stream',
-        timeout: remainingMs,
-        maxRedirects: 0,
-        proxy,
-        httpAgent,
-        httpsAgent,
-        validateStatus: (status: number) =>
-          (status >= 200 && status < 300) || (status >= 300 && status < 400),
+        ...applyAxiosProxyConfig(
+          {
+            responseType: 'stream',
+            timeout: remainingMs,
+            maxRedirects: 0,
+            httpAgent,
+            httpsAgent,
+            validateStatus: (status: number) =>
+              (status >= 200 && status < 300) || (status >= 300 && status < 400),
+          },
+          currentUrl,
+        ),
       });
     } catch (error) {
       (error as { response?: AxiosResponse })?.response?.data?.destroy?.();
