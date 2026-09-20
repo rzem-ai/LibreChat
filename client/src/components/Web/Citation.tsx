@@ -105,11 +105,12 @@ function getChipIcon(
     return <Folder className="size-2.5 shrink-0 text-text-secondary" aria-hidden="true" />;
   }
   if (isMCPType) {
+    // Deloitte Custom Change: round corners to match Connector logos
     return (
       <MCPIcon
         mcpIconMap={mcpIconMap}
         serverName={serverName}
-        className="size-3.5 shrink-0 text-text-secondary"
+        className="size-3.5 shrink-0 rounded-sm text-text-secondary"
       />
     );
   }
@@ -272,13 +273,14 @@ function CitationChip({ source, citationIds }: CitationChipProps) {
     }
 
     if (isMCPType) {
+      // Deloitte Custom Change: round corners to match Connector logos
       return (
         <TooltipContent
           icon={
             <MCPIcon
               mcpIconMap={mcpIconMap}
               serverName={source.serverName}
-              className="size-4 shrink-0 text-text-secondary"
+              className="size-4 shrink-0 rounded-md text-text-secondary"
             />
           }
           title={source.title || getCitationLabel()}
