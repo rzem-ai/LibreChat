@@ -1,6 +1,11 @@
 import { isIP } from 'node:net';
 import type { AxiosInstance, AxiosResponse } from 'axios';
-import { isAddressAllowed, isMCPDomainAllowed, createSSRFSafeAgents, getEffectivePort } from '~/auth';
+import {
+  isAddressAllowed,
+  isMCPDomainAllowed,
+  createSSRFSafeAgents,
+  getEffectivePort,
+} from '~/auth';
 import { createAxiosInstance } from '~/utils/axios';
 
 const codeFileDownloadAxios: AxiosInstance = createAxiosInstance();
@@ -108,12 +113,21 @@ export async function fetchAllowedCodeFileStream(
   let currentUrl = url;
   for (let hop = 0; hop <= CODE_FILE_MAX_REDIRECTS; hop++) {
     const parsedUrl = new URL(currentUrl);
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      throw new Error(
+        `codeFile download URL must use HTTP or HTTPS: ${redactUrlForLog(currentUrl)}`,
+      );
+    }
     if (hop > 0 && parsedUrl.origin !== originalOrigin) {
       crossOriginSeen = true;
     }
     const effectiveAllowedAddresses = crossOriginSeen ? null : allowedAddresses;
-    if (!(await isMCPDomainAllowed({ url: currentUrl }, allowedDomains, effectiveAllowedAddresses))) {
-      throw new Error(`codeFile download URL domain is not allowed: ${redactUrlForLog(currentUrl)}`);
+    if (
+      !(await isMCPDomainAllowed({ url: currentUrl }, allowedDomains, effectiveAllowedAddresses))
+    ) {
+      throw new Error(
+        `codeFile download URL domain is not allowed: ${redactUrlForLog(currentUrl)}`,
+      );
     }
     assertHopSafeForProxy(
       parsedUrl.hostname,
@@ -166,7 +180,13 @@ export async function fetchAllowedCodeFileStream(
         `codeFile download redirected without a Location header: ${redactUrlForLog(currentUrl)}`,
       );
     }
-    currentUrl = new URL(location, currentUrl).toString();
+    const redirectUrl = new URL(location, currentUrl);
+    if (parsedUrl.protocol === 'https:' && redirectUrl.protocol !== 'https:') {
+      throw new Error(
+        `codeFile download cannot redirect from HTTPS to an insecure protocol: ${redactUrlForLog(redirectUrl.toString())}`,
+      );
+    }
+    currentUrl = redirectUrl.toString();
   }
   throw new Error(`Too many redirects while downloading codeFile: ${redactUrlForLog(url)}`);
 }

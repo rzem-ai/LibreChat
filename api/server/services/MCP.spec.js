@@ -2642,7 +2642,7 @@ describe('User parameter passing tests', () => {
       mockIsMCPDomainAllowed.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
       mockCodeFileDownloadGet.mockResolvedValue({
         status: 302,
-        headers: { location: 'http://169.254.169.254/latest/meta-data/' },
+        headers: { location: 'https://169.254.169.254/latest/meta-data/' },
         data: undefined,
       });
 
@@ -2826,7 +2826,9 @@ describe('User parameter passing tests', () => {
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Failed to register codeFile artifact'),
-        expect.objectContaining({ message: expect.stringContaining('timed out following redirects') }),
+        expect.objectContaining({
+          message: expect.stringContaining('timed out following redirects'),
+        }),
       );
       expect(result).toBe('downloaded report.pdf');
 

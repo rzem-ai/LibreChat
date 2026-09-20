@@ -159,6 +159,31 @@ describe('fetchAllowedCodeFileStream', () => {
     expect(mockCreateSSRFSafeAgents).toHaveBeenNthCalledWith(2, ['internal.example:443']);
   });
 
+  it('rejects an HTTPS redirect to HTTP before requesting the insecure target', async () => {
+    const destroy = jest.fn();
+    mockGet.mockResolvedValue({
+      status: 302,
+      headers: { location: 'http://contoso.sharepoint.com/report.pdf' },
+      data: { destroy },
+    });
+
+    await expect(
+      fetchAllowedCodeFileStream('https://contoso.sharepoint.com/report.pdf', null, null),
+    ).rejects.toThrow(/cannot redirect from HTTPS to an insecure protocol/);
+
+    expect(mockGet).toHaveBeenCalledTimes(1);
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects non-HTTP download URLs before validating or requesting them', async () => {
+    await expect(
+      fetchAllowedCodeFileStream('wss://contoso.sharepoint.com/report.pdf', null, null),
+    ).rejects.toThrow(/must use HTTP or HTTPS/);
+
+    expect(mockIsMCPDomainAllowed).not.toHaveBeenCalled();
+    expect(mockGet).not.toHaveBeenCalled();
+  });
+
   it('destroys the response stream when the download rejects with a non-2xx/3xx status', async () => {
     const destroy = jest.fn();
     const axiosError = Object.assign(new Error('Request failed with status code 403'), {
