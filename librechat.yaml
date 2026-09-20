@@ -511,7 +511,7 @@ mcpSettings:
   # The SharePoint gateway returns Graph's short-lived, pre-authorized
   # download URLs as librechat-download resources for Code Interpreter.
   codeFileAllowedDomains:
-    - 'https://*.sharepoint.com'
+    - '*.sharepoint.com'
 
 speech: # https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/speech
   speechTab:
