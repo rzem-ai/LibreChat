@@ -121,6 +121,7 @@ class ModelEndHandler {
   async handle(event, data, metadata, graph) {
     if (!graph || !metadata) {
       console.warn(`Graph or metadata not found in ${event} event`);
+      return;
     }
 
     /** @type {string | undefined} */

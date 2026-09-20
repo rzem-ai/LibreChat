@@ -2225,7 +2225,7 @@ describe('User parameter passing tests', () => {
           mimeType: 'application/pdf',
           // 203.0.113.10 is a public documentation-range (TEST-NET-3) address,
           // not a private/reserved one — should be allowed as an IP literal.
-          url: 'http://203.0.113.10/download?sig=abc',
+          url: 'https://203.0.113.10/download?sig=abc',
         },
       };
       mockGetMCPManager.mockReturnValue({
@@ -2263,7 +2263,7 @@ describe('User parameter passing tests', () => {
       );
 
       expect(mockCodeFileDownloadGet).toHaveBeenCalledWith(
-        'http://203.0.113.10/download?sig=abc',
+        'https://203.0.113.10/download?sig=abc',
         expect.objectContaining({ proxy: configuredProxy }),
       );
     });
@@ -2573,7 +2573,7 @@ describe('User parameter passing tests', () => {
         codeFile: {
           name: 'report.pdf',
           mimeType: 'application/pdf',
-          url: 'http://169.254.169.254/latest/meta-data/',
+          url: 'https://169.254.169.254/latest/meta-data/',
         },
       };
       mockGetMCPManager.mockReturnValue({
