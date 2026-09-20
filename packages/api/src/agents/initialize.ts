@@ -4,6 +4,7 @@ import {
   Tools,
   Constants,
   ErrorTypes,
+  isActionTool,
   EModelEndpoint,
   EToolResources,
   paramEndpoints,
@@ -1299,7 +1300,7 @@ export async function initializeAgent(
        *  background task protocol can persist and return those artifacts. */
       excludeTool: (toolName) => {
         const [, serverName] = splitMCPToolKey(toolName, configuredMCPServerNames);
-        return serverName != null;
+        return serverName != null && !isActionTool(toolName);
       },
     });
     toolDefinitions = backgroundResult.toolDefinitions;
