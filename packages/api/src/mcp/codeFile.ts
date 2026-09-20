@@ -5,6 +5,7 @@ import {
   isMCPDomainAllowed,
   createSSRFSafeAgents,
   getEffectivePort,
+  isPrivateIP,
 } from '~/auth';
 import { createAxiosInstance } from '~/utils/axios';
 
@@ -77,10 +78,13 @@ function assertHopSafeForProxy(
    * first so a public IPv6 download target isn't misclassified as a
    * hostname and rejected. */
   const unbracketedHostname = hostname.replace(/^\[|\]$/g, '');
-  if (!proxyConfigured || !useSSRFProtection || isIP(unbracketedHostname) !== 0) {
+  if (!proxyConfigured || !useSSRFProtection) {
     return;
   }
   if (isAddressAllowed(hostname, allowedAddresses, port)) {
+    return;
+  }
+  if (isIP(unbracketedHostname) !== 0 && !isPrivateIP(unbracketedHostname)) {
     return;
   }
   throw new Error(
@@ -113,10 +117,8 @@ export async function fetchAllowedCodeFileStream(
   let currentUrl = url;
   for (let hop = 0; hop <= CODE_FILE_MAX_REDIRECTS; hop++) {
     const parsedUrl = new URL(currentUrl);
-    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
-      throw new Error(
-        `codeFile download URL must use HTTP or HTTPS: ${redactUrlForLog(currentUrl)}`,
-      );
+    if (parsedUrl.protocol !== 'https:') {
+      throw new Error(`codeFile download URL must use HTTPS: ${redactUrlForLog(currentUrl)}`);
     }
     if (hop > 0 && parsedUrl.origin !== originalOrigin) {
       crossOriginSeen = true;

@@ -82,7 +82,17 @@ describe('fetchAllowedCodeFileStream', () => {
     await expect(
       fetchAllowedCodeFileStream('https://[2001:db8::1]/report.pdf', null, null),
     ).resolves.toEqual({ status: 200, data: 'stream' });
-    expect(mockIsAddressAllowed).not.toHaveBeenCalled();
+    expect(mockIsAddressAllowed).toHaveBeenCalledWith('[2001:db8::1]', null, '443');
+  });
+
+  it('rejects a private IP literal under a configured proxy unless explicitly allowed', async () => {
+    mockAxiosInstance.defaults.proxy = { host: 'corp-proxy.internal', port: 8080 };
+
+    await expect(
+      fetchAllowedCodeFileStream('https://169.254.169.254/latest/meta-data', null, null),
+    ).rejects.toThrow(/requires an IP-literal or explicitly allowed host/);
+
+    expect(mockGet).not.toHaveBeenCalled();
   });
 
   it('does not build connect-time SSRF agents when a proxy is configured', async () => {
@@ -175,10 +185,10 @@ describe('fetchAllowedCodeFileStream', () => {
     expect(destroy).toHaveBeenCalledTimes(1);
   });
 
-  it('rejects non-HTTP download URLs before validating or requesting them', async () => {
+  it('rejects non-HTTPS download URLs before validating or requesting them', async () => {
     await expect(
-      fetchAllowedCodeFileStream('wss://contoso.sharepoint.com/report.pdf', null, null),
-    ).rejects.toThrow(/must use HTTP or HTTPS/);
+      fetchAllowedCodeFileStream('http://contoso.sharepoint.com/report.pdf', null, null),
+    ).rejects.toThrow(/must use HTTPS/);
 
     expect(mockIsMCPDomainAllowed).not.toHaveBeenCalled();
     expect(mockGet).not.toHaveBeenCalled();

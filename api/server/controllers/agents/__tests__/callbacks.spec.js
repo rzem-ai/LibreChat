@@ -695,6 +695,53 @@ describe('createToolEndCallback', () => {
       expect(res.write).toHaveBeenCalledTimes(1);
     });
 
+    it('processes code files when an artifact also contains generated images', async () => {
+      const { processCodeOutput } = require('~/server/services/Files/Code/process');
+      const { saveBase64Image } = require('~/server/services/Files/process');
+      res.headersSent = true;
+      saveBase64Image.mockResolvedValue({ file_id: 'image-1', filename: 'chart.png' });
+      processCodeOutput.mockResolvedValue({
+        file: {
+          file_id: 'file-1',
+          filename: 'report.pdf',
+          filepath: '/uploads/report.pdf',
+          type: 'application/pdf',
+          messageId: 'run-mixed',
+          toolCallId: 'tool-mixed',
+          status: 'ready',
+        },
+      });
+
+      const toolEndCallback = createToolEndCallback({ req, res, artifactPromises });
+      await toolEndCallback(
+        {
+          output: {
+            name: 'sp_download_file_mcp_sharepoint',
+            tool_call_id: 'tool-mixed',
+            artifact: {
+              __librechat_file_authoring: true,
+              content: [
+                { type: 'image_url', image_url: { url: 'data:image/png;base64,aGVsbG8=' } },
+              ],
+              session_id: 'session-1',
+              files: [{ id: 'file-1', name: 'report.pdf', storage_session_id: 'storage-1' }],
+            },
+          },
+        },
+        { run_id: 'run-mixed', thread_id: 'thread-mixed', provider: 'openai' },
+      );
+      await Promise.all(artifactPromises);
+
+      expect(saveBase64Image).toHaveBeenCalledTimes(1);
+      expect(processCodeOutput).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'file-1',
+          name: 'report.pdf',
+          session_id: 'storage-1',
+        }),
+      );
+    });
+
     it('does not process arbitrary user tool artifacts named create_file as code outputs', async () => {
       res.headersSent = true;
       const toolEndCallback = createToolEndCallback({ req, res, artifactPromises });

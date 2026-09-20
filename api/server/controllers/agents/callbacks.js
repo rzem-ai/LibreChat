@@ -121,7 +121,6 @@ class ModelEndHandler {
   async handle(event, data, metadata, graph) {
     if (!graph || !metadata) {
       console.warn(`Graph or metadata not found in ${event} event`);
-      return;
     }
 
     /** @type {string | undefined} */
@@ -950,7 +949,6 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null, jo
           }),
         );
       }
-      return;
     }
 
     if (!isCodeArtifactToolOutput(output)) {
@@ -1303,7 +1301,6 @@ function createResponsesToolEndCallback({ req, res, tracker, artifactPromises })
           }),
         );
       }
-      return;
     }
 
     if (!isCodeArtifactToolOutput(output)) {
