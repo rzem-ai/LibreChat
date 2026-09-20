@@ -2579,7 +2579,9 @@ describe('User parameter passing tests', () => {
       mockGetMCPManager.mockReturnValue({
         callTool: jest.fn().mockResolvedValue(['downloaded report.pdf', artifacts]),
       });
-      mockIsMCPDomainAllowed.mockResolvedValueOnce(false);
+      mockGetAppConfig.mockResolvedValue({
+        mcpSettings: { allowedDomains: ['contoso.sharepoint.com'] },
+      });
 
       const mcpTool = await createMCPTool({
         res: mockRes,
@@ -2638,8 +2640,10 @@ describe('User parameter passing tests', () => {
       mockGetMCPManager.mockReturnValue({
         callTool: jest.fn().mockResolvedValue(['downloaded report.pdf', artifacts]),
       });
-      // Allowed on the initial hop, then the redirect target is disallowed.
-      mockIsMCPDomainAllowed.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+      // The initial host is allowed; the redirect target must fail the real allowlist check.
+      mockGetAppConfig.mockResolvedValue({
+        mcpSettings: { allowedDomains: ['contoso.sharepoint.com'] },
+      });
       mockCodeFileDownloadGet.mockResolvedValue({
         status: 302,
         headers: { location: 'https://169.254.169.254/latest/meta-data/' },
