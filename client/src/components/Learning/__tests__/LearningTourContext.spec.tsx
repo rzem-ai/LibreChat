@@ -19,6 +19,7 @@ jest.mock('~/Providers', () => ({
 }));
 
 jest.mock('recoil', () => ({
+  useRecoilState: () => [false, mockSetSidebarExpanded],
   useSetRecoilState: () => mockSetSidebarExpanded,
 }));
 
