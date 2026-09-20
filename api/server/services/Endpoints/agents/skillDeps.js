@@ -292,7 +292,6 @@ function buildAgentToolContext({ agent, config }) {
     codeEnvAvailable: config.codeEnvAvailable,
     skillAuthoringAvailable: config.skillAuthoringAvailable,
     fileAuthoringToolNames: config.fileAuthoringToolNames,
-    mcpCodeSessionToolNames: config.mcpCodeSessionToolNames,
     skillPrimedIdsByName:
       buildSkillPrimedIdsByName(config.manualSkillPrimes, config.alwaysApplySkillPrimes) ?? {},
   };
@@ -330,8 +329,6 @@ function enrichLoadedToolsWithAgentContext({ result, req, ctx = {}, fallback = {
       activeSkillNames: ctx.activeSkillNames ?? fallback.activeSkillNames,
       skillAuthoringAvailable,
       fileAuthoringToolNames: ctx.fileAuthoringToolNames ?? fallback.fileAuthoringToolNames,
-      mcpCodeSessionToolNames:
-        ctx.mcpCodeSessionToolNames ?? fallback.mcpCodeSessionToolNames,
     },
   });
 }

@@ -18,7 +18,6 @@ describe('enrichWithSkillConfigurable', () => {
       skillPrimedIdsByName: undefined,
       skillAuthoringAvailable: undefined,
       fileAuthoringToolNames: undefined,
-      mcpCodeSessionToolNames: undefined,
     });
   });
 
@@ -74,21 +73,6 @@ describe('enrichWithSkillConfigurable', () => {
 
     expect(result.configurable.skillAuthoringAvailable).toBe(true);
     expect(result.configurable.fileAuthoringToolNames).toBe(fileAuthoringToolNames);
-  });
-
-  it('threads mcpCodeSessionToolNames through unchanged', () => {
-    const mcpCodeSessionToolNames = new Set(['sp_download_file_mcp_sharepoint']);
-    const result = enrichWithSkillConfigurable({
-      result: { loadedTools: [], configurable: {} },
-      context: {
-        req,
-        accessibleSkillIds,
-        codeEnvAvailable: true,
-        mcpCodeSessionToolNames,
-      },
-    });
-
-    expect(result.configurable.mcpCodeSessionToolNames).toBe(mcpCodeSessionToolNames);
   });
 
   it('preserves loadedTools unchanged', () => {

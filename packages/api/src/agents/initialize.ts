@@ -4,7 +4,6 @@ import {
   Tools,
   Constants,
   ErrorTypes,
-  isActionTool,
   EModelEndpoint,
   EToolResources,
   paramEndpoints,
@@ -46,12 +45,7 @@ import {
   unionPrimeAllowedTools,
   MAX_PRIMED_SKILLS_PER_TURN,
 } from './skills';
-import {
-  normalizeServerName,
-  requiresEphemeralUserConnection,
-  splitMCPToolKey,
-  normalizeAgentToolKeys,
-} from '~/mcp/utils';
+import { normalizeServerName, splitMCPToolKey, normalizeAgentToolKeys } from '~/mcp/utils';
 import {
   optionalChainWithEmptyCheck,
   extractLibreChatParams,
@@ -333,13 +327,6 @@ export type InitializedAgent = Agent & {
   skillAuthoringAvailable: boolean;
   /** Host-side file authoring tool names registered for this run. */
   fileAuthoringToolNames?: Set<string>;
-  /**
-   * This agent's own MCP tool names that participate in the shared code
-   * session (only set when `execute_code` is available to this agent).
-   * Lets `isCodeSessionAwareToolCall` in handlers.ts recognize a backgrounded
-   * MCP call as harvestable, mirroring `collectMCPToolNames` in run.ts.
-   */
-  mcpCodeSessionToolNames?: Set<string>;
   /** Accessible skill IDs for ACL checking at execute time */
   accessibleSkillIds?: import('mongoose').Types.ObjectId[];
   /**
@@ -1299,32 +1286,20 @@ export async function initializeAgent(
    */
   let backgroundToolNames: string[] | undefined;
   if (params.backgroundToolsAvailable === true) {
-    /** Tool names embed `normalizeServerName(server)` (see MCP.js tool keys)
-     *  while `mcpConfig` keys the original name, so index the ephemeral
-     *  servers by their normalized form. */
-    const ephemeralServerNames = new Set<string>();
-    for (const [serverName, serverConfig] of Object.entries(req.config?.mcpConfig ?? {})) {
-      if (serverConfig != null && requiresEphemeralUserConnection(serverConfig)) {
-        ephemeralServerNames.add(normalizeServerName(serverName));
-      }
-    }
-    /** Resolve the boundary against every configured server, not just the
-     *  ephemeral subset: a non-ephemeral name ending in an ephemeral one would
-     *  otherwise be misread as ephemeral. */
-    const allServerNames = Object.keys(req.config?.mcpConfig ?? {}).map(normalizeServerName);
+    const configuredMCPServerNames = Object.keys(req.config?.mcpConfig ?? {}).map(
+      normalizeServerName,
+    );
     const backgroundResult = applyBackgroundToolCalls({
       toolDefinitions,
       toolRegistry,
       toolOptions: agent.tool_options,
       capabilityToolNames,
-      /** Tools of ephemeral request-scoped MCP servers (runtime body
-       *  placeholders) never get the param: their connection dies at request
-       *  end, so the executor would only downgrade the call to foreground.
-       *  Unknown servers stay eligible — the executor's per-instance tag is
-       *  the fail-safe for those. */
+      /** MCP download artifacts are delivered through the foreground code
+       *  session path only. Do not advertise background execution until the
+       *  background task protocol can persist and return those artifacts. */
       excludeTool: (toolName) => {
-        const [, serverName] = splitMCPToolKey(toolName, allServerNames);
-        return serverName != null && ephemeralServerNames.has(serverName);
+        const [, serverName] = splitMCPToolKey(toolName, configuredMCPServerNames);
+        return serverName != null;
       },
     });
     toolDefinitions = backgroundResult.toolDefinitions;
@@ -1511,27 +1486,6 @@ export async function initializeAgent(
       .filter((toolDefinition) => isFileAuthoringToolDefinition(toolDefinition))
       .map((toolDefinition) => toolDefinition.name),
   );
-  /**
-   * Mirrors `collectMCPToolNames` in run.ts, but scoped to this agent's own
-   * `toolRegistry` rather than the whole run graph: `isCodeSessionAwareToolCall`
-   * in handlers.ts (used to decide whether a *backgrounded* tool call's result
-   * should be harvested into the shared code session) only ever looks up a
-   * tool call dispatched by this agent, so per-agent scope is sufficient —
-   * a subagent's own MCP tool is covered when that subagent initializes.
-   * Only populated when `execute_code` is actually available to this agent:
-   * MCP.js drops any codeFile artifact before uploading it otherwise, so an
-   * unreachable-to-Code-Interpreter agent gains no session benefit from
-   * treating its MCP calls as code-session participants.
-   */
-  const mcpCodeSessionToolNames =
-    effectiveCodeEnvAvailable === true
-      ? new Set(
-          Array.from(toolRegistry?.keys() ?? []).filter(
-            (name) => name.includes(Constants.mcp_delimiter) && !isActionTool(name),
-          ),
-        )
-      : undefined;
-
   const initializedAgent: InitializedAgent = {
     ...agent,
     resendFiles,
@@ -1554,10 +1508,6 @@ export async function initializeAgent(
     includeReasoningHistory: customEndpointConfig?.customParams?.includeReasoningHistory,
     skillAuthoringAvailable,
     fileAuthoringToolNames: fileAuthoringToolNames.size > 0 ? fileAuthoringToolNames : undefined,
-    mcpCodeSessionToolNames:
-      mcpCodeSessionToolNames != null && mcpCodeSessionToolNames.size > 0
-        ? mcpCodeSessionToolNames
-        : undefined,
     skillCount,
     accessibleSkillIds: executableSkillIds,
     activeSkillNames,

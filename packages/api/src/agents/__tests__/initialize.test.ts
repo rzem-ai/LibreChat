@@ -1772,69 +1772,6 @@ describe('initializeAgent — execute_code capability expansion', () => {
     expect(result.fileAuthoringToolNames).toEqual(new Set(['create_file', 'edit_file']));
   });
 
-  it('populates mcpCodeSessionToolNames from toolRegistry when codeEnvAvailable=true', async () => {
-    const { agent, req, res, loadTools, db } = createMocks();
-    agent.tools = ['execute_code'];
-    loadTools.mockResolvedValue({
-      tools: [],
-      toolContextMap: {},
-      dynamicToolContextMap: {},
-      userMCPAuthMap: undefined,
-      toolRegistry: new Map([
-        ['sp_download_file_mcp_sharepoint', {}],
-        ['sync_mcp_state_action_api---example---com', {}],
-      ]),
-      toolDefinitions: [],
-      hasDeferredTools: false,
-    });
-
-    const result = await initializeAgent(
-      {
-        req,
-        res,
-        agent,
-        loadTools,
-        endpointOption: { endpoint: EModelEndpoint.agents },
-        allowedProviders: new Set([Providers.OPENAI]),
-        isInitialAgent: true,
-        codeEnvAvailable: true,
-      },
-      db,
-    );
-
-    expect(result.mcpCodeSessionToolNames).toEqual(new Set(['sp_download_file_mcp_sharepoint']));
-  });
-
-  it('leaves mcpCodeSessionToolNames undefined when codeEnvAvailable=false', async () => {
-    const { agent, req, res, loadTools, db } = createMocks();
-    agent.tools = [];
-    loadTools.mockResolvedValue({
-      tools: [],
-      toolContextMap: {},
-      dynamicToolContextMap: {},
-      userMCPAuthMap: undefined,
-      toolRegistry: new Map([['sp_download_file_mcp_sharepoint', {}]]),
-      toolDefinitions: [],
-      hasDeferredTools: false,
-    });
-
-    const result = await initializeAgent(
-      {
-        req,
-        res,
-        agent,
-        loadTools,
-        endpointOption: { endpoint: EModelEndpoint.agents },
-        allowedProviders: new Set([Providers.OPENAI]),
-        isInitialAgent: true,
-        codeEnvAvailable: false,
-      },
-      db,
-    );
-
-    expect(result.mcpCodeSessionToolNames).toBeUndefined();
-  });
-
   it('does not register bash_tool + read_file when codeEnvAvailable=false', async () => {
     const { agent, req, res, loadTools, db } = createMocks();
     agent.tools = ['execute_code'];

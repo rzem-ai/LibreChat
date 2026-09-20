@@ -213,7 +213,12 @@ export function formatToolContent(
   const { codeFile, content } = extractCodeFile(result?.content ?? []);
 
   if (!RECOGNIZED_PROVIDERS.has(provider)) {
-    const text = content.length ? parseAsString(content) : codeFile ? '' : '(No response)';
+    let text = '(No response)';
+    if (content.length > 0) {
+      text = parseAsString(content);
+    } else if (codeFile) {
+      text = '';
+    }
     return [text, codeFile ? { codeFile } : undefined];
   }
 

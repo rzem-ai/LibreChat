@@ -1877,13 +1877,6 @@ function getFileAuthoringToolNames(
   return names instanceof Set ? (names as Set<string>) : undefined;
 }
 
-function getMCPCodeSessionToolNames(
-  mergedConfigurable: Record<string, unknown>,
-): Set<string> | undefined {
-  const names = mergedConfigurable.mcpCodeSessionToolNames;
-  return names instanceof Set ? (names as Set<string>) : undefined;
-}
-
 function isHostFileAuthoringToolCall(
   toolName: string,
   mergedConfigurable: Record<string, unknown>,
@@ -1891,22 +1884,11 @@ function isHostFileAuthoringToolCall(
   return getFileAuthoringToolNames(mergedConfigurable)?.has(toolName) === true;
 }
 
-/**
- * True for a host file-authoring/code-execution tool, or an MCP tool
- * registered by initializeAgent as a code-session participant (see
- * `mcpCodeSessionToolNames`, mirroring `collectMCPToolNames` in run.ts). The
- * MCP branch matters for background dispatch: a backgrounded MCP call whose
- * result carries a codeFile artifact must be harvested into the shared code
- * session the same way a foreground call would be.
- */
 function isCodeSessionAwareToolCall(
   toolName: string,
   mergedConfigurable: Record<string, unknown>,
 ): boolean {
-  return (
-    isCodeSessionToolName(toolName, getFileAuthoringToolNames(mergedConfigurable)) ||
-    getMCPCodeSessionToolNames(mergedConfigurable)?.has(toolName) === true
-  );
+  return isCodeSessionToolName(toolName, getFileAuthoringToolNames(mergedConfigurable));
 }
 
 function isSkillPrimedForAuthoring(
