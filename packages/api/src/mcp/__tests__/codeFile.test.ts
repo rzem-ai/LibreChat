@@ -1,11 +1,15 @@
-jest.mock('@librechat/data-schemas', () => ({
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-  },
-}));
+jest.mock(
+  '@librechat/data-schemas',
+  () => ({
+    logger: {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+    },
+  }),
+  { virtual: true },
+);
 
 jest.mock('~/utils/axios', () => {
   const mockAxiosInstance = {
@@ -21,14 +25,22 @@ jest.mock('~/utils/axios', () => {
 const mockIsMCPDomainAllowed = jest.fn(async () => true);
 const mockIsAddressAllowed = jest.fn(() => false);
 const mockCreateSSRFSafeAgents = jest.fn(() => ({ httpAgent: undefined, httpsAgent: undefined }));
+const mockIsSSRFTarget = jest.fn(() => false);
+const mockResolveHostnameSSRF = jest.fn(async () => false);
+const mockGetEffectivePort = jest.fn((protocol: string, port: string) =>
+  port || (protocol === 'https:' ? '443' : '80'),
+);
+const mockIsPrivateIP = jest.fn((hostname: string) => hostname === '169.254.169.254');
 
 jest.mock('~/auth', () => {
-  const actual = jest.requireActual('~/auth');
   return {
-    ...actual,
     isMCPDomainAllowed: (...args: unknown[]) => mockIsMCPDomainAllowed(...args),
     isAddressAllowed: (...args: unknown[]) => mockIsAddressAllowed(...args),
     createSSRFSafeAgents: (...args: unknown[]) => mockCreateSSRFSafeAgents(...args),
+    isSSRFTarget: (...args: unknown[]) => mockIsSSRFTarget(...args),
+    resolveHostnameSSRF: (...args: unknown[]) => mockResolveHostnameSSRF(...args),
+    getEffectivePort: (...args: unknown[]) => mockGetEffectivePort(...args),
+    isPrivateIP: (...args: unknown[]) => mockIsPrivateIP(...args),
   };
 });
 
@@ -44,6 +56,12 @@ describe('fetchAllowedCodeFileStream', () => {
     jest.clearAllMocks();
     mockIsMCPDomainAllowed.mockResolvedValue(true);
     mockIsAddressAllowed.mockReturnValue(false);
+    mockIsSSRFTarget.mockReturnValue(false);
+    mockResolveHostnameSSRF.mockResolvedValue(false);
+    mockGetEffectivePort.mockImplementation((protocol: string, port: string) =>
+      port || (protocol === 'https:' ? '443' : '80'),
+    );
+    mockIsPrivateIP.mockImplementation((hostname: string) => hostname === '169.254.169.254');
     mockAxiosInstance.defaults.proxy = false;
   });
 
@@ -167,6 +185,27 @@ describe('fetchAllowedCodeFileStream', () => {
     ]);
 
     expect(mockCreateSSRFSafeAgents).toHaveBeenNthCalledWith(2, ['internal.example:443']);
+  });
+
+  it('rejects a redirect to a private/reserved target even when allowlist mode is active', async () => {
+    const destroy = jest.fn();
+    mockIsSSRFTarget.mockImplementation((hostname: string) => hostname === '169.254.169.254');
+    mockGet.mockResolvedValue({
+      status: 302,
+      headers: { location: 'https://169.254.169.254/latest/meta-data' },
+      data: { destroy },
+    });
+
+    await expect(
+      fetchAllowedCodeFileStream(
+        'https://contoso.sharepoint.com/report.pdf',
+        ['https://contoso.sharepoint.com', 'https://169.254.169.254'],
+        null,
+      ),
+    ).rejects.toThrow(/redirect target is private or reserved/);
+
+    expect(mockGet).toHaveBeenCalledTimes(1);
+    expect(destroy).toHaveBeenCalledTimes(1);
   });
 
   it('rejects an HTTPS redirect to HTTP before requesting the insecure target', async () => {

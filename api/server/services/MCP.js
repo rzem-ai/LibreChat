@@ -1186,9 +1186,11 @@ function createToolInstance({
               tenantId: effectiveUser?.tenantId ?? getTenantId(),
               userId,
             });
+            const codeFileAllowedDomains =
+              appConfig?.mcpSettings?.codeFileAllowedDomains ?? appConfig?.mcpSettings?.allowedDomains;
             const download = await fetchAllowedCodeFileStream(
               url,
-              appConfig?.mcpSettings?.allowedDomains,
+              codeFileAllowedDomains,
               appConfig?.mcpSettings?.allowedAddresses,
             );
             stream = download.data;

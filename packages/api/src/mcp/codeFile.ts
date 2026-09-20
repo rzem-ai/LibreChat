@@ -3,9 +3,11 @@ import type { AxiosInstance, AxiosResponse } from 'axios';
 import {
   isAddressAllowed,
   isMCPDomainAllowed,
+  isSSRFTarget,
   createSSRFSafeAgents,
   getEffectivePort,
   isPrivateIP,
+  resolveHostnameSSRF,
 } from '~/auth';
 import { createAxiosInstance } from '~/utils/axios';
 
@@ -91,6 +93,14 @@ function assertHopSafeForProxy(
     `codeFile download via a configured proxy requires an IP-literal or explicitly allowed host while SSRF protection is on: ${hostname}`,
   );
 }
+
+async function assertRedirectTargetSafe(url: string): Promise<void> {
+  const hostname = new URL(url).hostname;
+  if (isSSRFTarget(hostname) || (await resolveHostnameSSRF(hostname))) {
+    throw new Error(`codeFile download redirect target is private or reserved: ${redactUrlForLog(url)}`);
+  }
+}
+
 export async function fetchAllowedCodeFileStream(
   url: string,
   allowedDomains: string[] | null | undefined,
@@ -119,6 +129,9 @@ export async function fetchAllowedCodeFileStream(
     const parsedUrl = new URL(currentUrl);
     if (parsedUrl.protocol !== 'https:') {
       throw new Error(`codeFile download URL must use HTTPS: ${redactUrlForLog(currentUrl)}`);
+    }
+    if (hop > 0) {
+      await assertRedirectTargetSafe(currentUrl);
     }
     if (hop > 0 && parsedUrl.origin !== originalOrigin) {
       crossOriginSeen = true;

@@ -476,6 +476,14 @@ describe('allowedAddressesSchema', () => {
       expect(result.success).toBe(true);
     });
 
+    it('accepts codeFileAllowedDomains on mcpSettings', () => {
+      const result = configSchema.safeParse({
+        version: '1.0',
+        mcpSettings: { codeFileAllowedDomains: ['https://*.sharepoint.com'] },
+      });
+      expect(result.success).toBe(true);
+    });
+
     it('accepts the field on actions', () => {
       const result = configSchema.safeParse({
         version: '1.0',
