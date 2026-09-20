@@ -1,3 +1,5 @@
+import type { AxiosRequestConfig } from 'axios';
+
 jest.mock(
   '@librechat/data-schemas',
   () => ({
@@ -23,7 +25,7 @@ jest.mock('~/utils/axios', () => {
 });
 
 const mockGetProxyUrlForUrl = jest.fn(() => undefined);
-const mockApplyAxiosProxyConfig = jest.fn((config: Record<string, unknown>) => config);
+const mockApplyAxiosProxyConfig = jest.fn((config: AxiosRequestConfig) => config);
 
 jest.mock('~/utils/proxy', () => {
   return {
@@ -73,7 +75,7 @@ describe('fetchAllowedCodeFileStream', () => {
     );
     mockIsPrivateIP.mockImplementation((hostname: string) => hostname === '169.254.169.254');
     mockGetProxyUrlForUrl.mockReturnValue(undefined);
-    mockApplyAxiosProxyConfig.mockImplementation((config: Record<string, unknown>) => config);
+    mockApplyAxiosProxyConfig.mockImplementation((config: AxiosRequestConfig) => config);
     mockAxiosInstance.defaults.proxy = false;
   });
 
@@ -128,7 +130,7 @@ describe('fetchAllowedCodeFileStream', () => {
   it('does not build connect-time SSRF agents when proxy env resolution routes the request through a proxy', async () => {
     mockGetProxyUrlForUrl.mockReturnValue('http://corp-proxy.internal:8080');
     mockIsAddressAllowed.mockReturnValue(true);
-    mockApplyAxiosProxyConfig.mockImplementation((config: Record<string, unknown>) => ({
+    mockApplyAxiosProxyConfig.mockImplementation((config: AxiosRequestConfig) => ({
       ...config,
       proxy: false,
       httpsAgent: 'proxy-agent',
