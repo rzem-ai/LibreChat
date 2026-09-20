@@ -264,6 +264,27 @@ describe('fetchAllowedCodeFileStream', () => {
     );
   });
 
+  it('rejects a proxied cross-origin redirect to a private target', async () => {
+    const destroy = jest.fn();
+    mockGetProxyUrlForUrl.mockImplementation((targetUrl?: string | URL) =>
+      String(targetUrl).includes('169.254.169.254') ? 'http://corp-proxy.internal:8080' : undefined,
+    );
+    mockIsSSRFTarget.mockImplementation((hostname: string) => hostname === '169.254.169.254');
+    mockGet.mockResolvedValue({
+      status: 302,
+      headers: { location: 'https://169.254.169.254/latest/meta-data' },
+      data: { destroy },
+    });
+
+    await expect(
+      fetchAllowedCodeFileStream('https://contoso.sharepoint.com/report.pdf', null, null),
+    ).rejects.toThrow(/redirect target is private or reserved/);
+
+    expect(mockGetProxyUrlForUrl).toHaveBeenCalledTimes(2);
+    expect(mockGet).toHaveBeenCalledTimes(1);
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
   it('rejects a redirect to a private/reserved target even when allowlist mode is active', async () => {
     const destroy = jest.fn();
     mockIsSSRFTarget.mockImplementation((hostname: string) => hostname === '169.254.169.254');
