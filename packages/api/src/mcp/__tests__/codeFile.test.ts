@@ -227,6 +227,43 @@ describe('fetchAllowedCodeFileStream', () => {
     expect(mockResolveHostnameSSRF).not.toHaveBeenCalled();
   });
 
+  it('re-resolves proxy routing on each redirect hop', async () => {
+    mockGetProxyUrlForUrl.mockImplementation((targetUrl?: string | URL) =>
+      String(targetUrl).includes('attacker.example') ? 'http://corp-proxy.internal:8080' : undefined,
+    );
+    mockApplyAxiosProxyConfig.mockImplementation(
+      (config: AxiosRequestConfig, targetUrl?: string | URL) =>
+        String(targetUrl).includes('attacker.example')
+          ? {
+              ...config,
+              proxy: false,
+              httpsAgent: 'proxy-agent',
+            }
+          : config,
+    );
+    mockGet
+      .mockResolvedValueOnce({
+        status: 302,
+        headers: { location: 'https://attacker.example/report.pdf' },
+        data: { destroy: jest.fn() },
+      })
+      .mockResolvedValueOnce({ status: 200, data: 'stream' });
+
+    await fetchAllowedCodeFileStream('https://contoso.sharepoint.com/report.pdf', null, null);
+
+    expect(mockGetProxyUrlForUrl).toHaveBeenNthCalledWith(
+      1,
+      'https://contoso.sharepoint.com/report.pdf',
+    );
+    expect(mockGetProxyUrlForUrl).toHaveBeenNthCalledWith(2, 'https://attacker.example/report.pdf');
+    expect(mockCreateSSRFSafeAgents).toHaveBeenCalledTimes(1);
+    expect(mockGet).toHaveBeenNthCalledWith(
+      2,
+      'https://attacker.example/report.pdf',
+      expect.objectContaining({ proxy: false, httpsAgent: 'proxy-agent' }),
+    );
+  });
+
   it('rejects a redirect to a private/reserved target even when allowlist mode is active', async () => {
     const destroy = jest.fn();
     mockIsSSRFTarget.mockImplementation((hostname: string) => hostname === '169.254.169.254');
