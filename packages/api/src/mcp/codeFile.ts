@@ -97,7 +97,9 @@ function assertHopSafeForProxy(
 async function assertRedirectTargetSafe(url: string): Promise<void> {
   const hostname = new URL(url).hostname;
   if (isSSRFTarget(hostname) || (await resolveHostnameSSRF(hostname))) {
-    throw new Error(`codeFile download redirect target is private or reserved: ${redactUrlForLog(url)}`);
+    throw new Error(
+      `codeFile download redirect target is private or reserved: ${redactUrlForLog(url)}`,
+    );
   }
 }
 

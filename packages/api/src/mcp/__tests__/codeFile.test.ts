@@ -27,8 +27,8 @@ const mockIsAddressAllowed = jest.fn(() => false);
 const mockCreateSSRFSafeAgents = jest.fn(() => ({ httpAgent: undefined, httpsAgent: undefined }));
 const mockIsSSRFTarget = jest.fn(() => false);
 const mockResolveHostnameSSRF = jest.fn(async () => false);
-const mockGetEffectivePort = jest.fn((protocol: string, port: string) =>
-  port || (protocol === 'https:' ? '443' : '80'),
+const mockGetEffectivePort = jest.fn(
+  (protocol: string, port: string) => port || (protocol === 'https:' ? '443' : '80'),
 );
 const mockIsPrivateIP = jest.fn((hostname: string) => hostname === '169.254.169.254');
 
@@ -58,8 +58,8 @@ describe('fetchAllowedCodeFileStream', () => {
     mockIsAddressAllowed.mockReturnValue(false);
     mockIsSSRFTarget.mockReturnValue(false);
     mockResolveHostnameSSRF.mockResolvedValue(false);
-    mockGetEffectivePort.mockImplementation((protocol: string, port: string) =>
-      port || (protocol === 'https:' ? '443' : '80'),
+    mockGetEffectivePort.mockImplementation(
+      (protocol: string, port: string) => port || (protocol === 'https:' ? '443' : '80'),
     );
     mockIsPrivateIP.mockImplementation((hostname: string) => hostname === '169.254.169.254');
     mockAxiosInstance.defaults.proxy = false;
@@ -204,6 +204,28 @@ describe('fetchAllowedCodeFileStream', () => {
       ),
     ).rejects.toThrow(/redirect target is private or reserved/);
 
+    expect(mockGet).toHaveBeenCalledTimes(1);
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a redirect whose allowlisted hostname resolves to a private address', async () => {
+    const destroy = jest.fn();
+    mockResolveHostnameSSRF.mockResolvedValue(true);
+    mockGet.mockResolvedValue({
+      status: 302,
+      headers: { location: 'https://internal.example/report.pdf' },
+      data: { destroy },
+    });
+
+    await expect(
+      fetchAllowedCodeFileStream(
+        'https://contoso.sharepoint.com/report.pdf',
+        ['https://contoso.sharepoint.com', 'https://internal.example'],
+        null,
+      ),
+    ).rejects.toThrow(/redirect target is private or reserved/);
+
+    expect(mockResolveHostnameSSRF).toHaveBeenCalledWith('internal.example');
     expect(mockGet).toHaveBeenCalledTimes(1);
     expect(destroy).toHaveBeenCalledTimes(1);
   });
