@@ -71,6 +71,7 @@ function ModelSelectorContent() {
       render={
         <button
           id="model-selector-button"
+          data-testid="model-selector-button"
           aria-keyshortcuts={modelSelectorAriaKey}
           className="my-1 flex h-9 w-full max-w-[70vw] items-center justify-center gap-2 rounded-xl border border-border-light bg-presentation px-3 py-2 text-sm text-text-primary hover:bg-surface-active-alt"
           aria-label={localize('com_ui_select_model')}
