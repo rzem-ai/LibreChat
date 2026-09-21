@@ -38,6 +38,7 @@ const backendURL = backendHost
   ? `http://${backendHost}:${backendPort}`
   : `http://localhost:${backendPort}`;
 const buildSourceMap = process.env.NODE_ENV === 'development';
+const appTitle = process.env.APP_TITLE || 'LibreChat';
 const QUERY_DEVTOOLS_CHUNK_MODULES = [
   '@tanstack/react-query-devtools',
   '@tanstack/match-sorter-utils',
@@ -165,8 +166,8 @@ export default defineConfig(({ command }) => ({
       },
       includeAssets: [],
       manifest: {
-        name: 'MyAssist',
-        short_name: 'MyAssist',
+        name: appTitle,
+        short_name: appTitle,
         display: 'standalone',
         background_color: '#000000',
         theme_color: '#009688',
