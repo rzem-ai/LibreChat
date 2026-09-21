@@ -257,6 +257,29 @@ function isDecimalPoint(text: string, index: number): boolean {
   return prev >= '0' && prev <= '9' && next >= '0' && next <= '9';
 }
 
+/** Matches a bare or markdown-link URL body; stops before whitespace or an enclosing `)`/`]`/quote so a `[text](url)` destination is captured without swallowing the closing paren. */
+const URL_PATTERN = /https?:\/\/[^\s<>"'\])]+/gi;
+
+/**
+ * Byte-offset spans of every URL in `text`, so `.`/`!`/`?` inside a path or
+ * query string (e.g. `report.pdf`) aren't mistaken for sentence boundaries. A
+ * split there would let a citation anchor land inside the URL, truncating and
+ * invalidating the link on the client.
+ */
+function computeUrlSpans(text: string): Array<[number, number]> {
+  const spans: Array<[number, number]> = [];
+  const pattern = new RegExp(URL_PATTERN);
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text)) !== null) {
+    spans.push([match.index, match.index + match[0].length]);
+  }
+  return spans;
+}
+
+function isInsideUrl(index: number, urlSpans: Array<[number, number]>): boolean {
+  return urlSpans.some(([start, end]) => index >= start && index < end);
+}
+
 /**
  * Splits text into sentence-like segments losslessly — concatenating the result
  * reproduces the input exactly, so anchors can be inserted without altering
@@ -264,6 +287,7 @@ function isDecimalPoint(text: string, index: number): boolean {
  */
 function splitIntoSentences(text: string): string[] {
   const sentences: string[] = [];
+  const urlSpans = computeUrlSpans(text);
   let start = 0;
 
   for (let i = 0; i < text.length; i++) {
@@ -274,6 +298,10 @@ function splitIntoSentences(text: string): string[] {
     }
 
     if (char === '.' && isDecimalPoint(text, i)) {
+      continue;
+    }
+
+    if (isInsideUrl(i, urlSpans)) {
       continue;
     }
 
