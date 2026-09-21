@@ -264,13 +264,10 @@ describe('UserController tutorial state', () => {
         'getting-started-guide': 4,
       });
       expect(mockUpdateUser).toHaveBeenCalledWith('user-1', {
-        tutorialFeedback: {
-          'other-course': { score: 5, comment: 'Existing comment' },
-          'getting-started-guide': {
-            score: 4,
-            comment: 'Helpful tour',
-            updatedAt: expect.any(Date),
-          },
+        'tutorialFeedback.getting-started-guide': {
+          score: 4,
+          comment: 'Helpful tour',
+          updatedAt: expect.any(Date),
         },
       });
       expect(res.json).toHaveBeenCalledWith({

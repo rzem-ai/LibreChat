@@ -180,26 +180,21 @@ const updateTutorialStateController = async (req, res) => {
       // Write any non-ratings fields (e.g. tutorialPromptSeen) separately.
       user = merged;
       const { tutorialRatings: _omitted, tutorialFeedback, ...rest } = update;
-      const existingTutorialFeedback =
-        user?.tutorialFeedback instanceof Map
-          ? Object.fromEntries(user.tutorialFeedback)
-          : user?.tutorialFeedback ?? {};
 
       if (tutorialFeedback) {
         const updatedAt = new Date();
-        rest.tutorialFeedback = {
-          ...existingTutorialFeedback,
-          ...Object.fromEntries(
+        Object.assign(
+          rest,
+          Object.fromEntries(
             Object.entries(tutorialFeedback).map(([courseId, feedback]) => [
-              courseId,
+              `tutorialFeedback.${courseId}`,
               {
-                ...existingTutorialFeedback[courseId],
                 ...feedback,
                 updatedAt,
               },
             ]),
           ),
-        };
+        );
       }
 
       if (Object.keys(rest).length > 0) {
