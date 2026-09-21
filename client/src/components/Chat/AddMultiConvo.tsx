@@ -39,6 +39,7 @@ function AddMultiConvo() {
   return (
     <TooltipAnchor
       id="add-multi-convo-button"
+      data-testid="add-multi-convo-button"
       description={localize('com_ui_add_multi_conversation')}
       role="button"
       tabIndex={0}

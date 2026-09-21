@@ -611,6 +611,7 @@ const ChatForm = memo(function ChatForm({
                       onCompositionEnd={handleCompositionEnd}
                       id={mainTextareaId}
                       tabIndex={0}
+                      data-testid="text-input"
                       rows={1}
                       onFocus={handleTextareaFocus}
                       onBlur={handleTextareaBlur}
