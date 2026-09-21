@@ -1,6 +1,6 @@
 import React from 'react';
 import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/react';
+import { render, screen } from '../../../../../../../test/layout-test-utils';
 import ModelSelector from '../ModelSelector';
 
 const mockSetSearchValue = jest.fn();
@@ -9,6 +9,12 @@ const mockOnOpenChange = jest.fn();
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string) => key,
+}));
+
+jest.mock('~/hooks/useKeyboardShortcuts', () => ({
+  useShortcutAriaKey: () => undefined,
+  useShortcutHint: () => '',
+  useShortcutDisplay: () => '',
 }));
 
 jest.mock('../ModelSelectorContext', () => ({
