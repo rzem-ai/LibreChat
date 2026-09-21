@@ -1,5 +1,6 @@
 import {
   Switch,
+  Tag,
   HoverCard,
   CircleHelpIcon,
   HoverCardPortal,
@@ -41,14 +42,14 @@ export function BetaPill() {
 export function LimitedAccessPill({ wrap = false }: { wrap?: boolean }) {
   const localize = useLocalize();
   return (
-    <span
-      className={cn(
-        'flex-shrink-0 rounded-full border border-amber-600/40 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-amber-700 dark:text-amber-400',
+    <Tag
+      label={localize('com_ui_limited_access')}
+      className="flex-shrink-0 border border-amber-600/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+      labelClassName={cn(
+        'px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide',
         wrap ? 'w-14 text-center leading-tight' : 'whitespace-nowrap',
       )}
-    >
-      {localize('com_ui_limited_access')}
-    </span>
+    />
   );
 }
 
