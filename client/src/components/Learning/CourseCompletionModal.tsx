@@ -1,4 +1,3 @@
-import { PartyPopper } from 'lucide-react';
 import { OGDialog, OGDialogTemplate } from '@librechat/client';
 import { useLearningTour } from './LearningTourContext';
 import RatingStars from './RatingStars';
@@ -20,9 +19,7 @@ export default function CourseCompletionModal() {
         showCancelButton={false}
         main={
           <div className="flex flex-col items-center gap-4 text-center">
-            <div className="flex size-14 items-center justify-center rounded-full bg-green-500/10">
-              <PartyPopper className="size-6 text-green-500" />
-            </div>
+            <img src="/assets/tour-complete.png" alt="" className="size-14" />
             <p className="text-sm text-text-secondary">{localize('com_learning_complete_body')}</p>
             {completedCourseId != null && <RatingStars courseId={completedCourseId} />}
           </div>
