@@ -41,7 +41,8 @@ const MAX_ANCHORS_PER_SENTENCE = 3;
 /** Citation marker character (U+E202) the frontend parses; see client citations.ts. */
 const ANCHOR_MARKER = '\ue202';
 /** Default KX usage-guidelines link, used when `KX_USAGE_GUIDELINES_URL` isn't configured. */
-const DEFAULT_KX_USAGE_GUIDELINES_URL = 'https://resources.deloitte.com/sites/kx/usage-guidelines';
+const DEFAULT_KX_USAGE_GUIDELINES_URL =
+  'https://resources.deloitte.com/sites/kx/SitePages/Prompt-Usage-Guidelines.aspx';
 
 const STOPWORDS = new Set([
   'the',

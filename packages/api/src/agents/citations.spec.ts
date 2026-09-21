@@ -910,7 +910,7 @@ describe('appendMCPDisclaimers', () => {
     const text = readText(parts[0]) ?? '';
     expect(text).toContain(STATIC_MESSAGE);
     expect(text).toContain(
-      '[KX usage guidelines](https://resources.deloitte.com/sites/kx/usage-guidelines)',
+      '[KX usage guidelines](https://resources.deloitte.com/sites/kx/SitePages/Prompt-Usage-Guidelines.aspx)',
     );
   });
 
