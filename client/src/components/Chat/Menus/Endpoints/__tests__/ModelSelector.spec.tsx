@@ -1,6 +1,6 @@
 import React from 'react';
 import '@testing-library/jest-dom';
-import { render, screen } from '../../../../../../../test/layout-test-utils';
+import { render, screen } from 'test/layout-test-utils';
 import ModelSelector from '../ModelSelector';
 
 const mockSetSearchValue = jest.fn();
