@@ -116,6 +116,7 @@ describe('createRun code-tool eager/session wiring', () => {
   it('includes MCP-delimited tools from toolRegistry but excludes non-MCP and action-collision tools', async () => {
     const agent = makeAgent({
       codeEnvAvailable: true,
+      mcpAvailableTools: { sharepoint: { sp_download_file_mcp_sharepoint: {} } },
       toolRegistry: new Map([
         ['sp_download_file_mcp_sharepoint', {}],
         ['create_file', {}],

@@ -931,7 +931,7 @@ function collectMCPToolNames(agents: Array<RunAgent | null | undefined>): string
         const [, serverName] =
           mcpServerNames.length > 0 ? splitMCPToolKey(name, mcpServerNames) : [name, undefined];
         if (
-          serverName != null ||
+          (serverName != null && mcpServerNames.includes(serverName)) ||
           (mcpServerNames.length === 0 &&
             name.includes(DataProviderConstants.mcp_delimiter) &&
             !isActionTool(name))
