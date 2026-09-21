@@ -88,6 +88,29 @@ export default defineConfig(({ command }) => ({
         });
       },
     },
+    {
+      /** publicDir copying is disabled for builds (see `publicDir` below), so favicons/icons/
+       * robots.txt must be copied into the output directory here, in `writeBundle` — which Rollup
+       * guarantees runs before any plugin's `closeBundle`, including VitePWA's, which is where it
+       * globs the output directory to build the service worker's precache manifest. Without this,
+       * these assets are silently never precached and are missing entirely when offline. */
+      name: 'copy-public-assets',
+      apply: 'build',
+      writeBundle(options) {
+        const outDir = options.dir ?? path.resolve(__dirname, 'dist');
+        fs.cpSync(path.resolve(__dirname, 'public/assets'), path.join(outDir, 'assets'), {
+          recursive: true,
+        });
+        fs.cpSync(
+          path.resolve(__dirname, 'public/robots.txt'),
+          path.join(outDir, 'robots.txt'),
+        );
+        fs.cpSync(
+          path.resolve(__dirname, 'public/favicon.ico'),
+          path.join(outDir, 'favicon.ico'),
+        );
+      },
+    },
     VitePWA({
       injectRegister: 'auto', // 'auto' | 'manual' | 'disabled'
       registerType: 'autoUpdate', // 'prompt' | 'autoUpdate'
@@ -99,6 +122,7 @@ export default defineConfig(({ command }) => ({
       workbox: {
         globPatterns: [
           '**/*.{js,css,html}',
+          'favicon.ico',
           'assets/favicon*.png',
           'assets/fav-*.svg',
           'assets/icon-*.png',
@@ -141,12 +165,17 @@ export default defineConfig(({ command }) => ({
       },
       includeAssets: [],
       manifest: {
-        name: 'LibreChat',
-        short_name: 'LibreChat',
+        name: 'MyAssist',
+        short_name: 'MyAssist',
         display: 'standalone',
         background_color: '#000000',
         theme_color: '#009688',
         icons: [
+          {
+            src: 'assets/fav-dark.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
+          },
           {
             src: 'assets/favicon-32x32.png',
             sizes: '32x32',

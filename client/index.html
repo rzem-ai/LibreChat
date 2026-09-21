@@ -7,15 +7,18 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MyAssist" />
     <meta name="description" content="MyAssist - AI workspace and chat application" />
     <title>MyAssist</title>
     <link
+      id="favicon-light"
       rel="icon"
       type="image/svg+xml"
       href="assets/fav-dark.svg"
       media="(prefers-color-scheme: light)"
     />
     <link
+      id="favicon-dark"
       rel="icon"
       type="image/svg+xml"
       href="assets/fav-light.svg"
@@ -60,6 +63,21 @@
         }
       `;
       document.head.appendChild(loadingContainerStyle);
+    </script>
+    <script>
+      (function () {
+        /** Some browsers don't repaint the tab favicon immediately when the OS
+         * color scheme changes while the tab is open — the media-matched
+         * <link rel="icon"> stays stale until something forces re-evaluation.
+         * Re-setting href to itself forces a refetch/repaint without a reload. */
+        var mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        var refreshFavicons = function () {
+          document.querySelectorAll('link[rel="icon"][media]').forEach(function (link) {
+            link.setAttribute('href', link.getAttribute('href'));
+          });
+        };
+        mediaQuery.addEventListener('change', refreshFavicons);
+      })();
     </script>
     <script>
       (function () {
