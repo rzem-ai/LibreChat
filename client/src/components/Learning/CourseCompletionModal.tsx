@@ -5,6 +5,7 @@ import { useLearningTour } from './LearningTourContext';
 import RatingStars from './RatingStars';
 import { useUpdateTutorialStateMutation } from '~/data-provider';
 import { useLocalize } from '~/hooks';
+import { cn } from '~/utils';
 
 /** Mounted once in `Root`; pops up whenever `LearningTourProvider` reports a finished tour. */
 export default function CourseCompletionModal() {
@@ -14,6 +15,8 @@ export default function CourseCompletionModal() {
   const updateTutorialState = useUpdateTutorialStateMutation();
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [comment, setComment] = useState('');
+  const commentLength = comment.length;
+  const isAtCommentLimit = commentLength >= MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH;
 
   useEffect(() => {
     setSelectedRating(null);
@@ -75,8 +78,13 @@ export default function CourseCompletionModal() {
                 placeholder={localize('com_learning_rate_comment_placeholder')}
                 className="min-h-[84px] resize-none border-border-medium bg-surface-primary text-sm"
               />
-              <p className="mt-2 text-right text-xs text-text-tertiary">
-                {localize('com_learning_rate_comment_count', String(comment.length))}
+              <p
+                className={cn(
+                  'mt-2 text-right text-xs',
+                  isAtCommentLimit ? 'text-amber-500' : 'text-text-tertiary',
+                )}
+              >
+                {localize('com_learning_rate_comment_count', { 0: commentLength })}
               </p>
             </div>
           </div>

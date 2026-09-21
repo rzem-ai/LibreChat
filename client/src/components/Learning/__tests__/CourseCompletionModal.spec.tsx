@@ -9,7 +9,13 @@ const mockMutate = jest.fn();
 const mockShowToast = jest.fn();
 
 jest.mock('~/hooks', () => ({
-  useLocalize: () => (key: string, value?: string) => (value ? `${key}:${value}` : key),
+  useLocalize: () => (key: string, value?: { 0?: number }) => {
+    if (value && typeof value === 'object' && 0 in value) {
+      return `${key}:${value[0]}`;
+    }
+
+    return key;
+  },
 }));
 
 jest.mock('@librechat/client', () => {
