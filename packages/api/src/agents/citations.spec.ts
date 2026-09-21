@@ -225,7 +225,226 @@ describe('insertFileCitations', () => {
     expect(parts[0]).toBe(ref);
   });
 
-  // Deloitte Custom Change: a file_search answer rendered as a markdown table must keep its
+  it('does not anchor text inside an artifact fenced code block, but still anchors surrounding prose', () => {
+    const original = [
+      'You can reserve a desk fourteen days in advance.',
+      '',
+      ':::artifact{identifier="desk-microsite" type="text/html" title="Desk Booking"}',
+      '````',
+      '<!-- You can reserve a desk fourteen days in advance. -->',
+      '<p>You can reserve a desk fourteen days in advance.</p>',
+      '````',
+      ':::',
+      '',
+      'Meeting rooms are booked via the calendar system.',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([
+        { fileId: 'fileA', content: DESK_CONTENT },
+        { fileId: 'fileB', content: MEETING_CONTENT },
+      ]),
+    ]);
+    const text = readText(parts[0]);
+    const lines = text.split('\n');
+
+    expect(lines[0]).toContain(`${MARKER}turn0file0`);
+    expect(lines[9]).toContain(`${MARKER}turn0file1`);
+    expect(lines[4]).not.toContain(MARKER);
+    expect(lines[5]).not.toContain(MARKER);
+  });
+
+  it('does not anchor text inside a plain (non-artifact) fenced code block', () => {
+    const original = ['```', 'You can reserve a desk fourteen days in advance.', '```'].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('respects the outer fence length so a nested shorter fence does not close the range early', () => {
+    const original = [
+      ':::artifact{identifier="doc" type="text/markdown" title="Doc"}',
+      '````',
+      'Some intro text.',
+      '```',
+      'You can reserve a desk fourteen days in advance.',
+      '```',
+      'You can reserve a desk fourteen days in advance.',
+      '````',
+      ':::',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not anchor text inside a plain tilde-fenced code block', () => {
+    const original = ['~~~', 'You can reserve a desk fourteen days in advance.', '~~~'].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not close a tilde fence with a same-length backtick line', () => {
+    const original = [
+      '~~~',
+      'You can reserve a desk fourteen days in advance.',
+      '```',
+      'You can reserve a desk fourteen days in advance.',
+      '~~~',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not anchor text inside a fenced code block quoted with a blockquote prefix', () => {
+    const original = [
+      '> ```js',
+      '> You can reserve a desk fourteen days in advance.',
+      '> ```',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not anchor text inside a nested blockquote fence, and does not let a shallower-quoted fence line close it', () => {
+    const original = [
+      '> > ```js',
+      '> ```',
+      '> > You can reserve a desk fourteen days in advance.',
+      '> > ```',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not let a deeper-quoted fence line close a shallower fence', () => {
+    const original = [
+      '> ```js',
+      '> > ```',
+      '> You can reserve a desk fourteen days in advance.',
+      '> ```',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not anchor text inside a fenced code block indented under a list item', () => {
+    const original = [
+      '- Reservation policy:',
+      '',
+      '  ```js',
+      '  You can reserve a desk fourteen days in advance.',
+      '  ```',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not let a 4-space-indented backtick line inside the block close the fence early', () => {
+    const original = [
+      '```js',
+      '    ```',
+      'You can reserve a desk fourteen days in advance.',
+      '```',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('closes a list-item fence whose continuation lines are indented to the marker width', () => {
+    const original = [
+      '- ```js',
+      '  You can reserve a desk fourteen days in advance.',
+      '  ```',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not treat an unindented line after a list-marker-prefixed fence as fence content, per CommonMark', () => {
+    const original = ['- ```js', 'You can reserve a desk fourteen days in advance.', '```'].join(
+      '\n',
+    );
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const lines = readText(parts[0]).split('\n');
+    expect(lines[0]).toBe('- ```js');
+    expect(lines[1]).toContain(`${MARKER}turn0file0`);
+  });
+
+  it('does not treat a 4-space-indented backtick line as a fence open, so real prose before a later fence still gets cited', () => {
+    const original = [
+      '    ```',
+      'You can reserve a desk fourteen days in advance.',
+      '```',
+      'unrelated code',
+      '```',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const lines = readText(parts[0]).split('\n');
+    expect(lines[1]).toContain(`${MARKER}turn0file0`);
+  });
+
+  it('excludes through the end of the text when a fence is never closed (truncated response)', () => {
+    const original = [
+      'Some intro prose.',
+      '```js',
+      'You can reserve a desk fourteen days in advance.',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('excludes through the end of the text when a tilde fence is never closed', () => {
+    const original = [
+      'Some intro prose.',
+      '~~~js',
+      'You can reserve a desk fourteen days in advance.',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  // a file_search answer rendered as a markdown table must keep its
   // pipe/column count intact — a citation anchor must land inside a cell, never after the row's
   // closing pipe.
   it('anchors a markdown table row inside its last cell without corrupting the row', () => {
@@ -500,8 +719,70 @@ describe('insertMCPCitations', () => {
     expect(usedCoords).toEqual(new Set(['0:0']));
   });
 
-  // Deloitte Custom Change: table-row protection is shared infrastructure, not SharePoint-only —
-  // any MCP connector's answer rendered as a table must keep its column count intact too.
+  it('does not anchor MCP-matched text inside an artifact fenced code block', () => {
+    const original = [
+      'The Reserve Bank held the cash rate steady at its meeting today.',
+      '',
+      ':::artifact{identifier="rates-summary" type="text/markdown" title="Rates Summary"}',
+      '````',
+      'The Reserve Bank held the cash rate steady at its meeting today.',
+      '````',
+      ':::',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertMCPCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'afr_get_latest_news', serverName: 'afr', content: AFR_ARTICLE },
+        ]),
+      ],
+      0,
+    );
+    const text = readText(parts[0]);
+    const lines = text.split('\n');
+    expect(lines[0]).toContain(`${MARKER}turn0mcp0`);
+    expect(lines[4]).not.toContain(MARKER);
+  });
+
+  it('does not anchor MCP-matched text when a fence is never closed (truncated response)', () => {
+    const original = [
+      '```',
+      'The Reserve Bank held the cash rate steady at its meeting today.',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertMCPCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'afr_get_latest_news', serverName: 'afr', content: AFR_ARTICLE },
+        ]),
+      ],
+      0,
+    );
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not anchor MCP-matched text when a tilde fence is never closed', () => {
+    const original = [
+      '~~~',
+      'The Reserve Bank held the cash rate steady at its meeting today.',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertMCPCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'afr_get_latest_news', serverName: 'afr', content: AFR_ARTICLE },
+        ]),
+      ],
+      0,
+    );
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  // table-row protection is shared infrastructure, not SharePoint-only — any MCP connector's
+  // answer rendered as a table must keep its column count intact too.
   it('anchors a non-SharePoint MCP table row inside its last cell without corrupting the row', () => {
     const parts = [
       textPart(
@@ -1055,6 +1336,259 @@ describe('insertSharePointCitations', () => {
     expect(rows[3]).toContain(`${MARKER}turn0mcp1`);
     expect(rows[4]).toContain(`${MARKER}turn0mcp2`);
   });
+
+  it('does not anchor a filename line inside an artifact fenced code block', () => {
+    const original = [
+      '- Consulting Graduate Induction Workbook.pptx',
+      '',
+      ':::artifact{identifier="listing" type="text/markdown" title="Listing"}',
+      '````',
+      '- Consulting Graduate Induction Workbook.pptx',
+      '````',
+      ':::',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    const lines = readText(parts[0]).split('\n');
+    expect(lines[0]).toContain(`${MARKER}turn0mcp0`);
+    expect(lines[4]).not.toContain(MARKER);
+  });
+
+  it('does not anchor a filename line when a fence is never closed (truncated response)', () => {
+    const original = ['````', '- Consulting Graduate Induction Workbook.pptx'].join('\n');
+    const parts = [textPart(original)];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not anchor a filename line when a tilde fence is never closed', () => {
+    const original = ['~~~~', '- Consulting Graduate Induction Workbook.pptx'].join('\n');
+    const parts = [textPart(original)];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('anchors a later prose mention when the same filename appeared earlier inside a fence', () => {
+    const original = [
+      '````',
+      '- Consulting Graduate Induction Workbook.pptx',
+      '````',
+      '',
+      '- Consulting Graduate Induction Workbook.pptx',
+    ].join('\n');
+    const parts = [textPart(original)];
+    const usedCoords = insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    const lines = readText(parts[0]).split('\n');
+    expect(lines[1]).not.toContain(MARKER);
+    expect(lines[4]).toContain(`${MARKER}turn0mcp0`);
+    expect(usedCoords.has('0:0')).toBe(true);
+  });
+
+  // Deloitte Custom Change: CommonMark allows the single space after a blockquote `>` marker to
+  // be omitted, so an opening fence written as "> ```js" can be legally closed by "```" prefixed
+  // with just ">" (no trailing space). The scanner must compare blockquote nesting depth, not the
+  // exact prefix string, or it treats the fence as never closed and swallows the rest of the
+  // message.
+  it('closes a blockquoted fence whose close line omits the space after the marker', () => {
+    const original = [
+      '> ```js',
+      '> - Consulting Graduate Induction Workbook.pptx',
+      '>```',
+      '',
+      '- Consulting Graduate Induction Workbook.pptx',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    const lines = readText(parts[0]).split('\n');
+    expect(lines[1]).not.toContain(MARKER);
+    expect(lines[4]).toContain(`${MARKER}turn0mcp0`);
+  });
+
+  // Deloitte Custom Change: a fence delimiter may be indented at most 3 spaces beyond its
+  // container prefix; a tab expands to a full tab stop and already exceeds that cap on its own,
+  // so a tab-indented backtick run is plain content, not a fence opener, and must not exclude the
+  // filename line that follows it.
+  it('does not treat a tab-indented backtick run as a fence opener', () => {
+    const original = ['\t```', '- Consulting Graduate Induction Workbook.pptx'].join('\n');
+    const parts = [textPart(original)];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    const lines = readText(parts[0]).split('\n');
+    expect(lines[1]).toContain(`${MARKER}turn0mcp0`);
+  });
+
+  // Deloitte Custom Change: a single table row can carry more than one SharePoint source in
+  // different cells (e.g. a file and its parent folder both matched); every matching cell must
+  // get its own anchor instead of only the first.
+  it('anchors every matching cell in a table row, not just the first', () => {
+    const parts = [
+      textPart(
+        '| File Name | Location | Last Modified |\n' +
+          '|---|---|---|\n' +
+          '| Consulting Graduate Induction Workbook.pptx | AISolutionStudio | 9 Sep 2026 |',
+      ),
+    ];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'AISolutionStudio',
+            content: 'AISolutionStudio',
+          },
+        ]),
+      ],
+      0,
+    );
+    const rows = readText(parts[0]).split('\n');
+    const cells = rows[2].split('|');
+    expect(cells[1]).toContain(`${MARKER}turn0mcp0`);
+    expect(cells[2]).toContain(`${MARKER}turn0mcp1`);
+  });
+
+  // Deloitte Custom Change: a message can contain more than one artifact. If the first fence is
+  // closed using a blockquote-marker whitespace variant (previously mis-recognized as unclosed),
+  // the false "extend to end-of-text" fallback would have swallowed the second artifact and all
+  // the prose around it. This proves both artifacts are excluded independently and the prose
+  // around each is still cited.
+  it('handles multiple artifacts independently when the first is closed with a blockquote marker variant', () => {
+    const original = [
+      '- Consulting Graduate Induction Workbook.pptx',
+      '',
+      '> ```js',
+      '> - Consulting Graduate Induction Workbook.pptx',
+      '>```',
+      '',
+      '- Consulting Graduate Induction Workbook.pptx',
+      '',
+      '````',
+      '- Consulting Graduate Induction Workbook.pptx',
+      '````',
+      '',
+      '- Consulting Graduate Induction Workbook.pptx',
+    ].join('\n');
+    const parts = [textPart(original)];
+    const usedCoords = insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'copy 1',
+          },
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'copy 2',
+          },
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'copy 3',
+          },
+        ]),
+      ],
+      0,
+    );
+    const lines = readText(parts[0]).split('\n');
+    expect(lines[0]).toContain(`${MARKER}turn0mcp0`);
+    expect(lines[3]).not.toContain(MARKER);
+    expect(lines[6]).toContain(`${MARKER}turn0mcp1`);
+    expect(lines[9]).not.toContain(MARKER);
+    expect(lines[12]).toContain(`${MARKER}turn0mcp2`);
+    expect(usedCoords.has('0:0')).toBe(true);
+    expect(usedCoords.has('0:1')).toBe(true);
+    expect(usedCoords.has('0:2')).toBe(true);
+  });
 });
 
 describe('appendGuaranteedMCPCitations', () => {
@@ -1302,6 +1836,33 @@ describe('applyEndOfTraceCitations', () => {
     expect(readText(parts[0])).toContain(`${MARKER}turn0file0`);
   });
 
+  it('leaves a microsite reply entirely uncited when every matching sentence sits inside the artifact fence', async () => {
+    const original = [
+      "Here's your microsite based on the two documents!",
+      '',
+      ':::artifact{identifier="microsite" type="text/html" title="Microsite"}',
+      '````',
+      'You can reserve a desk fourteen days in advance.',
+      'Meeting rooms are booked via the calendar system.',
+      '````',
+      ':::',
+    ].join('\n');
+    const parts = [textPart(original)];
+    await applyEndOfTraceCitations({
+      contentParts: parts,
+      artifactPromises: [
+        Promise.resolve(
+          fileSearchAttachment([
+            { fileId: 'fileA', content: DESK_CONTENT },
+            { fileId: 'fileB', content: MEETING_CONTENT },
+          ]),
+        ),
+      ],
+      fileCitations: true,
+    });
+    expect(readText(parts[0])).toBe(original);
+  });
+
   it('is a no-op when fileCitations is false', async () => {
     const original = 'You can reserve a desk fourteen days in advance.';
     const parts = [textPart(original)];
@@ -1439,6 +2000,64 @@ describe('applyEndOfTraceCitations', () => {
     const text = readText(parts[0]);
     expect(anchorCount(text, `${MARKER}turn0mcp0`)).toBe(1);
     expect(text).toBe(`${original} ${MARKER}turn0mcp0`);
+  });
+
+  it('does not force-append a citation when a SharePoint listing source is mentioned only inside an artifact fence', async () => {
+    const original = [
+      "Here's the file you asked about.",
+      '',
+      ':::artifact{identifier="listing" type="text/markdown" title="Listing"}',
+      '````',
+      '- GFS_style-guide.pptx',
+      '````',
+      ':::',
+    ].join('\n');
+    const parts = [textPart(original)];
+    await applyEndOfTraceCitations({
+      contentParts: parts,
+      artifactPromises: [
+        Promise.resolve(
+          mcpAttachment([
+            {
+              toolName: 'sp_list_recent',
+              serverName: 'sharepoint',
+              title: 'GFS_style-guide.pptx',
+              link: 'https://resources.deloitte.com/sites/Intellihub/SiteAssets/GFS_style-guide.pptx',
+              content: 'GFS_style-guide.pptx',
+            },
+          ]),
+        ),
+      ],
+      fileCitations: true,
+    });
+    expect(readText(parts[0])).toBe(original);
+  });
+
+  it('does not force-append a citation when a disclaimer-bearing MCP source is matched only inside an artifact fence', async () => {
+    const original = [
+      "Here's a summary.",
+      '',
+      ':::artifact{identifier="rates-summary" type="text/markdown" title="Rates Summary"}',
+      '````',
+      AFR_ARTICLE,
+      '````',
+      ':::',
+    ].join('\n');
+    const parts = [textPart(original)];
+    await applyEndOfTraceCitations({
+      contentParts: parts,
+      artifactPromises: [
+        Promise.resolve(
+          mcpAttachment(
+            [{ toolName: 'kx_search', serverName: 'kx', content: AFR_ARTICLE }],
+            'This information may not be current.',
+          ),
+        ),
+      ],
+      fileCitations: true,
+    });
+    const text = readText(parts[0]);
+    expect(anchorCount(text, MARKER)).toBe(0);
   });
 
   it('falls back to the lexical pass for a SharePoint source answered as prose instead of a filename line', async () => {
