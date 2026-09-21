@@ -2,6 +2,11 @@ import type { RefillIntervalUnit, TUserFavorite } from 'librechat-data-provider'
 import type { Document, Types } from 'mongoose';
 import { CursorPaginationParams } from '~/common';
 
+export interface TutorialFeedback {
+  score: number;
+  comment?: string;
+}
+
 export interface IUser extends Document {
   _id: Types.ObjectId;
   /**
@@ -59,6 +64,8 @@ export interface IUser extends Document {
   tutorialPromptSeen?: boolean;
   /** Per-course tutorial ratings. Key = course id, value = 1-5 star rating. */
   tutorialRatings?: Record<string, number>;
+  /** Per-course tutorial feedback. Key = course id, value = rating plus optional comment. */
+  tutorialFeedback?: Record<string, TutorialFeedback>;
   createdAt?: Date;
   updatedAt?: Date;
   /** Field for external source identification (for consistency with TPrincipal schema) */
@@ -105,6 +112,7 @@ export interface UpdateUserRequest {
   skillStates?: Record<string, boolean>;
   tutorialPromptSeen?: boolean;
   tutorialRatings?: Record<string, number>;
+  tutorialFeedback?: Record<string, TutorialFeedback>;
 }
 
 export interface UserDeleteResult {

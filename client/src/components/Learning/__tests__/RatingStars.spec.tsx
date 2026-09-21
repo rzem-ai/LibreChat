@@ -2,49 +2,35 @@ import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
 import RatingStars from '../RatingStars';
-
-const mockMutate = jest.fn();
+const mockOnSelect = jest.fn();
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string) => key,
 }));
 
-jest.mock('~/data-provider', () => ({
-  useUpdateTutorialStateMutation: () => ({ mutate: mockMutate }),
-}));
-
 describe('RatingStars', () => {
-  beforeEach(() => {
-    mockMutate.mockImplementation((_variables, options) => options?.onSuccess?.());
-  });
-
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it('submits the selected rating for the given course and shows a thank-you state', () => {
-    render(<RatingStars courseId="getting-started-guide" />);
+  it('calls onSelect when a rating is chosen', () => {
+    render(<RatingStars selected={null} onSelect={mockOnSelect} />);
 
     const stars = screen.getAllByRole('radio');
     expect(stars).toHaveLength(5);
 
     fireEvent.click(stars[3]);
 
-    expect(mockMutate).toHaveBeenCalledWith({
-      tutorialRatings: { 'getting-started-guide': 4 },
-    }, expect.any(Object));
-    expect(screen.getByText('com_learning_rate_thanks')).toBeInTheDocument();
-    expect(screen.queryAllByRole('radio')).toHaveLength(0);
+    expect(mockOnSelect).toHaveBeenCalledWith(4);
+    expect(screen.queryByText('com_learning_rate_thanks')).not.toBeInTheDocument();
   });
 
-  it('keeps the rating controls visible when the mutation does not succeed', () => {
-    mockMutate.mockImplementation(() => undefined);
-    render(<RatingStars courseId="getting-started-guide" />);
+  it('reflects the currently selected rating', () => {
+    const { rerender } = render(<RatingStars selected={null} onSelect={mockOnSelect} />);
 
-    const stars = screen.getAllByRole('radio');
-    fireEvent.click(stars[3]);
+    rerender(<RatingStars selected={4} onSelect={mockOnSelect} />);
 
+    expect(screen.getByTestId('course-rating-star-4')).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByText('com_learning_rate_prompt')).toBeInTheDocument();
-    expect(screen.queryByText('com_learning_rate_thanks')).not.toBeInTheDocument();
   });
 });

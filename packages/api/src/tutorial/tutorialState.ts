@@ -6,9 +6,14 @@
  */
 
 import { MAX_TUTORIAL_RATINGS } from '@librechat/data-schemas';
+import {
+  MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH,
+  type TTutorialFeedback,
+} from 'librechat-data-provider';
 
 // Re-export so callers that previously imported from @librechat/api continue to work.
 export { MAX_TUTORIAL_RATINGS };
+export { MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH };
 
 /** Keys that must never appear in a user-supplied object to prevent prototype pollution. */
 const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
@@ -31,6 +36,7 @@ export const MAX_RATING_KEY_LENGTH = 64;
 export interface TutorialStateUpdate {
   tutorialPromptSeen?: boolean;
   tutorialRatings?: Record<string, number>;
+  tutorialFeedback?: Record<string, TTutorialFeedback>;
 }
 
 export type TutorialStateValidationResult =
@@ -53,6 +59,43 @@ export function validateTutorialStateUpdate(body: unknown): TutorialStateValidat
 
   const raw = body as Record<string, unknown>;
   const update: TutorialStateUpdate = {};
+
+  const sanitiseFeedbackComment = (comment: string): string | undefined => {
+    const trimmed = comment.trim();
+    if (trimmed.length === 0) {
+      return undefined;
+    }
+    return trimmed;
+  };
+
+  const validateRatingKey = (key: string): string | undefined => {
+    if (key.length === 0 || key.length > MAX_RATING_KEY_LENGTH) {
+      return `Invalid rating key: "${key}"`;
+    }
+
+    if (key.startsWith('$') || key.includes('.')) {
+      return `Invalid rating key: "${key}"`;
+    }
+
+    if (DANGEROUS_KEYS.has(key)) {
+      return `Invalid rating key: "${key}"`;
+    }
+
+    return undefined;
+  };
+
+  const validateScore = (key: string, value: unknown): string | undefined => {
+    if (
+      typeof value !== 'number' ||
+      !Number.isInteger(value) ||
+      value < RATING_MIN ||
+      value > RATING_MAX
+    ) {
+      return `Rating for "${key}" must be an integer between ${RATING_MIN} and ${RATING_MAX}`;
+    }
+
+    return undefined;
+  };
 
   // --- tutorialPromptSeen ---
   if ('tutorialPromptSeen' in raw) {
@@ -82,30 +125,15 @@ export function validateTutorialStateUpdate(body: unknown): TutorialStateValidat
       // Reject empty or oversized keys — bounds per-entry storage so an
       // authenticated caller cannot bloat the user document by submitting
       // arbitrarily large course IDs (document-size limit is 16 MB BSON).
-      if (key.length === 0 || key.length > MAX_RATING_KEY_LENGTH) {
-        return { error: `Invalid rating key: "${key}"` };
+      const keyError = validateRatingKey(key);
+      if (keyError) {
+        return { error: keyError };
       }
 
-      // Reject MongoDB-illegal key characters: leading $ (operator injection)
-      // and dot (dot-notation path traversal)
-      if (key.startsWith('$') || key.includes('.')) {
-        return { error: `Invalid rating key: "${key}"` };
-      }
-
-      // Reject prototype-pollution-style keys
-      if (DANGEROUS_KEYS.has(key)) {
-        return { error: `Invalid rating key: "${key}"` };
-      }
-
-      // Validate value is an integer within the 1–5 range
-      if (
-        typeof value !== 'number' ||
-        !Number.isInteger(value) ||
-        value < RATING_MIN ||
-        value > RATING_MAX
-      ) {
+      const scoreError = validateScore(key, value);
+      if (scoreError) {
         return {
-          error: `Rating for "${key}" must be an integer between ${RATING_MIN} and ${RATING_MAX}`,
+          error: scoreError,
         };
       }
 
@@ -113,6 +141,70 @@ export function validateTutorialStateUpdate(body: unknown): TutorialStateValidat
     }
 
     update.tutorialRatings = sanitised;
+  }
+
+  if ('tutorialFeedback' in raw) {
+    const tutorialFeedback = raw.tutorialFeedback;
+
+    if (!tutorialFeedback || typeof tutorialFeedback !== 'object' || Array.isArray(tutorialFeedback)) {
+      return { error: 'tutorialFeedback must be a plain object' };
+    }
+
+    const feedbackMap = tutorialFeedback as Record<string, unknown>;
+    const sanitised: Record<string, TTutorialFeedback> = {};
+
+    for (const [key, value] of Object.entries(feedbackMap)) {
+      if (Object.keys(sanitised).length >= MAX_TUTORIAL_RATINGS) {
+        return { error: `tutorialFeedback cannot exceed ${MAX_TUTORIAL_RATINGS} entries` };
+      }
+
+      const keyError = validateRatingKey(key);
+      if (keyError) {
+        return { error: keyError };
+      }
+
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return { error: `tutorialFeedback for "${key}" must be an object` };
+      }
+
+      const feedback = value as Record<string, unknown>;
+      const scoreError = validateScore(key, feedback.score);
+      if (scoreError) {
+        return { error: scoreError };
+      }
+
+      let comment: string | undefined;
+      if ('comment' in feedback) {
+        if (feedback.comment != null && typeof feedback.comment !== 'string') {
+          return { error: `Comment for "${key}" must be a string` };
+        }
+
+        if (typeof feedback.comment === 'string') {
+          comment = sanitiseFeedbackComment(feedback.comment);
+          if ((comment ?? '').length > MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH) {
+            return {
+              error: `Comment for "${key}" cannot exceed ${MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH} characters`,
+            };
+          }
+        }
+      }
+
+      sanitised[key] = {
+        score: feedback.score as number,
+        ...(comment != null ? { comment } : {}),
+      };
+    }
+
+    update.tutorialFeedback = sanitised;
+
+    if (update.tutorialRatings) {
+      for (const [key, feedback] of Object.entries(sanitised)) {
+        const rating = update.tutorialRatings[key];
+        if (rating != null && rating !== feedback.score) {
+          return { error: `tutorialRatings and tutorialFeedback score must match for "${key}"` };
+        }
+      }
+    }
   }
 
   // Reject requests that contain no valid fields
@@ -135,13 +227,31 @@ export function validateTutorialStateUpdate(body: unknown): TutorialStateValidat
 export function toTutorialStateResponse(user: {
   tutorialPromptSeen?: boolean | null;
   tutorialRatings?: Map<string, number> | Record<string, number> | null;
-}): { tutorialPromptSeen: boolean; tutorialRatings: Record<string, number> } {
+  tutorialFeedback?: Map<string, TTutorialFeedback> | Record<string, TTutorialFeedback> | null;
+}): {
+  tutorialPromptSeen: boolean;
+  tutorialRatings: Record<string, number>;
+  tutorialFeedback: Record<string, TTutorialFeedback>;
+} {
   const tutorialRatings =
     user.tutorialRatings instanceof Map
       ? Object.fromEntries(user.tutorialRatings)
       : (user.tutorialRatings ?? {});
+  const tutorialFeedback =
+    user.tutorialFeedback instanceof Map
+      ? Object.fromEntries(user.tutorialFeedback)
+      : (user.tutorialFeedback ?? {});
+  const combinedTutorialFeedback = Object.entries(tutorialRatings).reduce<Record<string, TTutorialFeedback>>(
+    (acc, [courseId, score]) => {
+      acc[courseId] = tutorialFeedback[courseId] ?? { score };
+      return acc;
+    },
+    { ...tutorialFeedback },
+  );
+
   return {
     tutorialPromptSeen: !!user.tutorialPromptSeen,
     tutorialRatings,
+    tutorialFeedback: combinedTutorialFeedback,
   };
 }

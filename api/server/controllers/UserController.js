@@ -119,7 +119,7 @@ const acceptTermsController = async (req, res) => {
 const getTutorialStateController = async (req, res) => {
   // Deloitte Custom Change
   try {
-    const user = await db.getUserById(req.user.id, 'tutorialPromptSeen tutorialRatings');
+    const user = await db.getUserById(req.user.id, 'tutorialPromptSeen tutorialRatings tutorialFeedback');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -143,15 +143,25 @@ const updateTutorialStateController = async (req, res) => {
     }
 
     const { update } = result;
+    const tutorialRatings =
+      update.tutorialRatings ??
+      (update.tutorialFeedback != null
+        ? Object.fromEntries(
+            Object.entries(update.tutorialFeedback).map(([courseId, feedback]) => [
+              courseId,
+              feedback.score,
+            ]),
+          )
+        : undefined);
 
     let user;
 
-    if (update.tutorialRatings) {
+    if (tutorialRatings) {
       // mergeTutorialRatings enforces MAX_TUTORIAL_RATINGS using guarded
       // compare-and-swap writes compatible with DocumentDB.
       const { user: merged, capExceeded, conflict } = await db.mergeTutorialRatings(
         req.user.id,
-        update.tutorialRatings,
+        tutorialRatings,
       );
       if (capExceeded) {
         return res.status(400).json({
@@ -166,7 +176,19 @@ const updateTutorialStateController = async (req, res) => {
 
       // Write any non-ratings fields (e.g. tutorialPromptSeen) separately.
       user = merged;
-      const { tutorialRatings: _omitted, ...rest } = update;
+      const { tutorialRatings: _omitted, tutorialFeedback, ...rest } = update;
+      const existingTutorialFeedback =
+        user?.tutorialFeedback instanceof Map
+          ? Object.fromEntries(user.tutorialFeedback)
+          : user?.tutorialFeedback ?? {};
+
+      if (tutorialFeedback) {
+        rest.tutorialFeedback = {
+          ...existingTutorialFeedback,
+          ...tutorialFeedback,
+        };
+      }
+
       if (Object.keys(rest).length > 0) {
         user = (await db.updateUser(req.user.id, rest)) ?? user;
       }
