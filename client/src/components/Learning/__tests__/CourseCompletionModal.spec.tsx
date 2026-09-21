@@ -19,7 +19,7 @@ jest.mock('~/hooks', () => ({
 }));
 
 jest.mock('@librechat/client', () => {
-  const React = require('react');
+  const React = jest.requireActual<typeof import('react')>('react');
   const DialogContext = React.createContext({ onOpenChange: (_open: boolean) => {} });
 
   return {
