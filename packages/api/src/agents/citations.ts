@@ -376,6 +376,66 @@ function withAnchors(sentence: string, anchors: string[]): string {
   return `${trimmed} ${anchors.join(' ')}${trailing}`;
 }
 
+/**
+ * Anchors a single text blob against `passages`, line by line. A line that parses as a markdown
+ * table row (via `splitTableRowCells`) is scored as one unit and its anchors are inserted into the
+ * last non-empty cell, preserving column count — the same placement `insertSharePointCitations`
+ * uses. Every other line (prose, or a table separator row, which `splitTableRowCells` also treats
+ * as non-data) falls back to the existing sentence-boundary pass. Splitting/rejoining on `\n` is
+ * always lossless, so this never alters surrounding whitespace beyond the anchors themselves.
+ */
+function anchorTextPart(
+  text: string,
+  passages: Passage[],
+  options: {
+    threshold?: number;
+    tokenizeFn?: (text: string) => string[];
+    anchorTag?: string;
+  },
+): { text: string; usedCoords: Set<string> } {
+  const usedCoords = new Set<string>();
+  const lines = text.split('\n');
+  const tableLineIndices = computeTableLineIndices(lines);
+
+  const rebuiltLines = lines.map((line, index) => {
+    const lineCoords = new Set<string>();
+    const tableRow = tableLineIndices.has(index) ? splitTableRowCells(line) : undefined;
+
+    if (tableRow) {
+      const { anchors, coords } = anchorsForSentence(line, passages, {
+        ...options,
+        excludeCoords: lineCoords,
+      });
+      coords.forEach((coord) => usedCoords.add(coord));
+      if (anchors.length === 0) {
+        return line;
+      }
+      const lastCellIndex = findLastNonEmptyCellIndex(tableRow.cells);
+      if (lastCellIndex === -1) {
+        return line;
+      }
+      tableRow.cells[lastCellIndex] = withAnchors(tableRow.cells[lastCellIndex], anchors);
+      return joinTableRowCells(tableRow);
+    }
+
+    return splitIntoSentences(line)
+      .map((sentence) => {
+        const { anchors, coords } = anchorsForSentence(sentence, passages, {
+          ...options,
+          excludeCoords: lineCoords,
+        });
+        coords.forEach((coord) => {
+          usedCoords.add(coord);
+          lineCoords.add(coord);
+        });
+        return withAnchors(sentence, anchors);
+      })
+      .join('');
+  });
+
+  return { text: rebuiltLines.join('\n'), usedCoords };
+}
+
 function findLastTextPart(contentParts: TMessageContentParts[]): TMessageContentParts | undefined {
   for (let i = contentParts.length - 1; i >= 0; i--) {
     const text = readText(contentParts[i]);
@@ -433,21 +493,7 @@ export function insertFileCitations(
       continue;
     }
 
-    const sentences = splitIntoSentences(text);
-    let lineCoords = new Set<string>();
-    const rebuilt = sentences
-      .map((sentence) => {
-        const { anchors, coords } = anchorsForSentence(sentence, passages, {
-          excludeCoords: lineCoords,
-        });
-        coords.forEach((coord) => lineCoords.add(coord));
-        if (sentence.includes('\n')) {
-          lineCoords = new Set();
-        }
-        return withAnchors(sentence, anchors);
-      })
-      .join('');
-
+    const { text: rebuilt } = anchorTextPart(text, passages, {});
     if (rebuilt !== text) {
       writeText(part, rebuilt);
     }
@@ -508,26 +554,12 @@ export function insertMCPCitations(
       continue;
     }
 
-    const sentences = splitIntoSentences(text);
-    let lineCoords = new Set<string>();
-    const rebuilt = sentences
-      .map((sentence) => {
-        const { anchors, coords } = anchorsForSentence(sentence, passages, {
-          threshold: MCP_SIMILARITY_THRESHOLD,
-          tokenizeFn: tokenizeStemmed,
-          anchorTag: 'mcp',
-          excludeCoords: lineCoords,
-        });
-        coords.forEach((coord) => {
-          usedCoords.add(coord);
-          lineCoords.add(coord);
-        });
-        if (sentence.includes('\n')) {
-          lineCoords = new Set();
-        }
-        return withAnchors(sentence, anchors);
-      })
-      .join('');
+    const { text: rebuilt, usedCoords: partCoords } = anchorTextPart(text, passages, {
+      threshold: MCP_SIMILARITY_THRESHOLD,
+      tokenizeFn: tokenizeStemmed,
+      anchorTag: 'mcp',
+    });
+    partCoords.forEach((coord) => usedCoords.add(coord));
 
     if (rebuilt !== text) {
       writeText(part, rebuilt);
@@ -633,20 +665,137 @@ function stripLineMarkers(line: string): string {
 const TABLE_SEPARATOR_LINE = /^\s*\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?\s*$/;
 
 /**
- * Splits a markdown table row (`| a | b |`) into its cell contents, or
- * returns undefined if the line isn't a table row (including separator
- * rows), so a SharePoint answer rendered as a table can still be matched
- * cell-by-cell the same way a bulleted line is matched whole.
+ * A table row's cells plus which edge pipes the original line actually had, so a caller that
+ * rebuilds the row can reproduce the exact same leading/trailing pipe formatting instead of
+ * always adding both. `prefix`/`suffix` are the whitespace trimmed off the original line
+ * (indentation, trailing spaces, a CRLF's `\r`) so the rebuilt line reproduces it exactly instead
+ * of silently normalizing it away.
  */
-function splitTableRowCells(line: string): string[] | undefined {
+interface TableRowCells {
+  cells: string[];
+  hasLeadingPipe: boolean;
+  hasTrailingPipe: boolean;
+  prefix: string;
+  suffix: string;
+}
+
+/**
+ * True when the `|` at `index` is a real column separator, not a backslash-escaped literal pipe
+ * (`Value \| detail`). Counts consecutive backslashes immediately before it: an even count (zero
+ * included) leaves the pipe unescaped, an odd count means the last backslash escapes it.
+ */
+function isUnescapedPipeAt(text: string, index: number): boolean {
+  let backslashes = 0;
+  let i = index - 1;
+  while (i >= 0 && text[i] === '\\') {
+    backslashes += 1;
+    i -= 1;
+  }
+  return backslashes % 2 === 0;
+}
+
+/**
+ * Splits `text` on unescaped `|` characters only, so a literal `\|` inside a cell (GFM's escape
+ * for a pipe that shouldn't act as a column boundary) stays part of that cell's content instead of
+ * being mistaken for a separator.
+ */
+function splitUnescapedPipes(text: string): string[] {
+  const cells: string[] = [];
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '|' && isUnescapedPipeAt(text, i)) {
+      cells.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  cells.push(text.slice(start));
+  return cells;
+}
+
+/**
+ * Splits a markdown table row (`| a | b |`) into its cell contents, or returns undefined if the
+ * line isn't a table row (including separator rows), so a SharePoint or file_search answer
+ * rendered as a table can still be matched cell-by-cell the same way a bulleted line is matched
+ * whole. Only used on lines a caller has already confirmed sit inside a real GFM table block (see
+ * `computeTableLineIndices`) — this function only knows a single line's shape, not whether it's
+ * actually part of a table, so any pipe-containing prose, shell command, or fenced code line would
+ * otherwise look identical to a genuine row.
+ *
+ * GFM permits omitting the leading and/or trailing pipe on a multi-column row (`File | Summary`
+ * is as valid as `| File | Summary |`), so a row qualifies either when both edge pipes are present
+ * (covers single-column rows, which need both to be unambiguous) or when at least one unescaped
+ * `|` separates cells in the interior — a lone stray `|` (escaped or with nothing to separate) is
+ * not a table row.
+ */
+function splitTableRowCells(line: string): TableRowCells | undefined {
   const trimmed = line.trim();
-  if (!trimmed.startsWith('|') || !trimmed.endsWith('|') || trimmed.length < 2) {
+  if (trimmed.length === 0 || TABLE_SEPARATOR_LINE.test(trimmed)) {
     return undefined;
   }
-  if (TABLE_SEPARATOR_LINE.test(trimmed)) {
+  const hasLeadingPipe = trimmed.startsWith('|');
+  const hasTrailingPipe =
+    trimmed.length > 1 && trimmed.endsWith('|') && isUnescapedPipeAt(trimmed, trimmed.length - 1);
+  const core = trimmed.slice(hasLeadingPipe ? 1 : 0, hasTrailingPipe ? -1 : undefined);
+  const cells = splitUnescapedPipes(core);
+  if (!(hasLeadingPipe && hasTrailingPipe) && cells.length < 2) {
     return undefined;
   }
-  return trimmed.slice(1, -1).split('|');
+  const prefix = line.slice(0, line.indexOf(trimmed));
+  const suffix = line.slice(prefix.length + trimmed.length);
+  return { cells, hasLeadingPipe, hasTrailingPipe, prefix, suffix };
+}
+
+/**
+ * Identifies which lines of a lossless `\n`-split belong to a real GFM table block, so a line
+ * merely containing a pipe — prose, a shell command, fenced code, or markdown streamed so far that
+ * only has a header — is never mistaken for a table row. GFM requires a delimiter row
+ * (`| --- | --- |`) directly under the header to recognize a table at all; once one is found, the
+ * header and delimiter are marked, and contiguous following lines that themselves look like table
+ * rows extend the block until the first blank line or non-row line.
+ */
+function computeTableLineIndices(lines: string[]): Set<number> {
+  const tableLines = new Set<number>();
+  for (let i = 1; i < lines.length; i++) {
+    if (tableLines.has(i) || !TABLE_SEPARATOR_LINE.test(lines[i].trim())) {
+      continue;
+    }
+    const headerIndex = i - 1;
+    if (tableLines.has(headerIndex) || !splitTableRowCells(lines[headerIndex])) {
+      continue;
+    }
+    tableLines.add(headerIndex);
+    tableLines.add(i);
+    let j = i + 1;
+    while (j < lines.length && splitTableRowCells(lines[j])) {
+      tableLines.add(j);
+      j += 1;
+    }
+  }
+  return tableLines;
+}
+
+/**
+ * Rebuilds a table row from `splitTableRowCells`'s output, restoring the edge pipes and the
+ * leading/trailing whitespace (including a CRLF's `\r`) the original line had.
+ */
+function joinTableRowCells({
+  cells,
+  hasLeadingPipe,
+  hasTrailingPipe,
+  prefix,
+  suffix,
+}: TableRowCells): string {
+  return `${prefix}${hasLeadingPipe ? '|' : ''}${cells.join('|')}${hasTrailingPipe ? '|' : ''}${suffix}`;
+}
+
+/** Index of the last non-blank cell, or -1 if every cell is empty — the safe place to append an anchor without disturbing column count. */
+function findLastNonEmptyCellIndex(cells: string[]): number {
+  for (let i = cells.length - 1; i >= 0; i--) {
+    if (cells[i].trim().length > 0) {
+      return i;
+    }
+  }
+  return -1;
 }
 
 /**
@@ -806,9 +955,12 @@ export function insertSharePointCitations(
     }
 
     let changed = false;
-    const rebuiltLines = text.split('\n').map((line) => {
-      const tableCells = splitTableRowCells(line);
-      if (tableCells) {
+    const lines = text.split('\n');
+    const tableLineIndices = computeTableLineIndices(lines);
+    const rebuiltLines = lines.map((line, index) => {
+      const tableRow = tableLineIndices.has(index) ? splitTableRowCells(line) : undefined;
+      if (tableRow) {
+        const { cells: tableCells } = tableRow;
         for (let cellIndex = 0; cellIndex < tableCells.length; cellIndex++) {
           const normalizedCell = normalizeForMatch(stripLineMarkers(tableCells[cellIndex]));
           if (!normalizedCell) {
@@ -827,7 +979,7 @@ export function insertSharePointCitations(
             tableCells[cellIndex] = withAnchors(tableCells[cellIndex], [
               `${ANCHOR_MARKER}turn${coord.turn}mcp${coord.fileIndex}`,
             ]);
-            return `|${tableCells.join('|')}|`;
+            return joinTableRowCells(tableRow);
           }
         }
         return line;

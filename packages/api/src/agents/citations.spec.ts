@@ -224,6 +224,161 @@ describe('insertFileCitations', () => {
     ]);
     expect(parts[0]).toBe(ref);
   });
+
+  // Deloitte Custom Change: a file_search answer rendered as a markdown table must keep its
+  // pipe/column count intact — a citation anchor must land inside a cell, never after the row's
+  // closing pipe.
+  it('anchors a markdown table row inside its last cell without corrupting the row', () => {
+    const parts = [
+      textPart(
+        '| Topic | Summary |\n' +
+          '| --- | --- |\n' +
+          '| Desk Booking | You can reserve a desk fourteen days in advance through the booking portal |',
+      ),
+    ];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const rows = readText(parts[0]).split('\n');
+    expect(rows).toHaveLength(3);
+    expect(rows[2].trim().endsWith('|')).toBe(true);
+    const cells = rows[2].split('|');
+    expect(cells).toHaveLength(4);
+    expect(cells[1].trim()).toBe('Desk Booking');
+    expect(cells[2]).toContain(`${MARKER}turn0file0`);
+    expect(cells[2]).toContain(
+      'You can reserve a desk fourteen days in advance through the booking portal',
+    );
+  });
+
+  // Deloitte Custom Change: a `\|` inside a cell is GFM's escape for a literal pipe that is not a
+  // column separator — splitting on every `|` would fracture the cell and shift the anchor into a
+  // phantom extra column.
+  it('does not treat an escaped pipe inside a cell as a column boundary', () => {
+    const parts = [
+      textPart(
+        '| Topic | Summary |\n' +
+          '| --- | --- |\n' +
+          '| Desk Booking | You can reserve a desk \\| workspace fourteen days in advance through the booking portal |',
+      ),
+    ];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const rows = readText(parts[0]).split('\n');
+    expect(rows).toHaveLength(3);
+    expect(rows[2]).toBe(
+      '| Desk Booking | You can reserve a desk \\| workspace fourteen days in advance through the booking portal ' +
+        `${MARKER}turn0file0 |`,
+    );
+  });
+
+  // A pipe inside ordinary prose (no delimiter row anywhere nearby) must not be mistaken for a
+  // table row — it should fall back to the sentence-boundary pass, keeping the pipe intact and
+  // anchoring at the sentence, not a phantom cell.
+  it('does not treat a prose line containing a pipe as a table row', () => {
+    const parts = [
+      textPart(
+        'You can reserve a desk (standing | sitting) fourteen days in advance through the booking portal.',
+      ),
+    ];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const text = readText(parts[0]);
+    expect(text.split('\n')).toHaveLength(1);
+    expect(text).toContain('(standing | sitting)');
+    expect(text).toContain(`${MARKER}turn0file0`);
+  });
+
+  // A shell-style command containing pipes must not be parsed as table cells even when its text
+  // otherwise matches a source closely enough to be anchored.
+  it('anchors a non-table line containing pipes without splitting it into cells', () => {
+    const content = 'Run the audit using cat notes | grep foo | wc -l to count matches.';
+    const parts = [textPart(content)];
+    insertFileCitations(parts, [fileSearchAttachment([{ fileId: 'fileA', content }])]);
+    const text = readText(parts[0]);
+    expect(text.split('\n')).toHaveLength(1);
+    expect(text).toContain('cat notes | grep foo | wc -l');
+    expect(text).toContain(`${MARKER}turn0file0`);
+  });
+
+  // A header row with no delimiter row directly beneath it is not a valid GFM table (e.g.
+  // markdown streamed so far, or simply malformed) — it must not be parsed cell-by-cell.
+  it('does not treat a header row with no delimiter row as a table', () => {
+    const parts = [
+      textPart(
+        '| Topic | Summary |\n' +
+          '| Desk Booking | You can reserve a desk fourteen days in advance through the booking portal |',
+      ),
+    ];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const rows = readText(parts[0]).split('\n');
+    expect(rows).toHaveLength(2);
+    expect(rows[1]).toBe(
+      '| Desk Booking | You can reserve a desk fourteen days in advance through the booking portal |' +
+        ` ${MARKER}turn0file0`,
+    );
+  });
+
+  it('does not split a table row at a filename extension period', () => {
+    const parts = [
+      textPart(
+        '| File | Summary |\n' +
+          '| --- | --- |\n' +
+          '| report.pdf | You can reserve a desk fourteen days in advance through the booking portal |',
+      ),
+    ];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const text = readText(parts[0]);
+    const rows = text.split('\n');
+    expect(rows).toHaveLength(3);
+    expect(text).toContain('report.pdf');
+    expect(rows[2].split('|')).toHaveLength(4);
+  });
+
+  // GFM permits a table row without edge pipes (`File | Summary` is as valid as
+  // `| File | Summary |`) — that row must still be recognized as a table row, not fall through to
+  // sentence splitting, which would split a filename like `report.pdf` mid-word.
+  it('anchors a table row that omits the leading and trailing pipes', () => {
+    const parts = [
+      textPart(
+        'File | Summary\n' +
+          '--- | ---\n' +
+          'report.pdf | You can reserve a desk fourteen days in advance through the booking portal',
+      ),
+    ];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const text = readText(parts[0]);
+    const rows = text.split('\n');
+    expect(rows).toHaveLength(3);
+    expect(text).toContain('report.pdf');
+    expect(rows[2]).toContain(`${MARKER}turn0file0`);
+    expect(rows[2].startsWith('|')).toBe(false);
+    expect(rows[2].endsWith('|')).toBe(false);
+    expect(rows[2].split('|')).toHaveLength(2);
+  });
+
+  it('leaves a markdown table separator row untouched', () => {
+    const parts = [
+      textPart(
+        '| Topic | Summary |\n' +
+          '| --- | --- |\n' +
+          '| Desk Booking | You can reserve a desk fourteen days in advance through the booking portal |',
+      ),
+    ];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const rows = readText(parts[0]).split('\n');
+    expect(rows[1]).toBe('| --- | --- |');
+  });
 });
 
 describe('insertMCPCitations', () => {
@@ -343,6 +498,65 @@ describe('insertMCPCitations', () => {
       0,
     );
     expect(usedCoords).toEqual(new Set(['0:0']));
+  });
+
+  // Deloitte Custom Change: table-row protection is shared infrastructure, not SharePoint-only —
+  // any MCP connector's answer rendered as a table must keep its column count intact too.
+  it('anchors a non-SharePoint MCP table row inside its last cell without corrupting the row', () => {
+    const parts = [
+      textPart(
+        '| Topic | Summary |\n' +
+          '| --- | --- |\n' +
+          '| RBA Rates | The Reserve Bank held the cash rate steady at its meeting today |',
+      ),
+    ];
+    insertMCPCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'afr_get_latest_news', serverName: 'afr', content: AFR_ARTICLE },
+        ]),
+      ],
+      0,
+    );
+    const rows = readText(parts[0]).split('\n');
+    expect(rows).toHaveLength(3);
+    expect(rows[2].trim().endsWith('|')).toBe(true);
+    const cells = rows[2].split('|');
+    expect(cells).toHaveLength(4);
+    expect(cells[1].trim()).toBe('RBA Rates');
+    expect(cells[2]).toContain(`${MARKER}turn0mcp0`);
+    expect(cells[2]).toContain('The Reserve Bank held the cash rate steady at its meeting today');
+  });
+
+  // Two sources can both match the same row (e.g. a summary row referencing two distinct
+  // articles) — both anchors must land in the same last cell, in source order, without adding
+  // extra columns.
+  it('anchors multiple matching sources into the same row, in order', () => {
+    const parts = [
+      textPart(
+        '| Topic | Summary |\n' +
+          '| --- | --- |\n' +
+          '| Markets | The Reserve Bank held the cash rate steady at its meeting today, and shares in the mining sector rallied after a surprise jump in iron ore prices overseas |',
+      ),
+    ];
+    const coords = insertMCPCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'afr_get_latest_news', serverName: 'afr', content: AFR_ARTICLE },
+          { toolName: 'afr_get_latest_news', serverName: 'afr', content: OTHER_ARTICLE },
+        ]),
+      ],
+      0,
+    );
+    const rows = readText(parts[0]).split('\n');
+    expect(rows).toHaveLength(3);
+    const cells = rows[2].split('|');
+    expect(cells).toHaveLength(4);
+    expect(cells[2]).toContain(`${MARKER}turn0mcp0`);
+    expect(cells[2]).toContain(`${MARKER}turn0mcp1`);
+    expect(coords).toEqual(new Set(['0:0', '0:1']));
   });
 });
 
@@ -634,11 +848,52 @@ describe('insertSharePointCitations', () => {
       0,
     );
     const text = readText(parts[0]);
-    expect(text).toContain(`${MARKER}turn0mcp0`);
     const rows = text.split('\n');
     expect(rows).toHaveLength(3);
-    expect(rows[2].split('|')).toHaveLength(5);
-    expect(rows[2]).toContain('| AISolutionStudio |');
+    const cells = rows[2].split('|');
+    expect(cells).toHaveLength(5);
+    expect(cells[1]).toContain(`${MARKER}turn0mcp0`);
+    expect(cells[1]).toContain('Consulting Graduate Induction Workbook.pptx');
+    expect(cells[2].trim()).toBe('AISolutionStudio');
+    expect(cells[3].trim()).toBe('9 Sep 2026');
+  });
+
+  // GFM permits a table row without edge pipes — this must still be recognized as a table row
+  // (matched cell-by-cell) instead of falling through to the line-prefix matcher, which would
+  // split the filename at its extension period and miss it entirely.
+  it('anchors a markdown table row that omits the leading and trailing pipes', () => {
+    const parts = [
+      textPart(
+        'File Name | Location | Last Modified\n' +
+          '--- | --- | ---\n' +
+          'Consulting Graduate Induction Workbook.pptx | AISolutionStudio | 9 Sep 2026',
+      ),
+    ];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    const text = readText(parts[0]);
+    const rows = text.split('\n');
+    expect(rows).toHaveLength(3);
+    expect(rows[2].startsWith('|')).toBe(false);
+    expect(rows[2].endsWith('|')).toBe(false);
+    const cells = rows[2].split('|');
+    expect(cells).toHaveLength(3);
+    expect(cells[0]).toContain(`${MARKER}turn0mcp0`);
+    expect(cells[0]).toContain('Consulting Graduate Induction Workbook.pptx');
+    expect(cells[1].trim()).toBe('AISolutionStudio');
+    expect(cells[2].trim()).toBe('9 Sep 2026');
   });
 
   it('does not anchor a table row whose cell match is only a partial word', () => {
@@ -705,13 +960,66 @@ describe('insertSharePointCitations', () => {
     expect(readText(parts[0])).toBe(original);
   });
 
+  // Mixed citations: a table row match and a separate bulleted-line match in the same answer must
+  // both be anchored to the correct source, without either code path interfering with the other.
+  it('anchors both a table row and a separate bulleted line in the same answer', () => {
+    const parts = [
+      textPart(
+        '| File Name | Location |\n' +
+          '|---|---|\n' +
+          '| Report.pptx | Brand-Space |\n' +
+          '\n' +
+          '- Induction Workbook.docx',
+      ),
+    ];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'sp_search', serverName: 'sharepoint', title: 'Report.pptx', content: 'a' },
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Induction Workbook.docx',
+            content: 'b',
+          },
+        ]),
+      ],
+      0,
+    );
+    const rows = readText(parts[0]).split('\n');
+    expect(rows).toHaveLength(5);
+    expect(rows[2]).toContain(`${MARKER}turn0mcp0`);
+    expect(rows[4]).toContain(`${MARKER}turn0mcp1`);
+  });
+
+  // A pipe inside a bulleted line that is not part of a table (no delimiter row anywhere in the
+  // text) must not be parsed as table cells.
+  it('does not treat a bulleted line containing a pipe as a table row', () => {
+    const parts = [textPart('- Report.pptx | needs review')];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'sp_search', serverName: 'sharepoint', title: 'Report.pptx', content: 'a' },
+        ]),
+      ],
+      0,
+    );
+    const text = readText(parts[0]);
+    expect(text.split('\n')).toHaveLength(1);
+    expect(text).toContain(`${MARKER}turn0mcp0`);
+  });
+
   // Deloitte Custom Change: three sources can share the exact same filename (same file
   // uploaded to different folders) — each occurrence in the answer must credit a distinct
   // source, in the order those sources appeared in the tool result, not all the same one.
   it('credits each occurrence of a duplicate title to a distinct source, in source order', () => {
     const parts = [
       textPart(
-        '| 16x9_Timesaver_PPT.pptx | Brand-Space | 21 May 2025 |\n' +
+        '| File Name | Location | Last Modified |\n' +
+          '|---|---|---|\n' +
+          '| 16x9_Timesaver_PPT.pptx | Brand-Space | 21 May 2025 |\n' +
           '| 16x9_Timesaver_PPT.pptx | DR-GR Brand Templates | 08 Jun 2026 |\n' +
           '| 16x9_Timesaver_PPT.pptx | DR-GR | 08 Jan 2026 |',
       ),
@@ -743,9 +1051,9 @@ describe('insertSharePointCitations', () => {
       0,
     );
     const rows = readText(parts[0])?.split('\n') ?? [];
-    expect(rows[0]).toContain(`${MARKER}turn0mcp0`);
-    expect(rows[1]).toContain(`${MARKER}turn0mcp1`);
-    expect(rows[2]).toContain(`${MARKER}turn0mcp2`);
+    expect(rows[2]).toContain(`${MARKER}turn0mcp0`);
+    expect(rows[3]).toContain(`${MARKER}turn0mcp1`);
+    expect(rows[4]).toContain(`${MARKER}turn0mcp2`);
   });
 });
 
