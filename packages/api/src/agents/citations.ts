@@ -391,10 +391,12 @@ function anchorTextPart(
   },
 ): { text: string; usedCoords: Set<string> } {
   const usedCoords = new Set<string>();
+  const lines = text.split('\n');
+  const tableLineIndices = computeTableLineIndices(lines);
 
-  const rebuiltLines = text.split('\n').map((line) => {
+  const rebuiltLines = lines.map((line, index) => {
     const lineCoords = new Set<string>();
-    const tableRow = splitTableRowCells(line);
+    const tableRow = tableLineIndices.has(index) ? splitTableRowCells(line) : undefined;
 
     if (tableRow) {
       const { anchors, coords } = anchorsForSentence(line, passages, {
@@ -672,15 +674,52 @@ interface TableRowCells {
 }
 
 /**
+ * True when the `|` at `index` is a real column separator, not a backslash-escaped literal pipe
+ * (`Value \| detail`). Counts consecutive backslashes immediately before it: an even count (zero
+ * included) leaves the pipe unescaped, an odd count means the last backslash escapes it.
+ */
+function isUnescapedPipeAt(text: string, index: number): boolean {
+  let backslashes = 0;
+  let i = index - 1;
+  while (i >= 0 && text[i] === '\\') {
+    backslashes += 1;
+    i -= 1;
+  }
+  return backslashes % 2 === 0;
+}
+
+/**
+ * Splits `text` on unescaped `|` characters only, so a literal `\|` inside a cell (GFM's escape
+ * for a pipe that shouldn't act as a column boundary) stays part of that cell's content instead of
+ * being mistaken for a separator.
+ */
+function splitUnescapedPipes(text: string): string[] {
+  const cells: string[] = [];
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '|' && isUnescapedPipeAt(text, i)) {
+      cells.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  cells.push(text.slice(start));
+  return cells;
+}
+
+/**
  * Splits a markdown table row (`| a | b |`) into its cell contents, or returns undefined if the
  * line isn't a table row (including separator rows), so a SharePoint or file_search answer
  * rendered as a table can still be matched cell-by-cell the same way a bulleted line is matched
- * whole.
+ * whole. Only used on lines a caller has already confirmed sit inside a real GFM table block (see
+ * `computeTableLineIndices`) — this function only knows a single line's shape, not whether it's
+ * actually part of a table, so any pipe-containing prose, shell command, or fenced code line would
+ * otherwise look identical to a genuine row.
  *
  * GFM permits omitting the leading and/or trailing pipe on a multi-column row (`File | Summary`
  * is as valid as `| File | Summary |`), so a row qualifies either when both edge pipes are present
- * (covers single-column rows, which need both to be unambiguous) or when at least one `|`
- * separates cells in the interior — a lone stray `|` with nothing to separate is not a table row.
+ * (covers single-column rows, which need both to be unambiguous) or when at least one unescaped
+ * `|` separates cells in the interior — a lone stray `|` (escaped or with nothing to separate) is
+ * not a table row.
  */
 function splitTableRowCells(line: string): TableRowCells | undefined {
   const trimmed = line.trim();
@@ -688,14 +727,45 @@ function splitTableRowCells(line: string): TableRowCells | undefined {
     return undefined;
   }
   const hasLeadingPipe = trimmed.startsWith('|');
-  const hasTrailingPipe = trimmed.length > 1 && trimmed.endsWith('|');
+  const hasTrailingPipe =
+    trimmed.length > 1 && trimmed.endsWith('|') && isUnescapedPipeAt(trimmed, trimmed.length - 1);
   const core = trimmed.slice(hasLeadingPipe ? 1 : 0, hasTrailingPipe ? -1 : undefined);
-  if (!(hasLeadingPipe && hasTrailingPipe) && !core.includes('|')) {
+  const cells = splitUnescapedPipes(core);
+  if (!(hasLeadingPipe && hasTrailingPipe) && cells.length < 2) {
     return undefined;
   }
   const prefix = line.slice(0, line.indexOf(trimmed));
   const suffix = line.slice(prefix.length + trimmed.length);
-  return { cells: core.split('|'), hasLeadingPipe, hasTrailingPipe, prefix, suffix };
+  return { cells, hasLeadingPipe, hasTrailingPipe, prefix, suffix };
+}
+
+/**
+ * Identifies which lines of a lossless `\n`-split belong to a real GFM table block, so a line
+ * merely containing a pipe — prose, a shell command, fenced code, or markdown streamed so far that
+ * only has a header — is never mistaken for a table row. GFM requires a delimiter row
+ * (`| --- | --- |`) directly under the header to recognize a table at all; once one is found, the
+ * header and delimiter are marked, and contiguous following lines that themselves look like table
+ * rows extend the block until the first blank line or non-row line.
+ */
+function computeTableLineIndices(lines: string[]): Set<number> {
+  const tableLines = new Set<number>();
+  for (let i = 1; i < lines.length; i++) {
+    if (tableLines.has(i) || !TABLE_SEPARATOR_LINE.test(lines[i].trim())) {
+      continue;
+    }
+    const headerIndex = i - 1;
+    if (tableLines.has(headerIndex) || !splitTableRowCells(lines[headerIndex])) {
+      continue;
+    }
+    tableLines.add(headerIndex);
+    tableLines.add(i);
+    let j = i + 1;
+    while (j < lines.length && splitTableRowCells(lines[j])) {
+      tableLines.add(j);
+      j += 1;
+    }
+  }
+  return tableLines;
 }
 
 /**
@@ -879,8 +949,10 @@ export function insertSharePointCitations(
     }
 
     let changed = false;
-    const rebuiltLines = text.split('\n').map((line) => {
-      const tableRow = splitTableRowCells(line);
+    const lines = text.split('\n');
+    const tableLineIndices = computeTableLineIndices(lines);
+    const rebuiltLines = lines.map((line, index) => {
+      const tableRow = tableLineIndices.has(index) ? splitTableRowCells(line) : undefined;
       if (tableRow) {
         const { cells: tableCells } = tableRow;
         for (let cellIndex = 0; cellIndex < tableCells.length; cellIndex++) {
