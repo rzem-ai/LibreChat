@@ -205,14 +205,10 @@ describe('UserController tutorial state', () => {
       });
     });
 
-    it('calls updateUser for non-ratings fields alongside mergeTutorialRatings for ratings', async () => {
+    it('persists non-ratings fields in the guarded ratings write', async () => {
       mockMergeTutorialRatings.mockResolvedValue({
-        user: { tutorialPromptSeen: false, tutorialRatings: { 'chat-basics': 5 } },
+        user: { tutorialPromptSeen: true, tutorialRatings: { 'chat-basics': 5 } },
         capExceeded: false,
-      });
-      mockUpdateUser.mockResolvedValue({
-        tutorialPromptSeen: true,
-        tutorialRatings: { 'chat-basics': 5 },
       });
       const req = createRequest({
         body: { tutorialRatings: { 'chat-basics': 5 }, tutorialPromptSeen: true },
@@ -221,8 +217,12 @@ describe('UserController tutorial state', () => {
 
       await updateTutorialStateController(req, res);
 
-      expect(mockMergeTutorialRatings).toHaveBeenCalledWith('user-1', { 'chat-basics': 5 });
-      expect(mockUpdateUser).toHaveBeenCalledWith('user-1', { tutorialPromptSeen: true });
+      expect(mockMergeTutorialRatings).toHaveBeenCalledWith(
+        'user-1',
+        { 'chat-basics': 5 },
+        { tutorialPromptSeen: true },
+      );
+      expect(mockUpdateUser).not.toHaveBeenCalled();
     });
 
     it('stores tutorial feedback comments alongside the score', async () => {
@@ -260,16 +260,22 @@ describe('UserController tutorial state', () => {
 
       await updateTutorialStateController(req, res);
 
-      expect(mockMergeTutorialRatings).toHaveBeenCalledWith('user-1', {
-        'getting-started-guide': 4,
-      });
-      expect(mockUpdateUser).toHaveBeenCalledWith('user-1', {
-        'tutorialFeedback.getting-started-guide': {
-          score: 4,
-          comment: 'Helpful tour',
-          updatedAt: expect.any(Date),
+      expect(mockMergeTutorialRatings).toHaveBeenCalledWith(
+        'user-1',
+        {
+          'getting-started-guide': 4,
         },
-      });
+        {
+          tutorialFeedback: {
+            'getting-started-guide': {
+              score: 4,
+              comment: 'Helpful tour',
+              updatedAt: expect.any(Date),
+            },
+          },
+        },
+      );
+      expect(mockUpdateUser).not.toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({
         tutorialPromptSeen: false,
         tutorialRatings: { 'other-course': 5, 'getting-started-guide': 4 },

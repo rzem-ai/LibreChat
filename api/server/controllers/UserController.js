@@ -160,12 +160,33 @@ const updateTutorialStateController = async (req, res) => {
     let user;
 
     if (tutorialRatings) {
+      const { tutorialRatings: _omitted, tutorialFeedback, ...rest } = update;
+      const tutorialFeedbackUpdate =
+        tutorialFeedback == null
+          ? undefined
+          : Object.fromEntries(
+              Object.entries(tutorialFeedback).map(([courseId, feedback]) => [
+                courseId,
+                {
+                  ...feedback,
+                  updatedAt: new Date(),
+                },
+              ]),
+            );
+      const mergeUpdate = {
+        ...rest,
+        ...(tutorialFeedbackUpdate ? { tutorialFeedback: tutorialFeedbackUpdate } : {}),
+      };
       // mergeTutorialRatings enforces MAX_TUTORIAL_RATINGS using guarded
       // compare-and-swap writes compatible with DocumentDB.
-      const { user: merged, capExceeded, conflict } = await db.mergeTutorialRatings(
-        req.user.id,
-        tutorialRatings,
-      );
+      const mergeTutorialRatingsArgs = [req.user.id, tutorialRatings];
+
+      if (Object.keys(mergeUpdate).length > 0) {
+        mergeTutorialRatingsArgs.push(mergeUpdate);
+      }
+
+      const { user: merged, capExceeded, conflict } =
+        await db.mergeTutorialRatings(...mergeTutorialRatingsArgs);
       if (capExceeded) {
         return res.status(400).json({
           message: `tutorialRatings cannot exceed ${MAX_TUTORIAL_RATINGS} entries`,
@@ -177,29 +198,7 @@ const updateTutorialStateController = async (req, res) => {
         });
       }
 
-      // Write any non-ratings fields (e.g. tutorialPromptSeen) separately.
       user = merged;
-      const { tutorialRatings: _omitted, tutorialFeedback, ...rest } = update;
-
-      if (tutorialFeedback) {
-        const updatedAt = new Date();
-        Object.assign(
-          rest,
-          Object.fromEntries(
-            Object.entries(tutorialFeedback).map(([courseId, feedback]) => [
-              `tutorialFeedback.${courseId}`,
-              {
-                ...feedback,
-                updatedAt,
-              },
-            ]),
-          ),
-        );
-      }
-
-      if (Object.keys(rest).length > 0) {
-        user = (await db.updateUser(req.user.id, rest)) ?? user;
-      }
     } else {
       user = await db.updateUser(req.user.id, update);
     }

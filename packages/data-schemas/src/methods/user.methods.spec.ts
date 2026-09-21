@@ -908,6 +908,64 @@ describe('User Methods - Database Tests', () => {
       expect(persistedRatings['course-49']).toBe(3);
       expect([1, 5]).toContain(persistedRatings['shared-course']);
     });
+
+    test('should atomically persist ratings, feedback, and prompt state together', async () => {
+      const user = await User.create({
+        name: 'Tutorial Feedback User',
+        email: 'tutorial-feedback@example.com',
+        provider: 'local',
+        tutorialPromptSeen: false,
+        tutorialRatings: { 'existing-course': 5 },
+        tutorialFeedback: { 'existing-course': { score: 5, comment: 'Existing comment' } },
+      });
+      const userId = user._id?.toString() ?? '';
+      const updatedAt = new Date('2026-09-21T12:00:00.000Z');
+
+      const result = await methods.mergeTutorialRatings(
+        userId,
+        { 'new-course': 4 },
+        {
+          tutorialPromptSeen: true,
+          tutorialFeedback: {
+            'new-course': {
+              score: 4,
+              comment: 'Helpful tour',
+              updatedAt,
+            },
+          },
+        },
+      );
+      const persistedUser = await User.findById(userId).lean<t.IUser | null>();
+
+      expect(result.capExceeded).toBe(false);
+      expect(result.conflict).toBe(false);
+      expect(result.user?.tutorialPromptSeen).toBe(true);
+      expect(result.user?.tutorialRatings).toMatchObject({
+        'existing-course': 5,
+        'new-course': 4,
+      });
+      expect(result.user?.tutorialFeedback).toMatchObject({
+        'existing-course': { score: 5, comment: 'Existing comment' },
+        'new-course': {
+          score: 4,
+          comment: 'Helpful tour',
+          updatedAt,
+        },
+      });
+      expect(persistedUser?.tutorialPromptSeen).toBe(true);
+      expect(persistedUser?.tutorialRatings).toMatchObject({
+        'existing-course': 5,
+        'new-course': 4,
+      });
+      expect(persistedUser?.tutorialFeedback).toMatchObject({
+        'existing-course': { score: 5, comment: 'Existing comment' },
+        'new-course': {
+          score: 4,
+          comment: 'Helpful tour',
+          updatedAt,
+        },
+      });
+    });
   });
 
   describe('Email Normalization Edge Cases', () => {
