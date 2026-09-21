@@ -125,7 +125,7 @@ export default defineConfig(({ command }) => ({
           '**/*.{js,css,html}',
           'favicon.ico',
           'assets/favicon*.png',
-          'assets/fav-*.svg',
+          'assets/favicon-*.svg',
           'assets/icon-*.png',
           'assets/apple-touch-icon*.png',
           'assets/maskable-icon.png',
@@ -173,7 +173,7 @@ export default defineConfig(({ command }) => ({
         theme_color: '#009688',
         icons: [
           {
-            src: 'assets/fav-dark.svg',
+            src: 'assets/favicon-black.svg',
             sizes: 'any',
             type: 'image/svg+xml',
           },
