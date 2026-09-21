@@ -10,6 +10,7 @@
   border: 1px solid var(--border-light);
   background-color: var(--surface-primary);
   color: var(--text-primary);
+  font-family: 'Open Sans', ui-sans-serif, sans-serif, system-ui !important;
   box-shadow:
     0 10px 15px -3px rgb(0 0 0 / 0.1),
     0 4px 6px -4px rgb(0 0 0 / 0.1);
@@ -77,14 +78,14 @@
   background-color: var(--surface-hover);
 }
 
-.driver-popover-next-btn {
+.driver-popover-footer-btn.driver-popover-next-btn {
   border-color: var(--surface-submit);
   background-color: var(--surface-submit);
   color: #fff;
 }
 
-.driver-popover-next-btn:hover,
-.driver-popover-next-btn:focus {
+.driver-popover-footer-btn.driver-popover-next-btn:hover,
+.driver-popover-footer-btn.driver-popover-next-btn:focus {
   background-color: var(--surface-submit-hover);
 }
 

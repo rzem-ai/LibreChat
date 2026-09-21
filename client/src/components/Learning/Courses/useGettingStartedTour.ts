@@ -99,7 +99,7 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
         popover: {
           title: 'Welcome to MyAssist',
           description:
-            "Welcome to the new and improved MyAssist. We've rebuilt from the ground up to give you access to more powerful AI tools.<br><br>In this guided tour, we'll take you through the chat interface and side panel, so you are comfortable navigating through the platform.",
+            "Welcome to the new and improved MyAssist! We've rebuilt from the ground up to give you access to more powerful AI tools.<br><br>In this guided tour, we'll take you through the chat interface and side panel, so you are comfortable navigating through the platform.",
           side: 'right',
         },
       },
@@ -117,7 +117,7 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
         popover: {
           title: 'Model',
           description:
-            'Pick which model or agent answers your messages. Different options are better at different tasks — some are faster, some handle longer documents, and some are better at reasoning.<br/><br/><strong>If you are not sure where to start, choose a model provider with "AU" in the title.</strong>',
+            'Pick which model or agent answers your messages. Different options are better at different tasks — some are faster, some handle longer documents, and some are better at reasoning. A higher cost factor generally means a model is better suited to complex tasks.<br/><br/><strong>If you require your data to stay onshore in Australia, choose a model provider with "AU" in the title.</strong>',
           side: 'bottom',
         },
       },
@@ -180,7 +180,8 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
         element: '#send-button',
         popover: {
           title: 'Send',
-          description: 'Sends your message. This button lights up once you have typed something.',
+          description:
+            'Click here or hit Enter to send your message. This button lights up once you have typed something.',
           side: 'top',
         },
       },
@@ -228,6 +229,28 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
           side: 'right',
         },
       },
+      ...(canShowAgentSelectionSteps
+        ? [
+            {
+              element: '#nav-agents-marketplace-button',
+              popover: {
+                title: 'Agent Marketplace',
+                description:
+                  'Browse pre-built agents for common tasks. Each agent combines instructions, skills, connectors, files, and guidance so you can get started faster.',
+                side: 'right',
+              },
+            },
+            {
+              element: '#model-selector-button',
+              popover: {
+                title: 'Switch Back to a Model',
+                description:
+                  'If you are using an agent and want to return to a general model, open this selector and choose a standard model instead.',
+                side: 'bottom',
+              },
+            },
+          ]
+        : []),
       {
         element: '#nav-panel-skills',
         popover: {
@@ -242,7 +265,7 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
         popover: {
           title: 'Prompt Library',
           description:
-            'This is where you can create, edit and share prompts. Save prompt templates you use often, then trigger them in chat with a /command instead of retyping them.',
+            'This is where you can create, edit and share prompts. Save prompt templates you use often, then trigger them in chat by typing / to bring up the prompt search, instead of retyping them.',
           side: 'right',
         },
       },
@@ -289,32 +312,10 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
           side: 'right',
         },
       },
-      ...(canShowAgentSelectionSteps
-        ? [
-            {
-              element: '#nav-agents-marketplace-button',
-              popover: {
-                title: 'Agent Marketplace',
-                description:
-                  'Browse pre-built agents for common tasks. Each agent combines instructions, skills, connectors, files, and guidance so you can get started faster.',
-                side: 'right',
-              },
-            },
-            {
-              element: '#model-selector-button',
-              popover: {
-                title: 'Switch Back to a Model',
-                description:
-                  'If you are using an agent and want to return to a general model, open this selector and choose a standard model instead.',
-                side: 'bottom',
-              },
-            },
-          ]
-        : []),
       {
         element: '#nav-panel-learning',
         popover: {
-          title: 'Learning Hub',
+          title: 'MyAssist Academy',
           description:
             "You're here right now! Come back any time to revisit this tour or check for new learning content.",
           side: 'right',

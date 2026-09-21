@@ -11,8 +11,9 @@ export const COURSES: LearningCourse[] = [
   {
     id: 'getting-started-guide',
     title: 'Getting Started Tour',
-    description: 'Learn how to get started with MyAssist in this quick introductory tour, highly recommended for new users',
-    estimatedMinutes: 3,
+    description:
+      'Learn how to get started with MyAssist in this quick introductory tour, highly recommended for new users',
+    estimatedMinutes: 4,
     comingSoon: false,
   },
   {
