@@ -21,11 +21,11 @@ const SubmitButton = React.memo(
             ref={ref}
             aria-label={localize('com_nav_send_message')}
             id="send-button"
+            data-testid="send-button"
             disabled={props.disabled}
             className={cn(
               'rounded-full bg-primary p-1.5 text-primary-foreground outline-offset-4 transition-all duration-200 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary',
             )}
-            data-testid="send-button"
             type="submit"
           >
             <span className="" data-state="closed">

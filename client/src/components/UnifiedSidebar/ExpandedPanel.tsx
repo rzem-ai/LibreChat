@@ -49,6 +49,7 @@ const NewChatButton = memo(function NewChatButton({
       render={
         <a
           href="/c/new"
+          id="new-chat-button"
           data-testid="new-chat-button"
           aria-label={localize('com_ui_new_chat')}
           aria-keyshortcuts={ariaKey}
@@ -105,11 +106,11 @@ const NavIconButton = memo(function NavIconButton({
       side="right"
       render={
         <Button
+          id={`nav-panel-${link.id}`}
           size="icon"
           variant="ghost"
           aria-label={localize(link.title)}
           aria-pressed={isActive}
-          data-testid={`nav-panel-${link.id}`}
           className={cn(
             'h-9 w-9 rounded-lg',
             isActive ? 'bg-surface-active-alt text-text-primary' : 'text-text-secondary',
@@ -150,7 +151,7 @@ function ExpandedPanel({
         description={toggleSidebarHint}
         render={
           <Button
-            id={expanded ? CLOSE_SIDEBAR_ID : undefined}
+            id={expanded ? CLOSE_SIDEBAR_ID : 'open-sidebar-button'}
             data-testid={expanded ? 'close-sidebar-button' : 'open-sidebar-button'}
             size="icon"
             variant="ghost"
@@ -166,21 +167,39 @@ function ExpandedPanel({
       />
       <NewChatButton setActive={setActive} />
       <div className="mx-2 border-b border-border-light" />
+      {/* Deloitte Custom Change: Learning Hub is pinned to the bottom group
+          (directly above the account settings icon) so exclude it here */}
       <div className="flex flex-col gap-1 overflow-y-auto">
-        {links.map((link) => (
+        {links
+          .filter((link) => link.id !== 'learning')
+          .map((link) => (
+            <NavIconButton
+              key={link.id}
+              link={link}
+              isActive={link.id === effectiveActive}
+              expanded={expanded ?? true}
+              setActive={setActive}
+              onExpand={onExpand}
+              onCollapse={onCollapse}
+            />
+          ))}
+      </div>
+
+      {/* Deloitte Custom Change: Learning Hub pinned directly above the account
+          settings icon rather than floating at the end of the scrollable list
+          with a large mt-auto gap between them */}
+      <div className="mt-auto flex flex-col gap-1">
+        {links.find((link) => link.id === 'learning') && (
           <NavIconButton
-            key={link.id}
-            link={link}
-            isActive={link.id === effectiveActive}
+            key="learning"
+            link={links.find((link) => link.id === 'learning')!}
+            isActive={'learning' === effectiveActive}
             expanded={expanded ?? true}
             setActive={setActive}
             onExpand={onExpand}
             onCollapse={onCollapse}
           />
-        ))}
-      </div>
-
-      <div className="mt-auto">
+        )}
         <Suspense fallback={<Skeleton className="h-9 w-9 rounded-lg" />}>
           <AccountSettings collapsed />
         </Suspense>

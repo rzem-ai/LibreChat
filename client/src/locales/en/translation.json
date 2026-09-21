@@ -2167,5 +2167,20 @@
   "com_ui_zoom_in": "Zoom in",
   "com_ui_zoom_level": "Zoom level",
   "com_ui_zoom_out": "Zoom out",
-  "com_user_message": "You"
+  "com_user_message": "You",
+  "com_ui_learning_hub": "MyAssist Academy",
+  "com_learning_prompt_title": "Would you like a tour?",
+  "com_learning_prompt_body": "Get started with a quick guided tour of the platform.",
+  "com_learning_prompt_accept": "Start Tour",
+  "com_learning_prompt_decline": "Skip",
+  "com_learning_coming_soon": "More guided tours coming soon",
+  "com_learning_courses_title": "Guided Tours",
+  "com_learning_estimated_minutes": "{{0}} min",
+  "com_learning_estimated_minutes_plural": "{{0}} mins",
+  "com_learning_rate_prompt": "How helpful was this tour?",
+  "com_learning_rate_thanks": "Thanks for your feedback!",
+  "com_learning_start_tour": "Start tour",
+  "com_learning_complete_title": "Tour complete!",
+  "com_learning_complete_body": "Nice work — you've finished the Getting Started Tour.",
+  "com_learning_complete_done": "Done"
 }

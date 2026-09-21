@@ -157,6 +157,15 @@ const userSchema: Schema<IUser> = new Schema<IUser>(
       of: Boolean,
       default: () => new Map(),
     },
+    tutorialPromptSeen: {
+      type: Boolean,
+      default: false,
+    },
+    tutorialRatings: {
+      type: Map,
+      of: Number,
+      default: () => new Map(),
+    },
     /** Field for external source identification (for consistency with TPrincipal schema) */
     idOnTheSource: {
       type: String,

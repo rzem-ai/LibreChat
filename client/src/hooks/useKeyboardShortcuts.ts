@@ -17,6 +17,7 @@ import {
 } from '~/utils/shortcuts';
 import { mainTextareaId, NotificationSeverity } from '~/common';
 import { useArchiveConvoMutation } from '~/data-provider';
+import { isUnavailableElement } from '~/utils/elements';
 import { useHasAccess, useLocalize } from '~/hooks';
 import { clearMessagesCache } from '~/utils';
 import useNewConvo from './useNewConvo';
@@ -347,14 +348,6 @@ function isWithinOpenMenu(target: HTMLElement | null): boolean {
   return target instanceof Element && target.closest('[role="menu"], [role="listbox"]') != null;
 }
 
-function isUnavailableElement(el: HTMLElement): boolean {
-  return (
-    el.getAttribute('aria-disabled') === 'true' ||
-    (el instanceof HTMLButtonElement && el.disabled) ||
-    (el instanceof HTMLInputElement && el.disabled)
-  );
-}
-
 function clickTarget(el: HTMLElement | null | undefined): boolean {
   if (!el || isUnavailableElement(el)) {
     return false;
@@ -539,16 +532,11 @@ export function useShortcutActions(): ShortcutAction[] {
     return true;
   }, [setSidebarExpanded]);
 
-  const handleOpenModelSelector = useCallback(
-    () => clickElement('[data-testid="model-selector-button"]'),
-    [],
-  );
+  const handleOpenModelSelector = useCallback(() => clickElement('#model-selector-button'), []);
 
   const handleFocusSearch = useCallback(() => {
     const focusSearchInput = () => {
-      const input = document.querySelector<HTMLInputElement>(
-        'input[data-testid="nav-search-input"]',
-      );
+      const input = document.querySelector<HTMLInputElement>('#nav-search-input');
       if (!input) {
         return false;
       }
@@ -556,9 +544,7 @@ export function useShortcutActions(): ShortcutAction[] {
       return true;
     };
 
-    const panelButton = document.querySelector<HTMLButtonElement>(
-      '[data-testid="nav-panel-conversations"]',
-    );
+    const panelButton = document.querySelector<HTMLButtonElement>('#nav-panel-conversations');
     let switchedPanel = false;
     if (
       panelButton &&
@@ -667,7 +653,7 @@ export function useShortcutActions(): ShortcutAction[] {
   }, []);
 
   const handleOpenSettings = useCallback(() => {
-    const btn = document.querySelector<HTMLElement>('[data-testid="nav-user"]');
+    const btn = document.querySelector<HTMLElement>('#nav-user');
     if (!btn || isUnavailableElement(btn)) {
       return false;
     }
@@ -762,7 +748,7 @@ export function useShortcutActions(): ShortcutAction[] {
   }, [conversation?.conversationId, conversation?.title, routeConvoId, setDeleteTarget]);
 
   const handleSubmitMessage = useCallback(() => {
-    const btn = document.querySelector<HTMLButtonElement>('[data-testid="send-button"]');
+    const btn = document.getElementById('send-button') as HTMLButtonElement | null;
     return clickTarget(btn);
   }, []);
 
@@ -781,9 +767,7 @@ export function useShortcutActions(): ShortcutAction[] {
   const handleOpenPanel = useCallback(
     (panelId: string) => {
       const activatePanel = () => {
-        const btn = document.querySelector<HTMLButtonElement>(
-          `[data-testid="nav-panel-${panelId}"]`,
-        );
+        const btn = document.querySelector<HTMLButtonElement>(`#nav-panel-${panelId}`);
         if (!btn || isUnavailableElement(btn)) {
           return false;
         }
@@ -794,7 +778,7 @@ export function useShortcutActions(): ShortcutAction[] {
         return false;
       };
 
-      const btn = document.querySelector<HTMLButtonElement>(`[data-testid="nav-panel-${panelId}"]`);
+      const btn = document.querySelector<HTMLButtonElement>(`#nav-panel-${panelId}`);
       if (!btn || isUnavailableElement(btn)) {
         return false;
       }

@@ -25,6 +25,7 @@ function CodeInterpreter() {
         className="max-w-fit"
         checked={runCode}
         setValue={debouncedChange}
+        id="toolbar-toggle-code-interpreter"
         label={localize('com_ui_run_code')}
         isCheckedClassName="border-purple-600/40 bg-purple-500/10 hover:bg-purple-700/10"
         icon={<TerminalSquareIcon className="icon-md" aria-hidden="true" />}

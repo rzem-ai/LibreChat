@@ -3,7 +3,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import { AUTH_USER_DOC_BY_ID_PREFIX, CacheKeys } from 'librechat-data-provider';
 import type * as t from '~/types';
 import balanceSchema from '~/schema/balance';
-import { createUserMethods } from './user';
+import { createUserMethods, MAX_TUTORIAL_RATINGS } from './user';
 import userSchema from '~/schema/user';
 
 /** Mocking crypto for generateToken */
@@ -826,6 +826,87 @@ describe('User Methods - Database Tests', () => {
       expect(cache.get).toHaveBeenCalledWith(indexKey);
       expect(cache.delete).toHaveBeenCalledWith('auth-cache-key-a');
       expect(cache.delete).toHaveBeenCalledWith(indexKey);
+    });
+  });
+
+  describe('mergeTutorialRatings', () => {
+    const buildRatings = (count: number, start = 1): Record<string, number> =>
+      Object.fromEntries(
+        Array.from({ length: count }, (_, index) => [
+          `course-${index + start}`,
+          (index % 5) + 1,
+        ]),
+      );
+
+    const fetchRatings = async (userId: string): Promise<Record<string, number>> => {
+      const [result] = await User.aggregate<{ tutorialRatings?: Record<string, number> }>([
+        { $match: { _id: new mongoose.Types.ObjectId(userId) } },
+        { $project: { tutorialRatings: '$tutorialRatings' } },
+      ]);
+      return result?.tutorialRatings ?? {};
+    };
+
+    test('should merge updates and accept writes that land exactly at the cap', async () => {
+      const user = await User.create({
+        name: 'At Cap User',
+        email: 'at-cap@example.com',
+        provider: 'local',
+        tutorialRatings: buildRatings(MAX_TUTORIAL_RATINGS - 1),
+      });
+      const userId = user._id?.toString() ?? '';
+
+      const result = await methods.mergeTutorialRatings(userId, {
+        'course-1': 5,
+        [`course-${MAX_TUTORIAL_RATINGS}`]: 4,
+      });
+      const persistedRatings = await fetchRatings(userId);
+
+      expect(result.capExceeded).toBe(false);
+      expect(Object.keys(persistedRatings)).toHaveLength(MAX_TUTORIAL_RATINGS);
+      expect(persistedRatings['course-1']).toBe(5);
+      expect(persistedRatings[`course-${MAX_TUTORIAL_RATINGS}`]).toBe(4);
+    });
+
+    test('should reject writes over the cap and keep existing ratings unchanged', async () => {
+      const existingRatings = buildRatings(MAX_TUTORIAL_RATINGS);
+      const user = await User.create({
+        name: 'Over Cap User',
+        email: 'over-cap@example.com',
+        provider: 'local',
+        tutorialRatings: existingRatings,
+      });
+      const userId = user._id?.toString() ?? '';
+
+      const result = await methods.mergeTutorialRatings(userId, { 'course-51': 3 });
+      const persistedRatings = await fetchRatings(userId);
+
+      expect(result.capExceeded).toBe(true);
+      expect(Object.keys(persistedRatings)).toHaveLength(MAX_TUTORIAL_RATINGS);
+      expect(persistedRatings).toEqual(existingRatings);
+      expect(persistedRatings['course-51']).toBeUndefined();
+    });
+
+    test('should preserve both concurrent updates while enforcing the cap atomically', async () => {
+      const user = await User.create({
+        name: 'Concurrent Ratings User',
+        email: 'concurrent-ratings@example.com',
+        provider: 'local',
+        tutorialRatings: buildRatings(MAX_TUTORIAL_RATINGS - 3),
+      });
+      const userId = user._id?.toString() ?? '';
+
+      const [first, second] = await Promise.all([
+        methods.mergeTutorialRatings(userId, { 'course-48': 2, 'shared-course': 1 }),
+        methods.mergeTutorialRatings(userId, { 'course-49': 3, 'shared-course': 5 }),
+      ]);
+      const persistedRatings = await fetchRatings(userId);
+
+      expect(first.capExceeded).toBe(false);
+      expect(second.capExceeded).toBe(false);
+      expect(Object.keys(persistedRatings)).toHaveLength(MAX_TUTORIAL_RATINGS);
+      expect(persistedRatings['course-48']).toBe(2);
+      expect(persistedRatings['course-49']).toBe(3);
+      expect([1, 5]).toContain(persistedRatings['shared-course']);
     });
   });
 

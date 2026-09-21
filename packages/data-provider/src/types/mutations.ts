@@ -439,6 +439,13 @@ export type AcceptTermsMutationOptions = MutationOptions<
   void
 >;
 
+export type UpdateTutorialStateMutationOptions = MutationOptions<
+  types.TTutorialStateResponse,
+  Partial<types.TTutorialStateResponse>,
+  unknown,
+  unknown
+>;
+
 /* Tools */
 export type UpdatePluginAuthOptions = MutationOptions<types.TUser, types.TUpdateUserPlugins>;
 

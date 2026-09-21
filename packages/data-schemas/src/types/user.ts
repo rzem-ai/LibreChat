@@ -55,6 +55,10 @@ export interface IUser extends Document {
   favorites?: TUserFavorite[];
   /** Per-skill active/inactive overrides. Key = skillId, value = active state. */
   skillStates?: Record<string, boolean>;
+  /** Whether the user has already been shown the "Would you like a tutorial?" prompt. */
+  tutorialPromptSeen?: boolean;
+  /** Per-course tutorial ratings. Key = course id, value = 1-5 star rating. */
+  tutorialRatings?: Record<string, number>;
   createdAt?: Date;
   updatedAt?: Date;
   /** Field for external source identification (for consistency with TPrincipal schema) */
@@ -99,6 +103,8 @@ export interface UpdateUserRequest {
     memories?: boolean;
   };
   skillStates?: Record<string, boolean>;
+  tutorialPromptSeen?: boolean;
+  tutorialRatings?: Record<string, number>;
 }
 
 export interface UserDeleteResult {
