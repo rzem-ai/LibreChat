@@ -234,13 +234,16 @@ describe('useGettingStartedTour', () => {
     expect(capturedConfig?.steps?.some((step) => step.popover.title === 'Send')).toBe(true);
   });
 
-  it('omits a step when its target element is absent from the DOM entirely', () => {
-    // Removing the send button (rather than disabling it) should still drop the step.
+  it('keeps a missing-target step for Driver.js to skip at runtime', () => {
+    // Steps are no longer eagerly filtered by DOM presence at construction time.
+    // Driver.js's skipMissingElement + waitForElement handle absent targets
+    // at runtime when the tour actually reaches that step — so the Send step
+    // must remain in the steps array even when the element is not in the DOM.
     document.getElementById('send-button')?.remove();
 
     const { result } = renderHook(() => useGettingStartedTour());
     result.current.startTour();
 
-    expect(capturedConfig?.steps?.some((step) => step.popover.title === 'Send')).toBe(false);
+    expect(capturedConfig?.steps?.some((step) => step.popover.title === 'Send')).toBe(true);
   });
 });

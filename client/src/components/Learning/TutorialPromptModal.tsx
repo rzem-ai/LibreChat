@@ -211,11 +211,15 @@ export default function TutorialPromptModal({
                       // Return to top-left to close the outer shape, then
                       // immediately start the inner cutout (counter-clockwise)
                       '0px 0px,',
-                      // Inner rect (counter-clockwise) — the hole over the icon
+                      // Inner rect wound COUNTER-CLOCKWISE (top-left → bottom-left
+                      // → bottom-right → top-right → top-left), opposite to the
+                      // outer rect's clockwise direction. Under the nonzero fill
+                      // rule, opposite winding cancels and produces a real hole.
+                      // Same direction as the outer rect would NOT create a hole.
                       `${iconRect.left}px ${iconRect.top}px,`,
-                      `${iconRect.left + iconRect.width}px ${iconRect.top}px,`,
-                      `${iconRect.left + iconRect.width}px ${iconRect.top + iconRect.height}px,`,
                       `${iconRect.left}px ${iconRect.top + iconRect.height}px,`,
+                      `${iconRect.left + iconRect.width}px ${iconRect.top + iconRect.height}px,`,
+                      `${iconRect.left + iconRect.width}px ${iconRect.top}px,`,
                       `${iconRect.left}px ${iconRect.top}px`,
                       ')',
                     ].join(' ')
