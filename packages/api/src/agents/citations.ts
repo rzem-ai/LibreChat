@@ -40,6 +40,9 @@ const MCP_SIMILARITY_THRESHOLD = 0.35;
 const MAX_ANCHORS_PER_SENTENCE = 3;
 /** Citation marker character (U+E202) the frontend parses; see client citations.ts. */
 const ANCHOR_MARKER = '\ue202';
+/** Default KX usage-guidelines link, used when `KX_USAGE_GUIDELINES_URL` isn't configured. */
+const DEFAULT_KX_USAGE_GUIDELINES_URL =
+  'https://resources.deloitte.com/sites/kx/SitePages/Prompt-Usage-Guidelines.aspx';
 
 const STOPWORDS = new Set([
   'the',
@@ -572,6 +575,81 @@ function withAnchors(sentence: string, anchors: string[]): string {
   return `${trimmed} ${anchors.join(' ')}${trailing}`;
 }
 
+/**
+ * Anchors a single text blob against `passages`, line by line. A line that parses as a markdown
+ * table row (via `splitTableRowCells`) is scored as one unit and its anchors are inserted into the
+ * last non-empty cell, preserving column count — the same placement `insertSharePointCitations`
+ * uses. Every other line (prose, or a table separator row, which `splitTableRowCells` also treats
+ * as non-data) falls back to the existing sentence-boundary pass. Splitting/rejoining on `\n` is
+ * always lossless, so this never alters surrounding whitespace beyond the anchors themselves.
+ */
+function anchorTextPart(
+  text: string,
+  passages: Passage[],
+  options: {
+    threshold?: number;
+    tokenizeFn?: (text: string) => string[];
+    anchorTag?: string;
+    scoreExcludedRanges?: boolean;
+  },
+): { text: string; usedCoords: Set<string> } {
+  const usedCoords = new Set<string>();
+  const lines = text.split('\n');
+  const excludedRanges = findFencedCodeRanges(text);
+  let cursor = 0;
+  const inFence = lines.map((line) => {
+    const lineStart = cursor;
+    cursor += line.length + 1;
+    return isWithinRanges(lineStart, excludedRanges);
+  });
+  const tableLineIndices = computeTableLineIndices(lines);
+  const { scoreExcludedRanges = false, ...anchorOptions } = options;
+
+  const rebuiltLines = lines.map((line, index) => {
+    const excluded = inFence[index];
+    if (excluded && !scoreExcludedRanges) {
+      return line;
+    }
+
+    const lineCoords = new Set<string>();
+    const tableRow =
+      !excluded && tableLineIndices.has(index) ? splitTableRowCells(line) : undefined;
+
+    if (tableRow) {
+      const { anchors, coords } = anchorsForSentence(line, passages, {
+        ...anchorOptions,
+        excludeCoords: lineCoords,
+      });
+      coords.forEach((coord) => usedCoords.add(coord));
+      if (anchors.length === 0) {
+        return line;
+      }
+      const lastCellIndex = findLastNonEmptyCellIndex(tableRow.cells);
+      if (lastCellIndex === -1) {
+        return line;
+      }
+      tableRow.cells[lastCellIndex] = withAnchors(tableRow.cells[lastCellIndex], anchors);
+      return joinTableRowCells(tableRow);
+    }
+
+    return splitIntoSentences(line)
+      .map((sentence) => {
+        const { anchors, coords } = anchorsForSentence(sentence, passages, {
+          ...anchorOptions,
+          excludeCoords: lineCoords,
+        });
+        coords.forEach((coord) => {
+          usedCoords.add(coord);
+          lineCoords.add(coord);
+        });
+        return excluded ? sentence : withAnchors(sentence, anchors);
+      })
+      .join('');
+  });
+
+  return { text: rebuiltLines.join('\n'), usedCoords };
+}
+
 function findLastTextPart(contentParts: TMessageContentParts[]): TMessageContentParts | undefined {
   for (let i = contentParts.length - 1; i >= 0; i--) {
     const text = readText(contentParts[i]);
@@ -634,32 +712,7 @@ export function insertFileCitations(
       continue;
     }
 
-    const excludedRanges = findFencedCodeRanges(text);
-    const sentences = splitIntoSentences(text);
-    let lineCoords = new Set<string>();
-    let cursor = 0;
-    const rebuilt = sentences
-      .map((sentence) => {
-        const start = cursor;
-        cursor += sentence.length;
-        if (isWithinRanges(start, excludedRanges)) {
-          if (sentence.includes('\n')) {
-            lineCoords = new Set();
-          }
-          return sentence;
-        }
-
-        const { anchors, coords } = anchorsForSentence(sentence, passages, {
-          excludeCoords: lineCoords,
-        });
-        coords.forEach((coord) => lineCoords.add(coord));
-        if (sentence.includes('\n')) {
-          lineCoords = new Set();
-        }
-        return withAnchors(sentence, anchors);
-      })
-      .join('');
-
+    const { text: rebuilt } = anchorTextPart(text, passages, {});
     if (rebuilt !== text) {
       writeText(part, rebuilt);
     }
@@ -723,39 +776,16 @@ export function insertMCPCitations(
       continue;
     }
 
-    const excludedRanges = findFencedCodeRanges(text);
-    const sentences = splitIntoSentences(text);
-    let lineCoords = new Set<string>();
-    let cursor = 0;
-    const rebuilt = sentences
-      .map((sentence) => {
-        const start = cursor;
-        cursor += sentence.length;
-        // Deloitte Custom Change: still score the sentence inside an excluded (fenced) range
-        // so a source matched only there is marked used and doesn't get force-appended later
-        // by appendGuaranteedMCPCitations — but never insert the anchor markup, since it
-        // would render as literal text inside the fence.
-        const withinExcludedRange = isWithinRanges(start, excludedRanges);
-
-        const { anchors, coords } = anchorsForSentence(sentence, passages, {
-          threshold: MCP_SIMILARITY_THRESHOLD,
-          tokenizeFn: tokenizeStemmed,
-          anchorTag: 'mcp',
-          excludeCoords: lineCoords,
-        });
-        coords.forEach((coord) => {
-          usedCoords.add(coord);
-          lineCoords.add(coord);
-        });
-        if (sentence.includes('\n')) {
-          lineCoords = new Set();
-        }
-        if (withinExcludedRange) {
-          return sentence;
-        }
-        return withAnchors(sentence, anchors);
-      })
-      .join('');
+    // Score sentences inside an excluded (fenced) range too, so a source matched only there is
+    // marked used and doesn't get force-appended later by appendGuaranteedMCPCitations — but
+    // never insert the anchor markup, since it would render as literal text inside the fence.
+    const { text: rebuilt, usedCoords: partCoords } = anchorTextPart(text, passages, {
+      threshold: MCP_SIMILARITY_THRESHOLD,
+      tokenizeFn: tokenizeStemmed,
+      anchorTag: 'mcp',
+      scoreExcludedRanges: true,
+    });
+    partCoords.forEach((coord) => usedCoords.add(coord));
 
     if (rebuilt !== text) {
       writeText(part, rebuilt);
@@ -767,12 +797,14 @@ export function insertMCPCitations(
 
 /**
  * Deloitte Custom Change
- * Force-appends a citation anchor for every disclaimer-bearing or SharePoint
- * MCP source that wasn't already anchored by the lexical `insertMCPCitations`
- * pass — so those sources are always cited, not only when the model's
- * phrasing happened to overlap them. Scoped to disclaimer-bearing attachments
- * (e.g. KX) and SharePoint sources specifically, rather than every MCP
- * toolset: a source that never surfaces in the answer at all (e.g. an
+ * Force-appends a citation anchor for every disclaimer- or usage-restricted
+ * SharePoint MCP source that wasn't already anchored by the lexical
+ * `insertMCPCitations` pass — so those sources are always cited, not only
+ * when the model's phrasing happened to overlap them. Scoped to a source's
+ * own `usageRestriction` flag (KX quals or DPN profiles specifically — not
+ * every source in an attachment that merely contains one DPN hit) or the
+ * attachment's top-level `disclaimer`, plus SharePoint sources, rather than
+ * every MCP toolset: a source that never surfaces in the answer at all (e.g. an
  * AFR/feed/entity search hit the model chose not to discuss) should not get a
  * citation chip for text the user never reads about. Mirrors the exact
  * turn-advancement rule `useSearchResultsByTurn` depends on: the turn counter
@@ -796,7 +828,8 @@ export function appendGuaranteedMCPCitations(
     }
     const hasDisclaimer = Boolean(payload.disclaimer);
     payload.sources.forEach((source, fileIndex) => {
-      if (!hasDisclaimer && !isSharePointSource(source)) {
+      const requiresAnchor = hasDisclaimer || Boolean(source.usageRestriction);
+      if (!requiresAnchor && !isSharePointSource(source)) {
         return;
       }
       const coord = `${turn}:${fileIndex}`;
@@ -858,20 +891,137 @@ function stripLineMarkers(line: string): string {
 const TABLE_SEPARATOR_LINE = /^\s*\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?\s*$/;
 
 /**
- * Splits a markdown table row (`| a | b |`) into its cell contents, or
- * returns undefined if the line isn't a table row (including separator
- * rows), so a SharePoint answer rendered as a table can still be matched
- * cell-by-cell the same way a bulleted line is matched whole.
+ * A table row's cells plus which edge pipes the original line actually had, so a caller that
+ * rebuilds the row can reproduce the exact same leading/trailing pipe formatting instead of
+ * always adding both. `prefix`/`suffix` are the whitespace trimmed off the original line
+ * (indentation, trailing spaces, a CRLF's `\r`) so the rebuilt line reproduces it exactly instead
+ * of silently normalizing it away.
  */
-function splitTableRowCells(line: string): string[] | undefined {
+interface TableRowCells {
+  cells: string[];
+  hasLeadingPipe: boolean;
+  hasTrailingPipe: boolean;
+  prefix: string;
+  suffix: string;
+}
+
+/**
+ * True when the `|` at `index` is a real column separator, not a backslash-escaped literal pipe
+ * (`Value \| detail`). Counts consecutive backslashes immediately before it: an even count (zero
+ * included) leaves the pipe unescaped, an odd count means the last backslash escapes it.
+ */
+function isUnescapedPipeAt(text: string, index: number): boolean {
+  let backslashes = 0;
+  let i = index - 1;
+  while (i >= 0 && text[i] === '\\') {
+    backslashes += 1;
+    i -= 1;
+  }
+  return backslashes % 2 === 0;
+}
+
+/**
+ * Splits `text` on unescaped `|` characters only, so a literal `\|` inside a cell (GFM's escape
+ * for a pipe that shouldn't act as a column boundary) stays part of that cell's content instead of
+ * being mistaken for a separator.
+ */
+function splitUnescapedPipes(text: string): string[] {
+  const cells: string[] = [];
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '|' && isUnescapedPipeAt(text, i)) {
+      cells.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  cells.push(text.slice(start));
+  return cells;
+}
+
+/**
+ * Splits a markdown table row (`| a | b |`) into its cell contents, or returns undefined if the
+ * line isn't a table row (including separator rows), so a SharePoint or file_search answer
+ * rendered as a table can still be matched cell-by-cell the same way a bulleted line is matched
+ * whole. Only used on lines a caller has already confirmed sit inside a real GFM table block (see
+ * `computeTableLineIndices`) — this function only knows a single line's shape, not whether it's
+ * actually part of a table, so any pipe-containing prose, shell command, or fenced code line would
+ * otherwise look identical to a genuine row.
+ *
+ * GFM permits omitting the leading and/or trailing pipe on a multi-column row (`File | Summary`
+ * is as valid as `| File | Summary |`), so a row qualifies either when both edge pipes are present
+ * (covers single-column rows, which need both to be unambiguous) or when at least one unescaped
+ * `|` separates cells in the interior — a lone stray `|` (escaped or with nothing to separate) is
+ * not a table row.
+ */
+function splitTableRowCells(line: string): TableRowCells | undefined {
   const trimmed = line.trim();
-  if (!trimmed.startsWith('|') || !trimmed.endsWith('|') || trimmed.length < 2) {
+  if (trimmed.length === 0 || TABLE_SEPARATOR_LINE.test(trimmed)) {
     return undefined;
   }
-  if (TABLE_SEPARATOR_LINE.test(trimmed)) {
+  const hasLeadingPipe = trimmed.startsWith('|');
+  const hasTrailingPipe =
+    trimmed.length > 1 && trimmed.endsWith('|') && isUnescapedPipeAt(trimmed, trimmed.length - 1);
+  const core = trimmed.slice(hasLeadingPipe ? 1 : 0, hasTrailingPipe ? -1 : undefined);
+  const cells = splitUnescapedPipes(core);
+  if (!(hasLeadingPipe && hasTrailingPipe) && cells.length < 2) {
     return undefined;
   }
-  return trimmed.slice(1, -1).split('|');
+  const prefix = line.slice(0, line.indexOf(trimmed));
+  const suffix = line.slice(prefix.length + trimmed.length);
+  return { cells, hasLeadingPipe, hasTrailingPipe, prefix, suffix };
+}
+
+/**
+ * Identifies which lines of a lossless `\n`-split belong to a real GFM table block, so a line
+ * merely containing a pipe — prose, a shell command, fenced code, or markdown streamed so far that
+ * only has a header — is never mistaken for a table row. GFM requires a delimiter row
+ * (`| --- | --- |`) directly under the header to recognize a table at all; once one is found, the
+ * header and delimiter are marked, and contiguous following lines that themselves look like table
+ * rows extend the block until the first blank line or non-row line.
+ */
+function computeTableLineIndices(lines: string[]): Set<number> {
+  const tableLines = new Set<number>();
+  for (let i = 1; i < lines.length; i++) {
+    if (tableLines.has(i) || !TABLE_SEPARATOR_LINE.test(lines[i].trim())) {
+      continue;
+    }
+    const headerIndex = i - 1;
+    if (tableLines.has(headerIndex) || !splitTableRowCells(lines[headerIndex])) {
+      continue;
+    }
+    tableLines.add(headerIndex);
+    tableLines.add(i);
+    let j = i + 1;
+    while (j < lines.length && splitTableRowCells(lines[j])) {
+      tableLines.add(j);
+      j += 1;
+    }
+  }
+  return tableLines;
+}
+
+/**
+ * Rebuilds a table row from `splitTableRowCells`'s output, restoring the edge pipes and the
+ * leading/trailing whitespace (including a CRLF's `\r`) the original line had.
+ */
+function joinTableRowCells({
+  cells,
+  hasLeadingPipe,
+  hasTrailingPipe,
+  prefix,
+  suffix,
+}: TableRowCells): string {
+  return `${prefix}${hasLeadingPipe ? '|' : ''}${cells.join('|')}${hasTrailingPipe ? '|' : ''}${suffix}`;
+}
+
+/** Index of the last non-blank cell, or -1 if every cell is empty — the safe place to append an anchor without disturbing column count. */
+function findLastNonEmptyCellIndex(cells: string[]): number {
+  for (let i = cells.length - 1; i >= 0; i--) {
+    if (cells[i].trim().length > 0) {
+      return i;
+    }
+  }
+  return -1;
 }
 
 /**
@@ -1042,10 +1192,12 @@ export function insertSharePointCitations(
       cursor += line.length + 1;
       return isWithinRanges(lineStart, excludedRanges);
     });
+    const tableLineIndices = computeTableLineIndices(lines);
 
-    const matchLine = (line: string, insertAnchor: boolean): string => {
-      const tableCells = splitTableRowCells(line);
-      if (tableCells) {
+    const matchLine = (line: string, index: number, insertAnchor: boolean): string => {
+      const tableRow = tableLineIndices.has(index) ? splitTableRowCells(line) : undefined;
+      if (tableRow) {
+        const { cells: tableCells } = tableRow;
         let rowChanged = false;
         for (let cellIndex = 0; cellIndex < tableCells.length; cellIndex++) {
           const normalizedCell = normalizeForMatch(stripLineMarkers(tableCells[cellIndex]));
@@ -1071,7 +1223,7 @@ export function insertSharePointCitations(
             break;
           }
         }
-        return rowChanged ? `|${tableCells.join('|')}|` : line;
+        return rowChanged ? joinTableRowCells(tableRow) : line;
       }
 
       const base = stripLineMarkers(line);
@@ -1098,19 +1250,18 @@ export function insertSharePointCitations(
       return line;
     };
 
-    // Deloitte Custom Change: claim queued sources for visible prose lines first, in document
-    // order, before any fenced-code line gets a chance to — so a filename appearing both inside
-    // a fence and later in prose still credits (and anchors) the prose mention instead of the
-    // fence silently consuming the only queued source. Fenced lines are matched in a second pass
-    // purely to mark any leftover source as used, without writing an anchor, so a source
-    // mentioned only inside a fence still isn't force-appended later by
-    // appendGuaranteedMCPCitations.
+    // Claim queued sources for visible prose lines first, in document order, before any
+    // fenced-code line gets a chance to — so a filename appearing both inside a fence and later
+    // in prose still credits (and anchors) the prose mention instead of the fence silently
+    // consuming the only queued source. Fenced lines are matched in a second pass purely to mark
+    // any leftover source as used, without writing an anchor, so a source mentioned only inside a
+    // fence still isn't force-appended later by appendGuaranteedMCPCitations.
     const rebuiltLines = lines.map((line, index) =>
-      withinExcludedRange[index] ? line : matchLine(line, true),
+      withinExcludedRange[index] ? line : matchLine(line, index, true),
     );
     lines.forEach((line, index) => {
       if (withinExcludedRange[index]) {
-        matchLine(line, false);
+        matchLine(line, index, false);
       }
     });
 
@@ -1123,34 +1274,33 @@ export function insertSharePointCitations(
 }
 
 /**
- * Appends a single deterministic trailing disclaimer paragraph when any MCP
- * attachment carries one (e.g. KX's `usage_guidelines`), plus a link to the
- * static usage-guidelines page when configured — unless the disclaimer text
- * already references "usage guidelines" itself (KX's own boilerplate already
- * links to this page), in which case the extra link would just repeat the
- * same sentence. Only the first disclaimer found is used — a turn with
- * multiple KX calls (e.g. a refined follow-up search) tends to repeat the
- * same boilerplate warning with minor wording differences (not exact
- * matches), so appending every distinct-looking one would repeat the same
- * warning rather than surface new information. Always appends to an existing
- * text part — never creates a new one — so downstream content-part filtering
- * can't drop it.
+ * Appends a deterministic trailing disclaimer paragraph whenever any MCP
+ * attachment warrants one — a fixed, branded message rather than KX's own
+ * boilerplate text. Two independent triggers share the same paragraph, since
+ * a turn can carry either or both: any attachment with a `disclaimer` (KX's
+ * own `usage_guidelines`, typically surfaced for quals-type results), or any
+ * attachment flagged `dpnUsageRestriction` (a DPN people-profile result).
+ * Always appends to an existing text part — never creates a new one — so
+ * downstream content-part filtering can't drop it. The guidelines link falls
+ * back to `DEFAULT_KX_USAGE_GUIDELINES_URL` when `KX_USAGE_GUIDELINES_URL`
+ * isn't configured, so the default `.env.example` setup never renders
+ * non-clickable placeholder text.
  */
 export function appendMCPDisclaimers(
   contentParts: TMessageContentParts[],
   mcpAttachments: TAttachment[],
   mcpUsageGuidelinesUrl?: string,
 ): void {
-  let disclaimer: string | undefined;
+  let hasDisclaimer = false;
   for (const attachment of mcpAttachments) {
-    const payload = attachment[Tools.mcp_results] as { disclaimer?: string } | undefined;
-    if (payload?.disclaimer) {
-      disclaimer = payload.disclaimer;
-      break;
-    }
+    const payload = attachment[Tools.mcp_results] as
+      | { disclaimer?: string; dpnUsageRestriction?: boolean }
+      | undefined;
+    hasDisclaimer =
+      hasDisclaimer || Boolean(payload?.disclaimer) || Boolean(payload?.dpnUsageRestriction);
   }
 
-  if (!disclaimer) {
+  if (!hasDisclaimer) {
     return;
   }
 
@@ -1159,15 +1309,13 @@ export function appendMCPDisclaimers(
     return;
   }
 
-  const alreadyMentionsGuidelines = /usage guidelines/i.test(disclaimer);
-  const guidelinesLink =
-    mcpUsageGuidelinesUrl && !alreadyMentionsGuidelines
-      ? ` See [usage guidelines](${mcpUsageGuidelinesUrl}).`
-      : '';
-  const disclaimerText = `${disclaimer}${guidelinesLink}`;
+  const guidelinesText = `[KX usage guidelines](${mcpUsageGuidelinesUrl || DEFAULT_KX_USAGE_GUIDELINES_URL})`;
+  const disclaimer =
+    'Please note that this response uses data from the KX & DPN Connector. Review the accuracy ' +
+    `of all KX & DPN citations before reusing them. See the ${guidelinesText} to learn more.`;
 
   const text = readText(targetPart) ?? '';
-  writeText(targetPart, `${text}\n\n${disclaimerText}`);
+  writeText(targetPart, `${text}\n\n${disclaimer}`);
 }
 
 /**

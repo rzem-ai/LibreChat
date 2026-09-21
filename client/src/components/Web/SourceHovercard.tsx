@@ -39,12 +39,13 @@ export function getCleanDomain(url: string) {
 // Deloitte Custom Change: decorative — the domain is always rendered as adjacent text, so an
 // accessible name here would cause screen readers to announce it twice.
 export function FaviconImage({ domain, className = '' }: { domain: string; className?: string }) {
+  // Deloitte Custom Change: rounded corners to match the Connector logos in the admin panel
   return (
     <img
       src={getFaviconUrl(domain)}
       alt=""
       aria-hidden="true"
-      className={cn('size-4 shrink-0 rounded-full', className)}
+      className={cn('size-4 shrink-0 rounded-md', className)}
       loading="lazy"
     />
   );
@@ -200,7 +201,7 @@ export function SourceHovercard({
                 <button
                   type="button"
                   onClick={handleFileClick}
-                  className="ml-1 inline-flex h-5 max-w-44 items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap rounded-xl border border-border-heavy bg-surface-secondary px-2 text-xs font-medium text-text-primary no-underline transition-colors hover:bg-surface-hover dark:border-border-medium dark:hover:bg-surface-tertiary"
+                  className="ml-1 inline-flex h-[22px] max-w-44 items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-border-heavy bg-surface-secondary pl-1 pr-2 text-xs font-medium text-text-primary no-underline transition-colors hover:bg-surface-hover dark:border-border-medium dark:hover:bg-surface-tertiary"
                   onMouseEnter={onMouseEnter}
                   onMouseLeave={onMouseLeave}
                   title={isLocalFile ? localize('com_sources_download_local_unavailable') : label}
@@ -219,7 +220,7 @@ export function SourceHovercard({
                   href={source.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="ml-1 inline-block h-5 max-w-44 cursor-pointer items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-xl border border-border-heavy bg-surface-secondary px-2 text-xs font-medium no-underline transition-colors hover:bg-surface-hover dark:border-border-medium dark:hover:bg-surface-tertiary"
+                  className="ml-1 inline-block h-5 max-w-44 cursor-pointer items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-border-heavy bg-surface-secondary px-2 text-xs font-medium no-underline transition-colors hover:bg-surface-hover dark:border-border-medium dark:hover:bg-surface-tertiary"
                   onMouseEnter={onMouseEnter}
                   onMouseLeave={onMouseLeave}
                   title={label}

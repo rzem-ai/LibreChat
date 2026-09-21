@@ -32,7 +32,7 @@ async function sendIconSpecStream(page: Page, label: string) {
   return { conversationUrl: page.url(), reply };
 }
 
-test.describe('model spec message icons', () => {
+test.describe('model spec message icons', { tag: ['@mock', '@model-specs'] }, () => {
   test('preserves iconURL when resuming an active stream after navigation', async ({ page }) => {
     test.setTimeout(90000);
     const label = uniqueLabel('resume-icon');

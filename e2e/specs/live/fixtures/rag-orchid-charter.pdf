@@ -1,0 +1,53 @@
+%PDF-1.4
+%ÿÿÿÿ
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 594 >>
+stream
+BT
+/F1 14 Tf
+50 750 Td
+(Project ORCHID-7749 - Internal Program Charter) Tj
+/F1 10 Tf
+0 -20 Td
+(FICTIONAL TEST DATA - not a real Deloitte engagement.) Tj
+/F1 12 Tf
+0 -30 Td
+(ORCHID-7749 is the internal codename for the Q3 2026 telemetry) Tj
+0 -16 Td
+(pipeline migration. Program lead: Priya Ramanathan, Platform) Tj
+0 -16 Td
+(Reliability practice, Sydney. Charter approved 14 March 2026.) Tj
+0 -16 Td
+(Approved budget: AUD 2,480,000.) Tj
+0 -30 Td
+(Section 7 - Codename Ledger: an earlier proposal used the codename) Tj
+0 -16 Td
+(LOTUS-3320; that proposal was rejected on 02 February 2026.) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000247 00000 n 
+0000000892 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+989
+%%EOF

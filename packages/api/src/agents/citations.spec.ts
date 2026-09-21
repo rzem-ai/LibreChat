@@ -45,13 +45,21 @@ function fileSearchAttachment(sources: SourceInput[]): TAttachment {
   } as unknown as TAttachment;
 }
 
-function mcpAttachment(sources: MCPResultSource[], disclaimer?: string): TAttachment {
+function mcpAttachment(
+  sources: MCPResultSource[],
+  disclaimer?: string,
+  dpnUsageRestriction?: boolean,
+): TAttachment {
   return {
     type: Tools.mcp_results,
     messageId: 'msg-1',
     toolCallId: 'call-1',
     conversationId: 'conv-1',
-    [Tools.mcp_results]: disclaimer ? { sources, disclaimer } : { sources },
+    [Tools.mcp_results]: {
+      sources,
+      ...(disclaimer ? { disclaimer } : {}),
+      ...(dpnUsageRestriction ? { dpnUsageRestriction } : {}),
+    },
   } as unknown as TAttachment;
 }
 
@@ -421,6 +429,161 @@ describe('insertFileCitations', () => {
     ]);
     expect(readText(parts[0])).toBe(original);
   });
+
+  // a file_search answer rendered as a markdown table must keep its
+  // pipe/column count intact — a citation anchor must land inside a cell, never after the row's
+  // closing pipe.
+  it('anchors a markdown table row inside its last cell without corrupting the row', () => {
+    const parts = [
+      textPart(
+        '| Topic | Summary |\n' +
+          '| --- | --- |\n' +
+          '| Desk Booking | You can reserve a desk fourteen days in advance through the booking portal |',
+      ),
+    ];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const rows = readText(parts[0]).split('\n');
+    expect(rows).toHaveLength(3);
+    expect(rows[2].trim().endsWith('|')).toBe(true);
+    const cells = rows[2].split('|');
+    expect(cells).toHaveLength(4);
+    expect(cells[1].trim()).toBe('Desk Booking');
+    expect(cells[2]).toContain(`${MARKER}turn0file0`);
+    expect(cells[2]).toContain(
+      'You can reserve a desk fourteen days in advance through the booking portal',
+    );
+  });
+
+  // Deloitte Custom Change: a `\|` inside a cell is GFM's escape for a literal pipe that is not a
+  // column separator — splitting on every `|` would fracture the cell and shift the anchor into a
+  // phantom extra column.
+  it('does not treat an escaped pipe inside a cell as a column boundary', () => {
+    const parts = [
+      textPart(
+        '| Topic | Summary |\n' +
+          '| --- | --- |\n' +
+          '| Desk Booking | You can reserve a desk \\| workspace fourteen days in advance through the booking portal |',
+      ),
+    ];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const rows = readText(parts[0]).split('\n');
+    expect(rows).toHaveLength(3);
+    expect(rows[2]).toBe(
+      '| Desk Booking | You can reserve a desk \\| workspace fourteen days in advance through the booking portal ' +
+        `${MARKER}turn0file0 |`,
+    );
+  });
+
+  // A pipe inside ordinary prose (no delimiter row anywhere nearby) must not be mistaken for a
+  // table row — it should fall back to the sentence-boundary pass, keeping the pipe intact and
+  // anchoring at the sentence, not a phantom cell.
+  it('does not treat a prose line containing a pipe as a table row', () => {
+    const parts = [
+      textPart(
+        'You can reserve a desk (standing | sitting) fourteen days in advance through the booking portal.',
+      ),
+    ];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const text = readText(parts[0]);
+    expect(text.split('\n')).toHaveLength(1);
+    expect(text).toContain('(standing | sitting)');
+    expect(text).toContain(`${MARKER}turn0file0`);
+  });
+
+  // A shell-style command containing pipes must not be parsed as table cells even when its text
+  // otherwise matches a source closely enough to be anchored.
+  it('anchors a non-table line containing pipes without splitting it into cells', () => {
+    const content = 'Run the audit using cat notes | grep foo | wc -l to count matches.';
+    const parts = [textPart(content)];
+    insertFileCitations(parts, [fileSearchAttachment([{ fileId: 'fileA', content }])]);
+    const text = readText(parts[0]);
+    expect(text.split('\n')).toHaveLength(1);
+    expect(text).toContain('cat notes | grep foo | wc -l');
+    expect(text).toContain(`${MARKER}turn0file0`);
+  });
+
+  // A header row with no delimiter row directly beneath it is not a valid GFM table (e.g.
+  // markdown streamed so far, or simply malformed) — it must not be parsed cell-by-cell.
+  it('does not treat a header row with no delimiter row as a table', () => {
+    const parts = [
+      textPart(
+        '| Topic | Summary |\n' +
+          '| Desk Booking | You can reserve a desk fourteen days in advance through the booking portal |',
+      ),
+    ];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const rows = readText(parts[0]).split('\n');
+    expect(rows).toHaveLength(2);
+    expect(rows[1]).toBe(
+      '| Desk Booking | You can reserve a desk fourteen days in advance through the booking portal |' +
+        ` ${MARKER}turn0file0`,
+    );
+  });
+
+  it('does not split a table row at a filename extension period', () => {
+    const parts = [
+      textPart(
+        '| File | Summary |\n' +
+          '| --- | --- |\n' +
+          '| report.pdf | You can reserve a desk fourteen days in advance through the booking portal |',
+      ),
+    ];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const text = readText(parts[0]);
+    const rows = text.split('\n');
+    expect(rows).toHaveLength(3);
+    expect(text).toContain('report.pdf');
+    expect(rows[2].split('|')).toHaveLength(4);
+  });
+
+  // GFM permits a table row without edge pipes (`File | Summary` is as valid as
+  // `| File | Summary |`) — that row must still be recognized as a table row, not fall through to
+  // sentence splitting, which would split a filename like `report.pdf` mid-word.
+  it('anchors a table row that omits the leading and trailing pipes', () => {
+    const parts = [
+      textPart(
+        'File | Summary\n' +
+          '--- | ---\n' +
+          'report.pdf | You can reserve a desk fourteen days in advance through the booking portal',
+      ),
+    ];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const text = readText(parts[0]);
+    const rows = text.split('\n');
+    expect(rows).toHaveLength(3);
+    expect(text).toContain('report.pdf');
+    expect(rows[2]).toContain(`${MARKER}turn0file0`);
+    expect(rows[2].startsWith('|')).toBe(false);
+    expect(rows[2].endsWith('|')).toBe(false);
+    expect(rows[2].split('|')).toHaveLength(2);
+  });
+
+  it('leaves a markdown table separator row untouched', () => {
+    const parts = [
+      textPart(
+        '| Topic | Summary |\n' +
+          '| --- | --- |\n' +
+          '| Desk Booking | You can reserve a desk fourteen days in advance through the booking portal |',
+      ),
+    ];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    const rows = readText(parts[0]).split('\n');
+    expect(rows[1]).toBe('| --- | --- |');
+  });
 });
 
 describe('insertMCPCitations', () => {
@@ -602,6 +765,65 @@ describe('insertMCPCitations', () => {
       0,
     );
     expect(readText(parts[0])).toBe(original);
+  });
+
+  // table-row protection is shared infrastructure, not SharePoint-only — any MCP connector's
+  // answer rendered as a table must keep its column count intact too.
+  it('anchors a non-SharePoint MCP table row inside its last cell without corrupting the row', () => {
+    const parts = [
+      textPart(
+        '| Topic | Summary |\n' +
+          '| --- | --- |\n' +
+          '| RBA Rates | The Reserve Bank held the cash rate steady at its meeting today |',
+      ),
+    ];
+    insertMCPCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'afr_get_latest_news', serverName: 'afr', content: AFR_ARTICLE },
+        ]),
+      ],
+      0,
+    );
+    const rows = readText(parts[0]).split('\n');
+    expect(rows).toHaveLength(3);
+    expect(rows[2].trim().endsWith('|')).toBe(true);
+    const cells = rows[2].split('|');
+    expect(cells).toHaveLength(4);
+    expect(cells[1].trim()).toBe('RBA Rates');
+    expect(cells[2]).toContain(`${MARKER}turn0mcp0`);
+    expect(cells[2]).toContain('The Reserve Bank held the cash rate steady at its meeting today');
+  });
+
+  // Two sources can both match the same row (e.g. a summary row referencing two distinct
+  // articles) — both anchors must land in the same last cell, in source order, without adding
+  // extra columns.
+  it('anchors multiple matching sources into the same row, in order', () => {
+    const parts = [
+      textPart(
+        '| Topic | Summary |\n' +
+          '| --- | --- |\n' +
+          '| Markets | The Reserve Bank held the cash rate steady at its meeting today, and shares in the mining sector rallied after a surprise jump in iron ore prices overseas |',
+      ),
+    ];
+    const coords = insertMCPCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'afr_get_latest_news', serverName: 'afr', content: AFR_ARTICLE },
+          { toolName: 'afr_get_latest_news', serverName: 'afr', content: OTHER_ARTICLE },
+        ]),
+      ],
+      0,
+    );
+    const rows = readText(parts[0]).split('\n');
+    expect(rows).toHaveLength(3);
+    const cells = rows[2].split('|');
+    expect(cells).toHaveLength(4);
+    expect(cells[2]).toContain(`${MARKER}turn0mcp0`);
+    expect(cells[2]).toContain(`${MARKER}turn0mcp1`);
+    expect(coords).toEqual(new Set(['0:0', '0:1']));
   });
 });
 
@@ -893,11 +1115,52 @@ describe('insertSharePointCitations', () => {
       0,
     );
     const text = readText(parts[0]);
-    expect(text).toContain(`${MARKER}turn0mcp0`);
     const rows = text.split('\n');
     expect(rows).toHaveLength(3);
-    expect(rows[2].split('|')).toHaveLength(5);
-    expect(rows[2]).toContain('| AISolutionStudio |');
+    const cells = rows[2].split('|');
+    expect(cells).toHaveLength(5);
+    expect(cells[1]).toContain(`${MARKER}turn0mcp0`);
+    expect(cells[1]).toContain('Consulting Graduate Induction Workbook.pptx');
+    expect(cells[2].trim()).toBe('AISolutionStudio');
+    expect(cells[3].trim()).toBe('9 Sep 2026');
+  });
+
+  // GFM permits a table row without edge pipes — this must still be recognized as a table row
+  // (matched cell-by-cell) instead of falling through to the line-prefix matcher, which would
+  // split the filename at its extension period and miss it entirely.
+  it('anchors a markdown table row that omits the leading and trailing pipes', () => {
+    const parts = [
+      textPart(
+        'File Name | Location | Last Modified\n' +
+          '--- | --- | ---\n' +
+          'Consulting Graduate Induction Workbook.pptx | AISolutionStudio | 9 Sep 2026',
+      ),
+    ];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    const text = readText(parts[0]);
+    const rows = text.split('\n');
+    expect(rows).toHaveLength(3);
+    expect(rows[2].startsWith('|')).toBe(false);
+    expect(rows[2].endsWith('|')).toBe(false);
+    const cells = rows[2].split('|');
+    expect(cells).toHaveLength(3);
+    expect(cells[0]).toContain(`${MARKER}turn0mcp0`);
+    expect(cells[0]).toContain('Consulting Graduate Induction Workbook.pptx');
+    expect(cells[1].trim()).toBe('AISolutionStudio');
+    expect(cells[2].trim()).toBe('9 Sep 2026');
   });
 
   it('does not anchor a table row whose cell match is only a partial word', () => {
@@ -964,13 +1227,66 @@ describe('insertSharePointCitations', () => {
     expect(readText(parts[0])).toBe(original);
   });
 
+  // Mixed citations: a table row match and a separate bulleted-line match in the same answer must
+  // both be anchored to the correct source, without either code path interfering with the other.
+  it('anchors both a table row and a separate bulleted line in the same answer', () => {
+    const parts = [
+      textPart(
+        '| File Name | Location |\n' +
+          '|---|---|\n' +
+          '| Report.pptx | Brand-Space |\n' +
+          '\n' +
+          '- Induction Workbook.docx',
+      ),
+    ];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'sp_search', serverName: 'sharepoint', title: 'Report.pptx', content: 'a' },
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Induction Workbook.docx',
+            content: 'b',
+          },
+        ]),
+      ],
+      0,
+    );
+    const rows = readText(parts[0]).split('\n');
+    expect(rows).toHaveLength(5);
+    expect(rows[2]).toContain(`${MARKER}turn0mcp0`);
+    expect(rows[4]).toContain(`${MARKER}turn0mcp1`);
+  });
+
+  // A pipe inside a bulleted line that is not part of a table (no delimiter row anywhere in the
+  // text) must not be parsed as table cells.
+  it('does not treat a bulleted line containing a pipe as a table row', () => {
+    const parts = [textPart('- Report.pptx | needs review')];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          { toolName: 'sp_search', serverName: 'sharepoint', title: 'Report.pptx', content: 'a' },
+        ]),
+      ],
+      0,
+    );
+    const text = readText(parts[0]);
+    expect(text.split('\n')).toHaveLength(1);
+    expect(text).toContain(`${MARKER}turn0mcp0`);
+  });
+
   // Deloitte Custom Change: three sources can share the exact same filename (same file
   // uploaded to different folders) — each occurrence in the answer must credit a distinct
   // source, in the order those sources appeared in the tool result, not all the same one.
   it('credits each occurrence of a duplicate title to a distinct source, in source order', () => {
     const parts = [
       textPart(
-        '| 16x9_Timesaver_PPT.pptx | Brand-Space | 21 May 2025 |\n' +
+        '| File Name | Location | Last Modified |\n' +
+          '|---|---|---|\n' +
+          '| 16x9_Timesaver_PPT.pptx | Brand-Space | 21 May 2025 |\n' +
           '| 16x9_Timesaver_PPT.pptx | DR-GR Brand Templates | 08 Jun 2026 |\n' +
           '| 16x9_Timesaver_PPT.pptx | DR-GR | 08 Jan 2026 |',
       ),
@@ -1002,9 +1318,9 @@ describe('insertSharePointCitations', () => {
       0,
     );
     const rows = readText(parts[0])?.split('\n') ?? [];
-    expect(rows[0]).toContain(`${MARKER}turn0mcp0`);
-    expect(rows[1]).toContain(`${MARKER}turn0mcp1`);
-    expect(rows[2]).toContain(`${MARKER}turn0mcp2`);
+    expect(rows[2]).toContain(`${MARKER}turn0mcp0`);
+    expect(rows[3]).toContain(`${MARKER}turn0mcp1`);
+    expect(rows[4]).toContain(`${MARKER}turn0mcp2`);
   });
 
   it('does not anchor a filename line inside an artifact fenced code block', () => {
@@ -1318,6 +1634,52 @@ describe('appendGuaranteedMCPCitations', () => {
     expect(readText(parts[0])).toBe(original);
   });
 
+  // Deloitte Custom Change: a DPN source carries its restriction via its own
+  // `usageRestriction` flag rather than `disclaimer`, so it must still be force-anchored
+  // when unmatched, even with no top-level `usage_guidelines`/disclaimer.
+  it('force-anchors an unmatched DPN source that has no disclaimer', () => {
+    const original = 'The weather today has nothing to do with any of the sources.';
+    const parts = [textPart(original)];
+    const attachments = [
+      mcpAttachment([
+        {
+          toolName: 'dpn_search',
+          serverName: 'dpn',
+          content: 'Jane Doe, Partner',
+          usageRestriction: true,
+        },
+      ]),
+    ];
+    const usedCoords = insertMCPCitations(parts, attachments, 0);
+    appendGuaranteedMCPCitations(parts, attachments, 0, usedCoords);
+    expect(readText(parts[0])).toContain(`${MARKER}turn0mcp0`);
+  });
+
+  // Deloitte Custom Change: `dpnUsageRestriction` on the payload is an aggregate ("some
+  // source in this batch is a DPN profile") and must not force-anchor every other,
+  // unrelated source in the same attachment — only the specific source flagged
+  // `usageRestriction` needs the guarantee.
+  it('only force-anchors the specific usage-restricted source, not every source in the attachment', () => {
+    const original = 'The weather today has nothing to do with any of the sources.';
+    const parts = [textPart(original)];
+    const attachments = [
+      mcpAttachment([
+        {
+          toolName: 'kx_query',
+          serverName: 'kx',
+          content: 'Jane Doe, Partner',
+          usageRestriction: true,
+        },
+        { toolName: 'kx_query', serverName: 'kx', content: 'Unrelated quals result' },
+      ]),
+    ];
+    const usedCoords = insertMCPCitations(parts, attachments, 0);
+    appendGuaranteedMCPCitations(parts, attachments, 0, usedCoords);
+    const text = readText(parts[0]);
+    expect(text).toContain(`${MARKER}turn0mcp0`);
+    expect(text).not.toContain(`${MARKER}turn0mcp1`);
+  });
+
   it('does not duplicate an anchor for a source the lexical pass already matched', () => {
     const parts = [textPart(`${KX_QUAL}.`)];
     const attachments = [
@@ -1347,8 +1709,11 @@ describe('appendGuaranteedMCPCitations', () => {
 
 describe('appendMCPDisclaimers', () => {
   const DISCLAIMER = 'Please review accuracy of all the responses before reusing them.';
+  const STATIC_MESSAGE =
+    'Please note that this response uses data from the KX & DPN Connector. Review the accuracy of ' +
+    'all KX & DPN citations before reusing them.';
 
-  it('appends the disclaimer and a guidelines link once', () => {
+  it('appends the fixed KX disclaimer with a guidelines link once configured', () => {
     const parts = [textPart('Here is the answer.')];
     appendMCPDisclaimers(
       parts,
@@ -1356,61 +1721,34 @@ describe('appendMCPDisclaimers', () => {
       'https://resources.deloitte.com/sites/kx/usage-guidelines',
     );
     const text = readText(parts[0]);
-    expect(text).toContain(DISCLAIMER);
+    expect(text).toContain(STATIC_MESSAGE);
     expect(text).toContain(
-      '[usage guidelines](https://resources.deloitte.com/sites/kx/usage-guidelines)',
+      '[KX usage guidelines](https://resources.deloitte.com/sites/kx/usage-guidelines)',
     );
+    expect(text).not.toContain(DISCLAIMER);
   });
 
-  it('omits the guidelines link when the disclaimer already references usage guidelines itself', () => {
-    const parts = [textPart('Here is the answer.')];
-    const disclaimerWithOwnLink =
-      `${DISCLAIMER} See ` +
-      '[usage guidelines](https://resources.deloitte.com/sites/kx/SitePages/Prompt-Usage-Guidelines.aspx) ' +
-      'Citations [1](https://example.com/1) have usage restrictions.';
-    appendMCPDisclaimers(
-      parts,
-      [
-        mcpAttachment(
-          [{ toolName: 'kx_query', serverName: 'kx', content: 'x' }],
-          disclaimerWithOwnLink,
-        ),
-      ],
-      'https://resources.deloitte.com/sites/kx/SitePages/Prompt-Usage-Guidelines.aspx',
-    );
-    const text = readText(parts[0]) ?? '';
-    expect(anchorCount(text, 'usage guidelines')).toBe(1);
-  });
-
-  it('omits the link when no guidelines URL is configured', () => {
+  // Deloitte Custom Change: KX_USAGE_GUIDELINES_URL is empty in .env.example, so a default
+  // setup must still render a clickable link rather than non-clickable placeholder text.
+  it('falls back to the default guidelines URL when none is configured', () => {
     const parts = [textPart('Here is the answer.')];
     appendMCPDisclaimers(parts, [
       mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'x' }], DISCLAIMER),
     ]);
-    const text = readText(parts[0]);
-    expect(text).toContain(DISCLAIMER);
-    expect(text).not.toContain('usage guidelines');
+    const text = readText(parts[0]) ?? '';
+    expect(text).toContain(STATIC_MESSAGE);
+    expect(text).toContain(
+      '[KX usage guidelines](https://resources.deloitte.com/sites/kx/SitePages/Prompt-Usage-Guidelines.aspx)',
+    );
   });
 
-  it('dedupes identical disclaimer text across two attachments', () => {
+  it('appends the fixed disclaimer only once across two disclaimer-bearing attachments', () => {
     const parts = [textPart('Here is the answer.')];
     appendMCPDisclaimers(parts, [
       mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'x' }], DISCLAIMER),
       mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'y' }], DISCLAIMER),
     ]);
-    expect(anchorCount(readText(parts[0]), DISCLAIMER)).toBe(1);
-  });
-
-  it('uses only the first disclaimer when two attachments carry different-but-overlapping text', () => {
-    const parts = [textPart('Here is the answer.')];
-    const secondDisclaimer = `${DISCLAIMER} See usage guidelines.`;
-    appendMCPDisclaimers(parts, [
-      mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'x' }], DISCLAIMER),
-      mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'y' }], secondDisclaimer),
-    ]);
-    const text = readText(parts[0]);
-    expect(anchorCount(text, 'Please review accuracy')).toBe(1);
-    expect(text).not.toContain(secondDisclaimer);
+    expect(anchorCount(readText(parts[0]), STATIC_MESSAGE)).toBe(1);
   });
 
   it('is a no-op when no attachment carries a disclaimer', () => {
@@ -1420,6 +1758,30 @@ describe('appendMCPDisclaimers', () => {
       mcpAttachment([{ toolName: 'afr_search_news', serverName: 'afr', content: OTHER_ARTICLE }]),
     ]);
     expect(readText(parts[0])).toBe(original);
+  });
+
+  it('appends the fixed KX disclaimer when a DPN source is present', () => {
+    const parts = [textPart('Here is the answer.')];
+    appendMCPDisclaimers(parts, [
+      mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'x' }], undefined, true),
+    ]);
+    const text = readText(parts[0]);
+    expect(text).toContain(STATIC_MESSAGE);
+    expect(text).not.toContain('DPN profiles');
+  });
+
+  it('appends the fixed disclaimer only once when a turn has both quals and DPN sources', () => {
+    const parts = [textPart('Here is the answer.')];
+    appendMCPDisclaimers(
+      parts,
+      [mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'x' }], DISCLAIMER, true)],
+      'https://resources.deloitte.com/sites/kx/usage-guidelines',
+    );
+    const text = readText(parts[0]);
+    expect(text).toContain(
+      '[KX usage guidelines](https://resources.deloitte.com/sites/kx/usage-guidelines)',
+    );
+    expect(anchorCount(text, STATIC_MESSAGE)).toBe(1);
   });
 });
 
@@ -1553,12 +1915,13 @@ describe('applyEndOfTraceCitations', () => {
       mcpUsageGuidelinesUrl: 'https://resources.deloitte.com/sites/kx/usage-guidelines',
     });
     const text = readText(parts[0]);
+    const staticMessage = 'Please note that this response uses data from the KX & DPN Connector.';
     expect(text).toContain(`${MARKER}turn0mcp0`);
-    expect(text).toContain(disclaimer);
+    expect(text).toContain(staticMessage);
     expect(text).toContain(
-      '[usage guidelines](https://resources.deloitte.com/sites/kx/usage-guidelines)',
+      '[KX usage guidelines](https://resources.deloitte.com/sites/kx/usage-guidelines)',
     );
-    expect(text.indexOf(`${MARKER}turn0mcp0`)).toBeLessThan(text.indexOf(disclaimer));
+    expect(text.indexOf(`${MARKER}turn0mcp0`)).toBeLessThan(text.indexOf(staticMessage));
   });
 
   it('anchors SharePoint sources by line and other MCP sources by sentence in the same turn set', async () => {
