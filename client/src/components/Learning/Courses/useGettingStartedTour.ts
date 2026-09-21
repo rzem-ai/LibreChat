@@ -91,7 +91,7 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
       showMarketplace &&
       hasAvailableTarget('#nav-panel-conversations') &&
       hasAvailableTarget('#nav-agents-marketplace-button');
-    const steps: Array<{ element: string; popover: { title: string; description: string; side: 'top' | 'right' | 'bottom' | 'left' } }> = [
+    const steps = [
       {
         element: '#new-chat-button',
         popover: {
@@ -309,7 +309,7 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
           side: 'top',
         },
       },
-    ];
+    ] as const;
     // Do NOT eagerly filter steps here. Driver.js's own skipMissingElement +
     // waitForElement handles two cases correctly at runtime as each step is
     // reached: (a) genuinely absent elements (e.g. feature-flagged buttons not
