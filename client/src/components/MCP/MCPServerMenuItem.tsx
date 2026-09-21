@@ -42,7 +42,9 @@ export default function MCPServerMenuItem({
   const showActionButton = shouldShowActionButton(statusIconProps);
 
   // Include status in aria-label so screen readers announce it
-  const accessibleLabel = `${displayName}, ${statusText}`;
+  const accessibleLabel = server.config?.limitedAccess
+    ? `${displayName}, ${localize('com_ui_limited_access')}, ${statusText}`
+    : `${displayName}, ${statusText}`;
 
   return (
     <Ariakit.MenuItemCheckbox
@@ -87,8 +89,10 @@ export default function MCPServerMenuItem({
 
       {/* Server Info */}
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <span className="truncate text-sm font-medium text-text-primary">{displayName}</span>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
+            {displayName}
+          </span>
           {/* Deloitte Custom Change: SharePoint MCP is limited to a subset of users. */}
           {server.config?.limitedAccess && <LimitedAccessPill />}
         </div>

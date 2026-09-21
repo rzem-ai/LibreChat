@@ -414,6 +414,7 @@ const omitServerManagedFields = <T extends z.ZodObject<z.ZodRawShape>>(schema: T
     chatMenu: true,
     serverInstructions: true,
     requiresOAuth: true,
+    limitedAccess: true,
     customUserVars: true,
     oauth_headers: true,
   });

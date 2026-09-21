@@ -44,7 +44,10 @@ export function LimitedAccessPill({ wrap = false }: { wrap?: boolean }) {
   return (
     <Tag
       label={localize('com_ui_limited_access')}
-      className="flex-shrink-0 border border-amber-600/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+      className={cn(
+        'flex-shrink-0 border border-amber-600/40 bg-amber-500/10 text-amber-700 dark:text-amber-400',
+        wrap && '!max-h-none !overflow-visible',
+      )}
       labelClassName={cn(
         'px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide',
         wrap ? 'w-14 text-center leading-tight' : 'whitespace-nowrap',
