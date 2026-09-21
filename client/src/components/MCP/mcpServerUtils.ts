@@ -28,15 +28,6 @@ export interface SelectedIconInfo extends ThemedIconPaths {
 
 export type ConnectionStatusMap = Record<string, MCPServerStatus>;
 
-// Deloitte Custom Change: SharePoint MCP is limited to a subset of users.
-/** Server config keys (`librechat.yaml`) that should show a "Limited Access" label. */
-const LIMITED_ACCESS_SERVER_NAMES = new Set(['cleartrack-mcp-gateway-sharepoint']);
-
-// Deloitte Custom Change: SharePoint MCP is limited to a subset of users.
-export function hasLimitedAccess(serverName: string): boolean {
-  return LIMITED_ACCESS_SERVER_NAMES.has(serverName);
-}
-
 // Deloitte Custom Change: light/dark themed MCP server icons.
 /** Whether any icon path is configured for a server, i.e. it shouldn't fall back to the generic icon. */
 export function hasConfiguredIcon(icons: Partial<ThemedIconPaths>): boolean {

@@ -501,6 +501,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     iconPathLight: '/assets/mcp/sharepoint-light.png'
     iconPathDark: '/assets/mcp/sharepoint-dark.png'
+    limitedAccess: true
 #    oauth_headers:
 #      X-Custom-Header: "custom_value"
 

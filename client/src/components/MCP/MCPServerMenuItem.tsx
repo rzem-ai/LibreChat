@@ -7,7 +7,6 @@ import {
   getStatusColor,
   getStatusTextKey,
   hasConfiguredIcon,
-  hasLimitedAccess,
   shouldShowActionButton,
   type ConnectionStatusMap,
 } from './mcpServerUtils';
@@ -91,7 +90,7 @@ export default function MCPServerMenuItem({
         <div className="flex items-center gap-1.5">
           <span className="truncate text-sm font-medium text-text-primary">{displayName}</span>
           {/* Deloitte Custom Change: SharePoint MCP is limited to a subset of users. */}
-          {hasLimitedAccess(server.serverName) && <LimitedAccessPill />}
+          {server.config?.limitedAccess && <LimitedAccessPill />}
         </div>
         {server.config?.description && (
           <p className="truncate text-xs text-text-secondary">{server.config.description}</p>
