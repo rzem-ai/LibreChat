@@ -219,7 +219,7 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
         },
       },
       ...(canShowAgentSelectionSteps
-        ? [
+        ? ([
             {
               element: '#nav-agents-marketplace-button',
               popover: {
@@ -238,7 +238,7 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
                 side: 'bottom',
               },
             },
-          ]
+          ] as const)
         : []),
       {
         element: '#nav-panel-skills',
@@ -309,7 +309,9 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
           side: 'top',
         },
       },
-    ] satisfies Array<{ element: string; popover: { title: string; description: string; side: 'top' | 'right' | 'bottom' | 'left' } }>;
+    ] as const;
+    // Cast to mutable array for driver() which expects DriveStep[]
+    const stepsArray = steps as unknown as Array<{ element: string; popover: { title: string; description: string; side: 'top' | 'right' | 'bottom' | 'left' } }>;
     // Do NOT eagerly filter steps here. Driver.js's own skipMissingElement +
     // waitForElement handles two cases correctly at runtime as each step is
     // reached: (a) genuinely absent elements (e.g. feature-flagged buttons not
@@ -353,7 +355,7 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
         // Notify the caller so it can restore the pre-tour sidebar state.
         onEnd?.();
       },
-      steps,
+      steps: stepsArray,
     });
 
     // Store the instance so the useEffect cleanup can destroy it on unmount.
