@@ -142,7 +142,7 @@ describe('useGettingStartedTour', () => {
       popover: {
         title: 'Welcome to MyAssist',
         description:
-          "Welcome to the new and improved MyAssist. We've rebuilt from the ground up to give you access to more powerful AI tools.<br><br>In this guided tour, we'll take you through the chat interface and side panel, so you are comfortable navigating through the platform.",
+          "Welcome to the new and improved MyAssist! We've rebuilt from the ground up to give you access to more powerful AI tools.<br><br>In this guided tour, we'll take you through the chat interface and side panel, so you are comfortable navigating through the platform.",
         side: 'right',
       },
     });
