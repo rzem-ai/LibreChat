@@ -2,6 +2,7 @@ import React from 'react';
 import { Spinner } from '@librechat/client';
 import { PlugZap, SlidersHorizontal, X } from 'lucide-react';
 import type { MCPServerStatus } from 'librechat-data-provider';
+import { isSilentlyConnectableOboServer } from './mcpServerUtils';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -25,13 +26,6 @@ export interface MCPServerStatusIconProps {
   canCancel: boolean;
   onCancel: (e: React.MouseEvent) => void;
   hasCustomUserVars?: boolean;
-  /**
-   * Deloitte Custom Change: True when the server authenticates via On-Behalf-Of (OBO) token
-   * exchange. OBO connects transparently (no interactive OAuth step), so the checkbox
-   * alone is enough to trigger it — the explicit connect button is redundant
-   * and suppressed for these servers.
-   */
-  isObo?: boolean;
   /** When true, renders as a small status dot for compact layouts */
   compact?: boolean;
 }
@@ -52,8 +46,7 @@ export default function MCPServerStatusIcon({
   isInitializing,
   canCancel,
   onCancel,
-  hasCustomUserVars = false,
-  isObo = false,
+  hasCustomUserVars,
   compact = false,
 }: MCPServerStatusIconProps) {
   localize = useLocalize();
@@ -97,11 +90,14 @@ export default function MCPServerStatusIcon({
     return <ConnectingSpinner serverName={serverName} />;
   }
 
-  // Deloitte Custom Change: Disconnected or Error: OBO connects transparently via the
-  // checkbox, so no separate action is needed. Other auth types still get an explicit
-  // connect button.
+  // Deloitte Custom Change: Disconnected OBO servers connect transparently via the
+  // checkbox, so no separate action is needed — but an errored OBO server still needs
+  // an explicit retry, since silent auto-connect won't keep retrying on its own.
   if (connectionState === 'disconnected' || connectionState === 'error') {
-    if (isObo) {
+    if (
+      connectionState === 'disconnected' &&
+      isSilentlyConnectableOboServer(serverStatus, hasCustomUserVars)
+    ) {
       return null;
     }
     return <ConnectButton serverName={serverName} onConfigClick={onConfigClick} />;

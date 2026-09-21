@@ -18,6 +18,7 @@ import {
   useMCPServerManager,
   useMCPToolOptions,
 } from '~/hooks';
+import { isSilentlyConnectableOboServer } from '~/components/MCP/mcpServerUtils';
 import MCPServerStatusIcon from '~/components/MCP/MCPServerStatusIcon';
 import { mcpAllToken, mcpServerToken } from '../../items/selectors';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
@@ -272,6 +273,11 @@ export default function McpSection({ item }: Props) {
     !hasTools && (mcpToolsLoading || isInitializing || connectionState === 'connecting');
   const isConnected = connectionState === 'connected';
   const isBusy = isInitializing || connectionState === 'connecting';
+  const isSilentlyConnectable = isSilentlyConnectableOboServer(
+    statusIconProps?.serverStatus,
+    statusIconProps?.hasCustomUserVars,
+  );
+  const showConnectSection = !isConnected && !isSilentlyConnectable;
 
   /** Close + clear the OAuth dialog once the server connects, and don't let it
    * reopen on its own if the connection later drops. No useEffect — adjust state
@@ -382,7 +388,7 @@ export default function McpSection({ item }: Props) {
         <div
           className={cn(
             'grid transition-[grid-template-rows] [transition-duration:var(--resize-dur)] [transition-timing-function:var(--resize-ease)] motion-reduce:transition-none',
-            isConnected ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]',
+            showConnectSection ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
           )}
         >
           <div className="min-h-0 overflow-hidden">
@@ -391,8 +397,8 @@ export default function McpSection({ item }: Props) {
               variant="submit"
               className="mt-5 w-full gap-2"
               disabled={isBusy}
-              tabIndex={isConnected ? -1 : undefined}
-              aria-hidden={isConnected || undefined}
+              tabIndex={showConnectSection ? undefined : -1}
+              aria-hidden={!showConnectSection || undefined}
               onClick={handleConnect}
             >
               {isBusy && <Spinner className="size-4" />}

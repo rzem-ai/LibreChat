@@ -34,11 +34,24 @@ export type ProcessedOrganic = OrganicResult & ProcessedSource;
 export type ProcessedTopStory = TopStoryResult & ProcessedSource;
 export type ValidSource = ProcessedOrganic | ProcessedTopStory;
 
+/** Present when `type` is `'file'`: attachment metadata surfaced on a file_search citation chip. */
+export type FileReferenceMetadata = {
+  fileBytes?: number;
+  fileType?: string;
+};
+
 export type ResultReference = {
   link: string;
   type: 'link' | 'image' | 'video' | 'file';
   title?: string;
   attribution?: string;
+  /** Present when `type` is `'file'`: identifies the source file_search attachment. */
+  fileId?: string;
+  fileName?: string;
+  pages?: number[];
+  pageRelevance?: Record<number, number>;
+  relevance?: number;
+  metadata?: FileReferenceMetadata;
 };
 
 export type MCPResultReference = {

@@ -1,7 +1,7 @@
 # v0.8.7
 
 # Base node image
-FROM node:24.16.0-alpine AS node
+FROM node:24.17.0-alpine AS node
 
 # Add requirements for certs (with retries for transient mirror/proxy errors)
 RUN set -eux; \

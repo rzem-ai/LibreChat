@@ -39,6 +39,8 @@ const ADMIN_CONFIGURABLE_FIELDS = [
   'title',
   'description',
   'iconPath',
+  'iconPathLight', // Deloitte Custom Change: light/dark themed MCP server icons.
+  'iconPathDark', // Deloitte Custom Change: light/dark themed MCP server icons.
   'startup',
   'chatMenu',
   'serverInstructions',

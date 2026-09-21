@@ -1,5 +1,11 @@
 import type { SearchRefType } from 'librechat-data-provider';
-export type Citation = { turn: number; refType: SearchRefType | string; index: number };
+export type Citation = {
+  turn: number;
+  refType: SearchRefType | string;
+  index: number;
+  /** Id of the text span/marker this ref originated from — lets a merged group's chips each highlight only their own span. */
+  citationId?: string | null;
+};
 
 export type CitationProps = {
   citationId?: string | null;

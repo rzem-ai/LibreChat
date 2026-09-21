@@ -31,7 +31,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'develop@sha256:50c0365051b5fedc51e30d53e07c86abc3952af7533e0943f1f0eb354d3fd406'
+          tag: 'develop@sha256:5e71af45f812b4f1a42b21cea6e38506a986bdc24d0ab1c0c3935d5222f9854f'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://foundry-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -51,7 +51,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:01fb861676ca1ff5ee03eb906174f61f8952dfcdef6534b5632620cf44600320'
+          tag: 'develop@sha256:75acfc483aaea02819dea8343c24fc532fd8c6b2c3583c0827b97bc9eedbd5dc'
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -129,7 +129,7 @@ pods:
           AGENT_DEBUG_LOGGING: 'true'
           # Skill Security Scanner
           SKILL_SCANNER_URL: 'https://ai-registry-dev.ctk.au.deloitte.com/v1/scan?verbose=false'
-          SKILL_SCANNER_TIMEOUT_MS: '15000'
+          SKILL_SCANNER_TIMEOUT_MS: '30000'
           SKILL_SCANNER_MIN_SEVERITY: 'high'
           # AI Registry
           AI_REGISTRY_CLIENT_ID: "4aeebbdc-56f5-4329-b40e-3d0a243bf74a" # AI Registry DEV & UAT
@@ -161,7 +161,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:3bd35d414586d192b34ad0806a5c7495643189f791ad65cac1c650c72295d3de'
+          tag: 'develop@sha256:2f1afbb82b5d8f7840a88a03d516573e334dfd7bcbb51380e5e9dea1a889985a'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -217,7 +217,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:8ec6497962f427d3838371ed90ab40b1a27ba655942abaa38995cb9292d6f6bd'
+          tag: 'develop@sha256:e24701594b581bc8ef99d6721149e735ad6d03002e5db246d51a43d34c5c67c4'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
@@ -240,7 +240,7 @@ pods:
 
 valkey:
   image:
-    tag: 'develop@sha256:4c9c22ac6597f444deb3378136b42d7ebfdd947f8a4b5d9a16431aef6b5e6c3a'
+    tag: 'develop@sha256:87ebb22a20d8ee2f450574f70068388acb9d2b5b60f74b9cf873c6be845102b3'
   persistence:
     storageClass: 'managed-csi-standard-private'
   passwordSecretName: 'librechat-valkey-password-dev'

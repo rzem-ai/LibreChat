@@ -57,6 +57,12 @@ export interface ToolEndCallbackData {
     content: string | unknown;
     artifact?: unknown;
   };
+  /** Deloitte Custom Change: the tool's original call arguments, e.g. `{ code, country }` for an
+   * IBISWorld report tool — needed by citation-link builders since some
+   * tools' responses don't carry their own identifying fields. May arrive as a
+   * JSON string or a plain object depending on the callback path; see
+   * `normalizeMCPToolArgs` in `api/server/controllers/agents/callbacks.js`. */
+  input?: string | Record<string, unknown>;
 }
 
 export interface ToolEndCallbackMetadata {
@@ -4292,6 +4298,8 @@ export function createToolExecuteHandler(options: ToolExecuteOptions): EventHand
                             content: cleanedContent,
                             artifact: result.artifact,
                           },
+                          // Deloitte Custom Change: pass through the call args (see `ToolEndCallbackData.input`).
+                          input: tc.args,
                         },
                         {
                           run_id: (metadata as Record<string, unknown>)?.run_id as

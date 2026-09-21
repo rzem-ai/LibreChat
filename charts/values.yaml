@@ -73,10 +73,12 @@ pods:
           HELP_AND_FAQ_URL: 'https://forms.cloud.microsoft/e/E9AyvN4Ayx'
           OPENID_CALLBACK_URL: '/oauth/openid/callback'
           OPENID_GRAPH_SCOPES: 'User.Read,User.ReadBasic.All' #People.Read GroupMember.Read.All scopes to be added once App Registration admins grant them to us
+          OPENID_ON_BEHALF_FLOW_FOR_USERINFO_REQUIRED: 'true'
+          OPENID_ON_BEHALF_FLOW_USERINFO_SCOPE: 'user.read'
           OPENID_REQUIRED_ROLE_TOKEN_KIND: 'id'
           OPENID_REUSE_TOKENS: 'true'
           OPENID_USE_END_SESSION_ENDPOINT: 'true'
-          OPENID_BUTTON_LABEL: 'Login with SSO'
+          OPENID_BUTTON_LABEL: 'Continue with SSO'
           OPENID_IMAGE_URL: '/assets/favicon.svg'
           MODEL_PRICING_MIN_MULTIPLIER: '0.1'
           MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT: '0.1'
@@ -88,6 +90,9 @@ pods:
           # OpenTelemetry Tracing
           OTEL_SERVICE_NAME: 'librechat'
           OTEL_TRACES_EXPORTER: 'otlp'
+          # Only traces are exported; disable NodeSDK default metrics/logs pipelines.
+          OTEL_METRICS_EXPORTER: 'none'
+          OTEL_LOGS_EXPORTER: 'none'
           OTEL_EXPORTER_OTLP_PROTOCOL: 'http/protobuf'
           OTEL_TRACES_SAMPLER: 'parentbased_traceidratio'
           OTEL_TRACES_SAMPLER_ARG: '0.1'

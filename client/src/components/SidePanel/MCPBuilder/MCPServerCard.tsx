@@ -3,6 +3,8 @@ import { MCPIcon } from '@librechat/client';
 import { PermissionBits, hasPermissions } from 'librechat-data-provider';
 import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusIcon';
 import type { MCPServerDefinition } from '~/hooks';
+import { hasConfiguredIcon } from '~/components/MCP/mcpServerUtils';
+import MCPServerIcon from '~/components/MCP/MCPServerIcon';
 import { useLocalize } from '~/hooks';
 import { getStatusDotColor } from './MCPStatusBadge';
 import MCPServerDialog from './MCPServerDialog';
@@ -41,14 +43,8 @@ export default function MCPServerCard({
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const statusIconProps = getServerStatusIconProps(server.serverName);
-  const {
-    serverStatus,
-    onConfigClick,
-    isInitializing,
-    canCancel,
-    onCancel,
-    hasCustomUserVars = false,
-  } = statusIconProps;
+  const { serverStatus, onConfigClick, isInitializing, canCancel, onCancel, hasCustomUserVars } =
+    statusIconProps;
 
   const canEditThisServer = hasPermissions(server.effectivePermissions, PermissionBits.EDIT);
   const displayName = server.config?.title || server.serverName;
@@ -97,13 +93,17 @@ export default function MCPServerCard({
       >
         {/* Server Icon with Status Dot */}
         <div className="relative flex-shrink-0">
-          {server.config?.iconPath ? (
-            <img
-              src={server.config.iconPath}
-              className="size-8 rounded-lg object-cover"
-              alt=""
-              aria-hidden="true"
-            />
+          {/* Deloitte Custom Change */}
+          {hasConfiguredIcon(server.config ?? {}) ? (
+            <span aria-hidden="true">
+              <MCPServerIcon
+                iconPath={server.config?.iconPath ?? null}
+                iconPathLight={server.config?.iconPathLight ?? null}
+                iconPathDark={server.config?.iconPathDark ?? null}
+                alt=""
+                className="size-8 rounded-lg object-cover"
+              />
+            </span>
           ) : (
             <div className="flex size-8 items-center justify-center rounded-lg bg-surface-tertiary">
               <MCPIcon className="size-5 text-text-secondary" aria-hidden="true" />

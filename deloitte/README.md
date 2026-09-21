@@ -171,7 +171,7 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 14. `OPENID_REUSE_TOKENS=true`
 15. `OPENID_REQUIRED_ROLE=`
 16. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
-17. `OPENID_BUTTON_LABEL="Login with SSO"`
+17. `OPENID_BUTTON_LABEL="Continue with SSO"`
 18. `OPENID_IMAGE_URL=/assets/favicon.svg`
 19. `ALLOW_EMAIL_LOGIN=false`
 20. `ALLOW_REGISTRATION=false`
@@ -191,7 +191,7 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 34. `BEDROCK_GATEWAY_URL=http://gateway-proxy:8081`
 35. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
 36. `MCP_GATEWAY_URL=https://mcp-gw-dev.ctk.au.deloitte.com/mcp`
-37. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims`
+37. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims,sharepoint`
 38. `MCP_GATEWAY_OBO_SCOPE=api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user`
 39. `MODEL_PRICING_REFERENCE_MODEL_ID=gpt-56-luna`
 40. `MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT=0.1`
@@ -480,7 +480,7 @@ For LOCAL development, we need to add each user's hostname to the Redirect URIs 
 
 ### Details Per Environment
 - **DEV (Inc. LOCAL):** [AU CTK_TT_Librechat NONPROD](https://appreg.iam.deloitteresources.com/AppProperties/2075976d-5147-47b2-89d2-4ad060d19f85)
-- **UAT:** [AU CTK_TT_Librechat UAT NONPROD](https://appreg.iam.deloitteresources.com/AppProperties/2075976d-5147-47b2-89d2-4ad060d19f85)
+- **UAT:** [AU CTK_TT_Librechat UAT NONPROD](https://appreg.iam.deloitteresources.com/AppProperties/66cc6e2e-670a-47c9-a362-94c86c46782a)
 - **PROD:** [AU CTK_TT_Librechat PROD](https://appreg.iam.deloitteresources.com/AppSecrets/b5494d82-9ae5-449e-8867-6804ccc2f5ef)
 
 ### Configuration
