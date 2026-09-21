@@ -7,9 +7,12 @@ import {
   getStatusColor,
   getStatusTextKey,
   hasConfiguredIcon,
+  hasLimitedAccess,
   shouldShowActionButton,
   type ConnectionStatusMap,
 } from './mcpServerUtils';
+// Deloitte Custom Change: SharePoint MCP is limited to a subset of users.
+import { LimitedAccessPill } from '~/components/SidePanel/Agents/Advanced/ui';
 import MCPServerStatusIcon from './MCPServerStatusIcon';
 import MCPServerIcon from './MCPServerIcon';
 import { useLocalize } from '~/hooks';
@@ -87,6 +90,8 @@ export default function MCPServerMenuItem({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <span className="truncate text-sm font-medium text-text-primary">{displayName}</span>
+          {/* Deloitte Custom Change: SharePoint MCP is limited to a subset of users. */}
+          {hasLimitedAccess(server.serverName) && <LimitedAccessPill />}
         </div>
         {server.config?.description && (
           <p className="truncate text-xs text-text-secondary">{server.config.description}</p>

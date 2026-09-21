@@ -9,6 +9,7 @@ import {
 import type { ReactNode } from 'react';
 import { useLocalize } from '~/hooks';
 import { ESide } from '~/common';
+import { cn } from '~/utils';
 
 export const sectionLabelClass =
   'text-[11px] font-medium uppercase tracking-wide text-text-secondary';
@@ -31,6 +32,22 @@ export function BetaPill() {
   return (
     <span className="rounded-full border border-purple-600/40 bg-purple-500/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-purple-700 dark:text-purple-400">
       {localize('com_ui_beta')}
+    </span>
+  );
+}
+
+// Deloitte Custom Change: SharePoint MCP is limited to a subset of users.
+/** "Limited Access" accent pill. `wrap` breaks the label onto two lines for narrow layouts. */
+export function LimitedAccessPill({ wrap = false }: { wrap?: boolean }) {
+  const localize = useLocalize();
+  return (
+    <span
+      className={cn(
+        'flex-shrink-0 rounded-full border border-amber-600/40 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-amber-700 dark:text-amber-400',
+        wrap ? 'w-14 text-center leading-tight' : 'whitespace-nowrap',
+      )}
+    >
+      {localize('com_ui_limited_access')}
     </span>
   );
 }
