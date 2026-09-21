@@ -203,15 +203,6 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
         },
       },
       {
-        element: '#nav-search-input',
-        popover: {
-          title: 'Search Conversations',
-          description:
-            'Search across all of your past conversations by keyword — handy once you have more than a handful of chats.',
-          side: 'bottom',
-        },
-      },
-      {
         element: '#nav-projects-section',
         popover: {
           title: 'Projects',
@@ -275,15 +266,6 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
           title: 'Memories',
           description:
             'Review and manage what the assistant remembers about you across conversations.',
-          side: 'right',
-        },
-      },
-      {
-        element: '#nav-panel-bookmarks',
-        popover: {
-          title: 'Bookmarks',
-          description:
-            'Browse every conversation you have tagged, grouped by your own bookmark labels.',
           side: 'right',
         },
       },
