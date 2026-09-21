@@ -137,6 +137,7 @@ export async function fetchAllowedCodeFileStream(
       crossOriginSeen = true;
     }
     const effectiveAllowedAddresses = crossOriginSeen ? null : allowedAddresses;
+    const enforceRedirectSSRFProtection = useSSRFProtection || crossOriginSeen;
     if (
       !(await isMCPDomainAllowed({ url: currentUrl }, allowedDomains, effectiveAllowedAddresses))
     ) {
@@ -148,7 +149,7 @@ export async function fetchAllowedCodeFileStream(
       parsedUrl.hostname,
       getEffectivePort(parsedUrl.protocol, parsedUrl.port),
       proxyConfigured,
-      useSSRFProtection,
+      enforceRedirectSSRFProtection,
       effectiveAllowedAddresses,
     );
     /** Connect-time agents validate whatever hostname axios actually dials — the
@@ -162,7 +163,7 @@ export async function fetchAllowedCodeFileStream(
      * built for the direct-connection path. Rebuilt every hop so a cross-origin
      * redirect's dropped exemption also applies at the connect-time layer. */
     const { httpAgent, httpsAgent } =
-      useSSRFProtection && !proxyConfigured
+      enforceRedirectSSRFProtection && !proxyConfigured
         ? createSSRFSafeAgents(effectiveAllowedAddresses)
         : { httpAgent: undefined, httpsAgent: undefined };
     const remainingMs = deadline - Date.now();

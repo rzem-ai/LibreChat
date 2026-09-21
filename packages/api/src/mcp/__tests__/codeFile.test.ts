@@ -230,13 +230,11 @@ describe('fetchAllowedCodeFileStream', () => {
 
   it('re-resolves proxy routing on each redirect hop', async () => {
     mockGetProxyUrlForUrl.mockImplementation((targetUrl?: string | URL) =>
-      String(targetUrl).includes('attacker.example')
-        ? 'http://corp-proxy.internal:8080'
-        : undefined,
+      String(targetUrl).includes('203.0.113.10') ? 'http://corp-proxy.internal:8080' : undefined,
     );
     mockApplyAxiosProxyConfig.mockImplementation(
       (config: AxiosRequestConfig, targetUrl?: string | URL) =>
-        String(targetUrl).includes('attacker.example')
+        String(targetUrl).includes('203.0.113.10')
           ? {
               ...config,
               proxy: false,
@@ -247,14 +245,14 @@ describe('fetchAllowedCodeFileStream', () => {
     mockGet
       .mockResolvedValueOnce({
         status: 302,
-        headers: { location: 'https://attacker.example/report.pdf' },
+        headers: { location: 'https://203.0.113.10/report.pdf' },
         data: { destroy: jest.fn() },
       })
       .mockResolvedValueOnce({ status: 200, data: 'stream' });
 
     await fetchAllowedCodeFileStream(
       'https://contoso.sharepoint.com/report.pdf',
-      ['https://contoso.sharepoint.com', 'https://attacker.example'],
+      ['https://contoso.sharepoint.com', 'https://203.0.113.10'],
       null,
     );
 
@@ -262,11 +260,11 @@ describe('fetchAllowedCodeFileStream', () => {
       1,
       'https://contoso.sharepoint.com/report.pdf',
     );
-    expect(mockGetProxyUrlForUrl).toHaveBeenNthCalledWith(2, 'https://attacker.example/report.pdf');
+    expect(mockGetProxyUrlForUrl).toHaveBeenNthCalledWith(2, 'https://203.0.113.10/report.pdf');
     expect(mockCreateSSRFSafeAgents).not.toHaveBeenCalled();
     expect(mockGet).toHaveBeenNthCalledWith(
       2,
-      'https://attacker.example/report.pdf',
+      'https://203.0.113.10/report.pdf',
       expect.objectContaining({ proxy: false, httpsAgent: 'proxy-agent' }),
     );
   });
