@@ -183,9 +183,19 @@ const updateTutorialStateController = async (req, res) => {
           : user?.tutorialFeedback ?? {};
 
       if (tutorialFeedback) {
+        const updatedAt = new Date();
         rest.tutorialFeedback = {
           ...existingTutorialFeedback,
-          ...tutorialFeedback,
+          ...Object.fromEntries(
+            Object.entries(tutorialFeedback).map(([courseId, feedback]) => [
+              courseId,
+              {
+                ...existingTutorialFeedback[courseId],
+                ...feedback,
+                updatedAt,
+              },
+            ]),
+          ),
         };
       }
 

@@ -831,6 +831,7 @@ export const MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH = 200;
 export type TTutorialFeedback = {
   score: number;
   comment?: string;
+  updatedAt?: Date | string;
 };
 
 export type TTutorialStateResponse = {

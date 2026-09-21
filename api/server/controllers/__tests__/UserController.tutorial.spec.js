@@ -239,7 +239,11 @@ describe('UserController tutorial state', () => {
         tutorialRatings: { 'other-course': 5, 'getting-started-guide': 4 },
         tutorialFeedback: {
           'other-course': { score: 5, comment: 'Existing comment' },
-          'getting-started-guide': { score: 4, comment: 'Helpful tour' },
+          'getting-started-guide': {
+            score: 4,
+            comment: 'Helpful tour',
+            updatedAt: new Date('2026-09-21T10:00:00.000Z'),
+          },
         },
       });
       const req = createRequest({
@@ -262,7 +266,11 @@ describe('UserController tutorial state', () => {
       expect(mockUpdateUser).toHaveBeenCalledWith('user-1', {
         tutorialFeedback: {
           'other-course': { score: 5, comment: 'Existing comment' },
-          'getting-started-guide': { score: 4, comment: 'Helpful tour' },
+          'getting-started-guide': {
+            score: 4,
+            comment: 'Helpful tour',
+            updatedAt: expect.any(Date),
+          },
         },
       });
       expect(res.json).toHaveBeenCalledWith({
@@ -270,7 +278,11 @@ describe('UserController tutorial state', () => {
         tutorialRatings: { 'other-course': 5, 'getting-started-guide': 4 },
         tutorialFeedback: {
           'other-course': { score: 5, comment: 'Existing comment' },
-          'getting-started-guide': { score: 4, comment: 'Helpful tour' },
+          'getting-started-guide': {
+            score: 4,
+            comment: 'Helpful tour',
+            updatedAt: new Date('2026-09-21T10:00:00.000Z'),
+          },
         },
       });
     });

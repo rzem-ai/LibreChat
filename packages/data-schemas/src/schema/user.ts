@@ -39,6 +39,10 @@ const TutorialFeedbackSchema = new Schema(
       trim: true,
       maxlength: MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH,
     },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { _id: false },
 );

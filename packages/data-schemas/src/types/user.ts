@@ -5,6 +5,7 @@ import { CursorPaginationParams } from '~/common';
 export interface TutorialFeedback {
   score: number;
   comment?: string;
+  updatedAt?: Date;
 }
 
 export interface IUser extends Document {
