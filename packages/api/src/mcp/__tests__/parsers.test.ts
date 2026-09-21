@@ -1,3 +1,4 @@
+// Deloitte Custom Change: covers MCP download markers and model-visible path cleanup.
 import { logger } from '@librechat/data-schemas';
 import { formatToolContent, CODE_FILE_DOWNLOAD_SCHEME } from '../parsers';
 import type * as t from '../types';

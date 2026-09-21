@@ -1291,6 +1291,7 @@ export async function initializeAgent(
    */
   let backgroundToolNames: string[] | undefined;
   if (params.backgroundToolsAvailable === true) {
+    // Deloitte Custom Change: keep request-scoped MCP connections foreground-only.
     const configuredMCPServerNames = Object.keys(req.config?.mcpConfig ?? {}).map(
       normalizeServerName,
     );

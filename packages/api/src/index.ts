@@ -25,6 +25,7 @@ export * from './mcp/request';
 export * from './mcp/feed/feed';
 /* Utilities */
 export * from './mcp/utils';
+// Deloitte Custom Change: expose the MCP Code Interpreter download bridge.
 export * from './mcp/codeFile';
 export * from './mcp/context';
 export * from './utils';

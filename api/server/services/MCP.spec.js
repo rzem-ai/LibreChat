@@ -1,3 +1,4 @@
+// Deloitte Custom Change: covers MCP download bridge registration and safety guards.
 // Mock all dependencies - define mocks before imports
 const mockGetTenantId = jest.fn();
 

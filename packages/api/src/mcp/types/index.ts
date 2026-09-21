@@ -158,6 +158,7 @@ export type Artifacts =
       }>;
       session_id?: string;
       file_ids?: string[];
+      /** Deloitte Custom Change: signed MCP download resource for Code Interpreter. */
       codeFile?: { name: string; mimeType?: string; url: string };
     }
   | undefined;

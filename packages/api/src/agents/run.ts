@@ -894,6 +894,7 @@ export function anyAgentReplaysReasoningContent(
 }
 
 /**
+ * Deloitte Custom Change:
  * Collects MCP tool names (`${toolName}${mcp_delimiter}${serverName}`) from
  * every agent reachable in the run — primary, handoff/parallel, or a nested
  * subagent — for `codeSessionToolNames`. Walks `subagentAgentConfigs` like

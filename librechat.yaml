@@ -508,7 +508,7 @@ mcpSettings:
   allowedDomains:
     - mcp-gw-dev.ctk.au.deloitte.com
     - mcp-gateway.ctk.au.deloitte.com
-  # The SharePoint gateway returns Graph's short-lived, pre-authorized
+  # Deloitte Custom Change: The SharePoint gateway returns Graph's short-lived, pre-authorized
   # download URLs as librechat-download resources for Code Interpreter.
   codeFileAllowedDomains:
     - '*.sharepoint.com'

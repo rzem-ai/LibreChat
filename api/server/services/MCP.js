@@ -1124,6 +1124,7 @@ function createToolInstance({
        * `result[0]` for a marker-only response regardless of provider, so
        * without a substitute the Assistants endpoint would return nothing at
        * all for a tool call that otherwise succeeded. */
+      // Deloitte Custom Change: register MCP download resources with Code Interpreter.
       if (artifacts?.codeFile && isAssistantsEndpoint(provider)) {
         if (Array.isArray(result) && !result[0]) {
           result[0] = `File "${artifacts.codeFile.name}" could not be attached to this conversation for use in Code Interpreter.`;
@@ -1187,7 +1188,8 @@ function createToolInstance({
               userId,
             });
             const codeFileAllowedDomains =
-              appConfig?.mcpSettings?.codeFileAllowedDomains ?? appConfig?.mcpSettings?.allowedDomains;
+              appConfig?.mcpSettings?.codeFileAllowedDomains ??
+              appConfig?.mcpSettings?.allowedDomains;
             const download = await fetchAllowedCodeFileStream(
               url,
               codeFileAllowedDomains,

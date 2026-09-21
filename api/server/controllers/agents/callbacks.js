@@ -956,6 +956,7 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null, jo
       return;
     }
 
+    // Deloitte Custom Change: persist MCP Code Interpreter files alongside image artifacts.
     if (!output.artifact.files) {
       return;
     }

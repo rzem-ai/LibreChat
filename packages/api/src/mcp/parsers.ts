@@ -164,6 +164,8 @@ function extractCodeFile(content: t.ToolContentPart[]): {
     return { codeFile, content: remaining };
   }
 
+  // Deloitte Custom Change: Hide gateway-local paths from the model once the
+  // paired download marker has made the file available to Code Interpreter.
   return {
     codeFile,
     content: remaining.map((item) => {

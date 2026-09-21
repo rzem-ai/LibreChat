@@ -1,3 +1,4 @@
+// Deloitte Custom Change: covers mixed image and Code Interpreter file artifacts.
 const { Tools } = require('librechat-data-provider');
 
 // Mock all dependencies before requiring the module
