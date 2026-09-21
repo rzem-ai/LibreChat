@@ -333,6 +333,20 @@ describe('insertFileCitations', () => {
     expect(readText(parts[0])).toBe(original);
   });
 
+  it('does not let a deeper-quoted fence line close a shallower fence', () => {
+    const original = [
+      '> ```js',
+      '> > ```',
+      '> You can reserve a desk fourteen days in advance.',
+      '> ```',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertFileCitations(parts, [
+      fileSearchAttachment([{ fileId: 'fileA', content: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toBe(original);
+  });
+
   it('does not anchor text inside a fenced code block indented under a list item', () => {
     const original = [
       '- Reservation policy:',

@@ -387,8 +387,12 @@ function matchFenceOpen(line: string): FenceOpen | null {
  *
  * A fence can also sit inside a container — a blockquote or a list item — with the same
  * prefix repeated on every line of the block. Blockquote markers are `>` characters, matched
- * explicitly via `BLOCKQUOTE_PREFIX`, with the exact same prefix then required on the closing
- * line. A list item's continuation lines carry no repeated marker, just indentation, but its
+ * explicitly via `BLOCKQUOTE_PREFIX`, with the closing line required to carry the exact same
+ * nesting depth (counted via `countBlockquoteMarkers`, not compared as a literal string, since
+ * CommonMark allows the single space after each `>` to be omitted) — a shallower-quoted line
+ * can't close a deeper fence, and a deeper-quoted line can't close a shallower one either, since
+ * both mean the line sits at a different container depth than the fence it would be closing.
+ * A list item's continuation lines carry no repeated marker, just indentation, but its
  * opening line may put the fence directly after the marker (e.g. `- \`\`\`js`); that one-time
  * marker is matched via `LIST_MARKER_PREFIX` before looking for the fence. Per CommonMark, a
  * list item's continuation lines must be indented to at least the marker's own width to remain
@@ -439,7 +443,7 @@ function findFencedCodeRanges(text: string): ExcludedRange[] {
     for (let j = i + 1; j < lines.length; j++) {
       const line = lines[j];
       const linePrefix = blockquoteDepth > 0 ? (line.match(BLOCKQUOTE_PREFIX)?.[0] ?? '') : '';
-      if (blockquoteDepth > 0 && countBlockquoteMarkers(linePrefix) < blockquoteDepth) {
+      if (blockquoteDepth > 0 && countBlockquoteMarkers(linePrefix) !== blockquoteDepth) {
         continue;
       }
 
