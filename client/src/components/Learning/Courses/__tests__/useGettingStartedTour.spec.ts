@@ -67,13 +67,11 @@ describe('useGettingStartedTour', () => {
     appendAnchor('button', { id: 'send-button' });
     appendAnchor('button', { id: 'close-sidebar-button' });
     appendAnchor('button', { id: 'nav-panel-conversations', ariaPressed: 'true' });
-    appendAnchor('input', { id: 'nav-search-input' });
     appendAnchor('div', { id: 'nav-projects-section' });
     appendAnchor('button', { id: 'nav-panel-agents' });
     appendAnchor('button', { id: 'nav-panel-skills' });
     appendAnchor('button', { id: 'nav-panel-prompts' });
     appendAnchor('button', { id: 'nav-panel-memories' });
-    appendAnchor('button', { id: 'nav-panel-bookmarks' });
     appendAnchor('button', { id: 'nav-panel-files' });
     appendAnchor('button', { id: 'nav-panel-parameters' });
     appendAnchor('button', { id: 'nav-panel-mcp-builder' });
@@ -149,18 +147,17 @@ describe('useGettingStartedTour', () => {
     expect(capturedConfig?.steps?.[1]?.popover.title).toBe('New Chat');
   });
 
-  it('defines 26 steps and revisits the model selector to explain exiting an agent', () => {
+  it('defines 24 steps and revisits the model selector to explain exiting an agent', () => {
     const { result } = renderHook(() => useGettingStartedTour());
     result.current.startTour();
 
-    expect(capturedConfig?.steps).toHaveLength(26);
-    expect(capturedConfig?.steps?.slice(21, 25).map((step) => step.popover.title)).toEqual([
-      'Connectors',
+    expect(capturedConfig?.steps).toHaveLength(24);
+    expect(capturedConfig?.steps?.slice(13, 16).map((step) => step.popover.title)).toEqual([
+      'Agent Builder',
       'Agent Marketplace',
       'Switch Back to a Model',
-      'Learning Hub',
     ]);
-    expect(capturedConfig?.steps?.[23]).toEqual({
+    expect(capturedConfig?.steps?.[15]).toEqual({
       element: '#model-selector-button',
       popover: {
         title: 'Switch Back to a Model',
@@ -176,7 +173,7 @@ describe('useGettingStartedTour', () => {
     const { result } = renderHook(() => useGettingStartedTour());
     result.current.startTour();
 
-    expect(capturedConfig?.steps).toHaveLength(24);
+    expect(capturedConfig?.steps).toHaveLength(22);
     expect(
       capturedConfig?.steps?.some(
         (step) =>
@@ -184,9 +181,9 @@ describe('useGettingStartedTour', () => {
           step.popover.title === 'Switch Back to a Model',
       ),
     ).toBe(false);
-    expect(capturedConfig?.steps?.slice(21, 24).map((step) => step.popover.title)).toEqual([
+    expect(capturedConfig?.steps?.slice(19, 22).map((step) => step.popover.title)).toEqual([
       'Connectors',
-      'Learning Hub',
+      'MyAssist Academy',
       'Account Menu',
     ]);
   });
@@ -196,7 +193,7 @@ describe('useGettingStartedTour', () => {
     const { result } = renderHook(() => useGettingStartedTour());
     result.current.startTour();
 
-    expect(capturedConfig?.steps).toHaveLength(24);
+    expect(capturedConfig?.steps).toHaveLength(22);
     expect(
       capturedConfig?.steps?.some(
         (step) =>
@@ -211,7 +208,7 @@ describe('useGettingStartedTour', () => {
     const { result } = renderHook(() => useGettingStartedTour());
     result.current.startTour();
 
-    expect(capturedConfig?.steps).toHaveLength(24);
+    expect(capturedConfig?.steps).toHaveLength(22);
     expect(
       capturedConfig?.steps?.some(
         (step) =>

@@ -24,7 +24,7 @@ const FIRST_NAV_STEP_INDEX = 11;
  * make each step tolerant of elements that are conditionally rendered (permissions,
  * feature flags, viewport) or that need a moment to mount after a panel switch.
  *
- * Step order (24 core steps, plus agent-selection steps when available):
+ * Step order (22 core steps, plus agent-selection steps when available):
  *   1  Welcome to MyAssist
  *   2  New Chat
  *   3  Model Selector
@@ -37,20 +37,18 @@ const FIRST_NAV_STEP_INDEX = 11;
  *   10 Send
  *   11 Sidebar Toggle
  *   12 Conversations
- *   13 Search Conversations
- *   14 Projects
- *   15 Agent Builder
- *   16 Skill Library
- *   17 Prompt Library
- *   18 Memories
- *   19 Bookmarks
+ *   13 Projects
+ *   14 Agent Builder
+ *   15 Agent Marketplace
+ *   16 Switch Back to a Model
+ *   17 Skill Library
+ *   18 Prompt Library
+ *   19 Memories
  *   20 Files
  *   21 Parameters
  *   22 Connectors List
- *   23 Agent Marketplace
- *   24 Switch Back to a Model
- *   25 Learning Hub
- *   26 Account Menu
+ *   23 MyAssist Academy
+ *   24 Account Menu
  */
 interface TourOptions {
   /** Called when the tour ends (completed or cancelled). The caller uses this
@@ -93,7 +91,7 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
       showMarketplace &&
       hasAvailableTarget('#nav-panel-conversations') &&
       hasAvailableTarget('#nav-agents-marketplace-button');
-    const steps = [
+    const steps: Array<{ element: string; popover: { title: string; description: string; side: 'top' | 'right' | 'bottom' | 'left' } }> = [
       {
         element: '#new-chat-button',
         popover: {
