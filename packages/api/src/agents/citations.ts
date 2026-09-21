@@ -261,17 +261,33 @@ function isDecimalPoint(text: string, index: number): boolean {
 const URL_PATTERN = /https?:\/\/[^\s<>"'\])]+/gi;
 
 /**
+ * Trailing characters stripped off a matched URL before it's treated as a
+ * no-split span. The greedy `URL_PATTERN` match has no way to tell a real
+ * trailing character (an actual `.` in a path) from sentence punctuation that
+ * merely follows the URL (`See https://example.com/report.pdf. Next.`) — real
+ * URLs essentially never end in these characters, so they're always treated
+ * as prose punctuation and left eligible for sentence splitting.
+ */
+const URL_TRAILING_PUNCTUATION = /[.,;:!?]+$/;
+
+/**
  * Byte-offset spans of every URL in `text`, so `.`/`!`/`?` inside a path or
  * query string (e.g. `report.pdf`) aren't mistaken for sentence boundaries. A
  * split there would let a citation anchor land inside the URL, truncating and
- * invalidating the link on the client.
+ * invalidating the link on the client. Trailing sentence punctuation is
+ * trimmed off the match (see `URL_TRAILING_PUNCTUATION`) so a period right
+ * after the URL still ends the sentence normally instead of being swallowed
+ * into the no-split span.
  */
 function computeUrlSpans(text: string): Array<[number, number]> {
   const spans: Array<[number, number]> = [];
   const pattern = new RegExp(URL_PATTERN);
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(text)) !== null) {
-    spans.push([match.index, match.index + match[0].length]);
+    const trimmedLength = match[0].replace(URL_TRAILING_PUNCTUATION, '').length;
+    if (trimmedLength > 0) {
+      spans.push([match.index, match.index + trimmedLength]);
+    }
   }
   return spans;
 }
