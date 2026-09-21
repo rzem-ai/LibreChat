@@ -143,16 +143,19 @@ const updateTutorialStateController = async (req, res) => {
     }
 
     const { update } = result;
-    const tutorialRatings =
-      update.tutorialRatings ??
-      (update.tutorialFeedback != null
+    const feedbackRatings =
+      update.tutorialFeedback != null
         ? Object.fromEntries(
             Object.entries(update.tutorialFeedback).map(([courseId, feedback]) => [
               courseId,
               feedback.score,
             ]),
           )
-        : undefined);
+        : {};
+    const tutorialRatings =
+      update.tutorialRatings != null || update.tutorialFeedback != null
+        ? { ...feedbackRatings, ...(update.tutorialRatings ?? {}) }
+        : undefined;
 
     let user;
 
