@@ -133,6 +133,19 @@ describe('createRun code-tool eager/session wiring', () => {
     );
   });
 
+  it('includes an MCP tool when its server name contains the action delimiter', async () => {
+    const mcpTool = 'sp_download_file_mcp_sharepoint_action_eu';
+    const agent = makeAgent({
+      codeEnvAvailable: true,
+      mcpAvailableTools: { sharepoint_action_eu: { [mcpTool]: {} } },
+      toolRegistry: new Map([[mcpTool, {}]]),
+    });
+
+    const runConfig = await captureRunConfig([agent]);
+
+    expect(runConfig.codeSessionToolNames).toEqual(expect.arrayContaining([mcpTool]));
+  });
+
   it('recursively collects MCP tools from nested subagentAgentConfigs', async () => {
     const grandchild = makeAgent({
       id: 'agent_grandchild',

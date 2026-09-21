@@ -39,6 +39,7 @@ import type { BaseMessage } from '@librechat/agents/langchain/messages';
 import type { AppConfig, IUser } from '@librechat/data-schemas';
 import type { ToolInputValidationError } from '~/agents/toolValidation';
 import type { SubagentUsageEvent } from '~/agents/usage';
+import type { LCAvailableTools } from '~/mcp/types';
 import type * as t from '~/types';
 import {
   CHECK_BACKGROUND_TASK_NAME,
@@ -66,6 +67,7 @@ import { buildLangfuseConfig } from '~/langfuse/config';
 import { resolveConfigHeaders } from '~/utils/headers';
 import { applyTestRunHook } from '~/agents/testHook';
 import { isUserProvided } from '~/utils/common';
+import { normalizeServerName, splitMCPToolKey } from '~/mcp/utils';
 
 /** Expected shape of JSON tool search results */
 interface ToolSearchJsonResult {
@@ -364,6 +366,8 @@ type RunAgent = Omit<Agent, 'tools'> & {
   toolContextMap?: Record<string, unknown>;
   dynamicToolContextMap?: Record<string, unknown>;
   toolRegistry?: LCToolRegistry;
+  /** Server-keyed MCP definitions captured while initializing this agent. */
+  mcpAvailableTools?: Record<string, LCAvailableTools>;
   /** Serializable tool definitions for event-driven execution */
   toolDefinitions?: LCTool[];
   /** Precomputed flag indicating if any tools have defer_loading enabled */
@@ -897,9 +901,9 @@ export function anyAgentReplaysReasoningContent(
  * tool must also share the code session for its returned artifact to be
  * visible to a later `execute_code` call.
  *
- * Filters out action tools via {@link isActionTool}: an action's operationId
- * may itself contain `mcp_delimiter` (e.g. `sync_mcp_state_action_...`),
- * which would otherwise misclassify it as an MCP tool.
+ * Uses the initialized MCP server names where available. This distinguishes an
+ * action whose operationId contains `mcp_delimiter` from an MCP server whose
+ * name itself contains `_action_`.
  *
  * Only collects from agents with `codeEnvAvailable === true`: `MCP.js` drops
  * any `codeFile` artifact before uploading it when the handling agent has no
@@ -922,8 +926,16 @@ function collectMCPToolNames(agents: Array<RunAgent | null | undefined>): string
     }
     visited.add(agent.id);
     if (agent.codeEnvAvailable === true) {
+      const mcpServerNames = Object.keys(agent.mcpAvailableTools ?? {}).map(normalizeServerName);
       for (const name of agent.toolRegistry?.keys() ?? []) {
-        if (name.includes(DataProviderConstants.mcp_delimiter) && !isActionTool(name)) {
+        const [, serverName] =
+          mcpServerNames.length > 0 ? splitMCPToolKey(name, mcpServerNames) : [name, undefined];
+        if (
+          serverName != null ||
+          (mcpServerNames.length === 0 &&
+            name.includes(DataProviderConstants.mcp_delimiter) &&
+            !isActionTool(name))
+        ) {
           mcpToolNames.push(name);
         }
       }

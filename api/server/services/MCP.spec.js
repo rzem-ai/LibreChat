@@ -32,6 +32,17 @@ const mockIsMCPDomainAllowed = jest.fn(() => Promise.resolve(true));
 
 const mockGetAppConfig = jest.fn(() => Promise.resolve({}));
 const mockCheckCapability = jest.fn(() => Promise.resolve(true));
+const proxyEnvKeys = [
+  'PROXY',
+  'proxy',
+  'HTTP_PROXY',
+  'http_proxy',
+  'HTTPS_PROXY',
+  'https_proxy',
+  'NO_PROXY',
+  'no_proxy',
+];
+const originalProxyEnv = Object.fromEntries(proxyEnvKeys.map((key) => [key, process.env[key]]));
 
 jest.mock('@librechat/api', () => {
   const actual = jest.requireActual('@librechat/api');
@@ -125,6 +136,9 @@ describe('tests for the new helper functions used by the MCP connection status e
   beforeEach(() => {
     jest.clearAllMocks();
     delete mockCodeFileDownloadDefaults.proxy;
+    for (const key of proxyEnvKeys) {
+      delete process.env[key];
+    }
     jest.spyOn(MCPOAuthHandler, 'generateFlowId');
     mockGetTenantId.mockReturnValue(undefined);
     mockIsMCPDomainAllowed.mockResolvedValue(true);
@@ -138,6 +152,16 @@ describe('tests for the new helper functions used by the MCP connection status e
     mockGetFlowStateManager = require('~/config').getFlowStateManager;
     mockGetLogStores = require('~/cache').getLogStores;
     mockGetOAuthReconnectionManager = require('~/config').getOAuthReconnectionManager;
+  });
+
+  afterAll(() => {
+    for (const key of proxyEnvKeys) {
+      if (originalProxyEnv[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = originalProxyEnv[key];
+      }
+    }
   });
 
   describe('createOAuthStart', () => {
@@ -1561,6 +1585,12 @@ describe('User parameter passing tests', () => {
   });
 
   describe('createMCPTool', () => {
+    beforeEach(() => {
+      for (const key of proxyEnvKeys) {
+        delete process.env[key];
+      }
+    });
+
     afterEach(() => {
       delete mockCodeFileDownloadDefaults.proxy;
     });
@@ -2048,7 +2078,6 @@ describe('User parameter passing tests', () => {
         expect.objectContaining({
           responseType: 'stream',
           maxRedirects: 0,
-          proxy: false,
           validateStatus: expect.any(Function),
         }),
       );
@@ -2088,6 +2117,7 @@ describe('User parameter passing tests', () => {
 
       const configuredProxy = { host: 'corp-proxy.internal', port: 8080, protocol: 'http' };
       mockCodeFileDownloadDefaults.proxy = configuredProxy;
+      process.env.proxy = 'http://corp-proxy.internal:8080';
       /* A proxy resolves the target hostname itself, so routing an un-vetted
        * hostname through it while SSRF protection is on can't be trusted
        * (see the codeFile.ts proxy+SSRF test below) — the admin must vet the
@@ -2139,7 +2169,7 @@ describe('User parameter passing tests', () => {
 
       expect(mockCodeFileDownloadGet).toHaveBeenCalledWith(
         'https://contoso.sharepoint.com/_layouts/download.aspx?sig=abc',
-        expect.objectContaining({ proxy: configuredProxy }),
+        expect.objectContaining({ proxy: false, httpsAgent: expect.anything() }),
       );
     });
 
@@ -2158,6 +2188,7 @@ describe('User parameter passing tests', () => {
 
       const configuredProxy = { host: 'corp-proxy.internal', port: 8080, protocol: 'http' };
       mockCodeFileDownloadDefaults.proxy = configuredProxy;
+      process.env.proxy = 'http://corp-proxy.internal:8080';
       // No allowedDomains configured: useSSRFProtection stays on for this hostname.
 
       const artifacts = {
@@ -2222,6 +2253,7 @@ describe('User parameter passing tests', () => {
 
       const configuredProxy = { host: 'corp-proxy.internal', port: 8080, protocol: 'http' };
       mockCodeFileDownloadDefaults.proxy = configuredProxy;
+      process.env.proxy = 'http://corp-proxy.internal:8080';
 
       const artifacts = {
         codeFile: {
@@ -2268,7 +2300,7 @@ describe('User parameter passing tests', () => {
 
       expect(mockCodeFileDownloadGet).toHaveBeenCalledWith(
         'https://203.0.113.10/download?sig=abc',
-        expect.objectContaining({ proxy: configuredProxy }),
+        expect.objectContaining({ proxy: false, httpsAgent: expect.anything() }),
       );
     });
 
@@ -2683,7 +2715,9 @@ describe('User parameter passing tests', () => {
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Failed to register codeFile artifact'),
-        expect.objectContaining({ message: expect.stringContaining('domain is not allowed') }),
+        expect.objectContaining({
+          message: expect.stringContaining('redirect target is private or reserved'),
+        }),
       );
       expect(result).toBe('downloaded report.pdf');
     });
@@ -2713,10 +2747,7 @@ describe('User parameter passing tests', () => {
       });
       mockGetAppConfig.mockResolvedValue({
         mcpSettings: {
-          codeFileAllowedDomains: [
-            'https://contoso.sharepoint.com',
-            'https://169.254.169.254',
-          ],
+          codeFileAllowedDomains: ['https://contoso.sharepoint.com', 'https://169.254.169.254'],
         },
       });
       mockCodeFileDownloadGet.mockResolvedValue({

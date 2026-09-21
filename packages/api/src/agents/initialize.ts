@@ -4,7 +4,6 @@ import {
   Tools,
   Constants,
   ErrorTypes,
-  isActionTool,
   EModelEndpoint,
   EToolResources,
   paramEndpoints,
@@ -46,7 +45,12 @@ import {
   unionPrimeAllowedTools,
   MAX_PRIMED_SKILLS_PER_TURN,
 } from './skills';
-import { normalizeServerName, splitMCPToolKey, normalizeAgentToolKeys } from '~/mcp/utils';
+import {
+  normalizeServerName,
+  requiresEphemeralUserConnection,
+  splitMCPToolKey,
+  normalizeAgentToolKeys,
+} from '~/mcp/utils';
 import {
   optionalChainWithEmptyCheck,
   extractLibreChatParams,
@@ -1290,17 +1294,20 @@ export async function initializeAgent(
     const configuredMCPServerNames = Object.keys(req.config?.mcpConfig ?? {}).map(
       normalizeServerName,
     );
+    const ephemeralMCPServerNames = new Set<string>();
+    for (const [serverName, serverConfig] of Object.entries(req.config?.mcpConfig ?? {})) {
+      if (serverConfig != null && requiresEphemeralUserConnection(serverConfig)) {
+        ephemeralMCPServerNames.add(normalizeServerName(serverName));
+      }
+    }
     const backgroundResult = applyBackgroundToolCalls({
       toolDefinitions,
       toolRegistry,
       toolOptions: agent.tool_options,
       capabilityToolNames,
-      /** MCP download artifacts are delivered through the foreground code
-       *  session path only. Do not advertise background execution until the
-       *  background task protocol can persist and return those artifacts. */
       excludeTool: (toolName) => {
         const [, serverName] = splitMCPToolKey(toolName, configuredMCPServerNames);
-        return serverName != null && !isActionTool(toolName);
+        return serverName != null && ephemeralMCPServerNames.has(serverName);
       },
     });
     toolDefinitions = backgroundResult.toolDefinitions;
