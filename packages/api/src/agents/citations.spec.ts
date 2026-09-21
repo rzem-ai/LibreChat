@@ -45,13 +45,21 @@ function fileSearchAttachment(sources: SourceInput[]): TAttachment {
   } as unknown as TAttachment;
 }
 
-function mcpAttachment(sources: MCPResultSource[], disclaimer?: string): TAttachment {
+function mcpAttachment(
+  sources: MCPResultSource[],
+  disclaimer?: string,
+  dpnUsageRestriction?: boolean,
+): TAttachment {
   return {
     type: Tools.mcp_results,
     messageId: 'msg-1',
     toolCallId: 'call-1',
     conversationId: 'conv-1',
-    [Tools.mcp_results]: disclaimer ? { sources, disclaimer } : { sources },
+    [Tools.mcp_results]: {
+      sources,
+      ...(disclaimer ? { disclaimer } : {}),
+      ...(dpnUsageRestriction ? { dpnUsageRestriction } : {}),
+    },
   } as unknown as TAttachment;
 }
 
@@ -591,7 +599,11 @@ describe('insertSharePointCitations', () => {
     const parts = [textPart(original)];
     insertSharePointCitations(
       parts,
-      [mcpAttachment([{ toolName: 'sp_search', serverName: 'sharepoint', title: 'Archive', content: 'a' }])],
+      [
+        mcpAttachment([
+          { toolName: 'sp_search', serverName: 'sharepoint', title: 'Archive', content: 'a' },
+        ]),
+      ],
       0,
     );
     expect(readText(parts[0])).toBe(original);
@@ -637,7 +649,11 @@ describe('insertSharePointCitations', () => {
     const parts = [textPart(original)];
     insertSharePointCitations(
       parts,
-      [mcpAttachment([{ toolName: 'sp_search', serverName: 'sharepoint', title: 'Archive', content: 'a' }])],
+      [
+        mcpAttachment([
+          { toolName: 'sp_search', serverName: 'sharepoint', title: 'Archive', content: 'a' },
+        ]),
+      ],
       0,
     );
     expect(readText(parts[0])).toBe(original);
@@ -790,6 +806,52 @@ describe('appendGuaranteedMCPCitations', () => {
     expect(readText(parts[0])).toBe(original);
   });
 
+  // Deloitte Custom Change: a DPN source carries its restriction via its own
+  // `usageRestriction` flag rather than `disclaimer`, so it must still be force-anchored
+  // when unmatched, even with no top-level `usage_guidelines`/disclaimer.
+  it('force-anchors an unmatched DPN source that has no disclaimer', () => {
+    const original = 'The weather today has nothing to do with any of the sources.';
+    const parts = [textPart(original)];
+    const attachments = [
+      mcpAttachment([
+        {
+          toolName: 'dpn_search',
+          serverName: 'dpn',
+          content: 'Jane Doe, Partner',
+          usageRestriction: true,
+        },
+      ]),
+    ];
+    const usedCoords = insertMCPCitations(parts, attachments, 0);
+    appendGuaranteedMCPCitations(parts, attachments, 0, usedCoords);
+    expect(readText(parts[0])).toContain(`${MARKER}turn0mcp0`);
+  });
+
+  // Deloitte Custom Change: `dpnUsageRestriction` on the payload is an aggregate ("some
+  // source in this batch is a DPN profile") and must not force-anchor every other,
+  // unrelated source in the same attachment — only the specific source flagged
+  // `usageRestriction` needs the guarantee.
+  it('only force-anchors the specific usage-restricted source, not every source in the attachment', () => {
+    const original = 'The weather today has nothing to do with any of the sources.';
+    const parts = [textPart(original)];
+    const attachments = [
+      mcpAttachment([
+        {
+          toolName: 'kx_query',
+          serverName: 'kx',
+          content: 'Jane Doe, Partner',
+          usageRestriction: true,
+        },
+        { toolName: 'kx_query', serverName: 'kx', content: 'Unrelated quals result' },
+      ]),
+    ];
+    const usedCoords = insertMCPCitations(parts, attachments, 0);
+    appendGuaranteedMCPCitations(parts, attachments, 0, usedCoords);
+    const text = readText(parts[0]);
+    expect(text).toContain(`${MARKER}turn0mcp0`);
+    expect(text).not.toContain(`${MARKER}turn0mcp1`);
+  });
+
   it('does not duplicate an anchor for a source the lexical pass already matched', () => {
     const parts = [textPart(`${KX_QUAL}.`)];
     const attachments = [
@@ -819,8 +881,11 @@ describe('appendGuaranteedMCPCitations', () => {
 
 describe('appendMCPDisclaimers', () => {
   const DISCLAIMER = 'Please review accuracy of all the responses before reusing them.';
+  const STATIC_MESSAGE =
+    'Please note that this response uses data from the KX & DPN Connector. Review the accuracy of ' +
+    'all KX & DPN citations before reusing them.';
 
-  it('appends the disclaimer and a guidelines link once', () => {
+  it('appends the fixed KX disclaimer with a guidelines link once configured', () => {
     const parts = [textPart('Here is the answer.')];
     appendMCPDisclaimers(
       parts,
@@ -828,61 +893,34 @@ describe('appendMCPDisclaimers', () => {
       'https://resources.deloitte.com/sites/kx/usage-guidelines',
     );
     const text = readText(parts[0]);
-    expect(text).toContain(DISCLAIMER);
+    expect(text).toContain(STATIC_MESSAGE);
     expect(text).toContain(
-      '[usage guidelines](https://resources.deloitte.com/sites/kx/usage-guidelines)',
+      '[KX usage guidelines](https://resources.deloitte.com/sites/kx/usage-guidelines)',
     );
+    expect(text).not.toContain(DISCLAIMER);
   });
 
-  it('omits the guidelines link when the disclaimer already references usage guidelines itself', () => {
-    const parts = [textPart('Here is the answer.')];
-    const disclaimerWithOwnLink =
-      `${DISCLAIMER} See ` +
-      '[usage guidelines](https://resources.deloitte.com/sites/kx/SitePages/Prompt-Usage-Guidelines.aspx) ' +
-      'Citations [1](https://example.com/1) have usage restrictions.';
-    appendMCPDisclaimers(
-      parts,
-      [
-        mcpAttachment(
-          [{ toolName: 'kx_query', serverName: 'kx', content: 'x' }],
-          disclaimerWithOwnLink,
-        ),
-      ],
-      'https://resources.deloitte.com/sites/kx/SitePages/Prompt-Usage-Guidelines.aspx',
-    );
-    const text = readText(parts[0]) ?? '';
-    expect(anchorCount(text, 'usage guidelines')).toBe(1);
-  });
-
-  it('omits the link when no guidelines URL is configured', () => {
+  // Deloitte Custom Change: KX_USAGE_GUIDELINES_URL is empty in .env.example, so a default
+  // setup must still render a clickable link rather than non-clickable placeholder text.
+  it('falls back to the default guidelines URL when none is configured', () => {
     const parts = [textPart('Here is the answer.')];
     appendMCPDisclaimers(parts, [
       mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'x' }], DISCLAIMER),
     ]);
-    const text = readText(parts[0]);
-    expect(text).toContain(DISCLAIMER);
-    expect(text).not.toContain('usage guidelines');
+    const text = readText(parts[0]) ?? '';
+    expect(text).toContain(STATIC_MESSAGE);
+    expect(text).toContain(
+      '[KX usage guidelines](https://resources.deloitte.com/sites/kx/SitePages/Prompt-Usage-Guidelines.aspx)',
+    );
   });
 
-  it('dedupes identical disclaimer text across two attachments', () => {
+  it('appends the fixed disclaimer only once across two disclaimer-bearing attachments', () => {
     const parts = [textPart('Here is the answer.')];
     appendMCPDisclaimers(parts, [
       mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'x' }], DISCLAIMER),
       mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'y' }], DISCLAIMER),
     ]);
-    expect(anchorCount(readText(parts[0]), DISCLAIMER)).toBe(1);
-  });
-
-  it('uses only the first disclaimer when two attachments carry different-but-overlapping text', () => {
-    const parts = [textPart('Here is the answer.')];
-    const secondDisclaimer = `${DISCLAIMER} See usage guidelines.`;
-    appendMCPDisclaimers(parts, [
-      mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'x' }], DISCLAIMER),
-      mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'y' }], secondDisclaimer),
-    ]);
-    const text = readText(parts[0]);
-    expect(anchorCount(text, 'Please review accuracy')).toBe(1);
-    expect(text).not.toContain(secondDisclaimer);
+    expect(anchorCount(readText(parts[0]), STATIC_MESSAGE)).toBe(1);
   });
 
   it('is a no-op when no attachment carries a disclaimer', () => {
@@ -892,6 +930,30 @@ describe('appendMCPDisclaimers', () => {
       mcpAttachment([{ toolName: 'afr_search_news', serverName: 'afr', content: OTHER_ARTICLE }]),
     ]);
     expect(readText(parts[0])).toBe(original);
+  });
+
+  it('appends the fixed KX disclaimer when a DPN source is present', () => {
+    const parts = [textPart('Here is the answer.')];
+    appendMCPDisclaimers(parts, [
+      mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'x' }], undefined, true),
+    ]);
+    const text = readText(parts[0]);
+    expect(text).toContain(STATIC_MESSAGE);
+    expect(text).not.toContain('DPN profiles');
+  });
+
+  it('appends the fixed disclaimer only once when a turn has both quals and DPN sources', () => {
+    const parts = [textPart('Here is the answer.')];
+    appendMCPDisclaimers(
+      parts,
+      [mcpAttachment([{ toolName: 'kx_query', serverName: 'kx', content: 'x' }], DISCLAIMER, true)],
+      'https://resources.deloitte.com/sites/kx/usage-guidelines',
+    );
+    const text = readText(parts[0]);
+    expect(text).toContain(
+      '[KX usage guidelines](https://resources.deloitte.com/sites/kx/usage-guidelines)',
+    );
+    expect(anchorCount(text, STATIC_MESSAGE)).toBe(1);
   });
 });
 
@@ -998,12 +1060,13 @@ describe('applyEndOfTraceCitations', () => {
       mcpUsageGuidelinesUrl: 'https://resources.deloitte.com/sites/kx/usage-guidelines',
     });
     const text = readText(parts[0]);
+    const staticMessage = 'Please note that this response uses data from the KX & DPN Connector.';
     expect(text).toContain(`${MARKER}turn0mcp0`);
-    expect(text).toContain(disclaimer);
+    expect(text).toContain(staticMessage);
     expect(text).toContain(
-      '[usage guidelines](https://resources.deloitte.com/sites/kx/usage-guidelines)',
+      '[KX usage guidelines](https://resources.deloitte.com/sites/kx/usage-guidelines)',
     );
-    expect(text.indexOf(`${MARKER}turn0mcp0`)).toBeLessThan(text.indexOf(disclaimer));
+    expect(text.indexOf(`${MARKER}turn0mcp0`)).toBeLessThan(text.indexOf(staticMessage));
   });
 
   it('anchors SharePoint sources by line and other MCP sources by sentence in the same turn set', async () => {
