@@ -313,6 +313,16 @@ const FENCE_OPEN_LINE = /^(`{3,}|~{3,})(.*)$/;
 const BLOCKQUOTE_PREFIX = /^(?:[ \t]*>[ \t]?)+/;
 
 /**
+ * Counts the `>` markers in a matched `BLOCKQUOTE_PREFIX`, so two prefixes can be compared by
+ * nesting depth instead of by exact string equality — CommonMark allows the single space after
+ * each `>` to be omitted, so an opening fence's prefix (`"> "`) and its closing line's prefix
+ * (`">"`) can differ in whitespace while still being the same blockquote depth.
+ */
+function countBlockquoteMarkers(prefix: string): number {
+  return (prefix.match(/>/g) ?? []).length;
+}
+
+/**
  * Matches a list-item marker consumed on the fence's own opening line — e.g. `"- "`, `"* "`,
  * `"1. "`, `"12) "` — for a fence that opens immediately after the marker (`- \`\`\`js`) rather
  * than on an indented continuation line under the item.
@@ -329,12 +339,14 @@ interface FenceOpen {
  * prefix) into its delimiter character and run length, or `null` if the line isn't a valid
  * fence open. Per CommonMark, a backtick-fenced info string cannot itself contain a backtick
  * (it would be ambiguous with inline code spans); a tilde-fenced info string has no such
- * restriction. A fence may be indented at most 3 spaces beyond its container prefix — beyond
+ * restriction. A fence may be indented at most 3 *spaces* beyond its container prefix — beyond
  * that it's indented code content, not a fence, so any further leading whitespace disqualifies
- * the line rather than being trimmed away unconditionally.
+ * the line rather than being trimmed away unconditionally. A tab doesn't count toward that cap
+ * as a single character: it expands to a full tab stop (commonly 4 columns), so even one leading
+ * tab already exceeds the 3-space allowance and must disqualify the line, not be counted as "1".
  */
 function matchFenceOpen(line: string): FenceOpen | null {
-  const indent = line.match(/^[ \t]{0,3}/)?.[0].length ?? 0;
+  const indent = line.match(/^ {0,3}/)?.[0].length ?? 0;
   const remainder = line.slice(indent);
   if (/^[ \t]/.test(remainder)) {
     return null;
@@ -407,6 +419,7 @@ function findFencedCodeRanges(text: string): ExcludedRange[] {
   let i = 0;
   while (i < lines.length) {
     const blockquotePrefix = lines[i].match(BLOCKQUOTE_PREFIX)?.[0] ?? '';
+    const blockquoteDepth = countBlockquoteMarkers(blockquotePrefix);
     const afterBlockquote = lines[i].slice(blockquotePrefix.length);
     const listMarkerPrefix = afterBlockquote.match(LIST_MARKER_PREFIX)?.[0] ?? '';
     const fenceOpen = matchFenceOpen(afterBlockquote.slice(listMarkerPrefix.length));
@@ -422,11 +435,12 @@ function findFencedCodeRanges(text: string): ExcludedRange[] {
 
     for (let j = i + 1; j < lines.length; j++) {
       const line = lines[j];
-      if (blockquotePrefix && !line.startsWith(blockquotePrefix)) {
+      const linePrefix = blockquoteDepth > 0 ? (line.match(BLOCKQUOTE_PREFIX)?.[0] ?? '') : '';
+      if (blockquoteDepth > 0 && countBlockquoteMarkers(linePrefix) < blockquoteDepth) {
         continue;
       }
 
-      const candidate = blockquotePrefix ? line.slice(blockquotePrefix.length) : line;
+      const candidate = linePrefix ? line.slice(linePrefix.length) : line;
 
       if (requiredIndent > 0 && candidate.trim() !== '') {
         const lineIndent = candidate.match(/^[ \t]*/)?.[0].length ?? 0;
@@ -1032,6 +1046,7 @@ export function insertSharePointCitations(
     const matchLine = (line: string, insertAnchor: boolean): string => {
       const tableCells = splitTableRowCells(line);
       if (tableCells) {
+        let rowChanged = false;
         for (let cellIndex = 0; cellIndex < tableCells.length; cellIndex++) {
           const normalizedCell = normalizeForMatch(stripLineMarkers(tableCells[cellIndex]));
           if (!normalizedCell) {
@@ -1046,17 +1061,17 @@ export function insertSharePointCitations(
               continue;
             }
             usedCoords.add(`${coord.turn}:${coord.fileIndex}`);
-            if (!insertAnchor) {
-              return line;
+            if (insertAnchor) {
+              changed = true;
+              rowChanged = true;
+              tableCells[cellIndex] = withAnchors(tableCells[cellIndex], [
+                `${ANCHOR_MARKER}turn${coord.turn}mcp${coord.fileIndex}`,
+              ]);
             }
-            changed = true;
-            tableCells[cellIndex] = withAnchors(tableCells[cellIndex], [
-              `${ANCHOR_MARKER}turn${coord.turn}mcp${coord.fileIndex}`,
-            ]);
-            return `|${tableCells.join('|')}|`;
+            break;
           }
         }
-        return line;
+        return rowChanged ? `|${tableCells.join('|')}|` : line;
       }
 
       const base = stripLineMarkers(line);

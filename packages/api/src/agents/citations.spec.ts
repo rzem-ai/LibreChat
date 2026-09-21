@@ -1105,6 +1105,160 @@ describe('insertSharePointCitations', () => {
     expect(lines[4]).toContain(`${MARKER}turn0mcp0`);
     expect(usedCoords.has('0:0')).toBe(true);
   });
+
+  // Deloitte Custom Change: CommonMark allows the single space after a blockquote `>` marker to
+  // be omitted, so an opening fence written as "> ```js" can be legally closed by "```" prefixed
+  // with just ">" (no trailing space). The scanner must compare blockquote nesting depth, not the
+  // exact prefix string, or it treats the fence as never closed and swallows the rest of the
+  // message.
+  it('closes a blockquoted fence whose close line omits the space after the marker', () => {
+    const original = [
+      '> ```js',
+      '> - Consulting Graduate Induction Workbook.pptx',
+      '>```',
+      '',
+      '- Consulting Graduate Induction Workbook.pptx',
+    ].join('\n');
+    const parts = [textPart(original)];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    const lines = readText(parts[0]).split('\n');
+    expect(lines[1]).not.toContain(MARKER);
+    expect(lines[4]).toContain(`${MARKER}turn0mcp0`);
+  });
+
+  // Deloitte Custom Change: a fence delimiter may be indented at most 3 spaces beyond its
+  // container prefix; a tab expands to a full tab stop and already exceeds that cap on its own,
+  // so a tab-indented backtick run is plain content, not a fence opener, and must not exclude the
+  // filename line that follows it.
+  it('does not treat a tab-indented backtick run as a fence opener', () => {
+    const original = ['\t```', '- Consulting Graduate Induction Workbook.pptx'].join('\n');
+    const parts = [textPart(original)];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+        ]),
+      ],
+      0,
+    );
+    const lines = readText(parts[0]).split('\n');
+    expect(lines[1]).toContain(`${MARKER}turn0mcp0`);
+  });
+
+  // Deloitte Custom Change: a single table row can carry more than one SharePoint source in
+  // different cells (e.g. a file and its parent folder both matched); every matching cell must
+  // get its own anchor instead of only the first.
+  it('anchors every matching cell in a table row, not just the first', () => {
+    const parts = [
+      textPart(
+        '| File Name | Location | Last Modified |\n' +
+          '|---|---|---|\n' +
+          '| Consulting Graduate Induction Workbook.pptx | AISolutionStudio | 9 Sep 2026 |',
+      ),
+    ];
+    insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'Consulting Graduate Induction Workbook.pptx',
+          },
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'AISolutionStudio',
+            content: 'AISolutionStudio',
+          },
+        ]),
+      ],
+      0,
+    );
+    const rows = readText(parts[0]).split('\n');
+    const cells = rows[2].split('|');
+    expect(cells[1]).toContain(`${MARKER}turn0mcp0`);
+    expect(cells[2]).toContain(`${MARKER}turn0mcp1`);
+  });
+
+  // Deloitte Custom Change: a message can contain more than one artifact. If the first fence is
+  // closed using a blockquote-marker whitespace variant (previously mis-recognized as unclosed),
+  // the false "extend to end-of-text" fallback would have swallowed the second artifact and all
+  // the prose around it. This proves both artifacts are excluded independently and the prose
+  // around each is still cited.
+  it('handles multiple artifacts independently when the first is closed with a blockquote marker variant', () => {
+    const original = [
+      '- Consulting Graduate Induction Workbook.pptx',
+      '',
+      '> ```js',
+      '> - Consulting Graduate Induction Workbook.pptx',
+      '>```',
+      '',
+      '- Consulting Graduate Induction Workbook.pptx',
+      '',
+      '````',
+      '- Consulting Graduate Induction Workbook.pptx',
+      '````',
+      '',
+      '- Consulting Graduate Induction Workbook.pptx',
+    ].join('\n');
+    const parts = [textPart(original)];
+    const usedCoords = insertSharePointCitations(
+      parts,
+      [
+        mcpAttachment([
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'copy 1',
+          },
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'copy 2',
+          },
+          {
+            toolName: 'sp_search',
+            serverName: 'sharepoint',
+            title: 'Consulting Graduate Induction Workbook.pptx',
+            content: 'copy 3',
+          },
+        ]),
+      ],
+      0,
+    );
+    const lines = readText(parts[0]).split('\n');
+    expect(lines[0]).toContain(`${MARKER}turn0mcp0`);
+    expect(lines[3]).not.toContain(MARKER);
+    expect(lines[6]).toContain(`${MARKER}turn0mcp1`);
+    expect(lines[9]).not.toContain(MARKER);
+    expect(lines[12]).toContain(`${MARKER}turn0mcp2`);
+    expect(usedCoords.has('0:0')).toBe(true);
+    expect(usedCoords.has('0:1')).toBe(true);
+    expect(usedCoords.has('0:2')).toBe(true);
+  });
 });
 
 describe('appendGuaranteedMCPCitations', () => {
