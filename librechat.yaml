@@ -302,10 +302,6 @@ endpoints:
     models:
       - 'au.anthropic.claude-sonnet-4-6'
       - 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
-    # Deloitte Custom Change: Bedrock has no native web-search tool; the empty list is
-    # load-bearing — deleting this key would show a Web Search pill that silently does nothing.
-    nativeWebSearch:
-      supportedModels: []
 
 # Deloitte Custom Change: model pricing uses this baseline when no environment override is set.
 # Keep it aligned with the soft-default model and endpoint-costs.yaml.

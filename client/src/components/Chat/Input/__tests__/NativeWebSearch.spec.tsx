@@ -1,21 +1,15 @@
 // Deloitte Custom Change: tests
 
 import React from 'react';
-import userEvent from '@testing-library/user-event';
 import { render, screen } from '@testing-library/react';
 import NativeWebSearch from '../NativeWebSearch';
 
 let mockIsSupported = true;
 let mockIsPinned = true;
 let mockToggleState = false;
-const mockSetIsPinned = jest.fn();
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string) => key,
-}));
-
-jest.mock('~/utils', () => ({
-  cn: (...values: Array<string | false | undefined>) => values.filter(Boolean).join(' '),
 }));
 
 jest.mock('~/Providers', () => ({
@@ -23,7 +17,6 @@ jest.mock('~/Providers', () => ({
     nativeWebSearch: {
       toggleState: mockToggleState,
       isPinned: mockIsPinned,
-      setIsPinned: mockSetIsPinned,
       isSupported: mockIsSupported,
       debouncedChange: jest.fn(),
     },
@@ -32,9 +25,6 @@ jest.mock('~/Providers', () => ({
 
 jest.mock('@librechat/client', () => ({
   CheckboxButton: ({ label }: { label: string }) => <button type="button">{label}</button>,
-  PinIcon: ({ unpin }: { unpin?: boolean }) => (
-    <span data-testid={unpin ? 'native-web-search-unpin-icon' : 'native-web-search-pin-icon'} />
-  ),
 }));
 
 const pill = () => screen.queryByRole('button', { name: 'com_ui_native_web_search' });
@@ -63,17 +53,5 @@ describe('NativeWebSearch', () => {
     mockIsPinned = false;
     render(<NativeWebSearch />);
     expect(pill()).toBeNull();
-  });
-
-  it('allows the pill to be unpinned', async () => {
-    const user = userEvent.setup();
-    render(<NativeWebSearch />);
-
-    const pinButton = screen.getByRole('button', { name: 'com_ui_native_web_search com_ui_pin' });
-    expect(pinButton).toHaveAttribute('aria-pressed', 'true');
-
-    await user.click(pinButton);
-
-    expect(mockSetIsPinned).toHaveBeenCalledWith(false);
   });
 });

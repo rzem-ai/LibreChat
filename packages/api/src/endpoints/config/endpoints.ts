@@ -16,12 +16,16 @@ type PartialEndpointEntry = Partial<TConfig> & Record<string, unknown>;
 type DefaultEndpointsResult = Record<string, PartialEndpointEntry | false | null>;
 type MutableEndpointsConfig = Record<string, PartialEndpointEntry | false | null | undefined>;
 
-/** Deloitte Custom Change: built-in endpoints whose `nativeWebSearch` gate is surfaced to the client. */
+/**
+ * Deloitte Custom Change: built-in endpoints whose `nativeWebSearch` gate is surfaced to the
+ * client. Bedrock is intentionally excluded — it has no native web-search tool, and an
+ * omitted allowlist is treated as permissive, so advertising the config here would let the
+ * client show a toggle the backend can never honor.
+ */
 const NATIVE_WEB_SEARCH_ENDPOINTS = [
   EModelEndpoint.openAI,
   EModelEndpoint.google,
   EModelEndpoint.anthropic,
-  EModelEndpoint.bedrock,
 ] as const;
 
 export interface EndpointsConfigDeps {
