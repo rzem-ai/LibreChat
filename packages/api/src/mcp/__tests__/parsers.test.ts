@@ -329,7 +329,10 @@ describe('formatToolContent', () => {
     it('should extract a code-interpreter download link into artifacts.codeFile instead of text', () => {
       const result: t.MCPToolCallResponse = {
         content: [
-          { type: 'text', text: '{"status":"downloaded","fileName":"report.pdf"}' },
+          {
+            type: 'text',
+            text: '{"status":"downloaded","fileName":"report.pdf","tempPath":"/tmp/sp-files/report.pdf"}',
+          },
           {
             type: 'resource',
             resource: {
@@ -343,6 +346,7 @@ describe('formatToolContent', () => {
 
       const [content, artifacts] = formatToolContent(result, 'openai');
       expect(content).toBe('{"status":"downloaded","fileName":"report.pdf"}');
+      expect(content).not.toContain('tempPath');
       expect(content).not.toContain('Resource URI');
       expect(artifacts?.codeFile).toEqual({
         name: 'report.pdf',

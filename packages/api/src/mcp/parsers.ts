@@ -160,7 +160,28 @@ function extractCodeFile(content: t.ToolContentPart[]): {
     remaining.push(item);
   }
 
-  return { codeFile, content: remaining };
+  if (!codeFile) {
+    return { codeFile, content: remaining };
+  }
+
+  return {
+    codeFile,
+    content: remaining.map((item) => {
+      if (item.type !== 'text') {
+        return item;
+      }
+      try {
+        const payload = JSON.parse(item.text);
+        if (payload == null || Array.isArray(payload) || !Object.hasOwn(payload, 'tempPath')) {
+          return item;
+        }
+        delete payload.tempPath;
+        return { ...item, text: JSON.stringify(payload) };
+      } catch {
+        return item;
+      }
+    }),
+  };
 }
 
 function parseAsString(content: t.ToolContentPart[]): string {
