@@ -1886,6 +1886,7 @@
   "com_ui_skill_upload_drag": "Drag and drop or click to upload",
   "com_ui_skill_upload_file": "Upload File",
   "com_ui_skill_upload_req_md": ".md file must contain skill name and description formatted in YAML",
+  "com_ui_skill_upload_req_no_spaces": "File names must not contain spaces",
   "com_ui_skill_upload_req_size": "File size must not exceed {{0}} MB",
   "com_ui_skill_upload_req_zip": ".zip or .skill file must include a SKILL.md file",
   "com_ui_skill_upload_requirements": "File requirements",
