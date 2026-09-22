@@ -131,14 +131,15 @@ Ask the user:
 
 **Expected outcome:** The target skill is identified and confirmed.
 
-**External skill check:** Once the skill content is available, scan it for references that are incompatible with MyAssist. Flag only the following:
-- Absolute local file paths (e.g. `/Users/...`, `C:\...`, `~/...`)
-- Shell or terminal execution commands (e.g. `bash`, `subprocess`, `os.system`, `exec()`)
-- Instructions to run a script directly (e.g. "run this Python file", "execute the script")
+**External skill check:** Once the skill content is available, scan it for references that cannot run in MyAssist. Flag only the following:
+- Absolute host-local file paths outside the MyAssist sandbox (e.g. `/Users/...`, `C:\...`, `~/...`)
+- Shell or terminal execution commands that require an unavailable runtime (e.g. commands outside the enabled Run Code sandbox)
+- Instructions to run a script directly when no enabled MyAssist capability can execute it (e.g. "run this Python file", "execute the script")
 
 Do not flag:
+- Sandbox paths such as `/mnt/data`
+- Commands explicitly supported by the enabled Run Code functionality
 - Relative file paths (e.g. `references/skill_template.md`) — these refer to files attached to the skill and are valid
-- Mentions of code files as skill inputs or attachments — these are supported in MyAssist
 
 If incompatible references are found, present them as a short list and ask:
 
