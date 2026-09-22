@@ -216,6 +216,51 @@ describe('insertFileCitations', () => {
     expect(text).toContain('6.82');
   });
 
+  it('does not split or anchor inside a markdown link URL', () => {
+    const content =
+      'The style guide covering formatting is at https://resources.deloitte.com/sites/GFS_style-guide.pptx for review.';
+    const parts = [
+      textPart(
+        'See the [style guide](https://resources.deloitte.com/sites/GFS_style-guide.pptx) for formatting rules.',
+      ),
+    ];
+    insertFileCitations(parts, [fileSearchAttachment([{ fileId: 'fileA', content }])]);
+    const text = readText(parts[0]);
+    expect(text).toContain(
+      '[style guide](https://resources.deloitte.com/sites/GFS_style-guide.pptx)',
+    );
+    expect(text).toContain(`${MARKER}turn0file0`);
+  });
+
+  it('does not split or anchor inside a bare URL', () => {
+    const content =
+      'The style guide covering formatting is at https://resources.deloitte.com/sites/GFS_style-guide.pptx for review.';
+    const parts = [
+      textPart(
+        'The style guide covering formatting is at https://resources.deloitte.com/sites/GFS_style-guide.pptx for review.',
+      ),
+    ];
+    insertFileCitations(parts, [fileSearchAttachment([{ fileId: 'fileA', content }])]);
+    const text = readText(parts[0]);
+    expect(text).toContain('https://resources.deloitte.com/sites/GFS_style-guide.pptx for review');
+    expect(text).toContain(`${MARKER}turn0file0`);
+  });
+
+  it('splits and anchors correctly when a sentence-ending period immediately follows a bare URL', () => {
+    const content =
+      'The booking portal is available at https://intranet.acme.com/booking/desk.reservation.portal.v2 for making desk reservations.';
+    const parts = [
+      textPart(
+        'The booking portal is available at https://intranet.acme.com/booking/desk.reservation.portal.v2. Weather today is sunny and mild.',
+      ),
+    ];
+    insertFileCitations(parts, [fileSearchAttachment([{ fileId: 'fileA', content }])]);
+    const text = readText(parts[0]);
+    expect(text).toContain('https://intranet.acme.com/booking/desk.reservation.portal.v2');
+    expect(anchorCount(text, `${MARKER}turn0file0`)).toBe(1);
+    expect(text.indexOf(`${MARKER}turn0file0`)).toBeLessThan(text.indexOf('Weather'));
+  });
+
   it('preserves content-part object references (mutates in place)', () => {
     const parts = [textPart('You can reserve a desk fourteen days in advance.')];
     const ref = parts[0];
