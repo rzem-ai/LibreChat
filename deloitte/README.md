@@ -402,7 +402,7 @@ If you run more than one frontend at once — e.g. separate git worktrees/branch
 VITE_WORKSPACE_NAME="my-branch" PORT=3091 npm run frontend:dev
 ```
 
-This appends `/ my-branch` to the Deloitte header title in the browser, so you can tell which tab belongs to which instance at a glance instead of every tab looking identical. It's a one-off env var for the process running `npm run dev` — it doesn't need to be added to `.env`, and has no effect on the Docker Compose workflow.
+This appends `/ my-branch` to the Deloitte header title in the browser, so you can tell which tab belongs to which instance at a glance instead of every tab looking identical. It's a one-off env var for the process running `npm run frontend:dev` — it doesn't need to be added to `.env`, and has no effect on the Docker Compose workflow.
 
 ---
 
