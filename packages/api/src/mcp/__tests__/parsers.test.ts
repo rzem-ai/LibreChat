@@ -356,6 +356,25 @@ describe('formatToolContent', () => {
       });
     });
 
+    it('should consume a mixed-case code-interpreter download scheme', () => {
+      const result: t.MCPToolCallResponse = {
+        content: [
+          {
+            type: 'resource',
+            resource: {
+              uri: 'LIBRECHAT-Download://report.pdf',
+              text: 'https://contoso.sharepoint.com/download?sig=secret',
+            },
+          },
+        ],
+      };
+
+      const [content, artifacts] = formatToolContent(result, 'openai');
+      expect(content).toBe('');
+      expect(content).not.toContain('secret');
+      expect(artifacts?.codeFile?.name).toBe('report.pdf');
+    });
+
     it('should take the filename verbatim from a code-interpreter download link', () => {
       const result: t.MCPToolCallResponse = {
         content: [

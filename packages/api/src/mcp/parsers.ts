@@ -122,7 +122,7 @@ function extractCodeFile(content: t.ToolContentPart[]): {
   for (const item of content) {
     if (
       item.type === 'resource' &&
-      item.resource.uri.startsWith(CODE_FILE_DOWNLOAD_SCHEME) &&
+      item.resource.uri.toLowerCase().startsWith(CODE_FILE_DOWNLOAD_SCHEME) &&
       'text' in item.resource &&
       item.resource.text
     ) {
