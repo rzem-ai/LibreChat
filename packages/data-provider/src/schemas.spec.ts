@@ -5,6 +5,7 @@ import {
   ReasoningContext,
   googleSettings,
   anthropicSettings,
+  compactAgentsSchema,
   compactGoogleSchema,
   eAnthropicEffortSchema,
   eReasoningEffortSchema,
@@ -549,6 +550,25 @@ describe('googleSettings', () => {
       });
       expect(result.chatProjectId).toBe('project-1');
     });
+  });
+});
+
+// Deloitte Custom Change: regression test for the native web-search override being
+// silently stripped from Agents-endpoint requests before it reaches `model_parameters`.
+describe('compactAgentsSchema', () => {
+  it('preserves an explicit web_search override', () => {
+    const result = compactAgentsSchema.parse({
+      agent_id: 'agent-1',
+      web_search: true,
+    });
+    expect(result.web_search).toBe(true);
+  });
+
+  it('does not fabricate web_search when it is absent', () => {
+    const result = compactAgentsSchema.parse({
+      agent_id: 'agent-1',
+    });
+    expect(result.web_search).toBeUndefined();
   });
 });
 

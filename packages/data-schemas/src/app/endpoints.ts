@@ -3,6 +3,9 @@ import type {
   TEndpoint,
   TCustomConfig,
   TAgentsEndpoint,
+  TGoogleEndpoint,
+  TOpenAIEndpoint,
+  TBedrockEndpoint,
   TAnthropicEndpoint,
 } from 'librechat-data-provider';
 import type { AppConfig } from '~/types';
@@ -21,9 +24,10 @@ export const loadEndpoints = (
   agentsDefaults?: Partial<TAgentsEndpoint>,
 ): {
   allowedAddresses?: string[];
-  openAI?: Partial<import('librechat-data-provider').TEndpoint>;
-  google?: Partial<import('librechat-data-provider').TEndpoint>;
-  bedrock?: Partial<import('librechat-data-provider').TEndpoint>;
+  // Deloitte Custom Change: endpoint-specific types so `nativeWebSearch` is typed without casts
+  openAI?: Partial<TOpenAIEndpoint>;
+  google?: Partial<TGoogleEndpoint>;
+  bedrock?: Partial<TBedrockEndpoint>;
   anthropic?: Partial<TAnthropicEndpoint> & {
     vertexConfig?: import('librechat-data-provider').TVertexAIConfig;
   };

@@ -40,6 +40,9 @@ const MCP_SIMILARITY_THRESHOLD = 0.35;
 const MAX_ANCHORS_PER_SENTENCE = 3;
 /** Citation marker character (U+E202) the frontend parses; see client citations.ts. */
 const ANCHOR_MARKER = '\ue202';
+/** Default KX usage-guidelines link, used when `KX_USAGE_GUIDELINES_URL` isn't configured. */
+const DEFAULT_KX_USAGE_GUIDELINES_URL =
+  'https://resources.deloitte.com/sites/kx/SitePages/Prompt-Usage-Guidelines.aspx';
 
 const STOPWORDS = new Set([
   'the',
@@ -257,6 +260,45 @@ function isDecimalPoint(text: string, index: number): boolean {
   return prev >= '0' && prev <= '9' && next >= '0' && next <= '9';
 }
 
+/** Matches a bare or markdown-link URL body; stops before whitespace or an enclosing `)`/`]`/quote so a `[text](url)` destination is captured without swallowing the closing paren. */
+const URL_PATTERN = /https?:\/\/[^\s<>"'\])]+/gi;
+
+/**
+ * Trailing characters stripped off a matched URL before it's treated as a
+ * no-split span. The greedy `URL_PATTERN` match has no way to tell a real
+ * trailing character (an actual `.` in a path) from sentence punctuation that
+ * merely follows the URL (`See https://example.com/report.pdf. Next.`) — real
+ * URLs essentially never end in these characters, so they're always treated
+ * as prose punctuation and left eligible for sentence splitting.
+ */
+const URL_TRAILING_PUNCTUATION = /[.,;:!?]+$/;
+
+/**
+ * Byte-offset spans of every URL in `text`, so `.`/`!`/`?` inside a path or
+ * query string (e.g. `report.pdf`) aren't mistaken for sentence boundaries. A
+ * split there would let a citation anchor land inside the URL, truncating and
+ * invalidating the link on the client. Trailing sentence punctuation is
+ * trimmed off the match (see `URL_TRAILING_PUNCTUATION`) so a period right
+ * after the URL still ends the sentence normally instead of being swallowed
+ * into the no-split span.
+ */
+function computeUrlSpans(text: string): Array<[number, number]> {
+  const spans: Array<[number, number]> = [];
+  const pattern = new RegExp(URL_PATTERN);
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text)) !== null) {
+    const trimmedLength = match[0].replace(URL_TRAILING_PUNCTUATION, '').length;
+    if (trimmedLength > 0) {
+      spans.push([match.index, match.index + trimmedLength]);
+    }
+  }
+  return spans;
+}
+
+function isInsideUrl(index: number, urlSpans: Array<[number, number]>): boolean {
+  return urlSpans.some(([start, end]) => index >= start && index < end);
+}
+
 /**
  * Splits text into sentence-like segments losslessly — concatenating the result
  * reproduces the input exactly, so anchors can be inserted without altering
@@ -264,6 +306,7 @@ function isDecimalPoint(text: string, index: number): boolean {
  */
 function splitIntoSentences(text: string): string[] {
   const sentences: string[] = [];
+  const urlSpans = computeUrlSpans(text);
   let start = 0;
 
   for (let i = 0; i < text.length; i++) {
@@ -274,6 +317,10 @@ function splitIntoSentences(text: string): string[] {
     }
 
     if (char === '.' && isDecimalPoint(text, i)) {
+      continue;
+    }
+
+    if (isInsideUrl(i, urlSpans)) {
       continue;
     }
 
@@ -291,6 +338,209 @@ function splitIntoSentences(text: string): string[] {
   }
 
   return sentences;
+}
+
+// Deloitte Custom Change: Exclude fenced code blocks (backtick and tilde) from citation
+// anchoring so anchors never land inside artifact/code content and render as literal text.
+/** A half-open `[start, end)` character range in the original text to exclude from anchoring. */
+interface ExcludedRange {
+  start: number;
+  end: number;
+}
+
+/** Matches a fenced-code opening line: 3+ backticks or 3+ tildes, optionally followed by an info string. */
+const FENCE_OPEN_LINE = /^(`{3,}|~{3,})(.*)$/;
+
+/**
+ * Matches a leading blockquote container prefix: one or more `>` markers (each with optional
+ * surrounding whitespace), e.g. `"> "` or `"> > "` for a nested quote. List-item indentation
+ * doesn't need an equivalent marker here — it's plain whitespace, already stripped below by
+ * `trimStart()`.
+ */
+const BLOCKQUOTE_PREFIX = /^(?:[ \t]*>[ \t]?)+/;
+
+/**
+ * Counts the `>` markers in a matched `BLOCKQUOTE_PREFIX`, so two prefixes can be compared by
+ * nesting depth instead of by exact string equality — CommonMark allows the single space after
+ * each `>` to be omitted, so an opening fence's prefix (`"> "`) and its closing line's prefix
+ * (`">"`) can differ in whitespace while still being the same blockquote depth.
+ */
+function countBlockquoteMarkers(prefix: string): number {
+  return (prefix.match(/>/g) ?? []).length;
+}
+
+/**
+ * Matches a list-item marker consumed on the fence's own opening line — e.g. `"- "`, `"* "`,
+ * `"1. "`, `"12) "` — for a fence that opens immediately after the marker (`- \`\`\`js`) rather
+ * than on an indented continuation line under the item.
+ */
+const LIST_MARKER_PREFIX = /^[ \t]{0,3}(?:[-*+]|\d{1,9}[.)])[ \t]+/;
+
+interface FenceOpen {
+  char: string;
+  length: number;
+}
+
+/**
+ * Parses a candidate opening-fence line (already past any blockquote/list-marker container
+ * prefix) into its delimiter character and run length, or `null` if the line isn't a valid
+ * fence open. Per CommonMark, a backtick-fenced info string cannot itself contain a backtick
+ * (it would be ambiguous with inline code spans); a tilde-fenced info string has no such
+ * restriction. A fence may be indented at most 3 *spaces* beyond its container prefix — beyond
+ * that it's indented code content, not a fence, so any further leading whitespace disqualifies
+ * the line rather than being trimmed away unconditionally. A tab doesn't count toward that cap
+ * as a single character: it expands to a full tab stop (commonly 4 columns), so even one leading
+ * tab already exceeds the 3-space allowance and must disqualify the line, not be counted as "1".
+ */
+function matchFenceOpen(line: string): FenceOpen | null {
+  const indent = line.match(/^ {0,3}/)?.[0].length ?? 0;
+  const remainder = line.slice(indent);
+  if (/^[ \t]/.test(remainder)) {
+    return null;
+  }
+
+  const match = remainder.match(FENCE_OPEN_LINE);
+  if (!match) {
+    return null;
+  }
+
+  const fence = match[1];
+  const info = match[2];
+  const char = fence[0];
+  if (char === '`' && info.includes('`')) {
+    return null;
+  }
+
+  return { char, length: fence.length };
+}
+
+/**
+ * Finds fenced-code-block ranges (absolute character offsets into `text`) so citation
+ * anchors are never inserted inside them. An artifact body is always wrapped in a fence
+ * (see `api/app/clients/prompts/artifacts.js`), and the frontend's citation renderer only
+ * transforms markdown prose nodes, not fenced-code node content — an anchor placed inside
+ * a fence would render as literal text (e.g. `turn0file0`) instead of a citation chip.
+ *
+ * Markdown recognizes both backtick and tilde fences, and the frontend renders both as code
+ * nodes, so both must be tracked here. A closing fence must use the same delimiter character
+ * as its opener and have at least as many characters, so a shorter nested fence inside an
+ * artifact's body (e.g. a 3-backtick example inside its 4-backtick outer fence) doesn't
+ * prematurely close the range, and a tilde fence can't be closed by a backtick run or vice
+ * versa. When an opening fence has no matching close (a truncated stream), the excluded range
+ * extends from the opening fence through the end of `text`.
+ *
+ * A fence can also sit inside a container — a blockquote or a list item — with the same
+ * prefix repeated on every line of the block. Blockquote markers are `>` characters, matched
+ * explicitly via `BLOCKQUOTE_PREFIX`, with the closing line required to carry the exact same
+ * nesting depth (counted via `countBlockquoteMarkers`, not compared as a literal string, since
+ * CommonMark allows the single space after each `>` to be omitted) — a shallower-quoted line
+ * can't close a deeper fence, and a deeper-quoted line can't close a shallower one either, since
+ * both mean the line sits at a different container depth than the fence it would be closing.
+ * A list item's continuation lines carry no repeated marker, just indentation, but its
+ * opening line may put the fence directly after the marker (e.g. `- \`\`\`js`); that one-time
+ * marker is matched via `LIST_MARKER_PREFIX` before looking for the fence. Per CommonMark, a
+ * list item's continuation lines must be indented to at least the marker's own width to remain
+ * part of the item — code blocks don't get the lazy-continuation exception paragraphs do — so
+ * a line that falls short ends the item there: the range stops at the last sufficiently
+ * indented line, and that short line itself is re-scanned as ordinary top-level text (it may
+ * even open its own, unrelated fence).
+ *
+ * Per CommonMark, a fence delimiter — opening or closing — may only be indented up to 3
+ * spaces beyond its container prefix; beyond that it's still code content, not a fence. Both
+ * `matchFenceOpen` and the closing-fence check enforce that cap explicitly (rather than
+ * trimming all leading whitespace) so an over-indented delimiter-looking line is never
+ * mistaken for a fence boundary — which would otherwise let a stray indented line pair with a
+ * later, unrelated fence and swallow real prose (and its citations) in between.
+ *
+ * When no closing fence is found anywhere in the rest of the text (a stream truncated
+ * mid-code-block), the range still extends to the end of the text — CommonMark renders an
+ * unclosed fence as code through to the end of the document, so leaving it un-excluded would
+ * let a citation anchor land inside what actually renders as a code block.
+ */
+function findFencedCodeRanges(text: string): ExcludedRange[] {
+  const ranges: ExcludedRange[] = [];
+  const lines = text.split('\n');
+  const lineStarts: number[] = new Array(lines.length);
+  let offset = 0;
+  for (let i = 0; i < lines.length; i++) {
+    lineStarts[i] = offset;
+    offset += lines[i].length + 1;
+  }
+
+  let i = 0;
+  while (i < lines.length) {
+    const blockquotePrefix = lines[i].match(BLOCKQUOTE_PREFIX)?.[0] ?? '';
+    const blockquoteDepth = countBlockquoteMarkers(blockquotePrefix);
+    const afterBlockquote = lines[i].slice(blockquotePrefix.length);
+    const listMarkerPrefix = afterBlockquote.match(LIST_MARKER_PREFIX)?.[0] ?? '';
+    const fenceOpen = matchFenceOpen(afterBlockquote.slice(listMarkerPrefix.length));
+    if (!fenceOpen) {
+      i += 1;
+      continue;
+    }
+
+    const closeLineRegex = new RegExp(`^ {0,3}${fenceOpen.char}{${fenceOpen.length},}[ \t\r]*$`);
+    const requiredIndent = listMarkerPrefix.length;
+    let closeIndex = -1;
+    let listItemEndIndex = -1;
+
+    for (let j = i + 1; j < lines.length; j++) {
+      const line = lines[j];
+      const linePrefix = blockquoteDepth > 0 ? (line.match(BLOCKQUOTE_PREFIX)?.[0] ?? '') : '';
+      if (blockquoteDepth > 0 && countBlockquoteMarkers(linePrefix) !== blockquoteDepth) {
+        continue;
+      }
+
+      const candidate = linePrefix ? line.slice(linePrefix.length) : line;
+
+      if (requiredIndent > 0 && candidate.trim() !== '') {
+        const lineIndent = candidate.match(/^[ \t]*/)?.[0].length ?? 0;
+        if (lineIndent < requiredIndent) {
+          listItemEndIndex = j;
+          break;
+        }
+        if (closeLineRegex.test(candidate.slice(requiredIndent))) {
+          closeIndex = j;
+          break;
+        }
+        continue;
+      }
+
+      if (closeLineRegex.test(candidate)) {
+        closeIndex = j;
+        break;
+      }
+    }
+
+    if (closeIndex !== -1) {
+      ranges.push({
+        start: lineStarts[i],
+        end: lineStarts[closeIndex] + lines[closeIndex].length,
+      });
+      i = closeIndex + 1;
+      continue;
+    }
+
+    if (listItemEndIndex !== -1) {
+      const lastContentIndex = listItemEndIndex - 1;
+      ranges.push({
+        start: lineStarts[i],
+        end: lineStarts[lastContentIndex] + lines[lastContentIndex].length,
+      });
+      i = listItemEndIndex;
+      continue;
+    }
+
+    ranges.push({ start: lineStarts[i], end: text.length });
+    break;
+  }
+
+  return ranges;
+}
+
+/** True when `offset` falls within any of `ranges` (few ranges per message — linear scan is fine). */
+function isWithinRanges(offset: number, ranges: ExcludedRange[]): boolean {
+  return ranges.some((range) => offset >= range.start && offset < range.end);
 }
 
 function containment(sentenceTokens: Set<string>, passageTokens: Set<string>): number {
@@ -373,6 +623,81 @@ function withAnchors(sentence: string, anchors: string[]): string {
   return `${trimmed} ${anchors.join(' ')}${trailing}`;
 }
 
+/**
+ * Anchors a single text blob against `passages`, line by line. A line that parses as a markdown
+ * table row (via `splitTableRowCells`) is scored as one unit and its anchors are inserted into the
+ * last non-empty cell, preserving column count — the same placement `insertSharePointCitations`
+ * uses. Every other line (prose, or a table separator row, which `splitTableRowCells` also treats
+ * as non-data) falls back to the existing sentence-boundary pass. Splitting/rejoining on `\n` is
+ * always lossless, so this never alters surrounding whitespace beyond the anchors themselves.
+ */
+function anchorTextPart(
+  text: string,
+  passages: Passage[],
+  options: {
+    threshold?: number;
+    tokenizeFn?: (text: string) => string[];
+    anchorTag?: string;
+    scoreExcludedRanges?: boolean;
+  },
+): { text: string; usedCoords: Set<string> } {
+  const usedCoords = new Set<string>();
+  const lines = text.split('\n');
+  const excludedRanges = findFencedCodeRanges(text);
+  let cursor = 0;
+  const inFence = lines.map((line) => {
+    const lineStart = cursor;
+    cursor += line.length + 1;
+    return isWithinRanges(lineStart, excludedRanges);
+  });
+  const tableLineIndices = computeTableLineIndices(lines);
+  const { scoreExcludedRanges = false, ...anchorOptions } = options;
+
+  const rebuiltLines = lines.map((line, index) => {
+    const excluded = inFence[index];
+    if (excluded && !scoreExcludedRanges) {
+      return line;
+    }
+
+    const lineCoords = new Set<string>();
+    const tableRow =
+      !excluded && tableLineIndices.has(index) ? splitTableRowCells(line) : undefined;
+
+    if (tableRow) {
+      const { anchors, coords } = anchorsForSentence(line, passages, {
+        ...anchorOptions,
+        excludeCoords: lineCoords,
+      });
+      coords.forEach((coord) => usedCoords.add(coord));
+      if (anchors.length === 0) {
+        return line;
+      }
+      const lastCellIndex = findLastNonEmptyCellIndex(tableRow.cells);
+      if (lastCellIndex === -1) {
+        return line;
+      }
+      tableRow.cells[lastCellIndex] = withAnchors(tableRow.cells[lastCellIndex], anchors);
+      return joinTableRowCells(tableRow);
+    }
+
+    return splitIntoSentences(line)
+      .map((sentence) => {
+        const { anchors, coords } = anchorsForSentence(sentence, passages, {
+          ...anchorOptions,
+          excludeCoords: lineCoords,
+        });
+        coords.forEach((coord) => {
+          usedCoords.add(coord);
+          lineCoords.add(coord);
+        });
+        return excluded ? sentence : withAnchors(sentence, anchors);
+      })
+      .join('');
+  });
+
+  return { text: rebuiltLines.join('\n'), usedCoords };
+}
+
 function findLastTextPart(contentParts: TMessageContentParts[]): TMessageContentParts | undefined {
   for (let i = contentParts.length - 1; i >= 0; i--) {
     const text = readText(contentParts[i]);
@@ -414,6 +739,11 @@ function writeText(part: TMessageContentParts, value: string): void {
  * Deterministically inserts file citation anchors into the assistant's text
  * content parts by matching each sentence against the retrieved file_search
  * passages. Mutates the content parts in place. Pure and synchronous.
+ *
+ * A sentence sitting inside a fenced code block (e.g. an artifact body) is
+ * never anchored — the frontend's citation renderer only transforms markdown
+ * prose nodes, not fenced-code node content, so an anchor placed there would
+ * render as literal text (e.g. `turn0file0`) instead of a citation chip.
  */
 export function insertFileCitations(
   contentParts: TMessageContentParts[],
@@ -430,21 +760,7 @@ export function insertFileCitations(
       continue;
     }
 
-    const sentences = splitIntoSentences(text);
-    let lineCoords = new Set<string>();
-    const rebuilt = sentences
-      .map((sentence) => {
-        const { anchors, coords } = anchorsForSentence(sentence, passages, {
-          excludeCoords: lineCoords,
-        });
-        coords.forEach((coord) => lineCoords.add(coord));
-        if (sentence.includes('\n')) {
-          lineCoords = new Set();
-        }
-        return withAnchors(sentence, anchors);
-      })
-      .join('');
-
+    const { text: rebuilt } = anchorTextPart(text, passages, {});
     if (rebuilt !== text) {
       writeText(part, rebuilt);
     }
@@ -478,8 +794,11 @@ function buildMCPPassages(mcpAttachments: TAttachment[], turnOffset: number): Pa
  * Inserts MCP citation anchors (`turn{N}mcp0`) into assistant text parts by
  * matching each sentence against the MCP tool result content, using the more
  * lenient `MCP_SIMILARITY_THRESHOLD`. Mutates in place. Returns the
- * `"turn:fileIndex"` coordinates that received an anchor, so callers can
- * detect sources the lexical pass missed (see `appendGuaranteedMCPCitations`).
+ * `"turn:fileIndex"` coordinates that matched, so callers can detect sources
+ * the lexical pass missed entirely (see `appendGuaranteedMCPCitations`) — a
+ * sentence inside an excluded (fenced-code) range still contributes its
+ * coordinate here even though no anchor is written for it, so a source
+ * mentioned only inside a fence isn't force-cited again outside it.
  *
  * A source already anchored earlier on the same line is excluded from later
  * sentences on that line (reset at each `\n`). A single source's content can
@@ -505,26 +824,16 @@ export function insertMCPCitations(
       continue;
     }
 
-    const sentences = splitIntoSentences(text);
-    let lineCoords = new Set<string>();
-    const rebuilt = sentences
-      .map((sentence) => {
-        const { anchors, coords } = anchorsForSentence(sentence, passages, {
-          threshold: MCP_SIMILARITY_THRESHOLD,
-          tokenizeFn: tokenizeStemmed,
-          anchorTag: 'mcp',
-          excludeCoords: lineCoords,
-        });
-        coords.forEach((coord) => {
-          usedCoords.add(coord);
-          lineCoords.add(coord);
-        });
-        if (sentence.includes('\n')) {
-          lineCoords = new Set();
-        }
-        return withAnchors(sentence, anchors);
-      })
-      .join('');
+    // Score sentences inside an excluded (fenced) range too, so a source matched only there is
+    // marked used and doesn't get force-appended later by appendGuaranteedMCPCitations — but
+    // never insert the anchor markup, since it would render as literal text inside the fence.
+    const { text: rebuilt, usedCoords: partCoords } = anchorTextPart(text, passages, {
+      threshold: MCP_SIMILARITY_THRESHOLD,
+      tokenizeFn: tokenizeStemmed,
+      anchorTag: 'mcp',
+      scoreExcludedRanges: true,
+    });
+    partCoords.forEach((coord) => usedCoords.add(coord));
 
     if (rebuilt !== text) {
       writeText(part, rebuilt);
@@ -536,12 +845,14 @@ export function insertMCPCitations(
 
 /**
  * Deloitte Custom Change
- * Force-appends a citation anchor for every disclaimer-bearing or SharePoint
- * MCP source that wasn't already anchored by the lexical `insertMCPCitations`
- * pass — so those sources are always cited, not only when the model's
- * phrasing happened to overlap them. Scoped to disclaimer-bearing attachments
- * (e.g. KX) and SharePoint sources specifically, rather than every MCP
- * toolset: a source that never surfaces in the answer at all (e.g. an
+ * Force-appends a citation anchor for every disclaimer- or usage-restricted
+ * SharePoint MCP source that wasn't already anchored by the lexical
+ * `insertMCPCitations` pass — so those sources are always cited, not only
+ * when the model's phrasing happened to overlap them. Scoped to a source's
+ * own `usageRestriction` flag (KX quals or DPN profiles specifically — not
+ * every source in an attachment that merely contains one DPN hit) or the
+ * attachment's top-level `disclaimer`, plus SharePoint sources, rather than
+ * every MCP toolset: a source that never surfaces in the answer at all (e.g. an
  * AFR/feed/entity search hit the model chose not to discuss) should not get a
  * citation chip for text the user never reads about. Mirrors the exact
  * turn-advancement rule `useSearchResultsByTurn` depends on: the turn counter
@@ -565,7 +876,8 @@ export function appendGuaranteedMCPCitations(
     }
     const hasDisclaimer = Boolean(payload.disclaimer);
     payload.sources.forEach((source, fileIndex) => {
-      if (!hasDisclaimer && !isSharePointSource(source)) {
+      const requiresAnchor = hasDisclaimer || Boolean(source.usageRestriction);
+      if (!requiresAnchor && !isSharePointSource(source)) {
         return;
       }
       const coord = `${turn}:${fileIndex}`;
@@ -627,20 +939,137 @@ function stripLineMarkers(line: string): string {
 const TABLE_SEPARATOR_LINE = /^\s*\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?\s*$/;
 
 /**
- * Splits a markdown table row (`| a | b |`) into its cell contents, or
- * returns undefined if the line isn't a table row (including separator
- * rows), so a SharePoint answer rendered as a table can still be matched
- * cell-by-cell the same way a bulleted line is matched whole.
+ * A table row's cells plus which edge pipes the original line actually had, so a caller that
+ * rebuilds the row can reproduce the exact same leading/trailing pipe formatting instead of
+ * always adding both. `prefix`/`suffix` are the whitespace trimmed off the original line
+ * (indentation, trailing spaces, a CRLF's `\r`) so the rebuilt line reproduces it exactly instead
+ * of silently normalizing it away.
  */
-function splitTableRowCells(line: string): string[] | undefined {
+interface TableRowCells {
+  cells: string[];
+  hasLeadingPipe: boolean;
+  hasTrailingPipe: boolean;
+  prefix: string;
+  suffix: string;
+}
+
+/**
+ * True when the `|` at `index` is a real column separator, not a backslash-escaped literal pipe
+ * (`Value \| detail`). Counts consecutive backslashes immediately before it: an even count (zero
+ * included) leaves the pipe unescaped, an odd count means the last backslash escapes it.
+ */
+function isUnescapedPipeAt(text: string, index: number): boolean {
+  let backslashes = 0;
+  let i = index - 1;
+  while (i >= 0 && text[i] === '\\') {
+    backslashes += 1;
+    i -= 1;
+  }
+  return backslashes % 2 === 0;
+}
+
+/**
+ * Splits `text` on unescaped `|` characters only, so a literal `\|` inside a cell (GFM's escape
+ * for a pipe that shouldn't act as a column boundary) stays part of that cell's content instead of
+ * being mistaken for a separator.
+ */
+function splitUnescapedPipes(text: string): string[] {
+  const cells: string[] = [];
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '|' && isUnescapedPipeAt(text, i)) {
+      cells.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  cells.push(text.slice(start));
+  return cells;
+}
+
+/**
+ * Splits a markdown table row (`| a | b |`) into its cell contents, or returns undefined if the
+ * line isn't a table row (including separator rows), so a SharePoint or file_search answer
+ * rendered as a table can still be matched cell-by-cell the same way a bulleted line is matched
+ * whole. Only used on lines a caller has already confirmed sit inside a real GFM table block (see
+ * `computeTableLineIndices`) — this function only knows a single line's shape, not whether it's
+ * actually part of a table, so any pipe-containing prose, shell command, or fenced code line would
+ * otherwise look identical to a genuine row.
+ *
+ * GFM permits omitting the leading and/or trailing pipe on a multi-column row (`File | Summary`
+ * is as valid as `| File | Summary |`), so a row qualifies either when both edge pipes are present
+ * (covers single-column rows, which need both to be unambiguous) or when at least one unescaped
+ * `|` separates cells in the interior — a lone stray `|` (escaped or with nothing to separate) is
+ * not a table row.
+ */
+function splitTableRowCells(line: string): TableRowCells | undefined {
   const trimmed = line.trim();
-  if (!trimmed.startsWith('|') || !trimmed.endsWith('|') || trimmed.length < 2) {
+  if (trimmed.length === 0 || TABLE_SEPARATOR_LINE.test(trimmed)) {
     return undefined;
   }
-  if (TABLE_SEPARATOR_LINE.test(trimmed)) {
+  const hasLeadingPipe = trimmed.startsWith('|');
+  const hasTrailingPipe =
+    trimmed.length > 1 && trimmed.endsWith('|') && isUnescapedPipeAt(trimmed, trimmed.length - 1);
+  const core = trimmed.slice(hasLeadingPipe ? 1 : 0, hasTrailingPipe ? -1 : undefined);
+  const cells = splitUnescapedPipes(core);
+  if (!(hasLeadingPipe && hasTrailingPipe) && cells.length < 2) {
     return undefined;
   }
-  return trimmed.slice(1, -1).split('|');
+  const prefix = line.slice(0, line.indexOf(trimmed));
+  const suffix = line.slice(prefix.length + trimmed.length);
+  return { cells, hasLeadingPipe, hasTrailingPipe, prefix, suffix };
+}
+
+/**
+ * Identifies which lines of a lossless `\n`-split belong to a real GFM table block, so a line
+ * merely containing a pipe — prose, a shell command, fenced code, or markdown streamed so far that
+ * only has a header — is never mistaken for a table row. GFM requires a delimiter row
+ * (`| --- | --- |`) directly under the header to recognize a table at all; once one is found, the
+ * header and delimiter are marked, and contiguous following lines that themselves look like table
+ * rows extend the block until the first blank line or non-row line.
+ */
+function computeTableLineIndices(lines: string[]): Set<number> {
+  const tableLines = new Set<number>();
+  for (let i = 1; i < lines.length; i++) {
+    if (tableLines.has(i) || !TABLE_SEPARATOR_LINE.test(lines[i].trim())) {
+      continue;
+    }
+    const headerIndex = i - 1;
+    if (tableLines.has(headerIndex) || !splitTableRowCells(lines[headerIndex])) {
+      continue;
+    }
+    tableLines.add(headerIndex);
+    tableLines.add(i);
+    let j = i + 1;
+    while (j < lines.length && splitTableRowCells(lines[j])) {
+      tableLines.add(j);
+      j += 1;
+    }
+  }
+  return tableLines;
+}
+
+/**
+ * Rebuilds a table row from `splitTableRowCells`'s output, restoring the edge pipes and the
+ * leading/trailing whitespace (including a CRLF's `\r`) the original line had.
+ */
+function joinTableRowCells({
+  cells,
+  hasLeadingPipe,
+  hasTrailingPipe,
+  prefix,
+  suffix,
+}: TableRowCells): string {
+  return `${prefix}${hasLeadingPipe ? '|' : ''}${cells.join('|')}${hasTrailingPipe ? '|' : ''}${suffix}`;
+}
+
+/** Index of the last non-blank cell, or -1 if every cell is empty — the safe place to append an anchor without disturbing column count. */
+function findLastNonEmptyCellIndex(cells: string[]): number {
+  for (let i = cells.length - 1; i >= 0; i--) {
+    if (cells[i].trim().length > 0) {
+      return i;
+    }
+  }
+  return -1;
 }
 
 /**
@@ -735,9 +1164,12 @@ function nextCoordForAlias(
  *
  * Scoped to sources whose `toolName` starts with `sp_` so every other MCP
  * connector keeps using the existing lexical pass unchanged. Returns the
- * `"turn:fileIndex"` coordinates it anchored, in the same format
+ * `"turn:fileIndex"` coordinates it matched, in the same format
  * `insertMCPCitations` returns, so the caller can merge them into the same
- * `usedCoords` set.
+ * `usedCoords` set — a title matched on a line inside an excluded (fenced-code)
+ * range still contributes its coordinate here even though no anchor is
+ * written for it, so `appendGuaranteedMCPCitations` doesn't force-cite that
+ * source again outside the fence.
  */
 export function insertSharePointCitations(
   contentParts: TMessageContentParts[],
@@ -800,9 +1232,21 @@ export function insertSharePointCitations(
     }
 
     let changed = false;
-    const rebuiltLines = text.split('\n').map((line) => {
-      const tableCells = splitTableRowCells(line);
-      if (tableCells) {
+    const excludedRanges = findFencedCodeRanges(text);
+    const lines = text.split('\n');
+    let cursor = 0;
+    const withinExcludedRange = lines.map((line) => {
+      const lineStart = cursor;
+      cursor += line.length + 1;
+      return isWithinRanges(lineStart, excludedRanges);
+    });
+    const tableLineIndices = computeTableLineIndices(lines);
+
+    const matchLine = (line: string, index: number, insertAnchor: boolean): string => {
+      const tableRow = tableLineIndices.has(index) ? splitTableRowCells(line) : undefined;
+      if (tableRow) {
+        const { cells: tableCells } = tableRow;
+        let rowChanged = false;
         for (let cellIndex = 0; cellIndex < tableCells.length; cellIndex++) {
           const normalizedCell = normalizeForMatch(stripLineMarkers(tableCells[cellIndex]));
           if (!normalizedCell) {
@@ -817,14 +1261,17 @@ export function insertSharePointCitations(
               continue;
             }
             usedCoords.add(`${coord.turn}:${coord.fileIndex}`);
-            changed = true;
-            tableCells[cellIndex] = withAnchors(tableCells[cellIndex], [
-              `${ANCHOR_MARKER}turn${coord.turn}mcp${coord.fileIndex}`,
-            ]);
-            return `|${tableCells.join('|')}|`;
+            if (insertAnchor) {
+              changed = true;
+              rowChanged = true;
+              tableCells[cellIndex] = withAnchors(tableCells[cellIndex], [
+                `${ANCHOR_MARKER}turn${coord.turn}mcp${coord.fileIndex}`,
+              ]);
+            }
+            break;
           }
         }
-        return line;
+        return rowChanged ? joinTableRowCells(tableRow) : line;
       }
 
       const base = stripLineMarkers(line);
@@ -842,10 +1289,28 @@ export function insertSharePointCitations(
           continue;
         }
         usedCoords.add(`${coord.turn}:${coord.fileIndex}`);
+        if (!insertAnchor) {
+          return line;
+        }
         changed = true;
         return withAnchors(line, [`${ANCHOR_MARKER}turn${coord.turn}mcp${coord.fileIndex}`]);
       }
       return line;
+    };
+
+    // Claim queued sources for visible prose lines first, in document order, before any
+    // fenced-code line gets a chance to — so a filename appearing both inside a fence and later
+    // in prose still credits (and anchors) the prose mention instead of the fence silently
+    // consuming the only queued source. Fenced lines are matched in a second pass purely to mark
+    // any leftover source as used, without writing an anchor, so a source mentioned only inside a
+    // fence still isn't force-appended later by appendGuaranteedMCPCitations.
+    const rebuiltLines = lines.map((line, index) =>
+      withinExcludedRange[index] ? line : matchLine(line, index, true),
+    );
+    lines.forEach((line, index) => {
+      if (withinExcludedRange[index]) {
+        matchLine(line, index, false);
+      }
     });
 
     if (changed) {
@@ -857,34 +1322,33 @@ export function insertSharePointCitations(
 }
 
 /**
- * Appends a single deterministic trailing disclaimer paragraph when any MCP
- * attachment carries one (e.g. KX's `usage_guidelines`), plus a link to the
- * static usage-guidelines page when configured — unless the disclaimer text
- * already references "usage guidelines" itself (KX's own boilerplate already
- * links to this page), in which case the extra link would just repeat the
- * same sentence. Only the first disclaimer found is used — a turn with
- * multiple KX calls (e.g. a refined follow-up search) tends to repeat the
- * same boilerplate warning with minor wording differences (not exact
- * matches), so appending every distinct-looking one would repeat the same
- * warning rather than surface new information. Always appends to an existing
- * text part — never creates a new one — so downstream content-part filtering
- * can't drop it.
+ * Appends a deterministic trailing disclaimer paragraph whenever any MCP
+ * attachment warrants one — a fixed, branded message rather than KX's own
+ * boilerplate text. Two independent triggers share the same paragraph, since
+ * a turn can carry either or both: any attachment with a `disclaimer` (KX's
+ * own `usage_guidelines`, typically surfaced for quals-type results), or any
+ * attachment flagged `dpnUsageRestriction` (a DPN people-profile result).
+ * Always appends to an existing text part — never creates a new one — so
+ * downstream content-part filtering can't drop it. The guidelines link falls
+ * back to `DEFAULT_KX_USAGE_GUIDELINES_URL` when `KX_USAGE_GUIDELINES_URL`
+ * isn't configured, so the default `.env.example` setup never renders
+ * non-clickable placeholder text.
  */
 export function appendMCPDisclaimers(
   contentParts: TMessageContentParts[],
   mcpAttachments: TAttachment[],
   mcpUsageGuidelinesUrl?: string,
 ): void {
-  let disclaimer: string | undefined;
+  let hasDisclaimer = false;
   for (const attachment of mcpAttachments) {
-    const payload = attachment[Tools.mcp_results] as { disclaimer?: string } | undefined;
-    if (payload?.disclaimer) {
-      disclaimer = payload.disclaimer;
-      break;
-    }
+    const payload = attachment[Tools.mcp_results] as
+      | { disclaimer?: string; dpnUsageRestriction?: boolean }
+      | undefined;
+    hasDisclaimer =
+      hasDisclaimer || Boolean(payload?.disclaimer) || Boolean(payload?.dpnUsageRestriction);
   }
 
-  if (!disclaimer) {
+  if (!hasDisclaimer) {
     return;
   }
 
@@ -893,15 +1357,13 @@ export function appendMCPDisclaimers(
     return;
   }
 
-  const alreadyMentionsGuidelines = /usage guidelines/i.test(disclaimer);
-  const guidelinesLink =
-    mcpUsageGuidelinesUrl && !alreadyMentionsGuidelines
-      ? ` See [usage guidelines](${mcpUsageGuidelinesUrl}).`
-      : '';
-  const disclaimerText = `${disclaimer}${guidelinesLink}`;
+  const guidelinesText = `[KX usage guidelines](${mcpUsageGuidelinesUrl || DEFAULT_KX_USAGE_GUIDELINES_URL})`;
+  const disclaimer =
+    'Please note that this response uses data from the KX & DPN Connector. Review the accuracy ' +
+    `of all KX & DPN citations before reusing them. See the ${guidelinesText} to learn more.`;
 
   const text = readText(targetPart) ?? '';
-  writeText(targetPart, `${text}\n\n${disclaimerText}`);
+  writeText(targetPart, `${text}\n\n${disclaimer}`);
 }
 
 /**

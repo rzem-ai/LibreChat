@@ -20,6 +20,7 @@ import {
   useGetAgentsConfig,
   useToolToggle,
 } from '~/hooks';
+import useNativeWebSearchToggle from '~/hooks/Plugins/useNativeWebSearchToggle';
 import useArtifactsShadcnOnly from '~/hooks/Artifacts/useArtifactsShadcnOnly';
 import { getTimestampedValue } from '~/utils/timestamps';
 import { useGetStartupConfig } from '~/data-provider';
@@ -32,6 +33,8 @@ interface BadgeRowContextType {
   skills: ReturnType<typeof useToolToggle>;
   memory: ReturnType<typeof useToolToggle>;
   webSearch: ReturnType<typeof useToolToggle>;
+  // Deloitte Custom Change: native (provider) web-search pill state
+  nativeWebSearch: ReturnType<typeof useNativeWebSearchToggle>;
   artifacts: ReturnType<typeof useToolToggle>;
   fileSearch: ReturnType<typeof useToolToggle>;
   canUseFileSearchPill: boolean;
@@ -248,6 +251,9 @@ export default function BadgeRowProvider({
     },
   });
 
+  // Deloitte Custom Change: native web search writes `conversation.web_search`, not `ephemeralAgent`
+  const nativeWebSearch = useNativeWebSearchToggle();
+
   /** FileSearch hook */
   const fileSearch = useToolToggle({
     conversationId,
@@ -343,6 +349,7 @@ export default function BadgeRowProvider({
     skills,
     memory,
     webSearch,
+    nativeWebSearch,
     artifacts,
     fileSearch,
     canUseFileSearchPill, // Deloitte Custom Change

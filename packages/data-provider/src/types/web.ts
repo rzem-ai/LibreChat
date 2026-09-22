@@ -63,6 +63,7 @@ export type MCPResultReference = {
   attribution: string;
   type: 'mcp';
   usageRestriction?: boolean;
+  usageRestrictionLink?: string;
 };
 
 export interface SearchResultData {

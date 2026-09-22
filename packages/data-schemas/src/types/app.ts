@@ -6,8 +6,11 @@ import type {
   TCustomConfig,
   TMemoryConfig,
   EModelEndpoint,
+  TGoogleEndpoint,
+  TOpenAIEndpoint,
   TVertexAIConfig,
   TAgentsEndpoint,
+  TBedrockEndpoint,
   CloudFrontConfig,
   TCustomEndpoints,
   TAssistantEndpoint,
@@ -111,11 +114,12 @@ export interface AppConfig {
     /** Admin exemption list of host:port pairs that bypass the SSRF private-IP block */
     allowedAddresses?: string[];
     /** OpenAI endpoint configuration */
-    openAI?: Partial<TEndpoint>;
+    // Deloitte Custom Change: endpoint-specific types so `nativeWebSearch` is typed without casts
+    openAI?: Partial<TOpenAIEndpoint>;
     /** Google endpoint configuration */
-    google?: Partial<TEndpoint>;
+    google?: Partial<TGoogleEndpoint>;
     /** Bedrock endpoint configuration */
-    bedrock?: Partial<TEndpoint>;
+    bedrock?: Partial<TBedrockEndpoint>;
     /** Anthropic endpoint configuration with optional Vertex AI support */
     anthropic?: Partial<TAnthropicEndpoint> & {
       /** Validated Vertex AI configuration */

@@ -1,5 +1,8 @@
 import { Schema } from 'mongoose';
-import { SystemRoles } from 'librechat-data-provider';
+import {
+  SystemRoles,
+  MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH,
+} from 'librechat-data-provider';
 import { IUser } from '~/types';
 
 // Session sub-schema
@@ -19,6 +22,27 @@ const BackupCodeSchema = new Schema(
     codeHash: { type: String, required: true },
     used: { type: Boolean, default: false },
     usedAt: { type: Date, default: null },
+  },
+  { _id: false },
+);
+
+const TutorialFeedbackSchema = new Schema(
+  {
+    score: {
+      type: Number,
+      min: 1,
+      max: 5,
+      required: true,
+    },
+    comment: {
+      type: String,
+      trim: true,
+      maxlength: MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { _id: false },
 );
@@ -155,6 +179,20 @@ const userSchema: Schema<IUser> = new Schema<IUser>(
     skillStates: {
       type: Map,
       of: Boolean,
+      default: () => new Map(),
+    },
+    tutorialPromptSeen: {
+      type: Boolean,
+      default: false,
+    },
+    tutorialRatings: {
+      type: Map,
+      of: Number,
+      default: () => new Map(),
+    },
+    tutorialFeedback: {
+      type: Map,
+      of: TutorialFeedbackSchema,
       default: () => new Map(),
     },
     /** Field for external source identification (for consistency with TPrincipal schema) */

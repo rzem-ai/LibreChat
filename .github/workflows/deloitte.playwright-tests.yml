@@ -26,6 +26,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.56.1-noble
+    env:
+      MCP_GATEWAY_URL: http://127.0.0.1:65535
+      MCP_GATEWAY_OBO_SCOPE: api://e2e/mcp
     steps:
       - uses: actions/checkout@v4
         with:
@@ -56,6 +59,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.56.1-noble
+    env:
+      MCP_GATEWAY_URL: http://127.0.0.1:65535
+      MCP_GATEWAY_OBO_SCOPE: api://e2e/mcp
     steps:
       - uses: actions/checkout@v4
         with:

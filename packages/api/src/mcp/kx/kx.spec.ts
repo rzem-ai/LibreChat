@@ -1,7 +1,7 @@
-import { buildKxSources } from './kx';
+import { buildKxSources, DPN_USAGE_GUIDELINES_URL } from './kx';
 
 describe('buildKxSources', () => {
-  it('splits a KX people-search payload into one source per profile', () => {
+  it('splits a KX people-search payload into one source per profile, flagging DPN results for the usage-restriction warning', () => {
     const content = JSON.stringify({
       summary: 'The following professionals show experience...',
       actualresults: [
@@ -32,7 +32,9 @@ describe('buildKxSources', () => {
     expect(result?.sources[0].content).toBe(
       'Decker, Heather\n\nInsurance Regulatory & Compliance Practice',
     );
-    expect(result?.sources[0].usageRestriction).toBe(false);
+    expect(result?.sources[0].usageRestriction).toBe(true);
+    expect(result?.sources[0].usageRestrictionLink).toBe(DPN_USAGE_GUIDELINES_URL);
+    expect(result?.dpnUsageRestriction).toBe(true);
   });
 
   it('strips HTML and surfaces the per-item usage restriction warning for quals', () => {
@@ -68,6 +70,8 @@ describe('buildKxSources', () => {
       'Usage restrictions: Requires partner approval for each use',
     );
     expect(result?.sources[0].usageRestriction).toBe(true);
+    expect(result?.sources[0].usageRestrictionLink).toBeUndefined();
+    expect(result?.dpnUsageRestriction).toBeUndefined();
   });
 
   it('surfaces the top-level usage_guidelines disclaimer', () => {

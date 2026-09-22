@@ -206,6 +206,8 @@ export function getOpenAIConfig(
         customFormat: options.customParams?.reasoningFormat,
         isVercel: Boolean(isVercel),
       }),
+      // Deloitte Custom Change: forward the native web-search allowlist for per-model gating
+      supportedWebSearchModels: options.supportedWebSearchModels,
     });
     llmConfig = openaiResult.llmConfig;
     azure = openaiResult.azure;

@@ -69,7 +69,7 @@ test.describe('Messaging suite', () => {
     // Check if textbox is focused
     await page.waitForTimeout(250);
     const isTextboxFocused = await page.evaluate(() => {
-      return document.activeElement === document.querySelector('[data-testid="text-input"]');
+      return document.activeElement === document.getElementById('prompt-textarea');
     });
     expect(isTextboxFocused).toBeTruthy();
     const currentUrl = page.url();
