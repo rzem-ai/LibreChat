@@ -7,6 +7,7 @@ import {
   getStatusColor,
   getStatusTextKey,
   hasConfiguredIcon,
+  hasLimitedAccess,
   shouldShowActionButton,
   type ConnectionStatusMap,
 } from './mcpServerUtils';
@@ -40,9 +41,10 @@ export default function MCPServerMenuItem({
   const statusTextKey = getStatusTextKey(server.serverName, connectionStatus, isInitializing);
   const statusText = localize(statusTextKey as Parameters<typeof localize>[0]);
   const showActionButton = shouldShowActionButton(statusIconProps);
+  const limitedAccess = hasLimitedAccess(server);
 
   // Include status in aria-label so screen readers announce it
-  const accessibleLabel = server.config?.limitedAccess
+  const accessibleLabel = limitedAccess
     ? `${displayName}, ${localize('com_ui_limited_access')}, ${statusText}`
     : `${displayName}, ${statusText}`;
 
@@ -94,7 +96,7 @@ export default function MCPServerMenuItem({
             {displayName}
           </span>
           {/* Deloitte Custom Change: SharePoint MCP is limited to a subset of users. */}
-          {server.config?.limitedAccess && <LimitedAccessPill />}
+          {limitedAccess && <LimitedAccessPill />}
         </div>
         {server.config?.description && (
           <p className="truncate text-xs text-text-secondary">{server.config.description}</p>

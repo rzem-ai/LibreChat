@@ -3172,6 +3172,7 @@ describe('MCP Routes', () => {
           type: 'sse',
           url: 'http://server1.com/sse',
           title: 'Server 1',
+          limitedAccess: true,
           source: 'user',
         },
         'server-2': {
@@ -3191,6 +3192,7 @@ describe('MCP Routes', () => {
         type: 'sse',
         url: 'http://server1.com/sse',
         title: 'Server 1',
+        limitedAccess: true,
       });
       expect(response.body['server-2']).toMatchObject({
         type: 'sse',

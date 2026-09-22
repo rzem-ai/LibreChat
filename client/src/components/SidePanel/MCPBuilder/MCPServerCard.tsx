@@ -3,7 +3,7 @@ import { MCPIcon } from '@librechat/client';
 import { PermissionBits, hasPermissions } from 'librechat-data-provider';
 import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusIcon';
 import type { MCPServerDefinition } from '~/hooks';
-import { hasConfiguredIcon } from '~/components/MCP/mcpServerUtils';
+import { hasConfiguredIcon, hasLimitedAccess } from '~/components/MCP/mcpServerUtils';
 // Deloitte Custom Change: SharePoint MCP is limited to a subset of users.
 import { LimitedAccessPill } from '~/components/SidePanel/Agents/Advanced/ui';
 import MCPServerIcon from '~/components/MCP/MCPServerIcon';
@@ -53,6 +53,7 @@ export default function MCPServerCard({
   const description = server.config?.description;
   const statusDotColor = getStatusDotColor(serverStatus, isInitializing);
   const canEdit = canCreateEditMCPs && canEditThisServer;
+  const limitedAccess = hasLimitedAccess(server);
 
   // Deloitte Custom Change: connectOrConfigureServer (shared with toggleSelectAll) decides
   // whether to open the config dialog or initialize directly, based on hasCustomUserVars.
@@ -130,7 +131,7 @@ export default function MCPServerCard({
               {displayName}
             </span>
             {/* Deloitte Custom Change: SharePoint MCP is limited to a subset of users. */}
-            {server.config?.limitedAccess && <LimitedAccessPill wrap />}
+            {limitedAccess && <LimitedAccessPill wrap />}
           </div>
           {description && <p className="truncate text-xs text-text-secondary">{description}</p>}
         </div>
