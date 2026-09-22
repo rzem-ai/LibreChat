@@ -748,9 +748,15 @@ const updateMCPServerController = async (req, res) => {
         .json({ message: 'Forbidden: Insufficient permissions to configure OBO' });
     }
 
+    const configForUpdate = {
+      ...validation.data,
+      ...(existingConfig?.limitedAccess !== undefined && {
+        limitedAccess: existingConfig.limitedAccess,
+      }),
+    };
     const parsedConfig = await getMCPServersRegistry().updateServer(
       serverName,
-      validation.data,
+      configForUpdate,
       'DB',
       userId,
     );

@@ -3793,6 +3793,35 @@ describe('MCP Routes', () => {
       );
     });
 
+    it('should preserve the server-managed limitedAccess flag', async () => {
+      const updatedConfig = {
+        type: 'sse',
+        url: 'https://updated-mcp-server.example.com/sse',
+        title: 'Updated Server',
+      };
+      mockRegistryInstance.getServerConfig.mockResolvedValue({
+        ...updatedConfig,
+        limitedAccess: true,
+      });
+      mockRegistryInstance.updateServer.mockResolvedValue({
+        ...updatedConfig,
+        limitedAccess: true,
+        source: 'user',
+      });
+
+      const response = await request(app)
+        .patch('/api/mcp/servers/test-server')
+        .send({ config: updatedConfig });
+
+      expect(response.status).toBe(200);
+      expect(mockRegistryInstance.updateServer).toHaveBeenCalledWith(
+        'test-server',
+        expect.objectContaining({ limitedAccess: true }),
+        'DB',
+        'test-user-id',
+      );
+    });
+
     it('should redact secrets from update response', async () => {
       const validConfig = {
         type: 'sse',
