@@ -56,7 +56,7 @@ export function LimitedAccessPill({ wrap = false }: { wrap?: boolean }) {
     <Tag
       label={label}
       className="flex-shrink-0 border border-amber-600/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-      labelClassName="px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide whitespace-nowrap"
+      labelClassName="!ml-0 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide whitespace-nowrap"
     />
   );
 }
