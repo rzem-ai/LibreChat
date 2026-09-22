@@ -197,6 +197,27 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 40. `MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT=0.1`
 41. `MODEL_PRICING_MIN_MULTIPLIER=0.1`
 > The **ClearTrack MCP Gateway** connection (`mcpServers` block in `librechat.yaml` at repo root and `charts/config/librechat.yaml` for Helm) uses On-Behalf-Of (OBO) auth, not a dedicated OAuth client — it reuses `OPENID_CLIENT_ID`/`OPENID_CLIENT_SECRET` from item 8–9 to exchange the user's login token for one scoped to the gateway. There are no gateway-specific client credentials to set; the only requirement is that `OPENID_SCOPE` (item 12) includes the gateway's audience scope.
+
+### Code API / Code Interpreter JWT
+
+<!-- Deloitte Custom Change: local Code API authentication configuration. -->
+
+Add the following values to `.env` to authorize Code API execution:
+
+```env
+CODEAPI_AUTH_PROVIDER=librechat-jwt
+CODEAPI_JWT_ALGORITHM=EdDSA
+CODEAPI_JWT_KID=lc-codeapi-dev-2026-05
+CODEAPI_JWT_ISSUER=librechat
+CODEAPI_JWT_AUDIENCE=codeapi
+CODEAPI_JWT_TTL_SECONDS=300
+CODEAPI_JWT_MINT_CACHE_SECONDS=30
+CODEAPI_JWT_SINGLE_TENANT_ID=legacy
+CODEAPI_JWT_PRIVATE_JWK_JSON=<request from a team member; ask Kiel for the current value>
+```
+
+`CODEAPI_JWT_PRIVATE_JWK_JSON` is private key material. Do not commit it, paste it into tickets, or share it in chat. Request the current value from a team member; Kiel can direct you to the appropriate owner.
+
 31. `SKILL_SCANNER_URL=https://ai-registry-dev.ctk.au.deloitte.com/v1/scan?verbose=false`
 32. `SKILL_SCANNER_TIMEOUT_MS=15000`
 33. `SKILL_SCANNER_MIN_SEVERITY=high`
