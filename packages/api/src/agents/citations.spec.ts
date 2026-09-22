@@ -882,8 +882,8 @@ describe('appendGuaranteedMCPCitations', () => {
 describe('appendMCPDisclaimers', () => {
   const DISCLAIMER = 'Please review accuracy of all the responses before reusing them.';
   const STATIC_MESSAGE =
-    'Please note that this response uses data from the KX & DPN Connector. Review the accuracy of ' +
-    'all KX & DPN citations before reusing them.';
+    'Please note that this response uses data from the KX and DPN Connector. Review the accuracy of ' +
+    'all KX and DPN citations before reusing them.';
 
   it('appends the fixed KX disclaimer with a guidelines link once configured', () => {
     const parts = [textPart('Here is the answer.')];
@@ -1060,7 +1060,7 @@ describe('applyEndOfTraceCitations', () => {
       mcpUsageGuidelinesUrl: 'https://resources.deloitte.com/sites/kx/usage-guidelines',
     });
     const text = readText(parts[0]);
-    const staticMessage = 'Please note that this response uses data from the KX & DPN Connector.';
+    const staticMessage = 'Please note that this response uses data from the KX and DPN Connector.';
     expect(text).toContain(`${MARKER}turn0mcp0`);
     expect(text).toContain(staticMessage);
     expect(text).toContain(
