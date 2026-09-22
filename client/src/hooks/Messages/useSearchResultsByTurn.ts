@@ -160,6 +160,7 @@ export function useSearchResultsByTurn(attachments?: TAttachment[]) {
             link: source.link || `#mcp-${source.serverName}-${source.toolName}`,
             type: 'mcp' as const,
             usageRestriction: source.usageRestriction,
+            date: source.date, // Deloitte Custom Change: citation date
             usageRestrictionLink: source.usageRestrictionLink,
           }));
 

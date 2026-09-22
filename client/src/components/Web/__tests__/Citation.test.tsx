@@ -26,7 +26,7 @@ function StatefulCitationProvider({ children }: { children: React.ReactNode }) {
 }
 
 jest.mock('~/hooks', () => ({
-  useLocalize: () => (key: string, values?: { label?: string; pages?: string }) => {
+  useLocalize: () => (key: string, values?: { label?: string; pages?: string; date?: string }) => {
     if (key === 'com_citation_source') {
       return 'Source';
     }
@@ -44,6 +44,13 @@ jest.mock('~/hooks', () => ({
     }
     if (key === 'com_ui_tool_name_file_search') {
       return 'File Search';
+    }
+    // Deloitte Custom Change: citation date labels
+    if (key === 'com_citation_published') {
+      return `Published: ${values?.date ?? ''}`;
+    }
+    if (key === 'com_citation_uploaded') {
+      return `Uploaded: ${values?.date ?? ''}`;
     }
     return key;
   },
@@ -469,6 +476,159 @@ describe('Citation', () => {
 
     expect(dialog.querySelector('img')).not.toBeInTheDocument();
     expect(dialog.querySelector('svg.lucide-file-text')).toBeInTheDocument();
+  });
+
+  // Deloitte Custom Change: verify the MCP tooltip surfaces a citation's own `date` field.
+  it('shows the published date in the MCP tooltip when the source carries one', () => {
+    const searchResults: Record<string, SearchResultData> = {
+      '0': {
+        mcp_results: [
+          {
+            attribution: 'kx',
+            link: 'https://stagequals.deloitteresources.com/quals/view/1/description/',
+            serverName: 'kx',
+            snippet: 'Qualification summary text.',
+            title: 'Digital Twin Implementation',
+            toolName: 'kx_query',
+            type: 'mcp',
+            date: '24 Jun 2026',
+          },
+        ],
+      },
+    };
+
+    renderWithProviders(
+      <Citation
+        citationId="cite-date-1"
+        citationType="standalone"
+        node={{
+          properties: {
+            citation: { turn: 0, refType: 'mcp', index: 0 },
+            citationId: 'cite-date-1',
+          },
+        }}
+      />,
+      searchResults,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'More details about KX' }));
+
+    expect(screen.getByRole('dialog')).toHaveTextContent('Published: 24 Jun 2026');
+  });
+
+  // Deloitte Custom Change: verify the fallback that extracts a date from a `PublishedDate:` snippet when the source has no dedicated `date` field.
+  it('falls back to extracting the published date from the snippet when the source has no date field', () => {
+    const searchResults: Record<string, SearchResultData> = {
+      '0': {
+        mcp_results: [
+          {
+            attribution: 'ibisworld',
+            link: 'https://my.ibisworld.com/au/en/industry-specialized/56162/at-a-glance',
+            serverName: 'ibisworld',
+            snippet:
+              'Country: AU, Industry: Gold Ore Mining, PublishedDate: 2026-06-24T00:00:00, Body: ...',
+            title: 'Gold Ore Mining',
+            toolName: 'ibisworld_report_sections',
+            type: 'mcp',
+          },
+        ],
+      },
+    };
+
+    renderWithProviders(
+      <Citation
+        citationId="cite-date-2"
+        citationType="standalone"
+        node={{
+          properties: {
+            citation: { turn: 0, refType: 'mcp', index: 0 },
+            citationId: 'cite-date-2',
+          },
+        }}
+      />,
+      searchResults,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'More details about Gold Ore Mining' }));
+
+    expect(screen.getByRole('dialog')).toHaveTextContent('Published: 24 Jun 2026');
+  });
+
+  it('does not extract a date from an UnpublishedDate field', () => {
+    const searchResults: Record<string, SearchResultData> = {
+      '0': {
+        mcp_results: [
+          {
+            attribution: 'ibisworld',
+            link: 'https://my.ibisworld.com/au/en/industry-specialized/56162/at-a-glance',
+            serverName: 'ibisworld',
+            snippet: 'Country: AU, UnpublishedDate: 2026-06-24T00:00:00, Body: ...',
+            title: 'Gold Ore Mining',
+            toolName: 'ibisworld_report_sections',
+            type: 'mcp',
+          },
+        ],
+      },
+    };
+
+    renderWithProviders(
+      <Citation
+        citationId="cite-date-2"
+        citationType="standalone"
+        node={{
+          properties: {
+            citation: { turn: 0, refType: 'mcp', index: 0 },
+            citationId: 'cite-date-2',
+          },
+        }}
+      />,
+      searchResults,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'More details about Gold Ore Mining' }));
+
+    expect(screen.getByRole('dialog')).not.toHaveTextContent('Published: 24 Jun 2026');
+  });
+
+  // Deloitte Custom Change: verify the file_search tooltip surfaces the file's uploaded date.
+  it('shows the uploaded date in the file tooltip when the file has an uploadedAt timestamp', () => {
+    const searchResults: Record<string, SearchResultData> = {
+      '0': {
+        references: [
+          {
+            attribution: 'Tutorial Imazing.pdf',
+            fileId: 'file-456',
+            fileName: 'Tutorial Imazing.pdf',
+            link: '#file-456',
+            metadata: {
+              fileBytes: 2048,
+              fileType: 'application/pdf',
+              uploadedAt: '2025-11-06T00:00:00Z',
+            },
+            title: 'Tutorial Imazing.pdf',
+            type: 'file',
+          },
+        ],
+      },
+    };
+
+    renderWithProviders(
+      <Citation
+        citationId="cite-date-3"
+        citationType="standalone"
+        node={{
+          properties: {
+            citation: { turn: 0, refType: 'file', index: 0 },
+            citationId: 'cite-date-3',
+          },
+        }}
+      />,
+      searchResults,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /More details about/ }));
+
+    expect(screen.getByRole('dialog')).toHaveTextContent('Uploaded: 06 Nov 2025');
   });
 
   it('renders the configured server logo in the composite MCP tooltip header', () => {

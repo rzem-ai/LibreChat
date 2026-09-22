@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import * as Ariakit from '@ariakit/react';
 import { VisuallyHidden } from '@ariakit/react';
 import { ChevronDown, FileText, Folder } from 'lucide-react';
+import type { TranslationKeys } from '~/hooks/useLocalize';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -10,6 +11,8 @@ export interface SourceData {
   title?: string;
   attribution?: string;
   snippet?: string;
+  /** Deloitte Custom Change: citation date, formatted for display (e.g. "06 Nov 2025"). */
+  date?: string;
 }
 
 interface SourceHovercardProps {
@@ -63,6 +66,9 @@ export function TooltipContent({
   href,
   onClick,
   subtitle,
+  // Deloitte Custom Change: citation date, shown below the title
+  date,
+  dateLabelKey = 'com_citation_published',
   children,
 }: {
   icon: ReactNode;
@@ -70,8 +76,11 @@ export function TooltipContent({
   href?: string;
   onClick?: (e: React.MouseEvent) => void;
   subtitle?: string;
+  date?: string;
+  dateLabelKey?: TranslationKeys;
   children?: ReactNode;
 }) {
+  const localize = useLocalize();
   const titleClassName =
     'inline-block break-words text-sm font-medium leading-[1.5] text-text-primary';
   let titleElement: ReactNode;
@@ -103,6 +112,10 @@ export function TooltipContent({
   return (
     <div className="min-w-0">
       {titleElement}
+      {/* Deloitte Custom Change: citation date, shown below the title */}
+      {date && (
+        <p className="mt-0.5 text-xs text-text-secondary">{localize(dateLabelKey, { date })}</p>
+      )}
       {children}
       {subtitle && (
         <div className="mt-2 flex items-center gap-1.5 text-xs text-text-secondary">
@@ -256,6 +269,8 @@ export function SourceHovercard({
                     title={source.title || source.link}
                     href={source.link}
                     subtitle={domain}
+                    // Deloitte Custom Change: citation date
+                    date={source.date}
                   >
                     {source.snippet && (
                       <p className="mt-1.5 line-clamp-4 break-words text-xs text-text-secondary md:text-sm">

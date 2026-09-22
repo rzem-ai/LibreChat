@@ -1359,8 +1359,8 @@ export function appendMCPDisclaimers(
 
   const guidelinesText = `[KX usage guidelines](${mcpUsageGuidelinesUrl || DEFAULT_KX_USAGE_GUIDELINES_URL})`;
   const disclaimer =
-    'Please note that this response uses data from the KX & DPN Connector. Review the accuracy ' +
-    `of all KX & DPN citations before reusing them. See the ${guidelinesText} to learn more.`;
+    'Please note that this response uses data from the KX and DPN Connector. Review the accuracy ' +
+    `of all KX and DPN citations before reusing them. See the ${guidelinesText} to learn more.`;
 
   const text = readText(targetPart) ?? '';
   writeText(targetPart, `${text}\n\n${disclaimer}`);

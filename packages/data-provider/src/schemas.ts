@@ -891,6 +891,8 @@ export type MCPResultSource = {
   title?: string;
   link?: string;
   usageRestriction?: boolean;
+  /** Deloitte Custom Change: citation date, formatted for display (e.g. "06 Nov 2025"). */
+  date?: string;
   /** Overrides `link` as the "Learn more" target on the usage-restriction notice (e.g. DPN's fixed terms-of-use page, rather than the profile itself). */
   usageRestrictionLink?: string;
 };
