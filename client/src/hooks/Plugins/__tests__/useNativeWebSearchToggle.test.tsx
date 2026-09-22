@@ -18,8 +18,11 @@ jest.mock('~/data-provider', () => ({
   useGetStartupConfig: jest.fn(() => ({ data: undefined })),
 }));
 
-jest.mock('~/Providers', () => ({
+jest.mock('~/Providers/ChatContext', () => ({
   useChatContext: () => ({ conversation: mockConversation }),
+}));
+
+jest.mock('~/Providers/AgentsMapContext', () => ({
   useAgentsMapContext: () => mockAgentsMap,
 }));
 

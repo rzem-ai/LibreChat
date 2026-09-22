@@ -1,13 +1,15 @@
 // Deloitte Custom Change: drives the native (provider) web-search pill
 import { useMemo, useEffect, useCallback } from 'react';
 import {
+  EModelEndpoint,
   LocalStorageKeys,
   isAgentsEndpoint,
   modelSupportsNativeWebSearch,
 } from 'librechat-data-provider';
 import { useGetEndpointsQuery, useGetAgentByIdQuery } from '~/data-provider';
 import useSetIndexOptions from '~/hooks/Conversations/useSetIndexOptions';
-import { useAgentsMapContext, useChatContext } from '~/Providers';
+import { useAgentsMapContext } from '~/Providers/AgentsMapContext';
+import { useChatContext } from '~/Providers/ChatContext';
 import { usePinnedTool } from './usePinnedTool';
 
 const NATIVE_WEB_SEARCH_TOOL_KEY = 'native_web_search';
@@ -41,7 +43,9 @@ export default function useNativeWebSearchToggle() {
   const supportedModels = effectiveProvider
     ? endpointsConfig[effectiveProvider]?.nativeWebSearch?.supportedModels
     : undefined;
-  const isSupported = modelSupportsNativeWebSearch(effectiveModel, supportedModels);
+  const isSupported =
+    effectiveProvider !== EModelEndpoint.bedrock &&
+    modelSupportsNativeWebSearch(effectiveModel, supportedModels);
 
   const { isPinned, setIsPinned } = usePinnedTool({
     toolKey: NATIVE_WEB_SEARCH_TOOL_KEY,
