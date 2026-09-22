@@ -1,0 +1,116 @@
+repository:
+  owner: Deloitte-Australia
+  name: tt-librechat
+
+labels:
+
+
+assignees:
+  Jack: jwalkinshaw_deloitte
+  Ally: afulton_deloitte
+  Connor: cforsyth_deloitte
+  Sunny: suntrinh_deloitte
+  Emmanuel: emchu_deloitte
+  Emanuel: emchu_deloitte
+  Jyotin: jyotarora_deloitte
+  Alleena: alwaseem_deloitte
+  Kiel: kbustamante_deloitte
+  Isabelle: istran_deloitte
+  Mark Sturtz: msturtz_deloitte
+  Ish: iarifin_deloitte
+  Ishaq: iarifin_deloitte
+  Carlton: cmapundu_deloitte
+  Indi: iabeywickrama_deloitte
+  Kosi: kakaeze_deloitte
+  Nik: niwright_deloitte
+  Raman: rasangra_deloitte
+  Venkat: venramamurthi_deloitte
+
+epics:
+  - title: "Epic: Agents"
+    number: 468
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/468
+  - title: "Epic: Strategy Work"
+    number: 359
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/359
+  - title: "Epic: Change, Comms and Training"
+    number: 357
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/357
+  - title: "Extend DESC MCP - copy LUX"
+    number: 316
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/316
+  - title: "Extend GIMS MCP - copy LUX"
+    number: 315
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/315
+  - title: "Make SharePoint single site MCP"
+    number: 314
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/314
+  - title: "Create web search MCP"
+    number: 313
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/313
+  - title: "Add ZScaler to Crawl4AI"
+    number: 312
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/312
+  - title: "Merge from EBuddy again to tt-librechat-dep"
+    number: 311
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/311
+  - title: "Schedule penetration testing on Code Interpreter"
+    number: 310
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/310
+  - title: "Get exemption from Cyber to start prod deployment/pen testing while DAD documentation is being finished"
+    number: 309
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/309
+  - title: "Update URL and keyvault for langfuse"
+    number: 308
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/308
+  - title: "Create a project in langfuse UAT"
+    number: 307
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/307
+  - title: "Deploy admin panel"
+    number: 306
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/306
+  - title: "Switch redis to valkey in tt-librechat"
+    number: 305
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/305
+  - title: "Confirm open source PR privileges and process"
+    number: 304
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/304
+  - title: "Fix all vulnerabilities in ea-code-runtime"
+    number: 303
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/303
+  - title: "Fix all vulnerabilities in ea-libreadmin"
+    number: 302
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/302
+  - title: "Fix all vulnerabilities in tt-librechat-rag"
+    number: 301
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/301
+  - title: "Fix required vulnerabilities in tt-librechat"
+    number: 300
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/300
+  - title: "Schedule workshop with SIEM team"
+    number: 299
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/299
+  - title: "Epic: Security"
+    number: 297
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/297
+  - title: "Epic: Ways of Working"
+    number: 253
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/253
+  - title: "Epic: Testing"
+    number: 251
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/251
+  - title: "Epic: Evaluation"
+    number: 250
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/250
+  - title: "Epic: File Handling"
+    number: 249
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/249
+  - title: "Epic: MCPs"
+    number: 248
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/248
+  - title: "Epic: Skills"
+    number: 247
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/247
+  - title: "Epic: Core Platform"
+    number: 231
+    url: https://github.com/Deloitte-Australia/tt-librechat/issues/231
