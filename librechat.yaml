@@ -158,8 +158,8 @@ memory:
   messageWindowSize: 5 # Number of recent messages to consider
   agent:
     enabled: true
-    provider: 'VertexAI US'
-    model: 'google/gemini-2.5-flash'
+    provider: 'Gemini Global'
+    model: 'google/gemini-3.1-flash-lite'
     instructions: |
       Only store stated preferences (e.g. I like X, I dislike Y) and any important facts/context about the user's work at Deloitte (e.g. current projects, team composition).
       Update or delete out-of-date information promptly.
@@ -194,7 +194,7 @@ endpoints:
     # Restrict Agent Builder to the providers supported by the curated model catalog.
     allowedProviders:
       - 'Azure Global'
-      - 'VertexAI US'
+      - 'Gemini Global'
       - anthropic
       - bedrock
     model: 'gpt-56-terra'
@@ -274,18 +274,20 @@ endpoints:
           - 'gpt-56-terra'
           - 'gpt-56-sol'
 
-    # --- VertexAI / Google (us-central1) ---
+    # --- VertexAI / Google (global) ---
     # OpenAI-compatible endpoint, model names use google/ prefix
-    - name: 'VertexAI US'
+    - name: 'Gemini Global'
       apiKey: 'dummy'
-      baseURL: '${BASE_URL_VERTEXAI}'
+      baseURL: '${BASE_URL_VERTEXAI_GLOBAL}'
       models:
         default:
-          - 'google/gemini-2.5-flash'
-          - 'google/gemini-2.5-pro'
+          - 'google/gemini-3.7-flash'
+          - 'google/gemini-3.6-flash'
+          - 'google/gemini-3.5-flash-lite'
+          - 'google/gemini-3.1-flash-lite'
         fetch: false
       titleConvo: true
-      titleModel: 'google/gemini-2.5-flash'
+      titleModel: 'google/gemini-3.1-flash-lite'
       modelDisplayLabel: 'Gemini'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
@@ -388,23 +390,41 @@ modelSpecs:
         model: 'gpt-56-sol'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: 'vertexai-us-gemini-2-5-flash'
-      label: 'Gemini 2.5 Flash'
+    - name: 'gemini-global-gemini-3-7-flash'
+      label: 'Gemini 3.7 Flash'
       group: 'Gemini Global'
       groupIcon: 'google'
       iconURL: 'google'
       preset:
-        endpoint: 'VertexAI US'
-        model: 'google/gemini-2.5-flash'
+        endpoint: 'Gemini Global'
+        model: 'google/gemini-3.7-flash'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: 'vertexai-us-gemini-2-5-pro'
-      label: 'Gemini 2.5 Pro'
+    - name: 'gemini-global-gemini-3-6-flash'
+      label: 'Gemini 3.6 Flash'
       group: 'Gemini Global'
       iconURL: 'google'
       preset:
-        endpoint: 'VertexAI US'
-        model: 'google/gemini-2.5-pro'
+        endpoint: 'Gemini Global'
+        model: 'google/gemini-3.6-flash'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'gemini-global-gemini-3-5-flash-lite'
+      label: 'Gemini 3.5 Flash Lite'
+      group: 'Gemini Global'
+      iconURL: 'google'
+      preset:
+        endpoint: 'Gemini Global'
+        model: 'google/gemini-3.5-flash-lite'
+        promptPrefix: *deloitteSystemPrompt
+
+    - name: 'gemini-global-gemini-3-1-flash-lite'
+      label: 'Gemini 3.1 Flash Lite'
+      group: 'Gemini Global'
+      iconURL: 'google'
+      preset:
+        endpoint: 'Gemini Global'
+        model: 'google/gemini-3.1-flash-lite'
         promptPrefix: *deloitteSystemPrompt
 
     - name: 'anthropic-claude-haiku-4-5'
