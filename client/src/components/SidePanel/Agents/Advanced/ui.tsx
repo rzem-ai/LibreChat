@@ -10,7 +10,6 @@ import {
 import type { ReactNode } from 'react';
 import { useLocalize } from '~/hooks';
 import { ESide } from '~/common';
-import { cn } from '~/utils';
 
 export const sectionLabelClass =
   'text-[11px] font-medium uppercase tracking-wide text-text-secondary';
@@ -41,17 +40,23 @@ export function BetaPill() {
 /** "Limited Access" accent pill. `wrap` breaks the label onto two lines for narrow layouts. */
 export function LimitedAccessPill({ wrap = false }: { wrap?: boolean }) {
   const localize = useLocalize();
+  const label = localize('com_ui_limited_access');
+
+  if (wrap) {
+    return (
+      <span className="inline-flex w-[68px] flex-shrink-0 items-center justify-center rounded-3xl border border-amber-600/40 bg-amber-500/10 px-1.5 py-0.5 text-amber-700 dark:text-amber-400">
+        <span className="w-full text-center text-[9px] font-medium uppercase leading-tight tracking-wide">
+          {label}
+        </span>
+      </span>
+    );
+  }
+
   return (
     <Tag
-      label={localize('com_ui_limited_access')}
-      className={cn(
-        'flex-shrink-0 border border-amber-600/40 bg-amber-500/10 text-amber-700 dark:text-amber-400',
-        wrap && '!max-h-none !overflow-visible',
-      )}
-      labelClassName={cn(
-        'px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide',
-        wrap ? '!ml-0 w-14 text-center leading-tight' : 'whitespace-nowrap',
-      )}
+      label={label}
+      className="flex-shrink-0 border border-amber-600/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+      labelClassName="px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide whitespace-nowrap"
     />
   );
 }
