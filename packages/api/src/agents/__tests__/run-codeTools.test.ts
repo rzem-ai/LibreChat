@@ -1,3 +1,4 @@
+// Deloitte Custom Change: covers MCP tool membership in Code Interpreter sessions.
 import { createRun } from '~/agents/run';
 
 /**
@@ -77,9 +78,11 @@ function makeAgent(overrides?: Record<string, unknown>) {
   };
 }
 
-async function captureRunConfig(): Promise<Record<string, unknown>> {
+async function captureRunConfig(
+  agents: Array<Record<string, unknown>> = [makeAgent()],
+): Promise<Record<string, unknown>> {
   await createRun({
-    agents: [makeAgent()] as never,
+    agents: agents as never,
     signal: new AbortController().signal,
     streaming: true,
     streamUsage: true,
@@ -108,6 +111,74 @@ describe('createRun code-tool eager/session wiring', () => {
     const runConfig = await captureRunConfig();
     expect(runConfig.codeSessionToolNames).toEqual(
       expect.arrayContaining(['create_file', 'edit_file', 'read_file']),
+    );
+  });
+
+  it('includes MCP-delimited tools from toolRegistry but excludes non-MCP and action-collision tools', async () => {
+    const agent = makeAgent({
+      codeEnvAvailable: true,
+      mcpAvailableTools: { sharepoint: { sp_download_file_mcp_sharepoint: {} } },
+      toolRegistry: new Map([
+        ['sp_download_file_mcp_sharepoint', {}],
+        ['create_file', {}],
+        // An action whose operationId itself contains "_mcp_", preceding
+        // "_action_" — isActionTool must classify this as an action, not MCP.
+        ['sync_mcp_state_action_api---example---com', {}],
+      ]),
+    });
+    const runConfig = await captureRunConfig([agent]);
+    expect(runConfig.codeSessionToolNames).toEqual(
+      expect.arrayContaining(['sp_download_file_mcp_sharepoint']),
+    );
+    expect(runConfig.codeSessionToolNames).not.toEqual(
+      expect.arrayContaining(['sync_mcp_state_action_api---example---com']),
+    );
+  });
+
+  it('includes an MCP tool when its server name contains the action delimiter', async () => {
+    const mcpTool = 'sp_download_file_mcp_sharepoint_action_eu';
+    const agent = makeAgent({
+      codeEnvAvailable: true,
+      mcpAvailableTools: { sharepoint_action_eu: { [mcpTool]: {} } },
+      toolRegistry: new Map([[mcpTool, {}]]),
+    });
+
+    const runConfig = await captureRunConfig([agent]);
+
+    expect(runConfig.codeSessionToolNames).toEqual(expect.arrayContaining([mcpTool]));
+  });
+
+  it('recursively collects MCP tools from nested subagentAgentConfigs', async () => {
+    const grandchild = makeAgent({
+      id: 'agent_grandchild',
+      codeEnvAvailable: true,
+      toolRegistry: new Map([['nested_download_mcp_sharepoint', {}]]),
+    });
+    const child = makeAgent({
+      id: 'agent_child',
+      codeEnvAvailable: true,
+      toolRegistry: new Map([['child_download_mcp_onedrive', {}]]),
+      subagentAgentConfigs: [grandchild],
+    });
+    const root = makeAgent({ subagentAgentConfigs: [child] });
+    const runConfig = await captureRunConfig([root]);
+    expect(runConfig.codeSessionToolNames).toEqual(
+      expect.arrayContaining(['child_download_mcp_onedrive', 'nested_download_mcp_sharepoint']),
+    );
+  });
+
+  it('excludes MCP tools from an agent without codeEnvAvailable, even if a nested subagent has one', async () => {
+    const grandchild = makeAgent({
+      id: 'agent_grandchild_no_env',
+      toolRegistry: new Map([['nested_download_mcp_sharepoint', {}]]),
+    });
+    const root = makeAgent({
+      toolRegistry: new Map([['root_download_mcp_onedrive', {}]]),
+      subagentAgentConfigs: [grandchild],
+    });
+    const runConfig = await captureRunConfig([root]);
+    expect(runConfig.codeSessionToolNames).not.toEqual(
+      expect.arrayContaining(['root_download_mcp_onedrive', 'nested_download_mcp_sharepoint']),
     );
   });
 });

@@ -2095,6 +2095,7 @@ export const configSchema = z.object({
   mcpSettings: z
     .object({
       allowedDomains: z.array(z.string()).optional(),
+      codeFileAllowedDomains: z.array(z.string()).optional(),
       allowedAddresses: allowedAddressesSchema,
     })
     .optional(),

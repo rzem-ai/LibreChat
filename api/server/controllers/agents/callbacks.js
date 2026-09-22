@@ -954,13 +954,13 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null, jo
           }),
         );
       }
-      return;
     }
 
     if (!isCodeArtifactToolOutput(output)) {
       return;
     }
 
+    // Deloitte Custom Change: persist MCP Code Interpreter files alongside image artifacts.
     if (!output.artifact.files) {
       return;
     }
@@ -1311,7 +1311,6 @@ function createResponsesToolEndCallback({ req, res, tracker, artifactPromises })
           }),
         );
       }
-      return;
     }
 
     if (!isCodeArtifactToolOutput(output)) {

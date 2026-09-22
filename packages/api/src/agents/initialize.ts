@@ -1291,32 +1291,24 @@ export async function initializeAgent(
    */
   let backgroundToolNames: string[] | undefined;
   if (params.backgroundToolsAvailable === true) {
-    /** Tool names embed `normalizeServerName(server)` (see MCP.js tool keys)
-     *  while `mcpConfig` keys the original name, so index the ephemeral
-     *  servers by their normalized form. */
-    const ephemeralServerNames = new Set<string>();
+    // Deloitte Custom Change: keep request-scoped MCP connections foreground-only.
+    const configuredMCPServerNames = Object.keys(req.config?.mcpConfig ?? {}).map(
+      normalizeServerName,
+    );
+    const ephemeralMCPServerNames = new Set<string>();
     for (const [serverName, serverConfig] of Object.entries(req.config?.mcpConfig ?? {})) {
       if (serverConfig != null && requiresEphemeralUserConnection(serverConfig)) {
-        ephemeralServerNames.add(normalizeServerName(serverName));
+        ephemeralMCPServerNames.add(normalizeServerName(serverName));
       }
     }
-    /** Resolve the boundary against every configured server, not just the
-     *  ephemeral subset: a non-ephemeral name ending in an ephemeral one would
-     *  otherwise be misread as ephemeral. */
-    const allServerNames = Object.keys(req.config?.mcpConfig ?? {}).map(normalizeServerName);
     const backgroundResult = applyBackgroundToolCalls({
       toolDefinitions,
       toolRegistry,
       toolOptions: agent.tool_options,
       capabilityToolNames,
-      /** Tools of ephemeral request-scoped MCP servers (runtime body
-       *  placeholders) never get the param: their connection dies at request
-       *  end, so the executor would only downgrade the call to foreground.
-       *  Unknown servers stay eligible — the executor's per-instance tag is
-       *  the fail-safe for those. */
       excludeTool: (toolName) => {
-        const [, serverName] = splitMCPToolKey(toolName, allServerNames);
-        return serverName != null && ephemeralServerNames.has(serverName);
+        const [, serverName] = splitMCPToolKey(toolName, configuredMCPServerNames);
+        return serverName != null && ephemeralMCPServerNames.has(serverName);
       },
     });
     toolDefinitions = backgroundResult.toolDefinitions;
@@ -1503,7 +1495,6 @@ export async function initializeAgent(
       .filter((toolDefinition) => isFileAuthoringToolDefinition(toolDefinition))
       .map((toolDefinition) => toolDefinition.name),
   );
-
   const initializedAgent: InitializedAgent = {
     ...agent,
     resendFiles,

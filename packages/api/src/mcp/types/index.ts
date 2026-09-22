@@ -149,9 +149,17 @@ export type Artifacts =
         fileCitations?: boolean;
       };
       [Tools.web_search]?: SearchResultData;
-      files?: Array<{ id: string; name: string }>;
+      files?: Array<{
+        id: string;
+        name: string;
+        storage_session_id?: string;
+        resource_id?: string;
+        kind?: 'user' | 'agent' | 'skill';
+      }>;
       session_id?: string;
       file_ids?: string[];
+      /** Deloitte Custom Change: signed MCP download resource for Code Interpreter. */
+      codeFile?: { name: string; mimeType?: string; url: string };
     }
   | undefined;
 

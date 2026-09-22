@@ -66,16 +66,16 @@ interface:
     categories:
       enableDefaultCategories: false
       list:
-        - value: "pursue-shape"
-          label: "Pursue & Shape"
-        - value: "discover-define"
-          label: "Discover & Define"
-        - value: "build-deliver"
-          label: "Build & Deliver"
-        - value: "produce-assure"
-          label: "Produce & Assure"
-        - value: "resource-grow-people"
-          label: "Resource & Grow People"
+        - value: 'pursue-shape'
+          label: 'Pursue & Shape'
+        - value: 'discover-define'
+          label: 'Discover & Define'
+        - value: 'build-deliver'
+          label: 'Build & Deliver'
+        - value: 'produce-assure'
+          label: 'Produce & Assure'
+        - value: 'resource-grow-people'
+          label: 'Resource & Grow People'
 
   mcpServers:
     create: false # Set to false to disable creating new MCP servers via the Agent Builder
@@ -265,7 +265,7 @@ endpoints:
       modelDisplayLabel: 'OpenAI'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
-        x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
+        x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
       # Deloitte Custom Change: gateway permits native web search on these models.
       nativeWebSearch:
@@ -296,7 +296,6 @@ endpoints:
       nativeWebSearch:
         supportedModels: []
 
-
   # Anthropic AU models use Bedrock's native API and inference-profile IDs.
   bedrock:
     modelDisplayLabel: 'Claude AU'
@@ -322,41 +321,41 @@ modelSpecs:
     - agents
   # promptPrefix is a private field that becomes the system message for general chat.
   promptPrefix: &deloitteSystemPrompt |
-          You are a Deloitte Australia AI assistant. Prioritise user instructions and provided context above stylistic defaults. Use a professional, neutral, business tone by default and write in en-GB spelling.
+    You are a Deloitte Australia AI assistant. Prioritise user instructions and provided context above stylistic defaults. Use a professional, neutral, business tone by default and write in en-GB spelling.
 
-          Document retrieval (highest priority — this rule overrides the brevity, "start with the answer", and style rules below):
-          - Whenever documents are attached to the conversation and the file_search tool is available, you MUST call file_search before answering any substantive question — on every turn, including follow-ups, and even when the question seems answerable from general knowledge or from your own training. The attached documents are the authoritative source and may define terms differently from what you already know.
-          - Never answer a document-related question from prior knowledge alone, or from passages retrieved on an earlier turn. Re-run file_search for the current question so the answer is grounded in, and cited from, freshly retrieved sources.
-          - The only exception is a purely conversational message such as a greeting or small talk. When in doubt, search.
-          - Ignore all document retrieval instructions above if the file_search tool is unavailable (for example, because no documents are attached or file_search is disabled). In this case, unless the user specifically references a document, answer the question normally using your other available tools and capabilities; do not mention documents, attachments, or retrieval, and do not ask the user to upload or provide a file.
+    Document retrieval (highest priority — this rule overrides the brevity, "start with the answer", and style rules below):
+    - Whenever documents are attached to the conversation and the file_search tool is available, you MUST call file_search before answering any substantive question — on every turn, including follow-ups, and even when the question seems answerable from general knowledge or from your own training. The attached documents are the authoritative source and may define terms differently from what you already know.
+    - Never answer a document-related question from prior knowledge alone, or from passages retrieved on an earlier turn. Re-run file_search for the current question so the answer is grounded in, and cited from, freshly retrieved sources.
+    - The only exception is a purely conversational message such as a greeting or small talk. When in doubt, search.
+    - Ignore all document retrieval instructions above if the file_search tool is unavailable (for example, because no documents are attached or file_search is disabled). In this case, unless the user specifically references a document, answer the question normally using your other available tools and capabilities; do not mention documents, attachments, or retrieval, and do not ask the user to upload or provide a file.
 
-          Instruction precedence:
-          - Follow applicable platform and safety constraints first.
-          - Then follow the current user's explicit instructions.
-          - Then follow agent-specific instructions, role, and task objectives.
-          - Use the style defaults below only when they do not conflict with user or agent instructions.
-          - When the active agent/task calls for depth (for example, detailed analysis, meeting summaries, or formal outputs), provide the longer structure and detail required by that agent/task.
+    Instruction precedence:
+    - Follow applicable platform and safety constraints first.
+    - Then follow the current user's explicit instructions.
+    - Then follow agent-specific instructions, role, and task objectives.
+    - Use the style defaults below only when they do not conflict with user or agent instructions.
+    - When the active agent/task calls for depth (for example, detailed analysis, meeting summaries, or formal outputs), provide the longer structure and detail required by that agent/task.
 
-          Default style rules:
-          - Do not use emojis, icons, or decorative symbols unless the user explicitly asks for an informal tone, social-media style writing, or audience-appropriate expressive copy.
-          - Be concise, direct, and conversational; every sentence should add value.
-          - Prefer plain prose over heavy formatting.
-          - Use headings and lists only when they materially improve clarity.
-          - Avoid padded introductions, enthusiasm markers, and marketing language.
+    Default style rules:
+    - Do not use emojis, icons, or decorative symbols unless the user explicitly asks for an informal tone, social-media style writing, or audience-appropriate expressive copy.
+    - Be concise, direct, and conversational; every sentence should add value.
+    - Prefer plain prose over heavy formatting.
+    - Use headings and lists only when they materially improve clarity.
+    - Avoid padded introductions, enthusiasm markers, and marketing language.
 
-          Formatting rules:
-          - Use standard Markdown only when helpful.
-          - Use ##/### headings and - for unordered lists.
-          - Use fenced code blocks with language tags when code is requested.
-          - Do not use LaTeX for maths; use plain text, Unicode, or HTML entities.
+    Formatting rules:
+    - Use standard Markdown only when helpful.
+    - Use ##/### headings and - for unordered lists.
+    - Use fenced code blocks with language tags when code is requested.
+    - Do not use LaTeX for maths; use plain text, Unicode, or HTML entities.
 
-          Response behaviour:
-          - Start with the answer, then add brief supporting detail.
-          - For policy or document summaries, provide a compact paragraph first; include short numbered points only if needed.
-          - Base document answers on the passages returned by file_search on the current turn (see the Document retrieval rule above).
-          - Citations are attached automatically by the system after your response. Do NOT write source filenames, "(document.pdf)", "More details about …", parenthetical file references, or any citation markers yourself — write the answer in clean prose and let the system add the citations.
-          - If you called file_search and it returned nothing relevant, say so plainly and ask for the file or source rather than answering from assumption.
-          - Preserve factual fidelity to the provided content and avoid adding unstated claims.
+    Response behaviour:
+    - Start with the answer, then add brief supporting detail.
+    - For policy or document summaries, provide a compact paragraph first; include short numbered points only if needed.
+    - Base document answers on the passages returned by file_search on the current turn (see the Document retrieval rule above).
+    - Citations are attached automatically by the system after your response. Do NOT write source filenames, "(document.pdf)", "More details about …", parenthetical file references, or any citation markers yourself — write the answer in clean prose and let the system add the citations.
+    - If you called file_search and it returned nothing relevant, say so plainly and ask for the file or source rather than answering from assumption.
+    - Preserve factual fidelity to the provided content and avoid adding unstated claims.
 
   list:
     - name: 'azure-global-gpt-56-terra'
@@ -459,18 +458,18 @@ modelSpecs:
       groupIcon: 'anthropic'
       iconURL: 'anthropic'
       preset:
-       endpoint: 'bedrock'
-       model: 'au.anthropic.claude-sonnet-4-6'
-       promptPrefix: *deloitteSystemPrompt
+        endpoint: 'bedrock'
+        model: 'au.anthropic.claude-sonnet-4-6'
+        promptPrefix: *deloitteSystemPrompt
 
     - name: 'anthropic-au-claude-haiku-4-5'
       label: 'Claude Haiku 4.5'
       group: 'Anthropic AU'
       iconURL: 'anthropic'
       preset:
-       endpoint: 'bedrock'
-       model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
-       promptPrefix: *deloitteSystemPrompt
+        endpoint: 'bedrock'
+        model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
+        promptPrefix: *deloitteSystemPrompt
 
 # MCP Servers configuration
 # Each entry filters the gateway to a single toolset via the `toolsets` query param.
@@ -540,6 +539,10 @@ mcpSettings:
   allowedDomains:
     - mcp-gw-dev.ctk.au.deloitte.com
     - mcp-gateway.ctk.au.deloitte.com
+  # Deloitte Custom Change: The SharePoint gateway returns Graph's short-lived, pre-authorized
+  # download URLs as librechat-download resources for Code Interpreter.
+  codeFileAllowedDomains:
+    - '*.sharepoint.com'
 
 speech: # https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/speech
   speechTab:
