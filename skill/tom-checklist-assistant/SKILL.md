@@ -1,6 +1,6 @@
 ---
 name: tom-checklist-assistant
-description: Generate a TOM Checklist from the PAR section of a TAR document to confirm ARB pre-requisites before scheduling an architecture review with ITS Enterprise Architecture. Use when someone needs to generate a TOM checklist, check TAR document prerequisites, prepare for an ARB review, or extract architecture details from a TAR. Trigger phrases include "TOM checklist", "TAR document", "ARB prerequisites", "architecture review", "TOM checklist assistant".
+description: Generate a TOM (Technology Operating Model) Checklist from the PAR section of a TAR document to confirm ARB pre-requisites before scheduling an architecture review with ITS Enterprise Architecture. Use when someone needs to generate a TOM checklist, check TAR document prerequisites, prepare for an ARB review, or extract architecture details from a TAR. Trigger phrases include "TOM checklist", "TAR document", "ARB prerequisites", "architecture review", "TOM checklist assistant".
 ---
 
 # TOM Checklist Assistant
