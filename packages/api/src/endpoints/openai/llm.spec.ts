@@ -416,6 +416,47 @@ describe('getOpenAILLMConfig', () => {
 
       expect(result.tools).not.toContainEqual({ type: 'web_search' });
     });
+
+    it('should enable web search for any model when supportedWebSearchModels is not configured', () => {
+      const result = getOpenAILLMConfig({
+        apiKey: 'test-api-key',
+        streaming: true,
+        modelOptions: {
+          model: 'some-unlisted-model',
+          web_search: true,
+        },
+      });
+
+      expect(result.tools).toContainEqual({ type: 'web_search' });
+    });
+
+    it('should enable web search for a model matching the configured supportedWebSearchModels list', () => {
+      const result = getOpenAILLMConfig({
+        apiKey: 'test-api-key',
+        streaming: true,
+        modelOptions: {
+          model: 'gpt-4o-2024-08-06',
+          web_search: true,
+        },
+        supportedWebSearchModels: ['gpt-4o'],
+      });
+
+      expect(result.tools).toContainEqual({ type: 'web_search' });
+    });
+
+    it('should throw for a model not in the configured supportedWebSearchModels list', () => {
+      expect(() =>
+        getOpenAILLMConfig({
+          apiKey: 'test-api-key',
+          streaming: true,
+          modelOptions: {
+            model: 'gpt-3.5-turbo',
+            web_search: true,
+          },
+          supportedWebSearchModels: ['gpt-4o'],
+        }),
+      ).toThrow(/web search is not available/i);
+    });
   });
 
   describe('GPT-5 max_tokens Handling', () => {

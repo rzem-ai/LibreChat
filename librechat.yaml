@@ -31,6 +31,8 @@ interface:
     - 'mcp'
     - 'execute_code'
     - 'artifacts'
+    # Deloitte Custom Change: pin the provider-native web search pill by default
+    - 'native_web_search'
 
   deloitteHeader:
     enabled: true
@@ -204,6 +206,17 @@ endpoints:
     titleConvo: true
     titleModel: 'claude-haiku-4-5'
     titleMethod: 'completion'
+    # Deloitte Custom Change: gates the native provider web-search tool per model.
+    # Omitting this key entirely enables native web search for EVERY model of the
+    # endpoint; an empty `supportedModels` list disables it for every model.
+    # Keep in sync with what the LLM Gateway actually permits.
+    nativeWebSearch:
+      supportedModels:
+        - 'claude-haiku-4-5'
+        - 'claude-sonnet-5'
+        - 'claude-sonnet-4-6'
+        - 'claude-opus-4-6'
+        - 'claude-opus-4-8'
 
   # ========================================
   # Custom endpoints (OpenAI-compatible format)
@@ -228,6 +241,14 @@ endpoints:
       headers:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
+      # Deloitte Custom Change: gateway permits native web search on these models.
+      nativeWebSearch:
+        supportedModels:
+          - 'gpt-41-nano'
+          - 'gpt-4o-mini'
+          - 'gpt-41-mini'
+          - 'gpt-41'
+          - 'gpt-4o'
 
     # --- Azure Global ---
     - name: 'Azure Global'
@@ -246,6 +267,12 @@ endpoints:
       headers:
         x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
         Content-Type: 'application/json'
+      # Deloitte Custom Change: gateway permits native web search on these models.
+      nativeWebSearch:
+        supportedModels:
+          - 'gpt-56-luna'
+          - 'gpt-56-terra'
+          - 'gpt-56-sol'
 
     # --- VertexAI / Google (us-central1) ---
     # OpenAI-compatible endpoint, model names use google/ prefix
@@ -264,6 +291,10 @@ endpoints:
       headers:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
+      # Deloitte Custom Change: gateway has native web search disabled for Gemini; the empty list
+      # is load-bearing — deleting this key would show a Web Search pill that errors.
+      nativeWebSearch:
+        supportedModels: []
 
 
   # Anthropic AU models use Bedrock's native API and inference-profile IDs.

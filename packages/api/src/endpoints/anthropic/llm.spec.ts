@@ -689,6 +689,38 @@ describe('getLLMConfig', () => {
           },
         ]);
       });
+
+      it('should enable web search for any model when supportedWebSearchModels is not configured', () => {
+        const result = getLLMConfig('sk-ant-websearch-key', {
+          modelOptions: { model: 'claude-haiku-4-5', web_search: true },
+        });
+
+        expect(result.tools).toContainEqual({
+          type: 'web_search_20250305',
+          name: 'web_search',
+        });
+      });
+
+      it('should enable web search for a model matching the configured supportedWebSearchModels list', () => {
+        const result = getLLMConfig('sk-ant-websearch-key', {
+          modelOptions: { model: 'claude-opus-4-6', web_search: true },
+          supportedWebSearchModels: ['claude-opus-4'],
+        });
+
+        expect(result.tools).toContainEqual({
+          type: 'web_search_20250305',
+          name: 'web_search',
+        });
+      });
+
+      it('should throw for a model not in the configured supportedWebSearchModels list', () => {
+        expect(() =>
+          getLLMConfig('sk-ant-websearch-key', {
+            modelOptions: { model: 'claude-haiku-4-5', web_search: true },
+            supportedWebSearchModels: ['claude-opus-4'],
+          }),
+        ).toThrow(/web search is not available/i);
+      });
     });
 
     describe('Production-like Configuration Scenarios', () => {
