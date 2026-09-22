@@ -8,11 +8,20 @@ const RSS_FEED = `<?xml version="1.0" encoding="UTF-8"?>
       <title><![CDATA[RBA holds cash rate steady]]></title>
       <link>https://www.afr.com/rba-holds-rate</link>
       <description><![CDATA[<p>The Reserve Bank held the cash rate steady, citing <b>stable</b> inflation.</p>]]></description>
+      <pubDate>Thu, 03 Sep 2026 12:00:00 +0000</pubDate>
     </item>
     <item>
       <title><![CDATA[Iron ore prices jump]]></title>
       <link>https://www.afr.com/iron-ore-jump</link>
       <description><![CDATA[Shares in the mining sector rallied on the news.]]></description>
+      <updated>2026-09-04T12:00:00Z</updated>
+    </item>
+    <item>
+      <title><![CDATA[Market update]]></title>
+      <link>https://www.afr.com/market-update</link>
+      <description><![CDATA[The market closed higher.]]></description>
+      <pubDate>not a date</pubDate>
+      <updated>2026-09-05T12:00:00Z</updated>
     </item>
   </channel>
 </rss>`;
@@ -24,11 +33,21 @@ const ATOM_FEED = `<?xml version="1.0" encoding="UTF-8"?>
     <title>First entry</title>
     <link rel="alternate" href="https://example.com/first" />
     <summary>Summary of the first entry.</summary>
+    <published>2026-09-03T12:00:00Z</published>
+    <updated>2026-09-04T12:00:00Z</updated>
   </entry>
   <entry>
     <title>Second entry</title>
     <link href="https://example.com/second" />
     <content>Body of the second entry.</content>
+    <updated>2026-09-05T12:00:00Z</updated>
+  </entry>
+  <entry>
+    <title>Third entry</title>
+    <link href="https://example.com/third" />
+    <summary>Summary of the third entry.</summary>
+    <published>not a date</published>
+    <updated>2026-09-06T12:00:00Z</updated>
   </entry>
 </feed>`;
 
@@ -40,7 +59,7 @@ describe('buildMCPResultSources', () => {
       content: RSS_FEED,
     });
 
-    expect(result.sources).toHaveLength(2);
+    expect(result.sources).toHaveLength(3);
     expect(result.sources[0]).toMatchObject({
       toolName: 'afr_get_latest_news',
       serverName: 'afr',
@@ -50,10 +69,13 @@ describe('buildMCPResultSources', () => {
     expect(result.sources[0].content).toContain('RBA holds cash rate steady');
     expect(result.sources[0].content).toContain('stable');
     expect(result.sources[0].content).not.toContain('<b>');
+    expect(result.sources[0].date).toBe('03 Sep 2026');
     expect(result.sources[1]).toMatchObject({
       title: 'Iron ore prices jump',
       link: 'https://www.afr.com/iron-ore-jump',
     });
+    expect(result.sources[1].date).toBe('04 Sep 2026');
+    expect(result.sources[2].date).toBe('05 Sep 2026');
   });
 
   it('splits an Atom feed into one source per entry, preferring the alternate link', () => {
@@ -63,7 +85,7 @@ describe('buildMCPResultSources', () => {
       content: ATOM_FEED,
     });
 
-    expect(result.sources).toHaveLength(2);
+    expect(result.sources).toHaveLength(3);
     expect(result.sources[0]).toMatchObject({
       title: 'First entry',
       link: 'https://example.com/first',
@@ -72,6 +94,23 @@ describe('buildMCPResultSources', () => {
       title: 'Second entry',
       link: 'https://example.com/second',
     });
+    expect(result.sources[2]).toMatchObject({
+      title: 'Third entry',
+      link: 'https://example.com/third',
+    });
+  });
+
+  // Deloitte Custom Change: verify Atom entries surface a date too, preferring `published` over `updated`.
+  it('dates Atom entries from published, falling back to updated when it is missing or invalid', () => {
+    const result = buildMCPResultSources({
+      toolName: 'get_feed',
+      serverName: 'example',
+      content: ATOM_FEED,
+    });
+
+    expect(result.sources[0].date).toBe('03 Sep 2026');
+    expect(result.sources[1].date).toBe('05 Sep 2026');
+    expect(result.sources[2].date).toBe('06 Sep 2026');
   });
 
   it('falls back to a single source for plain-text content', () => {

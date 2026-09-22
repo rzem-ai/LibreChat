@@ -1,5 +1,6 @@
 import type { MCPResultSource, MCPSourcesResult } from 'librechat-data-provider';
 import { resolveMCPSourceLink } from './linkTemplates';
+import { formatDisplayDate } from './format';
 
 interface PlainTextBody {
   PlainText?: string;
@@ -93,6 +94,46 @@ function humanizeSectionTitle(key: string): string {
 
 /**
  * Deloitte Custom Change
+ * Finds the first section carrying a given top-level string field (`Title`,
+ * `PublicationDate`) and returns `transform`'s result for it, skipping
+ * error-status sections exactly like the main section-building loop does —
+ * otherwise a field from a section the rest of the code treats as unusable
+ * (`StatusCode >= 400`) could still leak into every other section's citation.
+ * Tries the next section when `transform` rejects a value (returns
+ * `undefined`), e.g. an unparseable date, rather than giving up.
+ */
+function findReportFieldValue<T>(
+  sections: ReportSection[],
+  usesBodyWrapper: boolean,
+  field: 'Title' | 'PublicationDate',
+  transform: (raw: string) => T | undefined,
+): T | undefined {
+  for (const section of sections) {
+    if (!section || typeof section !== 'object') {
+      continue;
+    }
+    if (usesBodyWrapper) {
+      const isErrorStatus = typeof section.StatusCode === 'number' && section.StatusCode >= 400;
+      if (isErrorStatus || !section.Body) {
+        continue;
+      }
+    }
+    const value: unknown = usesBodyWrapper
+      ? section.Body?.[field]
+      : (section as Record<string, unknown>)[field];
+    if (typeof value !== 'string') {
+      continue;
+    }
+    const result = transform(value);
+    if (result !== undefined) {
+      return result;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Deloitte Custom Change
  * Finds the report's own title (e.g. "Finance in Australia") from a `Title`
  * section in the same payload, so every other section's citation can be
  * labeled `<report title>: <section title>` instead of just the section
@@ -103,26 +144,30 @@ function extractReportTitle(
   sections: ReportSection[],
   usesBodyWrapper: boolean,
 ): string | undefined {
-  for (const section of sections) {
-    if (!section || typeof section !== 'object') {
-      continue;
-    }
-    const body: unknown = usesBodyWrapper
-      ? section.Body?.Title
-      : (section as Record<string, unknown>).Title;
-    if (typeof body === 'string') {
-      const trimmed = body.trim();
-      if (trimmed) {
-        return trimmed;
-      }
-    }
-  }
-  return undefined;
+  return findReportFieldValue(sections, usesBodyWrapper, 'Title', (value) => {
+    const trimmed = value.trim();
+    return trimmed || undefined;
+  });
 }
 
 /** Prefixes `sectionTitle` with the report's own title, when one was found (see {@link extractReportTitle}). */
 function prefixSectionTitle(sectionTitle: string, reportTitle: string | undefined): string {
   return reportTitle ? `${reportTitle}: ${sectionTitle}` : sectionTitle;
+}
+
+/**
+ * Deloitte Custom Change
+ * Finds the report's own `PublicationDate` (e.g. `ibisworld_full_report`'s
+ * top-level `{ PublicationDate: "..." }` section), the same way
+ * {@link extractReportTitle} finds `Title` — so every section built from this
+ * report can carry the date as its own `date` field instead of
+ * `PublicationDate` becoming an unrelated, orphaned citation.
+ */
+function extractReportPublicationDate(
+  sections: ReportSection[],
+  usesBodyWrapper: boolean,
+): string | undefined {
+  return findReportFieldValue(sections, usesBodyWrapper, 'PublicationDate', formatDisplayDate);
 }
 
 function formatSwotBody(body: SwotBody): string | undefined {
@@ -388,6 +433,7 @@ export function buildReportSources({
     (section) => section && typeof section === 'object' && 'Body' in section,
   );
   const reportTitle = extractReportTitle(parsed.Sections, usesBodyWrapper);
+  const reportDate = extractReportPublicationDate(parsed.Sections, usesBodyWrapper);
 
   const sources: MCPResultSource[] = [];
   for (const section of parsed.Sections) {
@@ -410,6 +456,10 @@ export function buildReportSources({
       [bodyKey] = Object.keys(section);
       body = bodyKey ? (section as Record<string, unknown>)[bodyKey] : undefined;
     }
+    // Deloitte Custom Change: `PublicationDate` is surfaced via `reportDate` on every section instead of its own citation.
+    if (bodyKey === 'PublicationDate') {
+      continue;
+    }
     const formatted =
       bodyKey && body !== null && body !== undefined ? formatSectionBody(bodyKey, body) : undefined;
     if (!bodyKey || !formatted) {
@@ -424,6 +474,7 @@ export function buildReportSources({
       title,
       link,
       content: isTitleSection ? formatted : [title, formatted].filter(Boolean).join('\n\n'),
+      date: reportDate, // Deloitte Custom Change: citation date
     });
   }
 

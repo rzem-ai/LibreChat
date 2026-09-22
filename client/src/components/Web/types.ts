@@ -35,4 +35,6 @@ export interface Reference {
   snippet: string;
   sitelinks?: Sitelink[];
   attribution: string;
+  /** Deloitte Custom Change: citation date, formatted for display (e.g. "06 Nov 2025"). */
+  date?: string;
 }

@@ -4,7 +4,7 @@ import { buildSharePointSources } from '../sharepoint/sharepoint';
 import { buildEntitySources } from '../entities/entities';
 import { buildAfrSearchSources } from '../afr/afr';
 import { buildReportSources } from '../report';
-import { stripHtmlTags } from '../format';
+import { stripHtmlTags, formatDisplayDate } from '../format';
 import { buildKxSources } from '../kx/kx';
 
 /** Upper bound on articles extracted from a single feed (feeds are already newest-first). */
@@ -80,6 +80,7 @@ function buildSourceFromItem(
   title: string,
   link: string,
   description: string,
+  date?: string, // Deloitte Custom Change: citation date
 ): MCPResultSource | undefined {
   if (!title && !link) {
     return undefined;
@@ -91,6 +92,7 @@ function buildSourceFromItem(
     title,
     link,
     content: [title, cleanDescription].filter(Boolean).join('\n\n'),
+    date,
   };
 }
 
@@ -104,6 +106,7 @@ function parseRssItems(toolName: string, serverName: string, channel: XMLNode): 
       toText(item.title),
       extractRssLink(item),
       toText(item.description ?? item['content:encoded']),
+      formatDisplayDate(toText(item.pubDate)) ?? formatDisplayDate(toText(item.updated)),
     );
     if (source) {
       sources.push(source);
@@ -122,6 +125,7 @@ function parseAtomEntries(toolName: string, serverName: string, feed: XMLNode): 
       toText(entry.title),
       extractAtomLink(entry),
       toText(entry.summary ?? entry.content),
+      formatDisplayDate(toText(entry.published)) ?? formatDisplayDate(toText(entry.updated)),
     );
     if (source) {
       sources.push(source);

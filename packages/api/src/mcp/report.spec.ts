@@ -121,6 +121,79 @@ describe('buildReportSources', () => {
     expect(result).toBeUndefined();
   });
 
+  // Deloitte Custom Change: verify PublicationDate is surfaced as `date` instead of its own citation.
+  it('surfaces a Body-wrapped PublicationDate as the date field on every section, without its own citation', () => {
+    const result = buildReportSources({
+      toolName: 'ibisworld_report_sections',
+      serverName: 'cleartrack-mcp-gateway',
+      content: JSON.stringify({
+        Sections: [
+          {
+            RequestedSection: 'publicationdate',
+            StatusCode: 200,
+            Body: { PublicationDate: '2026-06-24T00:00:00' },
+          },
+          {
+            RequestedSection: 'industryoutlook',
+            StatusCode: 200,
+            Body: { IndustryOutlook: { PlainText: 'Revenue is forecast to grow.' } },
+          },
+        ],
+      }),
+    });
+
+    expect(result?.sources).toHaveLength(1);
+    expect(result?.sources[0].date).toBe('24 Jun 2026');
+    expect(result?.sources.some((source) => source.title === 'Publication Date')).toBe(false);
+  });
+
+  // Deloitte Custom Change: verify the flat-shape (non-Body-wrapped) PublicationDate path too.
+  it('surfaces a flat-shape PublicationDate as the date field on every section', () => {
+    const result = buildReportSources({
+      toolName: 'ibisworld_full_report',
+      serverName: 'cleartrack-mcp-gateway',
+      content: JSON.stringify({
+        Sections: [
+          { PublicationDate: '2026-06-24T00:00:00' },
+          { Definition: { PlainText: 'This industry mines gold ore.' } },
+        ],
+      }),
+    });
+
+    expect(result?.sources).toHaveLength(1);
+    expect(result?.sources[0].date).toBe('24 Jun 2026');
+  });
+
+  // Deloitte Custom Change: verify an error-status PublicationDate section is ignored, just like the main loop ignores it for citations.
+  it('ignores a PublicationDate from an error-status section, falling back to a later valid one', () => {
+    const result = buildReportSources({
+      toolName: 'ibisworld_report_sections',
+      serverName: 'cleartrack-mcp-gateway',
+      content: JSON.stringify({
+        Sections: [
+          {
+            RequestedSection: 'publicationdate',
+            StatusCode: 500,
+            Body: { PublicationDate: '2020-01-01T00:00:00' },
+          },
+          {
+            RequestedSection: 'publicationdate',
+            StatusCode: 200,
+            Body: { PublicationDate: '2026-06-24T00:00:00' },
+          },
+          {
+            RequestedSection: 'industryoutlook',
+            StatusCode: 200,
+            Body: { IndustryOutlook: { PlainText: 'Revenue is forecast to grow.' } },
+          },
+        ],
+      }),
+    });
+
+    expect(result?.sources).toHaveLength(1);
+    expect(result?.sources[0].date).toBe('24 Jun 2026');
+  });
+
   it('returns undefined when no section has usable PlainText', () => {
     const result = buildReportSources({
       toolName: 'ibisworld_report_sections',

@@ -204,6 +204,7 @@ describe('processFileCitations', () => {
           file_id: 'file_123',
           filename: 'example_from_db.pdf',
           source: 's3',
+          createdAt: new Date('2025-11-06T00:00:00Z'),
         },
         {
           file_id: 'file_456',
@@ -224,6 +225,7 @@ describe('processFileCitations', () => {
         type: 'file',
         metadata: {
           storageType: 's3',
+          uploadedAt: '2025-11-06T00:00:00.000Z',
         },
       });
 

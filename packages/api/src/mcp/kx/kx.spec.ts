@@ -216,6 +216,32 @@ describe('buildKxSources', () => {
     expect(result?.sources[0].usageRestriction).toBe(false);
   });
 
+  // Deloitte Custom Change: verify the new `date` field is wired to sortbydate.
+  it('formats sortbydate as the citation date, omitting it when absent', () => {
+    const content = JSON.stringify({
+      actualresults: [
+        {
+          title: 'Decker, Heather',
+          appurl: 'https://stage.people.deloitte/profile/hdecker',
+          sortbydate: '2026-06-24T00:00:00',
+        },
+        {
+          title: 'No date profile',
+          appurl: 'https://stage.people.deloitte/profile/nodate',
+        },
+      ],
+    });
+
+    const result = buildKxSources({
+      toolName: 'kx_query',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+    });
+
+    expect(result?.sources[0].date).toBe('24 Jun 2026');
+    expect(result?.sources[1].date).toBeUndefined();
+  });
+
   it('skips title-less fragment records so they never render as anonymous chips', () => {
     const content = JSON.stringify({
       actualresults: [
