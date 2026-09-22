@@ -493,6 +493,30 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: false,
         connectionState: 'connected',
         authorizationState: 'not_required',
+        configuredObo: false,
+      });
+    });
+
+    it('should report configuredObo true for a server with an obo config, independent of connection state', async () => {
+      const oboConfig = { ...mockConfig, obo: { authHeader: 'Authorization' } };
+      const appConnections = new Map();
+      const userConnections = new Map();
+      const oauthServers = new Set();
+
+      const result = await getServerConnectionStatus(
+        mockUserId,
+        mockServerName,
+        oboConfig,
+        appConnections,
+        userConnections,
+        oauthServers,
+      );
+
+      expect(result).toEqual({
+        requiresOAuth: false,
+        connectionState: 'disconnected',
+        authorizationState: 'not_required',
+        configuredObo: true,
       });
     });
 
@@ -522,6 +546,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: false,
         connectionState: 'connecting',
         authorizationState: 'not_required',
+        configuredObo: false,
       });
     });
 
@@ -543,6 +568,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: false,
         connectionState: 'disconnected',
         authorizationState: 'not_required',
+        configuredObo: false,
       });
     });
 
@@ -580,6 +606,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: false,
         connectionState: 'connected',
         authorizationState: 'not_required',
+        configuredObo: false,
       });
     });
 
@@ -642,6 +669,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: true,
         connectionState: 'error',
         authorizationState: 'error',
+        configuredObo: false,
       });
     });
 
@@ -681,6 +709,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: true,
         connectionState: 'connecting',
         authorizationState: 'authorizing',
+        configuredObo: false,
       });
     });
 
@@ -713,6 +742,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: true,
         connectionState: 'disconnected',
         authorizationState: 'needs_authorization',
+        configuredObo: false,
       });
     });
 
@@ -755,6 +785,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: true,
         connectionState: 'connected',
         authorizationState: 'authorized',
+        configuredObo: false,
       });
     });
 
@@ -802,6 +833,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: true,
         connectionState: 'connected',
         authorizationState: 'authorized',
+        configuredObo: false,
       });
     });
 
@@ -836,6 +868,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: true,
         connectionState: 'connected',
         authorizationState: 'authorized',
+        configuredObo: false,
       });
       expect(findToken).not.toHaveBeenCalled();
     });
@@ -873,6 +906,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: true,
         connectionState: 'connecting',
         authorizationState: 'authorizing',
+        configuredObo: false,
       });
     });
 
@@ -903,6 +937,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: false,
         connectionState: 'disconnected',
         authorizationState: 'not_required',
+        configuredObo: false,
       });
       expect(mockFlowManager.getFlowState).not.toHaveBeenCalled();
       expect(findToken).not.toHaveBeenCalled();
@@ -938,6 +973,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: true,
         connectionState: 'disconnected',
         authorizationState: 'needs_authorization',
+        configuredObo: false,
       });
       expect(mockRegistryInstance.resolveAllowlists).toHaveBeenCalledWith({
         userId: mockUserId,
@@ -995,6 +1031,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: true,
         connectionState: 'connected',
         authorizationState: 'authorized',
+        configuredObo: false,
       });
     });
 
@@ -1058,6 +1095,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: true,
         connectionState: 'connected',
         authorizationState: 'authorized',
+        configuredObo: false,
       });
       expect(getGraphApiToken).toHaveBeenCalledWith(
         user,
@@ -1111,6 +1149,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: true,
         connectionState: 'disconnected',
         authorizationState: 'needs_authorization',
+        configuredObo: false,
       });
       expect(findToken).not.toHaveBeenCalled();
     });
@@ -1163,6 +1202,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: true,
         connectionState: 'disconnected',
         authorizationState: 'needs_authorization',
+        configuredObo: false,
       });
     });
 
@@ -1198,6 +1238,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: true,
         connectionState: 'disconnected',
         authorizationState: 'needs_authorization',
+        configuredObo: false,
       });
     });
 
@@ -1225,6 +1266,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: true,
         connectionState: 'connecting',
         authorizationState: 'authorizing',
+        configuredObo: false,
       });
       expect(mockOAuthReconnectionManager.isReconnecting).toHaveBeenCalledWith(
         mockUserId,
@@ -1264,6 +1306,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: true,
         connectionState: 'connected',
         authorizationState: 'authorized',
+        configuredObo: false,
       });
 
       // Should not call flow manager since server is connected
@@ -1294,6 +1337,7 @@ describe('tests for the new helper functions used by the MCP connection status e
         requiresOAuth: false,
         connectionState: 'disconnected',
         authorizationState: 'not_required',
+        configuredObo: false,
       });
 
       // Should not call flow manager since server doesn't require OAuth

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useMemo } from 'react';
-import { EModelEndpoint } from 'librechat-data-provider';
+import { EModelEndpoint, normalizeServerName } from 'librechat-data-provider';
 import type { MCP, Action, TPlugin } from 'librechat-data-provider';
 import type { AgentPanelContextType, MCPServerInfo } from '~/common';
 import {
@@ -14,6 +14,7 @@ import {
   useMCPConnectionStatus,
   useMCPServerManager,
 } from '~/hooks';
+import { useMCPIconMap } from '~/hooks/MCP';
 import { Panel, isEphemeralAgent } from '~/common';
 
 const AgentPanelContext = createContext<AgentPanelContextType | undefined>(undefined);
@@ -42,12 +43,13 @@ export function AgentPanelProvider({ children }: { children: React.ReactNode }) 
 
   const { data: regularTools } = useAvailableToolsQuery(EModelEndpoint.agents);
 
+  const mcpEnabled =
+    !isEphemeralAgent(agent_id) &&
+    !isLoading &&
+    availableMCPServers != null &&
+    availableMCPServers.length > 0;
   const { data: mcpData, isFetching: mcpToolsFetching } = useMCPToolsQuery({
-    enabled:
-      !isEphemeralAgent(agent_id) &&
-      !isLoading &&
-      availableMCPServers != null &&
-      availableMCPServers.length > 0,
+    enabled: mcpEnabled,
   });
   /** Tools are still arriving when the query is in flight and nothing is cached
    * yet (e.g., right after a hard refresh). Lets the MCP dialog show a skeleton. */
@@ -62,6 +64,8 @@ export function AgentPanelProvider({ children }: { children: React.ReactNode }) 
   const { connectionStatus } = useMCPConnectionStatus({
     enabled: !isEphemeralAgent(agent_id) && mcpServerNames.length > 0,
   });
+  // Deloitte Custom Change: light/dark themed MCP server icons.
+  const mcpIconMap = useMCPIconMap({ enabled: mcpEnabled });
   //TODO to refactor when tools come from tool box
   const mcpServersMap = useMemo(() => {
     const configuredServers = new Set(mcpServerNames);
@@ -75,11 +79,14 @@ export function AgentPanelProvider({ children }: { children: React.ReactNode }) 
         const displayDescription =
           serverConfig?.description || `${localize('com_ui_tool_collection_prefix')} ${serverName}`;
 
+        // Deloitte Custom Change: light/dark themed MCP server icons.
+        const icon = mcpIconMap.get(normalizeServerName(serverName)) || serverData.icon || '';
+
         const metadata = {
           name: displayName,
           pluginKey: serverName,
           description: displayDescription,
-          icon: serverData.icon || '',
+          icon,
           authConfig: serverData.authConfig,
           authenticated: serverData.authenticated,
         } as TPlugin;
@@ -88,7 +95,7 @@ export function AgentPanelProvider({ children }: { children: React.ReactNode }) 
           tool_id: tool.pluginKey,
           metadata: {
             ...tool,
-            icon: serverData.icon,
+            icon,
             authConfig: serverData.authConfig,
             authenticated: serverData.authenticated,
           } as TPlugin,
@@ -118,8 +125,9 @@ export function AgentPanelProvider({ children }: { children: React.ReactNode }) 
         serverConfig?.description ||
         `${localize('com_ui_tool_collection_prefix')} ${mcpServerName}`;
 
+      // Deloitte Custom Change: light/dark themed MCP server icons.
       const metadata = {
-        icon: serverConfig?.iconPath || '',
+        icon: mcpIconMap.get(normalizeServerName(mcpServerName)) || serverConfig?.iconPath || '',
         name: displayName,
         pluginKey: mcpServerName,
         description: displayDescription,
@@ -137,7 +145,7 @@ export function AgentPanelProvider({ children }: { children: React.ReactNode }) 
     }
 
     return serversMap;
-  }, [mcpData, localize, mcpServerNames, connectionStatus, availableMCPServersMap]);
+  }, [mcpData, localize, mcpServerNames, connectionStatus, availableMCPServersMap, mcpIconMap]);
 
   const value: AgentPanelContextType = {
     mcp,

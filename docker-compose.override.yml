@@ -26,6 +26,9 @@ services:
       - MEILI_HOST=http://meilisearch:7700
       - RAG_PORT=${RAG_PORT:-8000}
       - RAG_API_URL=http://rag_api:${RAG_PORT:-8000}
+      - MODEL_PRICING_REFERENCE_MODEL_ID=${MODEL_PRICING_REFERENCE_MODEL_ID:-gpt-56-luna}
+      - MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT=${MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT:-0.1}
+      - MODEL_PRICING_MIN_MULTIPLIER=${MODEL_PRICING_MIN_MULTIPLIER:-0.1}
       - NODE_TLS_REJECT_UNAUTHORIZED=0
     # On startup: copy Deloitte GEL assets over the defaults, then launch normally.
     # deloitte/assets is mounted read-only; the copy targets the live client/dist/assets.
@@ -55,6 +58,7 @@ services:
     env_file:
       - .env
     environment:
+      - BEDROCK_REVERSE_PROXY=${BEDROCK_REVERSE_PROXY:-au-bedrock-exp.ctk.au.deloitte.com}
       - AZURE_OPENAI_HOST=${AZURE_OPENAI_HOST:-au-openai-exp.ctk.au.deloitte.com}
     volumes:
       - ./nginx-gateway-proxy.conf.template:/etc/nginx/templates/default.conf.template:ro

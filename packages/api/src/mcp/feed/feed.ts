@@ -1,5 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
 import type { MCPResultSource, MCPSourcesResult } from 'librechat-data-provider';
+import { buildSharePointSources } from '../sharepoint/sharepoint';
 import { buildEntitySources } from '../entities/entities';
 import { buildAfrSearchSources } from '../afr/afr';
 import { buildReportSources } from '../report';
@@ -16,7 +17,9 @@ const FEED_ROOT_PATTERN = /^\s*(<\?xml[^>]*\?>\s*)?<(rss|feed)[\s>]/i;
  * unparsable or empty result (e.g. a REST error payload) yields no citation
  * at all rather than a raw-JSON-dump chip with no useful title or link.
  */
-const KNOWN_MCP_TOOLSET_PREFIXES = ['afr_', 'ibisworld_', 'desc_', 'gims_', 'kx_'];
+const KNOWN_MCP_TOOLSET_PREFIXES = ['afr_', 'ibisworld_', 'desc_', 'gims_', 'kx_', 'sp_'];
+
+const SHAREPOINT_TOOL_PREFIX = 'sp_';
 
 function isKnownMcpToolset(toolName: string): boolean {
   return KNOWN_MCP_TOOLSET_PREFIXES.some((prefix) => toolName.startsWith(prefix));
@@ -138,10 +141,13 @@ export function buildMCPResultSources({
   toolName,
   serverName,
   content,
+  args,
 }: {
   toolName: string;
   serverName: string;
   content: string;
+  /** Deloitte Custom Change: original tool call args, forwarded to {@link buildReportSources} for link resolution (e.g. `code`/`country`). */
+  args?: Record<string, unknown>;
 }): MCPSourcesResult {
   const fallback: MCPSourcesResult = {
     sources: isKnownMcpToolset(toolName) ? [] : [{ toolName, serverName, content }],
@@ -170,7 +176,7 @@ export function buildMCPResultSources({
     }
   }
 
-  const reportSources = buildReportSources({ toolName, serverName, content });
+  const reportSources = buildReportSources({ toolName, serverName, content, args });
   if (reportSources) {
     return reportSources;
   }
@@ -186,5 +192,12 @@ export function buildMCPResultSources({
   }
 
   const entitySources = buildEntitySources({ toolName, serverName, content });
-  return entitySources ?? fallback;
+  if (entitySources) {
+    return entitySources;
+  }
+
+  const sharePointSources = toolName.startsWith(SHAREPOINT_TOOL_PREFIX)
+    ? buildSharePointSources({ toolName, serverName, content })
+    : undefined;
+  return sharePointSources ?? fallback;
 }

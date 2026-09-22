@@ -256,9 +256,9 @@ router.get('/', async function (req, res) {
     const langfuseConnectionAvailable = isLangfuseConnectionAvailable();
     let langfuseConnectionAccess = false;
 
-    // Deloitte Custom Change: model pricing
+    // Deloitte Custom Change: model pricing uses the YAML reference model unless explicitly overridden.
     const modelPricing = getModelPricing();
-    const endpointCostConfig = getEndpointCostConfig();
+    const endpointCostConfig = getEndpointCostConfig(appConfig.modelPricing?.referenceModelId);
 
     if (langfuseConnectionAvailable) {
       try {

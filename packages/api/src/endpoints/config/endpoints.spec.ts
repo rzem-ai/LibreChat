@@ -175,6 +175,28 @@ describe('createEndpointsConfigService', () => {
       expect(result?.[EModelEndpoint.agents]?.allowedProviders).toEqual(['openAI', 'anthropic']);
     });
 
+    // Deloitte Custom Change: covers the hideFileContext merge path added to endpoints.ts
+    it('merges agents config with hideFileContext', async () => {
+      const deps = createMockDeps({
+        loadDefaultEndpointsConfig: jest.fn().mockResolvedValue({
+          [EModelEndpoint.agents]: { userProvide: false, order: 0 },
+        }),
+        getAppConfig: jest.fn().mockResolvedValue(
+          appConfig({
+            endpoints: {
+              [EModelEndpoint.agents]: {
+                hideFileContext: true,
+              },
+            },
+          }),
+        ),
+      });
+      const { getEndpointsConfig } = createEndpointsConfigService(deps);
+      const result = await getEndpointsConfig(fakeReq());
+
+      expect(result?.[EModelEndpoint.agents]?.hideFileContext).toBe(true);
+    });
+
     it('merges bedrock availableRegions', async () => {
       const deps = createMockDeps({
         loadDefaultEndpointsConfig: jest.fn().mockResolvedValue({

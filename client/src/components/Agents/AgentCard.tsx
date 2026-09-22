@@ -46,10 +46,10 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, onSelect, className = '' }
       <OGDialogTrigger asChild>
         <div
           className={cn(
-            'group relative flex h-32 gap-5 overflow-hidden rounded-xl',
+            'group relative flex h-48 gap-5 overflow-hidden rounded-xl',
             'cursor-pointer select-none px-6 py-4',
             'bg-surface-tertiary transition-colors duration-150 hover:bg-surface-hover',
-            'md:h-36 lg:h-40',
+            'md:h-52 lg:h-56',
             '[&_*]:cursor-pointer',
             className,
           )}
@@ -69,7 +69,7 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, onSelect, className = '' }
         >
           {/* Category badge - top right */}
           {categoryLabel && (
-            <span className="absolute right-4 top-3 rounded-md bg-surface-hover px-2 py-0.5 text-xs text-text-secondary">
+            <span className="absolute right-4 top-3 rounded-md bg-slate-200 px-2 py-0.5 text-xs text-slate-700 dark:bg-slate-700 dark:text-slate-300">
               {categoryLabel}
             </span>
           )}
@@ -82,7 +82,7 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, onSelect, className = '' }
           </div>
 
           {/* Content */}
-          <div className="flex min-w-0 flex-1 flex-col justify-center overflow-hidden">
+          <div className="flex min-w-0 flex-1 flex-col justify-start overflow-hidden pt-5 md:pt-6">
             {/* Agent name */}
             <Label className="line-clamp-2 text-base font-semibold text-text-primary md:text-lg">
               {agent.name}
@@ -92,7 +92,7 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, onSelect, className = '' }
             {agent.description && (
               <p
                 id={`agent-${agent.id}-description`}
-                className="mt-0.5 line-clamp-2 text-sm leading-snug text-text-secondary md:line-clamp-5"
+                className="mt-0.5 line-clamp-3 text-sm leading-snug text-text-secondary"
                 aria-label={localize('com_agents_description_card', {
                   description: agent.description,
                 })}

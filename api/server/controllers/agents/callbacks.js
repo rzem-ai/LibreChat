@@ -55,6 +55,29 @@ function extractMCPTextContent(content) {
   return text || null;
 }
 
+/**
+ * Deloitte Custom Change
+ * Normalizes a ToolEnd callback's `data.input` (the tool's original call
+ * arguments) into a plain object, so citation-link builders can read fields
+ * like `code`/`country` that never appear in the tool's response body.
+ * @param {unknown} input
+ * @returns {Record<string, unknown> | undefined}
+ */
+function normalizeMCPToolArgs(input) {
+  if (input && typeof input === 'object' && !Array.isArray(input)) {
+    return input;
+  }
+  if (typeof input !== 'string') {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(input);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 class ModelEndHandler {
   /**
    * @param {Array<UsageMetadata>} collectedUsage
@@ -757,6 +780,7 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null, jo
     if (!output.artifact && !isMCPTool) {
       return;
     }
+    const args = normalizeMCPToolArgs(data?.input);
 
     if (output.artifact?.[Tools.file_search]) {
       artifactPromises.push(
@@ -856,17 +880,22 @@ function createToolEndCallback({ req, res, artifactPromises, streamId = null, jo
         const [toolName, serverName] = (output.name ?? '').split(Constants.mcp_delimiter);
         artifactPromises.push(
           (async () => {
-            const { sources, disclaimer } = buildMCPResultSources({
+            const { sources, disclaimer, dpnUsageRestriction } = buildMCPResultSources({
               toolName,
               serverName,
               content: rawContent,
+              args,
             });
             const attachment = {
               type: Tools.mcp_results,
               messageId: metadata.run_id,
               toolCallId: output.tool_call_id,
               conversationId: metadata.thread_id,
-              [Tools.mcp_results]: disclaimer ? { sources, disclaimer } : { sources },
+              [Tools.mcp_results]: {
+                sources,
+                ...(disclaimer ? { disclaimer } : {}),
+                ...(dpnUsageRestriction ? { dpnUsageRestriction } : {}),
+              },
             };
             if (!streamId && !res.headersSent) {
               return attachment;
@@ -1129,6 +1158,7 @@ function createResponsesToolEndCallback({ req, res, tracker, artifactPromises })
     if (!output.artifact && !isMCPTool) {
       return;
     }
+    const args = normalizeMCPToolArgs(data?.input);
 
     if (output.artifact?.[Tools.file_search]) {
       artifactPromises.push(
@@ -1202,15 +1232,20 @@ function createResponsesToolEndCallback({ req, res, tracker, artifactPromises })
         const [toolName, serverName] = (output.name ?? '').split(Constants.mcp_delimiter);
         artifactPromises.push(
           (async () => {
-            const { sources, disclaimer } = buildMCPResultSources({
+            const { sources, disclaimer, dpnUsageRestriction } = buildMCPResultSources({
               toolName,
               serverName,
               content: rawContent,
+              args,
             });
             const attachment = {
               type: Tools.mcp_results,
               toolCallId: output.tool_call_id,
-              [Tools.mcp_results]: disclaimer ? { sources, disclaimer } : { sources },
+              [Tools.mcp_results]: {
+                sources,
+                ...(disclaimer ? { disclaimer } : {}),
+                ...(dpnUsageRestriction ? { dpnUsageRestriction } : {}),
+              },
             };
             if (res.headersSent && !res.writableEnded) {
               writeResponsesAttachment(res, tracker, attachment, metadata);
@@ -1460,4 +1495,5 @@ module.exports = {
   markSummarizationUsage,
   buildSummarizationHandlers,
   createResponsesToolEndCallback,
+  normalizeMCPToolArgs,
 };

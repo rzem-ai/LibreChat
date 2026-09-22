@@ -46,6 +46,7 @@ jest.mock('librechat-data-provider', () => ({
 
 // Mock hooks
 const mockFavorites: FavoriteItem[] = [];
+const mockUseShowMarketplace = jest.fn(() => false);
 const mockUseFavorites = jest.fn(() => ({
   favorites: mockFavorites,
   reorderFavorites: jest.fn(),
@@ -55,7 +56,7 @@ const mockUseFavorites = jest.fn(() => ({
 jest.mock('~/hooks', () => ({
   useFavorites: () => mockUseFavorites(),
   useLocalize: () => (key: string) => key,
-  useShowMarketplace: () => false,
+  useShowMarketplace: () => mockUseShowMarketplace(),
   useNewConvo: () => ({ newConversation: jest.fn() }),
   useGetConversation: () => () => null,
 }));
@@ -131,6 +132,7 @@ describe('FavoritesList', () => {
     jest.clearAllMocks();
     mockFavorites.length = 0;
     mockUseAgentsMapContext.mockImplementation(() => ({}));
+    mockUseShowMarketplace.mockReturnValue(false);
     mockUseGetEndpointsQuery.mockImplementation(() => ({
       data: { [EModelEndpoint.agents]: { order: 0 } },
     }));
@@ -162,6 +164,17 @@ describe('FavoritesList', () => {
       expect(container.firstChild).not.toBeNull();
       // When loading, the component renders skeleton placeholders (check for content, not specific CSS)
       expect(container.innerHTML).toContain('div');
+    });
+
+    it('renders the marketplace trigger with the stable nav-agents-marketplace-button id', () => {
+      mockUseShowMarketplace.mockReturnValue(true);
+
+      renderWithProviders(<FavoritesList />);
+
+      expect(screen.getByRole('button', { name: 'com_agents_marketplace' })).toHaveAttribute(
+        'id',
+        'nav-agents-marketplace-button',
+      );
     });
   });
 

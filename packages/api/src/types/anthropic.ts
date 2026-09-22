@@ -99,6 +99,8 @@ export interface AnthropicConfigOptions {
   vertexOptions?: VertexAIClientOptions;
   /** Full Vertex AI configuration including model mappings from YAML config */
   vertexConfig?: TVertexAISchema;
+  /** Deloitte Custom Change: admin-configured allowlist gating the native `web_search` tool per model */
+  supportedWebSearchModels?: string[];
 }
 
 /**

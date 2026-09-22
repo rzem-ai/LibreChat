@@ -387,8 +387,8 @@ describe('SkillsDialog view grouping', () => {
 
     render(<SkillsDialog open onOpenChange={jest.fn()} agentId="agent-1" />);
 
-    // Category alone, no view narrowing: only "writing" skills remain, across owners.
-    fireEvent.click(screen.getByRole('button', { name: 'writing' }));
+    // Category alone, no view narrowing: only "Writing" skills remain, across owners.
+    fireEvent.click(screen.getByRole('button', { name: 'Writing' }));
     expect(screen.getByText('writing-mine-skill')).toBeInTheDocument();
     expect(screen.getByText('writing-shared-skill')).toBeInTheDocument();
     expect(screen.queryByText('coding-mine-skill')).toBeNull();
@@ -401,7 +401,7 @@ describe('SkillsDialog view grouping', () => {
     expect(screen.getByText('coding-mine-skill')).toBeInTheDocument();
     expect(screen.queryByText('writing-shared-skill')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'writing' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Writing' }));
     expect(screen.getByText('writing-mine-skill')).toBeInTheDocument();
     expect(screen.queryByText('coding-mine-skill')).toBeNull();
     expect(screen.queryByText('writing-shared-skill')).toBeNull();

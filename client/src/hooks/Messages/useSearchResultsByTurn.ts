@@ -1,6 +1,11 @@
 import { useMemo } from 'react';
 import { TAttachment, Tools, SearchResultData } from 'librechat-data-provider';
-import type { MCPResultReference, MCPResultSource } from 'librechat-data-provider';
+import type {
+  MCPResultReference,
+  MCPResultSource,
+  FileReferenceMetadata,
+  ResultReference,
+} from 'librechat-data-provider';
 import { useLocalize } from '~/hooks';
 
 interface FileSource {
@@ -9,7 +14,7 @@ interface FileSource {
   pages?: number[];
   relevance?: number;
   pageRelevance?: Record<string, number>;
-  metadata?: Record<string, unknown>;
+  metadata?: FileReferenceMetadata;
 }
 
 interface MCPAttachmentPayload {
@@ -22,7 +27,7 @@ interface DeduplicatedSource {
   pages: number[];
   relevance: number;
   pageRelevance: Record<string, number>;
-  metadata?: any;
+  metadata?: FileReferenceMetadata;
 }
 
 /**
@@ -126,8 +131,9 @@ export function useSearchResultsByTurn(attachments?: TAttachment[]) {
                 fileName: source.fileName,
                 pages: source.pages,
                 pageRelevance: source.pageRelevance,
+                relevance: source.relevance,
                 metadata: source.metadata,
-              }) as ReturnType<typeof Object.assign>,
+              }) as ResultReference,
           ),
         };
 
@@ -154,6 +160,7 @@ export function useSearchResultsByTurn(attachments?: TAttachment[]) {
             link: source.link || `#mcp-${source.serverName}-${source.toolName}`,
             type: 'mcp' as const,
             usageRestriction: source.usageRestriction,
+            usageRestrictionLink: source.usageRestrictionLink,
           }));
 
           if (mcpRefs.length > 0) {

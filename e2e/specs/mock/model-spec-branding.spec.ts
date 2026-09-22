@@ -12,7 +12,7 @@ const BRANDED_SPEC = {
 /** The `softDefault: true` spec does not set `showOnLanding`, so it is unbranded. */
 const UNBRANDED_SPEC_LABEL = 'E2E Soft Default';
 
-test.describe('model spec branding on landing', () => {
+test.describe('model spec branding on landing', { tag: ['@mock', '@model-specs'] }, () => {
   test('branded spec replaces the greeting with its label and rendered description', async ({
     page,
   }) => {

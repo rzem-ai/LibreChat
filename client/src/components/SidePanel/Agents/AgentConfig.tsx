@@ -1,6 +1,6 @@
 import { Input } from '@librechat/client';
 import { Controller, useWatch, useFormContext } from 'react-hook-form';
-import { EModelEndpoint, getEndpointField } from 'librechat-data-provider';
+import { Constants, EModelEndpoint, getEndpointField } from 'librechat-data-provider';
 import type { AgentForm, IconComponentTypes } from '~/common';
 import AgentCategorySelector from './AgentCategorySelector';
 import { useLocalize, useAgentCapabilities } from '~/hooks';
@@ -60,29 +60,53 @@ export default function AgentConfig() {
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <Controller
             name="name"
-            rules={{ required: localize('com_ui_agent_name_is_required') }}
+            rules={{
+              required: localize('com_ui_agent_name_is_required'),
+              maxLength: {
+                value: Number(Constants.AGENT_NAME_MAX_LENGTH),
+                message: localize('com_ui_field_max_length', {
+                  field: localize('com_ui_agent_name'),
+                  length: Constants.AGENT_NAME_MAX_LENGTH,
+                }),
+              },
+            }}
             control={control}
-            render={({ field }) => (
-              <div className="flex flex-col">
-                <Input
-                  {...field}
-                  value={field.value ?? ''}
-                  maxLength={256}
-                  className={cn(fieldClass, 'font-medium')}
-                  id="name"
-                  type="text"
-                  placeholder={localize('com_agents_name_placeholder')}
-                  aria-label={localize('com_ui_agent_name')}
-                  aria-invalid={!!errors.name}
-                  aria-describedby={errors.name ? 'agent-name-error' : undefined}
-                />
-                {errors.name && (
-                  <div id="agent-name-error" className="mt-1 text-xs text-red-500" role="alert">
-                    {errors.name.message}
+            render={({ field }) => {
+              const nameLength = (field.value ?? '').length;
+              const isAtLimit = nameLength >= Constants.AGENT_NAME_MAX_LENGTH;
+              return (
+                <div className="flex flex-col">
+                  <div className="relative">
+                    <Input
+                      {...field}
+                      value={field.value ?? ''}
+                      maxLength={Number(Constants.AGENT_NAME_MAX_LENGTH)}
+                      className={cn(fieldClass, 'pr-12 font-medium')}
+                      id="name"
+                      type="text"
+                      placeholder={localize('com_agents_name_placeholder')}
+                      aria-label={localize('com_ui_agent_name')}
+                      aria-invalid={!!errors.name}
+                      aria-describedby={errors.name ? 'agent-name-error' : 'agent-name-counter'}
+                    />
+                    <span
+                      id="agent-name-counter"
+                      className={cn(
+                        'pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs',
+                        isAtLimit ? 'text-amber-500' : 'text-text-secondary',
+                      )}
+                    >
+                      {`${nameLength}/${Constants.AGENT_NAME_MAX_LENGTH}`}
+                    </span>
                   </div>
-                )}
-              </div>
-            )}
+                  {errors.name && (
+                    <div id="agent-name-error" className="mt-1 text-xs text-red-500" role="alert">
+                      {errors.name.message}
+                    </div>
+                  )}
+                </div>
+              );
+            }}
           />
           <Controller
             name="description"
@@ -156,7 +180,8 @@ export default function AgentConfig() {
       <ToolsSection agentId={agent_id} />
 
       {/* FILE CONTEXT — standalone section, separate from the tool library */}
-      {contextEnabled && (
+      {/* Deloitte Custom Change: hide File Context section when hideFileContext is set */}
+      {contextEnabled && !agentsConfig?.hideFileContext && (
         <div className="mb-3">
           <FileContext agent_id={agent_id} files={contextFiles} />
         </div>

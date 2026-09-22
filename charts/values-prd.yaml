@@ -4,6 +4,9 @@ branch: 'main'
 serviceAccount:
   name: sa-librechat-prd
 
+llmGateway:
+  namespace: 'llm-gateway-prd'
+
 nodeSelector:
   app: myassist
 
@@ -17,8 +20,8 @@ ingress:
   className: cilium
   host: 'myassist.ctk.au.deloitte.com'
   annotations:
-    ingress.cilium.io/loadbalancer-mode: "shared"
-    ingress.cilium.io/force-https: "true"
+    ingress.cilium.io/loadbalancer-mode: 'shared'
+    ingress.cilium.io/force-https: 'true'
     kubernetes.io/ingress.class: cilium
   tls:
     - secretName: ctk-au-deloitte-com
@@ -37,10 +40,10 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'main@sha256:2ab7ba3209eeed2730e8e1373a820f34dbc5e390e31af990cf21153997581aae'
+          tag: 'main@sha256:7d336f61f39a752fd9e2bb130ae4f1cdb01256b2344dd64f4efc4efc62af7c6f'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-prd.svc.cluster.local:8080'
-          TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://global.llm-gateway-prd.svc.cluster.local:8080'
+          TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://foundry-eastus.llm-gateway-prd.svc.cluster.local:8080'
           TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-prd.svc.cluster.local:8080'
           TOKEN_PROXY_ANTHROPIC_URL: 'http://anthropic-eastus2.llm-gateway-prd.svc.cluster.local:8080'
           TOKEN_PROXY_BEDROCK_AU_URL: 'http://bedrock-ap-southeast-2.llm-gateway-prd.svc.cluster.local:8080'
@@ -57,7 +60,14 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'main@sha256:ecc4acfc3d12f3718c237327eac4251e42da6501ca6059fbb930efa2b5fc9645'
+          tag: 'main@sha256:5421cb3e8234e2f1586d92bdf5360726f8e808cda9e9901154f758c92d60dec4'
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "32Gi"
+            cpu: "6000m"
         env:
           ADMIN_PANEL_URL: 'https://myassist.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -71,17 +81,20 @@ pods:
           BEDROCK_AWS_DEFAULT_REGION: 'ap-southeast-2'
           BEDROCK_AWS_SECRET_ACCESS_KEY: 'unused'
           BEDROCK_AWS_MODELS: 'au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0'
-          BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081'
-          CUSTOM_FOOTER: "**Feedback?** Submit a bug report, feature request or success story [here](https://forms.cloud.microsoft/e/E9AyvN4Ayx)"
+          BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081/bedrock'
+          CUSTOM_FOOTER: '**Feedback?** Submit a bug report, feature request or success story [here](https://forms.cloud.microsoft/e/E9AyvN4Ayx)'
           DOMAIN_CLIENT: 'https://myassist.ctk.au.deloitte.com'
           DOMAIN_SERVER: 'https://myassist.ctk.au.deloitte.com'
           EMBEDDINGS_MODEL: 'text-embedding-3-small'
           EMBEDDINGS_PROVIDER: 'openai'
-          ENDPOINTS: 'agents,anthropic,bedrock,custom'
+          ENDPOINTS: 'agents,anthropic,custom,bedrock'
           KEY_VAULT_NAME: 'kv-int-librechat-prd'
           MCP_GATEWAY_OBO_SCOPE: 'api://32e2a3a5-ad52-446e-8a61-5a7ad6103099/access_as_user'
           MCP_GATEWAY_TOOLSETS: 'teams,research,news,kx,desc,gims'
           MCP_GATEWAY_URL: 'https://mcp-gateway.ctk.au.deloitte.com/mcp'
+          MODEL_PRICING_MIN_MULTIPLIER: '0.1'
+          MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT: '0.1'
+          MODEL_PRICING_REFERENCE_MODEL_ID: 'gpt-56-luna'
           MONGO_DB: 'mdb-librechat-database-prd'
           NODE_ENV: 'production'
           NODE_TLS_REJECT_UNAUTHORIZED: '0' # TODO: Review Node TLS setup. See: https://github.com/Deloitte-Australia/tt-librechat/issues/159
@@ -96,7 +109,6 @@ pods:
           RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
           RAG_PORT: '8000'
-          RAG_USE_FULL_CONTEXT: 'true'
           REFRESH_TOKEN_EXPIRY: '86400000' # (ms) - 1 day refresh token expiration
           # ClearTrack Code Interpreter (ea-code-runtime)
           LIBRECHAT_CODE_BASEURL: 'https://code-runtime.ctk.au.deloitte.com/v1' # TODO: Confirm
@@ -131,10 +143,17 @@ pods:
           AGENT_DEBUG_LOGGING: 'true'
           # Skill Security Scanner
           SKILL_SCANNER_URL: 'https://ai-registry.ctk.au.deloitte.com/v1/scan?verbose=false'
-          SKILL_SCANNER_TIMEOUT_MS: '15000'
+          SKILL_SCANNER_TIMEOUT_MS: '30000'
           SKILL_SCANNER_MIN_SEVERITY: 'high'
           # AI Registry
-          AI_REGISTRY_CLIENT_ID: "65dad51c-d3ca-4252-b97d-815cf8518d6a"
+          AI_REGISTRY_CLIENT_ID: '65dad51c-d3ca-4252-b97d-815cf8518d6a'
+          # In-cluster Valkey -- StatefulSet from charts/templates/valkey.yaml
+          USE_REDIS: 'true'
+          USE_REDIS_STREAMS: 'true'
+          REDIS_URI: 'redis://librechat-valkey:6379'
+          REDIS_KEY_PREFIX: 'librechat'
+          REDIS_PING_INTERVAL: '300'
+          STREAM_DELTA_COALESCE_MS: '25'
         secrets:
           MONGO_URI: librechat-mdb-connection-string
           JWT_SECRET: librechat-jwt-secret # Use LibreChat Credentials Generator
@@ -149,11 +168,20 @@ pods:
           #Langfuse Observability
           LANGFUSE_PUBLIC_KEY: librechat-langfuse-public-key # TODO: Need to deploy to langfuse to prod first, then create an API in the frontend.
           LANGFUSE_SECRET_KEY: librechat-langfuse-secret-key # TODO: Need to deploy to langfuse to prod first, then create an API in the frontend.
+          # Redis/Valkey
+          REDIS_PASSWORD: librechat-valkey-password-prd
       rag-api:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'main@sha256:02fa6e357d06fe9f820571cb71f26228e12d264751b67fa33856011bbc641d29'
+          tag: 'main@sha256:2377a3565a905cb507eee8a36fe9fc15f85c30aa5e8124b798a546dc7e4f1828'
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "32Gi"
+            cpu: "6000m"
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -178,22 +206,22 @@ pods:
           targetPort: 8000
         ingress:
           enabled: false
-      # meilisearch: # TODO: Enable meilisearch when we can have multi-container PVC
-      #   image:
-      #     pullPolicy: Always
-      #     tag: 'main@sha256:eb6669b0f5a896090eafe0b12d3a15ec30f2c96e5f7dca8824a895106ccc92d1'
-      #   env:
-      #     MEILI_ENV: 'production'
-      #   secrets:
-      #     MEILI_MASTER_KEY: librechat-meili-master-key
-      #   persistence:
-      #     enabled: true
-      #     size: 10Gi
-      #     accessModes:
-      #       - ReadWriteOnce
-      #     name: 'meilisearch-data'
-      #     mountPath: /meili_data
-      #     storageClass: 'managed-csi-standard-private'
+          # meilisearch: # TODO: Enable meilisearch when we can have multi-container PVC
+          #   image:
+          #     pullPolicy: Always
+          #     tag: 'main@sha256:eb6669b0f5a896090eafe0b12d3a15ec30f2c96e5f7dca8824a895106ccc92d1'
+          #   env:
+          #     MEILI_ENV: 'production'
+          #   secrets:
+          #     MEILI_MASTER_KEY: librechat-meili-master-key
+          #   persistence:
+          #     enabled: true
+          #     size: 10Gi
+          #     accessModes:
+          #       - ReadWriteOnce
+          #     name: 'meilisearch-data'
+          #     mountPath: /meili_data
+          #     storageClass: 'managed-csi-standard-private'
   admin:
     replicas: 1
     containers:
@@ -205,7 +233,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'main@sha256:0a8af18f7be7676f9b2bac29ee021e0ab40cbeb3f71af123276c6f4d53534ec0'
+          tag: 'main@sha256:de512d13820ec29024bbf736cf0c61a3d2d51c2d54cbc8c1672e728b3649eb94'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
@@ -228,7 +256,7 @@ pods:
 
 valkey:
   image:
-    tag: 'main@sha256:ec7ab07262c5ac3da2847ec47ca04ac706570c5ebf2d4e2ed63f44348eb25a28'
+    tag: 'main@sha256:b5a82e99970c2d7d1421a0146fb2f006d44f35303f8a07ba73e4cf15f2580ff3'
   persistence:
     storageClass: 'managed-csi-standard-private'
-  passwordSecretName: 'librechat-valkey-password'
+  passwordSecretName: 'librechat-valkey-password-prd'

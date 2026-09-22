@@ -526,8 +526,14 @@ export type TConfig = {
   userProvideSessionToken?: boolean;
   userProvideBearerToken?: boolean;
   disableBuilder?: boolean;
+  /** Deloitte Custom Change: hides the File Context upload section in the Agent Builder UI. */
+  hideFileContext?: boolean;
   retrievalModels?: string[];
   capabilities?: string[];
+  /** Deloitte Custom Change: per-model gating for the native provider web-search tool */
+  nativeWebSearch?: {
+    supportedModels?: string[];
+  };
   customParams?: {
     defaultParamsEndpoint?: string;
     reasoningFormat?: ReasoningParameterFormat;
@@ -822,6 +828,20 @@ export type TUserTermsResponse = {
 export type TAcceptTermsResponse = {
   message: string;
   termsAcceptedAt: Date | string;
+};
+
+export const MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH = 200;
+
+export type TTutorialFeedback = {
+  score: number;
+  comment?: string;
+  updatedAt?: Date | string;
+};
+
+export type TTutorialStateResponse = {
+  tutorialPromptSeen: boolean;
+  tutorialRatings: Record<string, number>;
+  tutorialFeedback: Record<string, TTutorialFeedback>;
 };
 
 export type TBannerResponse = TBanner | null;

@@ -45,7 +45,7 @@ jest.mock('~/utils', () => ({
 }));
 
 jest.mock('~/components/Chat/Menus/OpenSidebar', () => ({
-  CLOSE_SIDEBAR_ID: 'close-sidebar',
+  CLOSE_SIDEBAR_ID: 'close-sidebar-button',
 }));
 
 jest.mock('~/components/Nav/AccountSettings', () => ({
@@ -170,5 +170,31 @@ describe('ExpandedPanel', () => {
       expect(mockNewConversation).toHaveBeenCalledTimes(1);
       expect(localStorage.getItem('side:active-panel')).toBe('prompts');
     });
+  });
+
+  it('renders stable ids for the sidebar toggle and panel buttons', () => {
+    renderPanel({ expanded: true });
+
+    expect(screen.getByRole('button', { name: 'com_nav_close_sidebar' })).toHaveAttribute(
+      'id',
+      'close-sidebar-button',
+    );
+    expect(screen.getByRole('button', { name: 'com_ui_chat_history' })).toHaveAttribute(
+      'id',
+      'nav-panel-conversations',
+    );
+    expect(screen.getByRole('button', { name: 'com_ui_prompts' })).toHaveAttribute(
+      'id',
+      'nav-panel-prompts',
+    );
+  });
+
+  it('switches the toggle button id when the sidebar is collapsed', () => {
+    renderPanel({ expanded: false });
+
+    expect(screen.getByRole('button', { name: 'com_nav_open_sidebar' })).toHaveAttribute(
+      'id',
+      'open-sidebar-button',
+    );
   });
 });

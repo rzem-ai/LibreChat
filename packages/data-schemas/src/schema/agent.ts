@@ -1,4 +1,5 @@
 import { Schema } from 'mongoose';
+import { Constants } from 'librechat-data-provider';
 import type { IAgent } from '~/types';
 
 const agentSchema: Schema<IAgent> = new Schema<IAgent>(
@@ -9,6 +10,7 @@ const agentSchema: Schema<IAgent> = new Schema<IAgent>(
     },
     name: {
       type: String,
+      maxlength: Number(Constants.AGENT_NAME_MAX_LENGTH),
     },
     description: {
       type: String,

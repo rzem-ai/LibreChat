@@ -128,6 +128,66 @@ describe('buildMCPResultSources', () => {
     expect(result.sources[0].content).toContain('Gold prices have risen sharply.');
   });
 
+  // Deloitte Custom Change: verify the new `args` param is threaded through to buildReportSources.
+  it('forwards args through to buildReportSources so a Sections report gets a link', () => {
+    const content = JSON.stringify({
+      Sections: [
+        {
+          RequestedSection: 'executivesummaryanalysis',
+          StatusCode: 200,
+          Body: { ExecutiveSummaryAnalysis: { PlainText: 'Gold prices have risen sharply.' } },
+        },
+      ],
+    });
+    const result = buildMCPResultSources({
+      toolName: 'ibisworld_report_sections',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+      args: { code: '56162', country: 'AU' },
+    });
+
+    expect(result.sources).toHaveLength(1);
+    expect(result.sources[0].link).toBe(
+      'https://my.ibisworld.com/au/en/industry-specialized/56162/at-a-glance',
+    );
+  });
+
+  // Deloitte Custom Change: verify the new report-list array payload handling and per-report link.
+  it('splits a top-level array report-list payload (e.g. ibisworld_list_reports) into one source per report, each linked', () => {
+    const content = JSON.stringify([
+      { Code: '56162', Title: 'Gold Ore Mining', Country: 'AU' },
+      { Code: '11111', Title: 'Test Report', Country: 'US' },
+    ]);
+    const result = buildMCPResultSources({
+      toolName: 'ibisworld_list_reports',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+    });
+
+    expect(result.sources).toHaveLength(2);
+    expect(result.sources[0]).toMatchObject({
+      title: 'Gold Ore Mining',
+      link: 'https://my.ibisworld.com/au/en/industry-specialized/56162/at-a-glance',
+    });
+  });
+
+  // Deloitte Custom Change: verify DESC/GIMS entity payloads are routed through buildEntitySources.
+  it('cites a DESC/GIMS entity that only has an entityID', () => {
+    const content = JSON.stringify({
+      statusCode: 200,
+      message: 'Result Model.',
+      data: { entityID: 999001 },
+    });
+    const result = buildMCPResultSources({
+      toolName: 'desc_get_entity_by_id',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+    });
+
+    expect(result.sources).toHaveLength(1);
+    expect(result.sources[0]).toMatchObject({ title: 'Entity 999001' });
+  });
+
   it('surfaces the KX disclaimer alongside its sources', () => {
     const content = JSON.stringify({
       usage_guidelines: 'Please review accuracy of all the responses before reusing them.',
@@ -182,5 +242,80 @@ describe('buildMCPResultSources', () => {
     });
 
     expect(result.sources).toEqual([]);
+  });
+
+  it('splits an sp_search response (SharePoint) into one source per hit', () => {
+    const content = JSON.stringify({
+      results: [
+        {
+          rank: 1,
+          summary: 'Q3 budget summary for the finance team.',
+          resource: {
+            name: 'Q3 Budget.xlsx',
+            webUrl: 'https://contoso.sharepoint.com/sites/finance/Q3%20Budget.xlsx',
+          },
+        },
+      ],
+      total: 1,
+    });
+    const result = buildMCPResultSources({
+      toolName: 'sp_search',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+    });
+
+    expect(result.sources).toHaveLength(1);
+    expect(result.sources[0]).toMatchObject({
+      toolName: 'sp_search',
+      serverName: 'cleartrack-mcp-gateway',
+      title: 'Q3 Budget.xlsx',
+      link: 'https://contoso.sharepoint.com/sites/finance/Q3%20Budget.xlsx',
+    });
+  });
+
+  it('splits an sp_list_items response (SharePoint) into one source per item', () => {
+    const content = JSON.stringify({
+      items: [
+        {
+          id: '1',
+          name: 'Report.pdf',
+          type: 'file',
+          webUrl: 'https://contoso.sharepoint.com/sites/finance/Report.pdf',
+        },
+      ],
+      count: 1,
+    });
+    const result = buildMCPResultSources({
+      toolName: 'sp_list_items',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+    });
+
+    expect(result.sources).toHaveLength(1);
+    expect(result.sources[0]).toMatchObject({ title: 'Report.pdf' });
+  });
+
+  it('suppresses citation entirely for unrecognized JSON from the SharePoint toolset', () => {
+    const result = buildMCPResultSources({
+      toolName: 'sp_get_item',
+      serverName: 'cleartrack-mcp-gateway',
+      content: JSON.stringify({ statusCode: 500, message: 'Internal error' }),
+    });
+
+    expect(result.sources).toEqual([]);
+  });
+
+  it('does not reclassify a non-SharePoint tool result that happens to share a SharePoint payload shape', () => {
+    const content = JSON.stringify({
+      items: [{ id: '1', name: 'Report.pdf', webUrl: 'https://contoso.sharepoint.com/sites/finance/Report.pdf' }],
+      count: 1,
+    });
+    const result = buildMCPResultSources({
+      toolName: 'some_other_tool',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+    });
+
+    expect(result.sources).toEqual([{ toolName: 'some_other_tool', serverName: 'cleartrack-mcp-gateway', content }]);
   });
 });

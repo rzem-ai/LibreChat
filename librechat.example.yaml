@@ -105,6 +105,7 @@ interface:
   providerUpload: true
   # Deloitte custom feature flags:
   # customDeloitteFeatureFlags:
+  #   isTutorialEnabled: true # Enable/disable the in-app Learning Hub tutorials (first-run prompt and guided tours).
   #   alwaysEnableFileSearch: true # Force-enable file_search for authorized users/capable endpoints.
   #   hideFileSearchToggle: true # Hide the file search pill without changing the underlying tool state.
   # Privacy policy settings

@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import * as Ariakit from '@ariakit/react';
-import { ChevronDown, FileText } from 'lucide-react';
 import { VisuallyHidden } from '@ariakit/react';
+import { ChevronDown, FileText, Folder } from 'lucide-react';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -20,6 +20,8 @@ interface SourceHovercardProps {
   onClick?: (e: React.MouseEvent) => void;
   isFile?: boolean;
   isLocalFile?: boolean;
+  /** Deloitte Custom Change: icon shown inside the chip itself; defaults to a generic file icon. */
+  chipIcon?: ReactNode;
   children?: ReactNode;
   filePages?: number[];
   fileRelevance?: number;
@@ -34,14 +36,81 @@ export function getCleanDomain(url: string) {
   return domain.startsWith('www.') ? domain.substring(4) : domain;
 }
 
+// Deloitte Custom Change: decorative — the domain is always rendered as adjacent text, so an
+// accessible name here would cause screen readers to announce it twice.
 export function FaviconImage({ domain, className = '' }: { domain: string; className?: string }) {
+  // Deloitte Custom Change: rounded corners to match the Connector logos in the admin panel
   return (
     <img
       src={getFaviconUrl(domain)}
-      alt={domain}
-      className={cn('size-4 shrink-0 rounded-full', className)}
+      alt=""
+      aria-hidden="true"
+      className={cn('size-4 shrink-0 rounded-md', className)}
       loading="lazy"
     />
+  );
+}
+
+/**
+ * Deloitte Custom Change: full hovercard body: title at the top (underlined
+ * when it links out or opens a preview, plain text otherwise), then any
+ * additional content, then the source icon + name as a footer at the bottom
+ * of the card.
+ */
+export function TooltipContent({
+  icon,
+  title,
+  href,
+  onClick,
+  subtitle,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  href?: string;
+  onClick?: (e: React.MouseEvent) => void;
+  subtitle?: string;
+  children?: ReactNode;
+}) {
+  const titleClassName =
+    'inline-block break-words text-sm font-medium leading-[1.5] text-text-primary';
+  let titleElement: ReactNode;
+  if (href) {
+    titleElement = (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn(titleClassName, 'underline underline-offset-2')}
+      >
+        {title}
+      </a>
+    );
+  } else if (onClick) {
+    titleElement = (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(titleClassName, 'text-left underline underline-offset-2')}
+      >
+        {title}
+      </button>
+    );
+  } else {
+    titleElement = <span className={titleClassName}>{title}</span>;
+  }
+
+  return (
+    <div className="min-w-0">
+      {titleElement}
+      {children}
+      {subtitle && (
+        <div className="mt-2 flex items-center gap-1.5 text-xs text-text-secondary">
+          {icon}
+          {subtitle}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -66,17 +135,14 @@ function FileHovercardContent({
   const localize = useLocalize();
   const fileName = source.attribution || source.title || localize('com_file_source');
 
+  // Deloitte Custom Change: shared TooltipContent layout replaces the old inline header markup
   return (
-    <>
-      <div className="flex items-center gap-2">
-        <FileText className="size-4 shrink-0 text-text-secondary" aria-hidden="true" />
-        <button
-          onClick={onClick}
-          className="min-w-0 truncate text-sm font-medium text-text-primary hover:underline"
-        >
-          {fileName}
-        </button>
-      </div>
+    <TooltipContent
+      icon={<Folder className="size-4 shrink-0 text-text-secondary" aria-hidden="true" />}
+      title={fileName}
+      onClick={onClick}
+      subtitle={localize('com_ui_tool_name_file_search')}
+    >
       {(fileRelevance != null || (filePages && filePages.length > 0)) && (
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
           {fileRelevance != null && fileRelevance > 0 && (
@@ -92,11 +158,11 @@ function FileHovercardContent({
         </div>
       )}
       {source.snippet && (
-        <p className="mt-1.5 line-clamp-3 break-words text-xs leading-relaxed text-text-secondary">
+        <p className="mt-1.5 line-clamp-3 break-words text-xs leading-snug text-text-secondary">
           {source.snippet}
         </p>
       )}
-    </>
+    </TooltipContent>
   );
 }
 
@@ -108,6 +174,7 @@ export function SourceHovercard({
   onClick,
   isFile = false,
   isLocalFile = false,
+  chipIcon,
   children,
   filePages,
   fileRelevance,
@@ -132,15 +199,20 @@ export function SourceHovercard({
             render={
               isFile ? (
                 <button
+                  type="button"
                   onClick={handleFileClick}
-                  className="ml-1 inline-flex h-5 max-w-36 items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap rounded-xl border border-border-heavy bg-surface-secondary px-2 text-xs font-medium text-text-primary no-underline transition-colors hover:bg-surface-hover dark:border-border-medium dark:hover:bg-surface-tertiary"
+                  className="ml-1 inline-flex h-[22px] max-w-44 items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-border-heavy bg-surface-secondary pl-1 pr-2 text-xs font-medium text-text-primary no-underline transition-colors hover:bg-surface-hover dark:border-border-medium dark:hover:bg-surface-tertiary"
                   onMouseEnter={onMouseEnter}
                   onMouseLeave={onMouseLeave}
-                  title={
-                    isLocalFile ? localize('com_sources_download_local_unavailable') : undefined
-                  }
+                  title={isLocalFile ? localize('com_sources_download_local_unavailable') : label}
                 >
-                  <FileText className="size-2.5 shrink-0 text-text-secondary" aria-hidden="true" />
+                  {/* Deloitte Custom Change: connector-specific chip icon, falls back to a generic file icon */}
+                  {chipIcon ?? (
+                    <FileText
+                      className="size-2.5 shrink-0 text-text-secondary"
+                      aria-hidden="true"
+                    />
+                  )}
                   {label}
                 </button>
               ) : (
@@ -148,9 +220,10 @@ export function SourceHovercard({
                   href={source.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="ml-1 inline-block h-5 max-w-36 cursor-pointer items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-xl border border-border-heavy bg-surface-secondary px-2 text-xs font-medium no-underline transition-colors hover:bg-surface-hover dark:border-border-medium dark:hover:bg-surface-tertiary"
+                  className="ml-1 inline-block h-5 max-w-44 cursor-pointer items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-border-heavy bg-surface-secondary px-2 text-xs font-medium no-underline transition-colors hover:bg-surface-hover dark:border-border-medium dark:hover:bg-surface-tertiary"
                   onMouseEnter={onMouseEnter}
                   onMouseLeave={onMouseLeave}
+                  title={label}
                 >
                   {label}
                 </a>
@@ -178,27 +251,18 @@ export function SourceHovercard({
                     fileRelevance={fileRelevance}
                   />
                 ) : (
-                  <>
-                    <div className="mb-1.5 overflow-hidden text-sm">
-                      <FaviconImage domain={domain} className="float-left mr-2 mt-0.5" />
-                      <span className="float-right ml-2 max-w-[40%] truncate text-xs text-text-secondary">
-                        {domain}
-                      </span>
-                      <a
-                        href={source.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium text-text-primary hover:underline"
-                      >
-                        {source.title || source.link}
-                      </a>
-                    </div>
+                  <TooltipContent
+                    icon={<FaviconImage domain={domain} />}
+                    title={source.title || source.link}
+                    href={source.link}
+                    subtitle={domain}
+                  >
                     {source.snippet && (
-                      <p className="line-clamp-4 break-words text-xs text-text-secondary md:text-sm">
+                      <p className="mt-1.5 line-clamp-4 break-words text-xs text-text-secondary md:text-sm">
                         {source.snippet}
                       </p>
                     )}
-                  </>
+                  </TooltipContent>
                 ))}
             </div>
           </Ariakit.Hovercard>

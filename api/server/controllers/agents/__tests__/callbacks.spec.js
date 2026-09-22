@@ -853,3 +853,43 @@ describe('isStreamWritable', () => {
     expect(isStreamWritable({ headersSent: true, writableEnded: false }, null)).toBe(true);
   });
 });
+
+// Deloitte Custom Change: verify tool-call args normalization feeding MCP citation-link builders.
+describe('normalizeMCPToolArgs', () => {
+  const { normalizeMCPToolArgs } = require('../callbacks');
+
+  it('returns a plain object input as-is', () => {
+    expect(normalizeMCPToolArgs({ code: '56162', country: 'AU' })).toEqual({
+      code: '56162',
+      country: 'AU',
+    });
+  });
+
+  it('parses a JSON-string input into an object', () => {
+    expect(normalizeMCPToolArgs('{"code":"56162","country":"AU"}')).toEqual({
+      code: '56162',
+      country: 'AU',
+    });
+  });
+
+  it('returns undefined for malformed JSON', () => {
+    expect(normalizeMCPToolArgs('{not valid json')).toBeUndefined();
+  });
+
+  it('returns undefined for a JSON string that parses to a non-object (e.g. a number)', () => {
+    expect(normalizeMCPToolArgs('42')).toBeUndefined();
+  });
+
+  it('returns undefined when input is null or undefined', () => {
+    expect(normalizeMCPToolArgs(null)).toBeUndefined();
+    expect(normalizeMCPToolArgs(undefined)).toBeUndefined();
+  });
+
+  it('returns undefined for an array input', () => {
+    expect(normalizeMCPToolArgs(['56162', 'AU'])).toBeUndefined();
+  });
+
+  it('returns undefined for a JSON string that parses to an array', () => {
+    expect(normalizeMCPToolArgs('["56162","AU"]')).toBeUndefined();
+  });
+});

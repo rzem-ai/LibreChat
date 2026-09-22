@@ -25,6 +25,7 @@ Describe the steps required to test your changes, including any setup or configu
 - [ ] I named this PR with a clear and descriptive title, starting with FEAT, FIX, REFACTOR, CHORE, DOCS or TEST
 - [ ] I wrote and commented my code for maximum clarity (see [tips](https://www.py4u.org/python-tutorial/best-practices-for-documenting-python-code-effectively/))
 - [ ] I can confidently explain the changes made in this PR and how they work
+- [ ] My PR buddy can confidently explain the changes made in this PR and how they work
 
 ## Testing
 - [ ] I tested my changes locally using the steps above and confirmed changes work as expected (include screenshots below, if applicable)

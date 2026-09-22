@@ -134,7 +134,7 @@ async function fetchJson<T>(page: Page, path: string, token: string): Promise<T>
   return result.json as T;
 }
 
-test.describe('deployment skills', () => {
+test.describe('deployment skills', { tag: ['@mock', '@skills'] }, () => {
   test('loads configured deployment skills for every authenticated user as read-only', async ({
     page,
   }) => {
