@@ -150,6 +150,8 @@ async function enhanceSourcesWithMetadata(sources, appConfig) {
         storageType: configuredStorageType,
         fileType: fileRecord.type || undefined,
         fileBytes: fileRecord.bytes || undefined,
+        // Deloitte Custom Change: uploaded date shown on file_search citations
+        uploadedAt: fileRecord.createdAt ? new Date(fileRecord.createdAt).toISOString() : undefined,
       },
     };
   });

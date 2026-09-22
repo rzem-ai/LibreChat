@@ -1,5 +1,7 @@
 import type { MCPResultSource, MCPSourcesResult } from 'librechat-data-provider';
 import { resolveMCPSourceLink } from '../linkTemplates';
+import { formatDisplayDate } from '../format';
+import { buildListSources } from '../listSources';
 
 /** Upper bound on entities extracted from a single search/list result. */
 const MAX_ENTITY_ITEMS = 30;
@@ -42,6 +44,7 @@ function buildEntitySource(
     title,
     link: resolveMCPSourceLink(toolName, { entityID }),
     content: [title, metadataLines.join('\n')].filter(Boolean).join('\n\n'),
+    date: formatDisplayDate(entity.lastApprovedDate), // Deloitte Custom Change: citation date
   };
 }
 
@@ -80,13 +83,11 @@ export function buildEntitySources({
   }
 
   if (Array.isArray(data.items)) {
-    const sources: MCPResultSource[] = [];
-    for (const entity of data.items.slice(0, MAX_ENTITY_ITEMS)) {
-      const source = buildEntitySource(toolName, serverName, entity);
-      if (source) {
-        sources.push(source);
-      }
-    }
+    const sources = buildListSources({
+      items: data.items,
+      maxItems: MAX_ENTITY_ITEMS,
+      mapItem: (entity) => buildEntitySource(toolName, serverName, entity),
+    });
     return sources.length > 0 ? { sources } : undefined;
   }
 

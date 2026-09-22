@@ -38,6 +38,8 @@ export type ValidSource = ProcessedOrganic | ProcessedTopStory;
 export type FileReferenceMetadata = {
   fileBytes?: number;
   fileType?: string;
+  /** Deloitte Custom Change: ISO timestamp the file was uploaded, from the File record's `createdAt`. */
+  uploadedAt?: string;
 };
 
 export type ResultReference = {
@@ -63,6 +65,8 @@ export type MCPResultReference = {
   attribution: string;
   type: 'mcp';
   usageRestriction?: boolean;
+  /** Deloitte Custom Change: citation date, formatted for display (e.g. "06 Nov 2025"). */
+  date?: string;
   usageRestrictionLink?: string;
 };
 
