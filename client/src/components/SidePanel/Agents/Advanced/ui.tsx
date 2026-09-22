@@ -50,7 +50,7 @@ export function LimitedAccessPill({ wrap = false }: { wrap?: boolean }) {
       )}
       labelClassName={cn(
         'px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide',
-        wrap ? 'w-14 text-center leading-tight' : 'whitespace-nowrap',
+        wrap ? '!ml-0 w-14 text-center leading-tight' : 'whitespace-nowrap',
       )}
     />
   );
