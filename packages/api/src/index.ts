@@ -25,6 +25,8 @@ export * from './mcp/request';
 export * from './mcp/feed/feed';
 /* Utilities */
 export * from './mcp/utils';
+// Deloitte Custom Change: expose the MCP Code Interpreter download bridge.
+export * from './mcp/codeFile';
 export * from './mcp/context';
 export * from './utils';
 export { default as Tokenizer, countTokens } from './utils/tokenizer';
@@ -56,6 +58,8 @@ export * from './projects';
 /* Skills */
 export * from './skills';
 export * from './favorites';
+/* Tutorial */
+export * from './tutorial';
 /* Endpoints */
 export * from './endpoints';
 /* Files */

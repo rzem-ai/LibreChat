@@ -9,6 +9,7 @@ import {
   SettingDefinition,
   tConvoUpdateSchema,
   applyModelAwareDefaults,
+  modelSupportsNativeWebSearch,
 } from 'librechat-data-provider';
 import type { TPreset } from 'librechat-data-provider';
 import { SaveAsPresetDialog } from '~/components/Endpoints';
@@ -51,9 +52,15 @@ export default function Parameters() {
       overriddenEndpointKey,
       model,
     );
-    return modelAwareParams.map(
-      (param) => (overriddenParamsMap[param.key] as SettingDefinition) ?? param,
-    );
+    // Deloitte Custom Change: hide the web_search param on models the admin allowlist excludes
+    const supportedWebSearchModels = endpointsConfig[provider]?.nativeWebSearch?.supportedModels;
+    return modelAwareParams
+      .filter(
+        (param) =>
+          param.key !== 'web_search' ||
+          modelSupportsNativeWebSearch(model, supportedWebSearchModels),
+      )
+      .map((param) => (overriddenParamsMap[param.key] as SettingDefinition) ?? param);
   }, [endpointType, endpointsConfig, model, provider]);
 
   useEffect(() => {

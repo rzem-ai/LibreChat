@@ -4,6 +4,7 @@ import {
   Bot,
   Brain,
   Bookmark,
+  GraduationCap,
   NotebookPen,
   ScrollText,
   ArrowRightToLine,
@@ -30,6 +31,7 @@ import AgentPanelSwitch from '~/components/SidePanel/Agents/AgentPanelSwitch';
 import BookmarkPanel from '~/components/SidePanel/Bookmarks/BookmarkPanel';
 import PanelSwitch from '~/components/SidePanel/Builder/PanelSwitch';
 import Parameters from '~/components/SidePanel/Parameters/Panel';
+import LearningPanel from '~/components/Learning/LearningPanel';
 import { MemoryPanel } from '~/components/SidePanel/Memories';
 import FilesPanel from '~/components/SidePanel/Files/Panel';
 import { PromptsAccordion } from '~/components/Prompts';
@@ -206,6 +208,22 @@ export default function useSideNavLinks({
       });
     }
 
+    const isTutorialEnabled =
+      (interfaceConfig.customDeloitteFeatureFlags?.isTutorialEnabled ??
+        interfaceConfig.isTutorialEnabled) !== false;
+
+    // Deloitte Custom Change: conditionally add the Learning Hub nav panel when
+    // the tutorial/learning-hub feature is enabled via interface config
+    if (isTutorialEnabled) {
+      links.push({
+        title: 'com_ui_learning_hub',
+        label: '',
+        icon: GraduationCap,
+        id: 'learning',
+        Component: LearningPanel,
+      });
+    }
+
     if (includeHidePanel && hidePanel) {
       links.push({
         title: 'com_sidepanel_hide_panel',
@@ -234,6 +252,8 @@ export default function useSideNavLinks({
     availableMCPServers,
     hasAccessToUseMCPSettings,
     hasAccessToCreateMCP,
+    interfaceConfig.customDeloitteFeatureFlags?.isTutorialEnabled,
+    interfaceConfig.isTutorialEnabled,
     includeHidePanel,
     hidePanel,
   ]);

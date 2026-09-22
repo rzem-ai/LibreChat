@@ -170,6 +170,7 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
                   <li>{localize('com_ui_skill_upload_req_md')}</li>
                   <li>{localize('com_ui_skill_upload_req_zip')}</li>
                   <li>{localize('com_ui_skill_upload_req_size', { 0: displayedSizeLimit })}</li>
+                  <li>{localize('com_ui_skill_upload_req_no_spaces')}</li>
                 </ul>
               </div>
             </div>

@@ -1,13 +1,14 @@
 // Deloitte Custom Change: tests
+import type { MCPOptions } from 'librechat-data-provider';
+import type { MCPServerDefinition } from '~/hooks/MCP/useMCPServerManager';
+import type { MCPServerStatusIconProps } from '../MCPServerStatusIcon';
 import {
   getSelectedServerIcons,
   hasConfiguredIcon,
+  hasLimitedAccess,
   resolveThemedIconPaths,
   shouldShowActionButton,
 } from '../mcpServerUtils';
-import type { MCPServerStatusIconProps } from '../MCPServerStatusIcon';
-import type { MCPServerDefinition } from '~/hooks/MCP/useMCPServerManager';
-import type { MCPOptions } from 'librechat-data-provider';
 
 const makeServer = (
   serverName: string,
@@ -111,6 +112,13 @@ describe('hasConfiguredIcon', () => {
   });
 });
 
+describe('hasLimitedAccess', () => {
+  it('returns true only for servers configured with limited access', () => {
+    expect(hasLimitedAccess(makeServer('sharepoint', { limitedAccess: true }))).toBe(true);
+    expect(hasLimitedAccess(makeServer('other-server'))).toBe(false);
+  });
+});
+
 describe('resolveThemedIconPaths', () => {
   it('returns null for both themes when no icon field is set', () => {
     expect(resolveThemedIconPaths({})).toEqual({ light: null, dark: null });
@@ -127,9 +135,10 @@ describe('resolveThemedIconPaths', () => {
       light: '/icon.png',
       dark: '/icon.png',
     });
-    expect(
-      resolveThemedIconPaths({ iconPath: '/icon.png', iconPathDark: '/dark.png' }),
-    ).toEqual({ light: '/icon.png', dark: '/dark.png' });
+    expect(resolveThemedIconPaths({ iconPath: '/icon.png', iconPathDark: '/dark.png' })).toEqual({
+      light: '/icon.png',
+      dark: '/dark.png',
+    });
   });
 
   it('falls back to the other theme variant when neither its own variant nor iconPath is set', () => {

@@ -396,7 +396,7 @@ describe('no-op shortcuts', () => {
   it('does not prevent submit shortcut when the send button is disabled', () => {
     renderHarness();
     const button = document.createElement('button');
-    button.dataset.testid = 'send-button';
+    button.id = 'send-button';
     button.disabled = true;
     document.body.appendChild(button);
 
@@ -409,7 +409,7 @@ describe('no-op shortcuts', () => {
 function appendSendButton(): jest.Mock {
   const onClick = jest.fn();
   const button = document.createElement('button');
-  button.dataset.testid = 'send-button';
+  button.id = 'send-button';
   button.addEventListener('click', onClick);
   document.body.appendChild(button);
   return onClick;

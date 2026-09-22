@@ -1,6 +1,12 @@
 import { Providers } from '@librechat/agents';
 import { logger } from '@librechat/data-schemas';
-import { googleSettings, AuthKeys, removeNullishValues } from 'librechat-data-provider';
+import {
+  googleSettings,
+  AuthKeys,
+  removeNullishValues,
+  modelSupportsNativeWebSearch,
+  unsupportedNativeWebSearchMessage,
+} from 'librechat-data-provider';
 import type { GoogleClientOptions, VertexAIClientOptions } from '@librechat/agents';
 import type { GoogleAIToolType } from '@librechat/agents/langchain/google-common';
 import type * as t from '~/types';
@@ -697,6 +703,11 @@ export function getGoogleConfig(
   const tools: GoogleAIToolType[] = [];
 
   if (enableWebSearch) {
+    const webSearchModel = ((llmConfig as { model?: string }).model || modelName) ?? '';
+    // Deloitte Custom Change: reject models the admin allowlist excludes from native web search
+    if (!modelSupportsNativeWebSearch(webSearchModel, options.supportedWebSearchModels)) {
+      throw new Error(unsupportedNativeWebSearchMessage(webSearchModel));
+    }
     tools.push({ googleSearch: {} });
   }
 

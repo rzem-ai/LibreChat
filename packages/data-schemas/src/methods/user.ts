@@ -12,8 +12,21 @@ import { signPayload } from '~/crypto';
 /** Default JWT session expiry: 15 minutes in milliseconds */
 export const DEFAULT_SESSION_EXPIRY: number = 1000 * 60 * 15;
 
+/**
+ * Maximum number of course ratings stored per user.
+ * Enforced inside mergeTutorialRatings via guarded compare-and-swap updates
+ * compatible with Amazon DocumentDB. Raise here if needed —
+ * this is the single source of truth for the limit.
+ */
+export const MAX_TUTORIAL_RATINGS = 50;
+
 interface UserMethodDeps {
   getCache?: (key: string) => CacheStore | undefined;
+}
+
+interface TutorialStateMergeUpdate {
+  tutorialFeedback?: NonNullable<IUser['tutorialFeedback']>;
+  tutorialPromptSeen?: boolean;
 }
 
 function isAuthUserDocCacheEnabled(): boolean {
@@ -123,6 +136,11 @@ export function createUserMethods(
     action: 'install' | 'uninstall',
   ) => Promise<IUser | null>;
   toggleUserMemories: (userId: string, memoriesEnabled: boolean) => Promise<IUser | null>;
+  mergeTutorialRatings: (
+    userId: string,
+    ratings: Record<string, number>,
+    updateData?: TutorialStateMergeUpdate,
+  ) => Promise<{ user: IUser | null; capExceeded: boolean; conflict: boolean }>;
 } {
   /**
    * Normalizes email fields in search criteria to lowercase and trimmed.
@@ -594,6 +612,91 @@ export function createUserMethods(
     return null;
   }
 
+  /**
+   * Merges new course ratings into tutorialRatings with cap enforcement.
+   *
+   * Uses a guarded compare-and-swap write to stay compatible with Amazon
+   * DocumentDB, which rejects aggregation-pipeline updates.
+   */
+  async function mergeTutorialRatings(
+    userId: string,
+    ratings: Record<string, number>,
+    updateData?: TutorialStateMergeUpdate,
+  ): Promise<{ user: IUser | null; capExceeded: boolean; conflict: boolean }> {
+    const User = mongoose.models.User;
+
+    const maxAttempts = 3;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const current = await User.findById(userId)
+        .select('tutorialRatings')
+        .lean<IUser | null>();
+      if (!current) {
+        return { user: null, capExceeded: false, conflict: false };
+      }
+
+      const hasTutorialRatingsField = Object.prototype.hasOwnProperty.call(
+        current,
+        'tutorialRatings',
+      );
+      const existingRatings = current.tutorialRatings ?? {};
+      const mergedRatings = { ...existingRatings, ...ratings };
+      if (Object.keys(mergedRatings).length > MAX_TUTORIAL_RATINGS) {
+        return { user: current, capExceeded: true, conflict: false };
+      }
+
+      const casFilter: FilterQuery<IUser> = hasTutorialRatingsField
+        ? { _id: userId, tutorialRatings: existingRatings }
+        : {
+            _id: userId,
+            $or: [
+              { tutorialRatings: { $exists: false } },
+              { tutorialRatings: existingRatings },
+            ],
+          };
+
+      const feedbackUpdate =
+        updateData?.tutorialFeedback != null
+          ? Object.fromEntries(
+              Object.entries(updateData.tutorialFeedback).map(([courseId, feedback]) => [
+                `tutorialFeedback.${courseId}`,
+                feedback,
+              ]),
+            )
+          : {};
+      const nextUpdate = {
+        tutorialRatings: mergedRatings,
+        ...feedbackUpdate,
+        ...(updateData?.tutorialPromptSeen != null
+          ? { tutorialPromptSeen: updateData.tutorialPromptSeen }
+          : {}),
+      };
+      const updated = await User.findOneAndUpdate(
+        casFilter,
+        { $set: nextUpdate },
+        { new: true, runValidators: true },
+      ).lean<IUser>();
+      if (updated) {
+        await invalidateAuthUserDocCache(userId);
+        return { user: updated, capExceeded: false, conflict: false };
+      }
+    }
+
+    const fallback = await User.findById(userId)
+      .select('tutorialRatings tutorialFeedback tutorialPromptSeen')
+      .lean<IUser | null>();
+    if (!fallback) {
+      return { user: null, capExceeded: false, conflict: false };
+    }
+
+    const fallbackRatings = fallback.tutorialRatings ?? {};
+    const fallbackMergedRatings = { ...fallbackRatings, ...ratings };
+    return {
+      user: fallback,
+      capExceeded: Object.keys(fallbackMergedRatings).length > MAX_TUTORIAL_RATINGS,
+      conflict: true,
+    };
+  }
+
   return {
     findUser,
     findUsers,
@@ -607,6 +710,7 @@ export function createUserMethods(
     deleteUserById,
     updateUserPlugins,
     toggleUserMemories,
+    mergeTutorialRatings,
   };
 }
 

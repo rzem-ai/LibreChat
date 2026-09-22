@@ -476,6 +476,22 @@ describe('allowedAddressesSchema', () => {
       expect(result.success).toBe(true);
     });
 
+    it('accepts codeFileAllowedDomains on mcpSettings', () => {
+      const result = configSchema.safeParse({
+        version: '1.0',
+        mcpSettings: { codeFileAllowedDomains: ['https://*.sharepoint.com'] },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects non-string codeFileAllowedDomains entries on mcpSettings', () => {
+      const result = configSchema.safeParse({
+        version: '1.0',
+        mcpSettings: { codeFileAllowedDomains: ['https://*.sharepoint.com', 42] },
+      });
+      expect(result.success).toBe(false);
+    });
+
     it('accepts the field on actions', () => {
       const result = configSchema.safeParse({
         version: '1.0',

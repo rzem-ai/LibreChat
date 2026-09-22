@@ -71,6 +71,7 @@ jest.mock('~/hooks', () => ({
           '.md file must contain skill name and description formatted in YAML',
         com_ui_skill_upload_req_zip: '.zip or .skill file must include a SKILL.md file',
         com_ui_skill_upload_req_size: `File size must not exceed ${params?.[0]} MB`,
+        com_ui_skill_upload_req_no_spaces: 'File names must not contain spaces',
         com_ui_skill_upload_size_error: `Skill import must not exceed ${params?.[0]} MB`,
         com_ui_skill_created: 'Skill created',
         com_ui_create_skill_upload_error: 'Failed to read the uploaded file',
@@ -131,6 +132,12 @@ describe('UploadSkillDialog', () => {
     render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
 
     expect(screen.getByText('File size must not exceed 1.06 MB')).toBeInTheDocument();
+  });
+
+  it('renders the no-spaces filename requirement', () => {
+    render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    expect(screen.getByText('File names must not contain spaces')).toBeInTheDocument();
   });
 
   it('rejects files above the configured skill import limit before upload', () => {

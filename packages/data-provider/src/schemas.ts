@@ -891,12 +891,18 @@ export type MCPResultSource = {
   title?: string;
   link?: string;
   usageRestriction?: boolean;
+  /** Deloitte Custom Change: citation date, formatted for display (e.g. "06 Nov 2025"). */
+  date?: string;
+  /** Overrides `link` as the "Learn more" target on the usage-restriction notice (e.g. DPN's fixed terms-of-use page, rather than the profile itself). */
+  usageRestrictionLink?: string;
 };
 
 /** Sources extracted from a single MCP tool result, plus an optional disclaimer the tool wants surfaced verbatim (e.g. KX usage restrictions). */
 export type MCPSourcesResult = {
   sources: MCPResultSource[];
   disclaimer?: string;
+  /** True when any source in this result is a DPN profile, so the end-of-response DPN usage-guidelines disclaimer can be appended. */
+  dpnUsageRestriction?: boolean;
 };
 
 export type TAttachmentMetadata = {
@@ -1534,6 +1540,8 @@ export const compactAgentsBaseSchema = tConversationSchema.pick({
   agent_id: true,
   instructions: true,
   additional_instructions: true,
+  // Deloitte Custom Change: preserve the native web-search override instead of stripping it
+  web_search: true,
 });
 
 export const compactAgentsSchema = compactAgentsBaseSchema

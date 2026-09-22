@@ -15,10 +15,10 @@ import type { Types } from 'mongoose';
 import type { ImportLimits } from './limits';
 import { isSkillScanError, scanSkillMarkdown, scanSkillUpload } from './scanner';
 import { resolveRequestTenantId } from '~/middleware/tenant';
+import { readZipEntry, stripZipArtifacts } from './zip';
 import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
 import { isSafeSkillFilePath } from './path';
 import { parseSkillMarkdown } from './parse';
-import { readZipEntry } from './zip';
 
 const SKILL_MD = 'SKILL.md';
 
@@ -355,20 +355,12 @@ async function handleZip(
     return res.status(400).json({ error: 'Invalid or corrupt archive' });
   }
 
-  // Deloitte Custom Change: Fix to Strip macOS metadata folders injected by Finder's "Compress" before any processing.
-  // This prevents __MACOSX/ resource fork sidecars and .DS_Store files from being stored as skill files or counted toward entry limits.
-  for (const entryPath of Object.keys(zip.files)) {
-    const normalized = entryPath.replace(/\\/g, '/');
-    const basename = path.posix.basename(normalized);
-    if (
-      normalized === '__MACOSX' ||
-      normalized.startsWith('__MACOSX/') ||
-      basename === '.DS_Store' ||
-      basename.startsWith('._')
-    ) {
-      zip.remove(entryPath);
-    }
-  }
+  // Deloitte Custom Change: Strip unwanted filesystem artifacts before processing.
+  // Patterns are configured via STRIP_DIR_NAMES and STRIP_BASENAME_PREFIXES in zip.ts —
+  // add new patterns there to extend behaviour.
+  // This safety net runs even when the skill scanner is disabled (e.g. open source
+  // / self-hosted deployments without SKILL_SCANNER_URL configured).
+  stripZipArtifacts(zip);
 
   const entries = Object.keys(zip.files);
 

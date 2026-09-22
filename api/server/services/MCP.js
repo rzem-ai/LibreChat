@@ -34,6 +34,9 @@ const {
   containsGraphTokenPlaceholder,
   isOAuthServer,
   isOboServer,
+  sanitizeFilename,
+  fetchAllowedCodeFileStream,
+  HOST_FILE_AUTHORING_ARTIFACT_KEY,
 } = require('@librechat/api');
 const { extractOpenIDTokenInfo, isOpenIDTokenValid } = require('@librechat/api');
 const {
@@ -42,6 +45,7 @@ const {
   Constants,
   Permissions,
   PermissionTypes,
+  AgentCapabilities,
   isAssistantsEndpoint,
 } = require('librechat-data-provider');
 const {
@@ -56,8 +60,9 @@ const { getGraphApiToken } = require('./GraphTokenService');
 const { exchangeOboToken } = require('./OboTokenService');
 const { createOboTrustChecker } = require('./OboPolicyService');
 const { reinitMCPServer } = require('./Tools/mcp');
-const { getAppConfig } = require('./Config');
+const { getAppConfig, checkCapability } = require('./Config');
 const { getLogStores } = require('~/cache');
+const { uploadCodeEnvFile } = require('~/server/services/Files/Code/crud');
 
 const MAX_CACHE_SIZE = 1000;
 const lastReconnectAttempts = new Map();
@@ -1111,6 +1116,142 @@ function createToolInstance({
         oboTrustChecker: createOboTrustChecker(),
       });
 
+      const artifacts = Array.isArray(result) ? result[1] : undefined;
+      /* The Assistants endpoint (and any other non-agent caller returning
+       * only `result[0]` below) has no code-session pipeline to hand this
+       * artifact to; registering it there would upload the file to Code
+       * Interpreter storage for no consumer. `formatToolContent` still empties
+       * `result[0]` for a marker-only response regardless of provider, so
+       * without a substitute the Assistants endpoint would return nothing at
+       * all for a tool call that otherwise succeeded. */
+      // Deloitte Custom Change: register MCP download resources with Code Interpreter.
+      if (artifacts?.codeFile && isAssistantsEndpoint(provider)) {
+        if (Array.isArray(result) && !result[0]) {
+          result[0] = `File "${artifacts.codeFile.name}" could not be attached to this conversation for use in Code Interpreter.`;
+        }
+      } else if (artifacts?.codeFile) {
+        const { name, url } = artifacts.codeFile;
+        delete artifacts.codeFile;
+        const req = res?.req;
+        /* `checkCapability` hits the DB/role-permissions layer, so a transient
+         * failure there must not turn an already-successful tool call (e.g.
+         * the SharePoint download) into a hard error via the outer catch —
+         * fail closed the same way an explicit "not enabled" result does. */
+        let capabilityCheckFailed = false;
+        let hasExecuteCodeCapability = false;
+        /* `formatToolContent` returns an empty `result[0]` for a marker-only
+         * download response, deferring all user-visible content to the
+         * codeFile artifact. If that artifact is then dropped below without
+         * a substitute message, the model sees a completely empty tool
+         * result with no indication the download happened (or failed). */
+        let codeFileRegistrationFailed = false;
+        if (req) {
+          try {
+            hasExecuteCodeCapability = await checkCapability(req, AgentCapabilities.execute_code);
+          } catch (capabilityError) {
+            capabilityCheckFailed = true;
+            logger.warn(
+              `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": failed to check Code Interpreter capability.`,
+              { message: capabilityError?.message, stack: capabilityError?.stack },
+            );
+          }
+        }
+        if (!req) {
+          codeFileRegistrationFailed = true;
+          logger.warn(
+            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": no request context available to register it with Code Interpreter.`,
+          );
+        } else if (capabilityCheckFailed) {
+          codeFileRegistrationFailed = true;
+          // Already logged above.
+        } else if (!hasExecuteCodeCapability) {
+          codeFileRegistrationFailed = true;
+          logger.warn(
+            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": Code Interpreter is not enabled for this endpoint.`,
+          );
+        } else if (config?.configurable?.codeEnvAvailable !== true) {
+          /* `checkCapability` above is only the endpoint-level admin gate; the
+           * agent actually handling this call may not have `execute_code` in
+           * its own tool list (`effectiveCodeEnvAvailable` in initialize.ts),
+           * in which case it has no Code Interpreter session to use this file
+           * from. */
+          codeFileRegistrationFailed = true;
+          logger.warn(
+            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": this agent does not have Code Interpreter (execute_code) available.`,
+          );
+        } else {
+          let stream;
+          try {
+            const appConfig = await getAppConfig({
+              role: effectiveUser?.role,
+              tenantId: effectiveUser?.tenantId ?? getTenantId(),
+              userId,
+            });
+            const codeFileAllowedDomains = appConfig?.mcpSettings?.codeFileAllowedDomains;
+            const download = await fetchAllowedCodeFileStream(
+              url,
+              codeFileAllowedDomains,
+              appConfig?.mcpSettings?.allowedAddresses,
+            );
+            stream = download.data;
+            const sandboxFilename = sanitizeFilename(name);
+            const uploaded = await uploadCodeEnvFile({
+              req,
+              stream,
+              filename: sandboxFilename,
+              kind: 'user',
+              id: userId,
+            });
+            artifacts[HOST_FILE_AUTHORING_ARTIFACT_KEY] = true;
+            artifacts.session_id = uploaded.storage_session_id;
+            artifacts.files = [
+              {
+                id: uploaded.file_id,
+                name: sandboxFilename,
+                storage_session_id: uploaded.storage_session_id,
+                resource_id: userId,
+                kind: 'user',
+              },
+            ];
+          } catch (codeFileError) {
+            /** Keep the underlying tool result (e.g. the SharePoint download
+             *  already succeeded) instead of failing the whole call over a
+             *  transient network blip, a disallowed/redirected URL, or an
+             *  expired short-lived download URL. */
+            codeFileRegistrationFailed = true;
+            logger.warn(
+              `[MCP][${serverName}][${toolName}][User: ${userId}] Failed to register codeFile artifact "${name}" with Code Interpreter:`,
+              /** Axios attaches the raw (signed) request URL to `error.config`/
+               *  `error.request`; logging `codeFileError` directly would leak
+               *  that credential-bearing query string, so only the message
+               *  and stack (already redacted at the throw site above) are
+               *  logged here. */
+              { message: codeFileError?.message, stack: codeFileError?.stack },
+            );
+          } finally {
+            /* If `uploadCodeEnvFile` threw/rejected before fully consuming
+             * `stream` (e.g. it validates the filename before reading the
+             * body), the underlying socket is left open — Node does not
+             * clean this up on its own. `destroy()` on an already-consumed
+             * or already-destroyed stream is a safe no-op. */
+            if (typeof stream?.destroy === 'function' && !stream.destroyed) {
+              stream.destroy();
+            }
+          }
+        }
+        /* Marker-only tool responses (`result[0] === ''`) rely entirely on the
+         * codeFile artifact to tell the model anything happened. Losing that
+         * artifact above without a substitute leaves the model with no signal
+         * at all, so fall back to a plain, non-secret status line instead.
+         * This also fires when `fetchAllowedCodeFileStream`/`uploadCodeEnvFile`
+         * themselves failed (disallowed/expired URL, network error), so the
+         * wording must stay neutral about whether the download itself
+         * succeeded. */
+        if (codeFileRegistrationFailed && Array.isArray(result) && !result[0]) {
+          result[0] = `File "${name}" could not be attached to this conversation for use in Code Interpreter.`;
+        }
+      }
+
       if (isAssistantsEndpoint(provider) && Array.isArray(result)) {
         return result[0];
       }
@@ -1420,7 +1561,7 @@ async function getServerConnectionStatus(
           /**
            * OBO servers use ephemeral in-memory cached tokens (not persistent DB storage).
            * User's upstream OpenID token is sufficient to display 'connected' status.
-           * 
+           *
            * Trustedness validation occurs later via oboTrustChecker during actual token exchange.
            * Token expiration/validity is checked during on-demand OBO token resolution at tool execution.
            * This allows green icon display on sign-in when upstream token is fresh.

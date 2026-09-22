@@ -494,7 +494,7 @@ const ProjectsSection = ({ toggleNav, isAuthenticated }: ProjectsSectionProps) =
   }
 
   return (
-    <div className="flex flex-col px-3 text-sm">
+    <div id="nav-projects-section" className="flex flex-col px-3 text-sm">
       <div className="flex h-8 w-full items-center gap-0.5 pr-2">
         <button
           onClick={() => {

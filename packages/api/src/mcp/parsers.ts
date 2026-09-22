@@ -1,9 +1,22 @@
 import crypto from 'node:crypto';
+import { logger } from '@librechat/data-schemas';
 import { Tools } from 'librechat-data-provider';
 import type { UIResource } from 'librechat-data-provider';
 import type * as t from './types';
 
 export const DEFAULT_MCP_IMAGE_DATA_MAX_BYTES: number = 10 * 1024 * 1024;
+
+/**
+ * Marker URI scheme a tool can use to hand back a download link for a file
+ * meant for Code Interpreter, instead of a resource block a caller might
+ * otherwise stringify into the model's context. `resource.text` carries the
+ * actual URL; the filename lives in `resource.uri` after the scheme, percent-
+ * encoded by the producer (e.g. ea-mcp-gateway's sharepoint-graph-mcp server
+ * via `url.PathEscape`) since SharePoint names routinely contain spaces or
+ * other characters that would otherwise be parsed as URI syntax. Consumers
+ * must `decodeURIComponent` it back out.
+ */
+export const CODE_FILE_DOWNLOAD_SCHEME = 'librechat-download://';
 
 function generateResourceId(text: string): string {
   return crypto.createHash('sha256').update(text).digest('hex').substring(0, 10);
@@ -94,8 +107,86 @@ function isImageContent(item: t.ToolContentPart): item is t.ImageContent {
   return item.type === 'image';
 }
 
-function parseAsString(result: t.MCPToolCallResponse): string {
-  const content = result?.content ?? [];
+/**
+ * Pulls a `librechat-download://` marker resource out of the content array
+ * regardless of provider, so it's never stringified into the model's
+ * context even for providers outside `RECOGNIZED_PROVIDERS`.
+ */
+function extractCodeFile(content: t.ToolContentPart[]): {
+  codeFile?: NonNullable<t.Artifacts>['codeFile'];
+  content: t.ToolContentPart[];
+} {
+  let codeFile: NonNullable<t.Artifacts>['codeFile'];
+  const remaining: t.ToolContentPart[] = [];
+
+  for (const item of content) {
+    if (
+      item.type === 'resource' &&
+      item.resource.uri.toLowerCase().startsWith(CODE_FILE_DOWNLOAD_SCHEME) &&
+      'text' in item.resource &&
+      item.resource.text
+    ) {
+      // Every valid marker is consumed here (not pushed into `remaining`),
+      // even beyond the first: only the first becomes the codeFile artifact,
+      // but a second one left in `remaining` would have its signed download
+      // URL stringified into the model's context by parseAsString below,
+      // defeating the whole point of this marker scheme.
+      if (!codeFile) {
+        const { uri, mimeType, text } = item.resource;
+        const rawName = uri.slice(CODE_FILE_DOWNLOAD_SCHEME.length) || uri;
+        // Producers percent-encode the filename component (e.g. ea-mcp-gateway's
+        // sharepoint-graph-mcp server) since raw names commonly contain spaces
+        // or characters like '#' that would otherwise be parsed as URI syntax.
+        // decodeURIComponent is a no-op for names with no such characters, so
+        // this is safe even against producers that don't encode.
+        let name = rawName;
+        try {
+          name = decodeURIComponent(rawName);
+        } catch {
+          // Malformed percent-encoding: fall back to the raw (undecoded) name.
+        }
+        codeFile = { name, mimeType, url: text };
+      } else {
+        /* Only the first download marker survives as a codeFile artifact;
+         * a second one is dropped rather than leaked into text (see above).
+         * That's silent data loss for a tool that returns multiple files in
+         * one call, so at least surface it here for operators. */
+        logger.warn(
+          `[MCP][parsers] Dropped a second librechat-download:// marker (only one codeFile per tool result is supported): ${item.resource.uri}`,
+        );
+      }
+      continue;
+    }
+    remaining.push(item);
+  }
+
+  if (!codeFile) {
+    return { codeFile, content: remaining };
+  }
+
+  // Deloitte Custom Change: Hide gateway-local paths from the model once the
+  // paired download marker has made the file available to Code Interpreter.
+  return {
+    codeFile,
+    content: remaining.map((item) => {
+      if (item.type !== 'text') {
+        return item;
+      }
+      try {
+        const payload = JSON.parse(item.text);
+        if (payload == null || Array.isArray(payload) || !Object.hasOwn(payload, 'tempPath')) {
+          return item;
+        }
+        delete payload.tempPath;
+        return { ...item, text: JSON.stringify(payload) };
+      } catch {
+        return item;
+      }
+    }),
+  };
+}
+
+function parseAsString(content: t.ToolContentPart[]): string {
   if (!content.length) {
     return '(No response)';
   }
@@ -142,13 +233,20 @@ export function formatToolContent(
   result: t.MCPToolCallResponse,
   provider: t.Provider,
 ): t.FormattedContentResult {
+  const { codeFile, content } = extractCodeFile(result?.content ?? []);
+
   if (!RECOGNIZED_PROVIDERS.has(provider)) {
-    return [parseAsString(result), undefined];
+    let text = '(No response)';
+    if (content.length > 0) {
+      text = parseAsString(content);
+    } else if (codeFile) {
+      text = '';
+    }
+    return [text, codeFile ? { codeFile } : undefined];
   }
 
-  const content = result?.content ?? [];
   if (!content.length) {
-    return ['(No response)', undefined];
+    return codeFile ? ['', { codeFile }] : ['(No response)', undefined];
   }
 
   const imageUrls: t.FormattedContent[] = [];
@@ -250,5 +348,9 @@ UI Resource Markers Available:
     };
   }
 
-  return [currentTextBlock || (artifacts !== undefined ? '' : '(No response)'), artifacts];
+  if (codeFile) {
+    artifacts = { ...artifacts, codeFile };
+  }
+
+  return [currentTextBlock || (artifacts != null ? '' : '(No response)'), artifacts];
 }

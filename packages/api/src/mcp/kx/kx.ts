@@ -1,6 +1,7 @@
-import type { MCPResultSource, MCPSourcesResult } from 'librechat-data-provider';
+import type { MCPSourcesResult } from 'librechat-data-provider';
 
-import { stripHtmlTags, htmlToMarkdownText } from '../format';
+import { stripHtmlTags, htmlToMarkdownText, formatDisplayDate } from '../format';
+import { buildListSources } from '../listSources';
 
 /** Upper bound on results extracted from a single KX query response. */
 const MAX_KX_RESULTS = 30;
@@ -9,8 +10,17 @@ interface KxResult {
   title?: string;
   description?: string;
   appurl?: string;
+  source?: string;
   usageguidelines?: string;
+  /** Deloitte Custom Change: per the KX API docs, content's date, e.g. KXQ_ProjectEndDate for Quals, KXA_ContentDate for Documents. */
+  sortbydate?: string;
 }
+
+/** KX result-type identifier for a Deloitte Professional Network people-profile hit. */
+const DPN_SOURCE_TYPE = 'DPN';
+
+/** Fixed terms-of-use page linked from a DPN citation's usage-restriction notice and end-of-response disclaimer, in place of the profile URL itself. */
+export const DPN_USAGE_GUIDELINES_URL = 'https://people.deloitte/legalcontent#termsofuse';
 
 interface KxPayload {
   actualresults?: KxResult[];
@@ -27,11 +37,11 @@ interface KxPayload {
  * the model to repeat it. KX embeds its own `<cit><a href="...">` markup in
  * that field, which is converted to markdown links (not stripped outright)
  * so the disclaimer stays clickable once appended to the markdown-rendered
- * answer. Each source that carries its own per-result
- * `usageguidelines` is flagged with `usageRestriction: true` so the UI can
- * show a distinct warning on that citation chip. Returns undefined (letting
- * the caller fall back) when the content isn't this KX shape, or no result
- * yields usable text.
+ * answer. Each source that carries its own per-result `usageguidelines`, or
+ * that is a DPN (Deloitte Professional Network) people-profile result, is
+ * flagged with `usageRestriction: true` so the UI can show a distinct warning
+ * on that citation chip. Returns undefined (letting the caller fall back)
+ * when the content isn't this KX shape, or no result yields usable text.
  */
 export function buildKxSources({
   toolName,
@@ -53,24 +63,32 @@ export function buildKxSources({
     return undefined;
   }
 
-  const sources: MCPResultSource[] = [];
-  for (const result of parsed.actualresults.slice(0, MAX_KX_RESULTS)) {
-    if (!result.title) {
-      continue;
-    }
-    const cleanDescription = result.description ? stripHtmlTags(result.description) : undefined;
-    const usageWarning = result.usageguidelines
-      ? `Usage restrictions: ${stripHtmlTags(result.usageguidelines)}`
-      : undefined;
-    sources.push({
-      toolName,
-      serverName,
-      title: result.title,
-      link: result.appurl,
-      content: [result.title, cleanDescription, usageWarning].filter(Boolean).join('\n\n'),
-      usageRestriction: Boolean(result.usageguidelines),
-    });
-  }
+  let dpnUsageRestriction = false;
+  const sources = buildListSources({
+    items: parsed.actualresults,
+    maxItems: MAX_KX_RESULTS,
+    mapItem: (result) => {
+      if (!result.title) {
+        return undefined;
+      }
+      const isDpnResult = result.source === DPN_SOURCE_TYPE;
+      dpnUsageRestriction = dpnUsageRestriction || isDpnResult;
+      const cleanDescription = result.description ? stripHtmlTags(result.description) : undefined;
+      const usageWarning = result.usageguidelines
+        ? `Usage restrictions: ${stripHtmlTags(result.usageguidelines)}`
+        : undefined;
+      return {
+        toolName,
+        serverName,
+        title: result.title,
+        link: result.appurl,
+        content: [result.title, cleanDescription, usageWarning].filter(Boolean).join('\n\n'),
+        usageRestriction: Boolean(result.usageguidelines) || isDpnResult,
+        date: formatDisplayDate(result.sortbydate), // Deloitte Custom Change: citation date
+        usageRestrictionLink: isDpnResult ? DPN_USAGE_GUIDELINES_URL : undefined,
+      };
+    },
+  });
 
   if (sources.length === 0) {
     return undefined;
@@ -79,5 +97,9 @@ export function buildKxSources({
   const disclaimer = parsed.usage_guidelines
     ? htmlToMarkdownText(parsed.usage_guidelines)
     : undefined;
-  return disclaimer ? { sources, disclaimer } : { sources };
+  return {
+    sources,
+    ...(disclaimer ? { disclaimer } : {}),
+    ...(dpnUsageRestriction ? { dpnUsageRestriction } : {}),
+  };
 }

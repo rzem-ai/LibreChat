@@ -3,7 +3,6 @@ name: myassist-skill-refiner
 description: Use when the user wants to improve, evaluate, or refine a LibreChat SKILL.md — checking if it's well-formed, fixing unexpected behaviour, translating feedback into concrete changes, or improving how a skill instructs the model.
 always-apply: false
 user-invocable: true
-# allowed-tools: ["<file-write-tool>"]  # add the LibreChat file-write tool name here to enable direct skill edits
 ---
 
 # Skill Refiner
@@ -131,6 +130,28 @@ Ask the user:
 - If the user doesn't know the skill name → ask them to describe what the skill was supposed to do, then suggest the most likely match and ask them to confirm before continuing
 
 **Expected outcome:** The target skill is identified and confirmed.
+
+**External skill check:** Once the skill content is available, scan it for references that cannot run in MyAssist. Flag only the following:
+- Absolute host-local file paths outside the MyAssist sandbox (e.g. `/Users/...`, `C:\...`, `~/...`)
+- Shell or terminal execution commands that require an unavailable runtime (e.g. commands outside the enabled Run Code sandbox)
+- Instructions to run a script directly when no enabled MyAssist capability can execute it (e.g. "run this Python file", "execute the script")
+
+Do not flag:
+- Sandbox paths such as `/mnt/data`
+- Commands explicitly supported by the enabled Run Code functionality
+- Relative file paths (e.g. `references/skill_template.md`) — these refer to files attached to the skill and are valid
+
+If incompatible references are found, present them as a short list and ask:
+
+> This skill references functions or folders not present in MyAssist — was this skill built outside MyAssist?
+
+- If **yes** → note it as externally built. Before proceeding, ask:
+
+  > Before we continue, please re-upload the skill along with any files it references. We recommend organising them in a `references/`, `assets/`, or `scripts/` folder so the skill can locate them consistently.
+
+  Once files are uploaded (or the user confirms none are needed), carry the flagged items forward into Step B2 as the opening feedback items, one at a time, so the user can decide how to handle each.
+
+- If **no** → continue normally.
 
 ---
 

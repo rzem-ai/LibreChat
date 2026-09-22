@@ -82,6 +82,8 @@ export async function initializeGoogle({
   if (googleConfig) {
     clientOptions.streamRate = googleConfig.streamRate;
     clientOptions.titleModel = googleConfig.titleModel;
+    // Deloitte Custom Change: pass the admin native web-search allowlist to the LLM config builder
+    clientOptions.supportedWebSearchModels = googleConfig.nativeWebSearch?.supportedModels;
   }
 
   if (allConfig) {

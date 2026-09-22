@@ -1,9 +1,52 @@
-import { useMemo } from 'react';
-import { isDark, useMediaQuery, useTheme } from '@librechat/client';
+import { useMemo, useSyncExternalStore } from 'react';
+import { isDark, useTheme } from '@librechat/client';
 import { normalizeServerName, buildServerNameAliases } from 'librechat-data-provider';
 import type { MCPServerDBObjectResponse } from 'librechat-data-provider';
-import { useMCPServersQuery } from '~/data-provider';
 import { resolveThemedIconPaths } from '~/components/MCP/mcpServerUtils';
+import { useMCPServersQuery } from '~/data-provider';
+
+// Deloitte Custom Change: single shared `matchMedia` subscription for OS dark-mode
+// detection, so rendering many citations in one message installs exactly one
+// native `change` listener total — every `useIsDarkMode` instance fans out from
+// that one listener instead of each registering its own.
+const DARK_MODE_QUERY = '(prefers-color-scheme: dark)';
+let darkModeMedia: MediaQueryList | null = null;
+const darkModeSubscribers = new Set<() => void>();
+
+function getDarkModeMedia(): MediaQueryList {
+  if (!darkModeMedia) {
+    darkModeMedia = window.matchMedia(DARK_MODE_QUERY);
+  }
+  return darkModeMedia;
+}
+
+function notifyDarkModeSubscribers(): void {
+  for (const subscriber of darkModeSubscribers) {
+    subscriber();
+  }
+}
+
+function subscribeToSystemDarkMode(onChange: () => void): () => void {
+  const media = getDarkModeMedia();
+  if (darkModeSubscribers.size === 0) {
+    media.addEventListener('change', notifyDarkModeSubscribers);
+  }
+  darkModeSubscribers.add(onChange);
+  return () => {
+    darkModeSubscribers.delete(onChange);
+    if (darkModeSubscribers.size === 0) {
+      media.removeEventListener('change', notifyDarkModeSubscribers);
+    }
+  };
+}
+
+function getSystemIsDarkSnapshot(): boolean {
+  return getDarkModeMedia().matches;
+}
+
+function getSystemIsDarkServerSnapshot(): boolean {
+  return false;
+}
 
 /**
  * Deloitte Custom Change: maps each configured MCP server's normalized name (the
@@ -13,8 +56,11 @@ import { resolveThemedIconPaths } from '~/components/MCP/mcpServerUtils';
  * Collisions are resolved via `buildServerNameAliases`, the same deterministic
  * routing the server uses, rather than "last/first configured name wins".
  */
-function useMCPServerConfigMap(): Map<string, MCPServerDBObjectResponse> {
-  const { data: servers } = useMCPServersQuery();
+function useMCPServerConfigMap({ enabled = true }: { enabled?: boolean } = {}): Map<
+  string,
+  MCPServerDBObjectResponse
+> {
+  const { data: servers } = useMCPServersQuery({ enabled });
 
   return useMemo(() => {
     const map = new Map<string, MCPServerDBObjectResponse>();
@@ -40,10 +86,25 @@ function useMCPServerConfigMap(): Map<string, MCPServerDBObjectResponse> {
  * re-render on that change must observe the media query themselves, via the
  * same shared `useMediaQuery` hook other theme-reactive components use.
  */
-function useIsDarkMode(): boolean {
+export function useIsDarkMode(): boolean {
   const { theme } = useTheme();
-  const systemIsDark = useMediaQuery('(prefers-color-scheme: dark)');
+  const systemIsDark = useSyncExternalStore(
+    subscribeToSystemDarkMode,
+    getSystemIsDarkSnapshot,
+    getSystemIsDarkServerSnapshot,
+  );
   return theme === 'system' ? systemIsDark : isDark(theme);
+}
+
+/**
+ * Deloitte Custom Change: resolves the icon path for a server config under the
+ * currently active theme, using the same light/dark/legacy fallback precedence
+ * as `MCPServerIcon`. Shared by `useMCPIconMap` and `useMCPServerMaps` so the
+ * light/dark selection logic isn't duplicated across both.
+ */
+function getThemedIconPath(config: MCPServerDBObjectResponse, dark: boolean): string | null {
+  const { light, dark: darkIconPath } = resolveThemedIconPaths(config);
+  return dark ? darkIconPath : light;
 }
 
 // Deloitte Custom Change: light/dark themed MCP server icons.
@@ -52,27 +113,20 @@ function useIsDarkMode(): boolean {
  * currently active theme, using the same light/dark/legacy fallback precedence
  * as `MCPServerIcon`. Servers with no icon configured are omitted.
  */
-export function useMCPIconMap(): Map<string, string> {
-  const { data: servers } = useMCPServersQuery();
+export function useMCPIconMap({ enabled = true }: { enabled?: boolean } = {}): Map<string, string> {
+  const configMap = useMCPServerConfigMap({ enabled });
   const dark = useIsDarkMode(); // Deloitte Custom Change: light/dark themed MCP server icons.
 
   return useMemo(() => {
     const map = new Map<string, string>();
-    if (!servers) {
-      return map;
-    }
-    for (const [serverName, config] of Object.entries(servers)) {
-      // Deloitte Custom Change: light/dark themed MCP server icons.
-      const { light, dark: darkIconPath } = resolveThemedIconPaths(config);
-      const iconPath = dark ? darkIconPath : light;
+    for (const [normalizedName, config] of configMap) {
+      const iconPath = getThemedIconPath(config, dark);
       if (iconPath) {
-        /** Looked up with a server name parsed out of a tool key, which carries the
-         *  normalized form, so key the map the same way. */
-        map.set(normalizeServerName(serverName), iconPath);
+        map.set(normalizedName, iconPath);
       }
     }
     return map;
-  }, [servers, dark]);
+  }, [configMap, dark]);
 }
 
 /**
@@ -89,22 +143,37 @@ export function useMCPServerNames(): string[] {
     }
     const rawNames = Object.keys(servers);
     const aliases = buildServerNameAliases(rawNames);
-    return Array.from(new Set([...rawNames.map(normalizeServerName), ...rawNames, ...aliases.keys()]));
+    return Array.from(
+      new Set([...rawNames.map(normalizeServerName), ...rawNames, ...aliases.keys()]),
+    );
   }, [servers]);
 }
 
-/** Deloitte Custom Change: maps each configured MCP server's normalized name to its display title. */
-export function useMCPServerTitleMap(): Map<string, string> {
-  const configMap = useMCPServerConfigMap();
+/**
+ * Deloitte Custom Change: combines the title and icon maps behind a single
+ * `useMCPServerConfigMap` call, for call sites (e.g. citations) that render many
+ * times per message and need both, so the alias/config traversal isn't repeated
+ * per map per render.
+ */
+export function useMCPServerMaps({ enabled = true }: { enabled?: boolean } = {}): {
+  titleMap: Map<string, string>;
+  iconMap: Map<string, string>;
+} {
+  const configMap = useMCPServerConfigMap({ enabled });
+  const dark = useIsDarkMode(); // Deloitte Custom Change: light/dark themed MCP server icons.
 
   return useMemo(() => {
-    const map = new Map<string, string>();
-    for (const [serverName, config] of configMap) {
+    const titleMap = new Map<string, string>();
+    const iconMap = new Map<string, string>();
+    for (const [normalizedName, config] of configMap) {
       if (config.title) {
-        map.set(serverName, config.title);
+        titleMap.set(normalizedName, config.title);
+      }
+      const iconPath = getThemedIconPath(config, dark);
+      if (iconPath) {
+        iconMap.set(normalizedName, iconPath);
       }
     }
-    return map;
-  }, [configMap]);
+    return { titleMap, iconMap };
+  }, [configMap, dark]);
 }
-

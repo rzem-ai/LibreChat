@@ -5,9 +5,11 @@ import {
   EModelEndpoint,
   MAX_SUBAGENT_DEPTH,
   MAX_SUBAGENT_RUN_CONFIGS,
+  isActionTool,
   extractEnvVariable,
   providerEndpointMap,
   normalizeEndpointName,
+  Constants as DataProviderConstants,
 } from 'librechat-data-provider';
 import type {
   SummarizationConfig as AgentSummarizationConfig,
@@ -37,6 +39,7 @@ import type { BaseMessage } from '@librechat/agents/langchain/messages';
 import type { AppConfig, IUser } from '@librechat/data-schemas';
 import type { ToolInputValidationError } from '~/agents/toolValidation';
 import type { SubagentUsageEvent } from '~/agents/usage';
+import type { LCAvailableTools } from '~/mcp/types';
 import type * as t from '~/types';
 import {
   CHECK_BACKGROUND_TASK_NAME,
@@ -64,6 +67,7 @@ import { buildLangfuseConfig } from '~/langfuse/config';
 import { resolveConfigHeaders } from '~/utils/headers';
 import { applyTestRunHook } from '~/agents/testHook';
 import { isUserProvided } from '~/utils/common';
+import { normalizeServerName, splitMCPToolKey } from '~/mcp/utils';
 
 /** Expected shape of JSON tool search results */
 interface ToolSearchJsonResult {
@@ -362,6 +366,8 @@ type RunAgent = Omit<Agent, 'tools'> & {
   toolContextMap?: Record<string, unknown>;
   dynamicToolContextMap?: Record<string, unknown>;
   toolRegistry?: LCToolRegistry;
+  /** Server-keyed MCP definitions captured while initializing this agent. */
+  mcpAvailableTools?: Record<string, LCAvailableTools>;
   /** Serializable tool definitions for event-driven execution */
   toolDefinitions?: LCTool[];
   /** Precomputed flag indicating if any tools have defer_loading enabled */
@@ -885,6 +891,63 @@ export function anyAgentReplaysReasoningContent(
     }
   }
   return false;
+}
+
+/**
+ * Deloitte Custom Change:
+ * Collects MCP tool names (`${toolName}${mcp_delimiter}${serverName}`) from
+ * every agent reachable in the run — primary, handoff/parallel, or a nested
+ * subagent — for `codeSessionToolNames`. Walks `subagentAgentConfigs` like
+ * {@link anyAgentHasStatefulSessions}, since a subagent's own MCP download
+ * tool must also share the code session for its returned artifact to be
+ * visible to a later `execute_code` call.
+ *
+ * Uses the initialized MCP server names where available. This distinguishes an
+ * action whose operationId contains `mcp_delimiter` from an MCP server whose
+ * name itself contains `_action_`.
+ *
+ * Only collects from agents with `codeEnvAvailable === true`: `MCP.js` drops
+ * any `codeFile` artifact before uploading it when the handling agent has no
+ * code environment, so listing that agent's MCP tools here would provide no
+ * session benefit while still forcing the SDK to treat every one of its MCP
+ * calls as side-effecting (losing eager execution) for nothing. A subagent
+ * without its own code environment is still walked for its children, since a
+ * deeper nested subagent may have `codeEnvAvailable` even when its parent
+ * doesn't.
+ */
+function collectMCPToolNames(agents: Array<RunAgent | null | undefined>): string[] {
+  const visited = new Set<string>();
+  const pending = [...agents];
+  const mcpToolNames: string[] = [];
+
+  for (let index = 0; index < pending.length; index++) {
+    const agent = pending[index];
+    if (agent == null || visited.has(agent.id)) {
+      continue;
+    }
+    visited.add(agent.id);
+    if (agent.codeEnvAvailable === true) {
+      const mcpServerNames = Object.keys(agent.mcpAvailableTools ?? {}).map(normalizeServerName);
+      for (const name of agent.toolRegistry?.keys() ?? []) {
+        const [, serverName] =
+          mcpServerNames.length > 0 ? splitMCPToolKey(name, mcpServerNames) : [name, undefined];
+        if (
+          (serverName != null && mcpServerNames.includes(serverName)) ||
+          (mcpServerNames.length === 0 &&
+            name.includes(DataProviderConstants.mcp_delimiter) &&
+            !isActionTool(name))
+        ) {
+          mcpToolNames.push(name);
+        }
+      }
+    }
+    for (const child of agent.subagentAgentConfigs ?? []) {
+      if (child != null && !visited.has(child.id)) {
+        pending.push(child);
+      }
+    }
+  }
+  return mcpToolNames;
 }
 
 /**
@@ -1604,11 +1667,36 @@ export async function createRun({
     // into the shared code session, keeping same-run continuity for later
     // foreground code calls. Poll results carry an artifact only for code
     // tasks, so non-code polls never touch the session.
+    //
+    // MCP tool names are dynamic (`${toolName}${mcp_delimiter}${serverName}`)
+    // and any MCP tool may hand back a `librechat-download://` codeFile (the
+    // SharePoint bridge in MCP.js is one example, not the only one), so every
+    // MCP tool reachable from the run — including nested subagents' — is
+    // opted into this list via `collectMCPToolNames` (there's no static
+    // per-tool metadata to narrow it further; `isActionTool` excludes action
+    // operationIds that happen to contain `mcp_delimiter`). Membership here
+    // has two real, but bounded, side effects on MCP tools that never return
+    // a codeFile:
+    //   1. They lose SDK eager/speculative execution (isEagerExecutionExcludedTool
+    //      in @librechat/agents treats any codeSessionToolNames member as
+    //      side-effecting). This only delays that one call to the normal
+    //      (non-speculative) path; it changes no behavior or output.
+    //   2. Once *any* MCP call has produced a session (via MCP.js setting
+    //      `artifacts.session_id`), the SDK's ToolNode also computes
+    //      `session_id`/`_injected_files` for every later call to a listed MCP
+    //      tool and attaches them to `config.toolCall` (outside `args`, so Zod
+    //      validation never sees them). This is inert here: MCP.js's `_call`
+    //      only forwards the model-provided `toolArguments` to
+    //      `mcpManager.callTool`, never `config.toolCall`, so no session/file
+    //      metadata is exposed to the downstream MCP server. If MCP.js is ever
+    //      changed to forward `config.toolCall` into the outgoing tool
+    //      arguments, that invariant needs to be re-checked.
     codeSessionToolNames: [
       CREATE_FILE_TOOL_NAME,
       EDIT_FILE_TOOL_NAME,
       Constants.READ_FILE,
       CHECK_BACKGROUND_TASK_NAME,
+      ...collectMCPToolNames(agents),
     ],
     // Derive the Langfuse trace id deterministically from runId so message
     // feedback can be scored against the trace without a lookup (see the

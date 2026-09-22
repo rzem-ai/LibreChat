@@ -1,8 +1,8 @@
 import '@testing-library/jest-dom/extend-expect';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
-import type { McpItem } from '../../items/types';
 import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusIcon';
+import type { McpItem } from '../../items/types';
 import McpSection from '../sections/McpSection';
 
 const mockSetValue = jest.fn();

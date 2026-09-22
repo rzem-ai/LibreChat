@@ -81,6 +81,8 @@ export async function initializeAnthropic({
     ...(vertexOptions && { vertexOptions }),
     // Pass full Vertex AI config including model mappings
     ...(vertexConfig && { vertexConfig }),
+    // Deloitte Custom Change: pass the admin native web-search allowlist to the LLM config builder
+    supportedWebSearchModels: anthropicConfig?.nativeWebSearch?.supportedModels,
   };
 
   const result = getLLMConfig(credentials, clientOptions);

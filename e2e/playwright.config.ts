@@ -27,7 +27,8 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [['html', { outputFolder: 'playwright-report' }]],
-  testIgnore: ['**/mock/**'],
+  // mock/real/live each run under their own playwright.config.*.ts; deprecated is excluded outright.
+  testIgnore: ['**/mock/**', '**/deprecated/**', '**/real/**', '**/live/**'],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     baseURL,
