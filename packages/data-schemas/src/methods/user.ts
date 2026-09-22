@@ -24,6 +24,11 @@ interface UserMethodDeps {
   getCache?: (key: string) => CacheStore | undefined;
 }
 
+interface TutorialStateMergeUpdate {
+  tutorialFeedback?: NonNullable<IUser['tutorialFeedback']>;
+  tutorialPromptSeen?: boolean;
+}
+
 function isAuthUserDocCacheEnabled(): boolean {
   return process.env.AUTH_USER_CACHE_MODE === 'on';
 }
@@ -134,6 +139,7 @@ export function createUserMethods(
   mergeTutorialRatings: (
     userId: string,
     ratings: Record<string, number>,
+    updateData?: TutorialStateMergeUpdate,
   ) => Promise<{ user: IUser | null; capExceeded: boolean; conflict: boolean }>;
 } {
   /**
@@ -615,6 +621,7 @@ export function createUserMethods(
   async function mergeTutorialRatings(
     userId: string,
     ratings: Record<string, number>,
+    updateData?: TutorialStateMergeUpdate,
   ): Promise<{ user: IUser | null; capExceeded: boolean; conflict: boolean }> {
     const User = mongoose.models.User;
 
@@ -647,10 +654,26 @@ export function createUserMethods(
             ],
           };
 
+      const feedbackUpdate =
+        updateData?.tutorialFeedback != null
+          ? Object.fromEntries(
+              Object.entries(updateData.tutorialFeedback).map(([courseId, feedback]) => [
+                `tutorialFeedback.${courseId}`,
+                feedback,
+              ]),
+            )
+          : {};
+      const nextUpdate = {
+        tutorialRatings: mergedRatings,
+        ...feedbackUpdate,
+        ...(updateData?.tutorialPromptSeen != null
+          ? { tutorialPromptSeen: updateData.tutorialPromptSeen }
+          : {}),
+      };
       const updated = await User.findOneAndUpdate(
         casFilter,
-        { $set: { tutorialRatings: mergedRatings } },
-        { new: true },
+        { $set: nextUpdate },
+        { new: true, runValidators: true },
       ).lean<IUser>();
       if (updated) {
         await invalidateAuthUserDocCache(userId);
@@ -659,7 +682,7 @@ export function createUserMethods(
     }
 
     const fallback = await User.findById(userId)
-      .select('tutorialRatings tutorialPromptSeen')
+      .select('tutorialRatings tutorialFeedback tutorialPromptSeen')
       .lean<IUser | null>();
     if (!fallback) {
       return { user: null, capExceeded: false, conflict: false };

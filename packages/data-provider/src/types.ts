@@ -826,9 +826,18 @@ export type TAcceptTermsResponse = {
   termsAcceptedAt: Date | string;
 };
 
+export const MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH = 200;
+
+export type TTutorialFeedback = {
+  score: number;
+  comment?: string;
+  updatedAt?: Date | string;
+};
+
 export type TTutorialStateResponse = {
   tutorialPromptSeen: boolean;
   tutorialRatings: Record<string, number>;
+  tutorialFeedback: Record<string, TTutorialFeedback>;
 };
 
 export type TBannerResponse = TBanner | null;

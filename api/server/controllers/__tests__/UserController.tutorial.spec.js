@@ -15,6 +15,7 @@ jest.mock('librechat-data-provider', () => ({
   Constants: { mcp_delimiter: '_mcp_', mcp_prefix: 'mcp_' },
   FileSources: {},
   ResourceType: {},
+  MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH: 200,
 }));
 
 jest.mock('@librechat/api', () => {
@@ -28,6 +29,7 @@ jest.mock('@librechat/api', () => {
     toTutorialStateResponse,
     MAX_TUTORIAL_RATINGS,
     MAX_RATING_KEY_LENGTH,
+    MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH,
   } = jest.requireActual('../../../../packages/api/src/tutorial/tutorialState');
 
   return {
@@ -35,6 +37,7 @@ jest.mock('@librechat/api', () => {
     toTutorialStateResponse,
     MAX_TUTORIAL_RATINGS,
     MAX_RATING_KEY_LENGTH,
+    MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH,
     // Side-effectful / server-runtime exports the controller imports but tests don't exercise:
     MCPOAuthHandler: {},
     MCPTokenStorage: {},
@@ -95,7 +98,11 @@ const {
   updateTutorialStateController,
 } = require('~/server/controllers/UserController');
 
-const { MAX_TUTORIAL_RATINGS, MAX_RATING_KEY_LENGTH } = require('@librechat/api');
+const {
+  MAX_TUTORIAL_RATINGS,
+  MAX_RATING_KEY_LENGTH,
+  MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH,
+} = require('@librechat/api');
 
 function createResponse() {
   const res = {};
@@ -125,11 +132,15 @@ describe('UserController tutorial state', () => {
 
       await getTutorialStateController(req, res);
 
-      expect(mockGetUserById).toHaveBeenCalledWith('user-1', 'tutorialPromptSeen tutorialRatings');
+      expect(mockGetUserById).toHaveBeenCalledWith(
+        'user-1',
+        'tutorialPromptSeen tutorialRatings tutorialFeedback',
+      );
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({
         tutorialPromptSeen: false,
         tutorialRatings: {},
+        tutorialFeedback: {},
       });
     });
 
@@ -155,6 +166,7 @@ describe('UserController tutorial state', () => {
       expect(res.json).toHaveBeenCalledWith({
         tutorialPromptSeen: true,
         tutorialRatings: {},
+        tutorialFeedback: {},
       });
     });
 
@@ -186,17 +198,17 @@ describe('UserController tutorial state', () => {
       expect(res.json).toHaveBeenCalledWith({
         tutorialPromptSeen: false,
         tutorialRatings: { 'other-course': 5, 'getting-started-guide': 4 },
+        tutorialFeedback: {
+          'other-course': { score: 5 },
+          'getting-started-guide': { score: 4 },
+        },
       });
     });
 
-    it('calls updateUser for non-ratings fields alongside mergeTutorialRatings for ratings', async () => {
+    it('persists non-ratings fields in the guarded ratings write', async () => {
       mockMergeTutorialRatings.mockResolvedValue({
-        user: { tutorialPromptSeen: false, tutorialRatings: { 'chat-basics': 5 } },
+        user: { tutorialPromptSeen: true, tutorialRatings: { 'chat-basics': 5 } },
         capExceeded: false,
-      });
-      mockUpdateUser.mockResolvedValue({
-        tutorialPromptSeen: true,
-        tutorialRatings: { 'chat-basics': 5 },
       });
       const req = createRequest({
         body: { tutorialRatings: { 'chat-basics': 5 }, tutorialPromptSeen: true },
@@ -205,8 +217,77 @@ describe('UserController tutorial state', () => {
 
       await updateTutorialStateController(req, res);
 
-      expect(mockMergeTutorialRatings).toHaveBeenCalledWith('user-1', { 'chat-basics': 5 });
-      expect(mockUpdateUser).toHaveBeenCalledWith('user-1', { tutorialPromptSeen: true });
+      expect(mockMergeTutorialRatings).toHaveBeenCalledWith(
+        'user-1',
+        { 'chat-basics': 5 },
+        { tutorialPromptSeen: true },
+      );
+      expect(mockUpdateUser).not.toHaveBeenCalled();
+    });
+
+    it('stores tutorial feedback comments alongside the score', async () => {
+      mockMergeTutorialRatings.mockResolvedValue({
+        user: {
+          tutorialPromptSeen: false,
+          tutorialRatings: { 'other-course': 5, 'getting-started-guide': 4 },
+          tutorialFeedback: { 'other-course': { score: 5, comment: 'Existing comment' } },
+        },
+        capExceeded: false,
+      });
+      mockUpdateUser.mockResolvedValue({
+        tutorialPromptSeen: false,
+        tutorialRatings: { 'other-course': 5, 'getting-started-guide': 4 },
+        tutorialFeedback: {
+          'other-course': { score: 5, comment: 'Existing comment' },
+          'getting-started-guide': {
+            score: 4,
+            comment: 'Helpful tour',
+            updatedAt: new Date('2026-09-21T10:00:00.000Z'),
+          },
+        },
+      });
+      const req = createRequest({
+        body: {
+          tutorialFeedback: {
+            'getting-started-guide': {
+              score: 4,
+              comment: '  Helpful tour  ',
+            },
+          },
+        },
+      });
+      const res = createResponse();
+
+      await updateTutorialStateController(req, res);
+
+      expect(mockMergeTutorialRatings).toHaveBeenCalledWith(
+        'user-1',
+        {
+          'getting-started-guide': 4,
+        },
+        {
+          tutorialFeedback: {
+            'getting-started-guide': {
+              score: 4,
+              comment: 'Helpful tour',
+              updatedAt: expect.any(Date),
+            },
+          },
+        },
+      );
+      expect(mockUpdateUser).not.toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith({
+        tutorialPromptSeen: false,
+        tutorialRatings: { 'other-course': 5, 'getting-started-guide': 4 },
+        tutorialFeedback: {
+          'other-course': { score: 5, comment: 'Existing comment' },
+          'getting-started-guide': {
+            score: 4,
+            comment: 'Helpful tour',
+            updatedAt: new Date('2026-09-21T10:00:00.000Z'),
+          },
+        },
+      });
     });
 
     it('returns 400 when the pipeline signals cap exceeded', async () => {
@@ -260,6 +341,29 @@ describe('UserController tutorial state', () => {
 
       expect(mockMergeTutorialRatings).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it('returns 400 when a tutorial feedback comment exceeds the maximum length', async () => {
+      const req = createRequest({
+        body: {
+          tutorialFeedback: {
+            'getting-started-guide': {
+              score: 5,
+              comment: 'x'.repeat(MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH + 1),
+            },
+          },
+        },
+      });
+      const res = createResponse();
+
+      await updateTutorialStateController(req, res);
+
+      expect(mockMergeTutorialRatings).not.toHaveBeenCalled();
+      expect(mockUpdateUser).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        message: `Comment for "getting-started-guide" cannot exceed ${MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH} characters`,
+      });
     });
 
     it('accepts a rating key exactly at MAX_RATING_KEY_LENGTH characters', async () => {

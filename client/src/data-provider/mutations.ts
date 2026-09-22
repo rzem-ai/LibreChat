@@ -1213,6 +1213,16 @@ export const useUpdateTutorialStateMutation = (
           QueryKeys.userTutorialState,
           userId,
         ]);
+        const tutorialFeedback = {
+          ...(previousTutorialState?.tutorialFeedback ?? {}),
+          ...(variables.tutorialFeedback ?? {}),
+        };
+        const tutorialRatingsFromFeedback = Object.entries(variables.tutorialFeedback ?? {}).reduce<
+          Record<string, number>
+        >((acc, [courseId, feedback]) => {
+          acc[courseId] = feedback.score;
+          return acc;
+        }, {});
         // Optimistically update the cache so the bubble closes immediately
         // rather than waiting for the server round-trip to complete.
         queryClient.setQueryData<t.TTutorialStateResponse>(
@@ -1223,8 +1233,10 @@ export const useUpdateTutorialStateMutation = (
               variables.tutorialPromptSeen ?? current?.tutorialPromptSeen ?? false,
             tutorialRatings: {
               ...(current?.tutorialRatings ?? {}),
+              ...tutorialRatingsFromFeedback,
               ...(variables.tutorialRatings ?? {}),
             },
+            tutorialFeedback,
           }),
         );
         await options?.onMutate?.(variables);
