@@ -194,6 +194,9 @@ const BaseOptionsSchema = z.object({
   // Deloitte Custom Change: light/dark themed MCP server icons.
   /** Icon shown when the app is in dark mode. Falls back to `iconPath`, then `iconPathLight`, if unset. */
   iconPathDark: z.string().optional(),
+  // Deloitte Custom Change: SharePoint MCP is limited to a subset of users.
+  /** When true, the UI shows a "Limited Access" label next to this server's icon/name. */
+  limitedAccess: z.boolean().optional(),
   timeout: z.number().int().nonnegative().optional(),
   /** Timeout (ms) for the long-lived SSE GET stream body before undici aborts it. Default: 300_000 (5 min). */
   sseReadTimeout: z.number().int().positive().optional(),
@@ -411,6 +414,7 @@ const omitServerManagedFields = <T extends z.ZodObject<z.ZodRawShape>>(schema: T
     chatMenu: true,
     serverInstructions: true,
     requiresOAuth: true,
+    limitedAccess: true,
     customUserVars: true,
     oauth_headers: true,
   });

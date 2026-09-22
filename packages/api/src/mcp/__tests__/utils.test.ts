@@ -514,6 +514,16 @@ describe('redactServerSecrets', () => {
     const redacted = redactServerSecrets(config);
     expect(redacted.obo).toEqual({ scopes: 'api://client-id/.default' });
   });
+
+  it('should preserve the limited access display flag', () => {
+    const config: ParsedServerConfig = {
+      type: 'sse',
+      url: 'https://example.com/mcp',
+      limitedAccess: true,
+    };
+
+    expect(redactServerSecrets(config).limitedAccess).toBe(true);
+  });
 });
 
 describe('redactAllServerSecrets', () => {

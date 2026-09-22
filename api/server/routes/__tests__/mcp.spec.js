@@ -3172,6 +3172,7 @@ describe('MCP Routes', () => {
           type: 'sse',
           url: 'http://server1.com/sse',
           title: 'Server 1',
+          limitedAccess: true,
           source: 'user',
         },
         'server-2': {
@@ -3191,6 +3192,7 @@ describe('MCP Routes', () => {
         type: 'sse',
         url: 'http://server1.com/sse',
         title: 'Server 1',
+        limitedAccess: true,
       });
       expect(response.body['server-2']).toMatchObject({
         type: 'sse',
@@ -3788,6 +3790,35 @@ describe('MCP Routes', () => {
           type: 'sse',
           url: 'https://updated-mcp-server.example.com/sse',
         }),
+        'DB',
+        'test-user-id',
+      );
+    });
+
+    it('should preserve the server-managed limitedAccess flag', async () => {
+      const updatedConfig = {
+        type: 'sse',
+        url: 'https://updated-mcp-server.example.com/sse',
+        title: 'Updated Server',
+      };
+      mockRegistryInstance.getServerConfig.mockResolvedValue({
+        ...updatedConfig,
+        limitedAccess: true,
+      });
+      mockRegistryInstance.updateServer.mockResolvedValue({
+        ...updatedConfig,
+        limitedAccess: true,
+        source: 'user',
+      });
+
+      const response = await request(app)
+        .patch('/api/mcp/servers/test-server')
+        .send({ config: updatedConfig });
+
+      expect(response.status).toBe(200);
+      expect(mockRegistryInstance.updateServer).toHaveBeenCalledWith(
+        'test-server',
+        expect.objectContaining({ limitedAccess: true }),
         'DB',
         'test-user-id',
       );
