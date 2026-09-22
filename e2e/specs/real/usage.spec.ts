@@ -59,7 +59,7 @@ async function sendTurn(page: Page, text: string) {
   await expect(page.getByRole('button', { name: 'Stop generating' })).toBeHidden({
     timeout: 90000,
   });
-  await expect(page.getByTestId('send-button')).toBeVisible({ timeout: 30000 });
+  await expect(page.locator('#send-button')).toBeVisible({ timeout: 30000 });
 }
 
 test.describe('context usage gauge with a real provider', () => {

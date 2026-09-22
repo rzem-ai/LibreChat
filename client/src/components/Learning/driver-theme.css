@@ -1,0 +1,110 @@
+/* Restyles driver.js's popover to match this app's design tokens (theme-aware — these
+   custom properties already flip between light/dark, so no separate dark-mode rules
+   are needed here). */
+
+.driver-popover {
+  max-width: 320px;
+  min-width: 260px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  background-color: var(--surface-primary);
+  color: var(--text-primary);
+  font-family: 'Open Sans', ui-sans-serif, sans-serif, system-ui !important;
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.driver-popover-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.driver-popover-title[style*='block'] + .driver-popover-description {
+  margin-top: 6px;
+}
+
+.driver-popover-description {
+  margin-bottom: 0;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.driver-popover-close-btn {
+  color: var(--text-tertiary);
+  transition: color 0.15s;
+}
+
+.driver-popover-close-btn:hover,
+.driver-popover-close-btn:focus {
+  color: var(--text-primary);
+}
+
+.driver-popover-footer {
+  margin-top: 14px;
+}
+
+.driver-popover-progress-text {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.driver-popover-footer-btn {
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border-light);
+  background-color: var(--surface-primary);
+  color: var(--text-primary);
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+
+.driver-popover-footer .driver-popover-btn-disabled {
+  opacity: 0.4;
+}
+
+.driver-popover-footer-btn:hover,
+.driver-popover-footer-btn:focus {
+  background-color: var(--surface-hover);
+}
+
+.driver-popover-footer-btn.driver-popover-next-btn {
+  border-color: var(--surface-submit);
+  background-color: var(--surface-submit);
+  color: #fff;
+}
+
+.driver-popover-footer-btn.driver-popover-next-btn:hover,
+.driver-popover-footer-btn.driver-popover-next-btn:focus {
+  background-color: var(--surface-submit-hover);
+}
+
+.driver-popover-arrow-side-left {
+  border-right-color: var(--surface-primary) !important;
+}
+
+.driver-popover-arrow-side-right {
+  border-left-color: var(--surface-primary) !important;
+}
+
+.driver-popover-arrow-side-top {
+  border-bottom-color: var(--surface-primary) !important;
+}
+
+.driver-popover-arrow-side-bottom {
+  border-top-color: var(--surface-primary) !important;
+}
+
+.driver-overlay {
+  z-index: 999999;
+}

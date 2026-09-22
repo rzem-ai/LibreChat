@@ -122,7 +122,7 @@ test.describe('core chat loop', { tag: ['@mock', '@chat'] }, () => {
     await selectMockEndpoint(page, MOCK_ENDPOINTS[0]);
 
     const input = page.getByRole('textbox', { name: 'Message input' });
-    const sendButton = page.getByTestId('send-button');
+    const sendButton = page.locator('#send-button');
 
     await expect(sendButton).toBeDisabled();
     await input.fill('ready to send');
@@ -336,11 +336,11 @@ test.describe('core chat loop', { tag: ['@mock', '@chat'] }, () => {
     const input = page.getByRole('textbox', { name: 'Message input' });
     await input.click();
     await input.fill(assertionText);
-    await expect(page.getByTestId('send-button')).toBeEnabled();
+    await expect(page.locator('#send-button')).toBeEnabled();
 
     const [response] = await Promise.all([
       page.waitForResponse(isAgentsStream, { timeout: 30000 }),
-      page.getByTestId('send-button').click(),
+      page.locator('#send-button').click(),
     ]);
     expect(response.ok()).toBeTruthy();
 
@@ -384,11 +384,11 @@ test.describe('core chat loop', { tag: ['@mock', '@chat'] }, () => {
     const input = page.getByRole('textbox', { name: 'Message input' });
     await input.click();
     await input.fill(assertionText);
-    await expect(page.getByTestId('send-button')).toBeEnabled();
+    await expect(page.locator('#send-button')).toBeEnabled();
 
     const [response] = await Promise.all([
       page.waitForResponse(isAgentsStream, { timeout: 30000 }),
-      page.getByTestId('send-button').click(),
+      page.locator('#send-button').click(),
     ]);
     expect(response.ok()).toBeTruthy();
 

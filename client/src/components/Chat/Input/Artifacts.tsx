@@ -102,6 +102,7 @@ function Artifacts() {
         className={cn('max-w-fit', isEnabled && !shadcnOnly && 'rounded-r-none border-r-0')}
         checked={isEnabled}
         setValue={handleToggle}
+        id="toolbar-toggle-artifacts"
         label={localize('com_ui_artifacts')}
         isCheckedClassName="border-amber-600/40 bg-amber-500/10 hover:bg-amber-700/10"
         icon={<WandSparkles className="icon-md" aria-hidden="true" />}
