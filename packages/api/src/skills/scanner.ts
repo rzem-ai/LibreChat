@@ -18,6 +18,7 @@
 import JSZip from 'jszip';
 import { logger } from '@librechat/data-schemas';
 import { SKILL_SEVERITY_LEVELS } from 'librechat-data-provider';
+import type { ImportLimits } from './limits';
 import { parseSkillMarkdown, extractSkillBody } from './parse';
 import {
   readZipEntry,
@@ -689,6 +690,14 @@ export async function scanSkillUpload(params: {
   archive: Uint8Array | Buffer;
   fileName: string;
   token?: string;
+  /**
+   * Request-scoped import limits — defaults to `DEFAULT_SKILL_IMPORT_LIMITS`
+   * when omitted. Passed through so the rename pass below reads the same
+   * limits `handleZip` (import.ts) will use for the same upload, keeping
+   * what gets scanned in sync with what gets imported even when a deployment
+   * overrides the defaults.
+   */
+  limits?: ImportLimits;
 }): Promise<void> {
   if (!isSkillScanEnabled()) {
     return;
@@ -717,8 +726,8 @@ export async function scanSkillUpload(params: {
   // safe-path filter silently drops spaced entries from the scanned archive
   // while handleZip still imports and uses those exact same (renamed) files,
   // letting them bypass the security scanner entirely.
-  const renames = await renameSpacedFilePaths(zip);
-  await rewriteRenamedFileReferences(zip, renames);
+  const renames = await renameSpacedFilePaths(zip, params.limits);
+  await rewriteRenamedFileReferences(zip, renames, params.limits);
 
   // Entry count guard — placed after stripping so the count reflects real skill
   // files only. Sends the original upload bytes rather than re-materialising the

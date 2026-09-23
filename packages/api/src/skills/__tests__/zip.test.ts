@@ -128,6 +128,30 @@ describe('rewriteRenamedFileReferences', () => {
     expect(await readText(zip, 'SKILL.md')).toBe('Run `cat many-fortunes.md` to read it.');
   });
 
+  it('leaves a wrapper-relative reference untouched when only the wrapping folder is renamed', async () => {
+    const zip = new JSZip();
+    zip.file('my skill/SKILL.md', 'See references/guide.md for details.');
+    zip.file('my skill/references/guide.md', 'a guide');
+
+    const renames = await renameSpacedFilePaths(zip);
+    await rewriteRenamedFileReferences(zip, renames);
+
+    expect(await readText(zip, 'my-skill/SKILL.md')).toBe('See references/guide.md for details.');
+  });
+
+  it('rewrites a reference relative to an intermediate renamed folder', async () => {
+    const zip = new JSZip();
+    zip.file('my-skill/SKILL.md', 'See reference notes/guide.md for details.');
+    zip.file('my-skill/reference notes/guide.md', 'a guide');
+
+    const renames = await renameSpacedFilePaths(zip);
+    await rewriteRenamedFileReferences(zip, renames);
+
+    expect(await readText(zip, 'my-skill/SKILL.md')).toBe(
+      'See reference-notes/guide.md for details.',
+    );
+  });
+
   it('does not modify binary file contents', async () => {
     const zip = new JSZip();
     zip.file('assets/logo image.png', Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x00, 0x00]));

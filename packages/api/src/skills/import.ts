@@ -193,13 +193,15 @@ export function createImportHandler(deps: ImportSkillDeps) {
         const scannerToken = process.env.SKILL_SCANNER_URL
           ? await deps.resolveScannerToken(req.user)
           : undefined;
+        const limits = getImportLimits(resolveImportLimits(deps.limits, req));
         // Deloitte custom feature: scan skills
         await scanSkillUpload({
           archive: file.buffer,
           fileName: file.originalname,
           token: scannerToken,
+          limits,
         });
-        return await handleZip(req, res, deps, file);
+        return await handleZip(req, res, deps, file, limits);
       }
       return res.status(400).json({ error: `Unsupported file type: ${ext}` });
     } catch (error) {
@@ -342,9 +344,9 @@ async function handleZip(
   res: Response,
   deps: ImportSkillDeps,
   file: Express.Multer.File,
+  limits: ImportLimits,
 ) {
   const userId = req.user.id;
-  const limits = getImportLimits(resolveImportLimits(deps.limits, req));
 
   const zipBuffer = file.buffer;
 

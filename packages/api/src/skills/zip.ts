@@ -134,17 +134,51 @@ export async function renameSpacedFilePaths(
 }
 
 /**
- * Rewrites literal references to renamed files (full relative path and bare
- * basename) across every other text entry in the archive, including entries
- * that were themselves renamed (e.g. SKILL.md may reference another renamed
- * file). Binary entries — detected via `isBinaryBuffer` — are left untouched.
- * Replacements are applied longest-match-first so a full-path reference is
- * rewritten before a bare-basename fallback can clobber part of it. Enforces
- * the same per-file and cumulative decompressed-size bounds `handleZip`
- * applies elsewhere (`limits`, defaulting to `DEFAULT_SKILL_IMPORT_LIMITS` for
- * callers with no per-request override), via `readZipEntry` — an entry that
- * exceeds those bounds is left unrewritten rather than fully decompressed.
- * No-ops when there are no renames.
+ * Builds every path-suffix replacement pair for a single rename, not just the
+ * full path and the bare basename. A reference inside a skill's own text is
+ * often written relative to some ancestor directory (most commonly the
+ * directory containing the manifest itself, when the archive is wrapped in a
+ * folder) rather than the full archive-relative path — e.g. a manifest at
+ * `my skill/SKILL.md` typically refers to a companion file as
+ * `references/guide.md`, omitting the wrapping `my skill/` segment entirely.
+ * Renaming only the wrapper segment (`my skill` -> `my-skill`) would leave
+ * that reference unmatched by a full-path-or-basename-only replacement, even
+ * though the wrapper rename doesn't affect the reference at all — and a rename
+ * of any other intermediate segment has the same problem. Since renaming
+ * never adds or removes path segments, `oldPath` and `newPath` always split
+ * into the same number of segments, so every same-length suffix pair (drop
+ * the first 0, 1, 2, ... segments from both) is a valid candidate reference
+ * form.
+ */
+function buildSuffixReplacements(oldPath: string, newPath: string): { from: string; to: string }[] {
+  const oldSegments = oldPath.split('/');
+  const newSegments = newPath.split('/');
+  const replacements: { from: string; to: string }[] = [];
+  for (let i = 0; i < oldSegments.length; i++) {
+    const from = oldSegments.slice(i).join('/');
+    const to = newSegments.slice(i).join('/');
+    if (from !== to) {
+      replacements.push({ from, to });
+    }
+  }
+  return replacements;
+}
+
+/**
+ * Rewrites literal references to renamed files across every other text entry
+ * in the archive, including entries that were themselves renamed (e.g.
+ * SKILL.md may reference another renamed file). Matches the full path, the
+ * bare basename, and every intermediate path suffix in between (see
+ * `buildSuffixReplacements`), since a reference may be written relative to
+ * any ancestor directory, not just the archive root. Binary entries —
+ * detected via `isBinaryBuffer` — are left untouched. Replacements are
+ * applied longest-match-first so a longer reference is rewritten before a
+ * shorter one can clobber part of it. Enforces the same per-file and
+ * cumulative decompressed-size bounds `handleZip` applies elsewhere
+ * (`limits`, defaulting to `DEFAULT_SKILL_IMPORT_LIMITS` for callers with no
+ * per-request override), via `readZipEntry` — an entry that exceeds those
+ * bounds is left unrewritten rather than fully decompressed. No-ops when
+ * there are no renames.
  */
 export async function rewriteRenamedFileReferences(
   zip: JSZip,
@@ -155,13 +189,15 @@ export async function rewriteRenamedFileReferences(
     return;
   }
 
-  const replacements = renames
-    .flatMap(({ oldPath, newPath }) => [
-      { from: oldPath, to: newPath },
-      { from: path.posix.basename(oldPath), to: path.posix.basename(newPath) },
-    ])
-    .filter(({ from, to }) => from !== to)
-    .sort((a, b) => b.from.length - a.from.length);
+  const uniqueReplacements = new Map<string, string>();
+  for (const { oldPath, newPath } of renames) {
+    for (const { from, to } of buildSuffixReplacements(oldPath, newPath)) {
+      uniqueReplacements.set(from, to);
+    }
+  }
+  const replacements = Array.from(uniqueReplacements, ([from, to]) => ({ from, to })).sort(
+    (a, b) => b.from.length - a.from.length,
+  );
 
   const perFileLimit = limits.maxSingleFileBytes;
   let totalDecompressed = 0;
