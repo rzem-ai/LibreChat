@@ -548,4 +548,67 @@ describe('createImportHandler', () => {
       }
     }
   });
+
+  // Deloitte Custom Change: Verify spaced filenames are auto-renamed instead of
+  // rejected as "Invalid path", literal references to the old name are rewritten
+  // inside SKILL.md, and a warning listing the rename is surfaced on the response.
+  it('renames spaced filenames, rewrites references, and surfaces a warning', async () => {
+    const savedScannerUrl = process.env.SKILL_SCANNER_URL;
+    delete process.env.SKILL_SCANNER_URL;
+
+    try {
+      const deps = mockImportDeps();
+      const handler = createImportHandler(deps);
+      const res = mockResponse();
+
+      const zip = new JSZip();
+      zip.file(
+        'SKILL.md',
+        [
+          '---',
+          'name: fortune-cookie',
+          'description: Tells a fortune.',
+          '---',
+          '# Fortune cookie',
+          'Run `cat references/many fortunes.md` to read the fortunes.',
+        ].join('\n'),
+      );
+      zip.file('references/many fortunes.md', 'You will find happiness.');
+
+      const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+      await handler(mockZipRequest(buffer), res);
+
+      expect(res.status).toHaveBeenCalledWith(201);
+      const summary = importSummary(res.body);
+      expect(summary.filesFailed).toBe(0);
+      expect(summary.filesSucceeded).toBe(1);
+
+      expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+        expect.objectContaining({ relativePath: 'references/many-fortunes.md' }),
+      );
+
+      expect(deps.createSkill).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.stringContaining('cat references/many-fortunes.md'),
+        }),
+      );
+
+      const body = res.body as { warnings?: Array<{ code: string; message: string }> };
+      expect(body.warnings).toEqual([
+        expect.objectContaining({
+          field: 'files',
+          code: 'FILENAME_SPACES_RENAMED',
+          message: expect.stringContaining("We've renamed 1 file"),
+          severity: 'warning',
+        }),
+      ]);
+    } finally {
+      if (savedScannerUrl === undefined) {
+        delete process.env.SKILL_SCANNER_URL;
+      } else {
+        process.env.SKILL_SCANNER_URL = savedScannerUrl;
+      }
+    }
+  });
 });

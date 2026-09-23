@@ -10,12 +10,18 @@ import type {
   CreateSkillResult,
   UpsertSkillFileInput,
 } from '@librechat/data-schemas';
+import type { TSkillWarning } from 'librechat-data-provider';
 import type { Request, Response } from 'express';
 import type { Types } from 'mongoose';
 import type { ImportLimits } from './limits';
 import { isSkillScanError, scanSkillMarkdown, scanSkillUpload } from './scanner';
 import { resolveRequestTenantId } from '~/middleware/tenant';
-import { readZipEntry, stripZipArtifacts } from './zip';
+import {
+  readZipEntry,
+  stripZipArtifacts,
+  renameSpacedFilePaths,
+  rewriteRenamedFileReferences,
+} from './zip';
 import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
 import { isSafeSkillFilePath } from './path';
 import { parseSkillMarkdown } from './parse';
@@ -362,6 +368,14 @@ async function handleZip(
   // / self-hosted deployments without SKILL_SCANNER_URL configured).
   stripZipArtifacts(zip);
 
+  // Deloitte Custom Change: Auto-rename entries whose path contains a space (spaces
+  // are not a permitted isSafeSkillFilePath character) and rewrite literal references
+  // to the old path/basename across the archive's other text files, so uploads that
+  // previously failed with "Invalid path" succeed instead. A warning is surfaced below
+  // once `renames` is known to be non-empty.
+  const renames = await renameSpacedFilePaths(zip);
+  await rewriteRenamedFileReferences(zip, renames);
+
   const entries = Object.keys(zip.files);
 
   if (entries.length > limits.maxEntries) {
@@ -628,8 +642,21 @@ async function handleZip(
   // Re-read the skill to get the current version/fileCount (bumped by each upsertSkillFile)
   const refreshed = (await deps.getSkillById(skill._id)) ?? skill;
 
+  const warnings: TSkillWarning[] = [];
+  if (renames.length > 0) {
+    warnings.push({
+      field: 'files',
+      code: 'FILENAME_SPACES_RENAMED',
+      message:
+        `We've renamed ${renames.length} file${renames.length === 1 ? '' : 's'} because the ` +
+        'filenames contained spaces. Please check your skill still performs as expected.',
+      severity: 'warning',
+    });
+  }
+
   return res.status(201).json({
     ...refreshed,
+    ...(warnings.length > 0 ? { warnings } : {}),
     _importSummary: {
       filesProcessed: fileResults.length,
       filesSucceeded: successCount,
