@@ -599,7 +599,7 @@ describe('createImportHandler', () => {
         expect.objectContaining({
           field: 'files',
           code: 'FILENAME_SPACES_RENAMED',
-          message: expect.stringContaining("We've renamed 1 file"),
+          message: expect.stringContaining('1 file has been renamed'),
           severity: 'warning',
         }),
       ]);

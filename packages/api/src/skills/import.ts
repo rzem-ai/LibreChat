@@ -648,8 +648,9 @@ async function handleZip(
       field: 'files',
       code: 'FILENAME_SPACES_RENAMED',
       message:
-        `We've renamed ${renames.length} file${renames.length === 1 ? '' : 's'} because the ` +
-        'filenames contained spaces. Please check your skill still performs as expected.',
+        `${renames.length} file${renames.length === 1 ? '' : 's'} ` +
+        `${renames.length === 1 ? 'has' : 'have'} been renamed because the filenames contained ` +
+        'spaces. Please check that the skill still works as expected.',
       severity: 'warning',
     });
   }
