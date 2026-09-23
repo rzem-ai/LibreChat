@@ -19,7 +19,12 @@ import JSZip from 'jszip';
 import { logger } from '@librechat/data-schemas';
 import { SKILL_SEVERITY_LEVELS } from 'librechat-data-provider';
 import { parseSkillMarkdown, extractSkillBody } from './parse';
-import { readZipEntry, stripZipArtifacts } from './zip';
+import {
+  readZipEntry,
+  stripZipArtifacts,
+  renameSpacedFilePaths,
+  rewriteRenamedFileReferences,
+} from './zip';
 import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
 
 const SKILL_MD = 'SKILL.md';
@@ -706,6 +711,14 @@ export async function scanSkillUpload(params: {
   // the entry count check so they do not inflate the count toward the limit.
   // Patterns are configured via STRIP_DIR_NAMES and STRIP_BASENAME_PREFIXES in zip.ts.
   stripZipArtifacts(zip);
+
+  // Deloitte Custom Change: Rename spaced filenames the same way handleZip
+  // (import.ts) will, before re-rooting/scanning — otherwise reRootZip's
+  // safe-path filter silently drops spaced entries from the scanned archive
+  // while handleZip still imports and uses those exact same (renamed) files,
+  // letting them bypass the security scanner entirely.
+  const renames = await renameSpacedFilePaths(zip);
+  await rewriteRenamedFileReferences(zip, renames);
 
   // Entry count guard — placed after stripping so the count reflects real skill
   // files only. Sends the original upload bytes rather than re-materialising the

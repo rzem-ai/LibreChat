@@ -373,8 +373,8 @@ async function handleZip(
   // to the old path/basename across the archive's other text files, so uploads that
   // previously failed with "Invalid path" succeed instead. A warning is surfaced below
   // once `renames` is known to be non-empty.
-  const renames = await renameSpacedFilePaths(zip);
-  await rewriteRenamedFileReferences(zip, renames);
+  const renames = await renameSpacedFilePaths(zip, limits);
+  await rewriteRenamedFileReferences(zip, renames, limits);
 
   const entries = Object.keys(zip.files);
 

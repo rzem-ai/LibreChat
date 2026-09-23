@@ -1,6 +1,8 @@
 import path from 'path';
 import type JSZip from 'jszip';
+import type { ImportLimits } from './limits';
 import { isBinaryBuffer } from './binary';
+import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
 
 /**
  * Deloitte Custom Change: Configurable strip patterns for unwanted filesystem
@@ -49,14 +51,51 @@ export function stripZipArtifacts(zip: JSZip): void {
 export type SkillFileRename = { oldPath: string; newPath: string };
 
 /**
+ * Disambiguates `candidate` against `reserved` by appending a numeric suffix
+ * before the file extension (`foo.txt` -> `foo-2.txt` -> `foo-3.txt`, ...),
+ * so a rename can never silently overwrite an existing entry.
+ */
+function uniquePath(candidate: string, reserved: ReadonlySet<string>): string {
+  if (!reserved.has(candidate)) {
+    return candidate;
+  }
+  const ext = path.posix.extname(candidate);
+  const base = candidate.slice(0, candidate.length - ext.length);
+  let counter = 2;
+  let next = `${base}-${counter}${ext}`;
+  while (reserved.has(next)) {
+    counter += 1;
+    next = `${base}-${counter}${ext}`;
+  }
+  return next;
+}
+
+/**
  * Renames any non-directory zip entry whose path contains a space, replacing
  * spaces in every path segment (not just the basename) with a hyphen, since
  * `isSafeSkillFilePath` rejects spaces anywhere in the path — including
  * folder names. Mutates the in-memory JSZip object in-place, mirroring
- * `stripZipArtifacts`. Returns the list of renames applied, empty if none.
+ * `stripZipArtifacts`. Renamed entries that would otherwise collide with an
+ * existing (or previously renamed) path are disambiguated with a numeric
+ * suffix rather than overwriting that entry. Enforces the same per-file and
+ * cumulative decompressed-size bounds `handleZip` applies elsewhere (`limits`,
+ * defaulting to `DEFAULT_SKILL_IMPORT_LIMITS` for callers with no per-request
+ * override), via `readZipEntry`, so a zip-bomb entry with a space in its name
+ * can't force unbounded decompression — an entry that exceeds those bounds is
+ * left unrenamed and falls through to the existing path-safety rejection.
+ * Returns the list of renames applied, empty if none.
  */
-export async function renameSpacedFilePaths(zip: JSZip): Promise<SkillFileRename[]> {
+export async function renameSpacedFilePaths(
+  zip: JSZip,
+  limits: ImportLimits = DEFAULT_SKILL_IMPORT_LIMITS,
+): Promise<SkillFileRename[]> {
   const renames: SkillFileRename[] = [];
+  const reservedPaths = new Set<string>(
+    Object.keys(zip.files).map((entryPath) => entryPath.replace(/\\/g, '/')),
+  );
+  const perFileLimit = limits.maxSingleFileBytes;
+  let totalDecompressed = 0;
+
   for (const entryPath of Object.keys(zip.files)) {
     const entry = zip.file(entryPath);
     if (entry == null || entry.dir) {
@@ -66,14 +105,27 @@ export async function renameSpacedFilePaths(zip: JSZip): Promise<SkillFileRename
     if (!normalized.includes(' ')) {
       continue;
     }
-    const newPath = normalized
+    const candidate = normalized
       .split('/')
       .map((segment) => segment.replace(/ /g, '-'))
       .join('/');
-    if (newPath === normalized) {
+    if (candidate === normalized) {
       continue;
     }
-    const buffer = await entry.async('nodebuffer');
+
+    const cumulativeLimit = limits.maxDecompressedBytes - totalDecompressed;
+    if (cumulativeLimit <= 0) {
+      continue;
+    }
+    const effectiveLimit = Math.min(perFileLimit, cumulativeLimit);
+    const { buffer, bytesRead } = await readZipEntry(entry, effectiveLimit);
+    totalDecompressed += bytesRead;
+    if (buffer == null) {
+      continue;
+    }
+
+    const newPath = uniquePath(candidate, reservedPaths);
+    reservedPaths.add(newPath);
     zip.remove(entryPath);
     zip.file(newPath, buffer);
     renames.push({ oldPath: normalized, newPath });
@@ -87,12 +139,17 @@ export async function renameSpacedFilePaths(zip: JSZip): Promise<SkillFileRename
  * that were themselves renamed (e.g. SKILL.md may reference another renamed
  * file). Binary entries — detected via `isBinaryBuffer` — are left untouched.
  * Replacements are applied longest-match-first so a full-path reference is
- * rewritten before a bare-basename fallback can clobber part of it. No-ops
- * when there are no renames.
+ * rewritten before a bare-basename fallback can clobber part of it. Enforces
+ * the same per-file and cumulative decompressed-size bounds `handleZip`
+ * applies elsewhere (`limits`, defaulting to `DEFAULT_SKILL_IMPORT_LIMITS` for
+ * callers with no per-request override), via `readZipEntry` — an entry that
+ * exceeds those bounds is left unrewritten rather than fully decompressed.
+ * No-ops when there are no renames.
  */
 export async function rewriteRenamedFileReferences(
   zip: JSZip,
   renames: SkillFileRename[],
+  limits: ImportLimits = DEFAULT_SKILL_IMPORT_LIMITS,
 ): Promise<void> {
   if (renames.length === 0) {
     return;
@@ -106,12 +163,24 @@ export async function rewriteRenamedFileReferences(
     .filter(({ from, to }) => from !== to)
     .sort((a, b) => b.from.length - a.from.length);
 
+  const perFileLimit = limits.maxSingleFileBytes;
+  let totalDecompressed = 0;
+
   for (const entryPath of Object.keys(zip.files)) {
     const entry = zip.file(entryPath);
     if (entry == null || entry.dir) {
       continue;
     }
-    const buffer = await entry.async('nodebuffer');
+    const cumulativeLimit = limits.maxDecompressedBytes - totalDecompressed;
+    if (cumulativeLimit <= 0) {
+      continue;
+    }
+    const effectiveLimit = Math.min(perFileLimit, cumulativeLimit);
+    const { buffer, bytesRead } = await readZipEntry(entry, effectiveLimit);
+    totalDecompressed += bytesRead;
+    if (buffer == null) {
+      continue;
+    }
     if (isBinaryBuffer(buffer)) {
       continue;
     }

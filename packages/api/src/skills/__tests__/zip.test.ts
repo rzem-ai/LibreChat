@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
 
+import { DEFAULT_SKILL_IMPORT_LIMITS } from '../limits';
 import { renameSpacedFilePaths, rewriteRenamedFileReferences } from '../zip';
 
 async function readText(zip: JSZip, entryPath: string): Promise<string> {
@@ -55,6 +56,53 @@ describe('renameSpacedFilePaths', () => {
 
     expect(renames).toEqual([]);
   });
+
+  it('disambiguates a rename that collides with an existing entry instead of overwriting it', async () => {
+    const zip = new JSZip();
+    zip.file('foo-bar.txt', 'existing');
+    zip.file('foo bar.txt', 'renamed');
+
+    const renames = await renameSpacedFilePaths(zip);
+
+    expect(renames).toEqual([{ oldPath: 'foo bar.txt', newPath: 'foo-bar-2.txt' }]);
+    expect(await readText(zip, 'foo-bar.txt')).toBe('existing');
+    expect(await readText(zip, 'foo-bar-2.txt')).toBe('renamed');
+  });
+
+  it('disambiguates multiple colliding renames with successive numeric suffixes', async () => {
+    const zip = new JSZip();
+    zip.file('foo bar-x.txt', 'first');
+    zip.file('foo-bar x.txt', 'second');
+
+    const renames = await renameSpacedFilePaths(zip);
+
+    const newPaths = renames.map((rename) => rename.newPath).sort();
+    expect(newPaths).toEqual(['foo-bar-x-2.txt', 'foo-bar-x.txt']);
+  });
+
+  it('leaves an entry unrenamed when it exceeds the per-file decompressed-size bound', async () => {
+    const zip = new JSZip();
+    const oversized = Buffer.alloc(11 * 1024 * 1024, 'a');
+    zip.file('big file.bin', oversized);
+
+    const renames = await renameSpacedFilePaths(zip);
+
+    expect(renames).toEqual([]);
+    expect(zip.file('big file.bin')).not.toBeNull();
+    expect(zip.file('big-file.bin')).toBeNull();
+  });
+
+  it('honors a caller-supplied, stricter limit instead of the default', async () => {
+    const zip = new JSZip();
+    zip.file('small file.txt', Buffer.alloc(1024, 'a'));
+
+    const strictLimits = { ...DEFAULT_SKILL_IMPORT_LIMITS, maxSingleFileBytes: 100 };
+    const renames = await renameSpacedFilePaths(zip, strictLimits);
+
+    expect(renames).toEqual([]);
+    expect(zip.file('small file.txt')).not.toBeNull();
+    expect(zip.file('small-file.txt')).toBeNull();
+  });
 });
 
 describe('rewriteRenamedFileReferences', () => {
@@ -106,5 +154,29 @@ describe('rewriteRenamedFileReferences', () => {
     await rewriteRenamedFileReferences(zip, []);
 
     expect(await readText(zip, 'SKILL.md')).toBe('no references here');
+  });
+
+  it('leaves an oversized entry unrewritten instead of fully decompressing it', async () => {
+    const zip = new JSZip();
+    zip.file('references/many fortunes.md', 'a fortune');
+    const oversized = `${'a'.repeat(11 * 1024 * 1024)} references/many fortunes.md`;
+    zip.file('SKILL.md', oversized);
+
+    const renames = await renameSpacedFilePaths(zip);
+    await rewriteRenamedFileReferences(zip, renames);
+
+    expect(await readText(zip, 'SKILL.md')).toBe(oversized);
+  });
+
+  it('honors a caller-supplied, stricter limit instead of the default', async () => {
+    const zip = new JSZip();
+    zip.file('references/many fortunes.md', 'a fortune');
+    zip.file('SKILL.md', 'See references/many fortunes.md for details.');
+
+    const renames = await renameSpacedFilePaths(zip);
+    const strictLimits = { ...DEFAULT_SKILL_IMPORT_LIMITS, maxSingleFileBytes: 5 };
+    await rewriteRenamedFileReferences(zip, renames, strictLimits);
+
+    expect(await readText(zip, 'SKILL.md')).toBe('See references/many fortunes.md for details.');
   });
 });
