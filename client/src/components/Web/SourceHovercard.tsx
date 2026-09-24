@@ -233,11 +233,12 @@ export function SourceHovercard({
                   href={source.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="ml-1 inline-block h-5 max-w-44 cursor-pointer items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-border-heavy bg-surface-secondary px-2 text-xs font-medium no-underline transition-colors hover:bg-surface-hover dark:border-border-medium dark:hover:bg-surface-tertiary"
+                  className="ml-1 inline-flex h-5 max-w-44 cursor-pointer items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-border-heavy bg-surface-secondary pl-1 pr-2 text-xs font-medium no-underline transition-colors hover:bg-surface-hover dark:border-border-medium dark:hover:bg-surface-tertiary"
                   onMouseEnter={onMouseEnter}
                   onMouseLeave={onMouseLeave}
                   title={label}
                 >
+                  {chipIcon ?? <FaviconImage domain={domain} className="size-3.5" />}
                   {label}
                 </a>
               )

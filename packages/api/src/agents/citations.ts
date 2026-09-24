@@ -1,20 +1,36 @@
 /**
- * End-of-trace file citations.
+ * End-of-trace citations.
  *
  * After an agent run finishes, this module deterministically inserts citation
  * anchors into the assistant's answer by matching each answer sentence against
- * the passages the `file_search` tool retrieved. It replaces the previous
- * approach of instructing the model to echo anchor markers itself, which was
- * unreliable and risked degrading answer quality.
+ * the passages the `file_search`, `web_search` (organic/news only), and MCP
+ * tools retrieved. It replaces the previous approach of instructing the model
+ * to echo anchor markers itself, which was unreliable and risked degrading
+ * answer quality.
  *
  * Matching is lexical: a sentence is anchored to a passage when enough of its
- * content words (>= `SIMILARITY_THRESHOLD`) also appear in that passage. Each
- * anchor encodes the coordinates the frontend resolves — `turn{N}file{M}`,
- * where N is the file_search attachment index and M is the first-seen fileId
- * index within it (mirrors `useSearchResultsByTurn` on the client).
+ * content words also appear in that passage. Two profiles exist because
+ * sources differ in how closely the model paraphrases them: file_search
+ * chunks are long and often quoted closely, so they use the strict, unstemmed
+ * `SIMILARITY_THRESHOLD`; MCP and web_search (organic/news) sources are short,
+ * loosely-paraphrased article excerpts, so they use the looser
+ * `MCP_SIMILARITY_THRESHOLD` with `tokenizeStemmed` — a strict/unstemmed
+ * profile on these sources tends to only match a sentence that echoes a
+ * source's title near-verbatim (e.g. a heading) while starving every
+ * paraphrased body claim of a citation. Each anchor encodes the coordinates
+ * the frontend resolves — `turn{N}file{M}` for file_search (N is the
+ * attachment index, M the first-seen fileId index within it),
+ * `turn{N}search{M}`/`turn{N}news{M}` for web_search (N is the attachment's
+ * own `turn` value, M the organic/topStories index), and `turn{N}mcp{M}` for
+ * MCP results (mirrors `useSearchResultsByTurn` on the client in every case).
  */
 import { Tools, ContentTypes } from 'librechat-data-provider';
-import type { TMessageContentParts, TAttachment, MCPResultSource } from 'librechat-data-provider';
+import type {
+  TMessageContentParts,
+  TAttachment,
+  MCPResultSource,
+  SearchResultData,
+} from 'librechat-data-provider';
 import type { Logger } from 'winston';
 
 /**
@@ -767,6 +783,98 @@ export function insertFileCitations(
   }
 }
 
+function extractWebSearchData(attachment: TAttachment): SearchResultData | undefined {
+  return attachment[Tools.web_search];
+}
+
+/**
+ * Builds passage lists for web_search organic and news results, keyed by each attachment's own
+ * `turn` value — already assigned upstream (the same value `useSearchResultsByTurn` keys the
+ * client's turnMap by) — rather than a fresh counter, so anchors line up with the turn numbering
+ * the client already resolves.
+ *
+ * Tokenized with `tokenizeStemmed`, the same as `buildMCPPassages` — organic/news results are
+ * short, loosely-paraphrased article excerpts, not long chunks the model quotes closely like
+ * file_search, so they need the looser MCP-style matching profile, not the strict one.
+ */
+function buildWebSearchPassages(webSearchAttachments: TAttachment[]): {
+  organic: Passage[];
+  news: Passage[];
+} {
+  const organic: Passage[] = [];
+  const news: Passage[] = [];
+
+  for (const attachment of webSearchAttachments) {
+    const data = extractWebSearchData(attachment);
+    if (!data || typeof data.turn !== 'number') {
+      continue;
+    }
+    const turn = data.turn;
+
+    data.organic?.forEach((result, fileIndex) => {
+      const tokens = new Set(
+        tokenizeStemmed(`${result.title ?? ''} ${result.content ?? result.snippet ?? ''}`),
+      );
+      if (tokens.size > 0) {
+        organic.push({ turn, fileIndex, tokens });
+      }
+    });
+
+    data.topStories?.forEach((result, fileIndex) => {
+      const tokens = new Set(tokenizeStemmed(`${result.title ?? ''} ${result.content ?? ''}`));
+      if (tokens.size > 0) {
+        news.push({ turn, fileIndex, tokens });
+      }
+    });
+  }
+
+  return { organic, news };
+}
+
+/**
+ * Deterministically inserts web search citation anchors (`turn{N}search{M}`/`turn{N}news{M}`)
+ * into the assistant's text content parts by matching each sentence against the organic/news
+ * results, the same lexical approach `insertMCPCitations` uses for article-style sources
+ * (stemmed tokens, `MCP_SIMILARITY_THRESHOLD`) rather than `insertFileCitations`'s strict
+ * profile — a heading that echoes a source's title verbatim will always clear a strict
+ * threshold, while paraphrased body claims further down the response won't, silently starving
+ * them of citations. Mutates in place.
+ *
+ * Scoped to organic and news results only — both carry real paraphrasable body text (title +
+ * snippet/scraped content), so lexical matching works the same way it does for MCP article
+ * sources. Images/videos have no body text to match against and remain model-cited (see the
+ * image/video escape-sequence instructions retained in `buildWebSearchContext`).
+ */
+export function insertWebSearchCitations(
+  contentParts: TMessageContentParts[],
+  webSearchAttachments: TAttachment[],
+): void {
+  const { organic, news } = buildWebSearchPassages(webSearchAttachments);
+
+  for (const [passages, anchorTag] of [
+    [organic, 'search'],
+    [news, 'news'],
+  ] as const) {
+    if (passages.length === 0) {
+      continue;
+    }
+    for (const part of contentParts) {
+      const text = readText(part);
+      if (text == null || text.length === 0) {
+        continue;
+      }
+      const { text: rebuilt } = anchorTextPart(text, passages, {
+        anchorTag,
+        threshold: MCP_SIMILARITY_THRESHOLD,
+        tokenizeFn: tokenizeStemmed,
+      });
+      if (rebuilt !== text) {
+        writeText(part, rebuilt);
+      }
+    }
+  }
+}
+
 /**
  * Builds MCP passages for sentence-level matching, offset so MCP turn numbers
  * don't collide with file_search turn numbers in the client's shared turnMap.
@@ -1404,9 +1512,16 @@ export async function applyEndOfTraceCitations({
       (attachment): attachment is TAttachment =>
         attachment != null && attachment.type === Tools.mcp_results,
     );
+    const webSearchAttachments = resolved.filter(
+      (attachment): attachment is TAttachment =>
+        attachment != null && attachment.type === Tools.web_search,
+    );
 
     if (fileSearchAttachments.length > 0) {
       insertFileCitations(contentParts, fileSearchAttachments);
+    }
+    if (webSearchAttachments.length > 0) {
+      insertWebSearchCitations(contentParts, webSearchAttachments);
     }
     if (mcpAttachments.length > 0) {
       const turnOffset = fileSearchAttachments.length;

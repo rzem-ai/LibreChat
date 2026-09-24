@@ -73,7 +73,12 @@ export function useSearchResultsByTurn(attachments?: TAttachment[]) {
       if (attachment.type === Tools.web_search && attachment[Tools.web_search]) {
         const searchData = attachment[Tools.web_search];
         if (searchData && typeof searchData.turn === 'number') {
-          turnMap[searchData.turn.toString()] = searchData;
+          // Merge rather than overwrite: file_search/MCP count turns independently from
+          // web_search, so the same numeric key can legitimately hold both a file_search
+          // entry (`references`) and a web_search entry (`organic`/`topStories`/etc.) —
+          // overwriting would silently drop whichever attachment was processed first.
+          const turnKey = searchData.turn.toString();
+          turnMap[turnKey] = { ...turnMap[turnKey], ...searchData };
         }
       }
 
@@ -137,7 +142,11 @@ export function useSearchResultsByTurn(attachments?: TAttachment[]) {
           ),
         };
 
-        turnMap[agentFileSearchTurn.toString()] = agentSearchData;
+        // Merge rather than overwrite: web_search counts turns independently from
+        // file_search, so the same numeric key can legitimately hold both an already-merged
+        // web_search entry and this file_search entry.
+        const turnKey = agentFileSearchTurn.toString();
+        turnMap[turnKey] = { ...turnMap[turnKey], ...agentSearchData };
         agentFileSearchTurn++;
       }
 

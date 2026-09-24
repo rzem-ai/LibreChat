@@ -1,8 +1,15 @@
 import { Tools, ContentTypes } from 'librechat-data-provider';
-import type { TMessageContentParts, TAttachment, MCPResultSource } from 'librechat-data-provider';
+import type {
+  TMessageContentParts,
+  TAttachment,
+  MCPResultSource,
+  OrganicResult,
+  TopStoryResult,
+} from 'librechat-data-provider';
 import {
   insertFileCitations,
   insertMCPCitations,
+  insertWebSearchCitations,
   insertSharePointCitations,
   appendGuaranteedMCPCitations,
   appendMCPDisclaimers,
@@ -59,6 +66,28 @@ function mcpAttachment(
       sources,
       ...(disclaimer ? { disclaimer } : {}),
       ...(dpnUsageRestriction ? { dpnUsageRestriction } : {}),
+    },
+  } as unknown as TAttachment;
+}
+
+function webSearchAttachment(
+  turn: number,
+  organic?: Array<Partial<OrganicResult> & { title?: string }>,
+  topStories?: Array<Partial<TopStoryResult> & { title?: string }>,
+): TAttachment {
+  return {
+    type: Tools.web_search,
+    messageId: 'msg-1',
+    toolCallId: 'call-1',
+    conversationId: 'conv-1',
+    [Tools.web_search]: {
+      turn,
+      ...(organic
+        ? { organic: organic.map((result) => ({ link: 'https://example.com', ...result })) }
+        : {}),
+      ...(topStories
+        ? { topStories: topStories.map((result) => ({ link: 'https://example.com', ...result })) }
+        : {}),
     },
   } as unknown as TAttachment;
 }
@@ -883,6 +912,63 @@ describe('insertMCPCitations', () => {
     expect(cells[2]).toContain(`${MARKER}turn0mcp0`);
     expect(cells[2]).toContain(`${MARKER}turn0mcp1`);
     expect(coords).toEqual(new Set(['0:0', '0:1']));
+  });
+});
+
+describe('insertWebSearchCitations', () => {
+  it('anchors a sentence grounded in an organic result', () => {
+    const parts = [textPart('You can reserve a desk fourteen days in advance.')];
+    insertWebSearchCitations(parts, [
+      webSearchAttachment(0, [{ title: 'Desk Booking', snippet: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toContain(`${MARKER}turn0search0`);
+  });
+
+  it('anchors a sentence grounded in a news result', () => {
+    const parts = [textPart(AFR_ARTICLE)];
+    insertWebSearchCitations(parts, [webSearchAttachment(0, undefined, [{ title: AFR_ARTICLE }])]);
+    expect(readText(parts[0])).toContain(`${MARKER}turn0news0`);
+  });
+
+  it('leaves an unmatched sentence uncited', () => {
+    const parts = [textPart('This sentence has nothing to do with any retrieved result at all.')];
+    insertWebSearchCitations(parts, [
+      webSearchAttachment(0, [{ title: 'Desk Booking', snippet: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).not.toContain(MARKER);
+  });
+
+  it("uses the attachment's own turn value, not a synthesized index", () => {
+    const parts = [textPart('You can reserve a desk fourteen days in advance.')];
+    insertWebSearchCitations(parts, [
+      webSearchAttachment(3, [{ title: 'Desk Booking', snippet: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toContain(`${MARKER}turn3search0`);
+  });
+
+  it('anchors organic and news results independently within the same attachment', () => {
+    const parts = [
+      textPart(
+        'You can reserve a desk fourteen days in advance. The Reserve Bank held the cash rate steady at its meeting today.',
+      ),
+    ];
+    insertWebSearchCitations(parts, [
+      webSearchAttachment(
+        0,
+        [{ title: 'Desk Booking', snippet: DESK_CONTENT }],
+        [{ title: AFR_ARTICLE }],
+      ),
+    ]);
+    const text = readText(parts[0]);
+    expect(text).toContain(`${MARKER}turn0search0`);
+    expect(text).toContain(`${MARKER}turn0news0`);
+  });
+
+  it('is a no-op when there are no organic or news results', () => {
+    const original = 'You can reserve a desk fourteen days in advance.';
+    const parts = [textPart(original)];
+    insertWebSearchCitations(parts, [webSearchAttachment(0)]);
+    expect(readText(parts[0])).toBe(original);
   });
 });
 
@@ -1866,6 +1952,14 @@ describe('tokenize stemming', () => {
     ]);
     expect(readText(parts[0])).toBe(sentence);
   });
+
+  it('matches different inflections of the same fact for web search citations, the same as MCP', () => {
+    const parts = [textPart(sentence)];
+    insertWebSearchCitations(parts, [
+      webSearchAttachment(0, [{ title: 'Central Bank Update', snippet: passageContent }]),
+    ]);
+    expect(readText(parts[0])).toContain(`${MARKER}turn0search0`);
+  });
 });
 
 describe('applyEndOfTraceCitations', () => {
@@ -1949,6 +2043,18 @@ describe('applyEndOfTraceCitations', () => {
       }),
     ).resolves.toBeUndefined();
     expect(readText(parts[0])).toBe(original);
+  });
+
+  it('inserts web search anchors when only a web_search attachment is present', async () => {
+    const parts = [textPart('You can reserve a desk fourteen days in advance.')];
+    await applyEndOfTraceCitations({
+      contentParts: parts,
+      artifactPromises: [
+        Promise.resolve(webSearchAttachment(0, [{ title: 'Desk Booking', snippet: DESK_CONTENT }])),
+      ],
+      fileCitations: true,
+    });
+    expect(readText(parts[0])).toContain(`${MARKER}turn0search0`);
   });
 
   it('splices insertMCPCitations, guaranteed anchors, and the disclaimer in order for an unmatched kx source', async () => {
