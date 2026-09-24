@@ -26,6 +26,8 @@ spec:
       infra-deploy/pr-status: approved
     uat:
       infra-deploy/pr-status: approved
+      argocd/app-name: librechat-uat
+      infra-deploy/url: https://myassist-uat.ctk.au.deloitte.com
     prd:
       infra-deploy/pr-status: approved
       argocd/app-name: librechat-prd
