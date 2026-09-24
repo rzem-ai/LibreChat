@@ -1,12 +1,9 @@
 imageRegistry: 'dttaitsdev.azurecr.io'
 branch: 'develop'
-
 llmGateway:
   namespace: 'llm-gateway-ctnp'
-
 serviceAccount:
   name: sa-librechat-dev
-
 ingress:
   className: cilium
   host: 'librechat-dev.ctk.au.deloitte.com'
@@ -19,7 +16,6 @@ ingress:
       secretStoreName: external-secret-store
       hosts:
         - 'librechat-dev.ctk.au.deloitte.com'
-
 pods:
   librechat:
     replicas: 1
@@ -46,8 +42,12 @@ pods:
           - -c
           - >-
             mkdir -p /app/client/dist/assets && if [ -d /app/deloitte/assets ]; then
+
+
               cp -a /app/deloitte/assets/. /app/client/dist/assets/;
             elif [ -d /app/deloitte-assets ]; then
+
+
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
@@ -237,7 +237,6 @@ pods:
           paths:
             - path: /admin
               pathType: Prefix
-
 valkey:
   image:
     tag: 'develop@sha256:87ebb22a20d8ee2f450574f70068388acb9d2b5b60f74b9cf873c6be845102b3'

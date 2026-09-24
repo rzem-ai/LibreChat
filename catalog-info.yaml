@@ -24,6 +24,8 @@ spec:
   environment:
     dev:
       infra-deploy/pr-status: approved
+      argocd/app-name: librechat-dev
+      infra-deploy/url: https://librechat-dev.ctk.au.deloitte.com
     uat:
       infra-deploy/pr-status: approved
       argocd/app-name: librechat-uat
