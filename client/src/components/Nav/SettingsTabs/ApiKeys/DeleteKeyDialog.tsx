@@ -7,6 +7,8 @@ type DeleteKeyDialogProps = {
   id: string;
   name: string;
   keyPrefix: string;
+  /** Deloitte Custom Change: revokes a key from the selected service account. */
+  userEmail: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   triggerRef?: RefObject<HTMLButtonElement | null>;
@@ -16,6 +18,7 @@ export default function DeleteKeyDialog({
   id,
   name,
   keyPrefix,
+  userEmail,
   open,
   onOpenChange,
   triggerRef,
@@ -25,15 +28,18 @@ export default function DeleteKeyDialog({
   const deleteMutation = useDeleteAgentApiKeyMutation();
 
   const handleDelete = () => {
-    deleteMutation.mutate(id, {
-      onSuccess: () => {
-        showToast({ message: localize('com_ui_api_key_deleted'), status: 'success' });
-        onOpenChange(false);
+    deleteMutation.mutate(
+      { id, userEmail },
+      {
+        onSuccess: () => {
+          showToast({ message: localize('com_ui_api_key_deleted'), status: 'success' });
+          onOpenChange(false);
+        },
+        onError: () => {
+          showToast({ message: localize('com_ui_api_key_delete_error'), status: 'error' });
+        },
       },
-      onError: () => {
-        showToast({ message: localize('com_ui_api_key_delete_error'), status: 'error' });
-      },
-    });
+    );
   };
 
   return (

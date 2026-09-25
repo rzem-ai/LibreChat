@@ -49,7 +49,11 @@ export interface SettingsContextValue {
   aboutEnabled: boolean;
   accountsTabEnabled: boolean;
   dataApiKeysEnabled: boolean;
+  /** Deloitte Custom Change: enables administrator-managed service account API keys. */
+  adminAgentApiKeysEnabled: boolean;
   dataDangerZoneEnabled: boolean;
+  /** Deloitte Custom Change: limits service account key-management UI to administrators. */
+  isAdmin: boolean;
   engineTTS: string;
   langfuseConnectionAccess: boolean;
 }

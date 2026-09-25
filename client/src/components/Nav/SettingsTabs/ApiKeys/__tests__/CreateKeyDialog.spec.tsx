@@ -4,6 +4,7 @@ import { useCreateAgentApiKeyMutation } from 'librechat-data-provider/react-quer
 import { render, fireEvent, waitFor } from 'test/layout-test-utils';
 import CreateKeyDialog from '../CreateKeyDialog';
 
+// Deloitte Custom Change: verifies service account identity is sent when an API key is created.
 jest.mock('librechat-data-provider/react-query', () => ({
   ...jest.requireActual('librechat-data-provider/react-query'),
   useCreateAgentApiKeyMutation: jest.fn(),
@@ -28,14 +29,16 @@ describe('CreateKeyDialog', () => {
   });
 
   it('renders nothing when closed', () => {
-    const { queryByRole } = render(<CreateKeyDialog open={false} onOpenChange={jest.fn()} />);
+    const { queryByRole } = render(
+      <CreateKeyDialog open={false} onOpenChange={jest.fn()} userEmail="eval@example.com" />,
+    );
     expect(queryByRole('heading', { name: 'Create API Key' })).not.toBeInTheDocument();
   });
 
   it('creates a key, reveals it, and closes on done', async () => {
     const onOpenChange = jest.fn();
     const { getByRole, getByLabelText, getByDisplayValue } = render(
-      <CreateKeyDialog open onOpenChange={onOpenChange} />,
+      <CreateKeyDialog open onOpenChange={onOpenChange} userEmail="eval@example.com" />,
     );
 
     expect(getByRole('heading', { name: 'Create API Key' })).toBeInTheDocument();
@@ -46,6 +49,9 @@ describe('CreateKeyDialog', () => {
     await waitFor(() =>
       expect(getByRole('heading', { name: 'API key created successfully' })).toBeInTheDocument(),
     );
+    expect(mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ userEmail: 'eval@example.com' }),
+    );
     expect(getByDisplayValue('lc-secret-full-key')).toBeInTheDocument();
 
     fireEvent.click(getByRole('button', { name: 'Done' }));
@@ -54,7 +60,9 @@ describe('CreateKeyDialog', () => {
 
   it('cancels without creating', () => {
     const onOpenChange = jest.fn();
-    const { getByRole } = render(<CreateKeyDialog open onOpenChange={onOpenChange} />);
+    const { getByRole } = render(
+      <CreateKeyDialog open onOpenChange={onOpenChange} userEmail="eval@example.com" />,
+    );
     fireEvent.click(getByRole('button', { name: 'Cancel' }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
