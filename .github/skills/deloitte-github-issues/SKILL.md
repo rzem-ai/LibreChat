@@ -1,114 +1,251 @@
 ---
 name: deloitte-github-issues
-description: >-
+description: >
   Create GitHub issues in Deloitte-Australia/tt-librechat using the
-  repository-specific assignee, label, and epic mappings defined in
-  repo_config.yaml.
+  repository-specific configuration defined in repo_config.yaml.
 ---
 
 # Deloitte GitHub Issue Creator
 
-Create GitHub issues for `Deloitte-Australia/tt-librechat` from user inputs.
+Create and manage GitHub issues for `Deloitte-Australia/tt-librechat`.
 
 ## Required Reference
 
-Read [repo_config.yaml](repo_config.yaml) in this directory before doing anything else. It is the source of truth for:
+Read `repo_config.yaml` before doing anything else.
 
-- the target repository;
-- the supported issue labels;
-- assignee display-name to GitHub login mappings;
-- available epic parent issues;
-- the configured GitHub account.
+It is the authoritative source for:
 
-Do not invent or guess any of those mappings when the config is available.
+- repository details
+- labels
+- assignee mappings
+- expertise mappings
+- epic definitions
+- routing rules
+- GitHub account configuration
 
-## Workflow
+Do not invent values when configuration exists.
 
-### Step 1 - Read the input and config
+---
 
-Parse the user input into issue rows. Treat the first column as the issue title unless the user explicitly says otherwise.
+# Workflow
 
-If the user states a count that does not match the number of issue rows they provided, stop and ask which rows to create.
+## Step 1 - Read the input
 
-Read `repo_config.yaml` and use it for all normalization in later steps.
+Parse the user's request into issue rows.
 
-### Step 2 - Normalize labels, assignees, and epic parents
+Assume:
 
-Use these label rules:
+- the first column is the issue title unless otherwise stated;
+- each row represents one issue;
+- user-provided values take precedence over inferred values.
 
-- `Alpha` -> `alpha patch`
-- `Alpha Patch` -> `alpha patch`
-- `Beta` -> `beta`
-- `GA` -> `GA`
-- `Could do` -> `backlog`
+If the user specifies a count that does not match the supplied rows, stop and ask for clarification.
 
-For assignees:
+---
 
-- split multiple names on `/`, `+`, `,`, `--`, or `and`;
-- trim whitespace;
-- map each name through `repo_config.yaml`;
-- if the dev field is blank, leave the issue unassigned;
-- if any name is missing from the config, stop and ask instead of guessing.
+## Step 2 - Load configuration
 
-For epics:
+Read `repo_config.yaml`.
 
-- match the provided epic name against `repo_config.yaml`;
-- treat the matched epic issue as the parent issue for the new child issue;
-- if no epic mapping exists, stop and ask instead of creating an unlinked issue.
+Normalise:
 
-### Step 3 - Check for exact-title duplicates
+- labels
+- assignees
+- epic selection
+- GitHub usernames
 
-Before creating anything, check whether an open or closed issue already exists with the exact same title in the target repository.
+using the configuration only.
 
-If an exact match exists, do not create a duplicate unless the user explicitly instructs you to.
+---
 
-### Step 4 - Create the issues
+## Step 3 - Determine the epic
 
-Create each issue in the configured repository with:
+If the user explicitly specifies an epic:
 
-- the exact title from the input;
-- the normalized label from Step 2;
-- the mapped assignees, when present;
-- a body that includes the parent epic and any metadata the user supplied, such as severity, ease, timing, dependencies, or requested developers.
+- match it against the configured epic list;
+- use that epic.
 
-Use this body shape unless the user provides a different template:
+If no epic is specified:
+
+1. Compare the issue title and description against epic keywords.
+2. Apply any matching routing rule.
+3. Select the most appropriate epic.
+4. Explain the routing decision.
+
+If multiple epics are plausible:
+
+- present the likely options;
+- ask the user to choose.
+
+Never create an issue with no epic unless the user explicitly requests it.
+
+---
+
+## Step 4 - Determine assignee
+
+If the user specifies an assignee:
+
+- map through the assignees section.
+
+If the user does not specify an assignee:
+
+1. Check applicable routing rules.
+2. Use the epic default assignee.
+3. Use expertise mappings to determine whether another configured specialist is a stronger fit.
+4. Recommend the specialist and explain why.
+
+If a user-supplied assignee cannot be found in configuration:
+
+- stop and ask.
+
+Never guess GitHub usernames.
+
+---
+
+## Step 5 - Normalize labels
+
+Apply the configured label aliases.
+
+Examples:
+
+- Alpha → alpha patch
+- Alpha Patch → alpha patch
+- Beta → beta
+- GA → GA
+- Could do → backlog
+
+If no matching label exists:
+
+- ask the user.
+
+---
+
+## Step 6 - Check for duplicates
+
+Before creating an issue:
+
+- search open issues;
+- search closed issues.
+
+If an exact title match exists:
+
+- report the existing issue;
+- do not create a duplicate unless explicitly requested.
+
+---
+
+## Step 7 - Create the issue
+
+Create the issue with:
+
+- title
+- body
+- labels
+- assignees
+
+Use the exact user-provided title.
+
+Use this template unless another template is supplied:
 
 ```md
 **Parent epic:** #<epic_number>
-**Severity:** <value if provided>
-**Ease of implementation:** <value if provided>
-**When:** <value if provided>
-**Requested devs:** <value if provided>
-**Dependencies:** <value if provided>
-**Notes:** <value if provided>
+
+**Severity*** <value>
+**Ease of implementation:** <value>
+**When:** <value>
+**Requested devs:** <value>
+**Dependencies:** <value>
+
+**Notes**
+<notes>
 ```
 
-Use the configured GitHub account from `repo_config.yaml` for non-interactive GitHub API or CLI operations when the available authentication supports account selection.
+Only include fields that were provided.
 
-### Step 5 - Link the created issues back to the epic
+---
 
-After creating child issues for an epic, update the parent epic issue body to include a `## Child issues` section with checklist items in this form:
+## Step 8 - Link issue to epic
+
+After issue creation:
+
+1. Open the parent epic.
+2. Locate the `## Child Issues` section.
+3. Create the section if it does not exist.
+4. Add the new issue checklist item.
+
+Example:
 
 ```md
+## Child Issues
+
 - [ ] #123
 ```
 
-If the section already exists, append only missing items. Do not duplicate existing checklist entries.
+Do not duplicate existing entries.
 
-### Step 6 - Report the outcome
+---
 
-Return the created issue numbers and URLs. Also report any rows skipped because of duplicates, missing mappings, or user-directed omissions.
+## Step 9 - Report outcome
 
-## Guardrails
+Summarise:
 
-- Use [repo_config.yaml](repo_config.yaml) as the authoritative repository mapping.
-- Preserve user-provided issue titles verbatim unless the user asks for edits.
-- Use non-interactive GitHub APIs or CLI commands.
-- If credentials allow issue creation but not project access, say that plainly.
-- Do not claim parent-epic linkage unless both the child issue and parent issue update were completed.
+- created issues
+- issue numbers
+- issue URLs
+- routed epic
+- assigned owners
+- labels applied
 
-## Example Triggers
+Also report:
 
-- "Create these 12 issues in tt-librechat."
-- "Use the first column as the issue title and assign from the Devs column."
-- "Create alpha patch issues and link them to the right epic."
+- duplicates skipped
+- unresolved mappings
+- failed updates
+
+Do not claim epic linkage unless the parent issue update succeeded.
+
+---
+
+# Routing Guidance
+
+When classifying issues automatically:
+
+| Topic | Preferred Epic | Preferred Owner |
+|---------|---------|---------|
+| Agent Builder | Agents | Sunny |
+| Agent Marketplace | Agents | Sunny |
+| MCP Integrations | MCPs | Isabelle |
+| Tool Calling | MCPs | Isabelle |
+| Testing | Testing | Jyotin |
+| Evaluation | Evaluation | Kosi |
+| File Uploads | File Handling | Ishaq |
+| Security | Security | Ally |
+| Ways of Working | Ways of Working | Ally |
+| Strategy | Strategy Work | Jack |
+| Skill Uploads | Skills | Alleena |
+| Skill Behaviour | Skills | Sunny |
+
+Routing guidance can be overridden by explicit user instructions.
+
+---
+
+# Guardrails
+
+- Preserve titles exactly.
+- Never invent labels.
+- Never invent epics.
+- Never invent assignees.
+- Never invent GitHub usernames.
+- Always use repo_config.yaml as the source of truth.
+- Explain routing decisions when done automatically.
+- Report failures clearly.
+
+---
+
+# Example Triggers
+
+- Create these 5 issues in tt-librechat.
+- Create alpha patch issues and route them automatically.
+- Create these issues and assign the best owner.
+- Categorise these issues into epics and create them.
+- Create backlog issues and link them to the correct epic.
