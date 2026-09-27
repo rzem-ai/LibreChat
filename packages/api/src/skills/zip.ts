@@ -134,27 +134,31 @@ export async function renameSpacedFilePaths(
 }
 
 /**
- * Builds every path-suffix replacement pair for a single rename, not just the
- * full path and the bare basename. A reference inside a skill's own text is
- * often written relative to some ancestor directory (most commonly the
- * directory containing the manifest itself, when the archive is wrapped in a
- * folder) rather than the full archive-relative path — e.g. a manifest at
- * `my skill/SKILL.md` typically refers to a companion file as
- * `references/guide.md`, omitting the wrapping `my skill/` segment entirely.
- * Renaming only the wrapper segment (`my skill` -> `my-skill`) would leave
- * that reference unmatched by a full-path-or-basename-only replacement, even
- * though the wrapper rename doesn't affect the reference at all — and a rename
- * of any other intermediate segment has the same problem. Since renaming
- * never adds or removes path segments, `oldPath` and `newPath` always split
- * into the same number of segments, so every same-length suffix pair (drop
- * the first 0, 1, 2, ... segments from both) is a valid candidate reference
- * form.
+ * Builds every strict path-suffix replacement pair for a single rename —
+ * every suffix shorter than the full path, down to the bare basename. A
+ * reference inside a skill's own text is often written relative to some
+ * ancestor directory (most commonly the directory containing the manifest
+ * itself, when the archive is wrapped in a folder) rather than the full
+ * archive-relative path — e.g. a manifest at `my skill/SKILL.md` typically
+ * refers to a companion file as `references/guide.md`, omitting the
+ * wrapping `my skill/` segment entirely. Renaming only the wrapper segment
+ * (`my skill` -> `my-skill`) would leave that reference unmatched by a
+ * full-path-or-basename-only replacement, even though the wrapper rename
+ * doesn't affect the reference at all — and a rename of any other
+ * intermediate segment has the same problem. Since renaming never adds or
+ * removes path segments, `oldPath` and `newPath` always split into the same
+ * number of segments, so every same-length suffix pair (drop the first 1, 2,
+ * ... segments from both) is a valid candidate reference form. Excludes the
+ * full path itself (dropping 0 segments): unlike these shorter suffixes, a
+ * rename's full path is guaranteed unique across the archive, so the caller
+ * applies it unconditionally instead of folding it into the ambiguity check
+ * that these shorter, potentially colliding forms need.
  */
 function buildSuffixReplacements(oldPath: string, newPath: string): { from: string; to: string }[] {
   const oldSegments = oldPath.split('/');
   const newSegments = newPath.split('/');
   const replacements: { from: string; to: string }[] = [];
-  for (let i = 0; i < oldSegments.length; i++) {
+  for (let i = 1; i < oldSegments.length; i++) {
     const from = oldSegments.slice(i).join('/');
     const to = newSegments.slice(i).join('/');
     if (from !== to) {
@@ -162,6 +166,24 @@ function buildSuffixReplacements(oldPath: string, newPath: string): { from: stri
     }
   }
   return replacements;
+}
+
+function escapeRegExp(literal: string): string {
+  return literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Builds a global regex matching `literal` only when it isn't embedded in a
+ * longer path-like token — i.e. neither immediately preceded nor followed by
+ * a character that could itself be part of a file path segment (letters,
+ * digits, `_`, `.`, `-`, `/`). Without this, a plain substring replacement
+ * would also rewrite occurrences inside unrelated prose, identifiers, or a
+ * longer name that happens to contain the renamed one as a substring (e.g.
+ * matching `foo bar.md` inside `foo bar.md.bak`).
+ */
+function referenceBoundaryRegex(literal: string): RegExp {
+  const escaped = escapeRegExp(literal);
+  return new RegExp(`(?<![A-Za-z0-9_.\\-/])${escaped}(?![A-Za-z0-9_.\\-/])`, 'g');
 }
 
 /**
@@ -173,14 +195,19 @@ function buildSuffixReplacements(oldPath: string, newPath: string): { from: stri
  * any ancestor directory, not just the archive root. Binary entries —
  * detected via `isBinaryBuffer` — are left untouched. Replacements are
  * applied longest-match-first so a longer reference is rewritten before a
- * shorter one can clobber part of it. When two different renames produce the
- * same suffix (most commonly two spaced files sharing a basename in
- * different directories) with different targets, that suffix is ambiguous
- * and is dropped rather than letting whichever rename was processed last win
- * — the full path replacement for each rename is always unambiguous and
- * still applies. Enforces the same per-file and
- * cumulative decompressed-size bounds `handleZip` applies elsewhere
- * (`limits`, defaulting to `DEFAULT_SKILL_IMPORT_LIMITS` for callers with no
+ * shorter one can clobber part of it, and only when not embedded in a longer
+ * path-like token (see `referenceBoundaryRegex`), so a renamed file's path
+ * doesn't also rewrite occurrences inside unrelated prose or a longer name
+ * that merely contains it as a substring. A rename's full path is always
+ * applied — it's guaranteed unique since it's the file's original archive
+ * path. Shorter suffix forms (see `buildSuffixReplacements`) are only
+ * applied when they resolve to a single target: when two different renames
+ * produce the same suffix (most commonly two spaced files sharing a
+ * basename in different directories) with different targets, that suffix is
+ * ambiguous and is dropped rather than letting whichever rename was
+ * processed last win. Enforces the same per-file and cumulative
+ * decompressed-size bounds `handleZip` applies elsewhere (`limits`,
+ * defaulting to `DEFAULT_SKILL_IMPORT_LIMITS` for callers with no
  * per-request override), via `readZipEntry` — an entry that exceeds those
  * bounds is left unrewritten rather than fully decompressed. No-ops when
  * there are no renames.
@@ -194,21 +221,31 @@ export async function rewriteRenamedFileReferences(
     return;
   }
 
-  const replacementTargets = new Map<string, Set<string>>();
+  const fullPathReplacements = new Map<string, string>(
+    renames.map(({ oldPath, newPath }) => [oldPath, newPath]),
+  );
+
+  const suffixTargets = new Map<string, Set<string>>();
   for (const { oldPath, newPath } of renames) {
     for (const { from, to } of buildSuffixReplacements(oldPath, newPath)) {
-      const targets = replacementTargets.get(from);
+      if (fullPathReplacements.has(from)) {
+        continue;
+      }
+      const targets = suffixTargets.get(from);
       if (targets) {
         targets.add(to);
       } else {
-        replacementTargets.set(from, new Set([to]));
+        suffixTargets.set(from, new Set([to]));
       }
     }
   }
-  const replacements = Array.from(replacementTargets)
-    .filter(([, targets]) => targets.size === 1)
-    .map(([from, targets]) => ({ from, to: [...targets][0] }))
-    .sort((a, b) => b.from.length - a.from.length);
+
+  const replacements = [
+    ...Array.from(fullPathReplacements, ([from, to]) => ({ from, to })),
+    ...Array.from(suffixTargets)
+      .filter(([, targets]) => targets.size === 1)
+      .map(([from, targets]) => ({ from, to: [...targets][0] })),
+  ].sort((a, b) => b.from.length - a.from.length);
 
   const perFileLimit = limits.maxSingleFileBytes;
   let totalDecompressed = 0;
@@ -234,8 +271,10 @@ export async function rewriteRenamedFileReferences(
     let text = buffer.toString('utf-8');
     let changed = false;
     for (const { from, to } of replacements) {
-      if (text.includes(from)) {
-        text = text.split(from).join(to);
+      const regex = referenceBoundaryRegex(from);
+      if (regex.test(text)) {
+        regex.lastIndex = 0;
+        text = text.replace(regex, () => to);
         changed = true;
       }
     }

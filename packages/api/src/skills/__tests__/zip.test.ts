@@ -218,4 +218,32 @@ describe('rewriteRenamedFileReferences', () => {
       'See a/foo-bar-2.txt, b/foo-bar.txt, and bare foo bar.txt for details.',
     );
   });
+
+  it("still rewrites a full-path reference that coincides with a different rename's ambiguous suffix", async () => {
+    const zip = new JSZip();
+    zip.file('a/foo bar.txt', 'content a');
+    zip.file('b/a/foo-bar.txt', 'pre-existing nested content');
+    zip.file('b/a/foo bar.txt', 'content nested b');
+    zip.file('SKILL.md', 'See a/foo bar.txt, b/a/foo bar.txt, and bare foo bar.txt for details.');
+
+    const renames = await renameSpacedFilePaths(zip);
+    await rewriteRenamedFileReferences(zip, renames);
+
+    expect(await readText(zip, 'SKILL.md')).toBe(
+      'See a/foo-bar.txt, b/a/foo-bar-2.txt, and bare foo bar.txt for details.',
+    );
+  });
+
+  it('does not rewrite a renamed name when it is only a substring of a longer name', async () => {
+    const zip = new JSZip();
+    zip.file('foo bar.md', 'content');
+    zip.file('SKILL.md', 'See foo bar.md for the summary and keep foo bar.md.bak untouched.');
+
+    const renames = await renameSpacedFilePaths(zip);
+    await rewriteRenamedFileReferences(zip, renames);
+
+    expect(await readText(zip, 'SKILL.md')).toBe(
+      'See foo-bar.md for the summary and keep foo bar.md.bak untouched.',
+    );
+  });
 });
