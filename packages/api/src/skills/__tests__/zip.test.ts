@@ -203,4 +203,19 @@ describe('rewriteRenamedFileReferences', () => {
 
     expect(await readText(zip, 'SKILL.md')).toBe('See references/many fortunes.md for details.');
   });
+
+  it('drops an ambiguous basename reference instead of rewriting it to the wrong target', async () => {
+    const zip = new JSZip();
+    zip.file('a/foo-bar.txt', 'pre-existing a content');
+    zip.file('a/foo bar.txt', 'renamed a content');
+    zip.file('b/foo bar.txt', 'renamed b content');
+    zip.file('SKILL.md', 'See a/foo bar.txt, b/foo bar.txt, and bare foo bar.txt for details.');
+
+    const renames = await renameSpacedFilePaths(zip);
+    await rewriteRenamedFileReferences(zip, renames);
+
+    expect(await readText(zip, 'SKILL.md')).toBe(
+      'See a/foo-bar-2.txt, b/foo-bar.txt, and bare foo bar.txt for details.',
+    );
+  });
 });

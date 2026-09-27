@@ -173,7 +173,12 @@ function buildSuffixReplacements(oldPath: string, newPath: string): { from: stri
  * any ancestor directory, not just the archive root. Binary entries —
  * detected via `isBinaryBuffer` — are left untouched. Replacements are
  * applied longest-match-first so a longer reference is rewritten before a
- * shorter one can clobber part of it. Enforces the same per-file and
+ * shorter one can clobber part of it. When two different renames produce the
+ * same suffix (most commonly two spaced files sharing a basename in
+ * different directories) with different targets, that suffix is ambiguous
+ * and is dropped rather than letting whichever rename was processed last win
+ * — the full path replacement for each rename is always unambiguous and
+ * still applies. Enforces the same per-file and
  * cumulative decompressed-size bounds `handleZip` applies elsewhere
  * (`limits`, defaulting to `DEFAULT_SKILL_IMPORT_LIMITS` for callers with no
  * per-request override), via `readZipEntry` — an entry that exceeds those
@@ -189,15 +194,21 @@ export async function rewriteRenamedFileReferences(
     return;
   }
 
-  const uniqueReplacements = new Map<string, string>();
+  const replacementTargets = new Map<string, Set<string>>();
   for (const { oldPath, newPath } of renames) {
     for (const { from, to } of buildSuffixReplacements(oldPath, newPath)) {
-      uniqueReplacements.set(from, to);
+      const targets = replacementTargets.get(from);
+      if (targets) {
+        targets.add(to);
+      } else {
+        replacementTargets.set(from, new Set([to]));
+      }
     }
   }
-  const replacements = Array.from(uniqueReplacements, ([from, to]) => ({ from, to })).sort(
-    (a, b) => b.from.length - a.from.length,
-  );
+  const replacements = Array.from(replacementTargets)
+    .filter(([, targets]) => targets.size === 1)
+    .map(([from, targets]) => ({ from, to: [...targets][0] }))
+    .sort((a, b) => b.from.length - a.from.length);
 
   const perFileLimit = limits.maxSingleFileBytes;
   let totalDecompressed = 0;
