@@ -214,6 +214,82 @@ describe('shared decompression budget', () => {
     // this cache hit and skip its own maxSingleFileBytes check entirely.
     expect(budget.cache.has('notes.txt')).toBe(false);
   });
+
+  it('classifies a large binary companion file without fully decompressing it', async () => {
+    const zip = new JSZip();
+    zip.file('foo bar.txt', 'small text');
+    zip.file('assets/big.bin', Buffer.alloc(5 * 1024 * 1024, 0));
+
+    const budget = createDecompressionBudget(DEFAULT_SKILL_IMPORT_LIMITS);
+    const renames = await renameSpacedFilePaths(zip, DEFAULT_SKILL_IMPORT_LIMITS, budget);
+    expect(renames).toEqual([{ oldPath: 'foo bar.txt', newPath: 'foo-bar.txt' }]);
+
+    const remainingBeforeRewrite = budget.remaining;
+    await rewriteRenamedFileReferences(zip, renames, DEFAULT_SKILL_IMPORT_LIMITS, budget);
+
+    // foo-bar.txt is a cache hit from the rename pass above, so this charge is
+    // entirely attributable to reading assets/big.bin. Classifying it as binary
+    // only needs enough bytes to fail isBinaryBuffer's null-byte check — nowhere
+    // near its full 5 MiB size — so the rewrite pass never holds (or charges
+    // the budget for) the whole decompressed asset just to skip rewriting it.
+    const chargedForBinaryEntry = remainingBeforeRewrite - budget.remaining;
+    expect(chargedForBinaryEntry).toBeLessThan(1024 * 1024);
+    expect(budget.cache.has('assets/big.bin')).toBe(false);
+  });
+
+  it('charges rewrite growth against the cumulative remaining budget, not just maxSingleFileBytes', async () => {
+    const zip = new JSZip();
+    zip.file('foo bar-x.txt', 'first');
+    zip.file('foo-bar x.txt', 'second');
+    const notes = 'ref: foo-bar x.txt';
+    zip.file('notes.txt', notes);
+
+    const budget = createDecompressionBudget(DEFAULT_SKILL_IMPORT_LIMITS);
+    const renames = await renameSpacedFilePaths(zip, DEFAULT_SKILL_IMPORT_LIMITS, budget);
+
+    const remainingBeforeRewrite = budget.remaining;
+    await rewriteRenamedFileReferences(zip, renames, DEFAULT_SKILL_IMPORT_LIMITS, budget);
+
+    const rewritten = 'ref: foo-bar-x-2.txt';
+    const growth = rewritten.length - notes.length;
+    expect(growth).toBeGreaterThan(0);
+    // The cached buffer is grown by the rewrite, so a later cache hit could
+    // silently serve `growth` more bytes than were ever charged against the
+    // budget unless that growth is subtracted here too — on top of the charge
+    // for reading notes.txt's original (pre-rewrite) content.
+    expect(budget.cache.get('notes.txt')?.toString('utf-8')).toBe(rewritten);
+    expect(remainingBeforeRewrite - budget.remaining).toBe(notes.length + growth);
+  });
+
+  it('evicts a rewritten entry instead of caching it when its growth would exceed the remaining cumulative budget, even though it still fits maxSingleFileBytes', async () => {
+    const zip = new JSZip();
+    zip.file('foo bar-x.txt', 'first');
+    zip.file('foo-bar x.txt', 'second');
+    const notes = 'ref: foo-bar x.txt';
+    zip.file('notes.txt', notes);
+
+    // Exactly enough headroom to read every entry once (rename pass reads the
+    // two spaced files, the rewrite pass reads notes.txt), plus a single byte
+    // left over — one byte short of the rewrite's two-byte growth.
+    const limits = {
+      ...DEFAULT_SKILL_IMPORT_LIMITS,
+      maxDecompressedBytes: 'first'.length + 'second'.length + notes.length + 1,
+    };
+    const budget = createDecompressionBudget(limits);
+
+    const renames = await renameSpacedFilePaths(zip, limits, budget);
+    await rewriteRenamedFileReferences(zip, renames, limits, budget);
+
+    const rewritten = 'ref: foo-bar-x-2.txt';
+    expect(rewritten.length).toBeLessThan(limits.maxSingleFileBytes);
+    // The zip entry itself still holds the correctly rewritten content...
+    expect(await readText(zip, 'notes.txt')).toBe(rewritten);
+    // ...but a cache hit here would serve 2 bytes more than the 1 byte actually
+    // left in the cumulative budget, so it must be evicted even though it fits
+    // maxSingleFileBytes on its own.
+    expect(budget.cache.has('notes.txt')).toBe(false);
+    expect(budget.remaining).toBe(1);
+  });
 });
 
 describe('rewriteRenamedFileReferences', () => {

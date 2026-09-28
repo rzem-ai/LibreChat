@@ -1,7 +1,7 @@
 import path from 'path';
 import type JSZip from 'jszip';
 import type { ImportLimits, DecompressionBudget } from './limits';
-import { isBinaryBuffer } from './binary';
+import { isBinaryBuffer, BINARY_CHECK_BYTES } from './binary';
 import { DEFAULT_SKILL_IMPORT_LIMITS, createDecompressionBudget } from './limits';
 
 const SKILL_MD = 'SKILL.md';
@@ -358,13 +358,49 @@ function buildCombinedReplacer(
 }
 
 /**
+ * Reads `entry` for `rewriteRenamedFileReferences`'s rewrite check, reusing
+ * an already-cached buffer from an earlier pass when present (same contract
+ * as `readZipEntryCached`). On a cache miss, uses `readTextZipEntry` instead
+ * of `readZipEntryCached` — a large binary companion asset is the common case
+ * for a big archive entry, and `isBinaryBuffer` only ever inspects its first
+ * `BINARY_CHECK_BYTES` bytes, so classifying it doesn't require decompressing
+ * (or charging the budget for) the rest of it. A freshly-read buffer is
+ * intentionally left out of `budget.cache` here — the caller decides whether
+ * it's worth caching once it knows whether a rewrite actually happened.
+ * Returns `null` for a directory-less binary entry, or one that exceeds the
+ * per-file or remaining cumulative limit.
+ */
+async function readRewriteCandidate(
+  entryPath: string,
+  entry: JSZip.JSZipObject,
+  limits: ImportLimits,
+  budget: DecompressionBudget,
+): Promise<{ buffer: Buffer; wasCached: boolean } | null> {
+  const cached = budget.cache.get(entryPath);
+  if (cached != null) {
+    return { buffer: cached, wasCached: true };
+  }
+  if (budget.remaining <= 0) {
+    return null;
+  }
+  const effectiveLimit = Math.min(limits.maxSingleFileBytes, budget.remaining);
+  const { buffer, bytesRead, binary } = await readTextZipEntry(entry, effectiveLimit);
+  budget.remaining -= bytesRead;
+  if (binary || buffer == null) {
+    return null;
+  }
+  return { buffer, wasCached: false };
+}
+
+/**
  * Rewrites literal references to renamed files across every other text entry
  * in the archive, including entries that were themselves renamed (e.g.
  * SKILL.md may reference another renamed file). Matches the full path, the
  * bare basename, and every intermediate path suffix in between (see
  * `buildSuffixReplacements`), since a reference may be written relative to
  * any ancestor directory, not just the archive root. Binary entries —
- * detected via `isBinaryBuffer` — are left untouched. All replacements are
+ * detected via `isBinaryBuffer`, without fully decompressing large ones (see
+ * `readRewriteCandidate`) — are left untouched. All replacements are
  * matched in a single combined pass per entry (see `buildCombinedReplacer`)
  * rather than testing/replacing each candidate against the same text in
  * turn, so cost stays linear in text size regardless of how many files were
@@ -382,7 +418,7 @@ function buildCombinedReplacer(
  * processed last win. Enforces the same per-file and cumulative
  * decompressed-size bounds `handleZip` applies elsewhere (`limits`,
  * defaulting to `DEFAULT_SKILL_IMPORT_LIMITS` for callers with no
- * per-request override), via `readZipEntryCached` — an entry that exceeds
+ * per-request override), via `readRewriteCandidate` — an entry that exceeds
  * those bounds is left unrewritten rather than fully decompressed. A
  * rewritten entry whose new content grows past `limits.maxSingleFileBytes`
  * (e.g. a collision-disambiguated target is longer than the reference it
@@ -399,6 +435,20 @@ function buildCombinedReplacer(
  * of re-charging the budget for the same entry; defaults to a fresh budget
  * for callers that only run this one pass. No-ops when there are no
  * renames.
+ *
+ * This pass touches every entry in the archive (any text file could
+ * reference a renamed one), but only entries it actually rewrites are worth
+ * another pass reusing — reusing an unrewritten entry costs nothing more than
+ * reading it again from `zip`. So a freshly-decompressed buffer that turns
+ * out unchanged is evicted from `budget.cache` rather than left resident,
+ * and a large binary asset is never fully decompressed or cached at all (see
+ * `readRewriteCandidate`) — otherwise, since this pass runs across the whole
+ * archive before any entry is persisted, `budget.cache` would hold roughly
+ * the entire uncompressed archive at once, defeating the streaming,
+ * one-entry-at-a-time behavior of `handleZip`'s companion-file loop and the
+ * scanner's re-rooting pass. A buffer this pass already had cached from an
+ * earlier pass (e.g. the rename pass's own renamed-entry buffer) is left as
+ * that pass's caller intended, whether or not this pass ends up rewriting it.
  */
 export async function rewriteRenamedFileReferences(
   zip: JSZip,
@@ -447,26 +497,122 @@ export async function rewriteRenamedFileReferences(
       continue;
     }
     const normalized = entryPath.replace(/\\/g, '/');
-    const buffer = await readZipEntryCached(normalized, entry, limits, budget);
-    if (buffer == null) {
+    const candidate = await readRewriteCandidate(normalized, entry, limits, budget);
+    if (candidate == null) {
       continue;
     }
-    if (isBinaryBuffer(buffer)) {
-      continue;
-    }
+    const { buffer, wasCached } = candidate;
+
     const text = buffer.toString('utf-8');
     const rewritten = text.replace(combined.regex, (match) => combined.targets.get(match) ?? match);
     if (rewritten === text) {
+      // Not this pass's own concern to keep resident — whichever pass reads
+      // this entry next re-derives it from `zip` (unchanged either way).
+      if (!wasCached) {
+        budget.cache.delete(normalized);
+      }
       continue;
     }
+
     zip.file(entryPath, rewritten);
     const rewrittenBuffer = Buffer.from(rewritten, 'utf-8');
-    if (rewrittenBuffer.length <= limits.maxSingleFileBytes) {
+    // A collision-disambiguated target can be longer than the reference it
+    // replaces, growing the entry past what its own original decompression
+    // charged against `budget.remaining`. Charging that growth now — instead
+    // of only checking it fits `maxSingleFileBytes` — keeps a later cache hit
+    // (e.g. handleZip's companion loop) from serving a buffer bigger than the
+    // cumulative budget actually has room for. When it doesn't fit either
+    // bound, evict instead: `zip`'s entry data is still the rewritten text, so
+    // a later bounded re-read reflects it and correctly rejects it as
+    // oversized rather than a cache hit silently bypassing that check.
+    const growth = rewrittenBuffer.length - buffer.length;
+    const fitsRemainingBudget = growth <= 0 || growth <= budget.remaining;
+    if (rewrittenBuffer.length <= limits.maxSingleFileBytes && fitsRemainingBudget) {
+      if (growth > 0) {
+        budget.remaining -= growth;
+      }
       budget.cache.set(normalized, rewrittenBuffer);
     } else {
       budget.cache.delete(normalized);
     }
   }
+}
+
+/**
+ * Like `readZipEntry`, but classifies the entry as binary or text as soon as
+ * enough bytes are available — mirroring the single-loop classify-then-abort
+ * pattern the skill file download handler uses — and stops decompressing
+ * immediately once it's binary, rather than reading (and charging the budget
+ * for) the rest of a potentially large binary asset just to conclude it's not
+ * a candidate for text rewriting. `isBinaryBuffer` only ever inspects the
+ * first `BINARY_CHECK_BYTES` bytes, so this never changes the classification
+ * outcome — only how much of the entry is decompressed to reach it. Returns
+ * `binary: true` with a `null` buffer for a binary entry, `binary: false`
+ * with a `null` buffer when the entry exceeds `effectiveLimit` before
+ * classification resolves it as binary, or the full (bounded) buffer with
+ * `binary: false` otherwise. `bytesRead` always reflects the bytes actually
+ * decompressed, for charging against a shared `DecompressionBudget`.
+ */
+export async function readTextZipEntry(
+  zipEntry: JSZip.JSZipObject,
+  effectiveLimit: number,
+): Promise<{ buffer: Buffer | null; bytesRead: number; binary: boolean }> {
+  if (effectiveLimit <= 0) {
+    return { buffer: null, bytesRead: 0, binary: false };
+  }
+
+  const chunks: Buffer[] = [];
+  let bytesRead = 0;
+  let stopped = false;
+  let exceededLimit = false;
+  let binaryChecked = false;
+  let binary = false;
+  const entryStream = zipEntry.nodeStream('nodebuffer');
+  const stop = () => {
+    stopped = true;
+    if ('destroy' in entryStream && typeof entryStream.destroy === 'function') {
+      entryStream.destroy();
+    }
+  };
+
+  await new Promise<void>((resolve, reject) => {
+    entryStream.on('data', (chunk: Buffer) => {
+      if (stopped) {
+        return;
+      }
+      bytesRead += chunk.length;
+      chunks.push(chunk);
+
+      if (bytesRead > effectiveLimit) {
+        exceededLimit = true;
+        stop();
+        resolve();
+        return;
+      }
+
+      if (!binaryChecked && bytesRead >= Math.min(BINARY_CHECK_BYTES, effectiveLimit)) {
+        binaryChecked = true;
+        if (isBinaryBuffer(Buffer.concat(chunks))) {
+          binary = true;
+          stop();
+          resolve();
+        }
+      }
+    });
+    entryStream.on('end', resolve);
+    entryStream.on('error', reject);
+  });
+
+  if (binary) {
+    return { buffer: null, bytesRead, binary: true };
+  }
+  if (exceededLimit) {
+    return { buffer: null, bytesRead, binary: false };
+  }
+  if (!binaryChecked && isBinaryBuffer(Buffer.concat(chunks))) {
+    return { buffer: null, bytesRead, binary: true };
+  }
+  return { buffer: Buffer.concat(chunks), bytesRead, binary: false };
 }
 
 /**
