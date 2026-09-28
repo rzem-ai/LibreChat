@@ -18,15 +18,16 @@
 import JSZip from 'jszip';
 import { logger } from '@librechat/data-schemas';
 import { SKILL_SEVERITY_LEVELS } from 'librechat-data-provider';
-import type { ImportLimits } from './limits';
+import type { ImportLimits, DecompressionBudget } from './limits';
 import { parseSkillMarkdown, extractSkillBody } from './parse';
 import {
   readZipEntry,
   stripZipArtifacts,
+  findSkillMdPath,
   renameSpacedFilePaths,
   rewriteRenamedFileReferences,
 } from './zip';
-import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
+import { DEFAULT_SKILL_IMPORT_LIMITS, createDecompressionBudget } from './limits';
 
 const SKILL_MD = 'SKILL.md';
 const DEFAULT_TIMEOUT_MS = 15000;
@@ -551,27 +552,6 @@ function stripInternalFrontmatterForScan(content: string): {
 }
 
 /**
- * Locate a `SKILL.md` entry at the archive root or one level deep — mirrors
- * the discovery rule `handleZip` (import.ts) uses when it later reads the
- * real archive, so the entry we rewrite here is the same one that flow will
- * treat as the manifest. Also reports the wrapping-folder prefix (e.g.
- * `my-skill/`), so the caller can re-root the archive before scanning — the
- * external scanner requires the manifest at the archive root and rejects a
- * one-level-deep upload as "missing SKILL.md", even though `handleZip` itself
- * tolerates that layout.
- */
-function findSkillMdPath(zip: JSZip): { path: string; prefix: string } | null {
-  for (const entryPath of Object.keys(zip.files)) {
-    const segments = entryPath.replace(/\\/g, '/').split('/').filter(Boolean);
-    const basename = segments[segments.length - 1];
-    if (basename?.toUpperCase() === SKILL_MD.toUpperCase() && segments.length <= 2) {
-      return { path: entryPath, prefix: segments.length === 2 ? `${segments[0]}/` : '' };
-    }
-  }
-  return null;
-}
-
-/**
  * Re-root every archive entry under `prefix` to the archive root, mirroring
  * the flattening `handleZip` (import.ts) applies when it later saves
  * companion files — without this, a skill zipped as a wrapping folder (e.g.
@@ -581,12 +561,19 @@ function findSkillMdPath(zip: JSZip): { path: string; prefix: string } | null {
  * same per-file/cumulative decompressed-size bounds `handleZip` applies to
  * companion files — returns `null` if any bound is exceeded, so the caller
  * falls back to scanning the original archive unchanged rather than risk
- * unbounded decompression.
+ * unbounded decompression. `budget` is shared with the caller's other passes
+ * over the same archive (rename, rewrite, the SKILL.md read) so their
+ * combined decompressed bytes stay bounded by a single `maxDecompressedBytes`
+ * allowance rather than each pass getting its own.
  */
-async function reRootZip(zip: JSZip, prefix: string, limits: ImportLimits): Promise<JSZip | null> {
+async function reRootZip(
+  zip: JSZip,
+  prefix: string,
+  limits: ImportLimits,
+  budget: DecompressionBudget,
+): Promise<JSZip | null> {
   const rooted = new JSZip();
   const perFileLimit = limits.maxSingleFileBytes;
-  let totalDecompressed = 0;
   for (const [entryPath, entry] of Object.entries(zip.files)) {
     if (entry.dir) {
       continue;
@@ -613,13 +600,13 @@ async function reRootZip(zip: JSZip, prefix: string, limits: ImportLimits): Prom
       continue;
     }
 
-    const cumulativeLimit = limits.maxDecompressedBytes - totalDecompressed;
+    const cumulativeLimit = budget.remaining;
     if (cumulativeLimit <= 0) {
       return null;
     }
     const effectiveLimit = Math.min(perFileLimit, cumulativeLimit);
     const { buffer, bytesRead } = await readZipEntry(entry, effectiveLimit);
-    totalDecompressed += bytesRead;
+    budget.remaining -= bytesRead;
     if (buffer == null) {
       return null;
     }
@@ -636,11 +623,14 @@ async function reRootZip(zip: JSZip, prefix: string, limits: ImportLimits): Prom
  * archive exceeds the same entry-count/decompressed-size bounds `handleZip`
  * (import.ts) enforces — the caller falls back to scanning the original
  * archive unchanged, so a zip-bomb SKILL.md entry can't be used to force an
- * unbounded local decompression ahead of those guards.
+ * unbounded local decompression ahead of those guards. `budget` is shared
+ * with the caller's rename/rewrite passes over the same archive, so all of
+ * them stay within one cumulative decompression allowance.
  */
 async function stripInternalFrontmatterFromZip(
   zip: JSZip,
   limits: ImportLimits,
+  budget: DecompressionBudget,
 ): Promise<{
   zip: JSZip;
   frontmatter?: Record<string, unknown>;
@@ -656,8 +646,9 @@ async function stripInternalFrontmatterFromZip(
   if (!skillMdEntry) {
     return null;
   }
-  const skillMdLimit = Math.min(limits.maxSingleFileBytes, limits.maxDecompressedBytes);
-  const { buffer: skillMdBuffer } = await readZipEntry(skillMdEntry, skillMdLimit);
+  const skillMdLimit = Math.min(limits.maxSingleFileBytes, budget.remaining);
+  const { buffer: skillMdBuffer, bytesRead } = await readZipEntry(skillMdEntry, skillMdLimit);
+  budget.remaining -= bytesRead;
   if (!skillMdBuffer) {
     return null;
   }
@@ -666,7 +657,7 @@ async function stripInternalFrontmatterFromZip(
     return null;
   }
   zip.file(skillMdPath, stripped.skillMd);
-  const rootedZip = prefix ? await reRootZip(zip, prefix, limits) : zip;
+  const rootedZip = prefix ? await reRootZip(zip, prefix, limits, budget) : zip;
   if (!rootedZip) {
     return null;
   }
@@ -726,9 +717,13 @@ export async function scanSkillUpload(params: {
   // (import.ts) will, before re-rooting/scanning — otherwise reRootZip's
   // safe-path filter silently drops spaced entries from the scanned archive
   // while handleZip still imports and uses those exact same (renamed) files,
-  // letting them bypass the security scanner entirely.
-  const renames = await renameSpacedFilePaths(zip, limits);
-  await rewriteRenamedFileReferences(zip, renames, limits);
+  // letting them bypass the security scanner entirely. `budget` is shared
+  // across rename, rewrite, and re-rooting below so a crafted archive can't
+  // multiply its effective decompression allowance by however many passes
+  // touch it.
+  const budget = createDecompressionBudget(limits);
+  const renames = await renameSpacedFilePaths(zip, limits, budget);
+  await rewriteRenamedFileReferences(zip, renames, limits, budget);
 
   // Entry count guard — placed after stripping so the count reflects real skill
   // files only. Sends the original upload bytes rather than re-materialising the
@@ -739,7 +734,7 @@ export async function scanSkillUpload(params: {
     return;
   }
 
-  const stripped = await stripInternalFrontmatterFromZip(zip, limits);
+  const stripped = await stripInternalFrontmatterFromZip(zip, limits, budget);
   if (!stripped) {
     // No parseable SKILL.md or other early exit — scan the original upload bytes
     // directly rather than re-materialising the in-memory archive.

@@ -1,8 +1,10 @@
 import path from 'path';
 import type JSZip from 'jszip';
-import type { ImportLimits } from './limits';
+import type { ImportLimits, DecompressionBudget } from './limits';
 import { isBinaryBuffer } from './binary';
-import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
+import { DEFAULT_SKILL_IMPORT_LIMITS, createDecompressionBudget } from './limits';
+
+const SKILL_MD = 'SKILL.md';
 
 /**
  * Deloitte Custom Change: Configurable strip patterns for unwanted filesystem
@@ -47,6 +49,30 @@ export function stripZipArtifacts(zip: JSZip): void {
   }
 }
 
+/**
+ * Locates SKILL.md at the archive root or one level deep inside a single
+ * wrapping folder, returning that folder's path prefix (empty string when
+ * SKILL.md is already at the root). Shared by the rename pass below (so its
+ * collision disambiguation matches the flattened namespace files are
+ * actually persisted into), `handleZip` (import.ts), and the security
+ * scanner's re-rooting pass (scanner.ts), so all three agree on the same
+ * wrapper folder for a given archive. Ignores a SKILL.md nested more than
+ * one level deep, matching `handleZip`'s "root or one level deep" contract
+ * — an archive with no qualifying SKILL.md yields `null`, not a false
+ * one-level-deep upload as "missing SKILL.md", even though `handleZip` itself
+ * tolerates that layout.
+ */
+export function findSkillMdPath(zip: JSZip): { path: string; prefix: string } | null {
+  for (const entryPath of Object.keys(zip.files)) {
+    const segments = entryPath.replace(/\\/g, '/').split('/').filter(Boolean);
+    const basename = segments[segments.length - 1];
+    if (basename?.toUpperCase() === SKILL_MD.toUpperCase() && segments.length <= 2) {
+      return { path: entryPath, prefix: segments.length === 2 ? `${segments[0]}/` : '' };
+    }
+  }
+  return null;
+}
+
 /** A file whose path was rewritten because it contained a space. */
 export type SkillFileRename = { oldPath: string; newPath: string };
 
@@ -77,24 +103,52 @@ function uniquePath(candidate: string, reserved: ReadonlySet<string>): string {
  * folder names. Mutates the in-memory JSZip object in-place, mirroring
  * `stripZipArtifacts`. Renamed entries that would otherwise collide with an
  * existing (or previously renamed) path are disambiguated with a numeric
- * suffix rather than overwriting that entry. Enforces the same per-file and
- * cumulative decompressed-size bounds `handleZip` applies elsewhere (`limits`,
- * defaulting to `DEFAULT_SKILL_IMPORT_LIMITS` for callers with no per-request
- * override), via `readZipEntry`, so a zip-bomb entry with a space in its name
- * can't force unbounded decompression — an entry that exceeds those bounds is
- * left unrenamed and falls through to the existing path-safety rejection.
- * Returns the list of renames applied, empty if none.
+ * suffix rather than overwriting that entry.
+ *
+ * Collisions are checked in the same flattened namespace `handleZip`
+ * (import.ts) and the security scanner persist/scan into — when the archive
+ * has a single wrapping folder around SKILL.md (see `findSkillMdPath`), that
+ * folder is stripped from each path before the uniqueness check, since two
+ * archive paths that don't collide before stripping (e.g. `skill/a-b.txt`
+ * and root-level `a-b.txt`) still collide once that prefix is stripped at
+ * import time. Without this, `renameSpacedFilePaths` could hand back a
+ * "unique" rename that `handleZip` then silently overwrites anyway.
+ *
+ * Enforces the same per-file and cumulative decompressed-size bounds
+ * `handleZip` applies elsewhere (`limits`, defaulting to
+ * `DEFAULT_SKILL_IMPORT_LIMITS` for callers with no per-request override),
+ * via `readZipEntry`, so a zip-bomb entry with a space in its name can't
+ * force unbounded decompression — an entry that exceeds those bounds is left
+ * unrenamed and falls through to the existing path-safety rejection. Accepts
+ * an optional `budget` shared with other passes over the same archive (see
+ * `rewriteRenamedFileReferences`, `handleZip`) so their combined decompressed
+ * bytes stay bounded by a single `maxDecompressedBytes` allowance rather than
+ * each pass getting its own; defaults to a fresh budget for callers that only
+ * run this one pass. Returns the list of renames applied, empty if none.
  */
 export async function renameSpacedFilePaths(
   zip: JSZip,
   limits: ImportLimits = DEFAULT_SKILL_IMPORT_LIMITS,
+  budget: DecompressionBudget = createDecompressionBudget(limits),
 ): Promise<SkillFileRename[]> {
   const renames: SkillFileRename[] = [];
-  const reservedPaths = new Set<string>(
-    Object.keys(zip.files).map((entryPath) => entryPath.replace(/\\/g, '/')),
+  const originalPrefix = findSkillMdPath(zip)?.prefix ?? '';
+  const renamedPrefix = originalPrefix ? originalPrefix.replace(/ /g, '-') : '';
+
+  const flattenPath = (fullPath: string): string => {
+    if (originalPrefix && fullPath.startsWith(originalPrefix)) {
+      return fullPath.slice(originalPrefix.length);
+    }
+    if (renamedPrefix && fullPath.startsWith(renamedPrefix)) {
+      return fullPath.slice(renamedPrefix.length);
+    }
+    return fullPath;
+  };
+
+  const reservedFlattened = new Set<string>(
+    Object.keys(zip.files).map((entryPath) => flattenPath(entryPath.replace(/\\/g, '/'))),
   );
   const perFileLimit = limits.maxSingleFileBytes;
-  let totalDecompressed = 0;
 
   for (const entryPath of Object.keys(zip.files)) {
     const entry = zip.file(entryPath);
@@ -113,19 +167,28 @@ export async function renameSpacedFilePaths(
       continue;
     }
 
-    const cumulativeLimit = limits.maxDecompressedBytes - totalDecompressed;
+    const cumulativeLimit = budget.remaining;
     if (cumulativeLimit <= 0) {
       continue;
     }
     const effectiveLimit = Math.min(perFileLimit, cumulativeLimit);
     const { buffer, bytesRead } = await readZipEntry(entry, effectiveLimit);
-    totalDecompressed += bytesRead;
+    budget.remaining -= bytesRead;
     if (buffer == null) {
       continue;
     }
 
-    const newPath = uniquePath(candidate, reservedPaths);
-    reservedPaths.add(newPath);
+    // Exclude this entry's own pre-rename slot before checking, so renaming
+    // the wrapping folder segment (e.g. `my skill/` -> `my-skill/`) never
+    // registers as a collision against itself.
+    reservedFlattened.delete(flattenPath(normalized));
+    const candidateFlat = flattenPath(candidate);
+    const uniqueFlat = uniquePath(candidateFlat, reservedFlattened);
+    const newPath =
+      uniqueFlat === candidateFlat
+        ? candidate
+        : candidate.slice(0, candidate.length - candidateFlat.length) + uniqueFlat;
+    reservedFlattened.add(uniqueFlat);
     zip.remove(entryPath);
     zip.file(newPath, buffer);
     renames.push({ oldPath: normalized, newPath });
@@ -209,13 +272,18 @@ function referenceBoundaryRegex(literal: string): RegExp {
  * decompressed-size bounds `handleZip` applies elsewhere (`limits`,
  * defaulting to `DEFAULT_SKILL_IMPORT_LIMITS` for callers with no
  * per-request override), via `readZipEntry` — an entry that exceeds those
- * bounds is left unrewritten rather than fully decompressed. No-ops when
- * there are no renames.
+ * bounds is left unrewritten rather than fully decompressed. Accepts an
+ * optional `budget` shared with other passes over the same archive (see
+ * `renameSpacedFilePaths`, `handleZip`) so their combined decompressed bytes
+ * stay bounded by a single `maxDecompressedBytes` allowance rather than each
+ * pass getting its own; defaults to a fresh budget for callers that only run
+ * this one pass. No-ops when there are no renames.
  */
 export async function rewriteRenamedFileReferences(
   zip: JSZip,
   renames: SkillFileRename[],
   limits: ImportLimits = DEFAULT_SKILL_IMPORT_LIMITS,
+  budget: DecompressionBudget = createDecompressionBudget(limits),
 ): Promise<void> {
   if (renames.length === 0) {
     return;
@@ -248,20 +316,19 @@ export async function rewriteRenamedFileReferences(
   ].sort((a, b) => b.from.length - a.from.length);
 
   const perFileLimit = limits.maxSingleFileBytes;
-  let totalDecompressed = 0;
 
   for (const entryPath of Object.keys(zip.files)) {
     const entry = zip.file(entryPath);
     if (entry == null || entry.dir) {
       continue;
     }
-    const cumulativeLimit = limits.maxDecompressedBytes - totalDecompressed;
+    const cumulativeLimit = budget.remaining;
     if (cumulativeLimit <= 0) {
       continue;
     }
     const effectiveLimit = Math.min(perFileLimit, cumulativeLimit);
     const { buffer, bytesRead } = await readZipEntry(entry, effectiveLimit);
-    totalDecompressed += bytesRead;
+    budget.remaining -= bytesRead;
     if (buffer == null) {
       continue;
     }

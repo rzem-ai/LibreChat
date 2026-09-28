@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 
-import { DEFAULT_SKILL_IMPORT_LIMITS } from '../limits';
+import { DEFAULT_SKILL_IMPORT_LIMITS, createDecompressionBudget } from '../limits';
 import { renameSpacedFilePaths, rewriteRenamedFileReferences } from '../zip';
 
 async function readText(zip: JSZip, entryPath: string): Promise<string> {
@@ -102,6 +102,54 @@ describe('renameSpacedFilePaths', () => {
     expect(renames).toEqual([]);
     expect(zip.file('small file.txt')).not.toBeNull();
     expect(zip.file('small-file.txt')).toBeNull();
+  });
+
+  it('disambiguates a rename against the archive-flattened namespace handleZip persists into', async () => {
+    const zip = new JSZip();
+    zip.file('skill/SKILL.md', 'manifest');
+    zip.file('skill/a b.txt', 'nested content');
+    zip.file('a-b.txt', 'existing root content');
+
+    const renames = await renameSpacedFilePaths(zip);
+
+    expect(renames).toEqual([{ oldPath: 'skill/a b.txt', newPath: 'skill/a-b-2.txt' }]);
+    expect(await readText(zip, 'skill/a-b-2.txt')).toBe('nested content');
+    expect(await readText(zip, 'a-b.txt')).toBe('existing root content');
+  });
+
+  it('does not treat a renamed wrapper folder as colliding with itself', async () => {
+    const zip = new JSZip();
+    zip.file('my skill/SKILL.md', 'manifest');
+    zip.file('my skill/notes.txt', 'notes');
+
+    const renames = await renameSpacedFilePaths(zip);
+
+    const newPaths = renames.map((rename) => rename.newPath).sort();
+    expect(newPaths).toEqual(['my-skill/SKILL.md', 'my-skill/notes.txt']);
+  });
+});
+
+describe('shared decompression budget', () => {
+  it('carries decompressed bytes forward from renameSpacedFilePaths into rewriteRenamedFileReferences', async () => {
+    const zip = new JSZip();
+    zip.file('foo bar.txt', Buffer.alloc(40, 'a'));
+    const reference = 'See foo bar.txt for details.';
+    const skillMdContent = reference + 'x'.repeat(50 - reference.length);
+    zip.file('SKILL.md', skillMdContent);
+
+    const strictLimits = { ...DEFAULT_SKILL_IMPORT_LIMITS, maxDecompressedBytes: 50 };
+    const budget = createDecompressionBudget(strictLimits);
+
+    const renames = await renameSpacedFilePaths(zip, strictLimits, budget);
+    expect(renames).toEqual([{ oldPath: 'foo bar.txt', newPath: 'foo-bar.txt' }]);
+    expect(budget.remaining).toBeLessThan(50);
+
+    await rewriteRenamedFileReferences(zip, renames, strictLimits, budget);
+
+    // A fresh 50-byte budget would have fit this 50-byte SKILL.md exactly, so it
+    // would have been rewritten. Sharing the budget with the rename pass above
+    // leaves too little of it remaining, so SKILL.md is left untouched instead.
+    expect(await readText(zip, 'SKILL.md')).toBe(skillMdContent);
   });
 });
 

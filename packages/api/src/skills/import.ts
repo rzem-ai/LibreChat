@@ -19,10 +19,11 @@ import { resolveRequestTenantId } from '~/middleware/tenant';
 import {
   readZipEntry,
   stripZipArtifacts,
+  findSkillMdPath,
   renameSpacedFilePaths,
   rewriteRenamedFileReferences,
 } from './zip';
-import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
+import { DEFAULT_SKILL_IMPORT_LIMITS, createDecompressionBudget } from './limits';
 import { isSafeSkillFilePath } from './path';
 import { parseSkillMarkdown } from './parse';
 
@@ -374,9 +375,12 @@ async function handleZip(
   // are not a permitted isSafeSkillFilePath character) and rewrite literal references
   // to the old path/basename across the archive's other text files, so uploads that
   // previously failed with "Invalid path" succeed instead. A warning is surfaced below
-  // once `renames` is known to be non-empty.
-  const renames = await renameSpacedFilePaths(zip, limits);
-  await rewriteRenamedFileReferences(zip, renames, limits);
+  // once `renames` is known to be non-empty. `budget` is shared across both passes and
+  // the companion-file loop below so a crafted archive can't multiply its effective
+  // decompression allowance by however many passes touch it.
+  const budget = createDecompressionBudget(limits);
+  const renames = await renameSpacedFilePaths(zip, limits, budget);
+  await rewriteRenamedFileReferences(zip, renames, limits, budget);
 
   const entries = Object.keys(zip.files);
 
@@ -385,20 +389,9 @@ async function handleZip(
   }
 
   // Find SKILL.md — at root or one level deep
-  let skillMdPath: string | null = null;
-  let prefix = '';
-  for (const p of entries) {
-    const normalized = p.replace(/\\/g, '/');
-    const segments = normalized.split('/').filter(Boolean);
-    const basename = segments[segments.length - 1];
-    if (basename?.toUpperCase() === SKILL_MD.toUpperCase() && segments.length <= 2) {
-      skillMdPath = p;
-      if (segments.length === 2) {
-        prefix = segments[0] + '/';
-      }
-      break;
-    }
-  }
+  const found = findSkillMdPath(zip);
+  const skillMdPath = found?.path ?? null;
+  const prefix = found?.prefix ?? '';
 
   if (!skillMdPath) {
     return res.status(400).json({ error: 'Archive must contain a SKILL.md file' });
@@ -483,9 +476,10 @@ async function handleZip(
     return res.status(500).json({ error: grant.error });
   }
 
-  // Process additional files (everything except SKILL.md)
+  // Process additional files (everything except SKILL.md). Shares `budget`
+  // with the rename/rewrite passes above so all three stay within one
+  // cumulative decompression allowance.
   const fileResults: Array<{ path: string; status: 'ok' | 'error'; error?: string }> = [];
-  let totalDecompressed = 0;
 
   for (const [entryPath, zipEntry] of Object.entries(zip.files)) {
     if (zipEntry.dir) {
@@ -511,7 +505,7 @@ async function handleZip(
       // Stream-decompress with hard byte cap. JSZip's nodeStream decompresses
       // incrementally so we can abort mid-entry without buffering the full file.
       const perFileLimit = limits.maxSingleFileBytes;
-      const cumulativeLimit = limits.maxDecompressedBytes - totalDecompressed;
+      const cumulativeLimit = budget.remaining;
       const effectiveLimit = Math.min(perFileLimit, cumulativeLimit);
 
       if (effectiveLimit <= 0) {
@@ -535,7 +529,7 @@ async function handleZip(
             return;
           }
           entryBytes += chunk.length;
-          totalDecompressed += chunk.length;
+          budget.remaining -= chunk.length;
           if (entryBytes > effectiveLimit) {
             exceededLimit = true;
             if ('destroy' in entryStream && typeof entryStream.destroy === 'function') {
