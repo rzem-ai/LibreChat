@@ -125,7 +125,7 @@ pods:
           OTEL_LOG_LEVEL: 'INFO'
           OTEL_IOREDIS_TRACING_ENABLED: 'false'
           DEBUG_LOGGING: 'false'
-          DEBUG_CONSOLE: 'false'
+          DEBUG_CONSOLE: 'true'
           AGENT_DEBUG_LOGGING: 'true'
           # Skill Security Scanner
           SKILL_SCANNER_URL: 'https://ai-registry-dev.ctk.au.deloitte.com/v1/scan?verbose=false'
