@@ -1500,6 +1500,7 @@ describe('setupOpenId', () => {
     // Depending on your implementation, user.avatar may be undefined or an empty string.
   });
 
+  // Deloitte Custom Change: Graph profile photos are normalized and persisted as inline PNG data URIs.
   it('should prefer and save a Microsoft Graph avatar when an OpenID picture is provided', async () => {
     const { getStrategyFunctions } = require('~/server/services/Files/strategies');
     const { getGraphApiToken } = require('~/server/services/GraphTokenService');
@@ -1517,9 +1518,6 @@ describe('setupOpenId', () => {
     verifyCallback = require('openid-client/passport').__getVerifyCallbackByName('openid');
 
     const { user } = await validate(tokenset);
-    const strategyResult =
-      getStrategyFunctions.mock.results[getStrategyFunctions.mock.results.length - 1];
-    const { saveBuffer } = strategyResult.value;
 
     expect(undici.fetch).toHaveBeenCalledWith(
       'https://graph.microsoft.com/v1.0/me/photo/$value',
@@ -1532,11 +1530,36 @@ describe('setupOpenId', () => {
       'fake_access_token',
       'https://graph.microsoft.com/User.Read',
     );
-    expect(resizeAvatar).not.toHaveBeenCalled();
-    expect(saveBuffer).toHaveBeenCalledWith(
-      expect.objectContaining({ buffer: Buffer.from('graph avatar') }),
-    );
-    expect(user.avatar).toBe('/fake/path/to/avatar.png');
+    expect(resizeAvatar).toHaveBeenCalledWith({
+      userId: 'newUserId',
+      input: Buffer.from('graph avatar'),
+    });
+    expect(user.avatar).toBe('data:image/png;base64,c2FmZSBhdmF0YXI=');
+    expect(getStrategyFunctions).not.toHaveBeenCalled();
+  });
+
+  // Deloitte Custom Change: an invalid Graph photo is optional and must not block authentication.
+  it('continues login when the Microsoft Graph avatar cannot be processed', async () => {
+    const { getStrategyFunctions } = require('~/server/services/Files/strategies');
+    require('openid-client').discovery.mockResolvedValueOnce({
+      clientId: 'fake_client_id',
+      clientSecret: 'fake_client_secret',
+      issuer: 'https://login.microsoftonline.com/tenant/v2.0',
+      serverMetadata: () => ({ issuer: 'https://login.microsoftonline.com/tenant/v2.0' }),
+    });
+    undici.fetch.mockResolvedValueOnce({
+      ok: true,
+      arrayBuffer: async () => Buffer.from('invalid graph avatar'),
+    });
+    resizeAvatar.mockRejectedValueOnce(new Error('unsupported image format'));
+    await setupOpenId();
+    verifyCallback = require('openid-client/passport').__getVerifyCallbackByName('openid');
+
+    const { user } = await validate(tokenset);
+
+    expect(user).toBeTruthy();
+    expect(user.avatar).toBeUndefined();
+    expect(getStrategyFunctions).not.toHaveBeenCalled();
   });
 
   // Deloitte Custom Change: verifies unavailable Entra profile photos do not block authentication.

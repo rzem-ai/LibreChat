@@ -334,6 +334,16 @@ const resizeIdentityProviderAvatar = async (url, userId, config, accessToken, su
   }
 };
 
+// Deloitte Custom Change: a malformed Graph photo must not prevent a valid Entra user from signing in.
+const resizeGraphAvatar = async (image, userId) => {
+  try {
+    return await resizeAvatar({ userId, input: image });
+  } catch (error) {
+    logger.error(`[openidStrategy] Failed to process Microsoft Graph profile photo: ${error}`);
+    return '';
+  }
+};
+
 /**
  * Determines the full name of a user based on OpenID userinfo and environment configuration.
  *
@@ -871,8 +881,13 @@ async function processOpenIDAuth(tokenset, existingUsersOnly = false) {
               tokenset.access_token,
               userinfo.sub,
             )
-          : image;
-      if (imageBuffer) {
+          : await resizeGraphAvatar(image, userId);
+      if (imageBuffer && graphImage) {
+        // Deloitte Custom Change: persist the normalized Graph avatar inline so private Blob access is not required.
+        const mimeType = imageBuffer.subarray(0, 3).toString() === 'GIF' ? 'gif' : 'png';
+        user.avatar = `data:image/${mimeType};base64,${imageBuffer.toString('base64')}`;
+        logger.debug('[openidStrategy] Graph avatar image encoded for user record');
+      } else if (imageBuffer) {
         logger.debug('[openidStrategy] Avatar image processed; saving avatar');
         const fileStrategy = getAvatarFileStrategy(appConfig, process.env.CDN_PROVIDER);
         const { saveBuffer } = getStrategyFunctions(fileStrategy);
