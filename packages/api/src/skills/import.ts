@@ -414,8 +414,12 @@ async function handleZip(
   //Deloitte added readZipEntry to read the SKILL.md file with a hard limit on bytes read,
   //to prevent zip bombs and other malicious archives from causing memory exhaustion.
   // This is a security measure to ensure that even if the declared size is small, we don't read more than the allowed limit.
-  const skillMdLimit = Math.min(limits.maxSingleFileBytes, limits.maxDecompressedBytes);
-  const { buffer: skillMdBuffer } = await readZipEntry(skillMdEntry, skillMdLimit);
+  const skillMdLimit = Math.min(limits.maxSingleFileBytes, budget.remaining);
+  const { buffer: skillMdBuffer, bytesRead: skillMdBytesRead } = await readZipEntry(
+    skillMdEntry,
+    skillMdLimit,
+  );
+  budget.remaining -= skillMdBytesRead;
   if (skillMdBuffer == null) {
     return res.status(400).json({ error: 'SKILL.md exceeds maximum file size' });
   }

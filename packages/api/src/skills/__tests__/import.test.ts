@@ -372,6 +372,48 @@ describe('createImportHandler', () => {
     expect(summary.errors).toHaveLength(3);
   });
 
+  it('subtracts the SKILL.md manifest read from the shared decompression budget', async () => {
+    const kib = 1024;
+    const skillMarkdown = [
+      '---',
+      'name: tiny-limit-skill',
+      'description: A skill used by import handler tests.',
+      '---',
+      'x'.repeat(20 * kib),
+    ].join('\n');
+
+    const zip = new JSZip();
+    zip.file('SKILL.md', skillMarkdown);
+    zip.file('files/big.txt', 'a'.repeat(20 * kib));
+    const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+    const deps = mockImportDeps({
+      maxZipBytes: 1024 * kib,
+      maxEntries: 10,
+      maxSingleFileBytes: 25 * kib,
+      maxDecompressedBytes: 30 * kib,
+    });
+    const handler = createImportHandler(deps);
+    const res = mockResponse();
+
+    await handler(mockZipRequest(buffer), res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    const summary = importSummary(res.body);
+    // The manifest alone (~20 KiB) leaves under 10 KiB of the 30 KiB budget for the
+    // 20 KiB companion file. If the manifest read weren't subtracted from the shared
+    // budget, the companion file would still see the full budget and succeed instead.
+    expect(summary.filesSucceeded).toBe(0);
+    expect(summary.filesFailed).toBe(1);
+    expect(summary.errors).toEqual([
+      expect.objectContaining({
+        path: 'files/big.txt',
+        status: 'error',
+        error: 'Cumulative decompressed size exceeds limit',
+      }),
+    ]);
+  });
+
   it('rejects malformed YAML frontmatter in markdown imports', async () => {
     const deps = mockImportDeps();
     const handler = createImportHandler(deps);

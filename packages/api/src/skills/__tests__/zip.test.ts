@@ -127,6 +127,18 @@ describe('renameSpacedFilePaths', () => {
     const newPaths = renames.map((rename) => rename.newPath).sort();
     expect(newPaths).toEqual(['my-skill/SKILL.md', 'my-skill/notes.txt']);
   });
+
+  it('preserves another entry reserving the same flattened path when excluding a self-collision', async () => {
+    const zip = new JSZip();
+    zip.file('my skill/SKILL.md', 'wrapped manifest');
+    zip.file('my-skill/SKILL.md', 'existing root manifest');
+
+    const renames = await renameSpacedFilePaths(zip);
+
+    expect(renames).toEqual([{ oldPath: 'my skill/SKILL.md', newPath: 'my-skill/SKILL-2.md' }]);
+    expect(await readText(zip, 'my-skill/SKILL.md')).toBe('existing root manifest');
+    expect(await readText(zip, 'my-skill/SKILL-2.md')).toBe('wrapped manifest');
+  });
 });
 
 describe('shared decompression budget', () => {

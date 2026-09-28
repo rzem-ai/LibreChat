@@ -81,15 +81,15 @@ export type SkillFileRename = { oldPath: string; newPath: string };
  * before the file extension (`foo.txt` -> `foo-2.txt` -> `foo-3.txt`, ...),
  * so a rename can never silently overwrite an existing entry.
  */
-function uniquePath(candidate: string, reserved: ReadonlySet<string>): string {
-  if (!reserved.has(candidate)) {
+function uniquePath(candidate: string, isReserved: (candidate: string) => boolean): string {
+  if (!isReserved(candidate)) {
     return candidate;
   }
   const ext = path.posix.extname(candidate);
   const base = candidate.slice(0, candidate.length - ext.length);
   let counter = 2;
   let next = `${base}-${counter}${ext}`;
-  while (reserved.has(next)) {
+  while (isReserved(next)) {
     counter += 1;
     next = `${base}-${counter}${ext}`;
   }
@@ -145,9 +145,17 @@ export async function renameSpacedFilePaths(
     return fullPath;
   };
 
-  const reservedFlattened = new Set<string>(
-    Object.keys(zip.files).map((entryPath) => flattenPath(entryPath.replace(/\\/g, '/'))),
-  );
+  // A counting map, not a Set: a wrapped archive can hold two distinct entries
+  // that flatten to the same path (e.g. `my skill/SKILL.md` and a pre-existing
+  // `my-skill/SKILL.md`). A Set would collapse both into one reservation, so
+  // excluding the entry being renamed from "its own" reservation below would
+  // incorrectly clear the other entry's reservation too.
+  const reservedFlattened = new Map<string, number>();
+  for (const entryPath of Object.keys(zip.files)) {
+    const flat = flattenPath(entryPath.replace(/\\/g, '/'));
+    reservedFlattened.set(flat, (reservedFlattened.get(flat) ?? 0) + 1);
+  }
+  const isReserved = (candidate: string): boolean => (reservedFlattened.get(candidate) ?? 0) > 0;
   const perFileLimit = limits.maxSingleFileBytes;
 
   for (const entryPath of Object.keys(zip.files)) {
@@ -178,17 +186,24 @@ export async function renameSpacedFilePaths(
       continue;
     }
 
-    // Exclude this entry's own pre-rename slot before checking, so renaming
+    // Exclude only this entry's own pre-rename slot before checking, so renaming
     // the wrapping folder segment (e.g. `my skill/` -> `my-skill/`) never
-    // registers as a collision against itself.
-    reservedFlattened.delete(flattenPath(normalized));
+    // registers as a collision against itself — while any other entry that
+    // independently flattens to the same path stays reserved.
+    const selfFlat = flattenPath(normalized);
+    const selfCount = reservedFlattened.get(selfFlat) ?? 0;
+    if (selfCount > 1) {
+      reservedFlattened.set(selfFlat, selfCount - 1);
+    } else {
+      reservedFlattened.delete(selfFlat);
+    }
     const candidateFlat = flattenPath(candidate);
-    const uniqueFlat = uniquePath(candidateFlat, reservedFlattened);
+    const uniqueFlat = uniquePath(candidateFlat, isReserved);
     const newPath =
       uniqueFlat === candidateFlat
         ? candidate
         : candidate.slice(0, candidate.length - candidateFlat.length) + uniqueFlat;
-    reservedFlattened.add(uniqueFlat);
+    reservedFlattened.set(uniqueFlat, (reservedFlattened.get(uniqueFlat) ?? 0) + 1);
     zip.remove(entryPath);
     zip.file(newPath, buffer);
     renames.push({ oldPath: normalized, newPath });
