@@ -372,6 +372,142 @@ describe('createImportHandler', () => {
     expect(summary.errors).toHaveLength(3);
   });
 
+  it('subtracts the SKILL.md manifest read from the shared decompression budget', async () => {
+    const kib = 1024;
+    const skillMarkdown = [
+      '---',
+      'name: tiny-limit-skill',
+      'description: A skill used by import handler tests.',
+      '---',
+      'x'.repeat(20 * kib),
+    ].join('\n');
+
+    const zip = new JSZip();
+    zip.file('SKILL.md', skillMarkdown);
+    zip.file('files/big.txt', 'a'.repeat(20 * kib));
+    const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+    const deps = mockImportDeps({
+      maxZipBytes: 1024 * kib,
+      maxEntries: 10,
+      maxSingleFileBytes: 25 * kib,
+      maxDecompressedBytes: 30 * kib,
+    });
+    const handler = createImportHandler(deps);
+    const res = mockResponse();
+
+    await handler(mockZipRequest(buffer), res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    const summary = importSummary(res.body);
+    // The manifest alone (~20 KiB) leaves under 10 KiB of the 30 KiB budget for the
+    // 20 KiB companion file. If the manifest read weren't subtracted from the shared
+    // budget, the companion file would still see the full budget and succeed instead.
+    expect(summary.filesSucceeded).toBe(0);
+    expect(summary.filesFailed).toBe(1);
+    expect(summary.errors).toEqual([
+      expect.objectContaining({
+        path: 'files/big.txt',
+        status: 'error',
+        error: 'Cumulative decompressed size exceeds limit',
+      }),
+    ]);
+  });
+
+  it('imports successfully when unique archive content fits the budget, even with a renamed companion file', async () => {
+    // Rename, rewrite, the SKILL.md manifest read, and the companion-file loop each read
+    // an entry's decompressed bytes. Before sharing a per-entry cache across those passes,
+    // each pass re-charged the shared budget for the same bytes: the rename pass reads the
+    // spaced companion once, the rewrite pass (triggered because any rename occurred) reads
+    // every entry a second time, and handleZip's own manifest read and companion loop read
+    // them again on top of that. A tight-but-sufficient budget below reproduces the
+    // spurious rejection that multi-pass over-charging caused.
+    const skillMarkdown = [
+      '---',
+      'name: tiny-limit-skill',
+      'description: A skill used by import handler tests.',
+      '---',
+      'See notes with space.md for details.',
+    ].join('\n');
+    const companionContent = 'a'.repeat(100);
+
+    const zip = new JSZip();
+    zip.file('SKILL.md', skillMarkdown);
+    zip.file('notes with space.md', companionContent);
+    const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+    const uniqueBytes =
+      Buffer.byteLength(skillMarkdown, 'utf-8') + Buffer.byteLength(companionContent, 'utf-8');
+    const deps = mockImportDeps({
+      maxZipBytes: 1024 * 1024,
+      maxEntries: 10,
+      maxSingleFileBytes: 1024,
+      maxDecompressedBytes: uniqueBytes + 5,
+    });
+    const handler = createImportHandler(deps);
+    const res = mockResponse();
+
+    await handler(mockZipRequest(buffer), res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    const summary = importSummary(res.body);
+    expect(summary.filesSucceeded).toBe(1);
+    expect(summary.filesFailed).toBe(0);
+  });
+
+  it('rejects a companion file as too large when rewriting its references grows it past the per-file limit, instead of trusting a stale cache hit', async () => {
+    const skillMarkdown = [
+      '---',
+      'name: tiny-limit-skill',
+      'description: A skill used by import handler tests.',
+      '---',
+      '# Test skill',
+    ].join('\n');
+
+    // Two spaced filenames collapse to the same renamed candidate, so the second is
+    // disambiguated with a "-2" suffix — two characters longer than the reference it
+    // replaces. Repeating the reference enough times grows notes.txt past the per-file
+    // limit only after rewriting, even though its original content fit comfortably.
+    const refToken = 'foo-bar x.txt';
+    const rewrittenToken = 'foo-bar-x-2.txt';
+    const repeatCount = Math.ceil(Buffer.byteLength(skillMarkdown, 'utf-8') / refToken.length) + 5;
+    const original = Array(repeatCount).fill(refToken).join(' ');
+    const rewritten = Array(repeatCount).fill(rewrittenToken).join(' ');
+
+    const zip = new JSZip();
+    zip.file('SKILL.md', skillMarkdown);
+    zip.file('foo bar-x.txt', 'first');
+    zip.file('foo-bar x.txt', 'second');
+    zip.file('notes.txt', original);
+    const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+    const maxSingleFileBytes = Buffer.byteLength(original, 'utf-8');
+    expect(Buffer.byteLength(rewritten, 'utf-8')).toBeGreaterThan(maxSingleFileBytes);
+
+    const deps = mockImportDeps({
+      maxZipBytes: 1024 * 1024,
+      maxEntries: 10,
+      maxSingleFileBytes,
+      maxDecompressedBytes: 1024 * 1024,
+    });
+    const handler = createImportHandler(deps);
+    const res = mockResponse();
+
+    await handler(mockZipRequest(buffer), res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    const summary = importSummary(res.body);
+    expect(summary.filesSucceeded).toBe(2);
+    expect(summary.filesFailed).toBe(1);
+    expect(summary.errors).toEqual([
+      expect.objectContaining({
+        path: 'notes.txt',
+        status: 'error',
+        error: expect.stringContaining('File too large'),
+      }),
+    ]);
+  });
+
   it('rejects malformed YAML frontmatter in markdown imports', async () => {
     const deps = mockImportDeps();
     const handler = createImportHandler(deps);
@@ -540,6 +676,69 @@ describe('createImportHandler', () => {
       expect(deps.upsertSkillFile).toHaveBeenCalledWith(
         expect.objectContaining({ relativePath: 'scripts/__init__.py' }),
       );
+    } finally {
+      if (savedScannerUrl === undefined) {
+        delete process.env.SKILL_SCANNER_URL;
+      } else {
+        process.env.SKILL_SCANNER_URL = savedScannerUrl;
+      }
+    }
+  });
+
+  // Deloitte Custom Change: Verify spaced filenames are auto-renamed instead of
+  // rejected as "Invalid path", literal references to the old name are rewritten
+  // inside SKILL.md, and a warning listing the rename is surfaced on the response.
+  it('renames spaced filenames, rewrites references, and surfaces a warning', async () => {
+    const savedScannerUrl = process.env.SKILL_SCANNER_URL;
+    delete process.env.SKILL_SCANNER_URL;
+
+    try {
+      const deps = mockImportDeps();
+      const handler = createImportHandler(deps);
+      const res = mockResponse();
+
+      const zip = new JSZip();
+      zip.file(
+        'SKILL.md',
+        [
+          '---',
+          'name: fortune-cookie',
+          'description: Tells a fortune.',
+          '---',
+          '# Fortune cookie',
+          'Run `cat references/many fortunes.md` to read the fortunes.',
+        ].join('\n'),
+      );
+      zip.file('references/many fortunes.md', 'You will find happiness.');
+
+      const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+      await handler(mockZipRequest(buffer), res);
+
+      expect(res.status).toHaveBeenCalledWith(201);
+      const summary = importSummary(res.body);
+      expect(summary.filesFailed).toBe(0);
+      expect(summary.filesSucceeded).toBe(1);
+
+      expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+        expect.objectContaining({ relativePath: 'references/many-fortunes.md' }),
+      );
+
+      expect(deps.createSkill).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.stringContaining('cat references/many-fortunes.md'),
+        }),
+      );
+
+      const body = res.body as { warnings?: Array<{ code: string; message: string }> };
+      expect(body.warnings).toEqual([
+        expect.objectContaining({
+          field: 'files',
+          code: 'FILENAME_SPACES_RENAMED',
+          message: expect.stringContaining('1 file has been renamed'),
+          severity: 'warning',
+        }),
+      ]);
     } finally {
       if (savedScannerUrl === undefined) {
         delete process.env.SKILL_SCANNER_URL;

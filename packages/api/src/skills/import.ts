@@ -10,13 +10,21 @@ import type {
   CreateSkillResult,
   UpsertSkillFileInput,
 } from '@librechat/data-schemas';
+import type { TSkillWarning } from 'librechat-data-provider';
 import type { Request, Response } from 'express';
 import type { Types } from 'mongoose';
 import type { ImportLimits } from './limits';
 import { isSkillScanError, scanSkillMarkdown, scanSkillUpload } from './scanner';
 import { resolveRequestTenantId } from '~/middleware/tenant';
-import { readZipEntry, stripZipArtifacts } from './zip';
-import { DEFAULT_SKILL_IMPORT_LIMITS } from './limits';
+import {
+  stripZipArtifacts,
+  findSkillMdPath,
+  readZipEntryCached,
+  renameSpacedFilePaths,
+  isSkillManifestConflictError,
+  rewriteRenamedFileReferences,
+} from './zip';
+import { DEFAULT_SKILL_IMPORT_LIMITS, createDecompressionBudget } from './limits';
 import { isSafeSkillFilePath } from './path';
 import { parseSkillMarkdown } from './parse';
 
@@ -187,13 +195,15 @@ export function createImportHandler(deps: ImportSkillDeps) {
         const scannerToken = process.env.SKILL_SCANNER_URL
           ? await deps.resolveScannerToken(req.user)
           : undefined;
+        const limits = getImportLimits(resolveImportLimits(deps.limits, req));
         // Deloitte custom feature: scan skills
         await scanSkillUpload({
           archive: file.buffer,
           fileName: file.originalname,
           token: scannerToken,
+          limits,
         });
-        return await handleZip(req, res, deps, file);
+        return await handleZip(req, res, deps, file, limits);
       }
       return res.status(400).json({ error: `Unsupported file type: ${ext}` });
     } catch (error) {
@@ -203,6 +213,9 @@ export function createImportHandler(deps: ImportSkillDeps) {
           message: error.message,
           issues: error.issues,
         });
+      }
+      if (isSkillManifestConflictError(error)) {
+        return res.status(400).json({ error: error.message });
       }
       // Surface validation errors as 400 instead of generic 500
       if (isValidationError(error)) {
@@ -336,9 +349,9 @@ async function handleZip(
   res: Response,
   deps: ImportSkillDeps,
   file: Express.Multer.File,
+  limits: ImportLimits,
 ) {
   const userId = req.user.id;
-  const limits = getImportLimits(resolveImportLimits(deps.limits, req));
 
   const zipBuffer = file.buffer;
 
@@ -362,6 +375,17 @@ async function handleZip(
   // / self-hosted deployments without SKILL_SCANNER_URL configured).
   stripZipArtifacts(zip);
 
+  // Deloitte Custom Change: Auto-rename entries whose path contains a space (spaces
+  // are not a permitted isSafeSkillFilePath character) and rewrite literal references
+  // to the old path/basename across the archive's other text files, so uploads that
+  // previously failed with "Invalid path" succeed instead. A warning is surfaced below
+  // once `renames` is known to be non-empty. `budget` is shared across both passes and
+  // the companion-file loop below so a crafted archive can't multiply its effective
+  // decompression allowance by however many passes touch it.
+  const budget = createDecompressionBudget(limits);
+  const renames = await renameSpacedFilePaths(zip, limits, budget);
+  await rewriteRenamedFileReferences(zip, renames, limits, budget);
+
   const entries = Object.keys(zip.files);
 
   if (entries.length > limits.maxEntries) {
@@ -369,20 +393,9 @@ async function handleZip(
   }
 
   // Find SKILL.md — at root or one level deep
-  let skillMdPath: string | null = null;
-  let prefix = '';
-  for (const p of entries) {
-    const normalized = p.replace(/\\/g, '/');
-    const segments = normalized.split('/').filter(Boolean);
-    const basename = segments[segments.length - 1];
-    if (basename?.toUpperCase() === SKILL_MD.toUpperCase() && segments.length <= 2) {
-      skillMdPath = p;
-      if (segments.length === 2) {
-        prefix = segments[0] + '/';
-      }
-      break;
-    }
-  }
+  const found = findSkillMdPath(zip);
+  const skillMdPath = found?.path ?? null;
+  const prefix = found?.prefix ?? '';
 
   if (!skillMdPath) {
     return res.status(400).json({ error: 'Archive must contain a SKILL.md file' });
@@ -402,11 +415,15 @@ async function handleZip(
       .json({ error: `SKILL.md too large (${Math.round(declaredSize / 1024 / 1024)}MB)` });
   }
 
-  //Deloitte added readZipEntry to read the SKILL.md file with a hard limit on bytes read,
-  //to prevent zip bombs and other malicious archives from causing memory exhaustion.
-  // This is a security measure to ensure that even if the declared size is small, we don't read more than the allowed limit.
-  const skillMdLimit = Math.min(limits.maxSingleFileBytes, limits.maxDecompressedBytes);
-  const { buffer: skillMdBuffer } = await readZipEntry(skillMdEntry, skillMdLimit);
+  // Deloitte added a hard limit on bytes read from SKILL.md to prevent zip bombs and other
+  // malicious archives from causing memory exhaustion — even when the declared size is small,
+  // we don't read more than the allowed limit. Reuses the rename/rewrite passes' cached buffer
+  // when one of them already read this exact entry, instead of decompressing it a second time.
+  const skillMdKey = skillMdPath.replace(/\\/g, '/');
+  const skillMdBuffer = await readZipEntryCached(skillMdKey, skillMdEntry, limits, budget);
+  // Nothing later in this request re-reads SKILL.md, so evict its cache slot immediately
+  // instead of holding it resident for the rest of the companion-file loop below.
+  budget.cache.delete(skillMdKey);
   if (skillMdBuffer == null) {
     return res.status(400).json({ error: 'SKILL.md exceeds maximum file size' });
   }
@@ -467,9 +484,10 @@ async function handleZip(
     return res.status(500).json({ error: grant.error });
   }
 
-  // Process additional files (everything except SKILL.md)
+  // Process additional files (everything except SKILL.md). Shares `budget`
+  // with the rename/rewrite passes above so all three stay within one
+  // cumulative decompression allowance.
   const fileResults: Array<{ path: string; status: 'ok' | 'error'; error?: string }> = [];
-  let totalDecompressed = 0;
 
   for (const [entryPath, zipEntry] of Object.entries(zip.files)) {
     if (zipEntry.dir) {
@@ -492,61 +510,74 @@ async function handleZip(
     }
 
     try {
-      // Stream-decompress with hard byte cap. JSZip's nodeStream decompresses
-      // incrementally so we can abort mid-entry without buffering the full file.
+      // Reuse the rename/rewrite passes' cached buffer when one of them already read this
+      // exact entry (common once the archive contains any renamed file, since the rewrite
+      // pass reads every entry), instead of decompressing it a second time. On a cache miss,
+      // stream-decompress with a hard byte cap — JSZip's nodeStream decompresses incrementally
+      // so we can abort mid-entry without buffering the full file. Either way, this is the
+      // entry's last read in the request, so its cache slot is evicted below once obtained —
+      // otherwise every companion file's buffer would stay resident for the rest of this loop.
       const perFileLimit = limits.maxSingleFileBytes;
-      const cumulativeLimit = limits.maxDecompressedBytes - totalDecompressed;
-      const effectiveLimit = Math.min(perFileLimit, cumulativeLimit);
+      const cumulativeLimit = budget.remaining;
+      let fileBuffer = budget.cache.get(normalized) ?? null;
 
-      if (effectiveLimit <= 0) {
-        fileResults.push({
-          path: relativePath,
-          status: 'error',
-          error: 'Cumulative decompressed size exceeds limit',
-        });
-        break;
-      }
+      if (fileBuffer == null) {
+        const effectiveLimit = Math.min(perFileLimit, cumulativeLimit);
 
-      // Stream-decompress with enforced byte limit
-      const chunks: Buffer[] = [];
-      let entryBytes = 0;
-      let exceededLimit = false;
-      const entryStream = zipEntry.nodeStream('nodebuffer');
-
-      await new Promise<void>((resolve, reject) => {
-        entryStream.on('data', (chunk: Buffer) => {
-          if (exceededLimit) {
-            return;
-          }
-          entryBytes += chunk.length;
-          totalDecompressed += chunk.length;
-          if (entryBytes > effectiveLimit) {
-            exceededLimit = true;
-            if ('destroy' in entryStream && typeof entryStream.destroy === 'function') {
-              entryStream.destroy();
-            }
-            resolve();
-            return;
-          }
-          chunks.push(chunk);
-        });
-        entryStream.on('end', resolve);
-        entryStream.on('error', reject);
-      });
-
-      if (exceededLimit) {
-        const reason =
-          entryBytes > perFileLimit
-            ? `File too large (max ${perFileLimit / 1024 / 1024}MB)`
-            : 'Cumulative decompressed size exceeds limit';
-        fileResults.push({ path: relativePath, status: 'error', error: reason });
-        if (entryBytes > cumulativeLimit) {
+        if (effectiveLimit <= 0) {
+          fileResults.push({
+            path: relativePath,
+            status: 'error',
+            error: 'Cumulative decompressed size exceeds limit',
+          });
           break;
         }
-        continue;
+
+        // Stream-decompress with enforced byte limit
+        const chunks: Buffer[] = [];
+        let entryBytes = 0;
+        let exceededLimit = false;
+        const entryStream = zipEntry.nodeStream('nodebuffer');
+
+        await new Promise<void>((resolve, reject) => {
+          entryStream.on('data', (chunk: Buffer) => {
+            if (exceededLimit) {
+              return;
+            }
+            entryBytes += chunk.length;
+            budget.remaining -= chunk.length;
+            if (entryBytes > effectiveLimit) {
+              exceededLimit = true;
+              if ('destroy' in entryStream && typeof entryStream.destroy === 'function') {
+                entryStream.destroy();
+              }
+              resolve();
+              return;
+            }
+            chunks.push(chunk);
+          });
+          entryStream.on('end', resolve);
+          entryStream.on('error', reject);
+        });
+
+        if (exceededLimit) {
+          const reason =
+            entryBytes > perFileLimit
+              ? `File too large (max ${perFileLimit / 1024 / 1024}MB)`
+              : 'Cumulative decompressed size exceeds limit';
+          fileResults.push({ path: relativePath, status: 'error', error: reason });
+          if (entryBytes > cumulativeLimit) {
+            break;
+          }
+          continue;
+        }
+
+        fileBuffer = Buffer.concat(chunks);
       }
 
-      const fileBuffer = Buffer.concat(chunks);
+      // This is the last read of this entry in the request — evict it so the cache doesn't
+      // hold every companion file's buffer resident for the remainder of the loop below.
+      budget.cache.delete(normalized);
 
       const fileId = crypto.randomUUID();
       const filename = path.basename(relativePath);
@@ -628,8 +659,23 @@ async function handleZip(
   // Re-read the skill to get the current version/fileCount (bumped by each upsertSkillFile)
   const refreshed = (await deps.getSkillById(skill._id)) ?? skill;
 
+  const warnings: TSkillWarning[] = [];
+  if (renames.length > 0) {
+    warnings.push({
+      field: 'files',
+      code: 'FILENAME_SPACES_RENAMED',
+      message:
+        `${renames.length} file${renames.length === 1 ? '' : 's'} ` +
+        `${renames.length === 1 ? 'has' : 'have'} been renamed because the ` +
+        `filename${renames.length === 1 ? '' : 's'} contained spaces. Please check that the ` +
+        'skill still works as expected.',
+      severity: 'warning',
+    });
+  }
+
   return res.status(201).json({
     ...refreshed,
+    ...(warnings.length > 0 ? { warnings } : {}),
     _importSummary: {
       filesProcessed: fileResults.length,
       filesSucceeded: successCount,
