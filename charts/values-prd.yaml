@@ -76,7 +76,7 @@ pods:
           APP_TITLE: 'MyAssist'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
           BASE_URL_AZURE_GLOBAL: 'http://127.0.0.1:8081/azure-global'
-          BASE_URL_VERTEXAI_GLOBAL: 'http://127.0.0.1:8081/vertexai'
+          BASE_URL_VERTEXAI: 'http://127.0.0.1:8081/vertexai'
           BEDROCK_AWS_ACCESS_KEY_ID: 'unused'
           BEDROCK_AWS_DEFAULT_REGION: 'ap-southeast-2'
           BEDROCK_AWS_SECRET_ACCESS_KEY: 'unused'

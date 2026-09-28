@@ -180,7 +180,7 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 23. Comment out `ASSISTANTS_API_KEY=`
 24. BASE_URL_AZURE_AU=https://au-openai-exp.ctk.au.deloitte.com/openai/v1
 25. BASE_URL_AZURE_US=https://us-openai-exp.ctk.au.deloitte.com/openai/v1
-26. BASE_URL_VERTEXAI_GLOBAL=https://global-vertexai-exp.ctk.au.deloitte.com
+26. BASE_URL_VERTEXAI=https://global-vertexai-exp.ctk.au.deloitte.com
 27. `BASE_URL_AZURE_GLOBAL=https://us-openai-exp.ctk.au.deloitte.com/openai/v1`
 28. `BASE_URL_AZURE_FOUNDRY_AU=https://au-foundry-exp.ctk.au.deloitte.com/openai/v1`
 29. `BEDROCK_AWS_DEFAULT_REGION=ap-southeast-2`

@@ -278,7 +278,7 @@ endpoints:
     # OpenAI-compatible endpoint, model names use google/ prefix
     - name: 'Gemini Global'
       apiKey: 'dummy'
-      baseURL: '${BASE_URL_VERTEXAI_GLOBAL}'
+      baseURL: '${BASE_URL_VERTEXAI}'
       models:
         default:
           - 'google/gemini-3.7-flash'
