@@ -360,15 +360,23 @@ function buildCombinedReplacer(
 /**
  * Reads `entry` for `rewriteRenamedFileReferences`'s rewrite check, reusing
  * an already-cached buffer from an earlier pass when present (same contract
- * as `readZipEntryCached`). On a cache miss, uses `readTextZipEntry` instead
- * of `readZipEntryCached` — a large binary companion asset is the common case
- * for a big archive entry, and `isBinaryBuffer` only ever inspects its first
- * `BINARY_CHECK_BYTES` bytes, so classifying it doesn't require decompressing
- * (or charging the budget for) the rest of it. A freshly-read buffer is
- * intentionally left out of `budget.cache` here — the caller decides whether
- * it's worth caching once it knows whether a rewrite actually happened.
- * Returns `null` for a directory-less binary entry, or one that exceeds the
- * per-file or remaining cumulative limit.
+ * as `readZipEntryCached`) — but only after confirming that buffer isn't
+ * binary. An earlier pass (e.g. `renameSpacedFilePaths`, via
+ * `readZipEntryCached`) caches a renamed entry's buffer regardless of its
+ * content type, so a cache hit here can't assume it's text the way a fresh
+ * read can; skipping this check would let a binary companion asset be
+ * UTF-8-decoded, rewritten, and written back corrupted whenever its bytes
+ * happen to contain a rewrite target. `isBinaryBuffer` only ever inspects the
+ * first `BINARY_CHECK_BYTES` bytes, so checking an already-resident cached
+ * buffer costs nothing further to decompress. On a cache miss, uses
+ * `readTextZipEntry` instead of `readZipEntryCached` — a large binary
+ * companion asset is the common case for a big archive entry, so classifying
+ * it doesn't require decompressing (or charging the budget for) the rest of
+ * it. A freshly-read buffer is intentionally left out of `budget.cache` here
+ * — the caller decides whether it's worth caching once it knows whether a
+ * rewrite actually happened. Returns `null` for a directory-less binary
+ * entry (cached or freshly read), or one that exceeds the per-file or
+ * remaining cumulative limit.
  */
 async function readRewriteCandidate(
   entryPath: string,
@@ -378,6 +386,9 @@ async function readRewriteCandidate(
 ): Promise<{ buffer: Buffer; wasCached: boolean } | null> {
   const cached = budget.cache.get(entryPath);
   if (cached != null) {
+    if (isBinaryBuffer(cached)) {
+      return null;
+    }
     return { buffer: cached, wasCached: true };
   }
   if (budget.remaining <= 0) {

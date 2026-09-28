@@ -290,6 +290,30 @@ describe('shared decompression budget', () => {
     expect(budget.cache.has('notes.txt')).toBe(false);
     expect(budget.remaining).toBe(1);
   });
+
+  it('does not corrupt a cached binary buffer from an earlier pass by treating it as text', async () => {
+    const zip = new JSZip();
+    zip.file('references/many fortunes.md', 'a fortune');
+    // Renamed by the pass below (it has a space), so its buffer is cached
+    // under its new path by renameSpacedFilePaths regardless of its binary
+    // content. Its bytes happen to contain the old path literal that the
+    // rewrite pass looks for, so a cache hit that skips the binary check
+    // would decode, rewrite, and write this back as corrupted text.
+    const binaryContent = Buffer.concat([
+      Buffer.from([0x00]),
+      Buffer.from('refers to many fortunes.md internally'),
+    ]);
+    zip.file('assets/image file.png', binaryContent);
+
+    const budget = createDecompressionBudget(DEFAULT_SKILL_IMPORT_LIMITS);
+    const renames = await renameSpacedFilePaths(zip, DEFAULT_SKILL_IMPORT_LIMITS, budget);
+    await rewriteRenamedFileReferences(zip, renames, DEFAULT_SKILL_IMPORT_LIMITS, budget);
+
+    const rewrittenEntry = zip.file('assets/image-file.png');
+    expect(rewrittenEntry).not.toBeNull();
+    const bytes = await rewrittenEntry!.async('nodebuffer');
+    expect(Buffer.compare(bytes, binaryContent)).toBe(0);
+  });
 });
 
 describe('rewriteRenamedFileReferences', () => {
