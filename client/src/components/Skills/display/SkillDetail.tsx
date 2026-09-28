@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Button, TooltipAnchor } from '@librechat/client';
 import { formatDisplayDate } from 'librechat-data-provider';
-import { User, Pencil, Calendar, EarthIcon } from 'lucide-react';
+import { Pin, User, Pencil, Calendar, EarthIcon } from 'lucide-react';
 import type { TSkill } from 'librechat-data-provider';
 import { useLocalize, useAuthContext, useSkillPermissions, useSkillActiveState } from '~/hooks';
 import SkillMarkdownRenderer from './SkillMarkdownRenderer';
@@ -57,6 +57,18 @@ export default function SkillDetail({ skill, onEdit, onDelete }: SkillDetailProp
                   <EarthIcon
                     className="size-5 shrink-0 text-accent-primary"
                     aria-label={localize('com_ui_skill_sr_public')}
+                  />
+                }
+              />
+            )}
+            {skill.alwaysApply === true && (
+              <TooltipAnchor
+                description={localize('com_ui_skills_always_apply_pin_title')}
+                side="top"
+                render={
+                  <Pin
+                    className="size-5 shrink-0 text-cyan-500"
+                    aria-label={localize('com_ui_skills_always_apply_pin_title')}
                   />
                 }
               />

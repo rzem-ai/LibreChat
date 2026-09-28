@@ -39,6 +39,7 @@ interface SkillContentEditorProps {
   isEditing: boolean;
   setIsEditing: React.Dispatch<React.SetStateAction<boolean>>;
   rules?: RegisterOptions;
+  readOnly?: boolean;
 }
 
 const SkillContentEditor: React.FC<SkillContentEditorProps> = ({
@@ -46,6 +47,7 @@ const SkillContentEditor: React.FC<SkillContentEditorProps> = ({
   isEditing,
   setIsEditing,
   rules,
+  readOnly = false,
 }) => {
   const localize = useLocalize();
   const {
@@ -59,31 +61,33 @@ const SkillContentEditor: React.FC<SkillContentEditorProps> = ({
       <div
         className={cn(
           'relative w-full flex-1 overflow-auto rounded-xl border border-border-medium p-3 text-left transition-all duration-200 sm:p-4',
-          isEditing ? '' : 'cursor-pointer hover:bg-surface-tertiary',
+          !readOnly && !isEditing && 'cursor-pointer hover:bg-surface-tertiary',
         )}
       >
-        <div className="absolute right-2 top-2 z-10">
-          <TooltipAnchor
-            description={isEditing ? localize('com_ui_done') : localize('com_ui_edit')}
-            render={
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => setIsEditing((prev) => !prev)}
-                aria-label={isEditing ? localize('com_ui_done') : localize('com_ui_edit')}
-                className="size-8 p-0 hover:bg-surface-tertiary"
-              >
-                <MorphIcon
-                  icon={isEditing ? Check : SquarePen}
-                  className="size-4 text-text-secondary"
-                />
-              </Button>
-            }
-          />
-        </div>
-        {!isEditing && (
+        {!readOnly && (
+          <div className="absolute right-2 top-2 z-10">
+            <TooltipAnchor
+              description={isEditing ? localize('com_ui_done') : localize('com_ui_edit')}
+              render={
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setIsEditing((prev) => !prev)}
+                  aria-label={isEditing ? localize('com_ui_done') : localize('com_ui_edit')}
+                  className="size-8 p-0 hover:bg-surface-tertiary"
+                >
+                  <MorphIcon
+                    icon={isEditing ? Check : SquarePen}
+                    className="size-4 text-text-secondary"
+                  />
+                </Button>
+              }
+            />
+          </div>
+        )}
+        {!readOnly && !isEditing && (
           <button
             type="button"
             aria-label={localize('com_ui_edit')}
@@ -132,14 +136,16 @@ const SkillContentEditor: React.FC<SkillContentEditorProps> = ({
                     {field.value}
                   </ReactMarkdown>
                 )}
-                <div className="pointer-events-none sticky bottom-1/2 z-10 flex translate-y-1/2 items-center justify-center opacity-0 transition-all duration-200 group-hover/preview:opacity-100">
-                  <div className="flex items-center gap-2 rounded-lg border border-border-light bg-surface-primary px-3 py-1.5 shadow-md">
-                    <MorphIcon icon={SquarePen} className="size-4 text-text-secondary" />
-                    <span className="text-sm font-medium text-text-primary">
-                      {localize('com_ui_click_to_edit')}
-                    </span>
+                {!readOnly && (
+                  <div className="pointer-events-none sticky bottom-1/2 z-10 flex translate-y-1/2 items-center justify-center opacity-0 transition-all duration-200 group-hover/preview:opacity-100">
+                    <div className="flex items-center gap-2 rounded-lg border border-border-light bg-surface-primary px-3 py-1.5 shadow-md">
+                      <MorphIcon icon={SquarePen} className="size-4 text-text-secondary" />
+                      <span className="text-sm font-medium text-text-primary">
+                        {localize('com_ui_click_to_edit')}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )
           }

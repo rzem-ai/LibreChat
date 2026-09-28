@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Info, AlertTriangle } from 'lucide-react';
 import { useForm, Controller, FormProvider } from 'react-hook-form';
 import {
@@ -166,6 +166,10 @@ export default function SkillForm({ skillId }: SkillFormProps) {
         <p>{localize('com_ui_skill_not_found_description')}</p>
       </div>
     );
+  }
+
+  if (!permissions.canEdit) {
+    return <Navigate to={`/skills/${skillId}`} replace />;
   }
 
   const readOnly = !permissions.canEdit;
@@ -338,6 +342,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
 
           <SkillContentEditor
             name="body"
+            readOnly={readOnly}
             isEditing={isEditingContent}
             setIsEditing={setIsEditingContent}
           />
