@@ -20,9 +20,21 @@ export const DEFAULT_SKILL_IMPORT_LIMITS: ImportLimits = {
  * `maxDecompressedBytes` regardless of how many passes process the archive —
  * without a shared budget, each pass would enforce the same cap
  * independently, letting a crafted archive be decompressed once per pass.
+ *
+ * `cache` reuses each entry's decompressed buffer across passes instead of
+ * merely capping repeat reads: several passes (rename, reference rewrite, the
+ * manifest read, the companion-file loop, re-rooting) legitimately need the
+ * same entry's bytes, and without a cache each of those reads would still
+ * charge `remaining` again for content already decompressed once — under-
+ * counting real remaining capacity and spuriously rejecting archives whose
+ * true unique content fits well under `maxDecompressedBytes`. Keyed by the
+ * entry's *current* forward-slash-normalized path — a pass that renames an
+ * entry must move its cache slot to the new path, and a pass that rewrites an
+ * entry's content must overwrite its cache slot, so later readers never see a
+ * stale (pre-rename or pre-rewrite) buffer.
  */
-export type DecompressionBudget = { remaining: number };
+export type DecompressionBudget = { remaining: number; cache: Map<string, Buffer> };
 
 export function createDecompressionBudget(limits: ImportLimits): DecompressionBudget {
-  return { remaining: limits.maxDecompressedBytes };
+  return { remaining: limits.maxDecompressedBytes, cache: new Map() };
 }

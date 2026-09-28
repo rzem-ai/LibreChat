@@ -414,6 +414,47 @@ describe('createImportHandler', () => {
     ]);
   });
 
+  it('imports successfully when unique archive content fits the budget, even with a renamed companion file', async () => {
+    // Rename, rewrite, the SKILL.md manifest read, and the companion-file loop each read
+    // an entry's decompressed bytes. Before sharing a per-entry cache across those passes,
+    // each pass re-charged the shared budget for the same bytes: the rename pass reads the
+    // spaced companion once, the rewrite pass (triggered because any rename occurred) reads
+    // every entry a second time, and handleZip's own manifest read and companion loop read
+    // them again on top of that. A tight-but-sufficient budget below reproduces the
+    // spurious rejection that multi-pass over-charging caused.
+    const skillMarkdown = [
+      '---',
+      'name: tiny-limit-skill',
+      'description: A skill used by import handler tests.',
+      '---',
+      'See notes with space.md for details.',
+    ].join('\n');
+    const companionContent = 'a'.repeat(100);
+
+    const zip = new JSZip();
+    zip.file('SKILL.md', skillMarkdown);
+    zip.file('notes with space.md', companionContent);
+    const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+    const uniqueBytes =
+      Buffer.byteLength(skillMarkdown, 'utf-8') + Buffer.byteLength(companionContent, 'utf-8');
+    const deps = mockImportDeps({
+      maxZipBytes: 1024 * 1024,
+      maxEntries: 10,
+      maxSingleFileBytes: 1024,
+      maxDecompressedBytes: uniqueBytes + 5,
+    });
+    const handler = createImportHandler(deps);
+    const res = mockResponse();
+
+    await handler(mockZipRequest(buffer), res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    const summary = importSummary(res.body);
+    expect(summary.filesSucceeded).toBe(1);
+    expect(summary.filesFailed).toBe(0);
+  });
+
   it('rejects malformed YAML frontmatter in markdown imports', async () => {
     const deps = mockImportDeps();
     const handler = createImportHandler(deps);

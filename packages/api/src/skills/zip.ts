@@ -77,6 +77,67 @@ export function findSkillMdPath(zip: JSZip): { path: string; prefix: string } | 
 export type SkillFileRename = { oldPath: string; newPath: string };
 
 /**
+ * Thrown by `renameSpacedFilePaths` when the archive's selected SKILL.md
+ * manifest (the entry `findSkillMdPath` returns) would rename into a path
+ * that another, unrelated entry already occupies in the flattened
+ * (prefix-stripped) namespace `handleZip` persists into and the security
+ * scanner re-roots into. Every other rename collision is safe to
+ * disambiguate with a numeric suffix (see `uniquePath`), but the manifest is
+ * different: `findSkillMdPath` is called again after renaming completes to
+ * determine which entry `handleZip` actually imports as "the skill", and
+ * silently suffixing the manifest away would let that second lookup pick the
+ * *other*, colliding entry instead — silently importing the wrong file as
+ * the manifest. Overwriting the other entry instead would silently destroy
+ * it. Neither is safe, so the archive is rejected outright.
+ */
+export class SkillManifestConflictError extends Error {
+  constructor(public readonly conflictingPath: string) {
+    super(
+      `Archive contains a naming conflict: the SKILL.md manifest would collide with another ` +
+        `file at "${conflictingPath}" after renaming`,
+    );
+    this.name = 'SkillManifestConflictError';
+  }
+}
+
+export function isSkillManifestConflictError(error: unknown): error is SkillManifestConflictError {
+  return error instanceof SkillManifestConflictError;
+}
+
+/**
+ * Reads `entry`'s decompressed bytes for use by any pass sharing `budget`,
+ * reusing a previous pass's buffer from `budget.cache` when present instead
+ * of decompressing (and charging `budget.remaining` for) the same entry
+ * again — see `DecompressionBudget`. On a cache miss, reads via
+ * `readZipEntry` bounded by both the per-file and remaining cumulative
+ * limits, charges the budget for the bytes actually read, and caches the
+ * result under `entryPath` (a forward-slash-normalized path — callers must
+ * normalize before calling) for later passes. Returns `null` when the entry
+ * exceeds either bound.
+ */
+export async function readZipEntryCached(
+  entryPath: string,
+  entry: JSZip.JSZipObject,
+  limits: ImportLimits,
+  budget: DecompressionBudget,
+): Promise<Buffer | null> {
+  const cached = budget.cache.get(entryPath);
+  if (cached != null) {
+    return cached;
+  }
+  if (budget.remaining <= 0) {
+    return null;
+  }
+  const effectiveLimit = Math.min(limits.maxSingleFileBytes, budget.remaining);
+  const { buffer, bytesRead } = await readZipEntry(entry, effectiveLimit);
+  budget.remaining -= bytesRead;
+  if (buffer != null) {
+    budget.cache.set(entryPath, buffer);
+  }
+  return buffer;
+}
+
+/**
  * Disambiguates `candidate` against `reserved` by appending a numeric suffix
  * before the file extension (`foo.txt` -> `foo-2.txt` -> `foo-3.txt`, ...),
  * so a rename can never silently overwrite an existing entry.
@@ -117,14 +178,23 @@ function uniquePath(candidate: string, isReserved: (candidate: string) => boolea
  * Enforces the same per-file and cumulative decompressed-size bounds
  * `handleZip` applies elsewhere (`limits`, defaulting to
  * `DEFAULT_SKILL_IMPORT_LIMITS` for callers with no per-request override),
- * via `readZipEntry`, so a zip-bomb entry with a space in its name can't
- * force unbounded decompression — an entry that exceeds those bounds is left
- * unrenamed and falls through to the existing path-safety rejection. Accepts
- * an optional `budget` shared with other passes over the same archive (see
- * `rewriteRenamedFileReferences`, `handleZip`) so their combined decompressed
- * bytes stay bounded by a single `maxDecompressedBytes` allowance rather than
- * each pass getting its own; defaults to a fresh budget for callers that only
- * run this one pass. Returns the list of renames applied, empty if none.
+ * via `readZipEntryCached`, so a zip-bomb entry with a space in its name
+ * can't force unbounded decompression — an entry that exceeds those bounds
+ * is left unrenamed and falls through to the existing path-safety rejection.
+ * Accepts an optional `budget` shared with other passes over the same
+ * archive (see `rewriteRenamedFileReferences`, `handleZip`) so their
+ * combined decompressed bytes stay bounded by a single `maxDecompressedBytes`
+ * allowance rather than each pass getting its own — and so a later pass
+ * reusing the same entry reuses this pass's decompressed buffer instead of
+ * decompressing (and re-charging the budget for) it again; defaults to a
+ * fresh budget for callers that only run this one pass. Returns the list of
+ * renames applied, empty if none.
+ *
+ * Throws {@link SkillManifestConflictError} instead of renaming when the
+ * archive's SKILL.md manifest itself needs renaming and its candidate path
+ * collides with another entry already reserved at that flattened path — see
+ * that error's docs for why silently disambiguating the manifest away is
+ * unsafe.
  */
 export async function renameSpacedFilePaths(
   zip: JSZip,
@@ -132,7 +202,9 @@ export async function renameSpacedFilePaths(
   budget: DecompressionBudget = createDecompressionBudget(limits),
 ): Promise<SkillFileRename[]> {
   const renames: SkillFileRename[] = [];
-  const originalPrefix = findSkillMdPath(zip)?.prefix ?? '';
+  const foundManifest = findSkillMdPath(zip);
+  const manifestPath = foundManifest?.path.replace(/\\/g, '/') ?? null;
+  const originalPrefix = foundManifest?.prefix ?? '';
   const renamedPrefix = originalPrefix ? originalPrefix.replace(/ /g, '-') : '';
 
   const flattenPath = (fullPath: string): string => {
@@ -156,7 +228,6 @@ export async function renameSpacedFilePaths(
     reservedFlattened.set(flat, (reservedFlattened.get(flat) ?? 0) + 1);
   }
   const isReserved = (candidate: string): boolean => (reservedFlattened.get(candidate) ?? 0) > 0;
-  const perFileLimit = limits.maxSingleFileBytes;
 
   for (const entryPath of Object.keys(zip.files)) {
     const entry = zip.file(entryPath);
@@ -175,13 +246,7 @@ export async function renameSpacedFilePaths(
       continue;
     }
 
-    const cumulativeLimit = budget.remaining;
-    if (cumulativeLimit <= 0) {
-      continue;
-    }
-    const effectiveLimit = Math.min(perFileLimit, cumulativeLimit);
-    const { buffer, bytesRead } = await readZipEntry(entry, effectiveLimit);
-    budget.remaining -= bytesRead;
+    const buffer = await readZipEntryCached(normalized, entry, limits, budget);
     if (buffer == null) {
       continue;
     }
@@ -198,7 +263,11 @@ export async function renameSpacedFilePaths(
       reservedFlattened.delete(selfFlat);
     }
     const candidateFlat = flattenPath(candidate);
-    const uniqueFlat = uniquePath(candidateFlat, isReserved);
+    const isManifestEntry = normalized === manifestPath;
+    if (isManifestEntry && isReserved(candidateFlat)) {
+      throw new SkillManifestConflictError(candidateFlat);
+    }
+    const uniqueFlat = isManifestEntry ? candidateFlat : uniquePath(candidateFlat, isReserved);
     const newPath =
       uniqueFlat === candidateFlat
         ? candidate
@@ -206,6 +275,8 @@ export async function renameSpacedFilePaths(
     reservedFlattened.set(uniqueFlat, (reservedFlattened.get(uniqueFlat) ?? 0) + 1);
     zip.remove(entryPath);
     zip.file(newPath, buffer);
+    budget.cache.delete(normalized);
+    budget.cache.set(newPath, buffer);
     renames.push({ oldPath: normalized, newPath });
   }
   return renames;
@@ -286,13 +357,16 @@ function referenceBoundaryRegex(literal: string): RegExp {
  * processed last win. Enforces the same per-file and cumulative
  * decompressed-size bounds `handleZip` applies elsewhere (`limits`,
  * defaulting to `DEFAULT_SKILL_IMPORT_LIMITS` for callers with no
- * per-request override), via `readZipEntry` — an entry that exceeds those
- * bounds is left unrewritten rather than fully decompressed. Accepts an
- * optional `budget` shared with other passes over the same archive (see
+ * per-request override), via `readZipEntryCached` — an entry that exceeds
+ * those bounds is left unrewritten rather than fully decompressed. Accepts
+ * an optional `budget` shared with other passes over the same archive (see
  * `renameSpacedFilePaths`, `handleZip`) so their combined decompressed bytes
  * stay bounded by a single `maxDecompressedBytes` allowance rather than each
- * pass getting its own; defaults to a fresh budget for callers that only run
- * this one pass. No-ops when there are no renames.
+ * pass getting its own — and so this pass reuses a buffer the rename pass
+ * (or a later pass reuses this pass's buffer) already decompressed instead
+ * of re-charging the budget for the same entry; defaults to a fresh budget
+ * for callers that only run this one pass. No-ops when there are no
+ * renames.
  */
 export async function rewriteRenamedFileReferences(
   zip: JSZip,
@@ -330,20 +404,13 @@ export async function rewriteRenamedFileReferences(
       .map(([from, targets]) => ({ from, to: [...targets][0] })),
   ].sort((a, b) => b.from.length - a.from.length);
 
-  const perFileLimit = limits.maxSingleFileBytes;
-
   for (const entryPath of Object.keys(zip.files)) {
     const entry = zip.file(entryPath);
     if (entry == null || entry.dir) {
       continue;
     }
-    const cumulativeLimit = budget.remaining;
-    if (cumulativeLimit <= 0) {
-      continue;
-    }
-    const effectiveLimit = Math.min(perFileLimit, cumulativeLimit);
-    const { buffer, bytesRead } = await readZipEntry(entry, effectiveLimit);
-    budget.remaining -= bytesRead;
+    const normalized = entryPath.replace(/\\/g, '/');
+    const buffer = await readZipEntryCached(normalized, entry, limits, budget);
     if (buffer == null) {
       continue;
     }
@@ -362,6 +429,7 @@ export async function rewriteRenamedFileReferences(
     }
     if (changed) {
       zip.file(entryPath, text);
+      budget.cache.set(normalized, Buffer.from(text, 'utf-8'));
     }
   }
 }

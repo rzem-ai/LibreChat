@@ -21,9 +21,9 @@ import { SKILL_SEVERITY_LEVELS } from 'librechat-data-provider';
 import type { ImportLimits, DecompressionBudget } from './limits';
 import { parseSkillMarkdown, extractSkillBody } from './parse';
 import {
-  readZipEntry,
   stripZipArtifacts,
   findSkillMdPath,
+  readZipEntryCached,
   renameSpacedFilePaths,
   rewriteRenamedFileReferences,
 } from './zip';
@@ -564,7 +564,9 @@ function stripInternalFrontmatterForScan(content: string): {
  * unbounded decompression. `budget` is shared with the caller's other passes
  * over the same archive (rename, rewrite, the SKILL.md read) so their
  * combined decompressed bytes stay bounded by a single `maxDecompressedBytes`
- * allowance rather than each pass getting its own.
+ * allowance rather than each pass getting its own — and so this pass reuses
+ * whatever buffer an earlier pass already decompressed for the same entry
+ * instead of re-charging the budget for it.
  */
 async function reRootZip(
   zip: JSZip,
@@ -573,7 +575,6 @@ async function reRootZip(
   budget: DecompressionBudget,
 ): Promise<JSZip | null> {
   const rooted = new JSZip();
-  const perFileLimit = limits.maxSingleFileBytes;
   for (const [entryPath, entry] of Object.entries(zip.files)) {
     if (entry.dir) {
       continue;
@@ -600,13 +601,7 @@ async function reRootZip(
       continue;
     }
 
-    const cumulativeLimit = budget.remaining;
-    if (cumulativeLimit <= 0) {
-      return null;
-    }
-    const effectiveLimit = Math.min(perFileLimit, cumulativeLimit);
-    const { buffer, bytesRead } = await readZipEntry(entry, effectiveLimit);
-    budget.remaining -= bytesRead;
+    const buffer = await readZipEntryCached(normalized, entry, limits, budget);
     if (buffer == null) {
       return null;
     }
@@ -625,7 +620,8 @@ async function reRootZip(
  * archive unchanged, so a zip-bomb SKILL.md entry can't be used to force an
  * unbounded local decompression ahead of those guards. `budget` is shared
  * with the caller's rename/rewrite passes over the same archive, so all of
- * them stay within one cumulative decompression allowance.
+ * them stay within one cumulative decompression allowance and reuse each
+ * other's decompressed buffers instead of re-charging for the same entry.
  */
 async function stripInternalFrontmatterFromZip(
   zip: JSZip,
@@ -646,9 +642,8 @@ async function stripInternalFrontmatterFromZip(
   if (!skillMdEntry) {
     return null;
   }
-  const skillMdLimit = Math.min(limits.maxSingleFileBytes, budget.remaining);
-  const { buffer: skillMdBuffer, bytesRead } = await readZipEntry(skillMdEntry, skillMdLimit);
-  budget.remaining -= bytesRead;
+  const skillMdKey = skillMdPath.replace(/\\/g, '/');
+  const skillMdBuffer = await readZipEntryCached(skillMdKey, skillMdEntry, limits, budget);
   if (!skillMdBuffer) {
     return null;
   }
@@ -657,6 +652,10 @@ async function stripInternalFrontmatterFromZip(
     return null;
   }
   zip.file(skillMdPath, stripped.skillMd);
+  // Overwrite (not delete) the cache slot: reRootZip below may still read this exact entry
+  // (when SKILL.md lives under `prefix`) and must see the sanitized manifest, not the raw
+  // uploaded one — otherwise internal-only frontmatter fields would leak into the scanned copy.
+  budget.cache.set(skillMdKey, Buffer.from(stripped.skillMd, 'utf-8'));
   const rootedZip = prefix ? await reRootZip(zip, prefix, limits, budget) : zip;
   if (!rootedZip) {
     return null;

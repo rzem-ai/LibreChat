@@ -17,10 +17,11 @@ import type { ImportLimits } from './limits';
 import { isSkillScanError, scanSkillMarkdown, scanSkillUpload } from './scanner';
 import { resolveRequestTenantId } from '~/middleware/tenant';
 import {
-  readZipEntry,
   stripZipArtifacts,
   findSkillMdPath,
+  readZipEntryCached,
   renameSpacedFilePaths,
+  isSkillManifestConflictError,
   rewriteRenamedFileReferences,
 } from './zip';
 import { DEFAULT_SKILL_IMPORT_LIMITS, createDecompressionBudget } from './limits';
@@ -212,6 +213,9 @@ export function createImportHandler(deps: ImportSkillDeps) {
           message: error.message,
           issues: error.issues,
         });
+      }
+      if (isSkillManifestConflictError(error)) {
+        return res.status(400).json({ error: error.message });
       }
       // Surface validation errors as 400 instead of generic 500
       if (isValidationError(error)) {
@@ -411,15 +415,12 @@ async function handleZip(
       .json({ error: `SKILL.md too large (${Math.round(declaredSize / 1024 / 1024)}MB)` });
   }
 
-  //Deloitte added readZipEntry to read the SKILL.md file with a hard limit on bytes read,
-  //to prevent zip bombs and other malicious archives from causing memory exhaustion.
-  // This is a security measure to ensure that even if the declared size is small, we don't read more than the allowed limit.
-  const skillMdLimit = Math.min(limits.maxSingleFileBytes, budget.remaining);
-  const { buffer: skillMdBuffer, bytesRead: skillMdBytesRead } = await readZipEntry(
-    skillMdEntry,
-    skillMdLimit,
-  );
-  budget.remaining -= skillMdBytesRead;
+  // Deloitte added a hard limit on bytes read from SKILL.md to prevent zip bombs and other
+  // malicious archives from causing memory exhaustion — even when the declared size is small,
+  // we don't read more than the allowed limit. Reuses the rename/rewrite passes' cached buffer
+  // when one of them already read this exact entry, instead of decompressing it a second time.
+  const skillMdKey = skillMdPath.replace(/\\/g, '/');
+  const skillMdBuffer = await readZipEntryCached(skillMdKey, skillMdEntry, limits, budget);
   if (skillMdBuffer == null) {
     return res.status(400).json({ error: 'SKILL.md exceeds maximum file size' });
   }
@@ -506,61 +507,68 @@ async function handleZip(
     }
 
     try {
-      // Stream-decompress with hard byte cap. JSZip's nodeStream decompresses
-      // incrementally so we can abort mid-entry without buffering the full file.
+      // Reuse the rename/rewrite passes' cached buffer when one of them already read this
+      // exact entry (common once the archive contains any renamed file, since the rewrite
+      // pass reads every entry), instead of decompressing it a second time. On a cache miss,
+      // stream-decompress with a hard byte cap — JSZip's nodeStream decompresses incrementally
+      // so we can abort mid-entry without buffering the full file.
       const perFileLimit = limits.maxSingleFileBytes;
       const cumulativeLimit = budget.remaining;
-      const effectiveLimit = Math.min(perFileLimit, cumulativeLimit);
+      let fileBuffer = budget.cache.get(normalized) ?? null;
 
-      if (effectiveLimit <= 0) {
-        fileResults.push({
-          path: relativePath,
-          status: 'error',
-          error: 'Cumulative decompressed size exceeds limit',
-        });
-        break;
-      }
+      if (fileBuffer == null) {
+        const effectiveLimit = Math.min(perFileLimit, cumulativeLimit);
 
-      // Stream-decompress with enforced byte limit
-      const chunks: Buffer[] = [];
-      let entryBytes = 0;
-      let exceededLimit = false;
-      const entryStream = zipEntry.nodeStream('nodebuffer');
-
-      await new Promise<void>((resolve, reject) => {
-        entryStream.on('data', (chunk: Buffer) => {
-          if (exceededLimit) {
-            return;
-          }
-          entryBytes += chunk.length;
-          budget.remaining -= chunk.length;
-          if (entryBytes > effectiveLimit) {
-            exceededLimit = true;
-            if ('destroy' in entryStream && typeof entryStream.destroy === 'function') {
-              entryStream.destroy();
-            }
-            resolve();
-            return;
-          }
-          chunks.push(chunk);
-        });
-        entryStream.on('end', resolve);
-        entryStream.on('error', reject);
-      });
-
-      if (exceededLimit) {
-        const reason =
-          entryBytes > perFileLimit
-            ? `File too large (max ${perFileLimit / 1024 / 1024}MB)`
-            : 'Cumulative decompressed size exceeds limit';
-        fileResults.push({ path: relativePath, status: 'error', error: reason });
-        if (entryBytes > cumulativeLimit) {
+        if (effectiveLimit <= 0) {
+          fileResults.push({
+            path: relativePath,
+            status: 'error',
+            error: 'Cumulative decompressed size exceeds limit',
+          });
           break;
         }
-        continue;
-      }
 
-      const fileBuffer = Buffer.concat(chunks);
+        // Stream-decompress with enforced byte limit
+        const chunks: Buffer[] = [];
+        let entryBytes = 0;
+        let exceededLimit = false;
+        const entryStream = zipEntry.nodeStream('nodebuffer');
+
+        await new Promise<void>((resolve, reject) => {
+          entryStream.on('data', (chunk: Buffer) => {
+            if (exceededLimit) {
+              return;
+            }
+            entryBytes += chunk.length;
+            budget.remaining -= chunk.length;
+            if (entryBytes > effectiveLimit) {
+              exceededLimit = true;
+              if ('destroy' in entryStream && typeof entryStream.destroy === 'function') {
+                entryStream.destroy();
+              }
+              resolve();
+              return;
+            }
+            chunks.push(chunk);
+          });
+          entryStream.on('end', resolve);
+          entryStream.on('error', reject);
+        });
+
+        if (exceededLimit) {
+          const reason =
+            entryBytes > perFileLimit
+              ? `File too large (max ${perFileLimit / 1024 / 1024}MB)`
+              : 'Cumulative decompressed size exceeds limit';
+          fileResults.push({ path: relativePath, status: 'error', error: reason });
+          if (entryBytes > cumulativeLimit) {
+            break;
+          }
+          continue;
+        }
+
+        fileBuffer = Buffer.concat(chunks);
+      }
 
       const fileId = crypto.randomUUID();
       const filename = path.basename(relativePath);
