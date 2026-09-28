@@ -190,6 +190,30 @@ describe('shared decompression budget', () => {
     await rewriteRenamedFileReferences(zip, renames, limits, budget);
     expect(budget.remaining).toBe(5);
   });
+
+  it("evicts a rewritten entry's cache slot when the rewrite grows it past the per-file limit, instead of letting a stale cache hit serve an oversized buffer", async () => {
+    const zip = new JSZip();
+    // Both renames collapse to the same candidate name, so the second is disambiguated
+    // with a numeric suffix — growing its replacement target by two characters.
+    zip.file('foo bar-x.txt', 'first');
+    zip.file('foo-bar x.txt', 'second');
+    const notes = 'ref: foo-bar x.txt';
+    zip.file('notes.txt', notes);
+
+    const limits = { ...DEFAULT_SKILL_IMPORT_LIMITS, maxSingleFileBytes: notes.length };
+    const budget = createDecompressionBudget(limits);
+
+    const renames = await renameSpacedFilePaths(zip, limits, budget);
+    await rewriteRenamedFileReferences(zip, renames, limits, budget);
+
+    const rewritten = 'ref: foo-bar-x-2.txt';
+    expect(rewritten.length).toBeGreaterThan(limits.maxSingleFileBytes);
+    // The zip entry itself still holds the correctly rewritten content...
+    expect(await readText(zip, 'notes.txt')).toBe(rewritten);
+    // ...but it must not be cached, or handleZip's companion loop would later trust
+    // this cache hit and skip its own maxSingleFileBytes check entirely.
+    expect(budget.cache.has('notes.txt')).toBe(false);
+  });
 });
 
 describe('rewriteRenamedFileReferences', () => {

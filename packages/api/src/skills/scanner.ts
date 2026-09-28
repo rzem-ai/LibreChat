@@ -566,7 +566,10 @@ function stripInternalFrontmatterForScan(content: string): {
  * combined decompressed bytes stay bounded by a single `maxDecompressedBytes`
  * allowance rather than each pass getting its own — and so this pass reuses
  * whatever buffer an earlier pass already decompressed for the same entry
- * instead of re-charging the budget for it.
+ * instead of re-charging the budget for it. Since copying an entry into
+ * `rooted` is its last read in the scan pipeline, each entry's `budget.cache`
+ * slot is evicted right after, so the cache doesn't hold the whole archive's
+ * decompressed bytes resident for the remainder of this loop.
  */
 async function reRootZip(
   zip: JSZip,
@@ -606,6 +609,9 @@ async function reRootZip(
       return null;
     }
     rooted.file(safePath, buffer);
+    // This is the entry's last read in the scan pipeline — evict it so `budget.cache`
+    // doesn't hold every entry's buffer resident for the rest of this loop.
+    budget.cache.delete(normalized);
   }
   return rooted;
 }

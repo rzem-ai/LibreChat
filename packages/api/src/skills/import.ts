@@ -421,6 +421,9 @@ async function handleZip(
   // when one of them already read this exact entry, instead of decompressing it a second time.
   const skillMdKey = skillMdPath.replace(/\\/g, '/');
   const skillMdBuffer = await readZipEntryCached(skillMdKey, skillMdEntry, limits, budget);
+  // Nothing later in this request re-reads SKILL.md, so evict its cache slot immediately
+  // instead of holding it resident for the rest of the companion-file loop below.
+  budget.cache.delete(skillMdKey);
   if (skillMdBuffer == null) {
     return res.status(400).json({ error: 'SKILL.md exceeds maximum file size' });
   }
@@ -511,7 +514,9 @@ async function handleZip(
       // exact entry (common once the archive contains any renamed file, since the rewrite
       // pass reads every entry), instead of decompressing it a second time. On a cache miss,
       // stream-decompress with a hard byte cap — JSZip's nodeStream decompresses incrementally
-      // so we can abort mid-entry without buffering the full file.
+      // so we can abort mid-entry without buffering the full file. Either way, this is the
+      // entry's last read in the request, so its cache slot is evicted below once obtained —
+      // otherwise every companion file's buffer would stay resident for the rest of this loop.
       const perFileLimit = limits.maxSingleFileBytes;
       const cumulativeLimit = budget.remaining;
       let fileBuffer = budget.cache.get(normalized) ?? null;
@@ -569,6 +574,10 @@ async function handleZip(
 
         fileBuffer = Buffer.concat(chunks);
       }
+
+      // This is the last read of this entry in the request — evict it so the cache doesn't
+      // hold every companion file's buffer resident for the remainder of the loop below.
+      budget.cache.delete(normalized);
 
       const fileId = crypto.randomUUID();
       const filename = path.basename(relativePath);

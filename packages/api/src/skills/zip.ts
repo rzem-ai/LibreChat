@@ -321,18 +321,40 @@ function escapeRegExp(literal: string): string {
   return literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/** Characters that can appear inside a file path segment — used to keep reference
+ * matches from firing inside a longer path-like token (see `buildCombinedReplacer`). */
+const PATH_TOKEN_CHAR = 'A-Za-z0-9_.\\-/';
+
 /**
- * Builds a global regex matching `literal` only when it isn't embedded in a
- * longer path-like token — i.e. neither immediately preceded nor followed by
- * a character that could itself be part of a file path segment (letters,
- * digits, `_`, `.`, `-`, `/`). Without this, a plain substring replacement
- * would also rewrite occurrences inside unrelated prose, identifiers, or a
- * longer name that happens to contain the renamed one as a substring (e.g.
- * matching `foo bar.md` inside `foo bar.md.bak`).
+ * Builds one boundary-aware regex that alternates over every replacement's
+ * `from` literal, plus a lookup from a matched literal to its target — so
+ * rewriting an entry's text is a single linear scan regardless of how many
+ * replacements exist, instead of testing and replacing each candidate against
+ * the same text in turn (which costs O(replacements × text length) per entry).
+ * A match still fires only when the literal isn't embedded in a longer
+ * path-like token — neither immediately preceded nor followed by a character
+ * that could itself be part of a file path segment (letters, digits, `_`,
+ * `.`, `-`, `/`) — otherwise a plain substring match would also rewrite
+ * occurrences inside unrelated prose, identifiers, or a longer name that
+ * happens to contain the renamed one as a substring (e.g. matching
+ * `foo bar.md` inside `foo bar.md.bak`). Alternatives are tried in the order
+ * given, so callers must pass `replacements` already sorted longest-first
+ * (see `rewriteRenamedFileReferences`) to preserve "longest reference wins"
+ * when two candidates could start at the same position. Returns `null` for an
+ * empty replacement list.
  */
-function referenceBoundaryRegex(literal: string): RegExp {
-  const escaped = escapeRegExp(literal);
-  return new RegExp(`(?<![A-Za-z0-9_.\\-/])${escaped}(?![A-Za-z0-9_.\\-/])`, 'g');
+function buildCombinedReplacer(
+  replacements: { from: string; to: string }[],
+): { regex: RegExp; targets: Map<string, string> } | null {
+  if (replacements.length === 0) {
+    return null;
+  }
+  const targets = new Map(replacements.map(({ from, to }) => [from, to]));
+  const alternation = replacements.map(({ from }) => escapeRegExp(from)).join('|');
+  return {
+    regex: new RegExp(`(?<![${PATH_TOKEN_CHAR}])(?:${alternation})(?![${PATH_TOKEN_CHAR}])`, 'g'),
+    targets,
+  };
 }
 
 /**
@@ -342,24 +364,34 @@ function referenceBoundaryRegex(literal: string): RegExp {
  * bare basename, and every intermediate path suffix in between (see
  * `buildSuffixReplacements`), since a reference may be written relative to
  * any ancestor directory, not just the archive root. Binary entries —
- * detected via `isBinaryBuffer` — are left untouched. Replacements are
- * applied longest-match-first so a longer reference is rewritten before a
- * shorter one can clobber part of it, and only when not embedded in a longer
- * path-like token (see `referenceBoundaryRegex`), so a renamed file's path
- * doesn't also rewrite occurrences inside unrelated prose or a longer name
- * that merely contains it as a substring. A rename's full path is always
- * applied — it's guaranteed unique since it's the file's original archive
- * path. Shorter suffix forms (see `buildSuffixReplacements`) are only
- * applied when they resolve to a single target: when two different renames
- * produce the same suffix (most commonly two spaced files sharing a
+ * detected via `isBinaryBuffer` — are left untouched. All replacements are
+ * matched in a single combined pass per entry (see `buildCombinedReplacer`)
+ * rather than testing/replacing each candidate against the same text in
+ * turn, so cost stays linear in text size regardless of how many files were
+ * renamed. Candidates are sorted longest-first before being combined so a
+ * longer reference is rewritten before a shorter one can clobber part of it,
+ * and a match only fires when it isn't embedded in a longer path-like token,
+ * so a renamed file's path doesn't also rewrite occurrences inside unrelated
+ * prose or a longer name that merely contains it as a substring. A rename's
+ * full path is always applied — it's guaranteed unique since it's the file's
+ * original archive path. Shorter suffix forms (see `buildSuffixReplacements`)
+ * are only applied when they resolve to a single target: when two different
+ * renames produce the same suffix (most commonly two spaced files sharing a
  * basename in different directories) with different targets, that suffix is
  * ambiguous and is dropped rather than letting whichever rename was
  * processed last win. Enforces the same per-file and cumulative
  * decompressed-size bounds `handleZip` applies elsewhere (`limits`,
  * defaulting to `DEFAULT_SKILL_IMPORT_LIMITS` for callers with no
  * per-request override), via `readZipEntryCached` — an entry that exceeds
- * those bounds is left unrewritten rather than fully decompressed. Accepts
- * an optional `budget` shared with other passes over the same archive (see
+ * those bounds is left unrewritten rather than fully decompressed. A
+ * rewritten entry whose new content grows past `limits.maxSingleFileBytes`
+ * (e.g. a collision-disambiguated target is longer than the reference it
+ * replaced, repeated many times) is evicted from `budget.cache` instead of
+ * cached oversized — the entry's data in `zip` is still updated to the
+ * rewritten text, so a later bounded read (e.g. `handleZip`'s companion-file
+ * loop) re-derives it from `zip` and correctly rejects it as oversized,
+ * rather than a cache hit silently bypassing that check. Accepts an optional
+ * `budget` shared with other passes over the same archive (see
  * `renameSpacedFilePaths`, `handleZip`) so their combined decompressed bytes
  * stay bounded by a single `maxDecompressedBytes` allowance rather than each
  * pass getting its own — and so this pass reuses a buffer the rename pass
@@ -404,6 +436,11 @@ export async function rewriteRenamedFileReferences(
       .map(([from, targets]) => ({ from, to: [...targets][0] })),
   ].sort((a, b) => b.from.length - a.from.length);
 
+  const combined = buildCombinedReplacer(replacements);
+  if (combined == null) {
+    return;
+  }
+
   for (const entryPath of Object.keys(zip.files)) {
     const entry = zip.file(entryPath);
     if (entry == null || entry.dir) {
@@ -417,19 +454,17 @@ export async function rewriteRenamedFileReferences(
     if (isBinaryBuffer(buffer)) {
       continue;
     }
-    let text = buffer.toString('utf-8');
-    let changed = false;
-    for (const { from, to } of replacements) {
-      const regex = referenceBoundaryRegex(from);
-      if (regex.test(text)) {
-        regex.lastIndex = 0;
-        text = text.replace(regex, () => to);
-        changed = true;
-      }
+    const text = buffer.toString('utf-8');
+    const rewritten = text.replace(combined.regex, (match) => combined.targets.get(match) ?? match);
+    if (rewritten === text) {
+      continue;
     }
-    if (changed) {
-      zip.file(entryPath, text);
-      budget.cache.set(normalized, Buffer.from(text, 'utf-8'));
+    zip.file(entryPath, rewritten);
+    const rewrittenBuffer = Buffer.from(rewritten, 'utf-8');
+    if (rewrittenBuffer.length <= limits.maxSingleFileBytes) {
+      budget.cache.set(normalized, rewrittenBuffer);
+    } else {
+      budget.cache.delete(normalized);
     }
   }
 }

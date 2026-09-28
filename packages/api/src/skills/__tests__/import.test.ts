@@ -455,6 +455,59 @@ describe('createImportHandler', () => {
     expect(summary.filesFailed).toBe(0);
   });
 
+  it('rejects a companion file as too large when rewriting its references grows it past the per-file limit, instead of trusting a stale cache hit', async () => {
+    const skillMarkdown = [
+      '---',
+      'name: tiny-limit-skill',
+      'description: A skill used by import handler tests.',
+      '---',
+      '# Test skill',
+    ].join('\n');
+
+    // Two spaced filenames collapse to the same renamed candidate, so the second is
+    // disambiguated with a "-2" suffix — two characters longer than the reference it
+    // replaces. Repeating the reference enough times grows notes.txt past the per-file
+    // limit only after rewriting, even though its original content fit comfortably.
+    const refToken = 'foo-bar x.txt';
+    const rewrittenToken = 'foo-bar-x-2.txt';
+    const repeatCount = Math.ceil(Buffer.byteLength(skillMarkdown, 'utf-8') / refToken.length) + 5;
+    const original = Array(repeatCount).fill(refToken).join(' ');
+    const rewritten = Array(repeatCount).fill(rewrittenToken).join(' ');
+
+    const zip = new JSZip();
+    zip.file('SKILL.md', skillMarkdown);
+    zip.file('foo bar-x.txt', 'first');
+    zip.file('foo-bar x.txt', 'second');
+    zip.file('notes.txt', original);
+    const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+    const maxSingleFileBytes = Buffer.byteLength(original, 'utf-8');
+    expect(Buffer.byteLength(rewritten, 'utf-8')).toBeGreaterThan(maxSingleFileBytes);
+
+    const deps = mockImportDeps({
+      maxZipBytes: 1024 * 1024,
+      maxEntries: 10,
+      maxSingleFileBytes,
+      maxDecompressedBytes: 1024 * 1024,
+    });
+    const handler = createImportHandler(deps);
+    const res = mockResponse();
+
+    await handler(mockZipRequest(buffer), res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    const summary = importSummary(res.body);
+    expect(summary.filesSucceeded).toBe(2);
+    expect(summary.filesFailed).toBe(1);
+    expect(summary.errors).toEqual([
+      expect.objectContaining({
+        path: 'notes.txt',
+        status: 'error',
+        error: expect.stringContaining('File too large'),
+      }),
+    ]);
+  });
+
   it('rejects malformed YAML frontmatter in markdown imports', async () => {
     const deps = mockImportDeps();
     const handler = createImportHandler(deps);
