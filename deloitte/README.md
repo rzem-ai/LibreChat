@@ -408,6 +408,28 @@ Note that you must use **VPN** to access the LLM Gateway.
 
 ---
 
+## Running the frontend directly (outside Docker)
+
+For fast iteration on frontend-only changes, you can skip the Docker rebuild loop and run the Vite dev server directly against your already-running backend container:
+
+```zsh
+BACKEND_PORT=3080 npm run frontend:dev
+```
+
+This starts Vite on `http://localhost:3090` with hot module reload, proxying API calls to `BACKEND_PORT`.
+
+### Telling parallel instances apart (`VITE_WORKSPACE_NAME`)
+
+If you run more than one frontend at once — e.g. separate git worktrees/branches, or multiple [Conductor](https://conductor.build) workspaces — set `VITE_WORKSPACE_NAME` when starting the dev server:
+
+```zsh
+VITE_WORKSPACE_NAME="my-branch" PORT=3091 npm run frontend:dev
+```
+
+This appends `/ my-branch` to the Deloitte header title in the browser, so you can tell which tab belongs to which instance at a glance instead of every tab looking identical. It's a one-off env var for the process running `npm run frontend:dev` — it doesn't need to be added to `.env`, and has no effect on the Docker Compose workflow.
+
+---
+
 ## VPN gotcha
 
 You may need to **swap VPN state** during setup:

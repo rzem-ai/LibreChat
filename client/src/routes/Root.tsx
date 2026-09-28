@@ -64,6 +64,11 @@ export default function Root() {
 
   const { data: config } = useGetStartupConfig();
   const deloitteHeader = config?.interface?.deloitteHeader;
+  const workspaceName = import.meta.env.VITE_WORKSPACE_NAME;
+  const title =
+    deloitteHeader?.title && workspaceName
+      ? `${deloitteHeader.title} / ${workspaceName}`
+      : deloitteHeader?.title;
   const termsEnabled =
     isAuthenticated && config?.interface?.termsOfService?.modalAcceptance === true;
   const { data: termsData, isLoading: termsLoading } = useUserTermsQuery({
@@ -123,7 +128,7 @@ export default function Root() {
                       } as CSSProperties
                     }
                   >
-                    {deloitteHeader?.enabled && <DeloitteHeader title={deloitteHeader.title} />}
+                    {deloitteHeader?.enabled && <DeloitteHeader title={title} />}
                     <div
                       className="flex"
                       style={{ height: `calc(100dvh - ${bannerHeight}px - var(--header-height))` }}
