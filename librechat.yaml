@@ -50,7 +50,7 @@ interface:
       - Have read and understand Deloitte Australia's [AI Usage Statement and AI Guidance](https://ausdeloitte.sharepoint.com/sites/DAIS/Shared%20Documents/Forms/AllItems.aspx?id=%2fsites%2fDAIS%2fShared+Documents%2fAI+Usage+Statement+and+AI+Guidance.pdf&parent=%2fsites%2fDAIS%2fShared+Documents&xsdata=MDV8MDJ8aWVkd2FyZHNAZGVsb2l0dGUuY29tLmF1fDM1N2RkNWIwNDE4MTRhZjM3ZWY0MDhkZjAzMGU4MTA1fDM2ZGE0NWYxZGQyYzRkMWZhZjEzNWFiZTQ2Yjk5OTIxfDB8MHw2MzkyMzMwMzI5OTA2MDY2MTh8VW5rbm93bnxUV0ZwYkdac2IzZDhleUpGYlhCMGVVMWhjR2tpT25SeWRXVXNJbFlpT2lJd0xqQXVNREF3TUNJc0lsQWlPaUpYYVc0ek1pSXNJa0ZPSWpvaVRXRnBiQ0lzSWxkVUlqb3lmUT09fDB8fHw%3d&sdata=T2w5MFNlSFVSdmJOZ1ozMFRVWGF3c1FDV25zOGoxdDVhNTBFWDJTV0pWQT0%3d);
       These guidelines apply to all users. Users from other member firms with questions on compliance should contact their local Q&R team. New Zealand users: nzdataoffice@deloitte.co.nz.
       - Understand that you are permitted to upload Deloitte or client confidential information to MyAssist, provided that you respect any client contractual obligations, including restrictions on the purpose for which client data may be used.
-      - Understand that if your client contract restricts Deloitte from processing client confidential information offshore, you must use an "Azure AU" model which can be selected in the model dropdown list.
+       - Understand that if your client contract restricts Deloitte from processing client confidential information offshore, you must use a "Regional" model which can be selected in the model dropdown list.
       - Understand that you are NOT permitted to use personal information or high-risk confidential information (e.g. market sensitive information such as financials, acquisition details, strategic plans) in your prompts when the “Web Search” feature is enabled.
       - Will review and fact-check any outputs generated using MyAssist, be transparent with your team about how you have used it in your work, and remain responsible for approving any actions performed by MyAssist on your behalf and for the outcomes of those action.
       - Will always act in accordance with your [Global Principles of Business Conduct](https://ausdeloitte.sharepoint.com/:b:/r/sites/DAISPolicies/QR%20Policies/Deloitte%20Global%20Principles%20of%20Business%20Conduct.pdf?csf=1&web=1&e=3qbMc1&xsdata=MDV8MDJ8aWVkd2FyZHNAZGVsb2l0dGUuY29tLmF1fDM1N2RkNWIwNDE4MTRhZjM3ZWY0MDhkZjAzMGU4MTA1fDM2ZGE0NWYxZGQyYzRkMWZhZjEzNWFiZTQ2Yjk5OTIxfDB8MHw2MzkyMzMwMzI5OTA2MzE5NzR8VW5rbm93bnxUV0ZwYkdac2IzZDhleUpGYlhCMGVVMWhjR2tpT25SeWRXVXNJbFlpT2lJd0xqQXVNREF3TUNJc0lsQWlPaUpYYVc0ek1pSXNJa0ZPSWpvaVRXRnBiQ0lzSWxkVUlqb3lmUT09fDB8fHw%3d&sdata=NktxaWkxNU56VzJzVitSb1pPdUl3NUs3SU9BS0psUUtVQ0RHUlhsZkViYz0%3d) when using MyAssist;
@@ -208,8 +208,9 @@ endpoints:
   # Custom endpoints (OpenAI-compatible format)
   # ========================================
   custom:
-    # --- Azure AU (aus-east) ---
+    # --- Azure Australia (aus-east) ---
     - name: 'Azure AU'
+      regional: true
       apiKey: 'dummy'
       baseURL: '${BASE_URL_AZURE_AU}'
       models:
@@ -222,7 +223,7 @@ endpoints:
         fetch: false
       titleConvo: true
       titleModel: 'gpt-4o-mini'
-      modelDisplayLabel: 'Azure AU'
+      modelDisplayLabel: 'Azure Australia'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
@@ -265,9 +266,10 @@ endpoints:
         Content-Type: 'application/json'
 
 
-  # Anthropic AU models use Bedrock's native API and inference-profile IDs.
+  # Anthropic Regional models use Bedrock's native API and inference-profile IDs.
   bedrock:
-    modelDisplayLabel: 'Claude AU'
+    regional: true
+    modelDisplayLabel: 'Anthropic Australia'
     models:
       - 'au.anthropic.claude-sonnet-4-6'
       - 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
@@ -423,22 +425,22 @@ modelSpecs:
 
     - name: 'anthropic-au-claude-sonnet-4-6'
       label: 'Claude Sonnet 4.6'
-      group: 'Anthropic AU'
+      group: 'Anthropic Australia'
       groupIcon: 'anthropic'
       iconURL: 'anthropic'
       preset:
-       endpoint: 'bedrock'
-       model: 'au.anthropic.claude-sonnet-4-6'
-       promptPrefix: *deloitteSystemPrompt
+        endpoint: 'bedrock'
+        model: 'au.anthropic.claude-sonnet-4-6'
+        promptPrefix: *deloitteSystemPrompt
 
     - name: 'anthropic-au-claude-haiku-4-5'
       label: 'Claude Haiku 4.5'
-      group: 'Anthropic AU'
+      group: 'Anthropic Australia'
       iconURL: 'anthropic'
       preset:
-       endpoint: 'bedrock'
-       model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
-       promptPrefix: *deloitteSystemPrompt
+        endpoint: 'bedrock'
+        model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
+        promptPrefix: *deloitteSystemPrompt
 
 # MCP Servers configuration
 # Each entry filters the gateway to a single toolset via the `toolsets` query param.

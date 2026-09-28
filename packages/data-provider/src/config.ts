@@ -591,6 +591,8 @@ export const defaultAssistantsVersion = {
 };
 
 export const baseEndpointSchema = z.object({
+  /** Whether endpoint data must be processed through the regional RAG embedding deployment. */
+  regional: z.boolean().optional(),
   streamRate: z.number().optional(),
   baseURL: z.string().optional(),
   /**

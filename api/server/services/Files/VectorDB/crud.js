@@ -5,6 +5,14 @@ const { logger } = require('@librechat/data-schemas');
 const { FileSources } = require('librechat-data-provider');
 const { logAxiosError, generateShortLivedToken } = require('@librechat/api');
 
+function getEmbeddingRegion(req) {
+  const endpoint = req.body?.endpoint;
+  const endpoints = req.config?.endpoints;
+  const customEndpoint = endpoints?.custom?.find((config) => config.name === endpoint);
+  const endpointConfig = endpoints?.[endpoint] ?? customEndpoint;
+  return endpointConfig?.regional === true ? 'regional' : 'global';
+}
+
 /**
  * Deletes a file from the vector database. This function takes a file object, constructs the full path, and
  * verifies the path's validity before deleting the file. If the path is invalid, an error is thrown.
@@ -74,6 +82,7 @@ async function uploadVectors({ req, file, file_id, entity_id, storageMetadata })
     const formData = new FormData();
     formData.append('file_id', file_id);
     formData.append('file', fs.createReadStream(file.path));
+    formData.append('embedding_region', getEmbeddingRegion(req));
     if (entity_id != null && entity_id) {
       formData.append('entity_id', entity_id);
     }
