@@ -15,11 +15,6 @@ interface TourPopoverProps {
 
 const footerButtonClassName = 'h-8 text-xs';
 
-/**
- * Getting Started tour popover content, mounted into driver.js's popover
- * wrapper via `onPopoverRender` in useGettingStartedTour.ts. driver.js still
- * owns positioning; this replaces the content it would otherwise render.
- */
 export default function TourPopover({
   titleHtml,
   descriptionHtml,

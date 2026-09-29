@@ -9,74 +9,48 @@ import { isUnavailableElement } from '~/utils/elements';
 import { useShowMarketplace } from '~/hooks';
 import { mainTextareaId } from '~/common';
 
-type Side = 'top' | 'right' | 'bottom' | 'left';
-
 const CHEVRON_OFFSET = '-6px';
-const chevronEdgeStyle: Record<Side, Partial<CSSStyleDeclaration>> = {
-  top: { bottom: CHEVRON_OFFSET, left: '50%', marginLeft: CHEVRON_OFFSET },
-  bottom: { top: CHEVRON_OFFSET, left: '50%', marginLeft: CHEVRON_OFFSET },
-  left: { right: CHEVRON_OFFSET, top: '50%', marginTop: CHEVRON_OFFSET },
-  right: { left: CHEVRON_OFFSET, top: '50%', marginTop: CHEVRON_OFFSET },
-};
 
-/**
- * Attaches a small diamond chevron to the card, on whichever edge faces the
- * target. driver.js decides that side (via a class on the wrapper) only
- * after `onPopoverRender` returns, hence the microtask. If it couldn't fit
- * the popover to any side (falls back to centered), there's no side to point
- * from — same as driver.js's own arrow in that case, so no chevron either.
- */
-function attachCardChevron(container: HTMLElement, wrapper: HTMLElement) {
+// Reuses driver.js's own (hidden) arrow position/side rather than guessing —
+// it's set only after onPopoverRender returns, hence the microtask.
+function attachCardChevron(container: HTMLElement, arrow: HTMLElement) {
   queueMicrotask(() => {
-    const side = (Object.keys(chevronEdgeStyle) as Side[]).find((value) =>
-      wrapper.classList.contains(`driver-popover-side-${value}`),
+    const side = (['top', 'right', 'bottom', 'left'] as const).find((value) =>
+      arrow.classList.contains(`driver-popover-arrow-side-${value}`),
     );
     if (!side) {
       return;
     }
     const chevron = document.createElement('div');
     chevron.className = 'absolute size-3 rotate-45 bg-surface-primary';
-    Object.assign(chevron.style, chevronEdgeStyle[side]);
+    if (side === 'left' || side === 'right') {
+      chevron.style.top = arrow.style.top;
+      chevron.style[side === 'left' ? 'right' : 'left'] = CHEVRON_OFFSET;
+    } else {
+      chevron.style.left = arrow.style.left;
+      chevron.style[side === 'top' ? 'bottom' : 'top'] = CHEVRON_OFFSET;
+    }
     container.style.position = 'relative';
     container.insertBefore(chevron, container.firstChild);
   });
 }
 
-/**
- * First step index needing the sidebar EXPANDED (steps before it are chat-area
- * only). Keep in sync with the "Conversations" step's position below.
- */
+// Index of the "Conversations" step — the first one needing the sidebar expanded.
 const FIRST_NAV_STEP_INDEX = 7;
 
-/**
- * Builds the Driver.js Getting Started tour over the default chat interface.
- * Related items are merged into single steps (see "Tools", "Library &
- * Connectors", "Personalize & Manage" below) via a comma-separated selector,
- * so driver.js highlights whichever of the group is first available while the
- * popover describes the group as a whole.
- */
 interface TourOptions {
-  /** Called when the tour ends (completed or cancelled). The caller uses this
-   *  to restore the sidebar to its pre-tour expanded/collapsed state. */
   onEnd?: () => void;
-  /** Setter for sidebar expanded state — used to expand before nav steps. */
   setSidebarExpanded?: (expanded: boolean) => void;
 }
 
 export default function useGettingStartedTour(onComplete?: () => void, options: TourOptions = {}) {
   const { onEnd, setSidebarExpanded } = options;
   const showMarketplace = useShowMarketplace();
-  // Retain the active Driver.js instance so it can be destroyed on unmount.
-  // Driver.js manipulates the DOM directly (body-level overlay + popover), so
-  // React unmounting the provider tree (e.g. on logout) does NOT remove those
-  // nodes automatically — we must call destroy() ourselves.
+  // driver.js manipulates the DOM directly, so unmounting React doesn't clean it up.
   const tourRef = useRef<ReturnType<typeof driver> | null>(null);
 
   useEffect(() => {
     return () => {
-      // Unmount cleanup: destroy any active tour so the overlay/popover are
-      // removed before the login page renders. tourRef is nulled after each
-      // destroy (both here and in onDestroyStarted) to prevent double-destroy.
       tourRef.current?.destroy();
       tourRef.current = null;
     };
@@ -84,15 +58,8 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
 
   const startTour = useCallback(() => {
     let completedFromLastStepNext = false;
-    // Tracks the React root mounted into the current step's popover, so it can
-    // be unmounted before the next step's popover replaces it (driver.js
-    // recreates the whole popover DOM fresh on every step) and when the tour
-    // ends.
     let currentPopoverRoot: Root | null = null;
 
-    /** Mounts TourPopover into driver.js's popover wrapper, reusing the values
-     *  driver.js already computed onto its own (about-to-be-hidden) elements —
-     *  title/description HTML, progress text, next label, previous-enabled. */
     const renderPopover = (popover: PopoverDOM, driverInstance: Driver) => {
       currentPopoverRoot?.unmount();
 
@@ -102,20 +69,14 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
       const nextLabel = popover.nextButton.innerHTML;
       const canGoPrevious = !popover.previousButton.disabled;
 
-      // Hide driver.js's own generated content — we render our own below —
-      // but leave the elements themselves in place (just display:none) rather
-      // than removing them, since driver.js still holds references to them.
       popover.title.style.display = 'none';
       popover.description.style.display = 'none';
       popover.footer.style.display = 'none';
       popover.closeButton.style.display = 'none';
       popover.arrow.style.display = 'none';
 
-      // driver.js's own default CSS still applies to the wrapper itself —
-      // white background, padding, a border-radius, a box-shadow, and a
-      // max-width — which would frame TourPopover's card in a second, visually
-      // mismatched box. Strip it down to a plain positioning shell so the card
-      // is the only visible surface.
+      // Strip driver.js's own default styling off the wrapper so the card is
+      // the only visible surface (otherwise it double-frames the card).
       Object.assign(popover.wrapper.style, {
         background: 'transparent',
         padding: '0',
@@ -129,10 +90,7 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
       const container = document.createElement('div');
       popover.wrapper.appendChild(container);
       currentPopoverRoot = createRoot(container);
-      // flushSync forces the render to commit synchronously, before this
-      // function returns — driver.js measures the wrapper's rendered size to
-      // position the popover immediately after onPopoverRender runs, so it
-      // needs our content already painted, not merely scheduled.
+      // flushSync: driver.js measures the wrapper right after this returns.
       flushSync(() => {
         currentPopoverRoot?.render(
           <TourPopover
@@ -151,8 +109,6 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
             onClose={() => {
               currentPopoverRoot?.unmount();
               currentPopoverRoot = null;
-              // destroy() skips onDestroyStarted (that hook is for the
-              // Escape/overlay-click paths), so replicate its cleanup here.
               driverInstance.destroy();
               tourRef.current = null;
               onEnd?.();
@@ -161,7 +117,7 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
         );
       });
 
-      attachCardChevron(container, popover.wrapper);
+      attachCardChevron(container, popover.arrow);
     };
 
     const hasAvailableTarget = (selector: string) => {
@@ -325,8 +281,6 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
         },
       },
     ];
-    // Don't pre-filter steps by DOM presence — skipMissingElement +
-    // waitForElement handle both absent and slow-to-mount targets at runtime.
     const tourDriver = driver({
       showProgress: true,
       allowClose: true,
@@ -334,16 +288,10 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
       waitForElement: 600,
       stagePadding: 6,
       stageRadius: 8,
-      // Lighter than driver.js's 0.7 default — still enough contrast for the
-      // spotlight to read, without dimming the rest of the screen so heavily.
       overlayOpacity: 0.5,
-      // animate:true also slides/resizes the spotlight between steps, not just
-      // fades — TourPopover's own `animate-in fade-in-0` handles the fade instead.
       animate: false,
       onPopoverRender: (popover, opts) => renderPopover(popover, opts.driver),
       onHighlightStarted: (_element, step, opts) => {
-        // Expand the sidebar once the tour reaches the first nav-panel step —
-        // it may be collapsed (mobile) or panel-body-hidden (desktop) until now.
         if (opts.state.activeIndex === FIRST_NAV_STEP_INDEX && setSidebarExpanded) {
           setSidebarExpanded(true);
         }
@@ -352,18 +300,15 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
         currentPopoverRoot?.unmount();
         currentPopoverRoot = null;
         tourDriver.destroy();
-        // Null the ref so the useEffect cleanup won't attempt a second destroy.
         tourRef.current = null;
         if (completedFromLastStepNext) {
           onComplete?.();
         }
-        // Notify the caller so it can restore the pre-tour sidebar state.
         onEnd?.();
       },
       steps,
     });
 
-    // Store the instance so the useEffect cleanup can destroy it on unmount.
     tourRef.current = tourDriver;
     tourDriver.drive();
   }, [onComplete, showMarketplace]);
