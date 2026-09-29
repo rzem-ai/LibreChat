@@ -1,3 +1,5 @@
+import { GETTING_STARTED_COURSE_ID } from './Courses/content/registry';
+
 export interface LearningCourse {
   id: string;
   title: string;
@@ -5,9 +7,6 @@ export interface LearningCourse {
   estimatedMinutes?: number;
   comingSoon: boolean;
 }
-
-/** Single source of truth for the Getting Started course's id — also read by LearningTourContext. */
-export const GETTING_STARTED_COURSE_ID = 'getting-started-guide';
 
 /** Static MVP course catalog — no backend content system, just a plain list. */
 export const COURSES: LearningCourse[] = [

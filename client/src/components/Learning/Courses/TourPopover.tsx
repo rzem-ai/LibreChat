@@ -13,8 +13,6 @@ interface TourPopoverProps {
   onClose: () => void;
 }
 
-const footerButtonClassName = 'h-8 text-xs';
-
 export default function TourPopover({
   titleHtml,
   descriptionHtml,
@@ -55,17 +53,11 @@ export default function TourPopover({
             size="sm"
             disabled={!canGoPrevious}
             onClick={onPrevious}
-            className={footerButtonClassName}
+            className="h-8 text-xs"
           >
             {localize('com_learning_tour_previous')}
           </Button>
-          <Button
-            type="button"
-            variant="submit"
-            size="sm"
-            onClick={onNext}
-            className={footerButtonClassName}
-          >
+          <Button type="button" variant="submit" size="sm" onClick={onNext} className="h-8 text-xs">
             {nextLabel}
           </Button>
         </div>
