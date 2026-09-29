@@ -2,10 +2,85 @@ import { useCallback, useEffect, useRef } from 'react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import '../driver-theme.css';
-import type { DriveStep } from 'driver.js';
+import type { DriveStep, PopoverDOM } from 'driver.js';
 import { isUnavailableElement } from '~/utils/elements';
 import { useShowMarketplace } from '~/hooks';
 import { mainTextareaId } from '~/common';
+
+/**
+ * Restyles driver.js's popover to match this app's design tokens. Applied via
+ * inline styles on the real DOM refs driver.js hands us — inline styles always
+ * beat driver.js's own shipped CSS regardless of stylesheet import order, so
+ * none of this needs `!important`. Hover/focus states and the arrow's per-side
+ * border color (driver.js only exposes which side is active via a class, not a
+ * prop) still live in driver-theme.css, since inline styles can't express
+ * pseudo-classes.
+ */
+function applyPopoverTheme(popover: PopoverDOM) {
+  Object.assign(popover.wrapper.style, {
+    maxWidth: '320px',
+    minWidth: '260px',
+    padding: '16px',
+    borderRadius: '12px',
+    border: '1px solid var(--border-light)',
+    backgroundColor: 'var(--surface-primary)',
+    color: 'var(--text-primary)',
+    fontFamily: "'Open Sans', ui-sans-serif, sans-serif, system-ui",
+    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+  });
+  // Fade-in only — driver.js's own `.driver-fade` animation is unused (see
+  // `animate: false` below), and these Tailwind utilities don't conflict with
+  // anything driver.js sets by default, so plain classes are safe here.
+  popover.wrapper.classList.add('animate-in', 'fade-in-0', 'duration-150');
+
+  Object.assign(popover.title.style, {
+    margin: '0',
+    fontSize: '14px',
+    fontWeight: '500',
+    lineHeight: '1.4',
+    color: 'var(--text-primary)',
+  });
+
+  Object.assign(popover.description.style, {
+    marginBottom: '0',
+    fontSize: '12px',
+    fontWeight: '400',
+    lineHeight: '1.6',
+    color: 'var(--text-secondary)',
+  });
+  if (popover.title.textContent) {
+    popover.description.style.marginTop = '6px';
+  }
+
+  popover.closeButton.style.color = 'var(--text-tertiary)';
+  popover.closeButton.style.transition = 'color 0.15s';
+
+  popover.footer.style.marginTop = '14px';
+
+  Object.assign(popover.progress.style, {
+    color: 'var(--text-tertiary)',
+    fontSize: '11px',
+    fontWeight: '500',
+  });
+
+  for (const button of [popover.previousButton, popover.nextButton]) {
+    Object.assign(button.style, {
+      borderRadius: '8px',
+      padding: '5px 12px',
+      fontSize: '12px',
+      fontWeight: '500',
+      border: '1px solid var(--border-light)',
+      backgroundColor: 'var(--surface-primary)',
+      color: 'var(--text-primary)',
+      transition: 'background-color 0.15s, color 0.15s',
+    });
+  }
+  Object.assign(popover.nextButton.style, {
+    borderColor: 'var(--surface-submit)',
+    backgroundColor: 'var(--surface-submit)',
+    color: '#fff',
+  });
+}
 
 /**
  * Index of the first step that requires the sidebar to be in its EXPANDED
@@ -259,9 +334,10 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
       // from the previous target's position to the next one over `duration` ms.
       // That's a real glide/morph, not a fade, and there's no config to keep the
       // fade while disabling it. So: turn animate off (the spotlight now snaps
-      // straight to each target) and fade the popover ourselves via a plain CSS
-      // animation in driver-theme.css instead.
+      // straight to each target) and fade the popover ourselves via Tailwind
+      // classes in applyPopoverTheme instead.
       animate: false,
+      onPopoverRender: applyPopoverTheme,
       onHighlightStarted: (_element, step, opts) => {
         // Expand the sidebar exactly when the tour transitions from chat-area
         // steps (0–6) to sidebar-nav steps (7+). This ensures:
