@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { useRecoilValue } from 'recoil';
-import { UserIcon, useAvatar } from '@librechat/client';
+import { UserIcon, useAuthenticatedImageSrc, useAvatar } from '@librechat/client';
 import type { IconProps } from '~/common';
 import MessageEndpointIcon from './MessageEndpointIcon';
 import { useLocalize } from '~/hooks';
@@ -63,10 +63,21 @@ type UserAvatarProps = {
 const UserAvatar = memo(
   ({ size, avatar, avatarSrc, userId, username, className }: UserAvatarProps) => {
     const [resolved, setResolved] = React.useState(() => resolveAvatar(userId, avatar, avatarSrc));
+    const {
+      src: authenticatedImageSrc,
+      isLoading: isImageLoading,
+      isError: imageFetchError,
+    } = useAuthenticatedImageSrc(resolved.type === 'image' ? resolved.src : '');
 
     React.useEffect(() => {
       setResolved(resolveAvatar(userId, avatar, avatarSrc));
     }, [userId, avatar, avatarSrc]);
+
+    React.useEffect(() => {
+      if (imageFetchError && resolved.type === 'image') {
+        setResolved(markAvatarFailed(userId, resolved.src));
+      }
+    }, [imageFetchError, resolved, userId]);
 
     return (
       <div
@@ -75,12 +86,14 @@ const UserAvatar = memo(
         className={cn('relative flex items-center justify-center', className ?? '')}
       >
         {resolved.type === 'image' ? (
-          <img
-            className="rounded-full"
-            src={resolved.src}
-            alt="avatar"
-            onError={() => setResolved(markAvatarFailed(userId, resolved.src))}
-          />
+          !isImageLoading && (
+            <img
+              className="rounded-full"
+              src={authenticatedImageSrc}
+              alt="avatar"
+              onError={() => setResolved(markAvatarFailed(userId, resolved.src))}
+            />
+          )
         ) : (
           <div
             style={{
