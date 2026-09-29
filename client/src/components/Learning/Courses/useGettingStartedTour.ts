@@ -1,20 +1,35 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
-import '../driver-theme.css';
 import type { DriveStep, PopoverDOM } from 'driver.js';
 import { isUnavailableElement } from '~/utils/elements';
 import { useShowMarketplace } from '~/hooks';
 import { mainTextareaId } from '~/common';
 
 /**
+ * Toggles inline styles on mouseenter/leave and focus/blur instead of writing
+ * a `:hover`/`:focus` CSS rule, so the tour's whole theme lives here in JS
+ * rather than a separate stylesheet.
+ */
+function bindHoverStyle(
+  element: HTMLElement,
+  hoverStyle: Partial<CSSStyleDeclaration>,
+  restStyle: Partial<CSSStyleDeclaration>,
+) {
+  Object.assign(element.style, restStyle);
+  const applyHover = () => Object.assign(element.style, hoverStyle);
+  const applyRest = () => Object.assign(element.style, restStyle);
+  element.addEventListener('mouseenter', applyHover);
+  element.addEventListener('mouseleave', applyRest);
+  element.addEventListener('focus', applyHover);
+  element.addEventListener('blur', applyRest);
+}
+
+/**
  * Restyles driver.js's popover to match this app's design tokens. Applied via
  * inline styles on the real DOM refs driver.js hands us — inline styles always
  * beat driver.js's own shipped CSS regardless of stylesheet import order, so
- * none of this needs `!important`. Hover/focus states and the arrow's per-side
- * border color (driver.js only exposes which side is active via a class, not a
- * prop) still live in driver-theme.css, since inline styles can't express
- * pseudo-classes.
+ * none of this needs `!important`.
  */
 function applyPopoverTheme(popover: PopoverDOM) {
   Object.assign(popover.wrapper.style, {
@@ -52,8 +67,12 @@ function applyPopoverTheme(popover: PopoverDOM) {
     popover.description.style.marginTop = '6px';
   }
 
-  popover.closeButton.style.color = 'var(--text-tertiary)';
   popover.closeButton.style.transition = 'color 0.15s';
+  bindHoverStyle(
+    popover.closeButton,
+    { color: 'var(--text-primary)' },
+    { color: 'var(--text-tertiary)' },
+  );
 
   popover.footer.style.marginTop = '14px';
 
@@ -70,16 +89,37 @@ function applyPopoverTheme(popover: PopoverDOM) {
       fontSize: '12px',
       fontWeight: '500',
       border: '1px solid var(--border-light)',
-      backgroundColor: 'var(--surface-primary)',
       color: 'var(--text-primary)',
       transition: 'background-color 0.15s, color 0.15s',
     });
   }
-  Object.assign(popover.nextButton.style, {
-    borderColor: 'var(--surface-submit)',
-    backgroundColor: 'var(--surface-submit)',
-    color: '#fff',
-  });
+  bindHoverStyle(
+    popover.previousButton,
+    { backgroundColor: 'var(--surface-hover)' },
+    { backgroundColor: 'var(--surface-primary)' },
+  );
+  popover.nextButton.style.borderColor = 'var(--surface-submit)';
+  popover.nextButton.style.color = '#fff';
+  bindHoverStyle(
+    popover.nextButton,
+    { backgroundColor: 'var(--surface-submit-hover)' },
+    { backgroundColor: 'var(--surface-submit)' },
+  );
+
+  // driver.js only tells us which side is active via a class, not a prop —
+  // color just that one edge to match the popover's background (the other
+  // three edges are already made transparent by driver.js's own CSS).
+  const arrowSideProperty: Record<string, string> = {
+    'driver-popover-arrow-side-left': 'border-right-color',
+    'driver-popover-arrow-side-right': 'border-left-color',
+    'driver-popover-arrow-side-top': 'border-bottom-color',
+    'driver-popover-arrow-side-bottom': 'border-top-color',
+  };
+  for (const [sideClass, property] of Object.entries(arrowSideProperty)) {
+    if (popover.arrow.classList.contains(sideClass)) {
+      popover.arrow.style.setProperty(property, 'var(--surface-primary)');
+    }
+  }
 }
 
 /**
