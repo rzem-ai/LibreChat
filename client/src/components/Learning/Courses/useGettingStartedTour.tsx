@@ -1,168 +1,59 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
-import type { DriveStep, PopoverDOM } from 'driver.js';
+import { createRoot, type Root } from 'react-dom/client';
+import { flushSync } from 'react-dom';
+import type { DriveStep, Driver, PopoverDOM } from 'driver.js';
+import TourPopover from './TourPopover';
 import { isUnavailableElement } from '~/utils/elements';
 import { useShowMarketplace } from '~/hooks';
 import { mainTextareaId } from '~/common';
 
-/**
- * Toggles inline styles on mouseenter/leave and focus/blur instead of writing
- * a `:hover`/`:focus` CSS rule, so the tour's whole theme lives here in JS
- * rather than a separate stylesheet.
- */
-function bindHoverStyle(
-  element: HTMLElement,
-  hoverStyle: Partial<CSSStyleDeclaration>,
-  restStyle: Partial<CSSStyleDeclaration>,
-) {
-  Object.assign(element.style, restStyle);
-  const applyHover = () => Object.assign(element.style, hoverStyle);
-  const applyRest = () => Object.assign(element.style, restStyle);
-  element.addEventListener('mouseenter', applyHover);
-  element.addEventListener('mouseleave', applyRest);
-  element.addEventListener('focus', applyHover);
-  element.addEventListener('blur', applyRest);
-}
+type Side = 'top' | 'right' | 'bottom' | 'left';
+
+const CHEVRON_OFFSET = '-6px';
+const chevronEdgeStyle: Record<Side, Partial<CSSStyleDeclaration>> = {
+  top: { bottom: CHEVRON_OFFSET, left: '50%', marginLeft: CHEVRON_OFFSET },
+  bottom: { top: CHEVRON_OFFSET, left: '50%', marginLeft: CHEVRON_OFFSET },
+  left: { right: CHEVRON_OFFSET, top: '50%', marginTop: CHEVRON_OFFSET },
+  right: { left: CHEVRON_OFFSET, top: '50%', marginTop: CHEVRON_OFFSET },
+};
 
 /**
- * Restyles driver.js's popover to match this app's design tokens. Applied via
- * inline styles on the real DOM refs driver.js hands us — inline styles always
- * beat driver.js's own shipped CSS regardless of stylesheet import order, so
- * none of this needs `!important`.
+ * Attaches a small diamond chevron to the card, on whichever edge faces the
+ * target. driver.js decides that side (via a class on the wrapper) only
+ * after `onPopoverRender` returns, hence the microtask. If it couldn't fit
+ * the popover to any side (falls back to centered), there's no side to point
+ * from — same as driver.js's own arrow in that case, so no chevron either.
  */
-function applyPopoverTheme(popover: PopoverDOM) {
-  Object.assign(popover.wrapper.style, {
-    maxWidth: '320px',
-    minWidth: '260px',
-    padding: '16px',
-    borderRadius: '12px',
-    border: '1px solid var(--border-light)',
-    backgroundColor: 'var(--surface-primary)',
-    color: 'var(--text-primary)',
-    fontFamily: "'Open Sans', ui-sans-serif, sans-serif, system-ui",
-    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
-  });
-  // Fade-in only — driver.js's own `.driver-fade` animation is unused (see
-  // `animate: false` below), and these Tailwind utilities don't conflict with
-  // anything driver.js sets by default, so plain classes are safe here.
-  popover.wrapper.classList.add('animate-in', 'fade-in-0', 'duration-150');
-
-  Object.assign(popover.title.style, {
-    margin: '0',
-    fontSize: '14px',
-    fontWeight: '500',
-    lineHeight: '1.4',
-    color: 'var(--text-primary)',
-  });
-
-  Object.assign(popover.description.style, {
-    marginBottom: '0',
-    fontSize: '12px',
-    fontWeight: '400',
-    lineHeight: '1.6',
-    color: 'var(--text-secondary)',
-  });
-  if (popover.title.textContent) {
-    popover.description.style.marginTop = '6px';
-  }
-
-  popover.closeButton.style.transition = 'color 0.15s';
-  bindHoverStyle(
-    popover.closeButton,
-    { color: 'var(--text-primary)' },
-    { color: 'var(--text-tertiary)' },
-  );
-
-  popover.footer.style.marginTop = '14px';
-
-  Object.assign(popover.progress.style, {
-    color: 'var(--text-tertiary)',
-    fontSize: '11px',
-    fontWeight: '500',
-  });
-
-  for (const button of [popover.previousButton, popover.nextButton]) {
-    Object.assign(button.style, {
-      borderRadius: '8px',
-      padding: '5px 12px',
-      fontSize: '12px',
-      fontWeight: '500',
-      border: '1px solid var(--border-light)',
-      color: 'var(--text-primary)',
-      transition: 'background-color 0.15s, color 0.15s',
-    });
-  }
-  bindHoverStyle(
-    popover.previousButton,
-    { backgroundColor: 'var(--surface-hover)' },
-    { backgroundColor: 'var(--surface-primary)' },
-  );
-  popover.nextButton.style.borderColor = 'var(--surface-submit)';
-  popover.nextButton.style.color = '#fff';
-  bindHoverStyle(
-    popover.nextButton,
-    { backgroundColor: 'var(--surface-submit-hover)' },
-    { backgroundColor: 'var(--surface-submit)' },
-  );
-
-  // driver.js only tells us which side is active via a class, not a prop —
-  // color just that one edge to match the popover's background (the other
-  // three edges are already made transparent by driver.js's own CSS).
-  const arrowSideProperty: Record<string, string> = {
-    'driver-popover-arrow-side-left': 'border-right-color',
-    'driver-popover-arrow-side-right': 'border-left-color',
-    'driver-popover-arrow-side-top': 'border-bottom-color',
-    'driver-popover-arrow-side-bottom': 'border-top-color',
-  };
-  for (const [sideClass, property] of Object.entries(arrowSideProperty)) {
-    if (popover.arrow.classList.contains(sideClass)) {
-      popover.arrow.style.setProperty(property, 'var(--surface-primary)');
+function attachCardChevron(container: HTMLElement, wrapper: HTMLElement) {
+  queueMicrotask(() => {
+    const side = (Object.keys(chevronEdgeStyle) as Side[]).find((value) =>
+      wrapper.classList.contains(`driver-popover-side-${value}`),
+    );
+    if (!side) {
+      return;
     }
-  }
+    const chevron = document.createElement('div');
+    chevron.className = 'absolute size-3 rotate-45 bg-surface-primary';
+    Object.assign(chevron.style, chevronEdgeStyle[side]);
+    container.style.position = 'relative';
+    container.insertBefore(chevron, container.firstChild);
+  });
 }
 
 /**
- * Index of the first step that requires the sidebar to be in its EXPANDED
- * state (panel body visible). Steps 0–6 target chat-area elements; from
- * step 7 (Conversations) onward the sidebar nav/content must be accessible.
- * Mobile: the sidebar is collapsed before the tour starts so chat steps are
- * unobstructed; it is re-expanded just before this index is reached.
- * Desktop: the sidebar panel body is hidden when collapsed, so we also
- * expand before this step regardless of the user's initial state.
+ * First step index needing the sidebar EXPANDED (steps before it are chat-area
+ * only). Keep in sync with the "Conversations" step's position below.
  */
 const FIRST_NAV_STEP_INDEX = 7;
 
 /**
  * Builds the Driver.js Getting Started tour over the default chat interface.
- * Driver.js owns the spotlight overlay, popover, and next/prev/progress
- * controls — no custom tour engine needed. `skipMissingElement` + `waitForElement`
- * make each step tolerant of elements that are conditionally rendered (permissions,
- * feature flags, viewport) or that need a moment to mount after a panel switch.
- *
- * Step order (14 core steps, plus agent-selection steps when available).
- * Related items are merged into single multi-target steps (see the
- * "Tools", "Library & Connectors", and "Personalize & Manage" steps below) —
- * each uses a comma-separated selector so driver.js highlights whichever of
- * the group is first available while the popover describes the group as a
- * whole; skipMissingElement still tolerates any individual target being
- * absent.
- *   1  Welcome to MyAssist / New Chat
- *   2  Model Selector
- *   3  Message Box
- *   4  Attach Files
- *   5  Tools (Run Code, Skills, Artifacts, Connectors)
- *   6  Send
- *   7  Sidebar Toggle
- *   8  Conversations
- *   9  Projects
- *   10 Agent Builder
- *   11 Agent Marketplace
- *   12 Switch Back to a Model
- *   13 Library & Connectors (Skill Library, Prompt Library, Connectors List)
- *   14 Personalize & Manage (Memories, Files, Parameters)
- *   15 MyAssist Academy
- *   16 Account Menu
+ * Related items are merged into single steps (see "Tools", "Library &
+ * Connectors", "Personalize & Manage" below) via a comma-separated selector,
+ * so driver.js highlights whichever of the group is first available while the
+ * popover describes the group as a whole.
  */
 interface TourOptions {
   /** Called when the tour ends (completed or cancelled). The caller uses this
@@ -193,6 +84,86 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
 
   const startTour = useCallback(() => {
     let completedFromLastStepNext = false;
+    // Tracks the React root mounted into the current step's popover, so it can
+    // be unmounted before the next step's popover replaces it (driver.js
+    // recreates the whole popover DOM fresh on every step) and when the tour
+    // ends.
+    let currentPopoverRoot: Root | null = null;
+
+    /** Mounts TourPopover into driver.js's popover wrapper, reusing the values
+     *  driver.js already computed onto its own (about-to-be-hidden) elements —
+     *  title/description HTML, progress text, next label, previous-enabled. */
+    const renderPopover = (popover: PopoverDOM, driverInstance: Driver) => {
+      currentPopoverRoot?.unmount();
+
+      const titleHtml = popover.title.innerHTML;
+      const descriptionHtml = popover.description.innerHTML;
+      const progressText = popover.progress.innerHTML;
+      const nextLabel = popover.nextButton.innerHTML;
+      const canGoPrevious = !popover.previousButton.disabled;
+
+      // Hide driver.js's own generated content — we render our own below —
+      // but leave the elements themselves in place (just display:none) rather
+      // than removing them, since driver.js still holds references to them.
+      popover.title.style.display = 'none';
+      popover.description.style.display = 'none';
+      popover.footer.style.display = 'none';
+      popover.closeButton.style.display = 'none';
+      popover.arrow.style.display = 'none';
+
+      // driver.js's own default CSS still applies to the wrapper itself —
+      // white background, padding, a border-radius, a box-shadow, and a
+      // max-width — which would frame TourPopover's card in a second, visually
+      // mismatched box. Strip it down to a plain positioning shell so the card
+      // is the only visible surface.
+      Object.assign(popover.wrapper.style, {
+        background: 'transparent',
+        padding: '0',
+        margin: '0',
+        borderRadius: '0',
+        boxShadow: 'none',
+        maxWidth: 'none',
+        minWidth: '0',
+      });
+
+      const container = document.createElement('div');
+      popover.wrapper.appendChild(container);
+      currentPopoverRoot = createRoot(container);
+      // flushSync forces the render to commit synchronously, before this
+      // function returns — driver.js measures the wrapper's rendered size to
+      // position the popover immediately after onPopoverRender runs, so it
+      // needs our content already painted, not merely scheduled.
+      flushSync(() => {
+        currentPopoverRoot?.render(
+          <TourPopover
+            titleHtml={titleHtml}
+            descriptionHtml={descriptionHtml}
+            progressText={progressText}
+            nextLabel={nextLabel}
+            canGoPrevious={canGoPrevious}
+            onPrevious={() => driverInstance.movePrevious()}
+            onNext={() => {
+              if (driverInstance.isLastStep()) {
+                completedFromLastStepNext = true;
+              }
+              driverInstance.moveNext();
+            }}
+            onClose={() => {
+              currentPopoverRoot?.unmount();
+              currentPopoverRoot = null;
+              // destroy() skips onDestroyStarted (that hook is for the
+              // Escape/overlay-click paths), so replicate its cleanup here.
+              driverInstance.destroy();
+              tourRef.current = null;
+              onEnd?.();
+            }}
+          />,
+        );
+      });
+
+      attachCardChevron(container, popover.wrapper);
+    };
+
     const hasAvailableTarget = (selector: string) => {
       try {
         const targets = document.querySelectorAll<HTMLElement>(selector);
@@ -354,14 +325,8 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
         },
       },
     ];
-    // Do NOT eagerly filter steps here. Driver.js's own skipMissingElement +
-    // waitForElement handles two cases correctly at runtime as each step is
-    // reached: (a) genuinely absent elements (e.g. feature-flagged buttons not
-    // rendered) are skipped automatically; (b) elements that are present but
-    // not yet visible due to slow route/render are waited for up to
-    // waitForElement ms. Filtering synchronously at construction time with a
-    // fixed delay (200-300ms) causes steps to be permanently removed before
-    // the UI has had time to render them, which waitForElement cannot recover.
+    // Don't pre-filter steps by DOM presence — skipMissingElement +
+    // waitForElement handle both absent and slow-to-mount targets at runtime.
     const tourDriver = driver({
       showProgress: true,
       allowClose: true,
@@ -369,34 +334,23 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
       waitForElement: 600,
       stagePadding: 6,
       stageRadius: 8,
-      // driver.js's `animate: true` (the default) doesn't just fade the popover —
-      // it also runs a JS-driven loop that slides/resizes the spotlight cutout
-      // from the previous target's position to the next one over `duration` ms.
-      // That's a real glide/morph, not a fade, and there's no config to keep the
-      // fade while disabling it. So: turn animate off (the spotlight now snaps
-      // straight to each target) and fade the popover ourselves via Tailwind
-      // classes in applyPopoverTheme instead.
+      // Lighter than driver.js's 0.7 default — still enough contrast for the
+      // spotlight to read, without dimming the rest of the screen so heavily.
+      overlayOpacity: 0.5,
+      // animate:true also slides/resizes the spotlight between steps, not just
+      // fades — TourPopover's own `animate-in fade-in-0` handles the fade instead.
       animate: false,
-      onPopoverRender: applyPopoverTheme,
+      onPopoverRender: (popover, opts) => renderPopover(popover, opts.driver),
       onHighlightStarted: (_element, step, opts) => {
-        // Expand the sidebar exactly when the tour transitions from chat-area
-        // steps (0–6) to sidebar-nav steps (7+). This ensures:
-        // - Mobile: sidebar was collapsed before step 0 so chat steps are
-        //   unobstructed; re-expanded here so nav elements are visible.
-        // - Desktop: sidebar panel body is opacity-0/pointer-events-none when
-        //   collapsed; expand so #nav-search-input, #nav-projects-section,
-        //   and #nav-user are accessible/visible during their steps.
+        // Expand the sidebar once the tour reaches the first nav-panel step —
+        // it may be collapsed (mobile) or panel-body-hidden (desktop) until now.
         if (opts.state.activeIndex === FIRST_NAV_STEP_INDEX && setSidebarExpanded) {
           setSidebarExpanded(true);
         }
       },
-      onNextClick: () => {
-        if (tourDriver.isLastStep()) {
-          completedFromLastStepNext = true;
-        }
-        tourDriver.moveNext();
-      },
       onDestroyStarted: () => {
+        currentPopoverRoot?.unmount();
+        currentPopoverRoot = null;
         tourDriver.destroy();
         // Null the ref so the useEffect cleanup won't attempt a second destroy.
         tourRef.current = null;

@@ -1,9 +1,29 @@
-import { renderHook } from '@testing-library/react';
+import { act, fireEvent, renderHook, within } from '@testing-library/react';
 import useGettingStartedTour from '../useGettingStartedTour';
+
+type FakePopoverDom = {
+  wrapper: HTMLElement;
+  arrow: HTMLElement;
+  title: HTMLElement;
+  description: HTMLElement;
+  footer: HTMLElement;
+  progress: HTMLElement;
+  previousButton: HTMLButtonElement;
+  nextButton: HTMLButtonElement;
+  closeButton: HTMLButtonElement;
+};
+
+type FakeDriverInstance = {
+  drive: jest.Mock;
+  destroy: jest.Mock;
+  moveNext: jest.Mock;
+  movePrevious: jest.Mock;
+  isLastStep: jest.Mock;
+};
 
 type DriverConfig = {
   onDestroyStarted?: () => void;
-  onNextClick?: () => void;
+  onPopoverRender?: (popover: FakePopoverDom, opts: { driver: FakeDriverInstance }) => void;
   steps?: Array<{
     element: string;
     popover: {
@@ -17,8 +37,10 @@ type DriverConfig = {
 const mockDrive = jest.fn();
 const mockDestroy = jest.fn();
 const mockMoveNext = jest.fn();
+const mockMovePrevious = jest.fn();
 let mockIsLastStep = jest.fn();
 let capturedConfig: DriverConfig | undefined;
+let mockDriverInstance: FakeDriverInstance | undefined;
 let mockShowMarketplace = true;
 
 function appendAnchor(
@@ -38,19 +60,67 @@ function appendAnchor(
   document.body.appendChild(element);
 }
 
+/**
+ * Builds a minimal PopoverDOM-shaped object out of real DOM elements — our
+ * onPopoverRender reads .innerHTML/.style.display/.disabled off these (as
+ * driver.js itself would have already set them) and appends a container to
+ * `wrapper` to mount TourPopover into via createRoot + flushSync.
+ */
+function createFakePopover(overrides: Partial<Record<string, string>> = {}): FakePopoverDom {
+  const wrapper = document.createElement('div');
+  const arrow = document.createElement('div');
+  const title = document.createElement('header');
+  const description = document.createElement('div');
+  const footer = document.createElement('footer');
+  const progress = document.createElement('span');
+  const previousButton = document.createElement('button');
+  const nextButton = document.createElement('button');
+  const closeButton = document.createElement('button');
+
+  title.innerHTML = overrides.title ?? 'Step Title';
+  description.innerHTML = overrides.description ?? 'Step description';
+  description.style.display = 'block';
+  progress.innerHTML = overrides.progress ?? '1 of 5';
+  progress.style.display = 'block';
+  nextButton.innerHTML = overrides.nextLabel ?? 'Next';
+  previousButton.disabled = overrides.previousDisabled === 'true';
+
+  wrapper.appendChild(closeButton);
+  wrapper.appendChild(arrow);
+  wrapper.appendChild(title);
+  wrapper.appendChild(description);
+  wrapper.appendChild(footer);
+  document.body.appendChild(wrapper);
+
+  return {
+    wrapper,
+    arrow,
+    title,
+    description,
+    footer,
+    progress,
+    previousButton,
+    nextButton,
+    closeButton,
+  };
+}
+
 jest.mock('~/hooks', () => ({
   useShowMarketplace: () => mockShowMarketplace,
+  useLocalize: () => (key: string) => key,
 }));
 
 jest.mock('driver.js', () => ({
   driver: (config: DriverConfig) => {
     capturedConfig = config;
-    return {
+    mockDriverInstance = {
       drive: mockDrive,
       destroy: mockDestroy,
       moveNext: mockMoveNext,
+      movePrevious: mockMovePrevious,
       isLastStep: mockIsLastStep,
     };
+    return mockDriverInstance;
   },
 }));
 
@@ -84,6 +154,7 @@ describe('useGettingStartedTour', () => {
     jest.clearAllMocks();
     mockIsLastStep = jest.fn();
     capturedConfig = undefined;
+    mockDriverInstance = undefined;
     mockShowMarketplace = true;
     document.body.innerHTML = '';
   });
@@ -120,15 +191,63 @@ describe('useGettingStartedTour', () => {
     result.current.startTour();
 
     mockIsLastStep.mockReturnValue(true);
-    const onNextClick = capturedConfig?.onNextClick as () => void;
-    const onDestroyStarted = capturedConfig?.onDestroyStarted as () => void;
+    const popover = createFakePopover({ nextLabel: 'Done' });
+    act(() => {
+      capturedConfig?.onPopoverRender?.(popover, { driver: mockDriverInstance! });
+    });
 
-    onNextClick();
-    onDestroyStarted();
+    fireEvent.click(within(popover.wrapper).getByText('Done'));
+    const onDestroyStarted = capturedConfig?.onDestroyStarted as () => void;
+    act(() => {
+      onDestroyStarted();
+    });
 
     expect(mockMoveNext).toHaveBeenCalledTimes(1);
     expect(mockDestroy).toHaveBeenCalledTimes(1);
     expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it("moves to the previous step when TourPopover's Previous button is clicked", () => {
+    const { result } = renderHook(() => useGettingStartedTour());
+    result.current.startTour();
+
+    const popover = createFakePopover({ previousDisabled: 'false' });
+    act(() => {
+      capturedConfig?.onPopoverRender?.(popover, { driver: mockDriverInstance! });
+    });
+
+    fireEvent.click(within(popover.wrapper).getByText('com_learning_tour_previous'));
+
+    expect(mockMovePrevious).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables the Previous button on the first step', () => {
+    const { result } = renderHook(() => useGettingStartedTour());
+    result.current.startTour();
+
+    const popover = createFakePopover({ previousDisabled: 'true' });
+    act(() => {
+      capturedConfig?.onPopoverRender?.(popover, { driver: mockDriverInstance! });
+    });
+
+    expect(within(popover.wrapper).getByText('com_learning_tour_previous')).toBeDisabled();
+  });
+
+  it('renders the title and description driver.js already computed for the step', () => {
+    const { result } = renderHook(() => useGettingStartedTour());
+    result.current.startTour();
+
+    const popover = createFakePopover({ title: 'Model', description: 'Pick a model.' });
+    act(() => {
+      capturedConfig?.onPopoverRender?.(popover, { driver: mockDriverInstance! });
+    });
+
+    // Scope to the appended container TourPopover renders into — driver.js's
+    // own (now hidden, but still present) title/description elements also
+    // match by text, since getByText matches hidden elements by default.
+    const renderedContainer = popover.wrapper.lastElementChild as HTMLElement;
+    expect(within(renderedContainer).getByText('Model')).toBeInTheDocument();
+    expect(within(renderedContainer).getByText('Pick a model.')).toBeInTheDocument();
   });
 
   it('starts with the merged welcome / new chat step', () => {
