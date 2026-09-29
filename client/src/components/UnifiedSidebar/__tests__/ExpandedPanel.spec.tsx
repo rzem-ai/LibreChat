@@ -1,14 +1,29 @@
 import React from 'react';
 import { RecoilRoot } from 'recoil';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import '@testing-library/jest-dom/extend-expect';
 import { MessagesSquare, NotebookPen } from 'lucide-react';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, fireEvent, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { MutableSnapshot } from 'recoil';
 import { ActivePanelProvider, DEFAULT_PANEL } from '~/Providers/ActivePanelContext';
 
 const mockNewConversation = jest.fn();
 const mockClearMessagesCache = jest.fn();
+const mockStartGettingStartedTour = jest.fn();
+const mockGetMarketplaceAgents = jest.fn();
+
+jest.mock('librechat-data-provider', () => {
+  const actual = jest.requireActual('librechat-data-provider');
+  return {
+    ...actual,
+    dataService: { ...actual.dataService, getMarketplaceAgents: () => mockGetMarketplaceAgents() },
+  };
+});
+
+jest.mock('~/components/Learning/LearningTourContext', () => ({
+  useLearningTour: () => ({ startGettingStartedTour: mockStartGettingStartedTour }),
+}));
 
 jest.mock('~/store', () => {
   const { atom } = jest.requireActual('recoil');
@@ -67,9 +82,19 @@ const createLinks = () => [
     icon: NotebookPen,
     id: 'prompts',
   },
+  {
+    title: 'com_ui_learning_hub' as const,
+    icon: NotebookPen,
+    id: 'learning',
+  },
 ];
 
 const createQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+function LocationDisplay() {
+  const location = useLocation();
+  return <output data-testid="location">{location.pathname + location.search}</output>;
+}
 
 function renderPanel({
   expanded = true,
@@ -89,18 +114,21 @@ function renderPanel({
   }
 
   const result = render(
-    <QueryClientProvider client={createQueryClient()}>
-      <RecoilRoot initializeState={initializeState}>
-        <ActivePanelProvider>
-          <ExpandedPanel
-            links={createLinks()}
-            expanded={expanded}
-            onCollapse={onCollapse}
-            onExpand={onExpand}
-          />
-        </ActivePanelProvider>
-      </RecoilRoot>
-    </QueryClientProvider>,
+    <MemoryRouter>
+      <QueryClientProvider client={createQueryClient()}>
+        <RecoilRoot initializeState={initializeState}>
+          <ActivePanelProvider>
+            <ExpandedPanel
+              links={createLinks()}
+              expanded={expanded}
+              onCollapse={onCollapse}
+              onExpand={onExpand}
+            />
+            <LocationDisplay />
+          </ActivePanelProvider>
+        </RecoilRoot>
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 
   return { ...result, onCollapse, onExpand };
@@ -111,6 +139,8 @@ describe('ExpandedPanel', () => {
     jest.clearAllMocks();
     localStorage.clear();
   });
+
+  afterEach(() => jest.restoreAllMocks());
 
   describe('NavIconButton collapse toggle', () => {
     it('collapses sidebar when clicking the active icon while expanded', () => {
@@ -195,6 +225,79 @@ describe('ExpandedPanel', () => {
     expect(screen.getByRole('button', { name: 'com_nav_open_sidebar' })).toHaveAttribute(
       'id',
       'open-sidebar-button',
+    );
+  });
+
+  it('opens the Learn menu on click, not hover, and starts the guided tutorial', () => {
+    renderPanel();
+
+    const learnButton = screen.getByRole('button', { name: 'com_ui_learning_hub' });
+    fireEvent.mouseEnter(learnButton);
+    expect(
+      screen.queryByRole('menuitem', { name: 'com_learning_take_guided_tutorial' }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(learnButton);
+    expect(screen.getByText('com_learning_take_guided_tutorial')).toBeInTheDocument();
+    expect(screen.getByText('com_learning_ask_faq_agent')).toBeInTheDocument();
+    expect(screen.getByText('com_learning_give_feedback')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('com_learning_take_guided_tutorial'));
+    expect(mockStartGettingStartedTour).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes the Learn menu on a second click', async () => {
+    renderPanel();
+    const learnButton = screen.getByRole('button', { name: 'com_ui_learning_hub' });
+
+    fireEvent.click(learnButton);
+    expect(
+      screen.getByRole('menuitem', { name: 'com_learning_take_guided_tutorial' }),
+    ).toBeInTheDocument();
+    fireEvent.click(learnButton);
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('menuitem', { name: 'com_learning_take_guided_tutorial' }),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  it('opens the matching FAQ agent chat', async () => {
+    mockGetMarketplaceAgents.mockResolvedValue({
+      data: [{ id: 'faq-agent-id', name: 'FAQ Agent' }],
+    });
+    renderPanel();
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_learning_hub' }));
+    fireEvent.click(screen.getByText('com_learning_ask_faq_agent'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('/c/new?agent_id=faq-agent-id'),
+    );
+  });
+
+  it('falls back to marketplace search when the FAQ agent is unavailable', async () => {
+    mockGetMarketplaceAgents.mockRejectedValue(new Error('Unavailable'));
+    renderPanel();
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_learning_hub' }));
+    fireEvent.click(screen.getByText('com_learning_ask_faq_agent'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent('/agents/all?q=FAQ%20Agent'),
+    );
+  });
+
+  it('opens the feedback form in a new tab', () => {
+    const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+    renderPanel();
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_learning_hub' }));
+    fireEvent.click(screen.getByText('com_learning_give_feedback'));
+
+    expect(open).toHaveBeenCalledWith(
+      'https://forms.cloud.microsoft/e/E9AyvN4Ayx',
+      '_blank',
+      'noopener,noreferrer',
     );
   });
 });
