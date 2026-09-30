@@ -1878,7 +1878,7 @@
   "com_ui_skill_role_editor_desc": "Can view and edit the skill",
   "com_ui_skill_role_owner_desc": "Full control over the skill including sharing and deletion",
   "com_ui_skill_role_viewer_desc": "Can view and use the skill but cannot edit it",
-  "com_ui_skill_scanning": "Scanning skill...",
+  "com_ui_skill_scanning": "Reviewing your skill...",
   "com_ui_skill_running": "Running {{0}}",
   "com_ui_skill_sr_public": "Public skill",
   "com_ui_skill_states_limit": "You've reached the limit of {{0}} active/inactive skill overrides. Remove some overrides to toggle new skills.",
