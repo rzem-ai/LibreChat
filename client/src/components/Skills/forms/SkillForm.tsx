@@ -196,7 +196,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
                 },
               }}
               render={({ field }) => (
-                <div className="relative mb-1 flex w-full flex-col sm:w-auto md:mb-0">
+                <div className="relative mb-1 flex w-full min-w-0 flex-col sm:flex-1 md:mb-0">
                   <Input
                     {...field}
                     id="skill-name"
