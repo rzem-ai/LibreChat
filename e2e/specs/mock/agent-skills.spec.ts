@@ -223,7 +223,9 @@ async function closeSkillPicker(page: Page, searchInput: Locator): Promise<void>
 }
 
 test.describe('Agent Builder skills', () => {
-  test('creates an agent with deployment and inline skills, then removes and persists one', async ({
+  // Deloitte Custom Change
+  // SKIPPED: requires the external SKILL_SCANNER_URL service; see e2e/docs/skipped-tests.md.
+  test.skip('creates an agent with deployment and inline skills, then removes and persists one', async ({
     page,
   }) => {
     test.setTimeout(180000);
@@ -482,7 +484,9 @@ test.describe('Agent Builder skills', () => {
     }
   });
 
-  test('persists explicit use-all semantics and includes skills created later', async ({
+  // Deloitte Custom Change
+  // SKIPPED: requires the external SKILL_SCANNER_URL service; see e2e/docs/skipped-tests.md.
+  test.skip('persists explicit use-all semantics and includes skills created later', async ({
     page,
   }) => {
     test.setTimeout(180000);
@@ -620,7 +624,9 @@ test.describe('Agent Builder skills', () => {
     }
   });
 
-  test('creates a skill inside the builder and auto-selects it for the new agent', async ({
+  // Deloitte Custom Change
+  // SKIPPED: requires the external SKILL_SCANNER_URL service; see e2e/docs/skipped-tests.md.
+  test.skip('creates a skill inside the builder and auto-selects it for the new agent', async ({
     page,
   }) => {
     test.setTimeout(180000);
@@ -722,7 +728,9 @@ test.describe('Agent Builder skills', () => {
     }
   });
 
-  test('discovers and selects a skill beyond the first 100 accessible skills', async ({ page }) => {
+  // Deloitte Custom Change
+  // SKIPPED: requires the external SKILL_SCANNER_URL service; see e2e/docs/skipped-tests.md.
+  test.skip('discovers and selects a skill beyond the first 100 accessible skills', async ({ page }) => {
     test.setTimeout(240000);
 
     const agentName = uniqueAgentName('E2E Agent Paginated Skill');

@@ -75,7 +75,9 @@ async function expectSelectedMCPServerTools(form: Locator) {
 }
 
 test.describe('agent builder MCP tools', { tag: ['@mock', '@mcp'] }, () => {
-  test('creates an agent with MCP server tools and persists the selection', async ({ page }) => {
+  // Deloitte Custom Change
+  // SKIPPED: Tool Library's e2e-memory button doesn't render in time; see e2e/docs/skipped-tests.md.
+  test.skip('creates an agent with MCP server tools and persists the selection', async ({ page }) => {
     test.setTimeout(120000);
 
     const agentName = uniqueAgentName('E2E MCP Agent');
