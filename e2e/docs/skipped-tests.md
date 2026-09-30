@@ -24,6 +24,7 @@ which is unrelated to why each of these fails.
 | `model-spec-skills.spec.ts` | loads accessible configured skills and skips missing or inaccessible names | Requires the external `SKILL_SCANNER_URL` scanning service, not available in this environment. |
 | `mcp.spec.ts` | creates an agent with MCP server tools and persists the selection | The Tool Library dialog's `e2e-memory` server button doesn't become visible in time; root cause not yet isolated. |
 | `quotes.spec.ts` | summons the popup from a native double-click word selection | Flaky on CI only (passes locally). `doubleClickWord` measures a 1-character bounding box and clicks its center, which reliably lands off the glyph under CI's headless rendering — likely web-font load timing shifting layout after the measurement. |
+| `steering-escalation.spec.ts` | waiting steer bubble arms in place via POST /chat/steer/arm and seals mid-stream | Flaky. The in-flight bubble disappears entirely right after the 200/`armed:true` arm response instead of staying relabeled in place — likely a race where the mock backend seals the steer before/alongside the arm response resolving client-side, skipping the "relabeled, still waiting" state the test asserts on. |
 
 ## Follow-up
 
@@ -37,3 +38,7 @@ which is unrelated to why each of these fails.
 - The `quotes.spec.ts` double-click test needs `doubleClickWord` reworked to wait
   for `document.fonts.ready` and measure a wider (multi-character) target before
   clicking, then a few CI runs to confirm it's stable before un-skipping.
+- The `steering-escalation.spec.ts` bubble-arm test needs the actual arm-vs-seal
+  event ordering traced (client and/or mock server) to confirm whether the seal
+  can genuinely race ahead of the arm response, and if so, whether the server
+  needs to guarantee arm-before-seal ordering or the client needs to tolerate it.
