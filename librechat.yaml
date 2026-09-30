@@ -557,10 +557,13 @@ mcpSettings:
   allowedDomains:
     - mcp-gw-dev.ctk.au.deloitte.com
     - mcp-gateway.ctk.au.deloitte.com
-  # Deloitte Custom Change: The SharePoint gateway returns Graph's short-lived, pre-authorized
-  # download URLs as librechat-download resources for Code Interpreter.
+  # Deloitte Custom Change: The trusted SharePoint gateway returns a short-lived download URL;
+  # LibreChat validates and streams it server-side to Code Interpreter.
   codeFileAllowedDomains:
     - '*.sharepoint.com'
+    # Required for the trusted SharePoint gateway download URL.
+    - 'https://mcp-gw-dev.ctk.au.deloitte.com'
+    - 'https://mcp-gateway.ctk.au.deloitte.com'
 
 speech: # https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/speech
   speechTab:

@@ -159,8 +159,16 @@ export type Artifacts =
       }>;
       session_id?: string;
       file_ids?: string[];
-      /** Deloitte Custom Change: signed MCP download resource for Code Interpreter. */
-      codeFile?: { name: string; mimeType?: string; url: string };
+      /** Trusted MCP download resource for Code Interpreter. */
+      codeFile?: {
+        name: string;
+        mimeType?: string;
+        url: string;
+        /** Deloitte Custom Change: identifies a gateway artifact requiring metadata validation. */
+        gatewayDownload?: true;
+        size?: number;
+        expiresAt?: string;
+      };
     }
   | undefined;
 

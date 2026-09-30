@@ -46,6 +46,9 @@ const {
   Permissions,
   PermissionTypes,
   AgentCapabilities,
+  EModelEndpoint,
+  mergeFileConfig,
+  getEndpointFileConfig,
   isAssistantsEndpoint,
 } = require('librechat-data-provider');
 const {
@@ -70,6 +73,28 @@ const RECONNECT_THROTTLE_MS = 10_000;
 
 const missingToolCache = new Map();
 const MISSING_TOOL_TTL_MS = 10_000;
+
+/**
+ * Deloitte Custom Change: applies the standard Agents file policy before a trusted gateway file is downloaded.
+ */
+function validateGatewayCodeFile({ req, mimeType, size }) {
+  const fileConfig = mergeFileConfig(req.config?.fileConfig);
+  const endpointFileConfig = getEndpointFileConfig({
+    endpoint: EModelEndpoint.agents,
+    fileConfig,
+  });
+  const fileSizeLimit = endpointFileConfig.fileSizeLimit ?? fileConfig.serverFileSizeLimit;
+
+  if (endpointFileConfig.disabled) {
+    throw new Error('Code Interpreter file uploads are disabled for Agents');
+  }
+  if (!Number.isSafeInteger(size) || size < 0 || size > fileSizeLimit) {
+    throw new Error('Gateway file exceeds the configured Agents file size limit');
+  }
+  if (!mimeType || !fileConfig.checkType(mimeType, endpointFileConfig.supportedMimeTypes)) {
+    throw new Error(`Unsupported codeFile MIME type: ${mimeType}`);
+  }
+}
 
 async function userCanUseMCPServers(user, req) {
   if (!user?.id || !user?.role) {
@@ -1033,6 +1058,17 @@ function createToolInstance({
   }
 
   const normalizedToolKey = `${toolName}${Constants.mcp_delimiter}${normalizeServerName(serverName)}`;
+  // Deloitte Custom Change: only the operator-configured SharePoint gateway can create download artifacts.
+  const trustedSharePointServerName =
+    process.env.SHAREPOINT_MCP_SERVER_NAME || 'cleartrack-mcp-gateway-sharepoint';
+  const trustedSharePointDownloadToolName =
+    process.env.SHAREPOINT_MCP_DOWNLOAD_TOOL || 'sp_download_file';
+  // Only the operator-configured gateway may return a Code Interpreter download artifact.
+  const isTrustedSharePointAttachmentTool =
+    toolName === trustedSharePointDownloadToolName &&
+    serverName === trustedSharePointServerName &&
+    capturedServerConfig != null &&
+    !isUserSourced(capturedServerConfig);
 
   /** @type {(toolArguments: Object | string, config?: GraphRunnableConfig) => Promise<unknown>} */
   const _call = async (toolArguments, config) => {
@@ -1087,8 +1123,7 @@ function createToolInstance({
 
       const customUserVars =
         config?.configurable?.userMCPAuthMap?.[`${Constants.mcp_prefix}${serverName}`];
-
-      const result = await mcpManager.callTool({
+      const callToolOptions = {
         serverName,
         serverConfig: capturedServerConfig,
         toolName,
@@ -1114,7 +1149,11 @@ function createToolInstance({
         graphTokenResolver: getGraphApiToken,
         oboTokenResolver: exchangeOboToken,
         oboTrustChecker: createOboTrustChecker(),
-      });
+        // Extract every trusted gateway response so its short-lived URL never
+        // reaches model context, even when this caller cannot use Code Interpreter.
+        extractSharePointAttachment: isTrustedSharePointAttachmentTool,
+      };
+      const result = await mcpManager.callTool(callToolOptions);
 
       const artifacts = Array.isArray(result) ? result[1] : undefined;
       /* The Assistants endpoint (and any other non-agent caller returning
@@ -1125,13 +1164,20 @@ function createToolInstance({
        * without a substitute the Assistants endpoint would return nothing at
        * all for a tool call that otherwise succeeded. */
       // Deloitte Custom Change: register MCP download resources with Code Interpreter.
-      if (artifacts?.codeFile && isAssistantsEndpoint(provider)) {
+      if (
+        artifacts?.codeFile &&
+        isAssistantsEndpoint(provider)
+      ) {
         if (Array.isArray(result) && !result[0]) {
-          result[0] = `File "${artifacts.codeFile.name}" could not be attached to this conversation for use in Code Interpreter.`;
+          result[0] = `File "${sanitizeFilename(artifacts.codeFile.name)}" could not be attached to this conversation for use in Code Interpreter.`;
         }
-      } else if (artifacts?.codeFile) {
-        const { name, url } = artifacts.codeFile;
-        delete artifacts.codeFile;
+      } else if (
+        artifacts?.codeFile
+      ) {
+        const { name, url, mimeType, gatewayDownload, size, expiresAt } = artifacts.codeFile;
+        // Deloitte Custom Change: gateway filenames are untrusted and must never reach model context or logs unsanitized.
+        const sanitizedFilename = sanitizeFilename(name);
+        delete artifacts?.codeFile;
         const req = res?.req;
         /* `checkCapability` hits the DB/role-permissions layer, so a transient
          * failure there must not turn an already-successful tool call (e.g.
@@ -1151,7 +1197,7 @@ function createToolInstance({
           } catch (capabilityError) {
             capabilityCheckFailed = true;
             logger.warn(
-              `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": failed to check Code Interpreter capability.`,
+              `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": failed to check Code Interpreter capability.`,
               { message: capabilityError?.message, stack: capabilityError?.stack },
             );
           }
@@ -1159,7 +1205,7 @@ function createToolInstance({
         if (!req) {
           codeFileRegistrationFailed = true;
           logger.warn(
-            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": no request context available to register it with Code Interpreter.`,
+              `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": no request context available to register it with Code Interpreter.`,
           );
         } else if (capabilityCheckFailed) {
           codeFileRegistrationFailed = true;
@@ -1167,7 +1213,7 @@ function createToolInstance({
         } else if (!hasExecuteCodeCapability) {
           codeFileRegistrationFailed = true;
           logger.warn(
-            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": Code Interpreter is not enabled for this endpoint.`,
+              `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": Code Interpreter is not enabled for this endpoint.`,
           );
         } else if (config?.configurable?.codeEnvAvailable !== true) {
           /* `checkCapability` above is only the endpoint-level admin gate; the
@@ -1177,11 +1223,14 @@ function createToolInstance({
            * from. */
           codeFileRegistrationFailed = true;
           logger.warn(
-            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${name}": this agent does not have Code Interpreter (execute_code) available.`,
+              `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": this agent does not have Code Interpreter (execute_code) available.`,
           );
         } else {
           let stream;
           try {
+            if (gatewayDownload) {
+              validateGatewayCodeFile({ req, mimeType, size });
+            }
             const appConfig = await getAppConfig({
               role: effectiveUser?.role,
               tenantId: effectiveUser?.tenantId ?? getTenantId(),
@@ -1192,13 +1241,21 @@ function createToolInstance({
               url,
               codeFileAllowedDomains,
               appConfig?.mcpSettings?.allowedAddresses,
+              // Deloitte Custom Change: only trusted gateway artifacts use the strict grant metadata limiter.
+              gatewayDownload ? { size, expiresAt } : undefined,
             );
             stream = download.data;
-            const sandboxFilename = sanitizeFilename(name);
+            const responseMimeType = String(download.headers?.['content-type'] ?? '')
+              .split(';', 1)[0]
+              .trim()
+              .toLowerCase();
+            if (gatewayDownload && responseMimeType && responseMimeType !== mimeType?.toLowerCase()) {
+              throw new Error('codeFile download content type does not match the gateway declaration');
+            }
             const uploaded = await uploadCodeEnvFile({
               req,
               stream,
-              filename: sandboxFilename,
+              filename: sanitizedFilename,
               kind: 'user',
               id: userId,
             });
@@ -1207,12 +1264,16 @@ function createToolInstance({
             artifacts.files = [
               {
                 id: uploaded.file_id,
-                name: sandboxFilename,
+                name: sanitizedFilename,
                 storage_session_id: uploaded.storage_session_id,
                 resource_id: userId,
                 kind: 'user',
               },
             ];
+            if (Array.isArray(result)) {
+              const attachmentStatus = `File "${sanitizedFilename}" is attached to Code Interpreter. Use execute_code to inspect the attached file; do not download it from a URL.`;
+              result[0] = result[0] ? `${result[0]}\n${attachmentStatus}` : attachmentStatus;
+            }
           } catch (codeFileError) {
             /** Keep the underlying tool result (e.g. the SharePoint download
              *  already succeeded) instead of failing the whole call over a
@@ -1220,7 +1281,7 @@ function createToolInstance({
              *  expired short-lived download URL. */
             codeFileRegistrationFailed = true;
             logger.warn(
-              `[MCP][${serverName}][${toolName}][User: ${userId}] Failed to register codeFile artifact "${name}" with Code Interpreter:`,
+              `[MCP][${serverName}][${toolName}][User: ${userId}] Failed to register codeFile artifact "${sanitizedFilename}" with Code Interpreter:`,
               /** Axios attaches the raw (signed) request URL to `error.config`/
                *  `error.request`; logging `codeFileError` directly would leak
                *  that credential-bearing query string, so only the message
@@ -1248,7 +1309,7 @@ function createToolInstance({
          * wording must stay neutral about whether the download itself
          * succeeded. */
         if (codeFileRegistrationFailed && Array.isArray(result) && !result[0]) {
-          result[0] = `File "${name}" could not be attached to this conversation for use in Code Interpreter.`;
+          result[0] = `File "${sanitizedFilename}" could not be attached to this conversation for use in Code Interpreter.`;
         }
       }
 

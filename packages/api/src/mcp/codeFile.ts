@@ -1,4 +1,5 @@
 import { isIP } from 'node:net';
+import { Transform } from 'node:stream';
 import type { AxiosInstance, AxiosResponse } from 'axios';
 import {
   isAddressAllowed,
@@ -105,7 +106,19 @@ export async function fetchAllowedCodeFileStream(
   url: string,
   allowedDomains: string[] | null | undefined,
   allowedAddresses: string[] | null | undefined,
+  downloadMetadata?: { size: number; expiresAt: string },
 ): Promise<AxiosResponse> {
+  if (downloadMetadata) {
+    const expiresAt = Date.parse(downloadMetadata.expiresAt);
+    if (
+      !Number.isSafeInteger(downloadMetadata.size) ||
+      downloadMetadata.size < 0 ||
+      !Number.isFinite(expiresAt) ||
+      expiresAt <= Date.now()
+    ) {
+      throw new Error('codeFile download grant is invalid or expired');
+    }
+  }
   /** Mirrors MCPServersRegistry.resolveAllowlists's useSSRFProtection formula,
    * computed from the same allowedDomains value used by isMCPDomainAllowed
    * below so the preflight check and the connect-time enforcement never
@@ -192,6 +205,39 @@ export async function fetchAllowedCodeFileStream(
       throw error;
     }
     if (response.status < 300) {
+      if (downloadMetadata) {
+        const contentLength = Number(response.headers?.['content-length']);
+        if (Number.isFinite(contentLength) && contentLength !== downloadMetadata.size) {
+          response.data?.destroy?.();
+          throw new Error('codeFile download does not match the gateway-declared size');
+        }
+        let downloadedBytes = 0;
+        const upstreamStream = response.data;
+        const limitedStream = new Transform({
+          transform(chunk, _encoding, callback) {
+            downloadedBytes += chunk.length;
+            if (downloadedBytes > downloadMetadata.size) {
+              callback(new Error('codeFile download exceeds the gateway-declared size'));
+              return;
+            }
+            callback(null, chunk);
+          },
+          flush(callback) {
+            if (downloadedBytes !== downloadMetadata.size) {
+              callback(new Error('codeFile download does not match the gateway-declared size'));
+              return;
+            }
+            callback();
+          },
+          destroy(error, callback) {
+            upstreamStream.destroy(error ?? undefined);
+            callback(error);
+          },
+        });
+        upstreamStream.once('error', (error: Error) => limitedStream.destroy(error));
+        upstreamStream.pipe(limitedStream);
+        response.data = limitedStream;
+      }
       return response;
     }
     response.data?.destroy?.();

@@ -1669,8 +1669,7 @@ export async function createRun({
     // tasks, so non-code polls never touch the session.
     //
     // MCP tool names are dynamic (`${toolName}${mcp_delimiter}${serverName}`)
-    // and any MCP tool may hand back a `librechat-download://` codeFile (the
-    // SharePoint bridge in MCP.js is one example, not the only one), so every
+    // and a trusted MCP tool may hand back a codeFile artifact, so every
     // MCP tool reachable from the run — including nested subagents' — is
     // opted into this list via `collectMCPToolNames` (there's no static
     // per-tool metadata to narrow it further; `isActionTool` excludes action
