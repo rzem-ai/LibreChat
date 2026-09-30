@@ -295,6 +295,14 @@ const messageSchema: Schema<IMessage> = new Schema(
     expiredAt: {
       type: Date,
     },
+    /** Explicit, auditable carve-out from default retention. Only a narrow,
+     * permissioned caller should ever set `exempt: true`. */
+    retentionException: {
+      exempt: { type: Boolean, default: false },
+      reason: { type: String },
+      setBy: { type: String },
+      setAt: { type: Date },
+    },
     addedConvo: {
       type: Boolean,
       default: undefined,

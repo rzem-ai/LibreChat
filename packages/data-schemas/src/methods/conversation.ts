@@ -1,5 +1,4 @@
 import { Buffer } from 'node:buffer';
-import { RetentionMode } from 'librechat-data-provider';
 import type {
   AnyBulkWriteOperation,
   DeleteResult,
@@ -321,7 +320,10 @@ export interface ConversationMethods {
       | { codeEnvironmentMode: 'without_attached'; codeWorkspaces?: undefined }
     ),
   ): Promise<IConversation | null>;
-  bulkSaveConvos(conversations: Array<Record<string, unknown>>): Promise<unknown>;
+  bulkSaveConvos(
+    conversations: Array<Record<string, unknown>>,
+    interfaceConfig?: AppConfig['interfaceConfig'],
+  ): Promise<unknown>;
   getConvosByCursor(
     user: string,
     options?: {
@@ -2194,11 +2196,15 @@ export function createConversationMethods(
       isTemporary,
       expiredAt,
       interfaceConfig,
+      retentionException,
     }: {
       userId: string;
       isTemporary?: boolean;
       expiredAt?: Date;
       interfaceConfig?: AppConfig['interfaceConfig'];
+      /** Explicit, auditable exemption from default retention. Never derive this from
+       * a generic request body — only a narrow, permissioned caller should set it. */
+      retentionException?: { exempt: boolean; reason?: string; setBy?: string };
     },
     {
       conversationId,
@@ -2231,6 +2237,7 @@ export function createConversationMethods(
       const update: Record<string, unknown> = { ...convo, user: userId };
       delete update.isTemporary;
       delete update.expiredAt;
+      delete update.retentionException;
       delete update.initial_agent_id;
       /** Ordinary saves may seed a decision, but only an explicit move may replace it. */
       const decisionOnInsert = {
@@ -2291,21 +2298,59 @@ export function createConversationMethods(
       }
 
       let retentionOnInsert: { expiredAt: Date; isTemporary: false } | undefined;
+      /** Set when the caller omits `isTemporary` and there's no `generalChatRetention`
+       * deferral: the write can't tell whether the stored row is already an explicit
+       * temporary chat, so it's applied as a compare-and-set at write time (see
+       * `temporaryCompareAndSet` below) instead of here. */
+      let temporaryCompareAndSet = false;
+      const isExemptFromRetention = retentionException?.exempt === true;
       if (expiredAt instanceof Date && !Number.isNaN(expiredAt.getTime())) {
         if (typeof isTemporary === 'boolean') {
           update.isTemporary = isTemporary;
         }
         update.expiredAt = expiredAt;
-      } else if (interfaceConfig?.retentionMode === RetentionMode.ALL) {
+      } else if (isExemptFromRetention) {
+        /** The only remaining path to a null expiry for a non-temporary conversation:
+         * an explicit, auditable exception from a narrow permissioned caller. */
+        update.isTemporary = false;
+        update.expiredAt = null;
+        update.retentionException = {
+          exempt: true,
+          reason: retentionException?.reason,
+          setBy: retentionException?.setBy,
+          setAt: new Date(),
+        };
+      } else if (isTemporary === true) {
+        update.isTemporary = true;
+        try {
+          update.expiredAt = createTempChatExpirationDate(interfaceConfig);
+        } catch (err) {
+          logger.error('Error creating temporary chat expiration date:', err);
+          logger.info(`---\`saveConvo\` context: ${metadata?.context}`);
+          update.expiredAt = createFallbackRetentionDate();
+        }
+      } else {
+        /** Default: every non-temporary, non-exempt chat gets a retention deadline,
+         * regardless of `interfaceConfig.retentionMode` — see `createChatExpirationDate`.
+         * When the caller omits `isTemporary` and there's no `generalChatRetention`
+         * deferral, `isTemporary:false` can't be forced into the `$set` here: a stored
+         * `true` must survive an update that omits the field. It's instead applied via
+         * `temporaryCompareAndSet` below, atomically with `expiredAt`, so a legacy row
+         * with no `isTemporary` at all never falls outside `buildRetentionVisibilityFilter`
+         * for the instant between this write and the backfill-repair blocks. */
         if (typeof isTemporary === 'boolean') {
           update.isTemporary = isTemporary;
-        }
-        if (
-          typeof isTemporary === 'boolean' ||
-          interfaceConfig.generalChatRetention === undefined
-        ) {
           try {
-            update.expiredAt = createChatExpirationDate(interfaceConfig, isTemporary);
+            update.expiredAt = createChatExpirationDate(interfaceConfig, false);
+          } catch (err) {
+            logger.error('Error creating chat expiration date:', err);
+            logger.info(`---\`saveConvo\` context: ${metadata?.context}`);
+            update.expiredAt = createFallbackRetentionDate();
+          }
+        } else if (interfaceConfig?.generalChatRetention === undefined) {
+          temporaryCompareAndSet = true;
+          try {
+            update.expiredAt = createChatExpirationDate(interfaceConfig, false);
           } catch (err) {
             logger.error('Error creating chat expiration date:', err);
             logger.info(`---\`saveConvo\` context: ${metadata?.context}`);
@@ -2326,18 +2371,6 @@ export function createConversationMethods(
             };
           }
         }
-      } else if (isTemporary === true) {
-        update.isTemporary = true;
-        try {
-          update.expiredAt = createTempChatExpirationDate(interfaceConfig);
-        } catch (err) {
-          logger.error('Error creating temporary chat expiration date:', err);
-          logger.info(`---\`saveConvo\` context: ${metadata?.context}`);
-          update.expiredAt = createFallbackRetentionDate();
-        }
-      } else if (isTemporary === false) {
-        update.isTemporary = false;
-        update.expiredAt = null;
       }
 
       const createdAtOnInsert =
@@ -2456,6 +2489,33 @@ export function createConversationMethods(
             };
           }
         }
+      } else if (temporaryCompareAndSet) {
+        /** Same compare-and-set idiom as the `isArchived` branch above (DocumentDB has no
+         * pipeline-form updates): stamp `isTemporary:false` only on a write that finds the
+         * row isn't already an explicit temporary chat, so a stored `true` is never
+         * clobbered by an update that omits the field. */
+        const baseUpdate = updatesArchiveState ? { ...update, archivedAt: null } : update;
+        const withTemporaryFalse = { ...baseUpdate, isTemporary: false };
+
+        conversationResult = await runUpdate(
+          { ...baseFilter, isTemporary: { $ne: true } },
+          buildOperation(withTemporaryFalse),
+          false,
+        );
+        if (!conversationResult.value) {
+          conversationResult = await runUpdate(
+            { ...baseFilter, isTemporary: true },
+            buildOperation(baseUpdate),
+            false,
+          );
+        }
+        if (!conversationResult.value && canUpsert) {
+          conversationResult = await runUpdate(
+            baseFilter,
+            buildOperation(withTemporaryFalse),
+            true,
+          );
+        }
       } else {
         conversationResult = await runUpdate(
           baseFilter,
@@ -2497,10 +2557,10 @@ export function createConversationMethods(
 
       /** Reuse the saved row's chat type when callers omit it, preserving existing deadlines. */
       if (
-        interfaceConfig?.retentionMode === RetentionMode.ALL &&
-        interfaceConfig.generalChatRetention !== undefined &&
+        interfaceConfig?.generalChatRetention !== undefined &&
         typeof isTemporary !== 'boolean' &&
-        conversation.expiredAt == null
+        conversation.expiredAt == null &&
+        conversation.retentionException?.exempt !== true
       ) {
         const deadline = createChatExpirationDate(
           interfaceConfig,
@@ -2521,14 +2581,14 @@ export function createConversationMethods(
       }
 
       if (
-        interfaceConfig?.retentionMode === RetentionMode.ALL &&
         typeof isTemporary !== 'boolean' &&
+        conversation.retentionException?.exempt !== true &&
         (conversation.isTemporary == null ||
           (conversation.isTemporary === false && conversation.$isDefault('isTemporary')))
       ) {
         /* This backfill runs after the main write, so it needs the same timestamp
-           suppression: otherwise the first pin or archive of a legacy chat under
-           `RetentionMode.ALL` bumps `updatedAt` here and lands in Today anyway. */
+           suppression: otherwise the first pin or archive of a legacy chat
+           bumps `updatedAt` here and lands in Today anyway. */
         await Conversation.updateOne(
           { _id: conversation._id, isTemporary: { $ne: false } },
           { $set: { isTemporary: false } },
@@ -2745,7 +2805,10 @@ export function createConversationMethods(
   /**
    * Saves multiple conversations in bulk.
    */
-  async function bulkSaveConvos(conversations: Array<Record<string, unknown>>) {
+  async function bulkSaveConvos(
+    conversations: Array<Record<string, unknown>>,
+    interfaceConfig?: AppConfig['interfaceConfig'],
+  ) {
     try {
       const Conversation = mongoose.models.Conversation as Model<IConversation>;
       const ChatProject = mongoose.models.ChatProject as Model<IChatProjectDocument>;
@@ -2817,6 +2880,26 @@ export function createConversationMethods(
         delete sanitized.initial_agent_id;
         delete sanitized.codeEnvironmentRevision;
         stripActorCheckpointFields(sanitized);
+        /**
+         * Defense-in-depth: bulk paths (import/duplicate/fork) are expected to
+         * pre-stamp retention fields via `ImportBatchBuilder.getRetentionFields()`,
+         * but a caller that doesn't must not silently create a permanently-retained
+         * row — mirrors `saveConvo`'s default derivation.
+         */
+        if (
+          sanitized.expiredAt == null &&
+          (sanitized.retentionException as { exempt?: boolean } | undefined)?.exempt !== true
+        ) {
+          try {
+            sanitized.expiredAt = createChatExpirationDate(
+              interfaceConfig,
+              sanitized.isTemporary === true,
+            );
+          } catch (err) {
+            logger.error('[bulkSaveConvos] Error creating chat expiration date:', err);
+            sanitized.expiredAt = createFallbackRetentionDate();
+          }
+        }
         if (typeof sanitized.user === 'string' && typeof sanitized.chatProjectId === 'string') {
           if (ownedProjects.has(`${sanitized.user}:${sanitized.chatProjectId}`)) {
             affectedProjectStats.set(`${sanitized.user}:${sanitized.chatProjectId}`, {

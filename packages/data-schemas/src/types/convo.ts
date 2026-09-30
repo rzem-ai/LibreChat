@@ -235,6 +235,18 @@ export interface IAgentEventBindingRecord {
   lineage: TSubagentThreadLineage;
 }
 
+/**
+ * An explicit, auditable carve-out from default retention. Only a narrow,
+ * permissioned caller should ever set `exempt: true` — never accepted from a
+ * generic conversation/message save request body.
+ */
+export interface IRetentionException {
+  exempt: boolean;
+  reason?: string;
+  setBy?: string;
+  setAt?: Date;
+}
+
 export interface IActiveSubagentThreadLease {
   conversationId: string;
   parentConversationId: string;
@@ -335,6 +347,7 @@ export interface IConversation extends Document {
   // Additional fields
   files?: string[];
   expiredAt?: Date;
+  retentionException?: IRetentionException;
   createdAt?: Date;
   updatedAt?: Date;
   tenantId?: string;

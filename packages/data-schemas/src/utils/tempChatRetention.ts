@@ -1,4 +1,3 @@
-import { RetentionMode } from 'librechat-data-provider';
 import type { AppConfig } from '~/types';
 import logger from '~/config/winston';
 
@@ -77,16 +76,17 @@ export function createTempChatExpirationDate(interfaceConfig?: AppConfig['interf
   return new Date(Date.now() + retentionHours * 60 * 60 * 1000);
 }
 
-/** Regular chats fall back to the temporary retention policy for existing configurations. */
+/**
+ * Default eligibility policy for every non-exempt, non-temporary chat: applies
+ * `generalChatRetention` when configured, otherwise the same 30-day default temp
+ * chats use. This always runs — `retentionMode` no longer gates whether an expiry is
+ * set at all, only (via `generalChatRetention`) what number is used.
+ */
 export function createChatExpirationDate(
   interfaceConfig?: AppConfig['interfaceConfig'],
   isTemporary: boolean = false,
 ): Date {
-  if (
-    isTemporary ||
-    interfaceConfig?.retentionMode !== RetentionMode.ALL ||
-    interfaceConfig.generalChatRetention === undefined
-  ) {
+  if (isTemporary || interfaceConfig?.generalChatRetention === undefined) {
     return createTempChatExpirationDate(interfaceConfig);
   }
 

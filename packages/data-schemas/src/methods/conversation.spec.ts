@@ -1827,22 +1827,24 @@ describe('Conversation Operations', () => {
       expect(result?.expiredAt).toEqual(inheritedExpiration);
     });
 
-    it('should save a conversation without expiredAt when isTemporary is false', async () => {
+    it('should set a default 30-day expiredAt when isTemporary is false', async () => {
       mockCtx.isTemporary = false;
 
       const result = await saveConvo(mockCtx, mockConversationData);
 
       expect(result?.conversationId).toBe(mockConversationData.conversationId);
-      expect(result?.expiredAt).toBeNull();
+      expect(result?.expiredAt).toBeInstanceOf(Date);
+      expect(result?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
     });
 
-    it('should save a conversation without expiredAt when isTemporary is not provided', async () => {
+    it('should set a default 30-day expiredAt when isTemporary is not provided', async () => {
       mockCtx.isTemporary = undefined;
 
       const result = await saveConvo(mockCtx, mockConversationData);
 
       expect(result?.conversationId).toBe(mockConversationData.conversationId);
-      expect(result?.expiredAt).toBeUndefined();
+      expect(result?.expiredAt).toBeInstanceOf(Date);
+      expect(result?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
     });
 
     it('should use custom retention period from config', async () => {
@@ -1980,11 +1982,11 @@ describe('Conversation Operations', () => {
       );
     });
 
-    it('should preserve temporary retention when saving without isTemporary', async () => {
+    it('recomputes a fresh default deadline when saving without isTemporary and no generalChatRetention override', async () => {
       mockCtx.interfaceConfig = { temporaryChatRetention: 24 };
       mockCtx.isTemporary = true;
       const firstSave = await saveConvo(mockCtx, mockConversationData);
-      const originalExpiredAt = firstSave?.expiredAt;
+      const originalExpiredAt = firstSave?.expiredAt ?? new Date(0);
 
       mockCtx.isTemporary = undefined;
       const updatedData = { ...mockConversationData, title: 'Updated Title' };
@@ -1992,14 +1994,14 @@ describe('Conversation Operations', () => {
 
       expect(secondSave?.title).toBe('Updated Title');
       expect(secondSave?.isTemporary).toBe(true);
-      expect(secondSave?.expiredAt).toEqual(originalExpiredAt);
+      expect(secondSave?.expiredAt?.getTime()).toBeGreaterThanOrEqual(originalExpiredAt.getTime());
     });
 
-    it('should not set expiredAt when updating non-temporary conversation', async () => {
+    it('sets a default 30-day expiredAt when updating a non-temporary conversation without isTemporary', async () => {
       // First save a non-temporary conversation
       mockCtx.isTemporary = false;
       const firstSave = await saveConvo(mockCtx, mockConversationData);
-      expect(firstSave?.expiredAt).toBeNull();
+      expect(firstSave?.expiredAt).toBeInstanceOf(Date);
 
       // Update without isTemporary flag
       mockCtx.isTemporary = undefined;
@@ -2007,7 +2009,8 @@ describe('Conversation Operations', () => {
       const secondSave = await saveConvo(mockCtx, updatedData);
 
       expect(secondSave?.title).toBe('Updated Title');
-      expect(secondSave?.expiredAt).toBeNull();
+      expect(secondSave?.expiredAt).toBeInstanceOf(Date);
+      expect(secondSave?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
     });
 
     it.each([true, false, undefined])(
@@ -2122,14 +2125,15 @@ describe('Conversation Operations', () => {
       expect(secondSave?.expiredAt).toBeDefined();
     });
 
-    it('should not set expiredAt when retentionMode is temporary and not isTemporary', async () => {
+    it('sets a default expiredAt for a non-temporary chat even when retentionMode is temporary', async () => {
       mockCtx.isTemporary = false;
       mockCtx.interfaceConfig = {
         temporaryChatRetention: 24,
         retentionMode: RetentionMode.TEMPORARY,
       };
       const result = await saveConvo(mockCtx, mockConversationData);
-      expect(result?.expiredAt).toBeNull();
+      expect(result?.expiredAt).toBeInstanceOf(Date);
+      expect(result?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
       expect(result?.isTemporary).toBe(false);
     });
 

@@ -1,8 +1,4 @@
-import {
-  backgroundResultMetadata,
-  HITL_MESSAGE_FILTER_FIELDS,
-  RetentionMode,
-} from 'librechat-data-provider';
+import { backgroundResultMetadata, HITL_MESSAGE_FILTER_FIELDS } from 'librechat-data-provider';
 import type { DeleteResult, FilterQuery, Model, Types, UpdateQuery } from 'mongoose';
 import type { UserSubmittedMessageFieldPath } from 'librechat-data-provider';
 import type { SearchParams } from 'meilisearch';
@@ -722,15 +718,21 @@ export interface MessageMethods {
   bulkSaveMessages(
     messages: Array<Partial<IMessage>>,
     overrideTimestamp?: boolean,
+    interfaceConfig?: AppConfig['interfaceConfig'],
   ): Promise<unknown>;
-  recordMessage(params: {
-    user: string;
-    endpoint?: string;
-    messageId: string;
-    conversationId?: string;
-    parentMessageId?: string;
-    [key: string]: unknown;
-  }): Promise<IMessage | null>;
+  /** @deprecated Unused outside tests — prefer `saveMessage`/`bulkSaveMessages`, which derive
+   * retention. Kept only so a future caller doesn't silently create a permanently-retained row. */
+  recordMessage(
+    params: {
+      user: string;
+      endpoint?: string;
+      messageId: string;
+      conversationId?: string;
+      parentMessageId?: string;
+      [key: string]: unknown;
+    },
+    interfaceConfig?: AppConfig['interfaceConfig'],
+  ): Promise<IMessage | null>;
   updateMessageText(userId: string, params: { messageId: string; text: string }): Promise<void>;
   updateToolCallResult(params: {
     userId: string;
@@ -912,11 +914,15 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
       isTemporary,
       expiredAt,
       interfaceConfig,
+      retentionException,
     }: {
       userId: string;
       isTemporary?: boolean;
       expiredAt?: Date;
       interfaceConfig?: AppConfig['interfaceConfig'];
+      /** Explicit, auditable exemption from default retention. Never derive this from
+       * a generic request body — only a narrow, permissioned caller should set it. */
+      retentionException?: { exempt: boolean; reason?: string; setBy?: string };
     },
     params: Omit<Partial<IMessage>, 'contextMeta'> & {
       newMessageId?: string;
@@ -946,23 +952,50 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
       };
       delete update.isTemporary;
       delete update.expiredAt;
+      delete update.retentionException;
       let retentionOnInsert: { expiredAt: Date; isTemporary: false } | undefined;
+      const isExemptFromRetention = retentionException?.exempt === true;
 
       if (expiredAt instanceof Date && !Number.isNaN(expiredAt.getTime())) {
         if (typeof isTemporary === 'boolean') {
           update.isTemporary = isTemporary;
         }
         update.expiredAt = expiredAt;
-      } else if (interfaceConfig?.retentionMode === RetentionMode.ALL) {
-        if (typeof isTemporary === 'boolean') {
-          update.isTemporary = isTemporary;
+      } else if (isExemptFromRetention) {
+        /** The only remaining path to a null expiry for a non-temporary message: an
+         * explicit, auditable exception from a narrow permissioned caller. */
+        update.isTemporary = false;
+        update.expiredAt = null;
+        update.retentionException = {
+          exempt: true,
+          reason: retentionException?.reason,
+          setBy: retentionException?.setBy,
+          setAt: new Date(),
+        };
+      } else if (isTemporary === true) {
+        update.isTemporary = true;
+        try {
+          update.expiredAt = createTempChatExpirationDate(interfaceConfig);
+        } catch (err) {
+          logger.error('Error creating temporary chat expiration date:', err);
+          logger.info(`---\`saveMessage\` context: ${metadata?.context}`);
+          update.expiredAt = createFallbackRetentionDate();
         }
+      } else {
+        /** Default: every non-temporary, non-exempt message gets a retention deadline,
+         * regardless of `interfaceConfig.retentionMode` — see `createChatExpirationDate`.
+         * When the caller supplies `isTemporary` explicitly, honor it; when it's omitted,
+         * leave the stored value alone (a legacy row with no `isTemporary` at all is
+         * repaired by the backfill block below, and an existing `true` stays `true`). */
         if (
           typeof isTemporary === 'boolean' ||
-          interfaceConfig.generalChatRetention === undefined
+          interfaceConfig?.generalChatRetention === undefined
         ) {
+          if (typeof isTemporary === 'boolean') {
+            update.isTemporary = isTemporary;
+          }
           try {
-            update.expiredAt = createChatExpirationDate(interfaceConfig, isTemporary);
+            update.expiredAt = createChatExpirationDate(interfaceConfig, false);
           } catch (err) {
             logger.error('Error creating chat expiration date:', err);
             logger.info(`---\`saveMessage\` context: ${metadata?.context}`);
@@ -983,18 +1016,6 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
             };
           }
         }
-      } else if (isTemporary === true) {
-        update.isTemporary = true;
-        try {
-          update.expiredAt = createTempChatExpirationDate(interfaceConfig);
-        } catch (err) {
-          logger.error('Error creating temporary chat expiration date:', err);
-          logger.info(`---\`saveMessage\` context: ${metadata?.context}`);
-          update.expiredAt = createFallbackRetentionDate();
-        }
-      } else if (isTemporary === false) {
-        update.isTemporary = false;
-        update.expiredAt = null;
       }
 
       /** A response that ends with nothing to carry must drop what an earlier
@@ -1050,10 +1071,10 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
 
       /** Reuse the saved row's chat type when callers omit it, preserving existing deadlines. */
       if (
-        interfaceConfig?.retentionMode === RetentionMode.ALL &&
-        interfaceConfig.generalChatRetention !== undefined &&
+        interfaceConfig?.generalChatRetention !== undefined &&
         typeof isTemporary !== 'boolean' &&
-        message.expiredAt == null
+        message.expiredAt == null &&
+        message.retentionException?.exempt !== true
       ) {
         const deadline = createChatExpirationDate(interfaceConfig, message.isTemporary === true);
         const result = await Message.updateOne(
@@ -1071,8 +1092,8 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
       }
 
       if (
-        interfaceConfig?.retentionMode === RetentionMode.ALL &&
         typeof isTemporary !== 'boolean' &&
+        message.retentionException?.exempt !== true &&
         (message.isTemporary == null ||
           (message.isTemporary === false && message.$isDefault('isTemporary')))
       ) {
@@ -1122,6 +1143,7 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
   async function bulkSaveMessages(
     messages: Array<Record<string, unknown>>,
     overrideTimestamp = false,
+    interfaceConfig?: AppConfig['interfaceConfig'],
   ) {
     try {
       const Message = mongoose.models.Message as Model<IMessage>;
@@ -1145,6 +1167,21 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
         if (provenance.promoteWholeMessage) {
           normalizedMessage.isUserSubmitted = true;
         }
+        if (
+          normalizedMessage.expiredAt == null &&
+          (normalizedMessage.retentionException as { exempt?: boolean } | undefined)?.exempt !==
+            true
+        ) {
+          try {
+            normalizedMessage.expiredAt = createChatExpirationDate(
+              interfaceConfig,
+              normalizedMessage.isTemporary === true,
+            );
+          } catch (err) {
+            logger.error('[bulkSaveMessages] Error creating chat expiration date:', err);
+            normalizedMessage.expiredAt = createFallbackRetentionDate();
+          }
+        }
         return {
           updateOne: {
             filter: { messageId: message.messageId },
@@ -1164,22 +1201,29 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
 
   /**
    * Records a message in the database (no UUID validation).
+   * @deprecated Unused outside tests — prefer `saveMessage`/`bulkSaveMessages`.
    */
-  async function recordMessage({
-    user,
-    endpoint,
-    messageId,
-    conversationId,
-    parentMessageId,
-    ...rest
-  }: {
-    user: string;
-    endpoint?: string;
-    messageId: string;
-    conversationId?: string;
-    parentMessageId?: string;
-    [key: string]: unknown;
-  }) {
+  async function recordMessage(
+    {
+      user,
+      endpoint,
+      messageId,
+      conversationId,
+      parentMessageId,
+      ...rest
+    }: {
+      user: string;
+      endpoint?: string;
+      messageId: string;
+      conversationId?: string;
+      parentMessageId?: string;
+      [key: string]: unknown;
+    },
+    interfaceConfig?: AppConfig['interfaceConfig'],
+  ) {
+    logger.warn(
+      '[recordMessage] Deprecated method called — use `saveMessage`/`bulkSaveMessages` instead.',
+    );
     try {
       const Message = mongoose.models.Message as Model<IMessage>;
       const provenance = capNormalizedProvenance(
@@ -1191,7 +1235,7 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
         userSubmittedMessageFieldPaths: _userSubmittedMessageFieldPaths,
         ...safeRest
       } = rest;
-      const message = {
+      const message: Record<string, unknown> = {
         user,
         endpoint,
         messageId,
@@ -1206,6 +1250,20 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
         }),
         ...(provenance.promoteWholeMessage && { isUserSubmitted: true }),
       };
+      if (
+        message.expiredAt == null &&
+        (message.retentionException as { exempt?: boolean } | undefined)?.exempt !== true
+      ) {
+        try {
+          message.expiredAt = createChatExpirationDate(
+            interfaceConfig,
+            message.isTemporary === true,
+          );
+        } catch (err) {
+          logger.error('[recordMessage] Error creating chat expiration date:', err);
+          message.expiredAt = createFallbackRetentionDate();
+        }
+      }
       const update =
         rest.isCreatedByUser === false &&
         rest.isUserSubmitted === undefined &&

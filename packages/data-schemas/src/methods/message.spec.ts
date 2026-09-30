@@ -3764,22 +3764,24 @@ describe('Message Operations', () => {
       expect(result?.expiredAt).toEqual(inheritedExpiration);
     });
 
-    it('should save a message without expiredAt when isTemporary is false', async () => {
+    it('should set a default 30-day expiredAt when isTemporary is false', async () => {
       mockCtx.isTemporary = false;
 
       const result = await saveMessage(mockCtx, mockMessageData);
 
       expect(result?.messageId).toBe('msg123');
-      expect(result?.expiredAt).toBeNull();
+      expect(result?.expiredAt).toBeInstanceOf(Date);
+      expect(result?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
     });
 
-    it('should save a message without expiredAt when isTemporary is not provided', async () => {
+    it('should set a default 30-day expiredAt when isTemporary is not provided', async () => {
       // No isTemporary set
 
       const result = await saveMessage(mockCtx, mockMessageData);
 
       expect(result?.messageId).toBe('msg123');
-      expect(result?.expiredAt).toBeUndefined();
+      expect(result?.expiredAt).toBeInstanceOf(Date);
+      expect(result?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
     });
 
     it('should use custom retention period from config', async () => {
@@ -3981,14 +3983,15 @@ describe('Message Operations', () => {
       expect(secondSave?.expiredAt).toBeDefined();
     });
 
-    it('should not set expiredAt when retentionMode is temporary and not isTemporary', async () => {
+    it('sets a default expiredAt for a non-temporary message even when retentionMode is temporary', async () => {
       mockCtx.isTemporary = false;
       mockCtx.interfaceConfig = {
         temporaryChatRetention: 24,
         retentionMode: RetentionMode.TEMPORARY,
       };
       const result = await saveMessage(mockCtx, mockMessageData);
-      expect(result?.expiredAt).toBeNull();
+      expect(result?.expiredAt).toBeInstanceOf(Date);
+      expect(result?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
     });
 
     it('should handle missing config gracefully', async () => {
@@ -4087,12 +4090,12 @@ describe('Message Operations', () => {
       );
     });
 
-    it('should preserve temporary retention when saving without isTemporary', async () => {
+    it('recomputes a fresh default deadline when saving without isTemporary and no generalChatRetention override', async () => {
       mockCtx.interfaceConfig = { temporaryChatRetention: 24 };
 
       mockCtx.isTemporary = true;
       const firstSave = await saveMessage(mockCtx, mockMessageData);
-      const originalExpiredAt = firstSave?.expiredAt;
+      const originalExpiredAt = firstSave?.expiredAt ?? new Date(0);
 
       mockCtx.isTemporary = undefined;
       const updatedData = { ...mockMessageData, text: 'Updated text' };
@@ -4100,11 +4103,12 @@ describe('Message Operations', () => {
 
       expect(secondSave?.text).toBe('Updated text');
       expect(secondSave?.isTemporary).toBe(true);
-      expect(secondSave?.expiredAt).toEqual(originalExpiredAt);
+      expect(secondSave?.expiredAt?.getTime()).toBeGreaterThanOrEqual(originalExpiredAt.getTime());
     });
 
     it('should handle bulk operations with temporary messages', async () => {
-      // This test verifies bulkSaveMessages doesn't interfere with expiredAt
+      // This test verifies bulkSaveMessages preserves an explicit expiredAt and
+      // derives a fallback default for any doc that omits one (see 1.5 hardening).
       const messages = [
         {
           messageId: 'bulk1',
@@ -4134,7 +4138,8 @@ describe('Message Operations', () => {
       const bulk2 = savedMessages.find((m) => m.messageId === 'bulk2');
 
       expect(bulk1?.expiredAt).toBeDefined();
-      expect(bulk2?.expiredAt).toBeNull();
+      expect(bulk2?.expiredAt).toBeInstanceOf(Date);
+      expect(bulk2?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
     });
   });
 

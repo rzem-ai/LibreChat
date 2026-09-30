@@ -110,4 +110,6 @@ export {
   migrateTenantIndexes,
   dropSupersededPromptGroupIndexes,
   backfillMCPServerNormalizedNames,
+  backfillConversationRetention,
 } from './migrations';
+export type { RetentionBackfillResult, RetentionBackfillOptions } from './migrations';

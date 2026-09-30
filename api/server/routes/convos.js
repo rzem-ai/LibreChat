@@ -832,6 +832,7 @@ router.post('/fork', forkIpLimiter, forkUserLimiter, configMiddleware, async (re
       splitAtTarget,
       option,
       filters: req.config?.filters,
+      interfaceConfig: req.config?.interfaceConfig,
       ...(req.config?.messageFilter?.pii == null
         ? {}
         : { legacyPii: req.config.messageFilter.pii }),
@@ -865,6 +866,7 @@ router.post(
         conversationId,
         title,
         filters: req.config?.filters,
+        interfaceConfig: req.config?.interfaceConfig,
         ...(req.config?.messageFilter?.pii == null
           ? {}
           : { legacyPii: req.config.messageFilter.pii }),

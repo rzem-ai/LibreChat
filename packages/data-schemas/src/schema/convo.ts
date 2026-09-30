@@ -372,6 +372,14 @@ const convoSchema: Schema<IConversation> = new Schema(
     expiredAt: {
       type: Date,
     },
+    /** Explicit, auditable carve-out from default retention. Only a narrow,
+     * permissioned caller should ever set `exempt: true`. */
+    retentionException: {
+      exempt: { type: Boolean, default: false },
+      reason: { type: String },
+      setBy: { type: String },
+      setAt: { type: Date },
+    },
     tenantId: {
       type: String,
       index: true,
