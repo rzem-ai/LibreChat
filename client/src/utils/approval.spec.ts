@@ -103,6 +103,27 @@ describe('applyPendingAction — tool_approval', () => {
     expect(getToolCall(message.content?.[0] as TMessageContentParts)?.args).toEqual(originalArgs);
   });
 
+  /** Deloitte Custom Change: the stamped approval part carries the server-emitted class. */
+  it('carries the server-emitted tool class onto the approval part', () => {
+    const action = toolApprovalAction({
+      payload: {
+        type: 'tool_approval',
+        action_requests: [
+          { name: 'search', arguments: '{}', tool_call_id: 'tc1', toolClass: 'W3' },
+        ],
+        review_configs: [
+          { action_name: 'search', tool_call_id: 'tc1', allowed_decisions: ['approve', 'reject'] },
+        ],
+      },
+    });
+
+    const result = applyPendingAction(msg({ content: [toolCallPart('tc1')] }), action);
+
+    expect(getToolCall(result.content?.[0] as TMessageContentParts)?.approval).toMatchObject({
+      toolClass: 'W3',
+    });
+  });
+
   it('leaves a completed tool call (with output) untouched and returns the same message reference', () => {
     const message = msg({ content: [toolCallPart('tc1', { output: 'already ran' })] });
     const result = applyPendingAction(message, toolApprovalAction());

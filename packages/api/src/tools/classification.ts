@@ -22,9 +22,13 @@ import type {
   LCTool,
 } from '@librechat/agents';
 import type { AgentToolOptions } from 'librechat-data-provider';
+import type { MCPToolClass } from 'librechat-data-provider';
 import { sanitizeGeminiSchema } from '~/mcp/zod';
 
 export type { LCTool, LCToolRegistry, AllowedCaller, JsonSchemaType };
+
+/** Deloitte Custom Change: An SDK tool-definition that also carries the gateway classification. */
+type ToolWithClass = LCTool & { toolClass?: MCPToolClass };
 
 export interface ToolDefinition {
   name: string;
@@ -32,6 +36,8 @@ export interface ToolDefinition {
   parameters?: JsonSchemaType;
   /** MCP server name extracted from tool name */
   serverName?: string;
+  /** Deloitte Custom Change: Validated gateway classification retained from MCP tools/list metadata. */
+  toolClass?: MCPToolClass;
 }
 
 /**
@@ -88,6 +94,12 @@ export function buildToolRegistryFromAgentOptions(
     if (tool.serverName) {
       toolDef.serverName = tool.serverName;
     }
+    // Deloitte Custom Change: carry the class through agent-option expansion so
+    // the registry that the approval pipeline reads is the one that classified
+    // the tools in the first place.
+    if (tool.toolClass) {
+      (toolDef as ToolWithClass).toolClass = tool.toolClass;
+    }
 
     registry.set(name, toolDef);
   }
@@ -103,6 +115,8 @@ interface MCPToolInstance {
   mcpJsonSchema?: JsonSchemaType;
   /** Server this tool came from, carried from resolution instead of re-parsed */
   mcpRawServerName?: string;
+  /** Deloitte Custom Change: Validated gateway classification carried onto the runtime tool instance */
+  mcpToolClass?: MCPToolClass;
 }
 
 /**
@@ -121,6 +135,12 @@ export function extractMCPToolDefinition(tool: MCPToolInstance): ToolDefinition 
 
   if (tool.mcpJsonSchema) {
     def.parameters = tool.mcpJsonSchema;
+  }
+  // Deloitte Custom Change: carry the gateway class from the runtime instance
+  // onto the definition so the approval pipeline sees the class the server
+  // advertised at discovery time.
+  if (tool.mcpToolClass) {
+    def.toolClass = tool.mcpToolClass;
   }
 
   const serverName = tool.mcpRawServerName ?? getServerNameFromTool(tool.name);
@@ -172,6 +192,9 @@ function buildToolRegistry(
       parameters: toolDef.parameters,
       serverName: toolDef.serverName,
       toolType: 'mcp',
+      // Deloitte Custom Change: basic registry entries keep the class so the
+      // agent-option builder and this path stay consistent.
+      ...(toolDef.toolClass != null && { toolClass: toolDef.toolClass }),
     });
   }
   return registry;

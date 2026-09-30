@@ -58,5 +58,7 @@ export { default as createPayload } from './createPayload';
 /* feedback */
 export * from './feedback';
 export * from './parameterSettings';
+/** Deloitte Custom Change: MCP gateway tool-class vocabulary for the HITL approval flow. */
+export * from './mcpToolClass';
 /* code-execution sandbox */
 export * from './codeEnvRef';

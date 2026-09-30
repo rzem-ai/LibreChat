@@ -1011,7 +1011,7 @@ function createToolInstance({
   jobCreatedAt,
 }) {
   /** @type {LCTool} */
-  const { description, parameters } = toolDefinition;
+  const { description, parameters, toolClass } = toolDefinition;
   const isGoogle = capturedProvider === Providers.VERTEXAI || capturedProvider === Providers.GOOGLE;
 
   let schema = parameters ? normalizeJsonSchema(resolveJsonSchemaRefs(parameters)) : null;
@@ -1306,6 +1306,9 @@ function createToolInstance({
   });
   toolInstance.mcp = true;
   toolInstance.mcpRawServerName = serverName;
+  // Deloitte Custom Change: retain the gateway class on the running instance so the
+  // approval pipeline can describe the call without re-resolving the server.
+  toolInstance.mcpToolClass = toolClass;
   // Ephemeral request-scoped servers (runtime body placeholders) tear their
   // connection down at request end, so they must never be backgrounded. A
   // missing/stale config means the server's lifetime is unknowable, so fail

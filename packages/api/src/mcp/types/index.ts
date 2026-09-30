@@ -24,6 +24,7 @@ import type {
 } from 'librechat-data-provider';
 import type { TokenMethods, IUser } from '@librechat/data-schemas';
 import type { LCTool } from '@librechat/agents';
+import type { MCPToolClass } from 'librechat-data-provider';
 import type { OboTokenResolver, OboTrustChecker } from '~/mcp/oauth/obo';
 import type { GraphTokenResolver } from '~/utils/graph';
 import type { FlowStateManager } from '~/flow/manager';
@@ -61,7 +62,7 @@ export type ToolsetCatalogEntry = MCPToolsetCatalogEntry;
 
 export interface LCFunctionTool {
   type: 'function';
-  ['function']: LCTool;
+  ['function']: LCTool & { toolClass?: MCPToolClass };
   /** Deloitte Custom Change: Capability-profile names this tool belongs to, from the MCP server's `_meta.toolsets`. */
   toolsets?: string[];
 }

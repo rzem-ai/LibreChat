@@ -107,6 +107,10 @@ function tagApprovalOnPart(
         actionId,
         allowed_decisions: reviewConfig?.allowed_decisions ?? [],
         description: request.description,
+        // Deloitte Custom Change: the class the gateway assigned, carried from
+        // the server payload so the approval UX can reveal proposed changes for
+        // classified tools.
+        ...(request.toolClass != null && { toolClass: request.toolClass }),
       },
     };
     changed = true;

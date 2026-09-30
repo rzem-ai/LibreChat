@@ -71,6 +71,53 @@ describe('createMCPToolCacheService', () => {
       });
     });
 
+    /** Deloitte Custom Change: the cached definition keeps the validated gateway class. */
+    describe('gateway tool-class metadata', () => {
+      const writeKey = `write${Constants.mcp_delimiter}gateway`;
+
+      it('preserves a validated gateway tool class in the cached definition', async () => {
+        const deps = createMockDeps();
+        const { updateMCPServerTools } = createMCPToolCacheService(deps);
+
+        const result = await updateMCPServerTools({
+          userId: 'u1',
+          serverName: 'gateway',
+          tools: [{ name: 'write', _meta: { 'tool-class': 'W2' } }],
+        });
+
+        expect(result).not.toBeNull();
+        expect(result?.[writeKey].function.toolClass).toBe('W2');
+      });
+
+      it('drops an invalid gateway tool class', async () => {
+        const deps = createMockDeps();
+        const { updateMCPServerTools } = createMCPToolCacheService(deps);
+
+        const result = await updateMCPServerTools({
+          userId: 'u1',
+          serverName: 'gateway',
+          tools: [{ name: 'write', _meta: { 'tool-class': 'write' } }],
+        });
+
+        expect(result).not.toBeNull();
+        expect(result?.[writeKey].function.toolClass).toBeUndefined();
+      });
+
+      /** Deloitte Custom Change: caller-supplied classes are also validated before caching. */
+      it('drops an invalid caller-supplied gateway tool class', async () => {
+        const deps = createMockDeps();
+        const { updateMCPServerTools } = createMCPToolCacheService(deps);
+
+        const result = await updateMCPServerTools({
+          userId: 'u1',
+          serverName: 'gateway',
+          tools: [{ name: 'write', toolClass: 'unsafe' }],
+        });
+
+        expect(result?.[writeKey].function.toolClass).toBeUndefined();
+      });
+    });
+
     it('constructs tool names with mcp_delimiter and caches them', async () => {
       const deps = createMockDeps();
       const { updateMCPServerTools } = createMCPToolCacheService(deps);

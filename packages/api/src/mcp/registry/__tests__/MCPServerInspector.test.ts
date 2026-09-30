@@ -556,6 +556,27 @@ describe('MCPServerInspector', () => {
       expect(result).toEqual({});
     });
 
+    /** Deloitte Custom Change: the discovered tool keeps only the validated gateway class. */
+    it('preserves only validated tool-class metadata', async () => {
+      mockConnection.fetchTools = jest.fn().mockResolvedValue([
+        {
+          name: 'write',
+          inputSchema: { type: 'object', properties: {} },
+          _meta: { 'tool-class': 'W1' },
+        },
+        {
+          name: 'unknown',
+          inputSchema: { type: 'object', properties: {} },
+          _meta: { 'tool-class': 'unsafe' },
+        },
+      ]);
+
+      const result = await MCPServerInspector.getToolFunctions('gateway', mockConnection);
+
+      expect(result.write_mcp_gateway['function'].toolClass).toBe('W1');
+      expect(result.unknown_mcp_gateway['function'].toolClass).toBeUndefined();
+    });
+
     it('builds keys with the normalized server name (model-facing contract)', async () => {
       mockConnection.fetchTools = jest.fn().mockResolvedValue([
         {

@@ -20,12 +20,15 @@ import { buildToolClassification } from './classification';
 import { getToolDefinition } from './registry/definitions';
 import { toolkitExpansion } from './toolkits/mapping';
 import { isMCPAllPlaceholder } from '~/mcp/utils';
+import type { MCPToolClass } from 'librechat-data-provider';
 
 export interface MCPServerTool {
   function?: {
     name?: string;
     description?: string;
     parameters?: JsonSchemaType;
+    /** Deloitte Custom Change: Validated gateway class carried on the LCFunctionTool function. */
+    toolClass?: MCPToolClass;
   };
 }
 
@@ -267,6 +270,11 @@ export async function loadToolDefinitions(
             description: toolDef.function.description || undefined,
             parameters: buildMcpParameters(toolDef.function.parameters),
             serverName,
+            // Deloitte Custom Change: the "all tools from this server" pin
+            // expands to every catalog entry, so the class must be carried per
+            // entry here — dropping it on this path would silently
+            // unclassify the whole server.
+            toolClass: toolDef.function.toolClass,
           });
           resolvedMCPToolCount++;
         }
@@ -281,6 +289,9 @@ export async function loadToolDefinitions(
         description: toolDef.function.description || undefined,
         parameters: buildMcpParameters(toolDef.function.parameters),
         serverName,
+        // Deloitte Custom Change: retain the class on single-tool pins so the
+        // approval pipeline sees the same class the gateway assigned.
+        toolClass: toolDef.function.toolClass,
       });
       resolvedMCPToolCount++;
     }
@@ -301,6 +312,9 @@ export async function loadToolDefinitions(
     mcp: true as const,
     mcpJsonSchema: def.parameters,
     mcpRawServerName: def.serverName,
+    // Deloitte Custom Change: carry the gateway class onto the loaded definition
+    // so instance-building and the approval pipeline both retain it.
+    mcpToolClass: def.toolClass,
   })) as unknown as GenericTool[];
 
   const classificationResult = await buildToolClassification({
