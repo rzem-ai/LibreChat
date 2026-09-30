@@ -1090,6 +1090,7 @@ export const azureEndpointSchema = z
         activityPrompt: true,
         activityMaxPerRun: true,
         activityCharLimit: true,
+        regional: true,
       })
       .partial(),
   );

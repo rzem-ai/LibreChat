@@ -15,6 +15,7 @@ jest.mock(
   'librechat-data-provider',
   () => ({
     FileSources: { vectordb: 'vectordb' },
+    EModelEndpoint: { agents: 'agents' },
   }),
   { virtual: true },
 );
@@ -27,6 +28,9 @@ jest.mock(
   { virtual: true },
 );
 
+const mockGetAgent = jest.fn();
+jest.mock('~/models', () => ({ getAgent: (...args) => mockGetAgent(...args) }), { virtual: true });
+
 const { uploadVectors } = require('./crud');
 
 describe('VectorDB upload routing', () => {
@@ -38,6 +42,7 @@ describe('VectorDB upload routing', () => {
     axios.post.mockResolvedValue({ data: { status: true, known_type: true } });
     appendSpy = jest.spyOn(FormData.prototype, 'append');
     readStreamSpy = jest.spyOn(fs, 'createReadStream').mockReturnValue(Readable.from(['file']));
+    mockGetAgent.mockReset();
   });
 
   afterEach(() => {
@@ -76,5 +81,88 @@ describe('VectorDB upload routing', () => {
     });
 
     expect(appendedRegion()).toBe('global');
+  });
+
+  it('routes an agent-backed upload to regional when the agent provider is a regional endpoint', async () => {
+    mockGetAgent.mockResolvedValue({ provider: 'Azure AU' });
+
+    await uploadVectors({
+      req: {
+        user: { id: 'user-1' },
+        body: { endpoint: 'agents', agent_id: 'agent-123' },
+        config: { endpoints: { custom: [{ name: 'Azure AU', regional: true }] } },
+      },
+      file: {
+        path: '/tmp/file.txt',
+        size: 4,
+        originalname: 'file.txt',
+        mimetype: 'text/plain',
+      },
+      file_id: 'file-1',
+    });
+
+    expect(mockGetAgent).toHaveBeenCalledWith({ id: 'agent-123' });
+    expect(appendedRegion()).toBe('regional');
+  });
+
+  it('routes an agent-backed upload to global when the agent provider has no regional flag', async () => {
+    mockGetAgent.mockResolvedValue({ provider: 'Azure Global' });
+
+    await uploadVectors({
+      req: {
+        user: { id: 'user-1' },
+        body: { endpoint: 'agents', agent_id: 'agent-456' },
+        config: { endpoints: { custom: [{ name: 'Azure Global' }] } },
+      },
+      file: {
+        path: '/tmp/file.txt',
+        size: 4,
+        originalname: 'file.txt',
+        mimetype: 'text/plain',
+      },
+      file_id: 'file-1',
+    });
+
+    expect(appendedRegion()).toBe('global');
+  });
+
+  it('blocks an agent upload when no agent_id is present in the request body', async () => {
+    await expect(
+      uploadVectors({
+        req: {
+          user: { id: 'user-1' },
+          body: { endpoint: 'agents' },
+          config: { endpoints: {} },
+        },
+        file: {
+          path: '/tmp/file.txt',
+          size: 4,
+          originalname: 'file.txt',
+          mimetype: 'text/plain',
+        },
+        file_id: 'file-1',
+      }),
+    ).rejects.toThrow('File upload is not supported: no agent_id in request body.');
+  });
+
+  it('blocks an agent upload when the agent has no configured provider', async () => {
+    mockGetAgent.mockResolvedValue({ provider: null });
+
+    await expect(
+      uploadVectors({
+        req: {
+          user: { id: 'user-1' },
+          body: { endpoint: 'agents', agent_id: 'agent-789' },
+          config: { endpoints: {} },
+        },
+        file: {
+          path: '/tmp/file.txt',
+          size: 4,
+          originalname: 'file.txt',
+          mimetype: 'text/plain',
+        },
+        file_id: 'file-1',
+      }),
+    ).rejects.toThrow('File upload is not supported: the agent has no configured provider.');
   });
 });
