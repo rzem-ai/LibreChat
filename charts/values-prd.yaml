@@ -44,7 +44,7 @@ pods:
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-prd.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://foundry-eastus.llm-gateway-prd.svc.cluster.local:8080'
-          TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-global.llm-gateway-prd.svc.cluster.local:8080'
+          TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-prd.svc.cluster.local:8080'
           TOKEN_PROXY_ANTHROPIC_URL: 'http://anthropic-eastus2.llm-gateway-prd.svc.cluster.local:8080'
           TOKEN_PROXY_BEDROCK_AU_URL: 'http://bedrock-ap-southeast-2.llm-gateway-prd.svc.cluster.local:8080'
           TOKEN_PROXY_MCP_URL: 'https://mcp-gateway.ctk.au.deloitte.com/mcp'
