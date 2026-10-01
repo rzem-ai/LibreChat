@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Button,
   OGDialog,
+  Spinner,
   OGDialogContent,
   TextareaAutosize,
   useToastContext,
@@ -229,9 +230,14 @@ export default function CreateSkillDialog({
             <Button
               type="submit"
               disabled={submitDisabled}
-              className={cn(submitDisabled && 'opacity-50')}
+              aria-busy={createSkill.isLoading || undefined}
+              className={cn('gap-2', submitDisabled && 'opacity-50')}
             >
-              {localize('com_ui_create')}
+              {/* Deloitte Custom Change: Show a loading indicator while the skill scanner runs. */}
+              {createSkill.isLoading && <Spinner className="size-4" aria-hidden="true" />}
+              {createSkill.isLoading
+                ? localize('com_ui_skill_scanning')
+                : localize('com_ui_create')}
             </Button>
           </div>
         </form>

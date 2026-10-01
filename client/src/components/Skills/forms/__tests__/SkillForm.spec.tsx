@@ -7,6 +7,7 @@ import SkillForm from '../SkillForm';
 const mockNavigate = jest.fn();
 const mockShowToast = jest.fn();
 const mockRefetch = jest.fn();
+let mockIsLoading = false;
 
 // Deloitte Custom Change: Capture update mutation callbacks so tests can simulate scanner results.
 interface MutationOptions {
@@ -33,6 +34,7 @@ jest.mock(
       ),
       Button: ({ children, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) =>
         React.createElement('button', props, children),
+      Spinner: () => React.createElement('div', { 'data-testid': 'spinner' }),
       Skeleton: (props: React.HTMLAttributes<HTMLDivElement>) => React.createElement('div', props),
       TextareaAutosize: React.forwardRef<
         HTMLTextAreaElement,
@@ -60,7 +62,7 @@ jest.mock('~/data-provider', () => ({
     capturedMutationOptions = options;
     return {
       mutate: jest.fn(),
-      isLoading: false,
+      isLoading: mockIsLoading,
     };
   },
 }));
@@ -75,6 +77,7 @@ jest.mock('~/hooks', () => ({
         com_ui_description: 'Description',
         com_ui_reset: 'Reset',
         com_ui_save: 'Save',
+        com_ui_skill_scanning: 'Reviewing your skill...',
         com_ui_skill_version: `Version ${params?.[0]}`,
       };
       return translations[key] ?? key;
@@ -155,6 +158,35 @@ describe('SkillForm', () => {
     jest.clearAllMocks();
     capturedMutationOptions = undefined;
     mockCurrentSkill = makeSkill();
+    mockIsLoading = false;
+  });
+
+  it('shows a busy save button while pending', async () => {
+    mockIsLoading = true;
+    render(<SkillForm skillId="skill-1" />);
+    await act(async () => {});
+
+    const button = screen.getByRole('button', { name: 'Reviewing your skill...' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByTestId('spinner')).toBeInTheDocument();
+  });
+
+  it('restores the save button after a scanner error', async () => {
+    mockIsLoading = true;
+    const { rerender } = render(<SkillForm skillId="skill-1" />);
+    await act(async () => {});
+
+    act(() => {
+      capturedMutationOptions?.onError?.(scanErrorFromIssues(['bad skill']));
+    });
+    mockIsLoading = false;
+    rerender(<SkillForm skillId="skill-1" />);
+
+    const button = screen.getByRole('button', { name: 'Save' });
+    expect(button).not.toHaveAttribute('aria-busy');
+    expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('bad skill');
   });
 
   // Deloitte Custom Change: Verify edit scan failures render as persistent accessible inline text.
