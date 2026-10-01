@@ -12,7 +12,8 @@ Produces two documents for a `develop` → `main` release merge:
    references.
 2. **Simplified User-Facing Release Notes** — a friendly announcement for
    end users of MyAssist. No jargon, no file/function names, no PR numbers,
-   no purely internal items.
+   no purely internal items. These should be need-to-know only. Include the 
+   key highlights a user would be interested in, not trivial items.
 
 Both follow the structure of the real example from PR #1128
 ("Merge: Develop into Main (7.0.2)") — lead with a one-line summary per
