@@ -127,7 +127,7 @@ export default defineConfig(({ command }) => ({
       workbox: {
         globPatterns: [
           '**/*.{js,css,html}',
-          'assets/favicon*.svg',
+          'assets/mark-foreground*.svg',
           'assets/icon-*.png',
           'assets/apple-touch-icon*.png',
           'manifest.webmanifest',

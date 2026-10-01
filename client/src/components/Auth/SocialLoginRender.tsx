@@ -90,7 +90,7 @@ function SocialLoginRender({
           <span
             role="img"
             aria-label="SSO Logo"
-            className="block h-5 w-5 bg-[url('/assets/favicon-white.svg')] bg-contain bg-center bg-no-repeat dark:bg-[url('/assets/favicon-black.svg')]"
+            className="block h-5 w-5 bg-[url('/assets/mark-foreground-white.svg')] bg-contain bg-center bg-no-repeat dark:bg-[url('/assets/mark-foreground-black.svg')]"
           />
         )}
         label={startupConfig.openidLabel}
