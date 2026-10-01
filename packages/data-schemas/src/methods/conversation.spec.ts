@@ -7798,4 +7798,150 @@ describe('Conversation Operations', () => {
       ]);
     });
   });
+
+  describe('claimExpiredConversations / releaseConversationPurgeClaim', () => {
+    const leaseMs = 10 * 60 * 1000;
+
+    const createExpired = (overrides: Partial<IConversation> = {}) =>
+      Conversation.create({
+        conversationId: uuidv4(),
+        user: 'purge-user',
+        endpoint: EModelEndpoint.openAI,
+        expiredAt: new Date(Date.now() - 1000),
+        ...overrides,
+      });
+
+    it('claims an expired, unclaimed conversation and increments purgeAttempts', async () => {
+      const convo = await createExpired();
+
+      const claimed = await methods.claimExpiredConversations(10, { leaseMs });
+
+      expect(claimed).toHaveLength(1);
+      expect(claimed[0]).toMatchObject({
+        conversationId: convo.conversationId,
+        user: 'purge-user',
+        purgeAttempts: 1,
+      });
+      expect(claimed[0].purgeClaimId).toEqual(expect.any(String));
+
+      const stored = await Conversation.findOne({ conversationId: convo.conversationId }).lean();
+      expect(stored?.purgeClaimId).toBe(claimed[0].purgeClaimId);
+      expect(stored?.purgeClaimedAt).toBeInstanceOf(Date);
+    });
+
+    it('does not claim a conversation that is not yet expired', async () => {
+      await createExpired({ expiredAt: new Date(Date.now() + 60 * 60 * 1000) });
+
+      const claimed = await methods.claimExpiredConversations(10, { leaseMs });
+
+      expect(claimed).toHaveLength(0);
+    });
+
+    it('does not claim a conversation with an exempt retention exception', async () => {
+      await createExpired({
+        retentionException: {
+          exempt: true,
+          reason: 'legal hold',
+          setBy: 'admin',
+          setAt: new Date(),
+        },
+      });
+
+      const claimed = await methods.claimExpiredConversations(10, { leaseMs });
+
+      expect(claimed).toHaveLength(0);
+    });
+
+    it('does not re-claim a conversation whose lease is still live', async () => {
+      await createExpired();
+      await methods.claimExpiredConversations(10, { leaseMs });
+
+      const second = await methods.claimExpiredConversations(10, { leaseMs });
+
+      expect(second).toHaveLength(0);
+    });
+
+    it('reclaims a conversation whose lease has expired', async () => {
+      const convo = await createExpired();
+      const firstClaim = await methods.claimExpiredConversations(10, { leaseMs });
+      expect(firstClaim).toHaveLength(1);
+
+      const reclaimNow = new Date(Date.now() + leaseMs + 1000);
+      const secondClaim = await methods.claimExpiredConversations(10, {
+        leaseMs,
+        now: reclaimNow,
+      });
+
+      expect(secondClaim).toHaveLength(1);
+      expect(secondClaim[0].conversationId).toBe(convo.conversationId);
+      expect(secondClaim[0].purgeAttempts).toBe(2);
+      expect(secondClaim[0].purgeClaimId).not.toBe(firstClaim[0].purgeClaimId);
+    });
+
+    it('does not claim a conversation parked behind purgeNotBefore', async () => {
+      await createExpired({ purgeNotBefore: new Date(Date.now() + 60 * 60 * 1000) });
+
+      const claimed = await methods.claimExpiredConversations(10, { leaseMs });
+
+      expect(claimed).toHaveLength(0);
+    });
+
+    it('claims a conversation once its purgeNotBefore has passed', async () => {
+      const convo = await createExpired({ purgeNotBefore: new Date(Date.now() - 1000) });
+
+      const claimed = await methods.claimExpiredConversations(10, { leaseMs });
+
+      expect(claimed).toHaveLength(1);
+      expect(claimed[0].conversationId).toBe(convo.conversationId);
+    });
+
+    it('never double-claims the same batch of candidates under concurrent sweep ticks', async () => {
+      await Promise.all(Array.from({ length: 5 }, () => createExpired()));
+
+      const [first, second] = await Promise.all([
+        methods.claimExpiredConversations(10, { leaseMs }),
+        methods.claimExpiredConversations(10, { leaseMs }),
+      ]);
+
+      const claimedIds = [...first, ...second].map((c) => c.conversationId);
+      expect(new Set(claimedIds).size).toBe(claimedIds.length);
+      expect(claimedIds).toHaveLength(5);
+    });
+
+    it('releases a claim on success, clearing claim state without parking the row', async () => {
+      const convo = await createExpired();
+      const [claim] = await methods.claimExpiredConversations(10, { leaseMs });
+
+      await methods.releaseConversationPurgeClaim(convo.conversationId, { success: true });
+
+      const stored = await Conversation.findOne({ conversationId: convo.conversationId }).lean();
+      expect(stored?.purgeClaimId).toBeUndefined();
+      expect(stored?.purgeClaimedAt).toBeUndefined();
+      expect(stored?.purgeNotBefore).toBeUndefined();
+      expect(claim.conversationId).toBe(convo.conversationId);
+    });
+
+    it('releases a claim on failure, parking the row behind purgeNotBefore', async () => {
+      const convo = await createExpired();
+      await methods.claimExpiredConversations(10, { leaseMs });
+
+      const retryDelayMs = 5 * 60 * 1000;
+      const beforeRelease = Date.now();
+      await methods.releaseConversationPurgeClaim(convo.conversationId, {
+        success: false,
+        retryDelayMs,
+      });
+
+      const stored = await Conversation.findOne({ conversationId: convo.conversationId }).lean();
+      expect(stored?.purgeClaimId).toBeUndefined();
+      expect(stored?.purgeClaimedAt).toBeUndefined();
+      expect(stored?.purgeNotBefore).toBeInstanceOf(Date);
+      expect(stored!.purgeNotBefore!.getTime()).toBeGreaterThanOrEqual(
+        beforeRelease + retryDelayMs,
+      );
+
+      const claimed = await methods.claimExpiredConversations(10, { leaseMs });
+      expect(claimed).toHaveLength(0);
+    });
+  });
 });

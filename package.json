@@ -153,6 +153,8 @@
     "migrate:conversation-retention:dry-run": "node config/migrate-conversation-retention.js --dry-run",
     "migrate:conversation-retention": "node config/migrate-conversation-retention.js",
     "migrate:conversation-retention:batch": "node config/migrate-conversation-retention.js --batch-size=500",
+    "migrate:drop-retention-ttl:dry-run": "node config/migrate-drop-retention-ttl.js --dry-run",
+    "migrate:drop-retention-ttl": "node config/migrate-drop-retention-ttl.js",
     "lighthouse": "npm run e2e:prepare && npm run lighthouse:run",
     "lighthouse:run": "playwright test --config=e2e/playwright.config.lighthouse.ts",
     "lighthouse:regression": "cross-env LIGHTHOUSE_REGRESSION=serial-reads npm run lighthouse:run",

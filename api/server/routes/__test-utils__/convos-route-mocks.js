@@ -178,6 +178,9 @@ module.exports = {
     deleteAgentCheckpoints,
     deleteOwnedAgentCheckpoints,
     openCheckpointDeletion,
+    purgeConversationCascade: jest.requireActual(
+      '../../../../packages/api/src/conversations/purgeCascade.ts',
+    ).purgeConversationCascade,
     isConversationImportError: jest.fn((error) => error?.name === 'ConversationImportError'),
     ...overrides,
   }),

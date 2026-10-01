@@ -1,4 +1,5 @@
 import { Buffer } from 'node:buffer';
+import { randomUUID } from 'node:crypto';
 import type {
   AnyBulkWriteOperation,
   DeleteResult,
@@ -539,6 +540,25 @@ export interface ConversationMethods {
     },
   ): Promise<DeleteResult & { messages: DeleteResult; conversationIds: string[] }>;
   archiveAllConvos(user: string): Promise<{ archivedCount: number }>;
+  claimExpiredConversations(
+    limit: number,
+    options: { leaseMs: number; now?: Date },
+  ): Promise<ClaimedPurgeConversation[]>;
+  releaseConversationPurgeClaim(
+    conversationId: string,
+    options: { success: boolean; retryDelayMs?: number },
+  ): Promise<void>;
+}
+
+/** A conversation whose expiry made it eligible for the purge sweep and which this
+ * claim call successfully leased. `purgeAttempts` reflects the increment from this
+ * claim, so a caller can compute backoff without a second read. */
+export interface ClaimedPurgeConversation {
+  conversationId: string;
+  user: string;
+  tenantId?: string;
+  purgeClaimId: string;
+  purgeAttempts: number;
 }
 
 export interface ConversationMethodDeps
@@ -3658,6 +3678,90 @@ export function createConversationMethods(
     }
   }
 
+  /**
+   * Leases up to `limit` expired, non-exempt conversations for the purge sweep.
+   * Each claim is a conditional `findOneAndUpdate` per candidate: the write content
+   * (`purgeClaimId`, `purgeClaimedAt`) never depends on which disjunct of the filter
+   * matched, so a single atomic call is enough without DocumentDB's unsupported
+   * pipeline-form updates (same constraint as the `isArchived` compare-and-set above).
+   * A conversation already leased by a live claim is skipped; one whose lease expired
+   * (`purgeClaimedAt` older than `leaseMs`) is reclaimed.
+   */
+  async function claimExpiredConversations(
+    limit: number,
+    { leaseMs, now = new Date() }: { leaseMs: number; now?: Date },
+  ): Promise<ClaimedPurgeConversation[]> {
+    const Conversation = mongoose.models.Conversation as Model<IConversation>;
+    const leaseExpiry = new Date(now.getTime() - leaseMs);
+    const unclaimedOrExpiredLease = {
+      $or: [{ purgeClaimId: { $exists: false } }, { purgeClaimedAt: { $lte: leaseExpiry } }],
+    };
+    const eligibilityFilter = {
+      expiredAt: { $lte: now },
+      'retentionException.exempt': { $ne: true },
+      $and: [
+        { $or: [{ purgeNotBefore: { $exists: false } }, { purgeNotBefore: { $lte: now } }] },
+        unclaimedOrExpiredLease,
+      ],
+    } as FilterQuery<IConversation>;
+
+    const candidates = await Conversation.find(eligibilityFilter)
+      .select({ conversationId: 1, user: 1, tenantId: 1 })
+      .sort({ expiredAt: 1 })
+      .limit(limit)
+      .lean<Array<Pick<IConversation, 'conversationId' | 'user' | 'tenantId'>>>();
+
+    const claimed: ClaimedPurgeConversation[] = [];
+    for (const candidate of candidates) {
+      const purgeClaimId = randomUUID();
+      const result = await Conversation.findOneAndUpdate(
+        {
+          conversationId: candidate.conversationId,
+          user: candidate.user,
+          ...unclaimedOrExpiredLease,
+        },
+        { $set: { purgeClaimId, purgeClaimedAt: now }, $inc: { purgeAttempts: 1 } },
+        { new: true },
+      ).lean<Pick<
+        IConversation,
+        'conversationId' | 'user' | 'tenantId' | 'purgeAttempts'
+      > | null>();
+
+      if (result?.conversationId != null && result.user != null) {
+        claimed.push({
+          conversationId: result.conversationId,
+          user: result.user,
+          tenantId: result.tenantId,
+          purgeClaimId,
+          purgeAttempts: result.purgeAttempts ?? 1,
+        });
+      }
+    }
+
+    return claimed;
+  }
+
+  /**
+   * Releases a purge claim after the sweep either finished the cascade (`success: true`,
+   * clearing claim state so a future expiry on the same row — unexpected but not
+   * impossible — can be claimed again) or failed it (`success: false`, parking the row
+   * behind `purgeNotBefore` for `retryDelayMs` so the next tick does not immediately
+   * re-claim a conversation that just failed).
+   */
+  async function releaseConversationPurgeClaim(
+    conversationId: string,
+    { success, retryDelayMs }: { success: boolean; retryDelayMs?: number },
+  ): Promise<void> {
+    const Conversation = mongoose.models.Conversation as Model<IConversation>;
+    const update: FilterQuery<IConversation> = {
+      $unset: { purgeClaimId: '', purgeClaimedAt: '' },
+    };
+    if (!success) {
+      update.$set = { purgeNotBefore: new Date(Date.now() + (retryDelayMs ?? 0)) };
+    }
+    await Conversation.updateOne({ conversationId }, update);
+  }
+
   return {
     getConvoFiles,
     searchConversation,
@@ -3673,6 +3777,8 @@ export function createConversationMethods(
     getConvosQueried,
     getConvo,
     getSubagentThreadForParent,
+    claimExpiredConversations,
+    releaseConversationPurgeClaim,
     listSubagentThreadsForParent,
     getAgentEventBinding,
     getAgentEventActorSnapshot,

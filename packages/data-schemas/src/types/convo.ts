@@ -348,6 +348,12 @@ export interface IConversation extends Document {
   files?: string[];
   expiredAt?: Date;
   retentionException?: IRetentionException;
+  /** Lease holder for the in-flight purge sweep claiming this conversation. */
+  purgeClaimId?: string;
+  purgeClaimedAt?: Date;
+  purgeAttempts?: number;
+  /** Earliest time a sweep tick may claim this conversation again. */
+  purgeNotBefore?: Date;
   createdAt?: Date;
   updatedAt?: Date;
   tenantId?: string;

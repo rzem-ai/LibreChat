@@ -101,6 +101,8 @@ export * from './plugins';
 export * from './endpoints';
 /* Files */
 export * from './files';
+/* Retention */
+export * from './retention';
 /* Images */
 export * from './images';
 /* Storage */

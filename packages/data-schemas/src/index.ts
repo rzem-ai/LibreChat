@@ -111,5 +111,6 @@ export {
   dropSupersededPromptGroupIndexes,
   backfillMCPServerNormalizedNames,
   backfillConversationRetention,
+  dropRetentionTTLIndexes,
 } from './migrations';
 export type { RetentionBackfillResult, RetentionBackfillOptions } from './migrations';

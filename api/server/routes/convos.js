@@ -9,7 +9,7 @@ const {
   normalizeSortField,
   CONVERSATION_SORT_FIELDS,
   openCheckpointDeletion,
-  waitForGenerationPersistence,
+  purgeConversationCascade,
   createArchiveAllHandler,
   createSubagentActivityStreamHandler,
   createSubagentControlHandler,
@@ -32,8 +32,6 @@ const {
   contentFilterBlockResponse,
   extractConversationTitleContent,
   extractStoredMessageContent,
-  GenerationJobManager,
-  isStopConfirmed,
 } = require('@librechat/api');
 const { logger } = require('@librechat/data-schemas');
 const { getAppConfig } = require('~/server/services/Config/app');
@@ -47,6 +45,11 @@ const {
   messageUserLimiter,
   moderateText,
 } = require('~/server/middleware');
+const {
+  retryPostDeleteCancellation,
+  confirmAgentGenerationsDrained,
+  drainDeletedAgentGenerations,
+} = require('~/server/services/Retention/agentDrain');
 const { forkConversation, duplicateConversation } = require('~/server/utils/import/fork');
 const { storage, importFileFilter } = require('~/server/routes/files/multer');
 const requireJwtAuth = require('~/server/middleware/requireJwtAuth');
@@ -270,140 +273,6 @@ router.get('/gen_title/:conversationId', async (req, res) => {
   }
 });
 
-const POST_DELETE_CANCEL_ATTEMPTS = 3;
-const POST_DELETE_CANCEL_BACKOFF_MS = 250;
-const GENERATION_LOOKUP_ATTEMPTS = 3;
-
-async function readGenerationForDeletion(conversationId) {
-  let lastError;
-  for (let attempt = 1; attempt <= GENERATION_LOOKUP_ATTEMPTS; attempt += 1) {
-    try {
-      return await GenerationJobManager.getCleanupJob(conversationId);
-    } catch (error) {
-      lastError = error;
-      if (attempt < GENERATION_LOOKUP_ATTEMPTS) {
-        await new Promise((resolve) => setTimeout(resolve, 25 * attempt));
-      }
-    }
-  }
-  throw lastError;
-}
-
-/** Replays a cancellation plan after deletion, retrying a transiently unreachable
- * owner rather than losing the only pass that can stop a late-admitted child. */
-async function retryPostDeleteCancellation(cancellationPlan, deletedConversationIds) {
-  for (let attempt = 1; attempt <= POST_DELETE_CANCEL_ATTEMPTS; attempt += 1) {
-    try {
-      await subagentThreadTaskStore.cancelPlan(cancellationPlan, deletedConversationIds);
-      return;
-    } catch (error) {
-      if (attempt === POST_DELETE_CANCEL_ATTEMPTS) {
-        logger.warn('Post-delete subagent cancellation failed', error);
-        return;
-      }
-      await new Promise((resolve) => setTimeout(resolve, POST_DELETE_CANCEL_BACKOFF_MS * attempt));
-    }
-  }
-}
-
-/** Confirms every exact generation is stopped before its conversation wave is removed. */
-async function confirmAgentGenerationsDrained(
-  userId,
-  conversationIds,
-  leaseTaskIds = [],
-  tenantId,
-  ownerWide = false,
-) {
-  const drainErrors = [];
-  let conversationRunIds;
-  try {
-    conversationRunIds = ownerWide
-      ? await GenerationJobManager.getCleanupBlockingJobIdsForUser(userId, tenantId)
-      : await GenerationJobManager.getCleanupBlockingJobIdsForConversations(
-          userId,
-          conversationIds,
-          tenantId,
-        );
-  } catch (error) {
-    logger.warn('Conversation generation index lookup failed', error);
-    throw new Error('Conversation generations could not be confirmed drained.');
-  }
-  const generationIds = [...new Set([...conversationIds, ...leaseTaskIds, ...conversationRunIds])];
-  await Promise.all(
-    generationIds.map(async (conversationId) => {
-      let job;
-      try {
-        job = await readGenerationForDeletion(conversationId);
-      } catch (error) {
-        logger.warn('Deleted child generation lookup failed', error);
-        drainErrors.push(error);
-        return;
-      }
-      if (job == null || job.metadata?.userId !== userId) {
-        return;
-      }
-      const jobTenantId = job.metadata?.tenantId;
-      if (jobTenantId != null && jobTenantId !== tenantId) {
-        return;
-      }
-      const needsDrain =
-        job.status === 'running' ||
-        job.status === 'requires_action' ||
-        job.metadata?.providerDrained === false ||
-        job.metadata?.terminalPersistencePending === true ||
-        job.metadata?.terminalHostActionPending === true;
-      if (!needsDrain) return;
-      try {
-        const abortResult = await GenerationJobManager.abortJob(conversationId, {
-          expectedCreatedAt: job.createdAt,
-          awaitProviderDrain: true,
-        });
-        if (!isStopConfirmed(abortResult)) {
-          throw new Error(
-            `Could not confirm generation stop for ${conversationId}: ${abortResult?.failureReason ?? 'unknown'}`,
-          );
-        }
-        await waitForGenerationPersistence(conversationId, job.createdAt, (id) =>
-          GenerationJobManager.getCleanupJob(id),
-        );
-      } catch (error) {
-        logger.warn('Deleted child generation drain failed', error);
-        drainErrors.push(error);
-      }
-    }),
-  );
-  if (drainErrors.length > 0) {
-    throw new Error('One or more deleted child generations could not be confirmed drained.');
-  }
-}
-
-/** Repeats generation discovery after the conversation wave is gone, then always
- * removes remnants for that immutable deletion set. A remote run may settle and
- * leave the cleanup index between persisting and this lookup; absence from the
- * index is therefore not evidence that the second persistence sweep is unnecessary. */
-async function drainDeletedAgentGenerations(
-  userId,
-  conversationIds,
-  leaseTaskIds = [],
-  tenantId,
-  deletion,
-) {
-  await confirmAgentGenerationsDrained(userId, conversationIds, leaseTaskIds, tenantId);
-  await db.deleteConvos(
-    userId,
-    { conversationId: { $in: conversationIds } },
-    {
-      allowEmpty: true,
-      beforeDelete: async (ids) => {
-        await deletion?.remember(ids);
-        await confirmAgentGenerationsDrained(userId, ids, [], tenantId);
-        await deletion?.remember(ids);
-      },
-    },
-  );
-  await db.deleteMessages({ user: userId, conversationId: { $in: conversationIds } });
-}
-
 /** Orders every owner-scoped agent execution against a delete-all persistence
  * snapshot. The recovery callback repeats the non-subagent drain if the durable
  * fence ever lapses and must be reacquired after deletion has started. */
@@ -489,31 +358,27 @@ router.delete('/', configMiddleware, async (req, res) => {
         ? req.user.tenantId
         : undefined;
     const checkpointer = req.config?.endpoints?.[EModelEndpoint.agents]?.checkpointer;
-    let cancellationPlan;
-    let checkpointDeletion;
     let dbResponse;
     if (filter.conversationId) {
-      checkpointDeletion = await openCheckpointDeletion(
+      const cascadeResult = await purgeConversationCascade(
         req.user.id,
         tenantId,
-        filter.conversationId,
-        checkpointer,
-      );
-      await checkpointDeletion.remember([filter.conversationId]);
-      cancellationPlan = await subagentThreadTaskStore.planCancellationForConversations(
-        req.user.id,
-        checkpointDeletion.conversationIds(),
-        tenantId,
-      );
-      await subagentThreadTaskStore.cancelPlan(cancellationPlan);
-      dbResponse = await db.deleteConvos(req.user.id, filter, {
-        allowEmpty: true,
-        beforeDelete: async (conversationIds) => {
-          await checkpointDeletion.remember(conversationIds);
-          await confirmAgentGenerationsDrained(req.user.id, conversationIds, [], tenantId);
-          await checkpointDeletion.remember(conversationIds);
+        [filter.conversationId],
+        {
+          checkpointer,
+          openCheckpointDeletion,
+          deleteConvos: db.deleteConvos,
+          deleteToolCalls: db.deleteToolCalls,
+          deleteConvoSharedLinksWithCleanup,
+          planCancellationForConversations:
+            subagentThreadTaskStore.planCancellationForConversations.bind(subagentThreadTaskStore),
+          cancelPlan: subagentThreadTaskStore.cancelPlan.bind(subagentThreadTaskStore),
+          retryPostDeleteCancellation,
+          confirmAgentGenerationsDrained,
+          drainDeletedAgentGenerations,
         },
-      });
+      );
+      dbResponse = cascadeResult.dbResponse;
     } else {
       /** An empty filter deletes every conversation this owner has, so it runs behind
        * the same admission fence as `DELETE /all` rather than a bare drain. */
@@ -525,58 +390,6 @@ router.delete('/', configMiddleware, async (req, res) => {
       );
       return res.status(201).json(fencedDeletion.result);
     }
-    let deletedConversationIds = [
-      ...new Set([
-        ...(dbResponse.conversationIds ?? (filter.conversationId ? [filter.conversationId] : [])),
-        ...(checkpointDeletion?.conversationIds() ?? []),
-      ]),
-    ];
-    /** Root deletion closes new child admission. Replay the plan to catch a task
-     * admitted after the first pass but before that fence, extended with the cascade
-     * this deletion reported. */
-    if (cancellationPlan != null && deletedConversationIds.length > 0) {
-      /** Confirm late children stopped before payload cleanup. A failed retry leaves
-       * durable deletion intent available even though conversation deletion committed. */
-      await retryPostDeleteCancellation(cancellationPlan, deletedConversationIds);
-      await drainDeletedAgentGenerations(
-        req.user.id,
-        deletedConversationIds,
-        cancellationPlan.leases
-          .filter(
-            (lease) =>
-              deletedConversationIds.includes(lease.parentConversationId) ||
-              deletedConversationIds.includes(lease.conversationId),
-          )
-          .map((lease) => lease.taskId),
-        tenantId,
-        checkpointDeletion,
-      );
-    } else if (deletedConversationIds.length > 0) {
-      /** Owner-wide deletion drains lease-backed tasks before the cascade, but a
-       * requires_action event actor has intentionally released its lease. Its durable
-       * generation is still addressable by the deleted conversation id and must be
-       * terminalized before its checkpoint is pruned. */
-      await drainDeletedAgentGenerations(
-        req.user.id,
-        deletedConversationIds,
-        [],
-        tenantId,
-        checkpointDeletion,
-      );
-    }
-    deletedConversationIds = [
-      ...new Set([...deletedConversationIds, ...(checkpointDeletion?.conversationIds() ?? [])]),
-    ];
-    if (checkpointDeletion != null) {
-      await checkpointDeletion.cleanup();
-    }
-    if (filter.conversationId) {
-      await Promise.all(deletedConversationIds.map((id) => db.deleteToolCalls(req.user.id, id)));
-      await Promise.all(
-        deletedConversationIds.map((id) => deleteConvoSharedLinksWithCleanup(req.user.id, id)),
-      );
-    }
-    await checkpointDeletion?.acknowledge();
     res.status(201).json(dbResponse);
   } catch (error) {
     logger.error('Error clearing conversations', error);
