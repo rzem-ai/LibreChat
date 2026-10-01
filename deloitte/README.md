@@ -10,7 +10,7 @@ This repository contains the local development setup for **LibreChat**, configur
 - **Local source code builds** — changes to your code reflected after rebuild (not pulling pre-built images)
 - Support for **Azure OpenAI (AU & US)**, **VertexAI (US)**, and **Anthropic via gateway proxy**
 - Integration with **ClearTrack MCP Gateway**
-- Local theming via **Deloitte GEL assets**
+- Local theming via **Deloitte GEL assets** (`client/public/assets`)
 - Full control over dependencies and build process
 - A structure that can later be deployed to **ClearTrack** (dev / stage / prod)
 
@@ -172,7 +172,7 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 15. `OPENID_REQUIRED_ROLE=`
 16. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
 17. `OPENID_BUTTON_LABEL="Continue with SSO"`
-18. `OPENID_IMAGE_URL=/assets/favicon.svg`
+18. `OPENID_IMAGE_URL=/assets/icon-192x192.png`
 19. `ALLOW_EMAIL_LOGIN=false`
 20. `ALLOW_REGISTRATION=false`
 21. `ALLOW_SOCIAL_REGISTRATION=false`
@@ -281,7 +281,6 @@ This local setup uses Docker Compose with two configuration files:
 - **Automatically merged** with the base file when running `docker compose` commands
 - Overrides the base configuration to build LibreChat and RAG API from **local source code**
 - Adds local-specific services: Caddy (reverse proxy), gateway-proxy (nginx)
-- Injects Deloitte GEL assets via custom startup command
 
 ### Local Builds from Source
 
@@ -368,7 +367,6 @@ You need to rebuild images when you change:
 You do NOT need to rebuild for:
 
 - **Configuration file changes** (`.env`, `librechat.yaml`, `Caddyfile`) — just restart containers
-- **Asset changes** (`deloitte/assets/`) — mounted as volume, changes reflect immediately on container restart
 
 To apply config changes without rebuilding:
 
