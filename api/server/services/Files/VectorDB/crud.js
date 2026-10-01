@@ -8,7 +8,10 @@ const { getAgent } = require('~/models');
 
 function resolveRegionFromEndpoint(endpoint, endpoints) {
   const customEndpoint = endpoints?.custom?.find((config) => config.name === endpoint);
-  const endpointConfig = endpoints?.[endpoint] ?? customEndpoint;
+  const endpointConfig = {
+    ...(endpoints?.[endpoint] ?? customEndpoint ?? {}),
+    ...(endpoints?.all ?? {}),
+  };
   return endpointConfig?.regional === true ? 'regional' : 'global';
 }
 

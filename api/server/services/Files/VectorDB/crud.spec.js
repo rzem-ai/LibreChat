@@ -83,6 +83,24 @@ describe('VectorDB upload routing', () => {
     expect(appendedRegion()).toBe('global');
   });
 
+  it('routes to regional embeddings when endpoints.all is regional', async () => {
+    await upload('Azure Global', {
+      all: { regional: true },
+      custom: [{ name: 'Azure Global' }],
+    });
+
+    expect(appendedRegion()).toBe('regional');
+  });
+
+  it('lets endpoints.all override an endpoint regional setting', async () => {
+    await upload('Azure Global', {
+      all: { regional: true },
+      custom: [{ name: 'Azure Global', regional: false }],
+    });
+
+    expect(appendedRegion()).toBe('regional');
+  });
+
   it('routes an agent-backed upload to regional when the agent provider is a regional endpoint', async () => {
     mockGetAgent.mockResolvedValue({ provider: 'Azure AU' });
 
