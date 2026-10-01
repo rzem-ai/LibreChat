@@ -96,7 +96,12 @@ export default defineConfig(({ command }) => ({
       },
     },
     {
-      /** publicDir copying is disabled for builds (see `publicDir` below), so favicons/icons/
+      /** Deloitte Custom Change: replaces `client/scripts/post-build.cjs` (removed — it ran after
+       * `vite build`, which was too late for VitePWA to see the copied files). If an upstream
+       * merge reintroduces `post-build.cjs`, don't restore it alongside this hook; port any new
+       * upstream logic into `writeBundle` here instead.
+       *
+       * publicDir copying is disabled for builds (see `publicDir` below), so favicons/icons/
        * robots.txt must be copied into the output directory here, in `writeBundle` — which Rollup
        * guarantees runs before any plugin's `closeBundle`, including VitePWA's, which is where it
        * globs the output directory to build the service worker's precache manifest. Without this,
@@ -108,14 +113,7 @@ export default defineConfig(({ command }) => ({
         fs.cpSync(path.resolve(__dirname, 'public/assets'), path.join(outDir, 'assets'), {
           recursive: true,
         });
-        fs.cpSync(
-          path.resolve(__dirname, 'public/robots.txt'),
-          path.join(outDir, 'robots.txt'),
-        );
-        fs.cpSync(
-          path.resolve(__dirname, 'public/favicon.ico'),
-          path.join(outDir, 'favicon.ico'),
-        );
+        fs.cpSync(path.resolve(__dirname, 'public/robots.txt'), path.join(outDir, 'robots.txt'));
       },
     },
     VitePWA({
@@ -129,12 +127,9 @@ export default defineConfig(({ command }) => ({
       workbox: {
         globPatterns: [
           '**/*.{js,css,html}',
-          'favicon.ico',
-          'assets/favicon*.png',
           'assets/favicon*.svg',
           'assets/icon-*.png',
           'assets/apple-touch-icon*.png',
-          'assets/maskable-icon.png',
           'manifest.webmanifest',
         ],
         globIgnores: [
@@ -179,35 +174,14 @@ export default defineConfig(({ command }) => ({
         theme_color: '#009688',
         icons: [
           {
-            src: 'assets/favicon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-          },
-          {
-            src: 'assets/favicon-32x32.png',
-            sizes: '32x32',
-            type: 'image/png',
-          },
-          {
-            src: 'assets/favicon-16x16.png',
-            sizes: '16x16',
-            type: 'image/png',
-          },
-          {
-            src: 'assets/apple-touch-icon-180x180.png',
-            sizes: '180x180',
-            type: 'image/png',
-          },
-          {
             src: 'assets/icon-192x192.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: 'assets/maskable-icon.png',
+            src: 'assets/icon-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'maskable',
           },
         ],
       },
