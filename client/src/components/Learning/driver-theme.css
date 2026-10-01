@@ -10,7 +10,7 @@
   border: 1px solid var(--border-light);
   background-color: var(--surface-primary);
   color: var(--text-primary);
-  font-family: 'Open Sans', ui-sans-serif, sans-serif, system-ui !important;
+  font-family: 'Open Sans Variable', ui-sans-serif, sans-serif, system-ui !important;
   box-shadow:
     0 10px 15px -3px rgb(0 0 0 / 0.1),
     0 4px 6px -4px rgb(0 0 0 / 0.1);

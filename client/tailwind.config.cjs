@@ -12,7 +12,7 @@ module.exports = {
 	darkMode: ["class"],
 	theme: {
 		fontFamily: {
-			sans: ["Open Sans", "ui-sans-serif", "sans-serif", "system-ui"],
+			sans: ["Open Sans Variable", "ui-sans-serif", "sans-serif", "system-ui"],
 			mono: ["Roboto Mono", "monospace"],
 		},
 		extend: {
