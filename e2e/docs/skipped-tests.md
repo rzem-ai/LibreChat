@@ -25,6 +25,7 @@ which is unrelated to why each of these fails.
 | `mcp.spec.ts` | creates an agent with MCP server tools and persists the selection | The Tool Library dialog's `e2e-memory` server button doesn't become visible in time; root cause not yet isolated. |
 | `quotes.spec.ts` | summons the popup from a native double-click word selection | Flaky on CI only (passes locally). `doubleClickWord` measures a 1-character bounding box and clicks its center, which reliably lands off the glyph under CI's headless rendering — likely web-font load timing shifting layout after the measurement. |
 | `steering-escalation.spec.ts` | waiting steer bubble arms in place via POST /chat/steer/arm and seals mid-stream | Flaky. The in-flight bubble disappears entirely right after the 200/`armed:true` arm response instead of staying relabeled in place — likely a race where the mock backend seals the steer before/alongside the arm response resolving client-side, skipping the "relabeled, still waiting" state the test asserts on. |
+| `enforced-model-specs.spec.ts` | rebuilds a valid enforced spec from the backend preset when the request is stale | Conditionally skipped unless `E2E_MODEL_SPECS_ENFORCE=true`. |
 
 ## Follow-up
 
