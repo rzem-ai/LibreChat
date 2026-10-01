@@ -143,8 +143,10 @@ export async function setSkillActive(
  * specs/mock/soft-default.spec.ts).
  */
 export async function selectModel(page: Page, endpoint: string, model: string) {
-  await page.getByTestId('new-chat-button').click();
-  await expect(page).toHaveURL(/\/c\/new/, { timeout: 15000 });
+  if (!/\/c\/new\/?$/.test(new URL(page.url()).pathname)) {
+    await page.getByTestId('new-chat-button').click();
+    await expect(page).toHaveURL(/\/c\/new\/?$/, { timeout: 15000 });
+  }
   await page.getByTestId('model-selector-button').click();
   // Skip the hover-activated submenu tree entirely: type into the picker's
   // search box, which flattens results and renders the matching model option
@@ -229,9 +231,12 @@ export async function sendMessage(page: Page, text: string) {
  * whole test's timeout budget.
  */
 export async function deleteCurrentConversation(page: Page) {
+  const conversationsTab = page.getByTestId('nav-panel-conversations');
   const conversation = page.getByTestId('convo-item').first();
-  if ((await conversation.count()) === 0) {
-    await page.getByTestId('nav-panel-conversations').click({ timeout: 10000 });
+  const conversationsActive = (await conversationsTab.getAttribute('aria-pressed')) === 'true';
+  const sidebarExpanded = (await page.getByTestId('close-sidebar-button').count()) > 0;
+  if (!conversationsActive || !sidebarExpanded) {
+    await conversationsTab.click({ timeout: 10000 });
   }
 
   await conversation.hover({ timeout: 10000 });
