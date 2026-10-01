@@ -40,7 +40,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'main@sha256:7d336f61f39a752fd9e2bb130ae4f1cdb01256b2344dd64f4efc4efc62af7c6f'
+          tag: 'main@sha256:79dcedfad549e348558f15bf19fcb1e2ec7532e53e7d4579a268f5065872d6b0'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-prd.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://foundry-eastus.llm-gateway-prd.svc.cluster.local:8080'
@@ -60,7 +60,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'main@sha256:5421cb3e8234e2f1586d92bdf5360726f8e808cda9e9901154f758c92d60dec4'
+          tag: 'main@sha256:9ba3c2f8cecf6812fe4e670d5f0e01ebe0a83b9ee13fbe2ec063517a3d448960'
         resources:
           requests:
             memory: "2Gi"
@@ -121,7 +121,7 @@ pods:
           CODEAPI_JWT_MINT_CACHE_SECONDS: '30'
           CODEAPI_JWT_SINGLE_TENANT_ID: 'legacy'
           # Azure Storage Container
-          AZURE_CLIENT_ID: 'e6da7f6e-8634-47df-be2f-7631d2f99822' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-prd
+          AZURE_CLIENT_ID: '8ad6bae3-1376-4c98-bf67-4b3be70f3ab6' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-prd
           AZURE_STORAGE_ACCOUNT_NAME: 'stctspokeprdshared'
           AZURE_STORAGE_PUBLIC_ACCESS: 'false'
           AZURE_CONTAINER_NAME: 'stc-librechat-app-prd'
@@ -174,7 +174,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'main@sha256:2377a3565a905cb507eee8a36fe9fc15f85c30aa5e8124b798a546dc7e4f1828'
+          tag: 'main@sha256:6854c67560ec9629deca6c4c775d49c45d3967a268d39ed7daf00817ecc97e89'
         resources:
           requests:
             memory: "2Gi"
@@ -189,7 +189,7 @@ pods:
           POSTGRES_DB: 'pgdb_librechat_app_prd'
           POSTGRES_USER: 'id-int-librechat-prd'
           POSTGRES_AUTH_TYPE: 'ActiveDirectoryMsi'
-          MANAGED_IDENTITY_CLIENT_ID: 'e6da7f6e-8634-47df-be2f-7631d2f99822' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-prd
+          MANAGED_IDENTITY_CLIENT_ID: '8ad6bae3-1376-4c98-bf67-4b3be70f3ab6' # Retrieved by asking Spark Bot for the Client ID (Application ID) of the managed identity named id-int-librechat-prd
           DB_HOST: 'psql-ctspoke-prd.postgres.database.azure.com'
           DB_PORT: '5432'
           RAG_HOST: '0.0.0.0'
@@ -233,7 +233,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'main@sha256:de512d13820ec29024bbf736cf0c61a3d2d51c2d54cbc8c1672e728b3649eb94'
+          tag: 'main@sha256:c99f2a32a8a4eb0930a19cc38f3519006ed0524ab7d611e846c7e9ca5c54408e'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
