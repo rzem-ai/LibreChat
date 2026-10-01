@@ -134,9 +134,17 @@ export async function setSkillActive(
   return previous;
 }
 
-/** Start a new chat and select a model under a given endpoint. */
+/**
+ * Start a new chat and select a model under a given endpoint. Waits for the
+ * URL to actually land on `/c/new` before opening the picker — clicking
+ * `model-selector-button` right after `new-chat-button` can otherwise race
+ * the conversation-reset state update, so the click lands on a stale render
+ * and silently does nothing (same pattern already used in
+ * specs/mock/soft-default.spec.ts).
+ */
 export async function selectModel(page: Page, endpoint: string, model: string) {
   await page.getByTestId('new-chat-button').click();
+  await expect(page).toHaveURL(/\/c\/new/, { timeout: 15000 });
   await page.getByTestId('model-selector-button').click();
   // Skip the hover-activated submenu tree entirely: type into the picker's
   // search box, which flattens results and renders the matching model option
@@ -160,6 +168,12 @@ export async function selectModel(page: Page, endpoint: string, model: string) {
     ? new RegExp(`^${escapedSearch}(\\s|$)`)
     : new RegExp(`^(${escapeRegExp(endpoint)} )?${escapedSearch}(\\s|$)`);
   await page.getByRole('option', { name: namePattern }).first().click();
+  // Confirm the trigger actually reflects the new selection before returning —
+  // callers send a message right after this call, and without this wait that
+  // send can fire while the endpoint/model switch is still in flight.
+  await expect(page.getByTestId('model-selector-button')).toContainText(searchTerm, {
+    timeout: 15000,
+  });
 }
 
 /**
@@ -205,23 +219,25 @@ export async function sendMessage(page: Page, text: string) {
  * (conversations/agents/skills) — after building an agent, the "agents" tab
  * is left active, so the conversation list (and its "Conversation Menu
  * Options" button) never rendered at all, which is why this used to hang
- * until the outer test timeout killed it. Switch back to the conversations
- * tab first, then scope to the newest conversation item and hover it — same
- * pattern already proven in specs/mock/conversation-management.spec.ts —
- * and give the click its own short timeout so a real failure here surfaces
- * in seconds, not by exhausting the whole test's budget.
+ * until the outer test timeout killed it. Check for an already-present
+ * conversation item first, and only click the conversations tab if none is
+ * found — clicking an already-active nav-panel icon collapses the sidebar
+ * instead of no-opping (see NavIconButton's handleClick in
+ * ExpandedPanel.tsx), so blindly clicking based on aria-pressed can break the
+ * flow. Every step gets its own short timeout so a real hang fails fast at
+ * the exact stuck line with an intact trace, instead of silently burning the
+ * whole test's timeout budget.
  */
 export async function deleteCurrentConversation(page: Page) {
-  const conversationsTab = page.getByTestId('nav-panel-conversations');
-  if ((await conversationsTab.getAttribute('aria-pressed')) !== 'true') {
-    await conversationsTab.click();
+  const conversation = page.getByTestId('convo-item').first();
+  if ((await conversation.count()) === 0) {
+    await page.getByTestId('nav-panel-conversations').click({ timeout: 10000 });
   }
 
-  const conversation = page.getByTestId('convo-item').first();
-  await conversation.hover();
+  await conversation.hover({ timeout: 10000 });
   await conversation
     .getByRole('button', { name: 'Conversation Menu Options' })
     .click({ timeout: 10000 });
-  await page.getByRole('menuitem', { name: 'Delete' }).click();
-  await page.getByRole('button', { name: 'Delete' }).click();
+  await page.getByRole('menuitem', { name: 'Delete' }).click({ timeout: 10000 });
+  await page.getByRole('button', { name: 'Delete' }).click({ timeout: 15000 });
 }
