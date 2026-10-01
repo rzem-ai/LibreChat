@@ -10,6 +10,10 @@ const {
   extractWebSearchEnvVars,
   deleteAgentCheckpoints,
   deleteAllSharedLinksWithCleanup,
+  // Deloitte Custom Change
+  validateTutorialStateUpdate,
+  toTutorialStateResponse,
+  MAX_TUTORIAL_RATINGS,
 } = require('@librechat/api');
 const {
   Tools,
@@ -109,6 +113,103 @@ const acceptTermsController = async (req, res) => {
   } catch (error) {
     logger.error('Error accepting terms:', error);
     res.status(500).json({ message: 'Error accepting terms' });
+  }
+};
+
+const getTutorialStateController = async (req, res) => {
+  // Deloitte Custom Change
+  try {
+    const user = await db.getUserById(req.user.id, 'tutorialPromptSeen tutorialRatings tutorialFeedback');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.status(200).json(toTutorialStateResponse(user));
+  } catch (error) {
+    logger.error('Error fetching tutorial state:', error);
+    res.status(500).json({ message: 'Error fetching tutorial state' });
+  }
+};
+
+const updateTutorialStateController = async (req, res) => {
+  // Deloitte Custom Change
+  try {
+    const result = validateTutorialStateUpdate(req.body);
+
+    if ('error' in result) {
+      return res.status(400).json({ message: result.error });
+    }
+    if ('empty' in result) {
+      return res.status(400).json({ message: 'No valid fields provided' });
+    }
+
+    const { update } = result;
+    const feedbackRatings =
+      update.tutorialFeedback != null
+        ? Object.fromEntries(
+            Object.entries(update.tutorialFeedback).map(([courseId, feedback]) => [
+              courseId,
+              feedback.score,
+            ]),
+          )
+        : {};
+    const tutorialRatings =
+      update.tutorialRatings != null || update.tutorialFeedback != null
+        ? { ...feedbackRatings, ...(update.tutorialRatings ?? {}) }
+        : undefined;
+
+    let user;
+
+    if (tutorialRatings) {
+      const { tutorialRatings: _omitted, tutorialFeedback, ...rest } = update;
+      const tutorialFeedbackUpdate =
+        tutorialFeedback == null
+          ? undefined
+          : Object.fromEntries(
+              Object.entries(tutorialFeedback).map(([courseId, feedback]) => [
+                courseId,
+                {
+                  ...feedback,
+                  updatedAt: new Date(),
+                },
+              ]),
+            );
+      const mergeUpdate = {
+        ...rest,
+        ...(tutorialFeedbackUpdate ? { tutorialFeedback: tutorialFeedbackUpdate } : {}),
+      };
+      // mergeTutorialRatings enforces MAX_TUTORIAL_RATINGS using guarded
+      // compare-and-swap writes compatible with DocumentDB.
+      const mergeTutorialRatingsArgs = [req.user.id, tutorialRatings];
+
+      if (Object.keys(mergeUpdate).length > 0) {
+        mergeTutorialRatingsArgs.push(mergeUpdate);
+      }
+
+      const { user: merged, capExceeded, conflict } =
+        await db.mergeTutorialRatings(...mergeTutorialRatingsArgs);
+      if (capExceeded) {
+        return res.status(400).json({
+          message: `tutorialRatings cannot exceed ${MAX_TUTORIAL_RATINGS} entries`,
+        });
+      }
+      if (conflict) {
+        return res.status(409).json({
+          message: 'tutorialRatings update conflict, please retry',
+        });
+      }
+
+      user = merged;
+    } else {
+      user = await db.updateUser(req.user.id, update);
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.status(200).json(toTutorialStateResponse(user));
+  } catch (error) {
+    logger.error('Error updating tutorial state:', error);
+    res.status(500).json({ message: 'Error updating tutorial state' });
   }
 };
 
@@ -627,6 +728,8 @@ module.exports = {
   getUserController,
   getTermsStatusController,
   acceptTermsController,
+  getTutorialStateController,
+  updateTutorialStateController,
   deleteUserController,
   verifyEmailController,
   updateUserPluginsController,

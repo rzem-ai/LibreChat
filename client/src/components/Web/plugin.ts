@@ -91,6 +91,14 @@ function findNextMatch(
   return { type: matchType, match: nextMatch, index: typeIndex };
 }
 
+// Deloitte Custom Change: `typeCounts`/`matchIndex` in `processTree` are only unique within a
+// single text node, so the same citationId (e.g. "standalone-0-5") can recur in unrelated blocks.
+// `MarkdownBlocks` parses each top-level block through its own `ReactMarkdown`/unified instance
+// (see `MarkdownBlocks.tsx`), so a counter scoped inside `processTree` would restart at 0 for
+// every block. Keeping it at module scope instead makes every generated id unique across the
+// whole message, not just within one block's tree.
+let globalNodeSeq = 0;
+
 function processTree(tree: Node) {
   visit(tree, 'text', (node, index, parent) => {
     const textNode = node as CitationNode;
@@ -98,6 +106,7 @@ function processTree(tree: Node) {
 
     if (typeof textNode.value !== 'string') return;
 
+    const nodeSeq = globalNodeSeq++;
     const originalValue = textNode.value;
     const segments: Array<CitationNode> = [];
 
@@ -137,7 +146,7 @@ function processTree(tree: Node) {
       }
 
       // Generate a unique ID for this citation based on its position in the text
-      const citationId = `${type}-${typeCounts[type as keyof typeof typeCounts]}-${matchIndex}`;
+      const citationId = `${nodeSeq}-${type}-${typeCounts[type as keyof typeof typeCounts]}-${matchIndex}`;
       citationIds.set(matchIndex, citationId);
 
       // Process based on match type
@@ -160,7 +169,7 @@ function processTree(tree: Node) {
             // Use the ID that will be generated for the next citation
             const nextIndex = nextCitation.match!.index;
             const nextType = nextCitation.type;
-            associatedCitationId = `${nextType}-${typeCounts[nextType as keyof typeof typeCounts]}-${nextIndex}`;
+            associatedCitationId = `${nodeSeq}-${nextType}-${typeCounts[nextType as keyof typeof typeCounts]}-${nextIndex}`;
           }
 
           segments.push({
@@ -286,15 +295,58 @@ function isPhrasing(node: CitationNode): boolean {
 }
 
 /**
+ * Deloitte Custom Change: extracts a node's citation refs regardless of whether it's a
+ * standalone `citation` or an already-grouped `composite-citation`, stamping each ref with
+ * the citationId of the node it came from (falling back to the group's own id for refs that
+ * were authored together in one composite marker and never had an individual id). Preserving
+ * the per-ref id — instead of collapsing every ref in a merge to one survivor id — means each
+ * rendered chip highlights only the text span that actually produced it.
+ */
+function toCitations(node: CitationNode): Array<Citation> {
+  const nodeCitationId = node.data?.hProperties?.citationId ?? null;
+  if (node.type === 'citation') {
+    const citation = node.data?.hProperties?.citation;
+    return citation ? [{ ...citation, citationId: nodeCitationId }] : [];
+  }
+  if (node.type === 'composite-citation') {
+    const citations = node.data?.hProperties?.citations ?? [];
+    return citations.map((citation) => ({ citationId: nodeCitationId, ...citation }));
+  }
+  return [];
+}
+
+/**
+ * Deloitte Custom Change
+ * Merges multiple citation chips relocated to the same block ancestor into a single
+ * `composite-citation` node — e.g. several report-section citations that turn out to share
+ * the same underlying link render as one chip instead of one per section. Each ref keeps the
+ * citationId of its originating node (see {@link toCitations}), so no cross-block id
+ * remapping is needed afterwards.
+ */
+function mergeCitationNodes(nodes: Array<CitationNode>): CitationNode {
+  const mergedId = nodes[0].data?.hProperties?.citationId ?? null;
+  return {
+    type: 'composite-citation',
+    data: {
+      hName: 'composite-citation',
+      hProperties: { citations: nodes.flatMap(toCitations), citationId: mergedId },
+    },
+  };
+}
+
+/**
  * Deloitte Custom Change
  * Recursively moves every `citation`/`composite-citation` node (mutating the
  * tree in place) to the end of its nearest non-phrasing (block) ancestor —
  * e.g. a paragraph, heading, or table cell — so chips never interrupt the
  * middle of a sentence, regardless of how deeply nested inside inline nodes
- * (emphasis/strong/links/etc.) they originally appeared. `highlighted-text`
- * nodes are left untouched since they represent real inline content, not a
- * relocatable chip. Returns any citations still bubbling up through phrasing
- * ancestors (empty once absorbed by a block ancestor).
+ * (emphasis/strong/links/etc.) they originally appeared. When more than one
+ * chip lands at the same block, they're merged into a single
+ * `composite-citation` (see {@link mergeCitationNodes}) instead of staying as
+ * separate siblings. `highlighted-text` nodes are left untouched since they
+ * represent real inline content, not a relocatable chip. Returns any
+ * citations still bubbling up through phrasing ancestors (empty once
+ * absorbed by a block ancestor).
  */
 function relocateCitations(node: CitationNode): Array<CitationNode> {
   if (!node.children || node.children.length === 0) return [];
@@ -327,7 +379,8 @@ function relocateCitations(node: CitationNode): Array<CitationNode> {
     return bubbled;
   }
 
-  node.children = [...keptChildren, ...bubbled];
+  const mergedBubbled = bubbled.length > 1 ? [mergeCitationNodes(bubbled)] : bubbled;
+  node.children = [...keptChildren, ...mergedBubbled];
   return [];
 }
 

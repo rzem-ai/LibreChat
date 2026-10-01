@@ -31,4 +31,6 @@ export interface GoogleConfigOptions {
   forceVertex?: boolean;
   /** GCP project id for Vertex AI ADC/service-account authentication */
   projectId?: string;
+  /** Deloitte Custom Change: admin-configured allowlist gating the native `web_search` tool per model */
+  supportedWebSearchModels?: string[];
 }

@@ -92,6 +92,16 @@ async function authenticate(config: FullConfig, user: User) {
     await page.waitForURL(conversationURL, { timeout });
     console.log('🤖: ✔️  user successfully authenticated');
 
+    // Some deployment configs require terms acceptance before the chat controls are usable.
+    const acceptTermsButton = page.getByRole('button', { name: 'I accept' });
+    const acceptedTerms = await acceptTermsButton
+      .click({ timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
+    if (acceptedTerms) {
+      await acceptTermsButton.waitFor({ state: 'hidden', timeout: 5000 });
+    }
+
     await page.context().storageState({ path: storageState });
     console.log('🤖: ✔️  authentication state successfully saved in', storageState);
     // await browser.close();

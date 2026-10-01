@@ -51,7 +51,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:d0579aeb11e94e9e7dbf508eb2d42463ac5053cfb1957fa13c05a7fac9b406d9'
+          tag: 'develop@sha256:9af0597b9c07815999670834d0bf2a873453babdd8041a66485e09e90e84ac05'
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -125,7 +125,7 @@ pods:
           OTEL_LOG_LEVEL: 'INFO'
           OTEL_IOREDIS_TRACING_ENABLED: 'false'
           DEBUG_LOGGING: 'false'
-          DEBUG_CONSOLE: 'false'
+          DEBUG_CONSOLE: 'true'
           AGENT_DEBUG_LOGGING: 'true'
           # Skill Security Scanner
           SKILL_SCANNER_URL: 'https://ai-registry-dev.ctk.au.deloitte.com/v1/scan?verbose=false'
@@ -161,7 +161,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:c1bfc537a3c30c9a1ddb54c479c0bbd1f4f0e19e02600276c8326383b50418b1'
+          tag: 'develop@sha256:4c8cbe5255a1184c2c096a1ca6fd2839982163a212f16a12626ad2402b4a0a25'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -217,7 +217,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:ddcf838ae7c25a37416eb93d440b6d14b5ec108b3356621ce461d5fae33d2c52'
+          tag: 'develop@sha256:7860249585aaff6920435794f6552b90a73edefb9a1e3e6f32926ac94f5431b3'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'

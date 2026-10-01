@@ -5,13 +5,15 @@ import { useLocalize } from '~/hooks';
 import Item from './Item';
 
 type ListProps = {
+  /** Deloitte Custom Change: lists keys belonging to the selected service account. */
+  userEmail: string;
   onCreate: () => void;
   headingId?: string;
 };
 
-export default function List({ onCreate, headingId }: ListProps) {
+export default function List({ userEmail, onCreate, headingId }: ListProps) {
   const localize = useLocalize();
-  const { data, isLoading, isError, isFetching, refetch } = useGetAgentApiKeysQuery();
+  const { data, isLoading, isError, isFetching, refetch } = useGetAgentApiKeysQuery(userEmail);
 
   if (isLoading) {
     return (
@@ -66,7 +68,7 @@ export default function List({ onCreate, headingId }: ListProps) {
       aria-label={headingId == null ? localize('com_ui_agent_api_keys') : undefined}
     >
       {keys.map((apiKey) => (
-        <Item key={apiKey.id} apiKey={apiKey} />
+        <Item key={apiKey.id} apiKey={apiKey} userEmail={userEmail} />
       ))}
     </ul>
   );

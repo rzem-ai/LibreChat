@@ -43,6 +43,7 @@ const {
   pickResumeContext,
   getApprovalTtlMs,
   isHITLEnabled,
+  attachApprovalToolClasses,
   captureAgentCheckpointGeneration,
   deleteAgentCheckpoint,
   LIBRECHAT_CHECKPOINT_NAMESPACE_KEY,
@@ -2129,7 +2130,11 @@ class AgentClient extends BaseClient {
         this.contentParts.push(...stamped);
       }
     }
-    const pendingAction = buildPendingAction(interrupt.payload, {
+    const approvalPayload = attachApprovalToolClasses(interrupt.payload, [
+      this.options.agent,
+      ...(this.agentConfigs?.values() ?? []),
+    ]);
+    const pendingAction = buildPendingAction(approvalPayload, {
       streamId,
       conversationId: this.conversationId,
       // runId mirrors the LangGraph checkpoint namespace when the SDK provides it

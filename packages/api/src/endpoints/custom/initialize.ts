@@ -108,6 +108,8 @@ function buildCustomOptions(
     titleMessageRole: endpointConfig.titleMessageRole,
     streamRate: endpointConfig.streamRate,
     endpointTokenConfig,
+    // Deloitte Custom Change: pass the admin native web-search allowlist to the LLM config builder
+    supportedWebSearchModels: endpointConfig.nativeWebSearch?.supportedModels,
   };
 
   if (forwardHeaders) {

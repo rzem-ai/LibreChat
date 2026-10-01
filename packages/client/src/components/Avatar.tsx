@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import type { TUser } from 'librechat-data-provider';
 import { Skeleton } from './Skeleton';
-import { useAvatar } from '~/hooks';
+import { useAuthenticatedImageSrc, useAvatar } from '~/hooks';
 import { UserIcon } from '~/svgs';
 
 export interface AvatarProps {
@@ -37,6 +37,8 @@ const Avatar: React.FC<AvatarProps> = ({
     if (!avatarSeed || imageError) return '';
     return (user?.avatar ?? '') || avatarSrc || '';
   }, [user?.avatar, avatarSrc, avatarSeed, imageError]);
+  const { src: authenticatedImageSrc, isLoading: isImageLoading, isError: imageFetchError } =
+    useAuthenticatedImageSrc(imageSrc);
 
   const handleImageLoad = useCallback(() => {
     setImageLoaded(true);
@@ -69,30 +71,32 @@ const Avatar: React.FC<AvatarProps> = ({
     return <DefaultAvatar />;
   }
 
-  if (avatarSeed.length > 0 && !imageError) {
+  if (avatarSeed.length > 0 && !imageError && !imageFetchError) {
     return (
       <div className="relative" style={{ width: `${size}px`, height: `${size}px` }}>
         {!imageLoaded && (
           <Skeleton className="rounded-full" style={{ width: `${size}px`, height: `${size}px` }} />
         )}
 
-        <img
-          style={{
-            width: `${size}px`,
-            height: `${size}px`,
-            display: imageLoaded ? 'block' : 'none',
-          }}
-          className={`rounded-full ${className}`}
-          src={imageSrc}
-          alt={altText}
-          onLoad={handleImageLoad}
-          onError={handleImageError}
-        />
+        {!isImageLoading && (
+          <img
+            style={{
+              width: `${size}px`,
+              height: `${size}px`,
+              display: imageLoaded ? 'block' : 'none',
+            }}
+            className={`rounded-full ${className}`}
+            src={authenticatedImageSrc}
+            alt={altText}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+          />
+        )}
       </div>
     );
   }
 
-  if (imageError && showDefaultWhenEmpty) {
+  if ((imageError || imageFetchError) && showDefaultWhenEmpty) {
     return <DefaultAvatar />;
   }
 

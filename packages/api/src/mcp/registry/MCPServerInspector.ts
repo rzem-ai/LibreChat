@@ -15,6 +15,7 @@ import { MCPConnectionFactory } from '~/mcp/MCPConnectionFactory';
 import { MCPDomainNotAllowedError } from '~/mcp/errors';
 import { detectOAuthRequirement } from '~/mcp/oauth';
 import { isEnabled } from '~/utils';
+import { getMCPToolClass } from 'librechat-data-provider';
 
 /**
  * Inspects MCP servers to discover their metadata, capabilities, and tools.
@@ -186,6 +187,10 @@ export class MCPServerInspector {
     const keyServerName = normalizeServerName(serverName);
     tools.forEach((tool) => {
       const name = `${tool.name}${Constants.mcp_delimiter}${keyServerName}`;
+      // Deloitte Custom Change: the gateway class rides with each tool's `_meta`
+      // so it is persisted with the definition it describes and survives both
+      // discovery writes (list + selected-server refresh).
+      const toolClass = getMCPToolClass(tool._meta);
       toolFunctions[name] = {
         type: 'function',
         ['function']: {
@@ -198,6 +203,7 @@ export class MCPServerInspector {
           parameters: normalizeJsonSchema(
             resolveJsonSchemaRefs(tool.inputSchema as Record<string, unknown>),
           ) as JsonSchemaType,
+          ...(toolClass != null && { toolClass }),
         },
       };
     });

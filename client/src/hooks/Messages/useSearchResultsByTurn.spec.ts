@@ -85,4 +85,27 @@ describe('useSearchResultsByTurn', () => {
 
     expect(result.current['0']?.mcp_results?.[0]).toMatchObject({ usageRestriction: true });
   });
+
+  it('passes date through to the mapped MCP reference', () => {
+    const attachments = [
+      {
+        type: Tools.mcp_results,
+        [Tools.mcp_results]: {
+          sources: [
+            {
+              toolName: 'kx_query',
+              serverName: 'cleartrack-mcp-gateway',
+              title: 'Assistance with AI Governance',
+              content: 'Assistance with AI Governance\n\nSummary.',
+              date: '12 Aug 2026',
+            },
+          ],
+        },
+      },
+    ] as unknown as TAttachment[];
+
+    const { result } = renderHook(() => useSearchResultsByTurn(attachments));
+
+    expect(result.current['0']?.mcp_results?.[0]).toMatchObject({ date: '12 Aug 2026' });
+  });
 });

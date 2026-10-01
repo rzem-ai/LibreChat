@@ -23,6 +23,19 @@ jest.mock('~/data-provider', () => ({
   })),
 }));
 
+/** Deloitte Custom Change: stubbed out — the real hook requires a ChatContext, which this
+ *  file-search spec doesn't provide. */
+jest.mock('~/hooks/Plugins/useNativeWebSearchToggle', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    toggleState: false,
+    debouncedChange: jest.fn(),
+    isPinned: false,
+    setIsPinned: jest.fn(),
+    isSupported: false,
+  })),
+}));
+
 jest.mock('~/hooks', () => {
   const { useRecoilState } = jest.requireActual('recoil');
   const { Constants } = jest.requireActual('librechat-data-provider');

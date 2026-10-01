@@ -253,7 +253,7 @@ async function measureSample(page: Page, agentName: string, token: string, seque
   await prepareConversation(page, agentName, sequence);
   const input = page.getByRole('textbox', { name: 'Message input' });
   await input.fill(`agent startup latency sample ${sequence}`);
-  await expect(page.getByTestId('send-button')).toBeEnabled();
+  await expect(page.locator('#send-button')).toBeEnabled();
   const replyCountBefore = await installBrowserObservers(input);
 
   await input.press('Enter');

@@ -1,9 +1,13 @@
 import crypto from 'node:crypto';
+import { logger } from '@librechat/data-schemas';
 import { Tools } from 'librechat-data-provider';
 import type { UIResource } from 'librechat-data-provider';
 import type * as t from './types';
 
 export const DEFAULT_MCP_IMAGE_DATA_MAX_BYTES: number = 10 * 1024 * 1024;
+
+/** Marker URI scheme for legacy MCP file-download artifacts. */
+export const CODE_FILE_DOWNLOAD_SCHEME = 'librechat-download://';
 
 function generateResourceId(text: string): string {
   return crypto.createHash('sha256').update(text).digest('hex').substring(0, 10);
@@ -94,8 +98,188 @@ function isImageContent(item: t.ToolContentPart): item is t.ImageContent {
   return item.type === 'image';
 }
 
-function parseAsString(result: t.MCPToolCallResponse): string {
-  const content = result?.content ?? [];
+/**
+ * Deloitte Custom Change: validates the trusted gateway's short-lived download contract.
+ * The origin, expiry, and declared size must be safe before creating an artifact.
+ */
+function parseSharePointGatewayDownload(
+  text: string,
+  gatewayOrigin: string | undefined,
+): NonNullable<t.Artifacts>['codeFile'] | undefined {
+  try {
+    const payload: unknown = JSON.parse(text);
+    if (payload == null || typeof payload !== 'object' || Array.isArray(payload)) {
+      return undefined;
+    }
+    const { status, fileName, mimeType, downloadUrl, size, expiresAt } = payload as {
+      status?: unknown;
+      fileName?: unknown;
+      mimeType?: unknown;
+      downloadUrl?: unknown;
+      size?: unknown;
+      expiresAt?: unknown;
+    };
+    if (
+      status !== 'ready' ||
+      typeof fileName !== 'string' ||
+      !fileName ||
+      typeof mimeType !== 'string' ||
+      !mimeType ||
+      typeof downloadUrl !== 'string' ||
+      !gatewayOrigin ||
+      !Number.isSafeInteger(size) ||
+      size < 0 ||
+      typeof expiresAt !== 'string' ||
+      !Number.isFinite(Date.parse(expiresAt)) ||
+      Date.parse(expiresAt) <= Date.now()
+    ) {
+      return undefined;
+    }
+    let origin: string;
+    try {
+      origin = new URL(downloadUrl).origin;
+    } catch {
+      return undefined;
+    }
+    if (origin !== gatewayOrigin) {
+      return undefined;
+    }
+    return { name: fileName, mimeType, url: downloadUrl, gatewayDownload: true, size, expiresAt };
+  } catch {
+    return undefined;
+  }
+}
+
+function removeGatewaySensitiveFields(payload: unknown): void {
+  if (Array.isArray(payload)) {
+    for (const [index, value] of payload.entries()) {
+      if (typeof value === 'string') {
+        payload[index] = value.replace(/https?:\/\/[^\s"'<>]+/giu, '[redacted URL]');
+      } else {
+        removeGatewaySensitiveFields(value);
+      }
+    }
+    return;
+  }
+  if (payload == null || typeof payload !== 'object') {
+    return;
+  }
+  for (const [key, value] of Object.entries(payload)) {
+    if (key === 'downloadUrl' || key === 'fileName') {
+      delete (payload as Record<string, unknown>)[key];
+    } else if (typeof value === 'string') {
+      (payload as Record<string, unknown>)[key] = value.replace(
+        /https?:\/\/[^\s"'<>]+/giu,
+        '[redacted URL]',
+      );
+    } else {
+      removeGatewaySensitiveFields(value);
+    }
+  }
+}
+
+/** Deloitte Custom Change: removes gateway grants and untrusted filenames from rejected trusted responses. */
+function redactSharePointGatewayDownloadUrl(text: string): string {
+  try {
+    const payload: unknown = JSON.parse(text);
+    if (payload == null || typeof payload !== 'object' || Array.isArray(payload)) {
+      // Deloitte Custom Change: trusted gateway primitives and arrays are opaque because they may be grants.
+      return 'Gateway download response could not be processed.';
+    }
+    removeGatewaySensitiveFields(payload);
+    return JSON.stringify(payload);
+  } catch {
+    // Deloitte Custom Change: malformed trusted gateway responses are opaque so escaped keys cannot leak grants.
+    return 'Gateway download response could not be processed.';
+  }
+}
+
+/**
+ * Deloitte Custom Change: removes trusted gateway download grants before they reach model context.
+ * Successful readiness responses become transient Code Interpreter artifacts; errors retain redacted text.
+ */
+function extractTrustedSharePointAttachment(
+  content: t.ToolContentPart[],
+  extractSharePointAttachment = true,
+  gatewayOrigin?: string,
+  allowArtifact = true,
+): {
+  codeFile?: NonNullable<t.Artifacts>['codeFile'];
+  content: t.ToolContentPart[];
+} {
+  let codeFile: NonNullable<t.Artifacts>['codeFile'];
+  const remaining: t.ToolContentPart[] = [];
+
+  for (const item of content) {
+    if (
+      item.type === 'resource' &&
+      item.resource.uri.toLowerCase().startsWith(CODE_FILE_DOWNLOAD_SCHEME) &&
+      'text' in item.resource &&
+      item.resource.text
+    ) {
+      if (extractSharePointAttachment) {
+        // The trusted gateway must use its metadata-bearing response so MCP.js can enforce its admission policy.
+        continue;
+      }
+      if (!codeFile) {
+        const { uri, mimeType, text } = item.resource;
+        const rawName = uri.slice(CODE_FILE_DOWNLOAD_SCHEME.length) || uri;
+        let name = rawName;
+        try {
+          name = decodeURIComponent(rawName);
+        } catch {
+          // Preserve legacy producer behavior for malformed percent-encoded filenames.
+        }
+        codeFile = { name, mimeType, url: text };
+      } else {
+        // Consume every marker so a second signed URL cannot enter model context.
+        logger.warn(
+          `[MCP][parsers] Dropped a second librechat-download:// marker (only one codeFile per tool result is supported): ${item.resource.uri}`,
+        );
+      }
+      continue;
+    }
+    if (extractSharePointAttachment && item.type === 'text') {
+      const gatewayDownload = parseSharePointGatewayDownload(item.text, gatewayOrigin);
+      if (gatewayDownload && allowArtifact) {
+        codeFile ??= gatewayDownload;
+        continue;
+      }
+      remaining.push({ ...item, text: redactSharePointGatewayDownloadUrl(item.text) });
+      continue;
+    }
+    remaining.push(item);
+  }
+
+  if (!codeFile) {
+    return { codeFile, content: remaining };
+  }
+
+  // Deloitte Custom Change: a paired code-file artifact allows gateway-local paths to be hidden from the model.
+  return {
+    codeFile,
+    content: remaining.map((item) => {
+      if (item.type !== 'text') {
+        return item;
+      }
+      try {
+        const payload: unknown = JSON.parse(item.text);
+        if (payload == null || typeof payload !== 'object' || Array.isArray(payload)) {
+          return item;
+        }
+        if (!Object.hasOwn(payload, 'tempPath')) {
+          return item;
+        }
+        delete (payload as { tempPath?: unknown }).tempPath;
+        return { ...item, text: JSON.stringify(payload) };
+      } catch {
+        return item;
+      }
+    }),
+  };
+}
+
+function parseAsString(content: t.ToolContentPart[]): string {
   if (!content.length) {
     return '(No response)';
   }
@@ -141,14 +325,34 @@ function parseAsString(result: t.MCPToolCallResponse): string {
 export function formatToolContent(
   result: t.MCPToolCallResponse,
   provider: t.Provider,
+  extractSharePointAttachment = false,
+  gatewayOrigin?: string,
 ): t.FormattedContentResult {
+  const { codeFile: extractedCodeFile, content } = extractTrustedSharePointAttachment(
+    result?.content ?? [],
+    extractSharePointAttachment,
+    gatewayOrigin,
+    !result?.isError,
+  );
+  const codeFile = extractedCodeFile;
+
   if (!RECOGNIZED_PROVIDERS.has(provider)) {
-    return [parseAsString(result), undefined];
+    let text = '(No response)';
+    if (content.length > 0) {
+      text = parseAsString(content);
+    } else if (codeFile) {
+      text = '';
+    }
+    return [
+      text,
+      codeFile ? { codeFile } : undefined,
+    ];
   }
 
-  const content = result?.content ?? [];
   if (!content.length) {
-    return ['(No response)', undefined];
+    return codeFile
+      ? ['', { codeFile }]
+      : ['(No response)', undefined];
   }
 
   const imageUrls: t.FormattedContent[] = [];
@@ -250,5 +454,9 @@ UI Resource Markers Available:
     };
   }
 
-  return [currentTextBlock || (artifacts !== undefined ? '' : '(No response)'), artifacts];
+  if (codeFile) {
+    artifacts = { ...artifacts, codeFile };
+  }
+
+  return [currentTextBlock || (artifacts != null ? '' : '(No response)'), artifacts];
 }

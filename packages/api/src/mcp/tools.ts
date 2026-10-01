@@ -1,5 +1,9 @@
 import { logger } from '@librechat/data-schemas';
-import { Constants, normalizeServerName } from 'librechat-data-provider';
+import {
+  Constants,
+  getMCPToolClass,
+  normalizeServerName,
+} from 'librechat-data-provider';
 import type { JsonSchemaType } from '@librechat/agents';
 import type { LCAvailableTools, LCFunctionTool, ParsedServerConfig } from './types';
 import { requiresEphemeralUserConnection } from './utils';
@@ -8,6 +12,10 @@ export interface MCPToolInput {
   name: string;
   description?: string;
   inputSchema?: JsonSchemaType;
+  /** Deloitte Custom Change: Raw MCP tool metadata, source of the gateway-assigned `tool-class`. */
+  _meta?: unknown;
+  /** Deloitte Custom Change: Gateway class supplied by callers that already resolved tool metadata. */
+  toolClass?: unknown;
 }
 
 export interface MCPToolCacheDeps {
@@ -105,6 +113,10 @@ export function createMCPToolCacheService(deps: MCPToolCacheDeps): MCPToolCacheS
        *  by the raw config name. */
       const keyServerName = normalizeServerName(serverName);
       for (const tool of tools) {
+        // Deloitte Custom Change: validate every class at the persistence boundary,
+        // including caller-supplied values, before approval metadata can consume it.
+        const toolClass =
+          getMCPToolClass({ 'tool-class': tool.toolClass }) ?? getMCPToolClass(tool._meta);
         const name = `${tool.name}${mcpDelimiter}${keyServerName}`;
         const entry: LCFunctionTool = {
           type: 'function',
@@ -112,6 +124,7 @@ export function createMCPToolCacheService(deps: MCPToolCacheDeps): MCPToolCacheS
             name,
             description: tool.description ?? '',
             parameters: tool.inputSchema ?? ({ type: 'object', properties: {} } as JsonSchemaType),
+            ...(toolClass != null && { toolClass }),
           },
         };
         serverTools[name] = entry;

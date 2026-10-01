@@ -1,0 +1,117 @@
+name: Playwright Live Tests
+
+on:
+  pull_request:
+    branches: [develop, uat, main]
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Optional override URL (default comes from selected environment var E2E_BASE_URL)'
+        required: false
+        default: ''
+        type: string
+      target_ref:
+        description: 'Target branch to test (manual runs only)'
+        required: true
+        default: 'develop'
+        type: choice
+        options:
+          - develop
+          - uat
+          - main
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.merged == true }}
+    # Self-hosted so the runner sits inside the network that can reach the
+    # private dev host and the SSO provider.
+    runs-on:
+      group: AU ITS DevOps Build Servers
+
+    # Select environment by destination branch (PR) or target_ref (manual).
+    environment: ${{ github.event_name == 'pull_request' && (github.event.pull_request.base.ref == 'develop' && 'playwright-dev' || github.event.pull_request.base.ref == 'uat' && 'playwright-uat' || github.event.pull_request.base.ref == 'main' && 'playwright-prod' || 'playwright-dev') || (github.event.inputs.target_ref == 'develop' && 'playwright-dev' || github.event.inputs.target_ref == 'uat' && 'playwright-uat' || github.event.inputs.target_ref == 'main' && 'playwright-prod' || 'playwright-dev') }}
+
+    concurrency:
+      group: playwright-live-${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || (github.event.inputs.target_ref == 'uat' && 'uat' || github.event.inputs.target_ref == 'main' && 'main' || 'develop') }}
+      cancel-in-progress: false
+
+    timeout-minutes: 60
+
+    env:
+      E2E_BASE_URL: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.base_url || vars.E2E_BASE_URL }}
+      # Drive the runner's preinstalled Edge; the bundled Chromium download
+      # stalls behind TLS inspection on this build server.
+      E2E_CHROMIUM_CHANNEL: msedge
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Post-merge runs validate destination-side code (merge commit), not the PR source branch.
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || (github.event.inputs.target_ref == 'uat' && 'uat' || github.event.inputs.target_ref == 'main' && 'main' || 'develop') }}
+
+      - name: Use Node.js 24.16.0
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.16.0'
+
+      # The build server sits behind TLS inspection, so Node must be told to
+      # trust the interception CAs or every HTTPS download fails.
+      - name: Trust corporate root certificates
+        shell: pwsh
+        run: |
+          $bundle = Join-Path $env:RUNNER_TEMP 'corp-ca-bundle.pem'
+          Get-Content deloitte/certificates/*.crt | Set-Content -Path $bundle -Encoding ascii
+          "NODE_EXTRA_CA_CERTS=$bundle" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify browser is available
+        shell: pwsh
+        run: |
+          $edge = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+          if (-not (Test-Path $edge)) { throw "Edge not found at $edge" }
+          (Get-Item $edge).VersionInfo.ProductVersion
+
+      - name: Verify credentials are wired up
+        shell: pwsh
+        env:
+          E2E_USER: ${{ secrets.E2E_LIVE_USER }}
+          E2E_PASS: ${{ secrets.E2E_LIVE_PASS }}
+        run: |
+          $missing = @()
+          if (-not $env:E2E_BASE_URL) { $missing += 'E2E_BASE_URL (environment variable)' }
+          if (-not $env:E2E_USER) { $missing += 'E2E_LIVE_USER' }
+          if (-not $env:E2E_PASS) { $missing += 'E2E_LIVE_PASS' }
+          if ($missing) {
+            throw "Missing environment config: $($missing -join ', '). Ensure each environment has secrets E2E_LIVE_USER/E2E_LIVE_PASS and variable E2E_BASE_URL."
+          }
+          Write-Host "Config present (base URL: $env:E2E_BASE_URL, user length: $($env:E2E_USER.Length), pass length: $($env:E2E_PASS.Length))"
+
+      # Programmatic login instead of a hand-captured snapshot: a fresh session
+      # every run, so nothing goes stale. Writes e2e/live-auth.json.
+      - name: Capture live session
+        shell: pwsh
+        env:
+          E2E_USER: ${{ secrets.E2E_LIVE_USER }}
+          E2E_PASS: ${{ secrets.E2E_LIVE_PASS }}
+        run: |
+          node e2e/login-live.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run live smoke
+        run: npx playwright test --config=e2e/playwright.config.live.ts
+
+      # Self-hosted runners keep their working directory, so the live session
+      # files must not survive the job.
+      - name: Remove captured session
+        if: always()
+        shell: pwsh
+        run: |
+          Remove-Item -Path e2e/live-auth.json -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path e2e/specs/.test-results, e2e/playwright-report -Recurse -Force -ErrorAction SilentlyContinue

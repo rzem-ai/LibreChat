@@ -1,4 +1,4 @@
-import { cn } from '~/utils';
+import { useIsDarkMode } from '~/hooks/MCP';
 import { resolveThemedIconPaths, type ThemedIconPaths } from './mcpServerUtils';
 
 // Deloitte Custom Change: light/dark themed MCP server icons.
@@ -20,19 +20,13 @@ export default function MCPServerIcon({
   className,
 }: MCPServerIconProps) {
   const { light, dark } = resolveThemedIconPaths({ iconPath, iconPathLight, iconPathDark });
+  const isDarkMode = useIsDarkMode();
 
   if (!light && !dark) {
     return null;
   }
 
-  if (light === dark) {
-    return <img src={light ?? undefined} alt={alt} className={className} />;
-  }
+  const src = isDarkMode ? (dark ?? light) : (light ?? dark);
 
-  return (
-    <>
-      <img src={light ?? undefined} alt={alt} className={cn(className, 'dark:hidden')} />
-      <img src={dark ?? undefined} alt={alt} className={cn(className, 'hidden dark:block')} />
-    </>
-  );
+  return <img src={src ?? undefined} alt={alt} className={className} />;
 }

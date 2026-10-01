@@ -4,6 +4,8 @@ export * from './bedrock';
 export * from './balance';
 export * from './config';
 export * from './file-config';
+/* Deloitte Custom Change: native (provider) web-search model gating */
+export * from './nativeWebSearch';
 /* messages  */
 export * from './messages';
 /* artifacts  */
@@ -48,6 +50,7 @@ export { dataService };
 import * as dataService from './data-service';
 /* general helpers */
 export * from './utils';
+export * from './formatDisplayDate';
 export * from './actions';
 export { default as createPayload } from './createPayload';
 // /* react query hooks */
@@ -55,5 +58,7 @@ export { default as createPayload } from './createPayload';
 /* feedback */
 export * from './feedback';
 export * from './parameterSettings';
+/** Deloitte Custom Change: MCP gateway tool-class vocabulary for the HITL approval flow. */
+export * from './mcpToolClass';
 /* code-execution sandbox */
 export * from './codeEnvRef';

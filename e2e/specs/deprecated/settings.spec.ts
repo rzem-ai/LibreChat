@@ -28,20 +28,20 @@ test.describe('Settings suite', () => {
     const endpointItem = page.getByTestId('endpoint-item-openAI');
     await endpointItem.click();
 
-    await page.getByTestId('text-input').click();
+    await page.locator('#prompt-textarea').click();
     const button1 = page.getByRole('button', { name: 'Mode: BingAI' });
     const button2 = page.getByRole('button', { name: 'Mode: Sydney' });
 
     try {
       await button1.click({ timeout: 100 });
-    } catch (e) {
-      // console.log('Bing button', e);
+    } catch {
+      // console.log('Bing button');
     }
 
     try {
       await button2.click({ timeout: 100 });
-    } catch (e) {
-      // console.log('Sydney button', e);
+    } catch {
+      // console.log('Sydney button');
     }
     await page.getByRole('option', { name: 'Sydney' }).click();
     await page.getByRole('tab', { name: 'Balanced' }).click();
@@ -51,12 +51,11 @@ test.describe('Settings suite', () => {
     await page.getByRole('menuitemradio', { name: 'ChatGPT OpenAI' }).click();
 
     // Close endpoint menu & re-select BingAI
-    await page.getByTestId('text-input').click();
+    await page.locator('#prompt-textarea').click();
     await newTopicButton.click();
     await endpointItem.click();
 
     // Check if the settings persisted
-    const localStorage = await page.evaluate(() => window.localStorage);
     const button = page.getByRole('button', { name: 'Mode: Sydney' });
     expect(button.count()).toBeTruthy();
   });

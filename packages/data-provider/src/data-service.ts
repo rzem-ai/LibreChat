@@ -128,8 +128,9 @@ export function updateUserKey(payload: t.TUpdateUserKeyRequest) {
   return request.put(endpoints.keys(), payload);
 }
 
-export function getAgentApiKeys(): Promise<t.TAgentApiKeyListResponse> {
-  return request.get(endpoints.apiKeys());
+// Deloitte Custom Change: forwards the selected service account for key management requests.
+export function getAgentApiKeys(userEmail: string): Promise<t.TAgentApiKeyListResponse> {
+  return request.get(endpoints.apiKeys(userEmail));
 }
 
 export function createAgentApiKey(
@@ -138,8 +139,9 @@ export function createAgentApiKey(
   return request.post(endpoints.apiKeys(), payload);
 }
 
-export function deleteAgentApiKey(id: string): Promise<void> {
-  return request.delete(endpoints.apiKeyById(id));
+// Deloitte Custom Change: sends the selected service account when revoking a key.
+export function deleteAgentApiKey(id: string, userEmail: string): Promise<void> {
+  return request.delete(endpoints.apiKeyById(id, userEmail));
 }
 
 export function getPresets(): Promise<s.TPreset[]> {
@@ -1314,6 +1316,16 @@ export function getUserTerms(): Promise<t.TUserTermsResponse> {
 
 export function acceptTerms(): Promise<t.TAcceptTermsResponse> {
   return request.post(endpoints.acceptUserTerms());
+}
+
+export function getUserTutorialState(): Promise<t.TTutorialStateResponse> {
+  return request.get(endpoints.userTutorialState());
+}
+
+export function updateUserTutorialState(
+  update: Partial<t.TTutorialStateResponse>,
+): Promise<t.TTutorialStateResponse> {
+  return request.post(endpoints.userTutorialState(), update);
 }
 
 export function getBanner(): Promise<t.TBannerResponse> {

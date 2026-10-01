@@ -39,6 +39,19 @@ export async function loadDefaultInterface({
   const memoryEnabled = isMemoryEnabled(memoryConfig);
   /** Only disable memories if memory config is present and explicitly disabled */
   const shouldDisableMemories = memoryConfig && !memoryEnabled;
+  const isTutorialEnabled =
+    interfaceConfig?.customDeloitteFeatureFlags?.isTutorialEnabled ??
+    interfaceConfig?.isTutorialEnabled ??
+    defaults.customDeloitteFeatureFlags?.isTutorialEnabled ??
+    defaults.isTutorialEnabled;
+  const shouldMaterializeNestedTutorialFlag =
+    interfaceConfig?.customDeloitteFeatureFlags?.isTutorialEnabled !== undefined ||
+    interfaceConfig?.isTutorialEnabled !== undefined;
+  const customDeloitteFeatureFlags = removeNullishValues({
+    ...(defaults.customDeloitteFeatureFlags ?? {}),
+    ...(interfaceConfig?.customDeloitteFeatureFlags ?? {}),
+    ...(shouldMaterializeNestedTutorialFlag ? { isTutorialEnabled } : {}),
+  });
 
   const loadedInterface: AppConfig['interfaceConfig'] = removeNullishValues({
     // UI elements - use schema defaults
@@ -47,7 +60,7 @@ export async function loadDefaultInterface({
       (hasModelSpecs ? includesAddedEndpoints : defaults.modelSelect),
     parameters: interfaceConfig?.parameters ?? (hasModelSpecs ? false : defaults.parameters),
     presets: interfaceConfig?.presets ?? (hasModelSpecs ? false : defaults.presets),
-    customDeloitteFeatureFlags: interfaceConfig?.customDeloitteFeatureFlags,
+    customDeloitteFeatureFlags,
     privacyPolicy: interfaceConfig?.privacyPolicy ?? defaults.privacyPolicy,
     termsOfService: interfaceConfig?.termsOfService ?? defaults.termsOfService,
     mcpServers: interfaceConfig?.mcpServers ?? defaults.mcpServers,
@@ -58,6 +71,7 @@ export async function loadDefaultInterface({
     contextCost: interfaceConfig?.contextCost ?? defaults.contextCost,
     currency: interfaceConfig?.currency ?? defaults.currency,
     userMessageAlignment: interfaceConfig?.userMessageAlignment ?? defaults.userMessageAlignment,
+    isTutorialEnabled,
 
     // Permissions and related settings - only include if explicitly configured
     bookmarks: interfaceConfig?.bookmarks,

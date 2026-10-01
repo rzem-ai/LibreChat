@@ -7,6 +7,7 @@ import {
 import { render, fireEvent } from 'test/layout-test-utils';
 import List from '../List';
 
+// Deloitte Custom Change: renders the API key list in a selected service account context.
 jest.mock('librechat-data-provider/react-query', () => ({
   ...jest.requireActual('librechat-data-provider/react-query'),
   useGetAgentApiKeysQuery: jest.fn(),
@@ -17,7 +18,7 @@ const mockQuery = useGetAgentApiKeysQuery as jest.Mock;
 const mockDelete = useDeleteAgentApiKeyMutation as jest.Mock;
 
 function renderList(props: Partial<React.ComponentProps<typeof List>> = {}) {
-  return render(<List onCreate={jest.fn()} {...props} />);
+  return render(<List userEmail="eval@example.com" onCreate={jest.fn()} {...props} />);
 }
 
 describe('List', () => {

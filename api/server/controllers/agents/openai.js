@@ -69,6 +69,14 @@ const { filterFilesByAgentAccess } = require('~/server/services/Files/permission
 const { logViolation } = require('~/cache');
 const db = require('~/models');
 
+// Deloitte Custom Change: normalizes Agent API tool arguments for OpenAI-compatible responses.
+function serializeToolArguments(args) {
+  if (args == null) {
+    return '';
+  }
+  return typeof args === 'string' ? args : JSON.stringify(args);
+}
+
 const filterFilesByRemoteAgentAccess = (params) =>
   filterFilesByAgentAccess({ ...params, resourceType: ResourceType.REMOTE_AGENT });
 
@@ -466,6 +474,31 @@ const executeOpenAIChatCompletion = async (envelope, { req, res }) => {
     // Create tracker for streaming or aggregator for non-streaming
     const tracker = isStreaming ? createOpenAIStreamTracker() : null;
     const aggregator = isStreaming ? null : createOpenAIContentAggregator();
+    // Deloitte Custom Change: reconciles Agent API tool IDs, run-step positions, and seed state.
+    const toolCallIndexesById = new Map();
+    const toolCallIndexesByStepId = new Map();
+    const seededToolCallIndexes = new Set();
+    let nextToolCallIndex = 0;
+
+    // Deloitte Custom Change: assigns a distinct OpenAI response index to every Agent API tool call.
+    const getToolCallIndex = (toolId, eventIndex) => {
+      if (toolId && toolCallIndexesById.has(toolId)) {
+        return toolCallIndexesById.get(toolId);
+      }
+
+      const targetMap = isStreaming ? tracker.toolCalls : aggregator.toolCalls;
+      let toolIndex = eventIndex;
+      while (targetMap.has(toolIndex)) {
+        toolIndex = nextToolCallIndex;
+        nextToolCallIndex += 1;
+      }
+      nextToolCallIndex = Math.max(nextToolCallIndex, toolIndex + 1);
+
+      if (toolId) {
+        toolCallIndexesById.set(toolId, toolIndex);
+      }
+      return toolIndex;
+    };
 
     // Set up response for streaming
     if (isStreaming) {
@@ -646,15 +679,29 @@ const executeOpenAIChatCompletion = async (envelope, { req, res }) => {
       on_run_step: createHandler((data) => {
         const stepDetails = data?.stepDetails;
         if (stepDetails?.type === 'tool_calls' && stepDetails.tool_calls) {
-          for (const tc of stepDetails.tool_calls) {
-            const toolIndex = data.index ?? 0;
+          for (const [toolPosition, tc] of stepDetails.tool_calls.entries()) {
             const toolId = tc.id ?? '';
+            const toolIndex = getToolCallIndex(toolId, data.index ?? nextToolCallIndex);
+            // Deloitte Custom Change: preserves the step-local position needed by later delta events.
+            if (data.id) {
+              const stepIndexes = toolCallIndexesByStepId.get(data.id) ?? new Map();
+              stepIndexes.set(tc.index ?? toolPosition, toolIndex);
+              toolCallIndexesByStepId.set(data.id, stepIndexes);
+            }
             const toolName = tc.name ?? '';
             const toolCall = {
               id: toolId,
               type: 'function',
-              function: { name: toolName, arguments: '' },
+              function: {
+                name: toolName,
+                // Deloitte Custom Change: non-streaming run-step payloads already contain complete arguments.
+                arguments: isStreaming ? '' : serializeToolArguments(tc.args),
+              },
             };
+            // Deloitte Custom Change: distinguishes complete run-step arguments from delta-built arguments.
+            if (!isStreaming && toolCall.function.arguments) {
+              seededToolCallIndexes.add(toolIndex);
+            }
 
             // Track tool call in tracker or aggregator
             if (isStreaming) {
@@ -687,12 +734,19 @@ const executeOpenAIChatCompletion = async (envelope, { req, res }) => {
               continue;
             }
 
-            const toolIndex = tc.index ?? 0;
+            // Deloitte Custom Change: resolves delta-only local indexes through their originating run step.
+            const stepIndexes = data.id && toolCallIndexesByStepId.get(data.id);
+            const toolIndex =
+              (tc.id && toolCallIndexesById.get(tc.id)) ??
+              stepIndexes?.get(tc.index ?? 0) ??
+              tc.index ??
+              nextToolCallIndex;
 
             // Update tool call arguments
             const targetMap = isStreaming ? tracker.toolCalls : aggregator.toolCalls;
             const tracked = targetMap.get(toolIndex);
-            if (tracked) {
+            // Deloitte Custom Change: only seeded calls skip deltas; delta-built arguments may span chunks.
+            if (tracked && (isStreaming || !seededToolCallIndexes.has(toolIndex))) {
               tracked.function.arguments += args;
             }
 
@@ -714,6 +768,21 @@ const executeOpenAIChatCompletion = async (envelope, { req, res }) => {
         }
       }),
 
+      // Deloitte Custom Change: reconciles the final non-streaming Agent API tool-call payload.
+      on_run_step_completed: createHandler((data) => {
+        if (isStreaming) {
+          return;
+        }
+
+        const toolCall = data?.result?.tool_call;
+        const toolIndex = toolCall?.id && toolCallIndexesById.get(toolCall.id);
+        const tracked = toolIndex != null ? aggregator.toolCalls.get(toolIndex) : undefined;
+        if (tracked && Object.hasOwn(toolCall, 'args')) {
+          // Deloitte Custom Change: completion events provide the authoritative final argument payload.
+          tracked.function.arguments = serializeToolArguments(toolCall.args);
+        }
+      }),
+
       // Usage tracking
       on_chat_model_end: {
         handle: (_event, data, metadata) => {
@@ -727,7 +796,6 @@ const executeOpenAIChatCompletion = async (envelope, { req, res }) => {
           }
         },
       },
-      on_run_step_completed: createHandler(),
       // Use proper ToolEndHandler for processing artifacts (images, file citations, code output)
       on_tool_end: new ToolEndHandler(toolEndCallback, logger),
       on_chain_stream: createHandler(),

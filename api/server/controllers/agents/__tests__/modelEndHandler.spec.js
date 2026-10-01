@@ -28,6 +28,26 @@ const buildGraph = () => ({
 });
 
 describe('ModelEndHandler — Vertex thoughtSignature capture (issue #13006 follow-up)', () => {
+  it('returns early when graph or metadata is missing', async () => {
+    const collectedUsage = [];
+    const handler = new ModelEndHandler(collectedUsage, null);
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await expect(
+      handler.handle(
+        'on_chat_model_end',
+        { output: { usage_metadata: { input_tokens: 1, output_tokens: 1, total_tokens: 2 } } },
+        undefined,
+        undefined,
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(warnSpy).toHaveBeenCalledWith('Graph or metadata not found in on_chat_model_end event');
+    expect(collectedUsage).toEqual([]);
+
+    warnSpy.mockRestore();
+  });
+
   it('maps non-empty signatures onto tool_call_ids in order', async () => {
     const collectedUsage = [];
     const collectedThoughtSignatures = {};

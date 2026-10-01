@@ -114,6 +114,72 @@ describe('AgentClient - interrupt discovery persistence', () => {
     expect(paused?.status).toBe('requires_action');
     expect(paused?.metadata.discoveredTools).toEqual(['save_issue_mcp_linear']);
   });
+
+  /** Deloitte Custom Change: nested-agent classes enrich only their matching approval requests. */
+  it('persists gateway classes from nested agents without changing unclassified approvals', async () => {
+    const streamId = 'conversation-tool-class-pause';
+    const job = await GenerationJobManager.createJob(streamId, 'user-123', streamId);
+    const client = new AgentClient({
+      req: {
+        user: { id: 'user-123' },
+        body: { endpoint: EModelEndpoint.agents, agent_id: 'agent-123' },
+        config: { endpoints: { [EModelEndpoint.agents]: {} } },
+      },
+      res: {},
+      agent: {
+        id: 'agent-123',
+        endpoint: EModelEndpoint.openAI,
+        provider: EModelEndpoint.openAI,
+        model_parameters: { model: 'gpt-4' },
+      },
+      agentConfigs: new Map([
+        [
+          'parent-agent',
+          {
+            id: 'parent-agent',
+            toolRegistry: new Map(),
+            subagentAgentConfigs: [
+              {
+                id: 'nested-agent',
+                toolRegistry: new Map([['write_mcp_gateway', { toolClass: 'W2' }]]),
+              },
+            ],
+          },
+        ],
+      ]),
+      contentParts: [],
+      collectedUsage: [],
+      artifactPromises: [],
+    });
+    client.conversationId = streamId;
+    client.responseMessageId = 'response-tool-class-pause';
+    client.jobCreatedAt = job.createdAt;
+
+    await client.handleRunInterrupt(
+      {
+        getInterrupt: () => ({
+          interruptId: 'tool-approval-interrupt',
+          threadId: streamId,
+          payload: {
+            type: 'tool_approval',
+            action_requests: [
+              { name: 'write_mcp_gateway', tool_call_id: 'tc1', arguments: '{}' },
+              { name: 'read_mcp_gateway', tool_call_id: 'tc2', arguments: '{}' },
+            ],
+          },
+        }),
+        getDiscoveredTools: () => [],
+        getRunMessages: () => [],
+      },
+      streamId,
+    );
+
+    const paused = await GenerationJobManager.getJob(streamId);
+    expect(paused?.metadata.pendingAction.payload.action_requests).toEqual([
+      { name: 'write_mcp_gateway', tool_call_id: 'tc1', arguments: '{}', toolClass: 'W2' },
+      { name: 'read_mcp_gateway', tool_call_id: 'tc2', arguments: '{}' },
+    ]);
+  });
 });
 
 jest.mock('~/server/services/Config', () => ({

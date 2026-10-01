@@ -55,6 +55,7 @@ const createSpaFallback = require('./utils/fallback');
 const { getAppConfig } = require('./services/Config');
 const staticCache = require('./utils/staticCache');
 const noIndex = require('./middleware/noIndex');
+const hsts = require('./middleware/hsts'); // Deloitte Custom Change: enforce HTTPS via Strict-Transport-Security on every response
 const routes = require('./routes');
 
 /** Reject messageFilter PII patterns the RE2 runtime engine cannot compile, at config load. */
@@ -196,6 +197,10 @@ const startServer = async () => {
     res.type('html');
     res.send(updatedIndexHtml);
   };
+
+  // Deloitte Custom Change: registered before all routes (including health checks)
+  // so Strict-Transport-Security is set on every response, not just API routes.
+  app.use(hsts);
 
   app.get('/health', (_req, res) => res.status(200).send('OK'));
   app.get('/livez', (_req, res) => res.status(200).send('OK'));

@@ -525,21 +525,24 @@ export const useMCPServerConnectionStatusQuery = (
   );
 };
 
+// Deloitte Custom Change: isolates API key query and mutation state by service account.
 export const useGetAgentApiKeysQuery = (
+  userEmail: string,
   config?: UseQueryOptions<t.TAgentApiKeyListResponse>,
 ): QueryObserverResult<t.TAgentApiKeyListResponse> => {
   return useQuery<t.TAgentApiKeyListResponse>(
-    [QueryKeys.agentApiKeys],
-    () => dataService.getAgentApiKeys(),
+    [QueryKeys.agentApiKeys, userEmail],
+    () => dataService.getAgentApiKeys(userEmail),
     {
+      enabled: !!userEmail,
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
-      refetchOnMount: false,
       ...config,
     },
   );
 };
 
+// Deloitte Custom Change: includes service account identity when creating an integration key.
 export const useCreateAgentApiKeyMutation = (): UseMutationResult<
   t.TAgentApiKeyCreateResponse,
   unknown,
@@ -549,18 +552,27 @@ export const useCreateAgentApiKeyMutation = (): UseMutationResult<
   return useMutation(
     (payload: t.TAgentApiKeyCreateRequest) => dataService.createAgentApiKey(payload),
     {
-      onSuccess: () => {
-        queryClient.invalidateQueries([QueryKeys.agentApiKeys]);
+      onSuccess: (_data, payload) => {
+        queryClient.invalidateQueries([QueryKeys.agentApiKeys, payload.userEmail]);
       },
     },
   );
 };
 
-export const useDeleteAgentApiKeyMutation = (): UseMutationResult<void, unknown, string> => {
+// Deloitte Custom Change: sends owner scope when deleting an integration key.
+export const useDeleteAgentApiKeyMutation = (): UseMutationResult<
+  void,
+  unknown,
+  { id: string; userEmail: string }
+> => {
   const queryClient = useQueryClient();
-  return useMutation((id: string) => dataService.deleteAgentApiKey(id), {
-    onSuccess: () => {
-      queryClient.invalidateQueries([QueryKeys.agentApiKeys]);
+  return useMutation(
+    ({ id, userEmail }: { id: string; userEmail: string }) =>
+      dataService.deleteAgentApiKey(id, userEmail),
+    {
+      onSuccess: (_data, variables) => {
+        queryClient.invalidateQueries([QueryKeys.agentApiKeys, variables.userEmail]);
+      },
     },
-  });
+  );
 };
