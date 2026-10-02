@@ -9,6 +9,16 @@ interface:
   # Mock models price at the default rate, so synthetic usage yields a value.
   contextCost: true
 
+  # Deloitte Custom Change: Deloitte-specific UI feature flags.
+  customDeloitteFeatureFlags:
+    # The tutorial prompt's dismiss state is per-user and never seeded for the
+    # e2e test user, so its backdrop blocks sidebar icon clicks (other than
+    # Learning Hub) on every fresh session unless disabled here.
+    isTutorialEnabled: false
+    # Gates the Regenerate hover button (HoverButtons.tsx); unset here it never
+    # renders, so chat.spec.ts/usage.spec.ts regenerate-branch flows can't pass.
+    regenerate: true
+
 # Enables the memory feature so the MEMORIES.USE permission is granted and the
 # ephemeral memory badge (inline set_memory/delete_memory tools) is available.
 # memory.spec.ts toggles it via the tools dropdown.
