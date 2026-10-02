@@ -44,8 +44,11 @@ ARG NPM_CI_ATTEMPTS=2
 # the container at runtime, which is too late for Vite's build-time manifest
 # generation — CI must pass this as a build-arg per environment (e.g.
 # "MyAssist (DEV)") for the deployed manifest to match. Empty by default so
-# client/vite.config.ts falls through to reading a local .env, then 'MyAssist'.
+# client/vite.config.ts falls through to its 'MyAssist' default. Declared as
+# ENV (not just ARG) so it's also set for any later RUN step without needing
+# to repeat it inline each time.
 ARG APP_TITLE=
+ENV APP_TITLE=${APP_TITLE}
 
 RUN mkdir -p /app && chown node:node /app
 WORKDIR /app
@@ -85,7 +88,7 @@ COPY --chown=node:node . .
 
 RUN \
     # React client build with configurable memory
-    NODE_OPTIONS="--max-old-space-size=${NODE_MAX_OLD_SPACE_SIZE}" APP_TITLE="${APP_TITLE}" npm run frontend; \
+    NODE_OPTIONS="--max-old-space-size=${NODE_MAX_OLD_SPACE_SIZE}" npm run frontend; \
     npm prune --production; \
     npm cache clean --force
 
