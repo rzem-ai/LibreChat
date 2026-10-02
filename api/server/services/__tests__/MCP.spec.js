@@ -53,6 +53,7 @@ jest.mock('~/models', () => ({
   findToken: jest.fn(),
   createToken: jest.fn(),
   updateToken: jest.fn(),
+  getFiles: jest.fn(),
 }));
 jest.mock('~/server/services/GraphTokenService', () => ({
   getGraphApiToken: jest.fn(),
@@ -66,11 +67,16 @@ jest.mock('~/server/services/OboPolicyService', () => ({
 jest.mock('~/server/services/Tools/mcp', () => ({
   reinitMCPServer: jest.fn(),
 }));
+const mockGetStrategyFunctions = jest.fn();
+jest.mock('~/server/services/Files/strategies', () => ({
+  getStrategyFunctions: (...args) => mockGetStrategyFunctions(...args),
+}));
 
 const { Constants } = require('librechat-data-provider');
 
 const { getAppConfig } = require('~/server/services/Config');
 const { reinitMCPServer } = require('~/server/services/Tools/mcp');
+const { getFiles } = require('~/models');
 const {
   createMCPTool,
   healMcpToolNames,
@@ -79,6 +85,9 @@ const {
   resolveAllMcpConfigs,
   resolveMcpServerContext,
   resolveCollisionAuditNames,
+  supportsAttachmentUpload,
+  resolveAttachmentUpload,
+  addAttachmentUploadHints,
 } = require('../MCP');
 
 describe('resolveConfigServers', () => {
@@ -471,5 +480,266 @@ describe('createMCPTool', () => {
     expect(toolInstance).toBeDefined();
     expect(toolInstance.name).toBe(canonicalToolKey);
     expect(reinitMCPServer).not.toHaveBeenCalled();
+  });
+
+  it('uses a reference-only schema for configured attachment uploads', async () => {
+    const uploadKey = `upload${Constants.mcp_delimiter}files`;
+    const uploadDefinition = {
+      name: uploadKey,
+      description: 'Upload a file',
+      parameters: {
+        type: 'object',
+        properties: { fileName: { type: 'string' }, content: { type: 'string' } },
+        required: ['fileName', 'content'],
+      },
+    };
+    getAppConfig.mockResolvedValue({
+      mcpConfig: { files: { attachmentUploadTools: ['upload'] } },
+    });
+
+    const toolInstance = await createMCPTool({
+      user: { id: 'user-1' },
+      toolKey: uploadKey,
+      serverName: 'files',
+      availableTools: { [uploadKey]: { type: 'function', function: uploadDefinition } },
+      config: { type: 'stdio', command: 'node', attachmentUploadTools: ['upload'] },
+      provider: 'openAI',
+      requestBody: { conversationId: 'conversation-1' },
+    });
+
+    expect(toolInstance.name).toBe(uploadKey);
+    expect(toolInstance.mcpJsonSchema.properties.content).toBeUndefined();
+    expect(toolInstance.mcpJsonSchema.properties.sourceFileName).toBeDefined();
+  });
+
+  it('instructs the model to use an attachment ID when a file is attached', async () => {
+    const uploadKey = `upload${Constants.mcp_delimiter}files`;
+    const uploadDefinition = {
+      name: uploadKey,
+      description: 'Upload a file',
+      parameters: {
+        type: 'object',
+        properties: { fileName: { type: 'string' }, content: { type: 'string' } },
+        required: ['fileName', 'content'],
+      },
+    };
+    getAppConfig.mockResolvedValue({
+      mcpConfig: { files: { attachmentUploadTools: ['upload'] } },
+    });
+
+    const toolInstance = await createMCPTool({
+      user: { id: 'user-1' },
+      toolKey: uploadKey,
+      serverName: 'files',
+      availableTools: { [uploadKey]: { type: 'function', function: uploadDefinition } },
+      config: { type: 'stdio', command: 'node', attachmentUploadTools: ['upload'] },
+      provider: 'openAI',
+      requestBody: { files: [{ file_id: 'file-1', filename: 'presentation.pptx' }] },
+    });
+
+    expect(toolInstance.mcpJsonSchema.properties.sourceFileId).toBeDefined();
+    expect(toolInstance.description).toContain('sourceFileId');
+    expect(toolInstance.description).not.toContain('sourceFileName');
+    expect(toolInstance.description).not.toContain('base64');
+  });
+});
+
+// Deloitte Custom Change: attachment uploads are resolved from authorized request files.
+describe('resolveAttachmentUpload', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('replaces sourceFileId with the authorized attachment bytes', async () => {
+    const { Readable } = require('stream');
+    const stream = Readable.from([Buffer.from('p'), Buffer.from('ptx bytes')]);
+    const getDownloadStream = jest.fn().mockResolvedValue({ data: stream });
+    const req = { user: { id: 'user-1' } };
+    const attachment = {
+      file_id: 'file-1',
+      source: 'azure_blob',
+      filepath: '/attachments/file-1',
+    };
+    mockGetStrategyFunctions.mockReturnValue({ getDownloadStream });
+    getFiles.mockResolvedValue([attachment]);
+
+    const result = await resolveAttachmentUpload({
+      toolArguments: { sourceFileId: 'file-1', fileName: 'presentation.pptx' },
+      requestBody: { files: [attachment] },
+      req,
+      user: { id: 'user-1' },
+    });
+
+    expect(result).toEqual({
+      fileName: 'presentation.pptx',
+      content: Buffer.from('pptx bytes').toString('base64'),
+      encoding: 'base64',
+    });
+    expect(mockGetStrategyFunctions).toHaveBeenCalledWith('azure_blob');
+    expect(getDownloadStream).toHaveBeenCalledWith(req, attachment.filepath);
+  });
+
+  it('resolves a generated file by the current conversation and user', async () => {
+    const { Readable } = require('stream');
+    const getDownloadStream = jest
+      .fn()
+      .mockResolvedValue(Readable.from([Buffer.from('pptx bytes')]));
+    mockGetStrategyFunctions.mockReturnValue({ getDownloadStream });
+    getFiles.mockResolvedValue([
+      {
+        file_id: 'file-1',
+        filename: 'testsp7.pptx',
+        source: 'local',
+        filepath: '/uploads/file-1',
+      },
+    ]);
+
+    const result = await resolveAttachmentUpload({
+      toolArguments: { sourceFileName: 'testsp7.pptx' },
+      requestBody: { conversationId: 'conversation-1' },
+      req: {},
+      user: { id: 'user-1' },
+    });
+
+    expect(getFiles).toHaveBeenCalledWith(
+      { conversationId: 'conversation-1', user: 'user-1' },
+      null,
+      { text: 0 },
+    );
+    expect(result).toEqual({
+      content: Buffer.from('pptx bytes').toString('base64'),
+      encoding: 'base64',
+    });
+  });
+
+  it('rejects a missing source reference', async () => {
+    await expect(
+      resolveAttachmentUpload({ toolArguments: { fileName: 'presentation.pptx' } }),
+    ).rejects.toThrow('Specify exactly one of sourceFileId or sourceFileName');
+  });
+
+  it('rejects a sourceFileId that is not attached to the current request', async () => {
+    await expect(
+      resolveAttachmentUpload({
+        toolArguments: { sourceFileId: 'other-user-file' },
+        requestBody: { files: [{ file_id: 'file-1' }] },
+      }),
+    ).rejects.toThrow('Attachment source must identify a file available to the current user');
+  });
+
+  it('rejects an empty sourceFileId instead of forwarding an incomplete upload', async () => {
+    await expect(
+      resolveAttachmentUpload({
+        toolArguments: { sourceFileId: '' },
+        requestBody: { files: [] },
+      }),
+    ).rejects.toThrow('sourceFileId must be a non-empty string');
+  });
+
+  it('accepts storage strategies that return a stream directly', async () => {
+    const { Readable } = require('stream');
+    const stream = Readable.from([Buffer.from('pptx bytes')]);
+    mockGetStrategyFunctions.mockReturnValue({
+      getDownloadStream: jest.fn().mockResolvedValue(stream),
+    });
+    getFiles.mockResolvedValue([{ file_id: 'file-1', source: 'azure_blob', filepath: '/file-1' }]);
+
+    await expect(
+      resolveAttachmentUpload({
+        toolArguments: { sourceFileId: 'file-1' },
+        requestBody: { files: [{ file_id: 'file-1', source: 'azure_blob', filepath: '/file-1' }] },
+      }),
+    ).resolves.toMatchObject({ content: Buffer.from('pptx bytes').toString('base64') });
+  });
+});
+
+// Deloitte Custom Change: only configured MCP tools receive attachment identifiers.
+describe('addAttachmentUploadHints', () => {
+  it('lists current-request attachments for an explicitly configured upload tool', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        content: { type: 'string', description: 'Base64-encoded content.' },
+      },
+      required: ['driveId', 'content'],
+    };
+
+    const result = addAttachmentUploadHints(
+      schema,
+      'sp_upload_file',
+      { attachmentUploadTools: ['sp_upload_file'] },
+      { files: [{ file_id: 'file-1', filename: 'presentation.pptx' }] },
+    );
+
+    expect(result.properties.sourceFileId.description).toContain('file-1 (presentation.pptx)');
+    expect(result.properties.content).toBeUndefined();
+    expect(result.required).toEqual(['driveId']);
+    expect(schema.properties.sourceFileId).toBeUndefined();
+    expect(schema.required).toEqual(['driveId', 'content']);
+  });
+
+  it('does not expose attachment IDs to an unconfigured tool', () => {
+    const schema = { properties: { content: { description: 'Base64-encoded content.' } } };
+
+    expect(
+      addAttachmentUploadHints(
+        schema,
+        'sp_upload_file',
+        {},
+        { files: [{ file_id: 'file-1', filename: 'presentation.pptx' }] },
+      ),
+    ).toBe(schema);
+  });
+
+  it('requires a generated conversation file name when no request attachment exists', () => {
+    const result = addAttachmentUploadHints(
+      {
+        properties: { content: { type: 'string' } },
+        required: ['content'],
+      },
+      'sp_upload_file',
+      { attachmentUploadTools: ['sp_upload_file'] },
+      { conversationId: 'conversation-1' },
+    );
+
+    expect(result.properties.content).toBeUndefined();
+    expect(result.properties.sourceFileName).toBeDefined();
+    expect(result.required).toEqual([]);
+  });
+
+  it('requires a provider-compatible source reference for Google schemas', () => {
+    const schema = { properties: { content: { type: 'string' } }, required: ['content'] };
+
+    expect(
+      addAttachmentUploadHints(
+        schema,
+        'sp_upload_file',
+        { attachmentUploadTools: ['sp_upload_file'] },
+        { files: [{ file_id: 'file-1' }] },
+        true,
+      ).required,
+    ).toEqual(['sourceFileId']);
+    expect(
+      addAttachmentUploadHints(
+        schema,
+        'sp_upload_file',
+        { attachmentUploadTools: ['sp_upload_file'] },
+        { conversationId: 'conversation-1' },
+        true,
+      ).required,
+    ).toEqual(['sourceFileName']);
+  });
+});
+
+describe('supportsAttachmentUpload', () => {
+  it('requires an explicit server configuration allowlist entry', () => {
+    expect(
+      supportsAttachmentUpload({ attachmentUploadTools: ['sp_upload_file'] }, 'sp_upload_file'),
+    ).toBe(true);
+    expect(
+      supportsAttachmentUpload(
+        { source: 'user', attachmentUploadTools: ['sp_upload_file'] },
+        'sp_upload_file',
+      ),
+    ).toBe(false);
+    expect(supportsAttachmentUpload({}, 'sp_upload_file')).toBe(false);
   });
 });

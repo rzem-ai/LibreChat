@@ -180,6 +180,10 @@ endpoints:
     hideFileContext: true
     maxCitations: 30
     maxCitationsPerFile: 7
+    # Attachment-backed uploads replace model-provided content with local file bytes
+    # at dispatch. Allow legacy streamed calls to complete so that replacement runs.
+    maxToolCallArgBytesByTool:
+      sp_upload_file_mcp_cleartrack-mcp-gateway-sharepoint: 10485760
     capabilities:
       [
         'actions',
@@ -527,6 +531,9 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     url: '${MCP_GATEWAY_URL}?toolsets=sharepoint'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    # Deloitte Custom Change: Only this trusted tool may receive current-request attachment bytes.
+    attachmentUploadTools:
+      - sp_upload_file
     iconPathLight: '/assets/mcp/sharepoint-light.png'
     iconPathDark: '/assets/mcp/sharepoint-dark.png'
     limitedAccess: true
