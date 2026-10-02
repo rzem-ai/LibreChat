@@ -1,7 +1,7 @@
 import react from '@vitejs/plugin-react';
 import fs from 'fs';
 import path from 'path';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import { createRequire } from 'module';
 import { VitePWA } from 'vite-plugin-pwa';
 import { compression } from 'vite-plugin-compression2';
@@ -38,10 +38,13 @@ const backendURL = backendHost
   ? `http://${backendHost}:${backendPort}`
   : `http://localhost:${backendPort}`;
 const buildSourceMap = process.env.NODE_ENV === 'development';
-/** Set by the Dockerfile's `ARG APP_TITLE` at build time — Helm's APP_TITLE only reaches the
- * container at runtime, too late for this build-time manifest. Plain host builds (no Docker)
- * get the 'MyAssist' fallback; export APP_TITLE in your shell first if you need it there too. */
-const appTitle = process.env.APP_TITLE || 'MyAssist';
+/** `process.env.APP_TITLE` is set by the Dockerfile's `ARG`/`ENV APP_TITLE` for Docker builds —
+ * Helm's APP_TITLE only reaches the container at runtime, too late for this build-time manifest.
+ * For `npm run frontend:dev` (no Docker), read a local `.env` directly via `loadEnv`, since Vite
+ * doesn't populate `process.env` from it until after this config factory has already returned. */
+const repoRoot = path.resolve(__dirname, '..');
+const localEnv = loadEnv(process.env.NODE_ENV || 'production', repoRoot, '');
+const appTitle = process.env.APP_TITLE || localEnv.APP_TITLE || 'MyAssist';
 const QUERY_DEVTOOLS_CHUNK_MODULES = [
   '@tanstack/react-query-devtools',
   '@tanstack/match-sorter-utils',
