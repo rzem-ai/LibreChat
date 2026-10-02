@@ -71,12 +71,16 @@ const mockGetStrategyFunctions = jest.fn();
 jest.mock('~/server/services/Files/strategies', () => ({
   getStrategyFunctions: (...args) => mockGetStrategyFunctions(...args),
 }));
+jest.mock('~/server/controllers/assistants/helpers', () => ({
+  getOpenAIClient: jest.fn(),
+}));
 
 const { Constants } = require('librechat-data-provider');
 
 const { getAppConfig } = require('~/server/services/Config');
 const { reinitMCPServer } = require('~/server/services/Tools/mcp');
 const { getFiles } = require('~/models');
+const { getOpenAIClient } = require('~/server/controllers/assistants/helpers');
 const {
   createMCPTool,
   healMcpToolNames,
@@ -600,7 +604,12 @@ describe('resolveAttachmentUpload', () => {
     });
 
     expect(getFiles).toHaveBeenCalledWith(
-      { conversationId: 'conversation-1', user: 'user-1' },
+      {
+        conversationId: 'conversation-1',
+        user: 'user-1',
+        context: 'execute_code',
+        'metadata.codeEnvRef': { $exists: true },
+      },
       null,
       { text: 0 },
     );
@@ -613,7 +622,7 @@ describe('resolveAttachmentUpload', () => {
   it('rejects a missing source reference', async () => {
     await expect(
       resolveAttachmentUpload({ toolArguments: { fileName: 'presentation.pptx' } }),
-    ).rejects.toThrow('Specify exactly one of sourceFileId or sourceFileName');
+    ).rejects.toThrow('Specify exactly one attachment source reference');
   });
 
   it('rejects a sourceFileId that is not attached to the current request', async () => {
@@ -648,6 +657,28 @@ describe('resolveAttachmentUpload', () => {
         requestBody: { files: [{ file_id: 'file-1', source: 'azure_blob', filepath: '/file-1' }] },
       }),
     ).resolves.toMatchObject({ content: Buffer.from('pptx bytes').toString('base64') });
+  });
+
+  it('uses an endpoint-specific client for OpenAI-backed files', async () => {
+    const { Readable } = require('stream');
+    const openai = {};
+    const getDownloadStream = jest.fn().mockResolvedValue({ body: Readable.from([Buffer.from('pptx bytes')]) });
+    mockGetStrategyFunctions.mockReturnValue({ getDownloadStream });
+    getOpenAIClient.mockResolvedValue({ openai });
+    getFiles.mockResolvedValue([
+      { file_id: 'file-1', source: 'openai', model: 'gpt-4o', filepath: '/unused' },
+    ]);
+
+    await expect(
+      resolveAttachmentUpload({
+        toolArguments: { sourceFileId: 'file-1' },
+        requestBody: { files: [{ file_id: 'file-1' }] },
+        req: { body: {} },
+        res: {},
+        user: { id: 'user-1' },
+      }),
+    ).resolves.toMatchObject({ content: Buffer.from('pptx bytes').toString('base64') });
+    expect(getDownloadStream).toHaveBeenCalledWith('file-1', openai);
   });
 });
 
@@ -716,7 +747,7 @@ describe('addAttachmentUploadHints', () => {
         { files: [{ file_id: 'file-1' }] },
         true,
       ).required,
-    ).toEqual(['sourceFileId']);
+    ).toEqual(['sourceFile']);
     expect(
       addAttachmentUploadHints(
         schema,
@@ -725,7 +756,7 @@ describe('addAttachmentUploadHints', () => {
         { conversationId: 'conversation-1' },
         true,
       ).required,
-    ).toEqual(['sourceFileName']);
+    ).toEqual(['sourceFile']);
   });
 });
 
