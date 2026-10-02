@@ -121,6 +121,18 @@ Added 8 rows to `deloitte/DeloitteCustomChanges.csv` that were missing: `.github
   - `packages/data-schemas`: `favorite.spec.ts` MongoMemoryServer timeouts, consistent with resource contention seen elsewhere.
   - Recommend re-running these one workspace at a time (not concurrently) to get a clean signal, per your earlier instruction to revisit this later.
 
+## Commit completed
+
+The merge commit landed on `sync/public-LibreChat-v0.8.8` (`bccd709c6`) with the full `.husky/pre-commit` pipeline (lint-staged + `scripts/static-checks.mts`) passing — no hooks bypassed. Not pushed; no PR opened.
+
+Getting there surfaced four more lint/static-check issues beyond the two you originally reported, all fixed before the commit succeeded:
+
+- `client/src/utils/files.ts`: removed unused `isPermissiveMimeConfig` import (already-correct resolution had switched the real check to `isExplicitMimeConfig`; the import was just never cleaned up).
+- `e2e/specs/mock/scenarios/sidebar-single-scroll.spec.ts`: rewrote a nested ternary in the `openSidebar` helper as an early-return, no behavior change.
+- `client/src/components/Auth/Login.tsx`: removed unused `OpenIDIcon` import — pre-existing dead code, confirmed identical on both sides of the merge, unrelated to the merge itself.
+- `client/src/components/Chat/Messages/Content/Parts/Attachment.tsx`: removed unused `FilePreview` import — upstream's card→row attachment-preview refactor (`PreviewPlaceholderCard` → `PreviewPlaceholderRow`) replaced the old `<FilePreview>` call with a status-icon glyph (`ROW_GLYPH_SLOT`); confirmed no remaining call site before removing.
+- **Real circular dependency, fixed, not just a lint nit:** upstream's new `config/circular-deps.mjs` check (run via `static-checks.mts`, not present on the Deloitte side before this merge) caught a genuine static cycle: `api/strategies/openidStrategy.js` → `GraphTokenService.js` → `OboTokenService.js` → `openidStrategy.js`. The back-edge was a lazy `require()` inside `exchangeOboToken`, added specifically to dodge this cycle at runtime — but the rolldown-based checker traces `require()` calls regardless of whether they're deferred inside a function body, so it still flagged it. Fixed with dependency injection instead of a lazy require: `OboTokenService.js` now exposes `registerOpenIdConfigGetter(getter)`, and `openidStrategy.js` calls it once at module load with its own `getOpenIdConfig`. This removes the back-edge entirely (OboTokenService no longer requires openidStrategy at all), rather than just hiding it from static analysis. Updated `OboTokenService.spec.js` to register a `jest.fn()` directly instead of auto-mocking `~/strategies/openidStrategy`. Verified: `node config/circular-deps.mjs` reports all 5 targets clean, and `OboTokenService.spec.js` / `openidStrategy.spec.js` / `GraphApiService.spec.js` / `OpenIDSessionRefresh.spec.js` (279 tests) all pass.
+
 ## Known follow-ups requiring your decision (not fixed, by design)
 
 1. Delete or rewrite `api/server/controllers/__tests__/mcp.tools.spec.js` (Batch 6) — tests a retired mechanism.
