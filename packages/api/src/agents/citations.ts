@@ -752,6 +752,42 @@ function writeText(part: TMessageContentParts, value: string): void {
 }
 
 /**
+ * Shared loop every `insert<Name>Citations` function uses once it has built its
+ * source-specific `passages`: read each content part's text, anchor it against
+ * `passages`, and write the result back if it changed. Returns the `"turn:fileIndex"`
+ * coordinates that matched across all parts, so callers that need them (e.g.
+ * `insertMCPCitations`, for `appendGuaranteedMCPCitations`) can use the return value,
+ * and callers that don't (file/web search) can simply ignore it.
+ */
+function applyPassageAnchors(
+  contentParts: TMessageContentParts[],
+  passages: Passage[],
+  options: {
+    threshold?: number;
+    tokenizeFn?: (text: string) => string[];
+    anchorTag?: string;
+    scoreExcludedRanges?: boolean;
+  } = {},
+): Set<string> {
+  const usedCoords = new Set<string>();
+  if (passages.length === 0) {
+    return usedCoords;
+  }
+  for (const part of contentParts) {
+    const text = readText(part);
+    if (text == null || text.length === 0) {
+      continue;
+    }
+    const { text: rebuilt, usedCoords: partCoords } = anchorTextPart(text, passages, options);
+    partCoords.forEach((coord) => usedCoords.add(coord));
+    if (rebuilt !== text) {
+      writeText(part, rebuilt);
+    }
+  }
+  return usedCoords;
+}
+
+/**
  * Deterministically inserts file citation anchors into the assistant's text
  * content parts by matching each sentence against the retrieved file_search
  * passages. Mutates the content parts in place. Pure and synchronous.
@@ -766,21 +802,7 @@ export function insertFileCitations(
   fileSearchAttachments: TAttachment[],
 ): void {
   const passages = buildPassages(fileSearchAttachments);
-  if (passages.length === 0) {
-    return;
-  }
-
-  for (const part of contentParts) {
-    const text = readText(part);
-    if (text == null || text.length === 0) {
-      continue;
-    }
-
-    const { text: rebuilt } = anchorTextPart(text, passages, {});
-    if (rebuilt !== text) {
-      writeText(part, rebuilt);
-    }
-  }
+  applyPassageAnchors(contentParts, passages, {});
 }
 
 function extractWebSearchData(attachment: TAttachment): SearchResultData | undefined {
@@ -855,23 +877,11 @@ export function insertWebSearchCitations(
     [organic, 'search'],
     [news, 'news'],
   ] as const) {
-    if (passages.length === 0) {
-      continue;
-    }
-    for (const part of contentParts) {
-      const text = readText(part);
-      if (text == null || text.length === 0) {
-        continue;
-      }
-      const { text: rebuilt } = anchorTextPart(text, passages, {
-        anchorTag,
-        threshold: MCP_SIMILARITY_THRESHOLD,
-        tokenizeFn: tokenizeStemmed,
-      });
-      if (rebuilt !== text) {
-        writeText(part, rebuilt);
-      }
-    }
+    applyPassageAnchors(contentParts, passages, {
+      anchorTag,
+      threshold: MCP_SIMILARITY_THRESHOLD,
+      tokenizeFn: tokenizeStemmed,
+    });
   }
 }
 
@@ -920,35 +930,16 @@ export function insertMCPCitations(
   mcpAttachments: TAttachment[],
   turnOffset: number,
 ): Set<string> {
-  const usedCoords = new Set<string>();
   const passages = buildMCPPassages(mcpAttachments, turnOffset);
-  if (passages.length === 0) {
-    return usedCoords;
-  }
-
-  for (const part of contentParts) {
-    const text = readText(part);
-    if (text == null || text.length === 0) {
-      continue;
-    }
-
-    // Score sentences inside an excluded (fenced) range too, so a source matched only there is
-    // marked used and doesn't get force-appended later by appendGuaranteedMCPCitations — but
-    // never insert the anchor markup, since it would render as literal text inside the fence.
-    const { text: rebuilt, usedCoords: partCoords } = anchorTextPart(text, passages, {
-      threshold: MCP_SIMILARITY_THRESHOLD,
-      tokenizeFn: tokenizeStemmed,
-      anchorTag: 'mcp',
-      scoreExcludedRanges: true,
-    });
-    partCoords.forEach((coord) => usedCoords.add(coord));
-
-    if (rebuilt !== text) {
-      writeText(part, rebuilt);
-    }
-  }
-
-  return usedCoords;
+  // Score sentences inside an excluded (fenced) range too, so a source matched only there is
+  // marked used and doesn't get force-appended later by appendGuaranteedMCPCitations — but
+  // never insert the anchor markup, since it would render as literal text inside the fence.
+  return applyPassageAnchors(contentParts, passages, {
+    threshold: MCP_SIMILARITY_THRESHOLD,
+    tokenizeFn: tokenizeStemmed,
+    anchorTag: 'mcp',
+    scoreExcludedRanges: true,
+  });
 }
 
 /**
