@@ -40,6 +40,12 @@ RUN uv --version
 ARG NODE_MAX_OLD_SPACE_SIZE=6144
 ARG NPM_CI_TIMEOUT_SECONDS=1500
 ARG NPM_CI_ATTEMPTS=2
+# Per-environment PWA manifest title. The Helm-provided APP_TITLE only reaches
+# the container at runtime, which is too late for Vite's build-time manifest
+# generation — CI must pass this as a build-arg per environment (e.g.
+# "MyAssist (DEV)") for the deployed manifest to match. Empty by default so
+# client/vite.config.ts falls through to reading a local .env, then 'MyAssist'.
+ARG APP_TITLE=
 
 RUN mkdir -p /app && chown node:node /app
 WORKDIR /app
@@ -79,7 +85,7 @@ COPY --chown=node:node . .
 
 RUN \
     # React client build with configurable memory
-    NODE_OPTIONS="--max-old-space-size=${NODE_MAX_OLD_SPACE_SIZE}" npm run frontend; \
+    NODE_OPTIONS="--max-old-space-size=${NODE_MAX_OLD_SPACE_SIZE}" APP_TITLE="${APP_TITLE}" npm run frontend; \
     npm prune --production; \
     npm cache clean --force
 

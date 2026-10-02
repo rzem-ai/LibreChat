@@ -1,7 +1,7 @@
 import react from '@vitejs/plugin-react';
 import fs from 'fs';
 import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import { createRequire } from 'module';
 import { VitePWA } from 'vite-plugin-pwa';
 import { compression } from 'vite-plugin-compression2';
@@ -38,13 +38,10 @@ const backendURL = backendHost
   ? `http://${backendHost}:${backendPort}`
   : `http://localhost:${backendPort}`;
 const buildSourceMap = process.env.NODE_ENV === 'development';
-/** `envPrefix` below restricts which vars reach `import.meta.env` for the client bundle, but
- * APP_TITLE is only needed here, in Node, for the PWA manifest — so it's loaded directly via
- * `loadEnv` (with no prefix filter) rather than `process.env`, which Vite doesn't populate
- * from `.env` until after this config factory has already returned its config. */
-const appTitle =
-  loadEnv(process.env.NODE_ENV || 'production', path.resolve(__dirname, '..'), '').APP_TITLE ||
-  'MyAssist';
+/** Set by the Dockerfile's `ARG APP_TITLE` at build time — Helm's APP_TITLE only reaches the
+ * container at runtime, too late for this build-time manifest. Plain host builds (no Docker)
+ * get the 'MyAssist' fallback; export APP_TITLE in your shell first if you need it there too. */
+const appTitle = process.env.APP_TITLE || 'MyAssist';
 const QUERY_DEVTOOLS_CHUNK_MODULES = [
   '@tanstack/react-query-devtools',
   '@tanstack/match-sorter-utils',

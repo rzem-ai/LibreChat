@@ -87,7 +87,13 @@ COPY --from=client-package-build /app/packages/client/dist /app/packages/client/
 COPY --from=client-package-build /app/packages/client/src /app/packages/client/src
 ARG NODE_MAX_OLD_SPACE_SIZE
 ENV NODE_OPTIONS="--max-old-space-size=${NODE_MAX_OLD_SPACE_SIZE}"
-RUN npm run build
+# Per-environment PWA manifest title — see the matching ARG in the root
+# Dockerfile for why this must be passed at build time, not runtime. This
+# stage only COPYs client/, so it has no root .env for loadEnv to fall back
+# to either; CI must pass this build-arg for the deployed manifest title to
+# be correct here.
+ARG APP_TITLE=
+RUN APP_TITLE="${APP_TITLE}" npm run build
 
 # API setup (including client dist)
 FROM base-min AS api-build
