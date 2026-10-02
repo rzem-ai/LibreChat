@@ -67,6 +67,10 @@ bower_components/
 *.d.ts
 !vite-env.d.ts
 
+# api/ is JS and resolves the `~` alias through api/jsconfig.json; a tsconfig.json
+# here shadows it (tooling sometimes creates an empty one) and breaks e2e resolution
+api/tsconfig.json
+
 # AI
 .clineignore
 .cursor
@@ -85,6 +89,7 @@ bower_components/
 # librechat.yml
 
 # Environment
+# Deloitte Custom Change: ignore Deloitte-specific local dev files
 Caddyfile
 .npmrc
 .env*
@@ -99,8 +104,10 @@ archive
 src/style - official.css
 /e2e/specs/.test-results/
 /e2e/benchmarks/.test-results/
+/e2e/benchmarks-tree/.test-results/
 /e2e/.generated/
 /e2e/playwright-report/
+/e2e/playwright-report-bombadil/
 /playwright/.cache/
 .DS_Store
 *.code-workspace
@@ -203,6 +210,7 @@ CLAUDE.md
 codedb.snapshot
 scripts/activity-labels/results/
 
+# Deloitte Custom Change: ignore Python bytecode and local skill drafts
 # Python bytecode
 __pycache__/
 **/__pycache__/
@@ -213,3 +221,7 @@ __pycache__/
 
 # Local untested skill drafts
 untested_skills/
+
+!e2e/lighthouse/librechat.yaml
+/.lighthouse/
+/e2e/lighthouse/.test-results/

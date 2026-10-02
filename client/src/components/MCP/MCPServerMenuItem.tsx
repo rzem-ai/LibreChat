@@ -14,6 +14,7 @@ import {
 // Deloitte Custom Change: SharePoint MCP is limited to a subset of users.
 import { LimitedAccessPill } from '~/components/SidePanel/Agents/Advanced/ui';
 import MCPServerStatusIcon from './MCPServerStatusIcon';
+// Deloitte Custom Change: light/dark themed MCP server icons.
 import MCPServerIcon from './MCPServerIcon';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -116,7 +117,7 @@ export default function MCPServerMenuItem({
         className={cn(
           'flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-sm border',
           isSelected
-            ? 'border-primary bg-primary text-primary-foreground'
+            ? 'border-border-xheavy bg-surface-inverted text-text-inverted'
             : 'border-border-xheavy bg-transparent',
         )}
       >

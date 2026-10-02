@@ -135,15 +135,22 @@ const SplitText: React.FC<SplitTextProps> = ({
 
   return (
     <>
-      <span className="sr-only">{text}</span>
       <p
         ref={ref}
+        dir="auto"
+        // Deloitte Custom Change: omit overflow-hidden, it clipped letter descenders (e.g. "g", "y") in the welcome text animation
         className={`split-parent inline ${className}`}
         style={{ textAlign, whiteSpace: 'normal', wordWrap: 'break-word' }}
-        aria-hidden="true"
       >
+        {/* The paragraph's auto direction ignores word boxes with their own dir. */}
+        <span className="sr-only">{text}</span>
         {words.map((word, wordIndex) => (
-          <span key={wordIndex} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>
+          <span
+            key={wordIndex}
+            dir="auto"
+            aria-hidden="true"
+            style={{ display: 'inline-block', whiteSpace: 'nowrap' }}
+          >
             {word.map((letter, letterIndex) => {
               const index =
                 words.slice(0, wordIndex).reduce((acc, w) => acc + w.length, 0) + letterIndex;

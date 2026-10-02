@@ -115,9 +115,11 @@ describe('Environment Variable Extraction', () => {
       expect(extractEnvVariable('  Hello ${USER}!  ')).toBe('Hello testuser!');
     });
 
-    it('should not handle multiple variables', () => {
-      expect(extractEnvVariable('${HELLO} ${USER}')).toBe('${HELLO} ${USER}');
-      expect(extractEnvVariable('  ${HELLO}   ${USER}  ')).toBe('${HELLO}   ${USER}');
+    it('should resolve multiple variables', () => {
+      // Deloitte Custom Change: stale assertion predated the multi-placeholder resolution
+      // loop documented in src/utils.ts — updated to match the intended behavior.
+      expect(extractEnvVariable('${HELLO} ${USER}')).toBe('world testuser');
+      expect(extractEnvVariable('  ${HELLO}   ${USER}  ')).toBe('world   testuser');
     });
 
     it('should handle undefined variables', () => {

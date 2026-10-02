@@ -214,7 +214,11 @@ export function SourceHovercard({
                 <button
                   type="button"
                   onClick={handleFileClick}
-                  className="ml-1 inline-flex h-[22px] max-w-44 items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-border-heavy bg-surface-secondary pl-1 pr-2 text-xs font-medium text-text-primary no-underline transition-colors hover:bg-surface-hover dark:border-border-medium dark:hover:bg-surface-tertiary"
+                  // Deloitte Custom Change: taller chip + split left/right padding to fit the
+                  // connector/MCP icon, rounded-md to match Connector logos (dark-mode handled by
+                  // the design-system tokens upstream now relies on, so the old dark: overrides
+                  // are dropped)
+                  className="ml-1 inline-flex h-[22px] max-w-44 items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-border-heavy bg-surface-secondary pl-1 pr-2 text-xs font-medium text-text-primary no-underline transition-colors hover:bg-surface-hover"
                   onMouseEnter={onMouseEnter}
                   onMouseLeave={onMouseLeave}
                   title={isLocalFile ? localize('com_sources_download_local_unavailable') : label}
@@ -233,7 +237,9 @@ export function SourceHovercard({
                   href={source.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="ml-1 inline-block h-5 max-w-44 cursor-pointer items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-border-heavy bg-surface-secondary px-2 text-xs font-medium no-underline transition-colors hover:bg-surface-hover dark:border-border-medium dark:hover:bg-surface-tertiary"
+                  // Deloitte Custom Change: wider chip (max-w-44) + rounded-md to match Connector
+                  // logos
+                  className="ml-1 inline-block h-5 max-w-44 cursor-pointer items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-border-heavy bg-surface-secondary px-2 text-xs font-medium no-underline transition-colors hover:bg-surface-hover"
                   onMouseEnter={onMouseEnter}
                   onMouseLeave={onMouseLeave}
                   title={label}
@@ -243,7 +249,7 @@ export function SourceHovercard({
               )
             }
           />
-          <Ariakit.HovercardDisclosure className="ml-0.5 rounded-full text-text-primary focus:outline-none focus:ring-2 focus:ring-ring">
+          <Ariakit.HovercardDisclosure className="ml-0.5 rounded-full text-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary">
             <VisuallyHidden>{localize('com_citation_more_details', { label })}</VisuallyHidden>
             <ChevronDown className="icon-sm" aria-hidden="true" />
           </Ariakit.HovercardDisclosure>

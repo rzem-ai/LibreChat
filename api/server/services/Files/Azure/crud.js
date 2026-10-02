@@ -6,6 +6,7 @@ const { logger } = require('@librechat/data-schemas');
 const {
   deleteRagFile,
   assertRemoteFileURL,
+  getSafeErrorMetadata,
   getAzureContainerClient,
   getRemoteFileFetchMaxBytes,
   getRemoteFileFetchTimeoutMs,
@@ -261,33 +262,48 @@ async function uploadFileToAzure({
  * @param {string} fileURL - The URL of the blob.
  * @returns {Promise<ReadableStream>} A readable stream of the blob.
  */
-async function getAzureFileStream(_req, fileURL) {
+async function getAzureFileStream(_req, fileURL, { signal } = {}) {
   try {
-    logger.debug(`[getAzureFileStream] container=${AZURE_CONTAINER_NAME} url=${fileURL}`);
-    const containerClient = await getAzureContainerClient(AZURE_CONTAINER_NAME);
-    if (!containerClient) {
-      throw new Error(
-        '[getAzureFileStream] getAzureContainerClient returned null (check AZURE_STORAGE_ACCOUNT_NAME)',
-      );
+    // Deloitte Custom Change: the private-avatar proxy route (avatar.js) calls this with a
+    // container-relative path (e.g. `/files/images/...`), not a full blob URL. A base is
+    // supplied so `new URL` accepts both; absolute blob URLs ignore the base entirely.
+    const url = new URL(fileURL, 'http://localhost');
+    const configuredClient = await getAzureContainerClient();
+    const configuredURL = configuredClient.url ? new URL(configuredClient.url) : undefined;
+    const configuredPrefix = configuredURL?.pathname.replace(/\/$/, '');
+    let containerClient = configuredClient;
+    let blobPath;
+
+    if (
+      configuredURL &&
+      configuredPrefix &&
+      url.origin === configuredURL.origin &&
+      url.pathname.startsWith(`${configuredPrefix}/`)
+    ) {
+      /* Azurite puts the account name before the container in the path. The configured
+       * container URL already includes both, so resolve the blob relative to it. */
+      blobPath = url.pathname.slice(configuredPrefix.length + 1);
+    } else {
+      const pathSegments = url.pathname.split('/').filter(Boolean);
+      const containerName = pathSegments.shift();
+      blobPath = pathSegments.join('/');
+      if (containerName) {
+        containerClient = await getAzureContainerClient(decodeURIComponent(containerName));
+      }
     }
-    const blobPath = fileURL.split(`${AZURE_CONTAINER_NAME}/`)[1];
+    blobPath = blobPath?.split('/').map(decodeURIComponent).join('/');
     if (!blobPath) {
-      throw new Error(`Could not extract blob path from URL: ${fileURL}`);
+      throw new Error('Invalid Azure Blob URL');
     }
-    logger.debug(`[getAzureFileStream] blobPath=${blobPath}`);
-    const blockBlobClient = containerClient.getBlockBlobClient(blobPath);
-    // Empty options: clear default lease/ETag conditions to avoid 409 on upload settlement.
-    const response = await blockBlobClient.download(0, undefined, {});
-    logger.debug(
-      `[getAzureFileStream] ok status=${response._response?.status} bytes=${response.contentLength}`,
-    );
+    const response = await containerClient.getBlockBlobClient(blobPath).download(0, undefined, {
+      abortSignal: signal,
+    });
+    if (!response.readableStreamBody) {
+      throw new Error('Azure Blob download returned no readable stream');
+    }
     return response.readableStreamBody;
   } catch (error) {
-    logger.error('[getAzureFileStream] Error getting blob stream:', {
-      message: error.message,
-      code: error.code,
-      statusCode: error.statusCode,
-    });
+    logger.error('[getAzureFileStream] Error getting blob stream:', getSafeErrorMetadata(error));
     throw error;
   }
 }

@@ -11,9 +11,15 @@ import {
 import type { QueryObserverResult, UseQueryOptions } from '@tanstack/react-query';
 import type t from 'librechat-data-provider';
 import type { AxiosResponse } from 'axios';
+import {
+  addFileToCache,
+  getDownloadFilename,
+  registerDownloadFilename,
+  unregisterDownloadFilename,
+} from '~/utils';
+// Deloitte Custom Change (PR #197): authenticated blob fetch for private Azure file rendering.
 import { useBlobUrl } from '~/hooks/Files/useBlobUrl';
 import { isEphemeralAgent } from '~/common';
-import { addFileToCache } from '~/utils';
 import store from '~/store';
 
 export type { BlobUrlResult } from '~/hooks/Files/useBlobUrl';
@@ -68,6 +74,7 @@ export const useGetFileConfig = <TData = t.TFileConfig>(
 type FileDownloadOptions = {
   source?: string | null;
   direct?: boolean;
+  purpose?: 'download' | 'preview';
 };
 
 export const isDirectDownloadSource = (source?: string | null): boolean =>
@@ -77,6 +84,7 @@ export const revokeDownloadURL = (url?: string | null): void => {
   if (!url?.startsWith('blob:')) {
     return;
   }
+  unregisterDownloadFilename(url);
   window.URL.revokeObjectURL(url);
 };
 
@@ -87,7 +95,13 @@ export const useFileDownload = (
 ): QueryObserverResult<string> => {
   const queryClient = useQueryClient();
   return useQuery(
-    [QueryKeys.fileDownload, file_id, options.source ?? '', options.direct ?? true],
+    [
+      QueryKeys.fileDownload,
+      file_id,
+      options.source ?? '',
+      options.direct ?? true,
+      options.purpose ?? 'download',
+    ],
     async () => {
       if (!userId || !file_id) {
         console.warn('No user ID provided for file download');
@@ -116,6 +130,10 @@ export const useFileDownload = (
           return downloadURL;
         }
 
+        registerDownloadFilename(
+          downloadURL,
+          getDownloadFilename(metadata.filename, metadata.file_id, metadata.source),
+        );
         addFileToCache(queryClient, metadata);
       } catch (e) {
         console.error('Error parsing file metadata, skipped updating file query cache', e);
@@ -164,9 +182,10 @@ export const useAuthenticatedBlobUrl = (
 export const useSharedFileDownload = (
   shareId?: string,
   file_id?: string,
+  purpose: 'download' | 'preview' = 'download',
 ): QueryObserverResult<string> => {
   return useQuery(
-    [QueryKeys.fileDownload, 'share', shareId ?? '', file_id ?? ''],
+    [QueryKeys.fileDownload, 'share', shareId ?? '', file_id ?? '', purpose],
     async () => {
       if (!shareId || !file_id) {
         return;
@@ -180,6 +199,26 @@ export const useSharedFileDownload = (
     },
   );
 };
+
+/** Preview consumers share immutable bytes, never a revocable download URL. */
+export const useFilePreviewBlob = (
+  userId?: string,
+  fileId?: string,
+  shareId?: string,
+): QueryObserverResult<Blob> =>
+  useQuery(
+    [QueryKeys.fileDownload, 'previewBlob', shareId ? 'share' : 'owner', shareId ?? userId, fileId],
+    async () => {
+      if (!fileId || (!shareId && !userId)) {
+        throw new Error('Preview identity unavailable');
+      }
+      const response = shareId
+        ? await dataService.getSharedFileDownload(shareId, fileId)
+        : await dataService.getFileDownload(userId!, fileId);
+      return response.data;
+    },
+    { enabled: false, retry: false, cacheTime: 0 },
+  );
 
 export const useCodeOutputDownload = (url = ''): QueryObserverResult<string> => {
   return useQuery(

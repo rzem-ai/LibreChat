@@ -1,11 +1,13 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useRef, useMemo, useEffect } from 'react';
 import * as Ariakit from '@ariakit/react';
-import { TooltipAnchor } from '@librechat/client';
+// Deloitte Custom Change: import Check and Minus icons for the Connect All checkbox
 import { Check, ChevronDown, Minus } from 'lucide-react';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
+import { TooltipAnchor, composerControlClasses } from '@librechat/client';
 import MCPServerMenuItem from '~/components/MCP/MCPServerMenuItem';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
 import StackedMCPIcons from '~/components/MCP/StackedMCPIcons';
+import { useMCPRefresh } from '~/hooks/MCP/useMCPRefresh';
 import { useHasAccess, useLocalize } from '~/hooks';
 import { useBadgeRowContext } from '~/Providers';
 import { cn } from '~/utils';
@@ -17,15 +19,40 @@ function MCPSelectContent() {
 
   const menuStore = Ariakit.useMenuStore({ focusLoop: true });
   const isOpen = menuStore.useState('open');
+  const configDialogOpen = manager?.getConfigDialogProps()?.isOpen === true;
+  useMCPRefresh({
+    enabled: (isOpen || configDialogOpen) && (manager?.availableMCPServers.length ?? 0) > 0,
+  });
+
+  /**
+   * The menu closes with the dialog it launched. Ariakit only takes Escape for
+   * a menu when the event target is the menu, its trigger, or `body`, so while
+   * the config dialog holds focus the menu never sees it — the Escape that
+   * closes the dialog leaves the menu open behind it, and `disabled={isOpen}`
+   * then makes its trigger unclickable, stranding the reader
+   * (`mcp-oauth-readiness` e2e). Keyed on the dialog CLOSING, not opening: the
+   * menu stays mounted underneath while the dialog is up, which is where its
+   * server rows are read from.
+   */
+  const configDialogWasOpen = useRef(false);
+  useEffect(() => {
+    if (configDialogWasOpen.current && !configDialogOpen) {
+      menuStore.hide();
+    }
+    configDialogWasOpen.current = configDialogOpen;
+  }, [configDialogOpen, menuStore]);
 
   const selectedServers = useMemo(() => {
     if (!manager?.mcpValues || manager.mcpValues.length === 0) {
       return [];
     }
     const selectedSet = new Set(manager.mcpValues);
-    return manager.selectableServers?.filter((s) => selectedSet.has(s.serverName));
+    return manager.selectableServers?.filter((s) => selectedSet.has(s.serverName)) ?? [];
   }, [manager?.selectableServers, manager?.mcpValues]);
 
+  /** Counts what the menu actually offers, never the raw selection: a name the
+   *  catalog has not returned — or one the admin has hidden — renders no row,
+   *  and billing it to the badge reads as a server that cannot be turned off. */
   const displayText = useMemo(() => {
     // Deloitte Custom Change: Count from de-duplicated selectedServers so the label
     // cannot over-count when mcpValues contains duplicates.
@@ -34,9 +61,12 @@ function MCPSelectContent() {
       return null;
     }
     if (selectedCount === 1) {
+      // Deloitte Custom Change: optional chaining guards against an entry that
+      // disappeared from the catalog between selection and this render.
       const [server] = selectedServers;
       return server?.config?.title || server?.serverName;
     }
+    // Deloitte Custom Change: "connected" wording matches the Connect All feature
     return localize('com_ui_x_connected', { 0: selectedCount });
   }, [selectedServers, localize]);
 
@@ -75,11 +105,8 @@ function MCPSelectContent() {
             <Ariakit.MenuButton
               id="toolbar-toggle-mcp-servers"
               className={cn(
-                'group relative inline-flex items-center justify-center gap-1.5',
-                'border border-border-medium text-sm font-medium transition-all',
-                'h-9 min-w-9 rounded-full bg-transparent px-2.5 shadow-sm',
-                'hover:bg-surface-hover hover:shadow-md active:shadow-inner',
-                'md:w-fit md:justify-start md:px-3',
+                composerControlClasses(),
+                'min-w-theme-control px-2.5 md:w-fit md:justify-start md:px-theme-normal',
                 isOpen && 'bg-surface-hover',
               )}
             />

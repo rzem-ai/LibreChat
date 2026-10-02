@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-react';
 import { MCPIcon, PinIcon } from '@librechat/client';
 import MCPServerMenuItem from '~/components/MCP/MCPServerMenuItem';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
+import { useMCPRefresh } from '~/hooks/MCP/useMCPRefresh';
 import { useBadgeRowContext } from '~/Providers';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -22,6 +23,13 @@ const MCPSubMenu = React.forwardRef<HTMLButtonElement, MCPSubMenuProps>(
       focusLoop: true,
       showTimeout: 100,
       placement: 'right',
+    });
+
+    const isOpen = menuStore.useState('open');
+    const configDialogOpen = mcpServerManager?.getConfigDialogProps()?.isOpen === true;
+    useMCPRefresh({
+      enabled:
+        (isOpen || configDialogOpen) && (mcpServerManager?.selectableServers.length ?? 0) > 0,
     });
 
     if (!mcpServerManager) {
@@ -89,10 +97,13 @@ const MCPSubMenu = React.forwardRef<HTMLButtonElement, MCPSubMenuProps>(
           <Ariakit.Menu
             portal={true}
             unmountOnHide={true}
+            gutter={12}
+            flip="left bottom-end top-end"
             aria-label={localize('com_ui_mcp_servers')}
-            // Deloitte Custom Change: Increase minimum width on MCP selector.
+            // Deloitte Custom Change: Increase minimum width on MCP selector so the dropdown
+            // doesn't shrink/snap during auth; clamped to viewport width on small screens.
             className={cn(
-              'animate-popover-left z-40 ml-3 flex min-w-[300px] max-w-[320px] flex-col rounded-xl',
+              'animate-popover-left z-40 ml-3 flex min-w-[min(300px,calc(100vw-1rem))] max-w-[min(320px,calc(100vw-1rem))] flex-col rounded-xl',
               'border border-border-light bg-presentation p-1.5 shadow-lg',
             )}
           >

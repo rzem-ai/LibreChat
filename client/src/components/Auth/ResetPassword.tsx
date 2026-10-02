@@ -20,6 +20,7 @@ function ResetPassword() {
   const password = watch('password');
   const resetPassword = useResetPasswordMutation();
   const { setError, setHeaderText, startupConfig } = useOutletContext<TLoginLayoutContext>();
+  // Deloitte Custom Change: GEL design system input styling (PR #138)
   const authInputClassName =
     'peer h-12 w-full rounded-lg border border-border-light bg-surface-primary px-4 pr-12 text-text-primary transition-colors duration-200 hover:border-border-medium focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus-visible:border-primary';
   const authLabelClassName =
@@ -41,6 +42,7 @@ function ResetPassword() {
   if (resetPassword.isSuccess) {
     return (
       <>
+        {/* Deloitte Custom Change: GEL design system success banner styling (PR #138) */}
         <div
           className="relative mt-6 rounded-xl border border-primary/20 bg-primary/5 px-6 py-4 text-primary shadow-sm transition-all dark:text-primary-foreground"
           role="alert"
@@ -107,7 +109,7 @@ function ResetPassword() {
         </div>
 
         {errors.password && (
-          <span role="alert" className="mt-1 text-sm text-red-500 dark:text-red-900">
+          <span role="alert" className="mt-1 text-sm text-text-destructive">
             {errors.password.message}
           </span>
         )}
@@ -130,17 +132,17 @@ function ResetPassword() {
           />
         </div>
         {errors.confirm_password && (
-          <span role="alert" className="mt-1 text-sm text-red-500 dark:text-red-900">
+          <span role="alert" className="mt-1 text-sm text-text-destructive">
             {errors.confirm_password.message}
           </span>
         )}
         {errors.token && (
-          <span role="alert" className="mt-1 text-sm text-red-500 dark:text-red-900">
+          <span role="alert" className="mt-1 text-sm text-text-destructive">
             {errors.token.message}
           </span>
         )}
         {errors.userId && (
-          <span role="alert" className="mt-1 text-sm text-red-500 dark:text-red-900">
+          <span role="alert" className="mt-1 text-sm text-text-destructive">
             {errors.userId.message}
           </span>
         )}

@@ -1,5 +1,5 @@
-import { TStartupConfig } from 'librechat-data-provider';
 import { ThemeSelector } from '@librechat/client';
+import { TStartupConfig } from 'librechat-data-provider';
 import { DeloitteLogo } from '~/components/DeloitteComponents/DeloitteLogo';
 import { ErrorMessage } from '~/components/Auth/ErrorMessage';
 import { TranslationKeys, useLocalize } from '~/hooks';
@@ -39,6 +39,7 @@ function AuthLayout({
         <div className="mx-auto sm:max-w-sm">
           <ErrorMessage>
             {localize('com_auth_error_invalid_reset_token')}{' '}
+            {/* Deloitte Custom Change: GEL design system color tokens (PR #138) */}
             <a className="font-medium text-primary hover:underline" href="/forgot-password">
               {localize('com_auth_click_here')}
             </a>{' '}
@@ -57,7 +58,8 @@ function AuthLayout({
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-[url('/assets/AI-Secondary-light.jpg')] bg-[length:auto_180vh] bg-[position:left_-37.5vh_top_-47.7vh] bg-no-repeat dark:bg-[url('/assets/AI-Secondary-dark.jpg')] dark:bg-black">
+    // Deloitte Custom Change: custom SSO login background images (PR #588)
+    <div className="relative flex min-h-screen flex-col bg-[url('/assets/AI-Secondary-light.jpg')] bg-[length:auto_180vh] bg-[position:left_-37.5vh_top_-47.7vh] bg-no-repeat dark:bg-black dark:bg-[url('/assets/AI-Secondary-dark.jpg')]">
       <Banner />
 
       <DisplayError />
@@ -66,9 +68,8 @@ function AuthLayout({
       </div>
 
       <main className="flex flex-grow items-center justify-center">
-        <div
-          className="w-authPageWidth rounded-xl overflow-hidden border border-border-light bg-card p-6 sm:max-w-md"
-        >
+        {/* Deloitte Custom Change: GEL design system card styling + DeloitteLogo (PR #138) */}
+        <div className="w-authPageWidth overflow-hidden rounded-xl border border-border-light bg-card p-6 sm:max-w-md">
           {!hasStartupConfigError && !isFetching && (
             <div className="mb-3 flex justify-center">
               <div className="h-6 w-24 bg-cover">
@@ -77,9 +78,7 @@ function AuthLayout({
             </div>
           )}
           {!hasStartupConfigError && !isFetching && header && (
-            <h1
-              className="mb-4 select-none text-center text-xl font-medium leading-none tracking-tight text-text-primary"
-            >
+            <h1 className="mb-4 select-none text-center text-xl font-medium leading-none tracking-tight text-text-primary">
               {header}
             </h1>
           )}

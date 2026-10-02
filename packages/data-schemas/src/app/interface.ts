@@ -58,6 +58,9 @@ export async function loadDefaultInterface({
     modelSelect:
       interfaceConfig?.modelSelect ??
       (hasModelSpecs ? includesAddedEndpoints : defaults.modelSelect),
+    codeHighlightThrottleMs:
+      interfaceConfig?.codeHighlightThrottleMs ?? defaults.codeHighlightThrottleMs,
+    agentSelectorLimit: interfaceConfig?.agentSelectorLimit ?? defaults.agentSelectorLimit,
     parameters: interfaceConfig?.parameters ?? (hasModelSpecs ? false : defaults.parameters),
     presets: interfaceConfig?.presets ?? (hasModelSpecs ? false : defaults.presets),
     customDeloitteFeatureFlags,
@@ -69,6 +72,7 @@ export async function loadDefaultInterface({
     buildInfo: interfaceConfig?.buildInfo ?? defaults.buildInfo,
     contextUsage: interfaceConfig?.contextUsage ?? defaults.contextUsage,
     contextCost: interfaceConfig?.contextCost ?? defaults.contextCost,
+    feedback: interfaceConfig?.feedback ?? defaults.feedback,
     currency: interfaceConfig?.currency ?? defaults.currency,
     userMessageAlignment: interfaceConfig?.userMessageAlignment ?? defaults.userMessageAlignment,
     isTutorialEnabled,
@@ -81,6 +85,7 @@ export async function loadDefaultInterface({
     agents: interfaceConfig?.agents,
     temporaryChat: interfaceConfig?.temporaryChat,
     temporaryChatRetention: interfaceConfig?.temporaryChatRetention,
+    generalChatRetention: interfaceConfig?.generalChatRetention,
     retentionMode: interfaceConfig?.retentionMode,
     retainAgentFiles: interfaceConfig?.retainAgentFiles,
     runCode: interfaceConfig?.runCode,
@@ -89,13 +94,16 @@ export async function loadDefaultInterface({
     // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
     providerUpload: interfaceConfig?.providerUpload,
     fileCitations: interfaceConfig?.fileCitations,
+    // Deloitte Custom Change: Deloitte Logo Lockup header (PR #269)
     deloitteHeader,
+    traceViewer: interfaceConfig?.traceViewer,
     defaultPinnedTools: interfaceConfig?.defaultPinnedTools,
     peoplePicker: interfaceConfig?.peoplePicker,
     marketplace: interfaceConfig?.marketplace,
     remoteAgents: interfaceConfig?.remoteAgents,
     skills: interfaceConfig?.skills,
     sharedLinks: interfaceConfig?.sharedLinks,
+    schedules: interfaceConfig?.schedules,
   });
 
   return loadedInterface;
