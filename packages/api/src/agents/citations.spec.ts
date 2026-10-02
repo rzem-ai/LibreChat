@@ -72,8 +72,8 @@ function mcpAttachment(
 
 function webSearchAttachment(
   turn: number,
-  organic?: Array<Partial<OrganicResult> & { title?: string }>,
-  topStories?: Array<Partial<TopStoryResult> & { title?: string }>,
+  organic?: Array<Partial<OrganicResult> & { title?: string; content?: string }>,
+  topStories?: Array<Partial<TopStoryResult> & { title?: string; content?: string }>,
 ): TAttachment {
   return {
     type: Tools.web_search,
@@ -920,6 +920,24 @@ describe('insertWebSearchCitations', () => {
     const parts = [textPart('You can reserve a desk fourteen days in advance.')];
     insertWebSearchCitations(parts, [
       webSearchAttachment(0, [{ title: 'Desk Booking', snippet: DESK_CONTENT }]),
+    ]);
+    expect(readText(parts[0])).toContain(`${MARKER}turn0search0`);
+  });
+
+  it('anchors a sentence grounded only in the snippet when the result also has scraped content', () => {
+    // A processed organic result can carry both a scraped `content` body and the provider's
+    // own `snippet` — the snippet can state a fact the scrape doesn't repeat. A sentence
+    // grounded only in that snippet fact must still match, not be silently dropped because
+    // `content` alone was indexed.
+    const parts = [textPart('New starters get a fourteen-day free trial of the premium plan.')];
+    insertWebSearchCitations(parts, [
+      webSearchAttachment(0, [
+        {
+          title: 'Desk Booking',
+          content: DESK_CONTENT,
+          snippet: 'New starters get a fourteen-day free trial of the premium membership plan.',
+        },
+      ]),
     ]);
     expect(readText(parts[0])).toContain(`${MARKER}turn0search0`);
   });
@@ -2013,6 +2031,21 @@ describe('applyEndOfTraceCitations', () => {
       fileCitations: false,
     });
     expect(readText(parts[0])).toBe(original);
+  });
+
+  it('still inserts web search citations when fileCitations is false', async () => {
+    // `fileCitations` is the file-search-specific citations permission. web_search has no
+    // model-generated citation fallback to fall back on, so it must not go silently uncited
+    // whenever an admin disables file citations alone.
+    const parts = [textPart('You can reserve a desk fourteen days in advance.')];
+    await applyEndOfTraceCitations({
+      contentParts: parts,
+      artifactPromises: [
+        Promise.resolve(webSearchAttachment(0, [{ title: 'Desk Booking', snippet: DESK_CONTENT }])),
+      ],
+      fileCitations: false,
+    });
+    expect(readText(parts[0])).toContain(`${MARKER}turn0search0`);
   });
 
   it('ignores non-file_search attachments', async () => {

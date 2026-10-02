@@ -834,8 +834,11 @@ function buildWebSearchPassages(webSearchAttachments: TAttachment[]): {
     const turn = data.turn;
 
     data.organic?.forEach((result, fileIndex) => {
+      // A processed organic result can carry both a scraped `content` and the provider's
+      // own `snippet` — the snippet can state facts the scrape doesn't repeat, so both
+      // must contribute tokens or sentences grounded only in the snippet never match.
       const tokens = new Set(
-        tokenizeStemmed(`${result.title ?? ''} ${result.content ?? result.snippet ?? ''}`),
+        tokenizeStemmed(`${result.title ?? ''} ${result.content ?? ''} ${result.snippet ?? ''}`),
       );
       if (tokens.size > 0) {
         organic.push({ turn, fileIndex, tokens });
@@ -1483,9 +1486,6 @@ export async function applyEndOfTraceCitations({
   mcpUsageGuidelinesUrl?: string;
   logger?: Logger;
 }): Promise<void> {
-  if (fileCitations === false) {
-    return;
-  }
   if (!Array.isArray(contentParts) || contentParts.length === 0) {
     return;
   }
@@ -1508,7 +1508,10 @@ export async function applyEndOfTraceCitations({
         attachment != null && attachment.type === Tools.web_search,
     );
 
-    if (fileSearchAttachments.length > 0) {
+    // `fileCitations` is the file-search-specific citations permission — it must not also
+    // gate web_search/MCP citations, which have no model-generated fallback to fall back on
+    // and would otherwise go silently uncited whenever an admin disables file citations alone.
+    if (fileCitations !== false && fileSearchAttachments.length > 0) {
       insertFileCitations(contentParts, fileSearchAttachments);
     }
     if (webSearchAttachments.length > 0) {
