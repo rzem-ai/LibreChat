@@ -43,6 +43,7 @@ const {
   resolveAttachmentUpload: resolveMCPAttachmentUpload,
   addAttachmentUploadHints,
   getAttachmentDownloadStream: getMCPAttachmentDownloadStream,
+  getThreadData,
 } = require('@librechat/api');
 const { extractOpenIDTokenInfo, isOpenIDTokenValid } = require('@librechat/api');
 const {
@@ -101,12 +102,34 @@ async function getAttachmentDownloadStream(attachment, req, res) {
 
 /** Thin server adapter for storage-specific file download dependencies. */
 async function resolveAttachmentUpload({ toolArguments, requestBody, req, res, user }) {
+  const sourceFile = toolArguments?.sourceFile;
+  const sourceFileNeedsThreadContext =
+    Object.prototype.hasOwnProperty.call(toolArguments ?? {}, 'sourceFileName') ||
+    (Object.prototype.hasOwnProperty.call(toolArguments ?? {}, 'sourceFile') &&
+      !(requestBody?.files ?? []).some((file) => file?.file_id === sourceFile));
+  let threadFileIds;
+  if (
+    sourceFileNeedsThreadContext &&
+    requestBody?.conversationId &&
+    requestBody.parentMessageId &&
+    user?.id &&
+    db.getMessages
+  ) {
+    const messages = await db.getMessages(
+      { conversationId: requestBody.conversationId, user: user.id },
+      'messageId parentMessageId files attachments',
+    );
+    threadFileIds = getThreadData(messages ?? [], requestBody.parentMessageId).fileIds;
+  }
+
   return resolveMCPAttachmentUpload({
     toolArguments,
     requestBody,
+    threadFileIds,
     user,
     dependencies: {
       getFiles: db.getFiles,
+      getCodeGeneratedFiles: db.getCodeGeneratedFiles,
       getAttachmentDownloadStream: (attachment) => getAttachmentDownloadStream(attachment, req, res),
     },
   });

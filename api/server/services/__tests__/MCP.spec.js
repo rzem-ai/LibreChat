@@ -54,6 +54,8 @@ jest.mock('~/models', () => ({
   createToken: jest.fn(),
   updateToken: jest.fn(),
   getFiles: jest.fn(),
+  getMessages: jest.fn(),
+  getCodeGeneratedFiles: jest.fn(),
 }));
 jest.mock('~/server/services/GraphTokenService', () => ({
   getGraphApiToken: jest.fn(),
@@ -79,7 +81,7 @@ const { Constants } = require('librechat-data-provider');
 
 const { getAppConfig } = require('~/server/services/Config');
 const { reinitMCPServer } = require('~/server/services/Tools/mcp');
-const { getFiles } = require('~/models');
+const { getFiles, getMessages, getCodeGeneratedFiles } = require('~/models');
 const { getOpenAIClient } = require('~/server/controllers/assistants/helpers');
 const {
   createMCPTool,
@@ -581,7 +583,7 @@ describe('resolveAttachmentUpload', () => {
     expect(getDownloadStream).toHaveBeenCalledWith(req, attachment.filepath);
   });
 
-  it('resolves a generated file by the current conversation and user', async () => {
+  it('resolves a generated file from the current conversation branch', async () => {
     const { Readable } = require('stream');
     const getCodeStream = jest.fn().mockResolvedValue({
       data: Readable.from([Buffer.from('pptx bytes')]),
@@ -589,7 +591,24 @@ describe('resolveAttachmentUpload', () => {
     mockGetStrategyFunctions.mockImplementation((source) =>
       source === 'execute_code' ? { getDownloadStream: getCodeStream } : {},
     );
-    getFiles.mockResolvedValue([
+    getMessages.mockResolvedValue([
+      {
+        messageId: 'root',
+        parentMessageId: '00000000-0000-0000-0000-000000000000',
+        attachments: [{ file_id: 'root-file' }],
+      },
+      {
+        messageId: 'selected-parent',
+        parentMessageId: 'root',
+        attachments: [{ file_id: 'file-1' }],
+      },
+      {
+        messageId: 'sibling-parent',
+        parentMessageId: 'root',
+        attachments: [{ file_id: 'sibling-file' }],
+      },
+    ]);
+    getCodeGeneratedFiles.mockResolvedValue([
       {
         file_id: 'file-1',
         filename: 'testsp7.pptx',
@@ -610,21 +629,19 @@ describe('resolveAttachmentUpload', () => {
 
     const result = await resolveAttachmentUpload({
       toolArguments: { sourceFileName: 'testsp7.pptx' },
-      requestBody: { conversationId: 'conversation-1' },
+      requestBody: { conversationId: 'conversation-1', parentMessageId: 'selected-parent' },
       req: {},
       user: { id: 'user-1' },
     });
 
-    expect(getFiles).toHaveBeenCalledWith(
-      {
-        conversationId: 'conversation-1',
-        user: 'user-1',
-        context: 'execute_code',
-        filename: 'testsp7.pptx',
-        'metadata.codeEnvRef': { $exists: true },
-      },
-      null,
-      { text: 0 },
+    expect(getMessages).toHaveBeenCalledWith(
+      { conversationId: 'conversation-1', user: 'user-1' },
+      'messageId parentMessageId files attachments',
+    );
+    expect(getCodeGeneratedFiles).toHaveBeenCalledWith(
+      'conversation-1',
+      ['file-1', 'root-file'],
+      { userId: 'user-1', tenantId: undefined },
     );
     expect(result).toEqual({
       content: Buffer.from('pptx bytes').toString('base64'),
@@ -636,6 +653,53 @@ describe('resolveAttachmentUpload', () => {
       { kind: 'skill', id: 'skill-1', version: 2 },
       expect.any(Object),
     );
+  });
+
+  it('rejects a generated file that is only referenced by another branch', async () => {
+    getMessages.mockResolvedValue([
+      {
+        messageId: 'root',
+        parentMessageId: '00000000-0000-0000-0000-000000000000',
+      },
+      {
+        messageId: 'selected-parent',
+        parentMessageId: 'root',
+        attachments: [{ file_id: 'selected-file' }],
+      },
+      {
+        messageId: 'sibling-parent',
+        parentMessageId: 'root',
+        attachments: [{ file_id: 'sibling-file' }],
+      },
+    ]);
+    getCodeGeneratedFiles.mockResolvedValue([]);
+
+    await expect(
+      resolveAttachmentUpload({
+        toolArguments: { sourceFileName: 'sibling-only.pptx' },
+        requestBody: { conversationId: 'conversation-1', parentMessageId: 'selected-parent' },
+        user: { id: 'user-1' },
+      }),
+    ).rejects.toThrow('Attachment source must identify a file available to the current user');
+
+    expect(getCodeGeneratedFiles).toHaveBeenCalledWith(
+      'conversation-1',
+      ['selected-file'],
+      { userId: 'user-1', tenantId: undefined },
+    );
+  });
+
+  it('rejects a generated filename when the request has no thread context', async () => {
+    await expect(
+      resolveAttachmentUpload({
+        toolArguments: { sourceFileName: 'output.pptx' },
+        requestBody: { conversationId: 'conversation-1' },
+        user: { id: 'user-1' },
+      }),
+    ).rejects.toThrow('Attachment source must identify a file available to the current user');
+
+    expect(getMessages).not.toHaveBeenCalled();
+    expect(getCodeGeneratedFiles).not.toHaveBeenCalled();
   });
 
   it('rejects a missing source reference', async () => {

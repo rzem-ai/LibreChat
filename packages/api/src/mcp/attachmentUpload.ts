@@ -1,4 +1,4 @@
-import type { IMongoFile } from '@librechat/data-schemas';
+import type { FileOwnerScope, IMongoFile } from '@librechat/data-schemas';
 import { EModelEndpoint, FileContext, FileSources } from 'librechat-data-provider';
 import type { Response } from 'express';
 import type { Readable } from 'stream';
@@ -44,6 +44,7 @@ export interface AttachmentUploadServerConfig {
 
 export interface AttachmentUploadRequestBody {
   conversationId?: string;
+  parentMessageId?: string;
   files?: AttachmentReference[];
 }
 
@@ -53,6 +54,11 @@ export interface AttachmentUploadDependencies {
     projection: null,
     options: { text: 0 },
   ) => Promise<AttachmentUploadFile[] | null>;
+  getCodeGeneratedFiles: (
+    conversationId: string,
+    threadFileIds: string[],
+    ownerScope: FileOwnerScope,
+  ) => Promise<AttachmentUploadFile[]>;
   getAttachmentDownloadStream: (attachment: AttachmentUploadFile) => Promise<AttachmentUploadStream>;
 }
 
@@ -204,7 +210,8 @@ export async function resolveAttachmentUpload({
 }: {
   toolArguments: unknown;
   requestBody?: AttachmentUploadRequestBody;
-  user?: { id?: string };
+  threadFileIds?: string[];
+  user?: { id?: string; tenantId?: string | null };
   dependencies: AttachmentUploadDependencies;
 }): Promise<JsonObject> {
   if (!isObject(toolArguments)) {
@@ -240,17 +247,13 @@ export async function resolveAttachmentUpload({
     ? requestFileIds.has(sourceFileReference as string)
       ? (await dependencies.getFiles({ file_id: sourceFileReference, user: user?.id }, null, { text: 0 })) ?? []
       : []
-    : (await dependencies.getFiles(
-        {
-          conversationId: requestBody?.conversationId,
-          user: user?.id,
-          context: 'execute_code',
-          filename: sourceFileName ?? sourceFile,
-          'metadata.codeEnvRef': { $exists: true },
-        },
-        null,
-        { text: 0 },
-      )) ?? [];
+    : requestBody?.conversationId && user?.id && requestBody.parentMessageId && threadFileIds?.length
+      ? (await dependencies.getCodeGeneratedFiles(
+          requestBody.conversationId,
+          threadFileIds ?? [],
+          { userId: user.id, tenantId: user.tenantId },
+        )).filter((attachment) => attachment.filename === (sourceFileName ?? sourceFile))
+      : [];
   if (matchingAttachments.length !== 1) {
     throw new Error('Attachment source must identify a file available to the current user');
   }
