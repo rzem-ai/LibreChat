@@ -269,7 +269,10 @@ endpoints:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
       nativeWebSearch:
-        supportedModels: []
+        supportedModels:
+          - 'gpt-56-luna'
+          - 'gpt-56-terra'
+          - 'gpt-56-sol'
 
     # --- VertexAI / Google (us-central1) ---
     # OpenAI-compatible endpoint, model names use google/ prefix
