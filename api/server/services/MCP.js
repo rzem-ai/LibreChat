@@ -307,10 +307,13 @@ function addAttachmentUploadHints(schema, toolName, serverConfig, requestBody, i
 
   const required = (schema.required ?? []).filter(
     (property) =>
-      property !== 'content' && property !== 'sourceFileId' && property !== 'sourceFileName',
+      property !== 'content' &&
+      property !== 'encoding' &&
+      property !== 'sourceFileId' &&
+      property !== 'sourceFileName',
   );
   // Deloitte Custom Change: prevent the model from streaming file bytes through the tool call.
-  const { content: _content, ...properties } = schema.properties ?? {};
+  const { content: _content, encoding: _encoding, ...properties } = schema.properties ?? {};
   const uploadSchema = {
     ...schema,
     properties: {

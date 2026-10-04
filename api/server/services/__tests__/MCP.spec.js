@@ -689,8 +689,9 @@ describe('addAttachmentUploadHints', () => {
       type: 'object',
       properties: {
         content: { type: 'string', description: 'Base64-encoded content.' },
+        encoding: { type: 'string', description: 'Content encoding.' },
       },
-      required: ['driveId', 'content'],
+      required: ['driveId', 'content', 'encoding'],
     };
 
     const result = addAttachmentUploadHints(
@@ -702,9 +703,10 @@ describe('addAttachmentUploadHints', () => {
 
     expect(result.properties.sourceFileId.description).toContain('file-1 (presentation.pptx)');
     expect(result.properties.content).toBeUndefined();
+    expect(result.properties.encoding).toBeUndefined();
     expect(result.required).toEqual(['driveId']);
     expect(schema.properties.sourceFileId).toBeUndefined();
-    expect(schema.required).toEqual(['driveId', 'content']);
+    expect(schema.required).toEqual(['driveId', 'content', 'encoding']);
   });
 
   it('does not expose attachment IDs to an unconfigured tool', () => {
