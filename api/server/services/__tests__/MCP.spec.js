@@ -583,16 +583,28 @@ describe('resolveAttachmentUpload', () => {
 
   it('resolves a generated file by the current conversation and user', async () => {
     const { Readable } = require('stream');
-    const getDownloadStream = jest
-      .fn()
-      .mockResolvedValue(Readable.from([Buffer.from('pptx bytes')]));
-    mockGetStrategyFunctions.mockReturnValue({ getDownloadStream });
+    const getCodeStream = jest.fn().mockResolvedValue({
+      data: Readable.from([Buffer.from('pptx bytes')]),
+    });
+    mockGetStrategyFunctions.mockImplementation((source) =>
+      source === 'execute_code' ? { getDownloadStream: getCodeStream } : {},
+    );
     getFiles.mockResolvedValue([
       {
         file_id: 'file-1',
         filename: 'testsp7.pptx',
-        source: 'local',
+        source: 'azure_blob',
         filepath: '/uploads/file-1',
+        context: 'execute_code',
+        metadata: {
+          codeEnvRef: {
+            storage_session_id: 'storage-session-1',
+            file_id: 'code-file-1',
+            kind: 'skill',
+            id: 'skill-1',
+            version: 2,
+          },
+        },
       },
     ]);
 
@@ -617,6 +629,12 @@ describe('resolveAttachmentUpload', () => {
       content: Buffer.from('pptx bytes').toString('base64'),
       encoding: 'base64',
     });
+    expect(mockGetStrategyFunctions).toHaveBeenCalledWith('execute_code');
+    expect(getCodeStream).toHaveBeenCalledWith(
+      'storage-session-1/code-file-1',
+      { kind: 'skill', id: 'skill-1', version: 2 },
+      expect.any(Object),
+    );
   });
 
   it('rejects a missing source reference', async () => {
@@ -774,5 +792,6 @@ describe('supportsAttachmentUpload', () => {
       ),
     ).toBe(false);
     expect(supportsAttachmentUpload({}, 'sp_upload_file')).toBe(false);
+    expect(supportsAttachmentUpload(undefined, 'sp_upload_file')).toBe(false);
   });
 });

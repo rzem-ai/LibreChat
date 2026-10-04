@@ -90,6 +90,7 @@ const MAX_ATTACHMENT_UPLOAD_BYTES = 7 * 1024 * 1024;
  */
 function supportsAttachmentUpload(serverConfig, toolName) {
   return (
+    serverConfig != null &&
     !isUserSourced(serverConfig) &&
     Array.isArray(serverConfig?.attachmentUploadTools) &&
     serverConfig.attachmentUploadTools.includes(toolName)
@@ -187,6 +188,23 @@ async function getConversationFiles(requestBody, user) {
  * @returns {Promise<NodeJS.ReadableStream>} Download stream for the file.
  */
 async function getAttachmentDownloadStream(attachment, req, res) {
+  if (attachment.context === FileContext.execute_code) {
+    const ref = attachment.metadata?.codeEnvRef;
+    if (!ref || !ref.storage_session_id || !ref.file_id || !ref.kind || !ref.id) {
+      throw new Error('Attached execute_code file has no code environment reference');
+    }
+    const identity =
+      ref.kind === 'skill'
+        ? { kind: ref.kind, id: ref.id, version: ref.version }
+        : { kind: ref.kind, id: ref.id };
+    const { getDownloadStream: getCodeStream } = getStrategyFunctions(FileSources.execute_code);
+    if (typeof getCodeStream !== 'function') {
+      throw new Error('Attached execute_code file cannot be downloaded');
+    }
+    const response = await getCodeStream(`${ref.storage_session_id}/${ref.file_id}`, identity, req);
+    return response.data;
+  }
+
   const { getDownloadStream } = getStrategyFunctions(attachment.source);
   if (typeof getDownloadStream !== 'function') {
     throw new Error(`Attached file source "${attachment.source}" cannot be downloaded`);
