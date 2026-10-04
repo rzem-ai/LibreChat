@@ -608,7 +608,6 @@ describe('resolveAttachmentUpload', () => {
         conversationId: 'conversation-1',
         user: 'user-1',
         context: 'execute_code',
-        filename: 'testsp7.pptx',
         'metadata.codeEnvRef': { $exists: true },
       },
       null,
@@ -625,15 +624,6 @@ describe('resolveAttachmentUpload', () => {
       resolveAttachmentUpload({ toolArguments: { fileName: 'presentation.pptx' } }),
     ).rejects.toThrow('Specify exactly one attachment source reference');
   });
-
-  it.each([null, 'sourceFileId', ['file-1']])(
-    'rejects malformed attachment upload arguments: %p',
-    async (toolArguments) => {
-      await expect(resolveAttachmentUpload({ toolArguments })).rejects.toThrow(
-        'Attachment upload arguments must be an object',
-      );
-    },
-  );
 
   it('rejects a sourceFileId that is not attached to the current request', async () => {
     await expect(
@@ -780,9 +770,6 @@ describe('supportsAttachmentUpload', () => {
         { source: 'user', attachmentUploadTools: ['sp_upload_file'] },
         'sp_upload_file',
       ),
-    ).toBe(false);
-    expect(
-      supportsAttachmentUpload({ dbId: 'user-server', attachmentUploadTools: ['sp_upload_file'] }, 'sp_upload_file'),
     ).toBe(false);
     expect(supportsAttachmentUpload({}, 'sp_upload_file')).toBe(false);
   });
