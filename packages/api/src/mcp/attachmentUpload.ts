@@ -8,7 +8,6 @@ const MAX_ATTACHMENT_UPLOAD_BYTES = 7 * 1024 * 1024;
 
 type JsonObject = Record<string, unknown>;
 type AttachmentUploadStream = Readable;
-type StorageDownload = AttachmentUploadStream | { data: AttachmentUploadStream };
 type AttachmentUploadFile = IMongoFile & { source: FileSources; context?: FileContext };
 type AttachmentReference = Pick<IMongoFile, 'file_id' | 'filename'>;
 type CodeEnvironmentIdentity =
@@ -26,7 +25,7 @@ interface ProviderClient {
 }
 
 interface StorageDownloadStrategy {
-  getDownloadStream?: (req: ServerRequest, filepath: string) => Promise<StorageDownload>;
+  getDownloadStream?: (req: ServerRequest, filepath: string) => Promise<Readable>;
 }
 
 interface CodeEnvironmentDownloadStrategy {
@@ -199,15 +198,13 @@ export async function getAttachmentDownloadStream({
   if (!getDownloadStream) {
     throw new Error(`Attached file source "${attachment.source}" cannot be downloaded`);
   }
-  const download = await getDownloadStream(req, attachment.storageKey || attachment.filepath);
-  return 'data' in download ? download.data : download;
+  return getDownloadStream(req, attachment.storageKey || attachment.filepath);
 }
 
 /** Resolves an authorized attachment reference to base64 tool arguments. */
 export async function resolveAttachmentUpload({
   toolArguments,
   requestBody,
-  threadFileIds,
   user,
   dependencies,
 }: {
