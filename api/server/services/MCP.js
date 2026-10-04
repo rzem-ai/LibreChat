@@ -37,6 +37,12 @@ const {
   sanitizeFilename,
   fetchAllowedCodeFileStream,
   HOST_FILE_AUTHORING_ARTIFACT_KEY,
+  supportsAttachmentUpload,
+  getAttachmentSourceField,
+  applyAttachmentUploadConfig,
+  resolveAttachmentUpload: resolveMCPAttachmentUpload,
+  addAttachmentUploadHints,
+  getAttachmentDownloadStream: getMCPAttachmentDownloadStream,
 } = require('@librechat/api');
 const { extractOpenIDTokenInfo, isOpenIDTokenValid } = require('@librechat/api');
 const {
@@ -51,7 +57,6 @@ const {
   getEndpointFileConfig,
   isAssistantsEndpoint,
   FileSources,
-  FileContext,
   checkOpenAIStorage,
 } = require('librechat-data-provider');
 const {
@@ -79,268 +84,33 @@ const RECONNECT_THROTTLE_MS = 10_000;
 
 const missingToolCache = new Map();
 const MISSING_TOOL_TTL_MS = 10_000;
-const MAX_ATTACHMENT_UPLOAD_BYTES = 7 * 1024 * 1024;
-
-/**
- * Deloitte Custom Change: Only explicitly trusted MCP tools may receive attachment bytes.
- * Determines whether an admin-configured MCP server may receive attachment bytes for a tool.
- * @param {object | undefined} serverConfig - Resolved MCP server configuration.
- * @param {string} toolName - Raw MCP tool name.
- * @returns {boolean} Whether the tool is authorized for attachment-backed uploads.
- */
-function supportsAttachmentUpload(serverConfig, toolName) {
-  return (
-    !isUserSourced(serverConfig) &&
-    Array.isArray(serverConfig?.attachmentUploadTools) &&
-    serverConfig.attachmentUploadTools.includes(toolName)
-  );
-}
-
-/**
- * Selects the model-facing reference for the files available in this request.
- * Current attachments have stable IDs; earlier generated files use filenames.
- * @param {import('@librechat/api').RequestBody | undefined} requestBody - Current request body.
- * @returns {'sourceFileId' | 'sourceFileName'} The preferred attachment reference field.
- */
-function getAttachmentSourceField(requestBody) {
-  return requestBody?.files?.some((file) => typeof file?.file_id === 'string')
-    ? 'sourceFileId'
-    : 'sourceFileName';
-}
-
-function applyAttachmentUploadConfig(serverConfig, serverName, appConfig) {
-  if (!serverConfig || serverConfig.source === 'user') {
-    return serverConfig;
-  }
-
-  const attachmentUploadTools = appConfig?.mcpConfig?.[serverName]?.attachmentUploadTools;
-  if (!Array.isArray(attachmentUploadTools)) {
-    return serverConfig;
-  }
-
-  // Deloitte Custom Change: retain the trusted YAML allowlist when inspected server configs omit it.
-  return { ...serverConfig, attachmentUploadTools };
-}
-
-/**
- * Deloitte Custom Change: Encode attachment bytes locally so the language model never relays them.
- * Reads a file stream into a base64 string without retaining the entire raw file in memory.
- * @param {NodeJS.ReadableStream} stream - The authorized attachment stream.
- * @returns {Promise<string>} The original stream bytes encoded as standard base64.
- */
-async function readStreamAsBase64(stream) {
-  /** @type {string[]} */
-  const encodedChunks = [];
-  let remainder = Buffer.alloc(0);
-  let size = 0;
-  for await (const chunk of stream) {
-    const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-    size += bytes.length;
-    if (size > MAX_ATTACHMENT_UPLOAD_BYTES) {
-      throw new Error(`Attachment exceeds the ${MAX_ATTACHMENT_UPLOAD_BYTES / (1024 * 1024)}MB upload limit`);
-    }
-    const data = remainder.length > 0 ? Buffer.concat([remainder, bytes]) : bytes;
-    const completeLength = data.length - (data.length % 3);
-    if (completeLength > 0) {
-      encodedChunks.push(data.subarray(0, completeLength).toString('base64'));
-    }
-    remainder = data.subarray(completeLength);
-  }
-  if (remainder.length > 0) {
-    encodedChunks.push(remainder.toString('base64'));
-  }
-  return encodedChunks.join('');
-}
-
-/**
- * Deloitte Custom Change: Resolve code-generated files only from the current user's active conversation.
- * @param {import('@librechat/api').RequestBody | undefined} requestBody - Current request body.
- * @param {import('librechat-data-provider').TUser | undefined} user - Current authenticated user.
- * @returns {Promise<object[]>} Conversation files that belong to the current user.
- */
-async function getConversationFiles(requestBody, user) {
-  if (!requestBody?.conversationId || !user?.id) {
-    return [];
-  }
-
-  return (
-    (await db.getFiles(
-      {
-        conversationId: requestBody.conversationId,
-        user: user.id,
-        context: FileContext.execute_code,
-        'metadata.codeEnvRef': { $exists: true },
-      },
-      null,
-      { text: 0 },
-    )) ?? []
-  );
-}
-
-/**
- * Returns a Node-readable stream for an authorized persisted file.
- * OpenAI and Azure files require an endpoint-specific client; other storage
- * strategies use the standard request/path stream signature.
- * @param {object} attachment - Persisted file document.
- * @param {ServerRequest | undefined} req - Authenticated request.
- * @param {import('express').Response | undefined} res - Active response.
- * @returns {Promise<NodeJS.ReadableStream>} Download stream for the file.
- */
 async function getAttachmentDownloadStream(attachment, req, res) {
-  const { getDownloadStream } = getStrategyFunctions(attachment.source);
-  if (typeof getDownloadStream !== 'function') {
-    throw new Error(`Attached file source "${attachment.source}" cannot be downloaded`);
-  }
-  if (checkOpenAIStorage(attachment.source)) {
-    if (!attachment.model) {
-      throw new Error(`Attached file source "${attachment.source}" has no associated model`);
-    }
-    const endpointMap = {
-      [FileSources.openai]: EModelEndpoint.assistants,
-      [FileSources.azure]: EModelEndpoint.azureAssistants,
-    };
-    const providerReq = Object.assign(Object.create(req ?? null), {
-      body: { ...req?.body, model: attachment.model },
-    });
-    const { openai } = await getOpenAIClient({
-      req: providerReq,
-      res,
-      overrideEndpoint: endpointMap[attachment.source],
-    });
-    const response = await getDownloadStream(attachment.file_id, openai);
-    return response.body && typeof response.body.getReader === 'function'
-      ? Readable.fromWeb(response.body)
-      : response.body;
-  }
-  const download = await getDownloadStream(req, attachment.storageKey || attachment.filepath);
-  return download?.data ?? download;
-}
-
-/**
- * Deloitte Custom Change: Resolve only files attached to the active request before tool dispatch.
- * Resolves a current-request attachment for an authorized MCP upload tool.
- * @param {object} params - Upload resolution inputs.
- * @param {object | string} params.toolArguments - Arguments generated for the MCP tool.
- * @param {import('@librechat/api').RequestBody | undefined} params.requestBody - Current request body.
- * @param {ServerRequest | undefined} params.req - Current authenticated request.
- * @param {import('librechat-data-provider').TUser | undefined} params.user - Current authenticated user.
- * @returns {Promise<object | string>} Tool arguments with attachment bytes substituted when requested.
- */
-async function resolveAttachmentUpload({ toolArguments, requestBody, req, res, user }) {
-  if (toolArguments == null || typeof toolArguments !== 'object' || Array.isArray(toolArguments)) {
-    return toolArguments;
-  }
-
-  const hasSourceFileId = Object.prototype.hasOwnProperty.call(toolArguments, 'sourceFileId');
-  const hasSourceFileName = Object.prototype.hasOwnProperty.call(toolArguments, 'sourceFileName');
-  const hasSourceFile = Object.prototype.hasOwnProperty.call(toolArguments, 'sourceFile');
-  if (Number(hasSourceFileId) + Number(hasSourceFileName) + Number(hasSourceFile) !== 1) {
-    throw new Error('Specify exactly one attachment source reference');
-  }
-  const sourceFileId = toolArguments.sourceFileId;
-  const sourceFileName = toolArguments.sourceFileName;
-  const sourceFile = toolArguments.sourceFile;
-
-  if (hasSourceFileId && (typeof sourceFileId !== 'string' || sourceFileId.trim() === '')) {
-    throw new Error('sourceFileId must be a non-empty string');
-  }
-  if (hasSourceFileName && (typeof sourceFileName !== 'string' || sourceFileName.trim() === '')) {
-    throw new Error('sourceFileName must be a non-empty string');
-  }
-  if (hasSourceFile && (typeof sourceFile !== 'string' || sourceFile.trim() === '')) {
-    throw new Error('sourceFile must be a non-empty string');
-  }
-
-  const requestFileIds = new Set(
-    (requestBody?.files ?? []).map((file) => file?.file_id).filter((fileId) => typeof fileId === 'string'),
-  );
-  const matchingAttachments = hasSourceFileId || (hasSourceFile && requestFileIds.has(sourceFile))
-    ? requestFileIds.has(sourceFileId ?? sourceFile)
-      ? (await db.getFiles({ file_id: sourceFileId ?? sourceFile, user: user?.id }, null, { text: 0 })) ?? []
-      : []
-    : (await getConversationFiles(requestBody, user)).filter(
-        (file) => file?.filename === (sourceFileName ?? sourceFile),
-      );
-  if (matchingAttachments.length !== 1) {
-    throw new Error('Attachment source must identify a file available to the current user');
-  }
-  const [attachment] = matchingAttachments;
-
-  const stream = await getAttachmentDownloadStream(attachment, req, res);
-  if (!stream || typeof stream[Symbol.asyncIterator] !== 'function') {
-    throw new Error(`Attached file source "${attachment.source}" did not return a readable stream`);
-  }
-  try {
-    const {
-      sourceFileId: _sourceFileId,
-      sourceFileName: _sourceFileName,
-      sourceFile: _sourceFile,
-      ...uploadArguments
-    } = toolArguments;
-    return {
-      ...uploadArguments,
-      content: await readStreamAsBase64(stream),
-      encoding: 'base64',
-    };
-  } finally {
-    if (typeof stream?.destroy === 'function' && !stream.destroyed) {
-      stream.destroy();
-    }
-  }
-}
-
-/**
- * Deloitte Custom Change: Give approved upload tools the active request's attachment IDs.
- * Adds current-request attachment identifiers to an authorized upload tool schema.
- * @param {object | null} schema - MCP tool JSON schema.
- * @param {string} toolName - Raw MCP tool name.
- * @param {object | undefined} serverConfig - Resolved MCP server configuration.
- * @param {import('@librechat/api').RequestBody | undefined} requestBody - Current request body.
- * @returns {object | null} Schema with attachment hints when applicable.
- */
-function addAttachmentUploadHints(schema, toolName, serverConfig, requestBody, isGoogle = false) {
-  if (!supportsAttachmentUpload(serverConfig, toolName)) {
-    return schema;
-  }
-
-  const attachments = requestBody?.files?.filter((file) => typeof file?.file_id === 'string') ?? [];
-
-  const required = (schema.required ?? []).filter(
-    (property) =>
-      property !== 'content' && property !== 'sourceFileId' && property !== 'sourceFileName',
-  );
-  // Deloitte Custom Change: prevent the model from streaming file bytes through the tool call.
-  const { content: _content, ...properties } = schema.properties ?? {};
-  const uploadSchema = {
-    ...schema,
-    properties: {
-      ...properties,
-      sourceFileId: {
-        type: 'string',
-        description: `ID of a file attached to the current request. LibreChat resolves it to the original bytes. Current request attachments: ${attachments.map((file) => `${file.file_id} (${file.filename ?? 'attached file'})`).join(', ')}.`,
-      },
-      sourceFileName: {
-        type: 'string',
-        description: 'Exact filename of a file created earlier in this conversation. LibreChat resolves it to the original bytes.',
-      },
+  return getMCPAttachmentDownloadStream({
+    attachment,
+    req,
+    res,
+    dependencies: {
+      getStrategyFunctions,
+      checkOpenAIStorage,
+      getOpenAIClient,
+      fileSources: FileSources,
+      endpoints: EModelEndpoint,
+      readableFromWeb: Readable.fromWeb,
     },
-    required,
-  };
-  if (isGoogle) {
-    return {
-      ...uploadSchema,
-      properties: {
-        ...properties,
-        sourceFile: {
-          type: 'string',
-          description:
-            'ID of a file attached to the current request, or exact filename of a file created earlier in this conversation. LibreChat resolves it to the original bytes.',
-        },
-      },
-      required: [...required, 'sourceFile'],
-    };
-  }
-  return { ...uploadSchema, oneOf: [{ required: ['sourceFileId'] }, { required: ['sourceFileName'] }] };
+  });
+}
+
+/** Thin server adapter for storage-specific file download dependencies. */
+async function resolveAttachmentUpload({ toolArguments, requestBody, req, res, user }) {
+  return resolveMCPAttachmentUpload({
+    toolArguments,
+    requestBody,
+    user,
+    dependencies: {
+      getFiles: db.getFiles,
+      getAttachmentDownloadStream: (attachment) => getAttachmentDownloadStream(attachment, req, res),
+    },
+  });
 }
 
 /**
@@ -1955,8 +1725,6 @@ module.exports = {
   getServerConnectionStatus,
   createUnavailableToolStub,
   supportsAttachmentUpload,
-  readStreamAsBase64,
-  getConversationFiles,
   resolveAttachmentUpload,
   addAttachmentUploadHints,
 };
