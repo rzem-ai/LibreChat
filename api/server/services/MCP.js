@@ -1405,7 +1405,9 @@ function createToolInstance({
       const customUserVars =
         config?.configurable?.userMCPAuthMap?.[`${Constants.mcp_prefix}${serverName}`];
       // Deloitte Custom Change: substitute the original authorized attachment immediately before dispatch.
-      const effectiveRequestBody = config?.configurable?.requestBody ?? capturedRequestBody;
+      const effectiveRequestBody = config?.configurable?.requestBody
+        ? { ...capturedRequestBody, ...config.configurable.requestBody }
+        : capturedRequestBody;
       const resolvedToolArguments = supportsAttachmentUpload(capturedServerConfig, toolName)
         ? await resolveAttachmentUpload({
             toolArguments,
