@@ -583,16 +583,28 @@ describe('resolveAttachmentUpload', () => {
 
   it('resolves a generated file by the current conversation and user', async () => {
     const { Readable } = require('stream');
-    const getDownloadStream = jest
-      .fn()
-      .mockResolvedValue(Readable.from([Buffer.from('pptx bytes')]));
-    mockGetStrategyFunctions.mockReturnValue({ getDownloadStream });
+    const getCodeStream = jest.fn().mockResolvedValue({
+      data: Readable.from([Buffer.from('pptx bytes')]),
+    });
+    mockGetStrategyFunctions.mockImplementation((source) =>
+      source === 'execute_code' ? { getDownloadStream: getCodeStream } : {},
+    );
     getFiles.mockResolvedValue([
       {
         file_id: 'file-1',
         filename: 'testsp7.pptx',
-        source: 'local',
+        source: 'azure_blob',
         filepath: '/uploads/file-1',
+        context: 'execute_code',
+        metadata: {
+          codeEnvRef: {
+            storage_session_id: 'storage-session-1',
+            file_id: 'code-file-1',
+            kind: 'skill',
+            id: 'skill-1',
+            version: 2,
+          },
+        },
       },
     ]);
 
@@ -618,6 +630,12 @@ describe('resolveAttachmentUpload', () => {
       content: Buffer.from('pptx bytes').toString('base64'),
       encoding: 'base64',
     });
+    expect(mockGetStrategyFunctions).toHaveBeenCalledWith('execute_code');
+    expect(getCodeStream).toHaveBeenCalledWith(
+      'storage-session-1/code-file-1',
+      { kind: 'skill', id: 'skill-1', version: 2 },
+      expect.any(Object),
+    );
   });
 
   it('rejects a missing source reference', async () => {
@@ -671,9 +689,10 @@ describe('resolveAttachmentUpload', () => {
 
   it('uses an endpoint-specific client for OpenAI-backed files', async () => {
     const { Readable } = require('stream');
-    const openai = {};
-    const getDownloadStream = jest.fn().mockResolvedValue({ body: Readable.from([Buffer.from('pptx bytes')]) });
-    mockGetStrategyFunctions.mockReturnValue({ getDownloadStream });
+    const content = jest
+      .fn()
+      .mockResolvedValue({ body: Readable.from([Buffer.from('pptx bytes')]) });
+    const openai = { files: { content } };
     getOpenAIClient.mockResolvedValue({ openai });
     getFiles.mockResolvedValue([
       { file_id: 'file-1', source: 'openai', model: 'gpt-4o', filepath: '/unused' },
@@ -688,7 +707,7 @@ describe('resolveAttachmentUpload', () => {
         user: { id: 'user-1' },
       }),
     ).resolves.toMatchObject({ content: Buffer.from('pptx bytes').toString('base64') });
-    expect(getDownloadStream).toHaveBeenCalledWith('file-1', openai);
+    expect(content).toHaveBeenCalledWith('file-1');
   });
 });
 

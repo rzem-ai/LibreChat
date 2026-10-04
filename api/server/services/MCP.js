@@ -90,11 +90,10 @@ async function getAttachmentDownloadStream(attachment, req, res) {
     req,
     res,
     dependencies: {
-      getStrategyFunctions,
+      getStorageDownloadStrategy: getStrategyFunctions,
+      getCodeEnvironmentDownloadStrategy: () => getStrategyFunctions(FileSources.execute_code),
       checkOpenAIStorage,
       getOpenAIClient,
-      fileSources: FileSources,
-      endpoints: EModelEndpoint,
       readableFromWeb: Readable.fromWeb,
     },
   });
