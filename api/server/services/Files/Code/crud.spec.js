@@ -324,34 +324,6 @@ describe('Code CRUD', () => {
       expect(uploadError.codeRuntimeUploadError).toBeUndefined();
     });
 
-    // Deloitte Custom Change: known stream length prevents chunked upload transfer.
-    it('sets the multipart known length when the source stream length is available', async () => {
-      const FormData = require('form-data');
-      const appendSpy = jest.spyOn(FormData.prototype, 'append');
-      mockAxios.post.mockResolvedValue({
-        data: {
-          message: 'success',
-          storage_session_id: 'sess-1',
-          files: [{ fileId: 'fid-1', filename: 'data.csv' }],
-        },
-      });
-
-      await uploadCodeEnvFile({ ...baseUploadParams, contentLength: 5 * 1024 * 1024 });
-
-      expect(appendSpy).toHaveBeenCalledWith(
-        'file',
-        baseUploadParams.stream,
-        expect.objectContaining({ knownLength: 5 * 1024 * 1024 }),
-      );
-      expect(appendCodeEnvFile).toHaveBeenCalledWith(
-        expect.anything(),
-        baseUploadParams.stream,
-        baseUploadParams.filename,
-        5 * 1024 * 1024,
-      );
-      appendSpy.mockRestore();
-    });
-
     it('should return { storage_session_id, file_id } on success', async () => {
       mockAxios.post.mockResolvedValue({
         data: {

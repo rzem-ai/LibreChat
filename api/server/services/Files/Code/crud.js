@@ -166,7 +166,6 @@ async function deleteCodeEnvFile(req, file) {
  * @param {ServerRequest} params.req - The request object from Express. It should have a `user` property with an `id` representing the user
  * @param {import('fs').ReadStream | import('stream').Readable} params.stream - The read stream for the file.
  * @param {string} params.filename - The name of the file.
- * @param {number} [params.contentLength] - The validated byte length of the stream, when known.
  * @param {'skill' | 'agent' | 'user'} params.kind - Resource kind that owns this file's storage session.
  * @param {string} params.id - Resource id (skillId / agentId / userId). Codeapi
  *   ignores this for `kind: 'user'` (auth context provides userId), but it's
@@ -176,12 +175,11 @@ async function deleteCodeEnvFile(req, file) {
  *   The codeapi storage location of the uploaded file.
  * @throws {Error} If there's an error during the upload process.
  */
-async function uploadCodeEnvFile({ req, stream, filename, contentLength, kind, id, version }) {
+async function uploadCodeEnvFile({ req, stream, filename, kind, id, version }) {
   try {
     const form = new FormData();
     appendCodeEnvFileIdentity(form, { kind, id, version });
-    // Deloitte Custom Change: preserve a trusted source length for non-chunked uploads.
-    appendCodeEnvFile(form, stream, filename, contentLength);
+    appendCodeEnvFile(form, stream, filename);
 
     const baseURL = getCodeBaseURL();
     const authHeaders = await getCodeApiAuthHeaders(req);

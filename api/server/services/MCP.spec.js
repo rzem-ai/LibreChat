@@ -2092,7 +2092,6 @@ describe('User parameter passing tests', () => {
         req: mockReq,
         stream: 'fake-stream',
         filename: 'report.pdf',
-        contentLength: 5242880,
         kind: 'user',
         id: mockUser.id,
       });

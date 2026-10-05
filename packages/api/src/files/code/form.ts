@@ -5,7 +5,6 @@ import type FormData from 'form-data';
 export interface CodeEnvFileOptions {
   filename: string;
   filepath?: string;
-  knownLength?: number;
 }
 
 const CODE_ENV_SAFE_ASCII_FILEPATH_CHAR_PATTERN = /^[a-zA-Z0-9._\-/]$/;
@@ -77,12 +76,6 @@ export function appendCodeEnvFile(
   form: FormData,
   stream: NodeJS.ReadableStream,
   filename: string,
-  contentLength?: number,
 ): void {
-  const options = getCodeEnvFileOptions(filename);
-  // Deloitte Custom Change: enables form-data to calculate the multipart Content-Length.
-  if (Number.isSafeInteger(contentLength) && contentLength >= 0) {
-    options.knownLength = contentLength;
-  }
-  form.append('file', stream, options);
+  form.append('file', stream, getCodeEnvFileOptions(filename));
 }

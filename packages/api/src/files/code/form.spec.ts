@@ -23,30 +23,6 @@ function renderMultipartDisposition(append: (form: FormData) => void): Promise<s
 }
 
 describe('code env FormData filenames', () => {
-  // Deloitte Custom Change: known lengths allow non-chunked Code Runtime uploads.
-  it('passes a valid stream length to form-data', () => {
-    const form = new FormData();
-    const appendSpy = jest.spyOn(form, 'append');
-
-    appendCodeEnvFile(form, Readable.from(['x']), 'report.xlsx', 42);
-
-    expect(appendSpy).toHaveBeenCalledWith('file', expect.any(Readable), {
-      filename: 'report.xlsx',
-      knownLength: 42,
-    });
-  });
-
-  it.each([undefined, -1, 1.5])('omits an invalid stream length of %p', (contentLength) => {
-    const form = new FormData();
-    const appendSpy = jest.spyOn(form, 'append');
-
-    appendCodeEnvFile(form, Readable.from(['x']), 'report.xlsx', contentLength);
-
-    expect(appendSpy).toHaveBeenCalledWith('file', expect.any(Readable), {
-      filename: 'report.xlsx',
-    });
-  });
-
   it('uses filepath for nested filenames so form-data preserves directories', async () => {
     const disposition = await renderMultipartDisposition((form) => {
       appendCodeEnvFile(form, Readable.from(['x']), 'pptx/pptx.py');

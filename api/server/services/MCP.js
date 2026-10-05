@@ -1533,21 +1533,10 @@ function createToolInstance({
                 'codeFile download content type does not match the gateway declaration',
               );
             }
-            // Deloitte Custom Change: trusted gateway lengths avoid chunked Code Runtime uploads.
-            const declaredLength = download.headers?.['content-length'];
-            const parsedContentLength =
-              typeof declaredLength === 'string' && /^\d+$/.test(declaredLength)
-                ? Number(declaredLength)
-                : NaN;
-            const contentLength =
-              Number.isSafeInteger(parsedContentLength) && parsedContentLength >= 0
-                ? parsedContentLength
-                : undefined;
             const uploaded = await uploadCodeEnvFile({
               req,
               stream,
               filename: sanitizedFilename,
-              ...(contentLength !== undefined ? { contentLength } : {}),
               kind: 'user',
               id: userId,
             });
