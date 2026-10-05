@@ -31,7 +31,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'develop@sha256:5e71af45f812b4f1a42b21cea6e38506a986bdc24d0ab1c0c3935d5222f9854f'
+          tag: 'develop@sha256:c38cada2adbba1cb3dfb3f3da72bd31294251a02de195fd447cbca7053f8a9f4'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://global.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -51,7 +51,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:6d69b9807a1c8ec5c53851b9c0577a0535c7976b28b8ddd8149a9bf0fdf0db95'
+          tag: 'develop@sha256:433531d76bf73fa5e58f149df17641a5e147983e99cfaffc15007255ced5d982'
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -162,7 +162,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:b368abd417bf7ebb838d81f62546bf566f428e963b5e8cb9051be7bc65abca65'
+          tag: 'develop@sha256:e880b82537ae3778abcc9b3701d5dc8c19e4b8dfe643518464e666e40a7597bf'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -219,7 +219,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:36cb2fb3d5630bc8c6b0e923f81e8fb384790649b0fb4bf17cb8c4bdb05811e0'
+          tag: 'develop@sha256:06e89522c1f2bee33af1547ebeba5510152e24fd2153a746e5d6a43d42ce4469'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
@@ -242,7 +242,7 @@ pods:
 
 valkey:
   image:
-    tag: 'develop@sha256:87ebb22a20d8ee2f450574f70068388acb9d2b5b60f74b9cf873c6be845102b3'
+    tag: 'develop@sha256:4fdf384b8cad080df2e9429b4aa512c090cb9d83368488ba0aa9d58e7c2e1d0e'
   persistence:
     storageClass: 'managed-csi-standard-private'
   passwordSecretName: 'librechat-valkey-password-dev'
