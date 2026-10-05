@@ -30,14 +30,14 @@ function getCodeRuntimeUploadFailure(error) {
     return undefined;
   }
 
-  if (response.status === 504 && data.code === 'upload_timeout') {
+  if (response?.status === 504 && data.code === 'upload_timeout') {
     const timeoutSeconds = data.timeout_seconds;
     if (Number.isSafeInteger(timeoutSeconds) && timeoutSeconds > 0) {
       return { code: 'upload_timeout', timeoutSeconds };
     }
   }
 
-  if (response.status === 413 && data.code === 'upload_size_limit') {
+  if (response?.status === 413 && data.code === 'upload_size_limit') {
     const maxFileSizeBytes = data.max_file_size_bytes;
     if (Number.isSafeInteger(maxFileSizeBytes) && maxFileSizeBytes > 0) {
       return { code: 'upload_size_limit', maxFileSizeBytes };
@@ -220,8 +220,10 @@ async function uploadCodeEnvFile({ req, stream, filename, contentLength, kind, i
         error,
       }),
     );
-    // Deloitte Custom Change: distinguish upload failures from source-download failures.
-    uploadError.codeRuntimeUploadError = true;
+    // Deloitte Custom Change: distinguish HTTP upload failures from source-download failures.
+    if (error?.response || error?.request) {
+      uploadError.codeRuntimeUploadError = true;
+    }
     // Deloitte Custom Change: retain only the safe response contract for MCP feedback.
     const failure = getCodeRuntimeUploadFailure(error);
     if (failure) {

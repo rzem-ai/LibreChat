@@ -303,8 +303,25 @@ describe('Code CRUD', () => {
       );
 
       await expect(uploadCodeEnvFile(baseUploadParams)).rejects.toMatchObject({
+        codeRuntimeUploadError: true,
         codeRuntimeUploadFailure: { code: 'upload_timeout', timeoutSeconds: 60 },
       });
+    });
+
+    it('does not mark local upload failures as Code Runtime upload errors', async () => {
+      mockAxios.post.mockResolvedValue({
+        data: { message: 'quota_exceeded', storage_session_id: 's', files: [] },
+      });
+
+      let uploadError;
+      try {
+        await uploadCodeEnvFile(baseUploadParams);
+      } catch (error) {
+        uploadError = error;
+      }
+
+      expect(uploadError).toBeDefined();
+      expect(uploadError.codeRuntimeUploadError).toBeUndefined();
     });
 
     // Deloitte Custom Change: known stream length prevents chunked upload transfer.

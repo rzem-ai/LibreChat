@@ -2965,7 +2965,7 @@ describe('User parameter passing tests', () => {
         const result = await invokeWithArtifact({ user, req, artifacts: gatewayArtifact() });
 
         expect(result).toBe(
-          'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The PDF file is too large to attach to Code Interpreter. Please use a smaller PDF file.',
+          'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The PDF file is too large to attach to Code Interpreter. Please use a smaller PDF file (under 100 MB).',
         );
       });
 

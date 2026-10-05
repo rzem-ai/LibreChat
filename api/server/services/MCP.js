@@ -293,6 +293,11 @@ function getUploadTimeoutMessage(fileType) {
   return "The file upload timed out. Please try again with a smaller file (under 1MB). We're actively working to increase the size limit.";
 }
 
+function formatFileSizeLimit(maxFileSizeBytes) {
+  const megabytes = maxFileSizeBytes / (1024 * 1024);
+  return `${Number.isInteger(megabytes) ? megabytes : megabytes.toFixed(2)} MB`;
+}
+
 /**
  * Deloitte Custom Change: maps trusted upload failures to agent-safe guidance
  * without exposing signed URLs, response bodies, or infrastructure details.
@@ -314,7 +319,8 @@ function getCodeFileAttachmentFailureReason(error, filename) {
     codeRuntimeFailure?.code === 'upload_size_limit' &&
     Number.isSafeInteger(codeRuntimeFailure.maxFileSizeBytes)
   ) {
-    return `The ${fileType} is too large to attach to Code Interpreter. Please use a smaller ${fileType}.`;
+    const limit = formatFileSizeLimit(codeRuntimeFailure.maxFileSizeBytes);
+    return `The ${fileType} is too large to attach to Code Interpreter. Please use a smaller ${fileType} (under ${limit}).`;
   }
 
   const message = typeof error?.message === 'string' ? error.message : '';
