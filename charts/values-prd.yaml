@@ -245,6 +245,7 @@ pods:
           SESSION_COOKIE_SECURE: 'true'
         secrets:
           SESSION_SECRET: librechat-admin-panel-session-secret
+          ADMIN_PANEL_METRICS_SECRET: librechat-admin-panel-metrics-secret
         service:
           enabled: true
           type: ClusterIP
