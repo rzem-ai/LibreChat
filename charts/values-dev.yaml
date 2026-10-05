@@ -34,7 +34,7 @@ pods:
           tag: 'develop@sha256:5e71af45f812b4f1a42b21cea6e38506a986bdc24d0ab1c0c3935d5222f9854f'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
-          TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://foundry-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://global.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_ANTHROPIC_URL: 'http://anthropic-eastus2.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_BEDROCK_AU_URL: 'http://bedrock-ap-southeast-2.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -92,7 +92,8 @@ pods:
           RAG_API_URL: 'http://127.0.0.1:8000'
           #RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
           #RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com'
-          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_REGIONAL_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_GLOBAL_BASEURL: 'http://127.0.0.1:8081/azure-global'
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
           RAG_PORT: '8000'
           REFRESH_TOKEN_EXPIRY: '86400000' # (ms) - 1 day refresh token expiration
@@ -177,7 +178,8 @@ pods:
           # RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
           # RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
           EMBEDDINGS_PROVIDER: 'openai'
-          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_REGIONAL_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_GLOBAL_BASEURL: 'http://127.0.0.1:8081/azure-global'
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
         secrets:
           # AZURE_OPENAI_API_KEY: librechat-azure-api-key

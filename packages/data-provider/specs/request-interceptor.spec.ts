@@ -127,6 +127,18 @@ function setTrackedWindowLocation(overrides: Partial<Location>) {
   return hrefWrites;
 }
 
+describe('getResponse', () => {
+  it('returns the full Axios response with typed payload data', async () => {
+    const data = { fileId: 'test-file' };
+    mockAdapter.mockImplementationOnce((config) => createAdapterResponse(config, data));
+
+    const response = await dataRequest.getResponse<typeof data>('/api/files/test-file');
+
+    expect(response.status).toBe(200);
+    expect(response.data).toEqual(data);
+  });
+});
+
 describe('axios 401 interceptor — Authorization header guard', () => {
   it('skips refresh and rejects when Authorization header is cleared', async () => {
     expect.assertions(1);
