@@ -1092,7 +1092,7 @@ export function getSkillFileBlob(
   skillId: string,
   relativePath: string,
 ): Promise<AxiosResponse<Blob>> {
-  return request.getResponse<AxiosResponse<Blob>>(
+  return request.getResponse<Blob>(
     `${endpoints.skillFile(skillId, relativePath)}?raw=true`,
     {
       responseType: 'blob',

@@ -145,7 +145,7 @@ export const useAuthenticatedBlobUrl = (
   }, [url]);
 
   const fetchBlob = useCallback(async () => {
-    const response = await request.getResponse<AxiosResponse<Blob>>(url as string, {
+    const response = await request.getResponse<Blob>(url as string, {
       responseType: 'blob',
       headers: { Accept: 'application/octet-stream' },
     });
