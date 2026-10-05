@@ -25,7 +25,7 @@ export default function useAuthenticatedImageSrc(url: string): {
     setIsError(false);
 
     request
-      .getResponse<{ data: Blob }>(url, { responseType: 'blob' })
+      .getResponse<Blob>(url, { responseType: 'blob' })
       .then((response) => {
         createdUrl = URL.createObjectURL(response.data);
         if (cancelled) {
