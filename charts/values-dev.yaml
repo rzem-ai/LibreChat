@@ -227,6 +227,11 @@ pods:
           SESSION_COOKIE_SECURE: 'true'
         secrets:
           SESSION_SECRET: librechat-admin-panel-session-secret-dev
+          # Bearer token used by ArgoCD to scrape /metrics on the admin pod.
+          # KV secret must exist as 'librechat-admin-panel-metrics-secret-dev'
+          # in kv-int-librechat-dev. ESO retrieves it and exposes it to the
+          # container as ADMIN_PANEL_METRICS_SECRET.
+          ADMIN_PANEL_METRICS_SECRET: librechat-admin-panel-metrics-secret-dev
         service:
           enabled: true
           type: ClusterIP

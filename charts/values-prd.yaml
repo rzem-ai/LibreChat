@@ -243,6 +243,9 @@ pods:
           SESSION_COOKIE_SECURE: 'true'
         secrets:
           SESSION_SECRET: librechat-admin-panel-session-secret
+          # Bearer token used by ArgoCD to scrape /metrics on the admin pod.
+          # KV secret must exist as 'librechat-admin-panel-metrics-secret' (prd convention: no env suffix).
+          ADMIN_PANEL_METRICS_SECRET: librechat-admin-panel-metrics-secret
         service:
           enabled: true
           type: ClusterIP
