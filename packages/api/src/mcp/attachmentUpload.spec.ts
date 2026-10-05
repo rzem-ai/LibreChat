@@ -33,6 +33,28 @@ describe('attachment uploads', () => {
     expect(stream.destroyed).toBe(true);
   });
 
+  it('reads exactly 7MiB from multiple chunks', async () => {
+    const megabyte = 1024 * 1024;
+    const chunks = [Buffer.alloc(3 * megabyte, 'a'), Buffer.alloc(4 * megabyte, 'b')];
+
+    await expect(readStreamAsBase64(Readable.from(chunks))).resolves.toBe(
+      Buffer.concat(chunks).toString('base64'),
+    );
+  });
+
+  it('rejects a 7MiB plus one byte stream split across multiple chunks', async () => {
+    const megabyte = 1024 * 1024;
+    const stream = Readable.from([
+      Buffer.alloc(3 * megabyte),
+      Buffer.alloc(4 * megabyte),
+      Buffer.alloc(1),
+    ]);
+
+    await expect(readStreamAsBase64(stream)).rejects.toThrow(
+      'Attachment exceeds the 7MB upload limit',
+    );
+  });
+
   it('does not trust legacy database-backed server configs', () => {
     expect(
       supportsAttachmentUpload(

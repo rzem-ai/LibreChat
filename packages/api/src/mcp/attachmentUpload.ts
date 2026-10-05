@@ -18,6 +18,12 @@ type JsonSchema = {
   [key: string]: unknown;
 };
 
+type AttachmentUploadSchema = {
+  required?: string[];
+  properties?: Record<string, unknown>;
+  allOf?: unknown[];
+};
+
 export function supportsAttachmentUpload(
   serverConfig: { source?: string; dbId?: unknown; attachmentUploadTools?: string[] } | undefined,
   toolName: string,
@@ -160,22 +166,18 @@ export async function resolveAttachmentUpload<TAttachment extends Attachment>({
   }
 }
 
-export function addAttachmentUploadHints(
-  schema: JsonSchema | null,
-  toolName: string,
-  serverConfig: { source?: string; dbId?: unknown; attachmentUploadTools?: string[] } | undefined,
-  requestBody: RequestBodyWithFiles | undefined,
+/** Adds model-facing attachment references to an already provider-normalized schema. */
+export function rewriteAttachmentUploadSchema<TSchema extends AttachmentUploadSchema>(
+  schema: TSchema,
+  files: Attachment[] | undefined,
   isGoogle = false,
-): JsonSchema | null {
-  if (!schema || !supportsAttachmentUpload(serverConfig, toolName)) {
-    return schema;
-  }
-  const attachments = requestBody?.files?.filter((file) => typeof file.file_id === 'string') ?? [];
+): TSchema {
+  const attachments = files?.filter((file) => typeof file.file_id === 'string') ?? [];
   const required = (schema.required ?? []).filter(
     (property) => !['content', 'encoding', 'sourceFileId', 'sourceFileName'].includes(property),
   );
   const { content: _content, encoding: _encoding, ...properties } = schema.properties ?? {};
-  const uploadSchema: JsonSchema = {
+  const uploadSchema = {
     ...schema,
     properties: {
       ...properties,
@@ -212,4 +214,17 @@ export function addAttachmentUploadHints(
       { oneOf: [{ required: ['sourceFileId'] }, { required: ['sourceFileName'] }] },
     ],
   };
+}
+
+export function addAttachmentUploadHints(
+  schema: JsonSchema | null,
+  toolName: string,
+  serverConfig: { source?: string; dbId?: unknown; attachmentUploadTools?: string[] } | undefined,
+  requestBody: RequestBodyWithFiles | undefined,
+  isGoogle = false,
+): JsonSchema | null {
+  if (!schema || !supportsAttachmentUpload(serverConfig, toolName)) {
+    return schema;
+  }
+  return rewriteAttachmentUploadSchema(schema, requestBody?.files, isGoogle);
 }

@@ -16,6 +16,7 @@ import type { LCToolRegistry, JsonSchemaType, LCTool, GenericTool } from '@libre
 import type { AgentToolOptions } from 'librechat-data-provider';
 import type { ToolDefinition } from './classification';
 import { resolveJsonSchemaRefs, normalizeJsonSchema, sanitizeGeminiSchema } from '~/mcp/zod';
+import { rewriteAttachmentUploadSchema } from '~/mcp/attachmentUpload';
 import { buildToolClassification } from './classification';
 import { getToolDefinition } from './registry/definitions';
 import { toolkitExpansion } from './toolkits/mapping';
@@ -160,59 +161,7 @@ export async function loadToolDefinitions(
     if (!isAttachmentUpload) {
       return providerSchema;
     }
-
-    const required = (providerSchema.required ?? []).filter(
-      (property) =>
-        property !== 'content' &&
-        property !== 'encoding' &&
-        property !== 'sourceFileId' &&
-        property !== 'sourceFileName',
-    );
-    const {
-      content: _content,
-      encoding: _encoding,
-      ...properties
-    } = providerSchema.properties ?? {};
-    const sourceFileDescription = `ID of a file attached to the current request. LibreChat resolves it to the original bytes. Current request attachments: ${(
-      attachmentFiles ?? []
-    )
-      .filter((file) => typeof file.file_id === 'string')
-      .map((file) => `${file.file_id} (${file.filename ?? 'attached file'})`)
-      .join(', ')}.`;
-    const uploadSchema: JsonSchemaType = {
-      ...providerSchema,
-      properties: {
-        ...properties,
-        sourceFileId: { type: 'string', description: sourceFileDescription },
-        sourceFileName: {
-          type: 'string',
-          description:
-            'Exact filename of a file created earlier in this conversation. LibreChat resolves it to the original bytes.',
-        },
-      },
-      required,
-    };
-    const schema = isGoogle
-      ? {
-          ...uploadSchema,
-          properties: {
-            ...properties,
-            sourceFile: {
-              type: 'string',
-              description:
-                'ID of a file attached to the current request, or exact filename of a file created earlier in this conversation. LibreChat resolves it to the original bytes.',
-            },
-          },
-          required: [...required, 'sourceFile'],
-        }
-      : {
-          ...uploadSchema,
-          allOf: [
-            ...(uploadSchema.allOf ?? []),
-            { oneOf: [{ required: ['sourceFileId'] }, { required: ['sourceFileName'] }] },
-          ],
-        };
-    return schema;
+    return rewriteAttachmentUploadSchema(providerSchema, attachmentFiles, isGoogle);
   };
 
   const emptyResult: LoadToolDefinitionsResult = {

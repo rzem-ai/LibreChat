@@ -113,7 +113,10 @@ async function getConversationFiles(requestBody, user) {
     'messageId parentMessageId files attachments',
   );
   const { fileIds } = getThreadData(messages ?? [], requestBody.parentMessageId);
-  return db.getCodeGeneratedFiles(requestBody.conversationId, fileIds, { user: user.id });
+  return db.getCodeGeneratedFiles(requestBody.conversationId, fileIds, {
+    userId: user.id,
+    tenantId: user.tenantId,
+  });
 }
 
 /**
