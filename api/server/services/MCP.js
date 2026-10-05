@@ -1591,18 +1591,14 @@ function createToolInstance({
             }
           }
         }
-        /* Marker-only tool responses (`result[0] === ''`) rely entirely on the
-         * codeFile artifact to tell the model anything happened. Losing that
-         * artifact above without a substitute leaves the model with no signal
-         * at all, so fall back to a plain, non-secret status line instead.
-         * This also fires when `fetchAllowedCodeFileStream`/`uploadCodeEnvFile`
-         * themselves failed (disallowed/expired URL, network error), so the
-         * wording must stay neutral about whether the download itself
-         * succeeded. */
-        if (codeFileRegistrationFailed && Array.isArray(result) && !result[0]) {
+        /* Preserve the tool result while always making failed attachment
+         * registration visible to the model. This can happen after a successful
+         * download, so the status wording stays neutral about download success. */
+        if (codeFileRegistrationFailed && Array.isArray(result)) {
           // Deloitte Custom Change: preserve the agent signal when attachment registration fails.
           const failureReason = codeFileFailureReason ? ` ${codeFileFailureReason}` : '';
-          result[0] = `File "${sanitizedFilename}" could not be attached to this conversation for use in Code Interpreter.${failureReason}`;
+          const attachmentStatus = `File "${sanitizedFilename}" could not be attached to this conversation for use in Code Interpreter.${failureReason}`;
+          result[0] = result[0] ? `${result[0]}\n${attachmentStatus}` : attachmentStatus;
         }
       }
 

@@ -2403,7 +2403,9 @@ describe('User parameter passing tests', () => {
           message: expect.stringContaining('requires an IP-literal or explicitly allowed host'),
         }),
       );
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+      );
     });
 
     it('should route a proxied codeFile download to a public IP-literal host under SSRF protection', async () => {
@@ -2533,7 +2535,9 @@ describe('User parameter passing tests', () => {
       expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Code Interpreter is not enabled'),
       );
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+      );
       if (originalDownloadToolName === undefined) {
         delete process.env.SHAREPOINT_MCP_DOWNLOAD_TOOL;
       } else {
@@ -2597,7 +2601,9 @@ describe('User parameter passing tests', () => {
         expect.stringContaining('failed to check Code Interpreter capability'),
         expect.objectContaining({ message: 'transient config load failure' }),
       );
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+      );
     });
 
     it('should substitute a status message when dropping a codeFile artifact leaves an empty marker-only tool result', async () => {
@@ -2714,7 +2720,9 @@ describe('User parameter passing tests', () => {
       expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('does not have Code Interpreter (execute_code) available'),
       );
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+      );
     });
 
     it('should drop a codeFile artifact and warn when no request context is available', async () => {
@@ -3439,7 +3447,9 @@ describe('User parameter passing tests', () => {
           message: expect.stringContaining('timed out following redirects'),
         }),
       );
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+      );
 
       Date.now.mockRestore();
     });
@@ -3499,7 +3509,9 @@ describe('User parameter passing tests', () => {
         expect.stringContaining('Failed to register codeFile artifact'),
         expect.objectContaining({ message: 'download URL expired' }),
       );
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+      );
     });
 
     it('should not upload a codeFile artifact for the Assistants endpoint', async () => {
