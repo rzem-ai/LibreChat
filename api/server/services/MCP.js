@@ -37,6 +37,12 @@ const {
   sanitizeFilename,
   fetchAllowedCodeFileStream,
   HOST_FILE_AUTHORING_ARTIFACT_KEY,
+  supportsAttachmentUpload,
+  getAttachmentSourceField,
+  resolveAttachmentUpload: resolveAttachmentUploadCore,
+  addAttachmentUploadHints,
+  getThreadData,
+  readStreamAsBase64,
 } = require('@librechat/api');
 const { extractOpenIDTokenInfo, isOpenIDTokenValid } = require('@librechat/api');
 const {
@@ -47,9 +53,11 @@ const {
   PermissionTypes,
   AgentCapabilities,
   EModelEndpoint,
+  checkOpenAIStorage,
   mergeFileConfig,
   getEndpointFileConfig,
   isAssistantsEndpoint,
+  FileSources,
 } = require('librechat-data-provider');
 const {
   getOAuthReconnectionManager,
@@ -64,6 +72,9 @@ const { exchangeOboToken } = require('./OboTokenService');
 const { createOboTrustChecker } = require('./OboPolicyService');
 const { reinitMCPServer } = require('./Tools/mcp');
 const { getAppConfig, checkCapability } = require('./Config');
+const { getStrategyFunctions } = require('./Files/strategies');
+const { getOpenAIClient } = require('~/server/controllers/assistants/helpers');
+const { Readable } = require('stream');
 const { getLogStores } = require('~/cache');
 const { uploadCodeEnvFile } = require('~/server/services/Files/Code/crud');
 
@@ -73,6 +84,167 @@ const RECONNECT_THROTTLE_MS = 10_000;
 
 const missingToolCache = new Map();
 const MISSING_TOOL_TTL_MS = 10_000;
+function applyAttachmentUploadConfig(serverConfig, serverName, appConfig) {
+  if (!serverConfig || serverConfig.source === 'user') {
+    return serverConfig;
+  }
+
+  const attachmentUploadTools = appConfig?.mcpConfig?.[serverName]?.attachmentUploadTools;
+  if (!Array.isArray(attachmentUploadTools)) {
+    return serverConfig;
+  }
+
+  // Deloitte Custom Change: retain the trusted YAML allowlist when inspected server configs omit it.
+  return { ...serverConfig, attachmentUploadTools };
+}
+
+/**
+ * Deloitte Custom Change: Resolve generated files only from the current user's active conversation thread.
+ * @param {import('@librechat/api').RequestBody | undefined} requestBody - Current request body.
+ * @param {import('librechat-data-provider').TUser | undefined} user - Current authenticated user.
+ * @returns {Promise<object[]>} Conversation files that belong to the current user.
+ */
+async function getConversationFiles(requestBody, user) {
+  if (!requestBody?.conversationId || !requestBody?.parentMessageId || !user?.id) {
+    return [];
+  }
+  const messages = await db.getMessages(
+    { conversationId: requestBody.conversationId, user: user.id },
+    'messageId parentMessageId files attachments',
+  );
+  const { fileIds } = getThreadData(messages ?? [], requestBody.parentMessageId);
+  const threadFiles =
+    (await db.getCodeGeneratedFiles(requestBody.conversationId, fileIds, {
+      userId: user.id,
+      tenantId: getTenantId(),
+    })) ?? [];
+  // Deloitte Custom Change: a file generated earlier in THIS still-in-progress
+  // turn has no saved message yet, so `getThreadData` above can't see it via
+  // the thread's persisted `files`/`attachments`. Match it directly by the
+  // in-flight response message id so "generate, then upload" works in one turn.
+  if (!requestBody.messageId) {
+    return threadFiles;
+  }
+  const currentTurnFiles =
+    (await db.getFiles(
+      {
+        conversationId: requestBody.conversationId,
+        user: user.id,
+        tenantId: getTenantId(),
+        context: 'execute_code',
+        messageId: requestBody.messageId,
+        'metadata.codeEnvRef': { $exists: true },
+      },
+      null,
+      { text: 0 },
+    )) ?? [];
+  const seenFileIds = new Set(threadFiles.map((file) => file.file_id));
+  return [...threadFiles, ...currentTurnFiles.filter((file) => !seenFileIds.has(file.file_id))];
+}
+
+/**
+ * Deloitte Custom Change: Resolve an authorized attachment's bytes from whichever storage
+ * backend actually holds them, so upload tools never need provider-specific download logic.
+ * Returns a Node-readable stream for an authorized persisted file.
+ * OpenAI and Azure files require an endpoint-specific client; other storage
+ * strategies use the standard request/path stream signature.
+ * @param {object} attachment - Persisted file document.
+ * @param {ServerRequest | undefined} req - Authenticated request.
+ * @param {import('express').Response | undefined} res - Active response.
+ * @returns {Promise<NodeJS.ReadableStream>} Download stream for the file.
+ */
+async function getAttachmentDownloadStream(attachment, req, res) {
+  const ref = attachment.metadata?.codeEnvRef;
+  if (
+    attachment.context === 'execute_code' &&
+    ref?.storage_session_id &&
+    ref?.file_id &&
+    ref?.kind &&
+    ref?.id
+  ) {
+    const identity =
+      ref.kind === 'skill'
+        ? { kind: ref.kind, id: ref.id, version: ref.version }
+        : { kind: ref.kind, id: ref.id };
+    const { getDownloadStream: getCodeStream } = getStrategyFunctions(FileSources.execute_code);
+    if (typeof getCodeStream === 'function') {
+      try {
+        const response = await getCodeStream(
+          `${ref.storage_session_id}/${ref.file_id}`,
+          identity,
+          req,
+        );
+        return response.data;
+      } catch (error) {
+        logger.warn(
+          '[MCP] Code environment download unavailable; using durable file storage',
+          error,
+        );
+      }
+    }
+  }
+  const { getDownloadStream } = getStrategyFunctions(attachment.source);
+  if (typeof getDownloadStream !== 'function') {
+    throw new Error(`Attached file source "${attachment.source}" cannot be downloaded`);
+  }
+  if (checkOpenAIStorage(attachment.source)) {
+    if (!attachment.model) {
+      throw new Error(`Attached file source "${attachment.source}" has no associated model`);
+    }
+    const endpointMap = {
+      [FileSources.openai]: EModelEndpoint.assistants,
+      [FileSources.azure]: EModelEndpoint.azureAssistants,
+    };
+    const providerReq = Object.assign(Object.create(req ?? null), {
+      body: { ...req?.body, model: attachment.model },
+    });
+    const { openai } = await getOpenAIClient({
+      req: providerReq,
+      res,
+      overrideEndpoint: endpointMap[attachment.source],
+    });
+    const response = await getDownloadStream(attachment.file_id, openai);
+    return response.body && typeof response.body.getReader === 'function'
+      ? Readable.fromWeb(response.body)
+      : response.body;
+  }
+  const download = await getDownloadStream(req, attachment.storageKey || attachment.filepath);
+  return download?.data ?? download;
+}
+
+/**
+ * Deloitte Custom Change: Resolve only files attached to the active request before tool dispatch.
+ * Resolves a current-request attachment for an authorized MCP upload tool.
+ * @param {object} params - Upload resolution inputs.
+ * @param {object | string} params.toolArguments - Arguments generated for the MCP tool.
+ * @param {import('@librechat/api').RequestBody | undefined} params.requestBody - Current request body.
+ * @param {ServerRequest | undefined} params.req - Current authenticated request.
+ * @param {import('librechat-data-provider').TUser | undefined} params.user - Current authenticated user.
+ * @returns {Promise<object | string>} Tool arguments with attachment bytes substituted when requested.
+ */
+async function resolveAttachmentUpload({ toolArguments, requestBody, req, res, user, signal }) {
+  const requestFileIds = new Set(
+    (requestBody?.files ?? [])
+      .map((file) => file?.file_id)
+      .filter((fileId) => typeof fileId === 'string'),
+  );
+  return resolveAttachmentUploadCore({
+    toolArguments,
+    signal,
+    dependencies: {
+      getRequestAttachment: async (fileId) =>
+        requestFileIds.has(fileId)
+          ? ((await db.getFiles(
+              { file_id: fileId, user: user?.id, tenantId: getTenantId() },
+              null,
+              { text: 0 },
+            )) ?? [])
+          : [],
+      getThreadFiles: () => getConversationFiles(requestBody, user),
+      getDownloadStream: (attachment) => getAttachmentDownloadStream(attachment, req, res),
+    },
+  });
+}
 
 /**
  * Deloitte Custom Change: applies the standard Agents file policy before a trusted gateway file is downloaded.
@@ -931,6 +1103,7 @@ async function createMCPTool({
       tenantId: user?.tenantId,
       userId: user?.id,
     });
+    serverConfig = applyAttachmentUploadConfig(serverConfig, serverName, appConfig);
     const allowedDomains = appConfig?.mcpSettings?.allowedDomains;
     const allowedAddresses = appConfig?.mcpSettings?.allowedAddresses;
     const isDomainAllowed = await isEarlyDomainAllowed({
@@ -1057,6 +1230,23 @@ function createToolInstance({
     };
   }
 
+  // Deloitte Custom Change: expose current attachment IDs only to configured trusted upload tools.
+  schema = addAttachmentUploadHints(
+    schema,
+    toolName,
+    capturedServerConfig,
+    capturedRequestBody,
+    isGoogle,
+  );
+  const attachmentUpload = supportsAttachmentUpload(capturedServerConfig, toolName);
+  const attachmentSourceField = isGoogle
+    ? 'sourceFile'
+    : getAttachmentSourceField(capturedRequestBody);
+  const attachmentInstructions = `Upload a file already available in this conversation. Provide the destination fields and ${attachmentSourceField}. Never provide content, file bytes, or encoding: LibreChat reads and encodes the file after this tool call.`;
+  const attachmentUploadDescription = attachmentUpload
+    ? [description, attachmentInstructions].filter(Boolean).join('\n\n')
+    : description || '';
+
   const normalizedToolKey = `${toolName}${Constants.mcp_delimiter}${normalizeServerName(serverName)}`;
   // Deloitte Custom Change: only the operator-configured SharePoint gateway can create download artifacts.
   const trustedSharePointServerName =
@@ -1123,17 +1313,32 @@ function createToolInstance({
 
       const customUserVars =
         config?.configurable?.userMCPAuthMap?.[`${Constants.mcp_prefix}${serverName}`];
+      // Deloitte Custom Change: substitute the original authorized attachment immediately before dispatch.
+      const effectiveRequestBody = config?.configurable?.requestBody
+        ? { ...capturedRequestBody, ...config.configurable.requestBody }
+        : capturedRequestBody;
+      const resolvedToolArguments = supportsAttachmentUpload(capturedServerConfig, toolName)
+        ? await resolveAttachmentUpload({
+            toolArguments,
+            requestBody: effectiveRequestBody,
+            req: res?.req,
+            res,
+            user: effectiveUser,
+            signal: derivedSignal,
+          })
+        : toolArguments;
+
       const callToolOptions = {
         serverName,
         serverConfig: capturedServerConfig,
         toolName,
         provider,
-        toolArguments,
+        toolArguments: resolvedToolArguments,
         options: {
           signal: derivedSignal,
         },
         user: effectiveUser,
-        requestBody: config?.configurable?.requestBody ?? capturedRequestBody,
+        requestBody: effectiveRequestBody,
         requestScopedConnections:
           config?.configurable?.requestScopedConnections ?? capturedRequestScopedConnections,
         customUserVars,
@@ -1164,16 +1369,11 @@ function createToolInstance({
        * without a substitute the Assistants endpoint would return nothing at
        * all for a tool call that otherwise succeeded. */
       // Deloitte Custom Change: register MCP download resources with Code Interpreter.
-      if (
-        artifacts?.codeFile &&
-        isAssistantsEndpoint(provider)
-      ) {
+      if (artifacts?.codeFile && isAssistantsEndpoint(provider)) {
         if (Array.isArray(result) && !result[0]) {
           result[0] = `File "${sanitizeFilename(artifacts.codeFile.name)}" could not be attached to this conversation for use in Code Interpreter.`;
         }
-      } else if (
-        artifacts?.codeFile
-      ) {
+      } else if (artifacts?.codeFile) {
         const { name, url, mimeType, gatewayDownload, size, expiresAt } = artifacts.codeFile;
         // Deloitte Custom Change: gateway filenames are untrusted and must never reach model context or logs unsanitized.
         const sanitizedFilename = sanitizeFilename(name);
@@ -1205,7 +1405,7 @@ function createToolInstance({
         if (!req) {
           codeFileRegistrationFailed = true;
           logger.warn(
-              `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": no request context available to register it with Code Interpreter.`,
+            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": no request context available to register it with Code Interpreter.`,
           );
         } else if (capabilityCheckFailed) {
           codeFileRegistrationFailed = true;
@@ -1213,7 +1413,7 @@ function createToolInstance({
         } else if (!hasExecuteCodeCapability) {
           codeFileRegistrationFailed = true;
           logger.warn(
-              `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": Code Interpreter is not enabled for this endpoint.`,
+            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": Code Interpreter is not enabled for this endpoint.`,
           );
         } else if (config?.configurable?.codeEnvAvailable !== true) {
           /* `checkCapability` above is only the endpoint-level admin gate; the
@@ -1223,7 +1423,7 @@ function createToolInstance({
            * from. */
           codeFileRegistrationFailed = true;
           logger.warn(
-              `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": this agent does not have Code Interpreter (execute_code) available.`,
+            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": this agent does not have Code Interpreter (execute_code) available.`,
           );
         } else {
           let stream;
@@ -1249,8 +1449,14 @@ function createToolInstance({
               .split(';', 1)[0]
               .trim()
               .toLowerCase();
-            if (gatewayDownload && responseMimeType && responseMimeType !== mimeType?.toLowerCase()) {
-              throw new Error('codeFile download content type does not match the gateway declaration');
+            if (
+              gatewayDownload &&
+              responseMimeType &&
+              responseMimeType !== mimeType?.toLowerCase()
+            ) {
+              throw new Error(
+                'codeFile download content type does not match the gateway declaration',
+              );
             }
             const uploaded = await uploadCodeEnvFile({
               req,
@@ -1362,7 +1568,7 @@ function createToolInstance({
   const toolInstance = tool(_call, {
     schema,
     name: normalizedToolKey,
-    description: description || '',
+    description: attachmentUploadDescription,
     responseFormat: AgentConstants.CONTENT_AND_ARTIFACT,
   });
   toolInstance.mcp = true;
@@ -1378,9 +1584,9 @@ function createToolInstance({
   toolInstance.mcpRequiresEphemeralConnection = capturedServerConfig
     ? requiresEphemeralUserConnection(capturedServerConfig)
     : true;
-  // On Google/Vertex, propagate the union-flattened schema so definitions extracted
-  // from this instance don't reach the Gemini converter with unsupported unions.
-  toolInstance.mcpJsonSchema = isGoogle ? schema : parameters;
+  // Deloitte Custom Change: expose the rewritten attachment-reference schema to every provider.
+  // This must match the runtime validator or models will continue to emit the original `content` field.
+  toolInstance.mcpJsonSchema = schema;
   return toolInstance;
 }
 
@@ -1664,4 +1870,9 @@ module.exports = {
   checkOAuthFlowStatus,
   getServerConnectionStatus,
   createUnavailableToolStub,
+  supportsAttachmentUpload,
+  readStreamAsBase64,
+  getConversationFiles,
+  resolveAttachmentUpload,
+  addAttachmentUploadHints,
 };

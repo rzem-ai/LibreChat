@@ -532,6 +532,9 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     url: '${MCP_GATEWAY_URL}?toolsets=sharepoint'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    # Deloitte Custom Change: Only this trusted tool may receive current-request attachment bytes.
+    attachmentUploadTools:
+      - sp_upload_file
     iconPathLight: '/assets/mcp/sharepoint-light.png'
     iconPathDark: '/assets/mcp/sharepoint-dark.png'
     limitedAccess: true
