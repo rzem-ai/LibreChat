@@ -151,22 +151,28 @@ export async function loadToolDefinitions(
       return undefined;
     }
     const normalized = normalizeJsonSchema(resolveJsonSchemaRefs(mcpParams));
+    const providerSchema = isGoogle ? sanitizeGeminiSchema(normalized) : normalized;
+    const [rawToolName] = toolName ? splitMCPToolKey(toolName, serverName ? [serverName] : []) : [];
     const isAttachmentUpload =
       serverName != null &&
       toolName != null &&
-      attachmentUploadTools?.[serverName]?.includes(toolName);
+      attachmentUploadTools?.[serverName]?.includes(rawToolName ?? toolName);
     if (!isAttachmentUpload) {
-      return isGoogle ? sanitizeGeminiSchema(normalized) : normalized;
+      return providerSchema;
     }
 
-    const required = (normalized.required ?? []).filter(
+    const required = (providerSchema.required ?? []).filter(
       (property) =>
         property !== 'content' &&
         property !== 'encoding' &&
         property !== 'sourceFileId' &&
         property !== 'sourceFileName',
     );
-    const { content: _content, encoding: _encoding, ...properties } = normalized.properties ?? {};
+    const {
+      content: _content,
+      encoding: _encoding,
+      ...properties
+    } = providerSchema.properties ?? {};
     const sourceFileDescription = `ID of a file attached to the current request. LibreChat resolves it to the original bytes. Current request attachments: ${(
       attachmentFiles ?? []
     )
@@ -174,7 +180,7 @@ export async function loadToolDefinitions(
       .map((file) => `${file.file_id} (${file.filename ?? 'attached file'})`)
       .join(', ')}.`;
     const uploadSchema: JsonSchemaType = {
-      ...normalized,
+      ...providerSchema,
       properties: {
         ...properties,
         sourceFileId: { type: 'string', description: sourceFileDescription },
@@ -206,7 +212,7 @@ export async function loadToolDefinitions(
             { oneOf: [{ required: ['sourceFileId'] }, { required: ['sourceFileName'] }] },
           ],
         };
-    return isGoogle ? sanitizeGeminiSchema(schema) : schema;
+    return schema;
   };
 
   const emptyResult: LoadToolDefinitionsResult = {

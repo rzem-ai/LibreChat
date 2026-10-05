@@ -54,6 +54,8 @@ jest.mock('~/models', () => ({
   createToken: jest.fn(),
   updateToken: jest.fn(),
   getFiles: jest.fn(),
+  getMessages: jest.fn(),
+  getCodeGeneratedFiles: jest.fn(),
 }));
 jest.mock('~/server/services/GraphTokenService', () => ({
   getGraphApiToken: jest.fn(),
@@ -80,6 +82,7 @@ const { Constants } = require('librechat-data-provider');
 const { getAppConfig } = require('~/server/services/Config');
 const { reinitMCPServer } = require('~/server/services/Tools/mcp');
 const { getFiles } = require('~/models');
+const { getMessages, getCodeGeneratedFiles } = require('~/models');
 const { getOpenAIClient } = require('~/server/controllers/assistants/helpers');
 const {
   createMCPTool,
@@ -613,24 +616,46 @@ describe('resolveAttachmentUpload', () => {
         },
       },
     ]);
+    getMessages.mockResolvedValue([
+      {
+        messageId: 'parent-1',
+        parentMessageId: '00000000-0000-0000-0000-000000000000',
+        files: [{ file_id: 'file-1' }],
+      },
+    ]);
+    getCodeGeneratedFiles.mockResolvedValue([
+      {
+        file_id: 'file-1',
+        filename: 'testsp7.pptx',
+        source: 'azure_blob',
+        filepath: '/uploads/file-1',
+        context: 'execute_code',
+        metadata: {
+          codeEnvRef: {
+            storage_session_id: 'storage-session-1',
+            file_id: 'code-file-1',
+            kind: 'skill',
+            id: 'skill-1',
+            version: 2,
+          },
+        },
+      },
+    ]);
 
     const result = await resolveAttachmentUpload({
       toolArguments: { sourceFileName: 'testsp7.pptx' },
-      requestBody: { conversationId: 'conversation-1' },
+      requestBody: { conversationId: 'conversation-1', parentMessageId: 'parent-1' },
       req: {},
       user: { id: 'user-1' },
     });
 
-    expect(getFiles).toHaveBeenCalledWith(
-      {
-        conversationId: 'conversation-1',
-        user: 'user-1',
-        context: 'execute_code',
-        'metadata.codeEnvRef': { $exists: true },
-      },
-      null,
-      { text: 0 },
+    expect(getMessages).toHaveBeenCalledWith(
+      { conversationId: 'conversation-1', user: 'user-1' },
+      'messageId parentMessageId files attachments',
     );
+    expect(getCodeGeneratedFiles).toHaveBeenCalledWith('conversation-1', ['file-1'], {
+      user: 'user-1',
+    });
     expect(result).toEqual({
       content: Buffer.from('pptx bytes').toString('base64'),
       encoding: 'base64',
@@ -681,6 +706,40 @@ describe('resolveAttachmentUpload', () => {
         requestBody: { files: [{ file_id: 'file-1', source: 'azure_blob', filepath: '/file-1' }] },
       }),
     ).resolves.toMatchObject({ content: Buffer.from('pptx bytes').toString('base64') });
+  });
+
+  it('falls back to durable storage when a generated file has no code environment reference', async () => {
+    const { Readable } = require('stream');
+    const getDownloadStream = jest
+      .fn()
+      .mockResolvedValue({ data: Readable.from([Buffer.from('saved')]) });
+    mockGetStrategyFunctions.mockReturnValue({ getDownloadStream });
+    getMessages.mockResolvedValue([
+      {
+        messageId: 'parent-1',
+        parentMessageId: '00000000-0000-0000-0000-000000000000',
+        files: [{ file_id: 'file-1' }],
+      },
+    ]);
+    getCodeGeneratedFiles.mockResolvedValue([
+      {
+        file_id: 'file-1',
+        filename: 'saved.csv',
+        source: 'azure_blob',
+        filepath: '/uploads/file-1',
+        context: 'execute_code',
+      },
+    ]);
+
+    await expect(
+      resolveAttachmentUpload({
+        toolArguments: { sourceFileName: 'saved.csv' },
+        requestBody: { conversationId: 'conversation-1', parentMessageId: 'parent-1' },
+        req: { user: { id: 'user-1' } },
+        user: { id: 'user-1' },
+      }),
+    ).resolves.toMatchObject({ content: Buffer.from('saved').toString('base64') });
+    expect(getDownloadStream).toHaveBeenCalledWith(expect.any(Object), '/uploads/file-1');
   });
 
   it('uses an endpoint-specific client for OpenAI-backed files', async () => {

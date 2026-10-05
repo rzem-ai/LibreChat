@@ -180,10 +180,6 @@ endpoints:
     hideFileContext: true
     maxCitations: 30
     maxCitationsPerFile: 7
-    # Attachment-backed uploads replace model-provided content with local file bytes
-    # at dispatch. Allow legacy streamed calls to complete so that replacement runs.
-    maxToolCallArgBytesByTool:
-      sp_upload_file_mcp_cleartrack-mcp-gateway-sharepoint: 10485760
     capabilities:
       [
         'actions',
