@@ -159,11 +159,13 @@ memory:
   messageWindowSize: 5 # Number of recent messages to consider
   agent:
     enabled: true
-    provider: 'VertexAI US'
-    model: 'google/gemini-2.5-flash'
+    provider: 'anthropic'
+    model: 'claude-haiku-4-5'
     instructions: |
-      Only store stated preferences (e.g. I like X, I dislike Y) and any important facts/context about the user's work at Deloitte (e.g. current projects, team composition).
-      Update or delete out-of-date information promptly.
+      You are a memory extraction assistant.
+      CRITICAL: Do not create a memory for general conversational remarks, fleeting topics, or casual statements.
+      Only extract core biographical details, permanent user preferences, or facts the user explicitly asks you to remember.
+      Be highly conservative. If a detail seems temporary or minor, DO NOT store it.
 
 endpoints:
   # ========================================
