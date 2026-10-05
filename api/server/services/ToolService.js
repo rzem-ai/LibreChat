@@ -680,8 +680,8 @@ async function loadToolDefinitionsWrapper({
     ? await resolveMcpServerContext(req)
     : { configServers: {}, serverNames: [], rawServerNames: [] };
   const attachmentUploadTools = Object.fromEntries(
-    Object.entries(configServers).flatMap(([serverName, serverConfig]) =>
-      serverConfig?.source !== 'user' && Array.isArray(serverConfig?.attachmentUploadTools)
+    Object.entries(appConfig?.mcpConfig ?? {}).flatMap(([serverName, serverConfig]) =>
+      Array.isArray(serverConfig?.attachmentUploadTools)
         ? [[serverName, serverConfig.attachmentUploadTools]]
         : [],
     ),
