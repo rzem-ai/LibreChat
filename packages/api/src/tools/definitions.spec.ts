@@ -31,6 +31,49 @@ describe('definitions.ts', () => {
   });
 
   describe('loadToolDefinitions', () => {
+    it('rewrites approved attachment upload schemas in the definitions-only path', async () => {
+      const params: LoadToolDefinitionsParams = {
+        userId: 'user-123',
+        agentId: 'agent-123',
+        tools: ['sp_upload_file_mcp_sharepoint'],
+        rawServerNames: ['sharepoint'],
+        attachmentUploadTools: { sharepoint: ['sp_upload_file'] },
+        attachmentFiles: [{ file_id: 'file-123', filename: 'report.pptx' }],
+      };
+      const deps: LoadToolDefinitionsDeps = {
+        getOrFetchMCPServerTools: jest.fn().mockResolvedValue({
+          sp_upload_file_mcp_sharepoint: {
+            function: {
+              name: 'sp_upload_file',
+              parameters: {
+                type: 'object',
+                properties: {
+                  driveId: { type: 'string' },
+                  content: { type: 'string' },
+                  encoding: { type: 'string' },
+                },
+                required: ['driveId', 'content'],
+              },
+            },
+          },
+        }),
+        isBuiltInTool: mockIsBuiltInTool,
+      };
+
+      const result = await loadToolDefinitions(params, deps);
+      const definition = result.toolDefinitions[0];
+
+      expect(definition?.parameters?.properties).not.toHaveProperty('content');
+      expect(definition?.parameters?.properties).not.toHaveProperty('encoding');
+      expect(definition?.parameters?.properties).toHaveProperty('sourceFileId');
+      expect(definition?.parameters?.properties).toHaveProperty('sourceFileName');
+      expect(definition?.parameters?.required).toEqual(['driveId']);
+      expect(definition?.parameters?.oneOf).toEqual([
+        { required: ['sourceFileId'] },
+        { required: ['sourceFileName'] },
+      ]);
+    });
+
     it('should return empty result for empty tools array', async () => {
       const params: LoadToolDefinitionsParams = {
         userId: 'user-123',

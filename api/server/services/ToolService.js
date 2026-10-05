@@ -679,6 +679,13 @@ async function loadToolDefinitionsWrapper({
   } = hasFilteredMCPTools
     ? await resolveMcpServerContext(req)
     : { configServers: {}, serverNames: [], rawServerNames: [] };
+  const attachmentUploadTools = Object.fromEntries(
+    Object.entries(configServers).flatMap(([serverName, serverConfig]) =>
+      serverConfig?.source !== 'user' && Array.isArray(serverConfig?.attachmentUploadTools)
+        ? [[serverName, serverConfig.attachmentUploadTools]]
+        : [],
+    ),
+  );
 
   /**
    * Shadowed servers must not emit definitions: their normalized function
@@ -1043,6 +1050,8 @@ async function loadToolDefinitionsWrapper({
         mcpServerNames,
         rawServerNames: mcpRawServerNames,
         accessibleServerNames: defsAccessibleServerNames,
+        attachmentUploadTools,
+        attachmentFiles: req.body?.files,
       },
       {
         isBuiltInTool,
@@ -1131,6 +1140,8 @@ async function loadToolDefinitionsWrapper({
           mcpServerNames,
           rawServerNames: mcpRawServerNames,
           accessibleServerNames: defsAccessibleServerNames,
+          attachmentUploadTools,
+          attachmentFiles: req.body?.files,
         },
         {
           isBuiltInTool,

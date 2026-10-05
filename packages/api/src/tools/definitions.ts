@@ -69,6 +69,10 @@ export interface LoadToolDefinitionsParams {
    * unavailable server's names.
    */
   accessibleServerNames?: readonly string[];
+  /** Operator-approved upload tools, keyed by their raw MCP server name. */
+  attachmentUploadTools?: Record<string, readonly string[]>;
+  /** Files attached to this request, exposed as references instead of tool-call bytes. */
+  attachmentFiles?: Array<{ file_id?: string; filename?: string }>;
 }
 
 export interface ActionToolDefinition {
@@ -124,6 +128,8 @@ export async function loadToolDefinitions(
     mcpServerNames,
     rawServerNames,
     accessibleServerNames,
+    attachmentUploadTools,
+    attachmentFiles,
   } = params;
   const {
     getOrFetchMCPServerTools,
@@ -136,12 +142,68 @@ export async function loadToolDefinitions(
   const isGoogle = provider === Providers.GOOGLE || provider === Providers.VERTEXAI;
 
   /** Normalizes MCP tool params, additionally union-flattening for the Gemini/Vertex path. */
-  const buildMcpParameters = (mcpParams?: JsonSchemaType): JsonSchemaType | undefined => {
+  const buildMcpParameters = (
+    mcpParams: JsonSchemaType | undefined,
+    serverName?: string,
+    toolName?: string,
+  ): JsonSchemaType | undefined => {
     if (!mcpParams) {
       return undefined;
     }
     const normalized = normalizeJsonSchema(resolveJsonSchemaRefs(mcpParams));
-    return isGoogle ? sanitizeGeminiSchema(normalized) : normalized;
+    const isAttachmentUpload =
+      serverName != null &&
+      toolName != null &&
+      attachmentUploadTools?.[serverName]?.includes(toolName);
+    if (!isAttachmentUpload) {
+      return isGoogle ? sanitizeGeminiSchema(normalized) : normalized;
+    }
+
+    const required = (normalized.required ?? []).filter(
+      (property) =>
+        property !== 'content' &&
+        property !== 'encoding' &&
+        property !== 'sourceFileId' &&
+        property !== 'sourceFileName',
+    );
+    const { content: _content, encoding: _encoding, ...properties } = normalized.properties ?? {};
+    const sourceFileDescription = `ID of a file attached to the current request. LibreChat resolves it to the original bytes. Current request attachments: ${(
+      attachmentFiles ?? []
+    )
+      .filter((file) => typeof file.file_id === 'string')
+      .map((file) => `${file.file_id} (${file.filename ?? 'attached file'})`)
+      .join(', ')}.`;
+    const uploadSchema: JsonSchemaType = {
+      ...normalized,
+      properties: {
+        ...properties,
+        sourceFileId: { type: 'string', description: sourceFileDescription },
+        sourceFileName: {
+          type: 'string',
+          description:
+            'Exact filename of a file created earlier in this conversation. LibreChat resolves it to the original bytes.',
+        },
+      },
+      required,
+    };
+    const schema = isGoogle
+      ? {
+          ...uploadSchema,
+          properties: {
+            ...properties,
+            sourceFile: {
+              type: 'string',
+              description:
+                'ID of a file attached to the current request, or exact filename of a file created earlier in this conversation. LibreChat resolves it to the original bytes.',
+            },
+          },
+          required: [...required, 'sourceFile'],
+        }
+      : {
+          ...uploadSchema,
+          oneOf: [{ required: ['sourceFileId'] }, { required: ['sourceFileName'] }],
+        };
+    return isGoogle ? sanitizeGeminiSchema(schema) : schema;
   };
 
   const emptyResult: LoadToolDefinitionsResult = {
@@ -268,7 +330,11 @@ export async function loadToolDefinitions(
           mcpToolDefs.push({
             name: actualToolName,
             description: toolDef.function.description || undefined,
-            parameters: buildMcpParameters(toolDef.function.parameters),
+            parameters: buildMcpParameters(
+              toolDef.function.parameters,
+              serverName,
+              toolDef.function.name ?? actualToolName,
+            ),
             serverName,
             // Deloitte Custom Change: the "all tools from this server" pin
             // expands to every catalog entry, so the class must be carried per
@@ -287,7 +353,11 @@ export async function loadToolDefinitions(
       mcpToolDefs.push({
         name: toolName,
         description: toolDef.function.description || undefined,
-        parameters: buildMcpParameters(toolDef.function.parameters),
+        parameters: buildMcpParameters(
+          toolDef.function.parameters,
+          serverName,
+          toolDef.function.name ?? toolName,
+        ),
         serverName,
         // Deloitte Custom Change: retain the class on single-tool pins so the
         // approval pipeline sees the same class the gateway assigned.
