@@ -372,6 +372,142 @@ describe('createImportHandler', () => {
     expect(summary.errors).toHaveLength(3);
   });
 
+  it('subtracts the SKILL.md manifest read from the shared decompression budget', async () => {
+    const kib = 1024;
+    const skillMarkdown = [
+      '---',
+      'name: tiny-limit-skill',
+      'description: A skill used by import handler tests.',
+      '---',
+      'x'.repeat(20 * kib),
+    ].join('\n');
+
+    const zip = new JSZip();
+    zip.file('SKILL.md', skillMarkdown);
+    zip.file('files/big.txt', 'a'.repeat(20 * kib));
+    const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+    const deps = mockImportDeps({
+      maxZipBytes: 1024 * kib,
+      maxEntries: 10,
+      maxSingleFileBytes: 25 * kib,
+      maxDecompressedBytes: 30 * kib,
+    });
+    const handler = createImportHandler(deps);
+    const res = mockResponse();
+
+    await handler(mockZipRequest(buffer), res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    const summary = importSummary(res.body);
+    // The manifest alone (~20 KiB) leaves under 10 KiB of the 30 KiB budget for the
+    // 20 KiB companion file. If the manifest read weren't subtracted from the shared
+    // budget, the companion file would still see the full budget and succeed instead.
+    expect(summary.filesSucceeded).toBe(0);
+    expect(summary.filesFailed).toBe(1);
+    expect(summary.errors).toEqual([
+      expect.objectContaining({
+        path: 'files/big.txt',
+        status: 'error',
+        error: 'Cumulative decompressed size exceeds limit',
+      }),
+    ]);
+  });
+
+  it('imports successfully when unique archive content fits the budget, even with a renamed companion file', async () => {
+    // Rename, rewrite, the SKILL.md manifest read, and the companion-file loop each read
+    // an entry's decompressed bytes. Before sharing a per-entry cache across those passes,
+    // each pass re-charged the shared budget for the same bytes: the rename pass reads the
+    // spaced companion once, the rewrite pass (triggered because any rename occurred) reads
+    // every entry a second time, and handleZip's own manifest read and companion loop read
+    // them again on top of that. A tight-but-sufficient budget below reproduces the
+    // spurious rejection that multi-pass over-charging caused.
+    const skillMarkdown = [
+      '---',
+      'name: tiny-limit-skill',
+      'description: A skill used by import handler tests.',
+      '---',
+      'See notes with space.md for details.',
+    ].join('\n');
+    const companionContent = 'a'.repeat(100);
+
+    const zip = new JSZip();
+    zip.file('SKILL.md', skillMarkdown);
+    zip.file('notes with space.md', companionContent);
+    const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+    const uniqueBytes =
+      Buffer.byteLength(skillMarkdown, 'utf-8') + Buffer.byteLength(companionContent, 'utf-8');
+    const deps = mockImportDeps({
+      maxZipBytes: 1024 * 1024,
+      maxEntries: 10,
+      maxSingleFileBytes: 1024,
+      maxDecompressedBytes: uniqueBytes + 5,
+    });
+    const handler = createImportHandler(deps);
+    const res = mockResponse();
+
+    await handler(mockZipRequest(buffer), res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    const summary = importSummary(res.body);
+    expect(summary.filesSucceeded).toBe(1);
+    expect(summary.filesFailed).toBe(0);
+  });
+
+  it('rejects a companion file as too large when rewriting its references grows it past the per-file limit, instead of trusting a stale cache hit', async () => {
+    const skillMarkdown = [
+      '---',
+      'name: tiny-limit-skill',
+      'description: A skill used by import handler tests.',
+      '---',
+      '# Test skill',
+    ].join('\n');
+
+    // Two spaced filenames collapse to the same renamed candidate, so the second is
+    // disambiguated with a "-2" suffix — two characters longer than the reference it
+    // replaces. Repeating the reference enough times grows notes.txt past the per-file
+    // limit only after rewriting, even though its original content fit comfortably.
+    const refToken = 'foo-bar x.txt';
+    const rewrittenToken = 'foo-bar-x-2.txt';
+    const repeatCount = Math.ceil(Buffer.byteLength(skillMarkdown, 'utf-8') / refToken.length) + 5;
+    const original = Array(repeatCount).fill(refToken).join(' ');
+    const rewritten = Array(repeatCount).fill(rewrittenToken).join(' ');
+
+    const zip = new JSZip();
+    zip.file('SKILL.md', skillMarkdown);
+    zip.file('foo bar-x.txt', 'first');
+    zip.file('foo-bar x.txt', 'second');
+    zip.file('notes.txt', original);
+    const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+    const maxSingleFileBytes = Buffer.byteLength(original, 'utf-8');
+    expect(Buffer.byteLength(rewritten, 'utf-8')).toBeGreaterThan(maxSingleFileBytes);
+
+    const deps = mockImportDeps({
+      maxZipBytes: 1024 * 1024,
+      maxEntries: 10,
+      maxSingleFileBytes,
+      maxDecompressedBytes: 1024 * 1024,
+    });
+    const handler = createImportHandler(deps);
+    const res = mockResponse();
+
+    await handler(mockZipRequest(buffer), res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    const summary = importSummary(res.body);
+    expect(summary.filesSucceeded).toBe(2);
+    expect(summary.filesFailed).toBe(1);
+    expect(summary.errors).toEqual([
+      expect.objectContaining({
+        path: 'notes.txt',
+        status: 'error',
+        error: expect.stringContaining('File too large'),
+      }),
+    ]);
+  });
+
   it('rejects malformed YAML frontmatter in markdown imports', async () => {
     const deps = mockImportDeps();
     const handler = createImportHandler(deps);
@@ -417,59 +553,198 @@ describe('createImportHandler', () => {
     expect(deps.createSkill).not.toHaveBeenCalled();
   });
 
-  it('strips __MACOSX, ._* and .DS_Store entries from macOS Finder zips', async () => {
-    const deps = mockImportDeps();
-    const handler = createImportHandler(deps);
-    const res = mockResponse();
+  // Deloitte Custom Change: Verify macOS metadata is stripped inside handleZip when the
+  // skill scanner is not configured (open source / self-hosted deployments without
+  // SKILL_SCANNER_URL). This is the primary fix for the original bug — scanSkillUpload
+  // no-ops when the scanner is disabled, so handleZip is the only protection.
+  it('strips __MACOSX, ._* and .DS_Store entries in handleZip when scanner is not configured', async () => {
+    // Explicitly disable the scanner so this test is deterministic regardless of
+    // what SKILL_SCANNER_URL is set to in the environment or by other test suites.
+    const savedScannerUrl = process.env.SKILL_SCANNER_URL;
+    delete process.env.SKILL_SCANNER_URL;
 
-    const zip = new JSZip();
+    try {
+      const deps = mockImportDeps();
+      const handler = createImportHandler(deps);
+      const res = mockResponse();
 
-    // Level 3 skill: SKILL.md + reference doc + subfolders for scripts, references, and assets
-    zip.file(
-      'skill-name/SKILL.md',
-      '---\nname: mac-skill\ndescription: A macOS-created skill.\n---\n# Body',
-    );
-    zip.file('skill-name/FORMS.md', '# Form-filling guide');
-    zip.file('skill-name/scripts/fill_form.py', 'print("hello")');
-    zip.file('skill-name/references/api-schema.json', '{"api": "schema"}');
-    zip.file('skill-name/assets/template.txt', 'template');
+      const zip = new JSZip();
 
-    // .DS_Store files at multiple depths — Finder writes one per folder it opens
-    zip.file('skill-name/.DS_Store', '');
-    zip.file('skill-name/scripts/.DS_Store', '');
-    zip.file('.DS_Store', '');
+      // Level 3 skill: SKILL.md + reference doc + subfolders for scripts, references, and assets
+      zip.file(
+        'skill-name/SKILL.md',
+        '---\nname: mac-skill\ndescription: A macOS-created skill.\n---\n# Body',
+      );
+      zip.file('skill-name/FORMS.md', '# Form-filling guide');
+      zip.file('skill-name/scripts/fill_form.py', 'print("hello")');
+      zip.file('skill-name/references/api-schema.json', '{"api": "schema"}');
+      zip.file('skill-name/assets/template.txt', 'template');
 
-    // __MACOSX/ mirror — Finder injects one sidecar per file with extended attributes
-    zip.file('__MACOSX/skill-name/._SKILL.md', '');
-    zip.file('__MACOSX/skill-name/._FORMS.md', '');
-    zip.file('__MACOSX/skill-name/scripts/._fill_form.py', '');
-    zip.file('__MACOSX/skill-name/references/._api-schema.json', '');
-    zip.file('__MACOSX/skill-name/assets/._template.txt', '');
+      // .DS_Store files at multiple depths — Finder writes one per folder it opens
+      zip.file('skill-name/.DS_Store', '');
+      zip.file('skill-name/scripts/.DS_Store', '');
+      zip.file('.DS_Store', '');
 
-    const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+      // __MACOSX/ mirror — Finder injects one sidecar per file with extended attributes
+      zip.file('__MACOSX/skill-name/._SKILL.md', '');
+      zip.file('__MACOSX/skill-name/._FORMS.md', '');
+      zip.file('__MACOSX/skill-name/scripts/._fill_form.py', '');
+      zip.file('__MACOSX/skill-name/references/._api-schema.json', '');
+      zip.file('__MACOSX/skill-name/assets/._template.txt', '');
 
-    await handler(mockZipRequest(buffer), res);
+      const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
 
-    // Import succeeds and only the 4 real Level 3 files are stored (SKILL.md is consumed as body)
-    expect(res.status).toHaveBeenCalledWith(201);
-    const summary = importSummary(res.body);
-    expect(summary.filesProcessed).toBe(4);
-    expect(summary.filesSucceeded).toBe(4);
-    expect(summary.filesFailed).toBe(0);
+      await handler(mockZipRequest(buffer), res);
 
-    // None of the macOS entries should have reached storage
-    expect(deps.upsertSkillFile).toHaveBeenCalledTimes(4);
-    expect(deps.upsertSkillFile).toHaveBeenCalledWith(
-      expect.objectContaining({ relativePath: 'FORMS.md' }),
-    );
-    expect(deps.upsertSkillFile).toHaveBeenCalledWith(
-      expect.objectContaining({ relativePath: 'scripts/fill_form.py' }),
-    );
-    expect(deps.upsertSkillFile).toHaveBeenCalledWith(
-      expect.objectContaining({ relativePath: 'references/api-schema.json' }),
-    );
-    expect(deps.upsertSkillFile).toHaveBeenCalledWith(
-      expect.objectContaining({ relativePath: 'assets/template.txt' }),
-    );
+      // Import succeeds and only the 4 real Level 3 files are stored (SKILL.md is consumed as body)
+      expect(res.status).toHaveBeenCalledWith(201);
+      const summary = importSummary(res.body);
+      expect(summary.filesProcessed).toBe(4);
+      expect(summary.filesSucceeded).toBe(4);
+      expect(summary.filesFailed).toBe(0);
+
+      // None of the macOS entries should have reached storage
+      expect(deps.upsertSkillFile).toHaveBeenCalledTimes(4);
+      expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+        expect.objectContaining({ relativePath: 'FORMS.md' }),
+      );
+      expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+        expect.objectContaining({ relativePath: 'scripts/fill_form.py' }),
+      );
+      expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+        expect.objectContaining({ relativePath: 'references/api-schema.json' }),
+      );
+      expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+        expect.objectContaining({ relativePath: 'assets/template.txt' }),
+      );
+    } finally {
+      if (savedScannerUrl === undefined) {
+        delete process.env.SKILL_SCANNER_URL;
+      } else {
+        process.env.SKILL_SCANNER_URL = savedScannerUrl;
+      }
+    }
+  });
+
+  // Deloitte Custom Change: Verify stripZipArtifacts removes hidden files and accidentally
+  // included dependency directories at all levels when the scanner is not configured.
+  it('strips hidden files and artifact directories at all levels when scanner is not configured', async () => {
+    const savedScannerUrl = process.env.SKILL_SCANNER_URL;
+    delete process.env.SKILL_SCANNER_URL;
+
+    try {
+      const deps = mockImportDeps();
+      const handler = createImportHandler(deps);
+      const res = mockResponse();
+
+      const zip = new JSZip();
+
+      // Real skill files, including valid underscore-prefixed Python modules
+      zip.file('SKILL.md', '---\nname: python-skill\ndescription: A Python skill.\n---\n# Body');
+      zip.file('scripts/run.py', 'print("hello")');
+      zip.file('scripts/_helpers.py', 'def helper(): pass');
+      zip.file('scripts/__init__.py', '');
+
+      // Hidden files and accidentally included directories at nested levels
+      zip.file('.env', 'SECRET=value');
+      zip.file('skill-name/.gitignore', '.venv/');
+      zip.file('skill-name/.venv/bin/python', '');
+      zip.file('skill-name/.venv/lib/python3.11/site-packages/pandas/__init__.py', '');
+      zip.file('skill-name/scripts/__pycache__/run.cpython-311.pyc', '');
+      zip.file('skill-name/assets/node_modules/lodash/index.js', '');
+      zip.file('skill-name/references/.git/config', '');
+
+      const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+      await handler(mockZipRequest(buffer), res);
+
+      // Import succeeds and only real skill files are stored (SKILL.md is consumed as body)
+      expect(res.status).toHaveBeenCalledWith(201);
+      const summary = importSummary(res.body);
+      expect(summary.filesProcessed).toBe(3);
+      expect(summary.filesSucceeded).toBe(3);
+      expect(summary.filesFailed).toBe(0);
+
+      // Artifact entries are absent while valid Python modules remain available
+      expect(deps.upsertSkillFile).toHaveBeenCalledTimes(3);
+      expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+        expect.objectContaining({ relativePath: 'scripts/run.py' }),
+      );
+      expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+        expect.objectContaining({ relativePath: 'scripts/_helpers.py' }),
+      );
+      expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+        expect.objectContaining({ relativePath: 'scripts/__init__.py' }),
+      );
+    } finally {
+      if (savedScannerUrl === undefined) {
+        delete process.env.SKILL_SCANNER_URL;
+      } else {
+        process.env.SKILL_SCANNER_URL = savedScannerUrl;
+      }
+    }
+  });
+
+  // Deloitte Custom Change: Verify spaced filenames are auto-renamed instead of
+  // rejected as "Invalid path", literal references to the old name are rewritten
+  // inside SKILL.md, and a warning listing the rename is surfaced on the response.
+  it('renames spaced filenames, rewrites references, and surfaces a warning', async () => {
+    const savedScannerUrl = process.env.SKILL_SCANNER_URL;
+    delete process.env.SKILL_SCANNER_URL;
+
+    try {
+      const deps = mockImportDeps();
+      const handler = createImportHandler(deps);
+      const res = mockResponse();
+
+      const zip = new JSZip();
+      zip.file(
+        'SKILL.md',
+        [
+          '---',
+          'name: fortune-cookie',
+          'description: Tells a fortune.',
+          '---',
+          '# Fortune cookie',
+          'Run `cat references/many fortunes.md` to read the fortunes.',
+        ].join('\n'),
+      );
+      zip.file('references/many fortunes.md', 'You will find happiness.');
+
+      const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+      await handler(mockZipRequest(buffer), res);
+
+      expect(res.status).toHaveBeenCalledWith(201);
+      const summary = importSummary(res.body);
+      expect(summary.filesFailed).toBe(0);
+      expect(summary.filesSucceeded).toBe(1);
+
+      expect(deps.upsertSkillFile).toHaveBeenCalledWith(
+        expect.objectContaining({ relativePath: 'references/many-fortunes.md' }),
+      );
+
+      expect(deps.createSkill).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body: expect.stringContaining('cat references/many-fortunes.md'),
+        }),
+      );
+
+      const body = res.body as { warnings?: Array<{ code: string; message: string }> };
+      expect(body.warnings).toEqual([
+        expect.objectContaining({
+          field: 'files',
+          code: 'FILENAME_SPACES_RENAMED',
+          message: expect.stringContaining('1 file has been renamed'),
+          severity: 'warning',
+        }),
+      ]);
+    } finally {
+      if (savedScannerUrl === undefined) {
+        delete process.env.SKILL_SCANNER_URL;
+      } else {
+        process.env.SKILL_SCANNER_URL = savedScannerUrl;
+      }
+    }
   });
 });

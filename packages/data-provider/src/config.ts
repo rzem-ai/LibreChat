@@ -648,6 +648,26 @@ export const baseEndpointSchema = z.object({
 
 export type TBaseEndpoint = z.infer<typeof baseEndpointSchema>;
 
+/**
+ * Deloitte Custom Change: per-model gating for the native provider web-search tool
+ * (OpenAI `web_search`, Anthropic `web_search_20250305`, Google `google_search`) — distinct from the
+ * built-in search-crawl-rerank pipeline configured under the root-level `webSearch:`
+ * key. When the `nativeWebSearch` key is omitted entirely, native web search stays
+ * enabled for every model of that provider/endpoint (permissive default). When
+ * `supportedModels` is explicitly set to an empty array, native web search is
+ * disabled for every model of that provider/endpoint.
+ */
+export const nativeWebSearchSchema = z.object({
+  /**
+   * Model names supporting native web search. Matched as an exact string OR a
+   * case-insensitive prefix (e.g. `"gpt-4o"` matches `"gpt-4o-2024-08-06"`).
+   * An explicit empty array means no models are supported.
+   */
+  supportedModels: z.array(z.string()).optional(),
+});
+
+export type TNativeWebSearchConfig = z.infer<typeof nativeWebSearchSchema>;
+
 export const bedrockGuardrailConfigSchema = z.object({
   guardrailIdentifier: z.string(),
   guardrailVersion: z.string(),
@@ -661,8 +681,11 @@ export const bedrockEndpointSchema = baseEndpointSchema.merge(
     models: z.array(z.string()).optional(),
     guardrailConfig: bedrockGuardrailConfigSchema.optional(),
     inferenceProfiles: z.record(z.string(), z.string()).optional(),
+    nativeWebSearch: nativeWebSearchSchema.optional(),
   }),
 );
+
+export type TBedrockEndpoint = z.infer<typeof bedrockEndpointSchema>;
 
 const modelItemSchema = z.union([
   z.string(),
@@ -1057,6 +1080,7 @@ export const endpointSchema = baseEndpointSchema.merge(
         }),
       )
       .optional(),
+    nativeWebSearch: nativeWebSearchSchema.optional(),
   }),
 );
 
@@ -1154,10 +1178,35 @@ export const anthropicEndpointSchema = baseEndpointSchema.merge(
     vertex: vertexAISchema.optional(),
     /** Optional: List of available models */
     models: z.array(z.string()).optional(),
+    nativeWebSearch: nativeWebSearchSchema.optional(),
   }),
 );
 
 export type TAnthropicEndpoint = z.infer<typeof anthropicEndpointSchema>;
+
+/**
+ * Deloitte Custom Change: OpenAI endpoint schema. Extends `baseEndpointSchema` with fields
+ * specific to the built-in OpenAI endpoint (currently just native web-search gating).
+ */
+export const openAIEndpointSchema = baseEndpointSchema.merge(
+  z.object({
+    nativeWebSearch: nativeWebSearchSchema.optional(),
+  }),
+);
+
+export type TOpenAIEndpoint = z.infer<typeof openAIEndpointSchema>;
+
+/**
+ * Deloitte Custom Change: Google endpoint schema. Extends `baseEndpointSchema` with fields
+ * specific to the built-in Google endpoint (currently just native web-search gating).
+ */
+export const googleEndpointSchema = baseEndpointSchema.merge(
+  z.object({
+    nativeWebSearch: nativeWebSearchSchema.optional(),
+  }),
+);
+
+export type TGoogleEndpoint = z.infer<typeof googleEndpointSchema>;
 
 /** Masked preview of the API key, stored at write time so admin
  * reads can show which key is configured without returning the secret. */
@@ -1397,8 +1446,11 @@ export const interfaceSchema = z
         createActions: z.boolean().optional(),
         landingIcon: z.boolean().optional(),
         conversationIcon: z.boolean().optional(),
+        /** Enable/disable the in-app Learning Hub tutorials (first-run prompt, guided tours). */
+        isTutorialEnabled: z.boolean().optional(),
         accountsTab: z.boolean().optional(),
         dataApiKeys: z.boolean().optional(),
+        adminAgentApiKeys: z.boolean().optional(), // Deloitte Custom Change: admin-only service account API key management.
         dataDangerZone: z.boolean().optional(),
         externalVoiceProvider: z.boolean().optional(),
         artifactsShadcnOnly: z.boolean().optional(),
@@ -1475,6 +1527,8 @@ export const interfaceSchema = z
     // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
     providerUpload: z.boolean().optional(),
     fileCitations: z.boolean().optional(),
+    /** Legacy fallback during config migration to `interface.customDeloitteFeatureFlags.isTutorialEnabled`. */
+    isTutorialEnabled: z.boolean().optional(),
     /** Horizontal alignment of the current user's own chat turns. `'right'` right-aligns
      * the user's messages as iMessage-style bubbles without an avatar/name header
      * (assistant/agent messages remain left-aligned and unaffected). */
@@ -1557,6 +1611,7 @@ export const interfaceSchema = z
     // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
     providerUpload: false,
     fileCitations: true,
+    isTutorialEnabled: true,
     userMessageAlignment: 'left',
     buildInfo: true,
     remoteAgents: {
@@ -2044,6 +2099,7 @@ export const configSchema = z.object({
   mcpSettings: z
     .object({
       allowedDomains: z.array(z.string()).optional(),
+      codeFileAllowedDomains: z.array(z.string()).optional(),
       allowedAddresses: allowedAddressesSchema,
     })
     .optional(),
@@ -2093,8 +2149,8 @@ export const configSchema = z.object({
        * endpoint > a custom endpoint's own config.
        */
       all: baseEndpointSchema.omit({ baseURL: true }).optional(),
-      [EModelEndpoint.openAI]: baseEndpointSchema.optional(),
-      [EModelEndpoint.google]: baseEndpointSchema.optional(),
+      [EModelEndpoint.openAI]: openAIEndpointSchema.optional(),
+      [EModelEndpoint.google]: googleEndpointSchema.optional(),
       [EModelEndpoint.anthropic]: anthropicEndpointSchema.optional(),
       [EModelEndpoint.azureOpenAI]: azureEndpointSchema.optional(),
       [EModelEndpoint.azureAssistants]: assistantEndpointSchema.optional(),
@@ -3157,6 +3213,8 @@ export enum LocalStorageKeys {
   LAST_CODE_TOGGLE_ = 'LAST_CODE_TOGGLE_',
   /** Last checked toggle for Web Search per conversation ID */
   LAST_WEB_SEARCH_TOGGLE_ = 'LAST_WEB_SEARCH_TOGGLE_',
+  /** Deloitte Custom Change: last checked toggle for native (provider) Web Search per conversation ID */
+  LAST_NATIVE_WEB_SEARCH_TOGGLE_ = 'LAST_NATIVE_WEB_SEARCH_TOGGLE_',
   /** Last checked toggle for File Search per conversation ID */
   LAST_FILE_SEARCH_TOGGLE_ = 'LAST_FILE_SEARCH_TOGGLE_',
   /** Last checked toggle for Artifacts per conversation ID */

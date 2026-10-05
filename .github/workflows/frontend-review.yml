@@ -2,12 +2,6 @@ name: Frontend Unit Tests
 
 on:
   pull_request:
-    paths:
-      - 'client/**'
-      - 'packages/client/**'
-      - 'packages/data-provider/**'
-      - '.github/workflows/frontend-review.yml'
-      - '!**.md'
 
 permissions:
   contents: read
@@ -16,8 +10,29 @@ env:
   NODE_OPTIONS: '--max-old-space-size=${{ secrets.NODE_MAX_OLD_SPACE_SIZE || 6144 }}'
 
 jobs:
+  changes:
+    name: Detect frontend changes
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'client/**'
+              - 'packages/client/**'
+              - 'packages/data-provider/**'
+              - '.github/workflows/frontend-review.yml'
+              - '!**.md'
+
   build:
     name: Build packages
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -299,3 +314,23 @@ jobs:
 
       - name: Build client
         run: cd client && npm run build:ci
+
+  all-checks-passed:
+    name: All checks passed
+    if: always()
+    needs:
+      - changes
+      - build
+      - typecheck
+      - test-packages-client
+      - test-ubuntu
+      - test-windows
+      - build-verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any dependency failed or was cancelled
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" || "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "One or more required jobs failed."
+            exit 1
+          fi

@@ -24,6 +24,7 @@ import type {
 } from 'librechat-data-provider';
 import type { TokenMethods, IUser } from '@librechat/data-schemas';
 import type { LCTool } from '@librechat/agents';
+import type { MCPToolClass } from 'librechat-data-provider';
 import type { OboTokenResolver, OboTrustChecker } from '~/mcp/oauth/obo';
 import type { GraphTokenResolver } from '~/utils/graph';
 import type { FlowStateManager } from '~/flow/manager';
@@ -61,7 +62,7 @@ export type ToolsetCatalogEntry = MCPToolsetCatalogEntry;
 
 export interface LCFunctionTool {
   type: 'function';
-  ['function']: LCTool;
+  ['function']: LCTool & { toolClass?: MCPToolClass };
   /** Deloitte Custom Change: Capability-profile names this tool belongs to, from the MCP server's `_meta.toolsets`. */
   toolsets?: string[];
 }
@@ -149,9 +150,25 @@ export type Artifacts =
         fileCitations?: boolean;
       };
       [Tools.web_search]?: SearchResultData;
-      files?: Array<{ id: string; name: string }>;
+      files?: Array<{
+        id: string;
+        name: string;
+        storage_session_id?: string;
+        resource_id?: string;
+        kind?: 'user' | 'agent' | 'skill';
+      }>;
       session_id?: string;
       file_ids?: string[];
+      /** Trusted MCP download resource for Code Interpreter. */
+      codeFile?: {
+        name: string;
+        mimeType?: string;
+        url: string;
+        /** Deloitte Custom Change: identifies a gateway artifact requiring metadata validation. */
+        gatewayDownload?: true;
+        size?: number;
+        expiresAt?: string;
+      };
     }
   | undefined;
 

@@ -7,6 +7,7 @@ const mockMutate = jest.fn();
 const mockNavigate = jest.fn();
 const mockSetIsOpen = jest.fn();
 const mockShowToast = jest.fn();
+let mockIsLoading = false;
 let mockFileConfigInput: FileConfigInput | undefined = {
   skills: {
     fileSizeLimit: 1,
@@ -54,7 +55,7 @@ jest.mock('~/data-provider', () => ({
     capturedMutationOptions = options;
     return {
       mutate: mockMutate,
-      isLoading: false,
+      isLoading: mockIsLoading,
     };
   },
 }));
@@ -71,9 +72,11 @@ jest.mock('~/hooks', () => ({
           '.md file must contain skill name and description formatted in YAML',
         com_ui_skill_upload_req_zip: '.zip or .skill file must include a SKILL.md file',
         com_ui_skill_upload_req_size: `File size must not exceed ${params?.[0]} MB`,
+        com_ui_skill_upload_req_no_spaces: 'File names must not contain spaces',
         com_ui_skill_upload_size_error: `Skill import must not exceed ${params?.[0]} MB`,
         com_ui_skill_created: 'Skill created',
         com_ui_create_skill_upload_error: 'Failed to read the uploaded file',
+        com_ui_skill_scanning: 'Reviewing your skill...',
       };
       return translations[key] ?? key;
     },
@@ -108,11 +111,45 @@ describe('UploadSkillDialog', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     capturedMutationOptions = undefined;
+    mockIsLoading = false;
     mockFileConfigInput = {
       skills: {
         fileSizeLimit: 1,
       },
     };
+  });
+
+  it('shows a busy drop zone and ignores new files while pending', () => {
+    mockIsLoading = true;
+    const { container } = render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    const dropZone = screen.getByRole('button', { name: 'Reviewing your skill...' });
+    expect(dropZone).toBeDisabled();
+    expect(dropZone).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByTestId('spinner')).toBeInTheDocument();
+
+    const file = new File([new Uint8Array(1024)], 'second.skill', { type: 'application/zip' });
+    fireEvent.change(getFileInput(container), { target: { files: [file] } });
+    fireEvent.drop(dropZone, { dataTransfer: { files: [file] } });
+
+    expect(mockMutate).not.toHaveBeenCalled();
+  });
+
+  it('restores the drop zone after a scanner error', () => {
+    mockIsLoading = true;
+    const { rerender } = render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    act(() => {
+      capturedMutationOptions?.onError?.(scanErrorFromIssues(['bad skill']));
+    });
+    mockIsLoading = false;
+    rerender(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    const dropZone = screen.getByRole('button', { name: 'Drag and drop or click to upload' });
+    expect(dropZone).toBeEnabled();
+    expect(dropZone).not.toHaveAttribute('aria-busy');
+    expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('bad skill');
   });
 
   it('renders the configured skill import size limit', () => {
@@ -131,6 +168,12 @@ describe('UploadSkillDialog', () => {
     render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
 
     expect(screen.getByText('File size must not exceed 1.06 MB')).toBeInTheDocument();
+  });
+
+  it('renders the no-spaces filename requirement', () => {
+    render(<UploadSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    expect(screen.getByText('File names must not contain spaces')).toBeInTheDocument();
   });
 
   it('rejects files above the configured skill import limit before upload', () => {

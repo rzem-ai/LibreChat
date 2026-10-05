@@ -6,6 +6,7 @@ const mockMutate = jest.fn();
 const mockNavigate = jest.fn();
 const mockSetIsOpen = jest.fn();
 const mockShowToast = jest.fn();
+let mockIsLoading = false;
 
 // Deloitte Custom Change: Capture mutation callbacks so tests can simulate scanner results.
 interface MutationOptions {
@@ -34,6 +35,7 @@ jest.mock(
         ...props
       }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string }) =>
         React.createElement('button', props, children),
+      Spinner: () => React.createElement('div', { 'data-testid': 'spinner' }),
       // Deloitte Custom Change: Expose dialog close callbacks so scanner error reset paths can be tested.
       OGDialog: ({
         open,
@@ -72,7 +74,7 @@ jest.mock('~/data-provider', () => ({
     capturedMutationOptions = options;
     return {
       mutate: mockMutate,
-      isLoading: false,
+      isLoading: mockIsLoading,
     };
   },
 }));
@@ -87,6 +89,7 @@ jest.mock('~/hooks', () => ({
       com_ui_create: 'Create',
       // Deloitte Custom Change: Provide the create fallback message used by scan error formatting.
       com_ui_skill_create_error: 'Failed to create the skill',
+      com_ui_skill_scanning: 'Reviewing your skill...',
     };
     return translations[key] ?? key;
   },
@@ -114,6 +117,33 @@ describe('CreateSkillDialog', () => {
     jest.clearAllMocks();
     capturedMutationOptions = undefined;
     capturedOnOpenChange = undefined;
+    mockIsLoading = false;
+  });
+
+  it('shows a busy create button while pending', () => {
+    mockIsLoading = true;
+    render(<CreateSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    const button = screen.getByRole('button', { name: 'Reviewing your skill...' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByTestId('spinner')).toBeInTheDocument();
+  });
+
+  it('restores the create button after a scanner error', () => {
+    mockIsLoading = true;
+    const { rerender } = render(<CreateSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    act(() => {
+      capturedMutationOptions?.onError?.(scanErrorFromIssues(['bad skill']));
+    });
+    mockIsLoading = false;
+    rerender(<CreateSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    const button = screen.getByRole('button', { name: 'Create' });
+    expect(button).not.toHaveAttribute('aria-busy');
+    expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('bad skill');
   });
 
   it('does not submit an ancestor form when rendered through a portal', async () => {

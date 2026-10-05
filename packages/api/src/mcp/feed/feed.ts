@@ -1,9 +1,10 @@
 import { XMLParser } from 'fast-xml-parser';
 import type { MCPResultSource, MCPSourcesResult } from 'librechat-data-provider';
+import { buildSharePointSources } from '../sharepoint/sharepoint';
 import { buildEntitySources } from '../entities/entities';
 import { buildAfrSearchSources } from '../afr/afr';
 import { buildReportSources } from '../report';
-import { stripHtmlTags } from '../format';
+import { stripHtmlTags, formatDisplayDate } from '../format';
 import { buildKxSources } from '../kx/kx';
 
 /** Upper bound on articles extracted from a single feed (feeds are already newest-first). */
@@ -16,7 +17,9 @@ const FEED_ROOT_PATTERN = /^\s*(<\?xml[^>]*\?>\s*)?<(rss|feed)[\s>]/i;
  * unparsable or empty result (e.g. a REST error payload) yields no citation
  * at all rather than a raw-JSON-dump chip with no useful title or link.
  */
-const KNOWN_MCP_TOOLSET_PREFIXES = ['afr_', 'ibisworld_', 'desc_', 'gims_', 'kx_'];
+const KNOWN_MCP_TOOLSET_PREFIXES = ['afr_', 'ibisworld_', 'desc_', 'gims_', 'kx_', 'sp_'];
+
+const SHAREPOINT_TOOL_PREFIX = 'sp_';
 
 function isKnownMcpToolset(toolName: string): boolean {
   return KNOWN_MCP_TOOLSET_PREFIXES.some((prefix) => toolName.startsWith(prefix));
@@ -77,6 +80,7 @@ function buildSourceFromItem(
   title: string,
   link: string,
   description: string,
+  date?: string, // Deloitte Custom Change: citation date
 ): MCPResultSource | undefined {
   if (!title && !link) {
     return undefined;
@@ -88,6 +92,7 @@ function buildSourceFromItem(
     title,
     link,
     content: [title, cleanDescription].filter(Boolean).join('\n\n'),
+    date,
   };
 }
 
@@ -101,6 +106,7 @@ function parseRssItems(toolName: string, serverName: string, channel: XMLNode): 
       toText(item.title),
       extractRssLink(item),
       toText(item.description ?? item['content:encoded']),
+      formatDisplayDate(toText(item.pubDate)) ?? formatDisplayDate(toText(item.updated)),
     );
     if (source) {
       sources.push(source);
@@ -119,6 +125,7 @@ function parseAtomEntries(toolName: string, serverName: string, feed: XMLNode): 
       toText(entry.title),
       extractAtomLink(entry),
       toText(entry.summary ?? entry.content),
+      formatDisplayDate(toText(entry.published)) ?? formatDisplayDate(toText(entry.updated)),
     );
     if (source) {
       sources.push(source);
@@ -138,10 +145,13 @@ export function buildMCPResultSources({
   toolName,
   serverName,
   content,
+  args,
 }: {
   toolName: string;
   serverName: string;
   content: string;
+  /** Deloitte Custom Change: original tool call args, forwarded to {@link buildReportSources} for link resolution (e.g. `code`/`country`). */
+  args?: Record<string, unknown>;
 }): MCPSourcesResult {
   const fallback: MCPSourcesResult = {
     sources: isKnownMcpToolset(toolName) ? [] : [{ toolName, serverName, content }],
@@ -170,7 +180,7 @@ export function buildMCPResultSources({
     }
   }
 
-  const reportSources = buildReportSources({ toolName, serverName, content });
+  const reportSources = buildReportSources({ toolName, serverName, content, args });
   if (reportSources) {
     return reportSources;
   }
@@ -186,5 +196,12 @@ export function buildMCPResultSources({
   }
 
   const entitySources = buildEntitySources({ toolName, serverName, content });
-  return entitySources ?? fallback;
+  if (entitySources) {
+    return entitySources;
+  }
+
+  const sharePointSources = toolName.startsWith(SHAREPOINT_TOOL_PREFIX)
+    ? buildSharePointSources({ toolName, serverName, content })
+    : undefined;
+  return sharePointSources ?? fallback;
 }

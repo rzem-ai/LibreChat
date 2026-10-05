@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import * as Ariakit from '@ariakit/react';
 import { VisuallyHidden } from '@ariakit/react';
 import { ChevronDown, FileText, Folder } from 'lucide-react';
+import type { TranslationKeys } from '~/hooks/useLocalize';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -10,6 +11,8 @@ export interface SourceData {
   title?: string;
   attribution?: string;
   snippet?: string;
+  /** Deloitte Custom Change: citation date, formatted for display (e.g. "06 Nov 2025"). */
+  date?: string;
 }
 
 interface SourceHovercardProps {
@@ -39,12 +42,13 @@ export function getCleanDomain(url: string) {
 // Deloitte Custom Change: decorative — the domain is always rendered as adjacent text, so an
 // accessible name here would cause screen readers to announce it twice.
 export function FaviconImage({ domain, className = '' }: { domain: string; className?: string }) {
+  // Deloitte Custom Change: rounded corners to match the Connector logos in the admin panel
   return (
     <img
       src={getFaviconUrl(domain)}
       alt=""
       aria-hidden="true"
-      className={cn('size-4 shrink-0 rounded-full', className)}
+      className={cn('size-4 shrink-0 rounded-md', className)}
       loading="lazy"
     />
   );
@@ -62,6 +66,9 @@ export function TooltipContent({
   href,
   onClick,
   subtitle,
+  // Deloitte Custom Change: citation date, shown below the title
+  date,
+  dateLabelKey = 'com_citation_published',
   children,
 }: {
   icon: ReactNode;
@@ -69,8 +76,11 @@ export function TooltipContent({
   href?: string;
   onClick?: (e: React.MouseEvent) => void;
   subtitle?: string;
+  date?: string;
+  dateLabelKey?: TranslationKeys;
   children?: ReactNode;
 }) {
+  const localize = useLocalize();
   const titleClassName =
     'inline-block break-words text-sm font-medium leading-[1.5] text-text-primary';
   let titleElement: ReactNode;
@@ -102,6 +112,10 @@ export function TooltipContent({
   return (
     <div className="min-w-0">
       {titleElement}
+      {/* Deloitte Custom Change: citation date, shown below the title */}
+      {date && (
+        <p className="mt-0.5 text-xs text-text-secondary">{localize(dateLabelKey, { date })}</p>
+      )}
       {children}
       {subtitle && (
         <div className="mt-2 flex items-center gap-1.5 text-xs text-text-secondary">
@@ -200,7 +214,7 @@ export function SourceHovercard({
                 <button
                   type="button"
                   onClick={handleFileClick}
-                  className="ml-1 inline-flex h-5 max-w-44 items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap rounded-xl border border-border-heavy bg-surface-secondary px-2 text-xs font-medium text-text-primary no-underline transition-colors hover:bg-surface-hover dark:border-border-medium dark:hover:bg-surface-tertiary"
+                  className="ml-1 inline-flex h-[22px] max-w-44 items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-border-heavy bg-surface-secondary pl-1 pr-2 text-xs font-medium text-text-primary no-underline transition-colors hover:bg-surface-hover dark:border-border-medium dark:hover:bg-surface-tertiary"
                   onMouseEnter={onMouseEnter}
                   onMouseLeave={onMouseLeave}
                   title={isLocalFile ? localize('com_sources_download_local_unavailable') : label}
@@ -219,7 +233,7 @@ export function SourceHovercard({
                   href={source.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="ml-1 inline-block h-5 max-w-44 cursor-pointer items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-xl border border-border-heavy bg-surface-secondary px-2 text-xs font-medium no-underline transition-colors hover:bg-surface-hover dark:border-border-medium dark:hover:bg-surface-tertiary"
+                  className="ml-1 inline-block h-5 max-w-44 cursor-pointer items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-border-heavy bg-surface-secondary px-2 text-xs font-medium no-underline transition-colors hover:bg-surface-hover dark:border-border-medium dark:hover:bg-surface-tertiary"
                   onMouseEnter={onMouseEnter}
                   onMouseLeave={onMouseLeave}
                   title={label}
@@ -255,6 +269,8 @@ export function SourceHovercard({
                     title={source.title || source.link}
                     href={source.link}
                     subtitle={domain}
+                    // Deloitte Custom Change: citation date
+                    date={source.date}
                   >
                     {source.snippet && (
                       <p className="mt-1.5 line-clamp-4 break-words text-xs text-text-secondary md:text-sm">

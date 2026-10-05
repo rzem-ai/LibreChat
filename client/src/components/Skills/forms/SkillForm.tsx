@@ -2,7 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Info, AlertTriangle } from 'lucide-react';
 import { useForm, Controller, FormProvider } from 'react-hook-form';
-import { Input, Button, Skeleton, TextareaAutosize, useToastContext } from '@librechat/client';
+import {
+  Input,
+  Button,
+  Spinner,
+  Skeleton,
+  TextareaAutosize,
+  useToastContext,
+} from '@librechat/client';
 import {
   InvocationMode,
   SKILL_NAME_PATTERN,
@@ -196,7 +203,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
                 },
               }}
               render={({ field }) => (
-                <div className="relative mb-1 flex w-full flex-col sm:w-auto md:mb-0">
+                <div className="relative mb-1 flex w-full min-w-0 flex-col sm:flex-1 md:mb-0">
                   <Input
                     {...field}
                     id="skill-name"
@@ -348,9 +355,14 @@ export default function SkillForm({ skillId }: SkillFormProps) {
                 type="submit"
                 disabled={saveDisabled}
                 aria-disabled={saveDisabled || undefined}
-                className={cn('w-full sm:w-auto', saveDisabled && 'opacity-50')}
+                aria-busy={updateSkill.isLoading || undefined}
+                className={cn('w-full gap-2 sm:w-auto', saveDisabled && 'opacity-50')}
               >
-                {localize('com_ui_save')}
+                {/* Deloitte Custom Change: Show a loading indicator while the skill scanner runs. */}
+                {updateSkill.isLoading && <Spinner className="size-4" aria-hidden="true" />}
+                {updateSkill.isLoading
+                  ? localize('com_ui_skill_scanning')
+                  : localize('com_ui_save')}
               </Button>
             </div>
           )}

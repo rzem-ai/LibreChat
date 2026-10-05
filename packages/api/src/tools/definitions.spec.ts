@@ -403,6 +403,47 @@ describe('definitions.ts', () => {
         expect(result.mcpResolution).toEqual({ expectedToolCount: 0, resolvedToolCount: 0 });
       });
 
+      /** Deloitte Custom Change: the `all-tools` pin must not drop the gateway class. */
+      it('keeps the gateway tool class when a server pin pulls in ALL of its tools', async () => {
+        const tools = {
+          write_mcp_warehouse: {
+            function: {
+              name: 'write_mcp_warehouse',
+              description: 'Write a row',
+              parameters: { type: 'object', properties: {} },
+              toolClass: 'W2',
+            },
+          },
+          read_mcp_warehouse: {
+            function: {
+              name: 'read_mcp_warehouse',
+              description: 'Read a row',
+              parameters: { type: 'object', properties: {} },
+              toolClass: 'R1',
+            },
+          },
+        };
+        mockGetOrFetchMCPServerTools.mockResolvedValue(tools);
+
+        const result = await loadToolDefinitions(
+          {
+            userId: 'user-123',
+            agentId: 'agent-123',
+            tools: ['sys__all__sys_mcp_warehouse'],
+          },
+          {
+            getOrFetchMCPServerTools: mockGetOrFetchMCPServerTools,
+            isBuiltInTool: mockIsBuiltInTool,
+          },
+        );
+
+        const byName = new Map(
+          result.toolDefinitions.map((def) => [def.name, def as { toolClass?: string }]),
+        );
+        expect(byName.get('write_mcp_warehouse')?.toolClass).toBe('W2');
+        expect(byName.get('read_mcp_warehouse')?.toolClass).toBe('R1');
+      });
+
       it('refreshes a non-empty server catalog once when the selected tool is missing', async () => {
         const selectedTool = 'run_query_mcp_warehouse';
         const staleTools = {

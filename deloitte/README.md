@@ -171,7 +171,7 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 14. `OPENID_REUSE_TOKENS=true`
 15. `OPENID_REQUIRED_ROLE=`
 16. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
-17. `OPENID_BUTTON_LABEL="Login with SSO"`
+17. `OPENID_BUTTON_LABEL="Continue with SSO"`
 18. `OPENID_IMAGE_URL=/assets/favicon.svg`
 19. `ALLOW_EMAIL_LOGIN=false`
 20. `ALLOW_REGISTRATION=false`
@@ -194,16 +194,40 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 37. `BEDROCK_GATEWAY_URL=http://gateway-proxy:8081`
 38. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
 39. `MCP_GATEWAY_URL=https://mcp-gw-dev.ctk.au.deloitte.com/mcp`
-40. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims`
+40. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims,sharepoint`
 41. `MCP_GATEWAY_OBO_SCOPE=api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user`
 42. `MODEL_PRICING_REFERENCE_MODEL_ID=gpt-56-luna`
 43. `MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT=0.1`
 44. `MODEL_PRICING_MIN_MULTIPLIER=0.1`
 > The **ClearTrack MCP Gateway** connection (`mcpServers` block in `librechat.yaml` at repo root and `charts/config/librechat.yaml` for Helm) uses On-Behalf-Of (OBO) auth, not a dedicated OAuth client — it reuses `OPENID_CLIENT_ID`/`OPENID_CLIENT_SECRET` from item 8–9 to exchange the user's login token for one scoped to the gateway. There are no gateway-specific client credentials to set; the only requirement is that `OPENID_SCOPE` (item 12) includes the gateway's audience scope.
-45. `SKILL_SCANNER_URL=https://ai-registry-dev.ctk.au.deloitte.com/v1/scan?verbose=false`
-46. `SKILL_SCANNER_TIMEOUT_MS=15000`
-47. `SKILL_SCANNER_MIN_SEVERITY=high`
-48. `AI_REGISTRY_CLIENT_ID=<update with the provided AI Registry client ID from another team member>` (DEV & UAT use `4aeebbdc-56f5-4329-b40e-3d0a243bf74a`)
+
+### Code API / Code Interpreter .env vars
+
+Add the following values to `.env` to enable the Run Code button for code execution:
+
+```env
+LIBRECHAT_CODE_BASEURL=https://code-runtime-dev.ctk.au.deloitte.com/v1
+CODEAPI_AUTH_PROVIDER=librechat-jwt
+CODEAPI_JWT_ALGORITHM=EdDSA
+CODEAPI_JWT_KID=lc-codeapi-dev-2026-05
+CODEAPI_JWT_ISSUER=librechat
+CODEAPI_JWT_AUDIENCE=codeapi
+CODEAPI_JWT_TTL_SECONDS=300
+CODEAPI_JWT_MINT_CACHE_SECONDS=30
+CODEAPI_JWT_SINGLE_TENANT_ID=legacy
+CODEAPI_JWT_PRIVATE_JWK_JSON=<request from a team member; ask Kiel for the current value>
+```
+
+`CODEAPI_JWT_PRIVATE_JWK_JSON` is private key material. Do not commit it, paste it into tickets, or share it in chat. Request the current value from a team member; Kiel can direct you to the appropriate owner.
+
+### Skill Scanner .env vars 
+
+Add the following values to `.env` to enable the Security Scanning for saving/uploading skills.
+
+`SKILL_SCANNER_URL=https://ai-registry-dev.ctk.au.deloitte.com/v1/scan?verbose=false`
+`SKILL_SCANNER_TIMEOUT_MS=15000`
+`SKILL_SCANNER_MIN_SEVERITY=high`
+`AI_REGISTRY_CLIENT_ID=<update with the provided AI Registry client ID from another team member>` (DEV & UAT use `4aeebbdc-56f5-4329-b40e-3d0a243bf74a`)
 > The **Skill Security Scanner** screens every skill through the Deloitte AI Registry before it is saved. Leaving `SKILL_SCANNER_URL` unset disables scanning entirely — skills are then saved unchecked, with no warning. Like the MCP Gateway, it uses On-Behalf-Of auth reusing `OPENID_CLIENT_ID`/`OPENID_CLIENT_SECRET`, scoped to `api://<AI_REGISTRY_CLIENT_ID>/access_as_user` (requires admin consent on that Entra ID app — a one-time infra setup step). Non-OpenID users, or requests made before that consent is granted, are sent unauthenticated. `SKILL_SCANNER_MIN_SEVERITY` sets the lowest finding severity that blocks a skill (`info`, `low`, `medium`, `high`, `critical`); findings below that threshold are reported but do not block.
 
 ### Evaluation framework variables
@@ -387,6 +411,28 @@ Note that you must use **VPN** to access the LLM Gateway.
 
 ---
 
+## Running the frontend directly (outside Docker)
+
+For fast iteration on frontend-only changes, you can skip the Docker rebuild loop and run the Vite dev server directly against your already-running backend container:
+
+```zsh
+BACKEND_PORT=3080 npm run frontend:dev
+```
+
+This starts Vite on `http://localhost:3090` with hot module reload, proxying API calls to `BACKEND_PORT`.
+
+### Telling parallel instances apart (`VITE_WORKSPACE_NAME`)
+
+If you run more than one frontend at once — e.g. separate git worktrees/branches, or multiple [Conductor](https://conductor.build) workspaces — set `VITE_WORKSPACE_NAME` when starting the dev server:
+
+```zsh
+VITE_WORKSPACE_NAME="my-branch" PORT=3091 npm run frontend:dev
+```
+
+This appends `/ my-branch` to the Deloitte header title in the browser, so you can tell which tab belongs to which instance at a glance instead of every tab looking identical. It's a one-off env var for the process running `npm run frontend:dev` — it doesn't need to be added to `.env`, and has no effect on the Docker Compose workflow.
+
+---
+
 ## VPN gotcha
 
 You may need to **swap VPN state** during setup:
@@ -483,7 +529,7 @@ For LOCAL development, we need to add each user's hostname to the Redirect URIs 
 
 ### Details Per Environment
 - **DEV (Inc. LOCAL):** [AU CTK_TT_Librechat NONPROD](https://appreg.iam.deloitteresources.com/AppProperties/2075976d-5147-47b2-89d2-4ad060d19f85)
-- **UAT:** [AU CTK_TT_Librechat UAT NONPROD](https://appreg.iam.deloitteresources.com/AppProperties/2075976d-5147-47b2-89d2-4ad060d19f85)
+- **UAT:** [AU CTK_TT_Librechat UAT NONPROD](https://appreg.iam.deloitteresources.com/AppProperties/66cc6e2e-670a-47c9-a362-94c86c46782a)
 - **PROD:** [AU CTK_TT_Librechat PROD](https://appreg.iam.deloitteresources.com/AppSecrets/b5494d82-9ae5-449e-8867-6804ccc2f5ef)
 
 ### Configuration

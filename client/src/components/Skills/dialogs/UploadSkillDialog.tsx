@@ -147,6 +147,7 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
               disabled={importMutation.isLoading}
+              aria-busy={importMutation.isLoading || undefined}
               className={cn(
                 'flex h-[120px] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-sm text-text-secondary transition-colors',
                 isDragging
@@ -160,7 +161,10 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
               ) : (
                 <Upload className="size-8 text-text-secondary" aria-hidden="true" />
               )}
-              {localize('com_ui_skill_upload_drag')}
+              {/* Deloitte Custom Change: Tell the user the upload is waiting on the skill scanner. */}
+              {importMutation.isLoading
+                ? localize('com_ui_skill_scanning')
+                : localize('com_ui_skill_upload_drag')}
             </button>
 
             <div className="flex flex-col gap-3 text-xs text-text-secondary">
@@ -170,6 +174,7 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
                   <li>{localize('com_ui_skill_upload_req_md')}</li>
                   <li>{localize('com_ui_skill_upload_req_zip')}</li>
                   <li>{localize('com_ui_skill_upload_req_size', { 0: displayedSizeLimit })}</li>
+                  <li>{localize('com_ui_skill_upload_req_no_spaces')}</li>
                 </ul>
               </div>
             </div>

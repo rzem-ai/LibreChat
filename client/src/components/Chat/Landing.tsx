@@ -23,6 +23,8 @@ const containerClassName =
  * re-rendered every grapheme span on each Landing render. */
 const greetingAnimationFrom = { opacity: 0, transform: 'translate3d(0,50px,0)' };
 const greetingAnimationTo = { opacity: 1, transform: 'translate3d(0,0,0)' };
+/** Deloitte Custom Change: lower the landing greeting letter delay so the page feels faster. */
+const greetingLetterDelay = 20;
 
 function getTextSizeClass(text: string | undefined | null) {
   if (!text) {
@@ -207,7 +209,7 @@ export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: 
                 key={`split-text-${name}`}
                 text={name}
                 className={`${getTextSizeClass(name)} font-medium text-text-primary`}
-                delay={50}
+                delay={greetingLetterDelay}
                 textAlign="center"
                 animationFrom={greetingAnimationFrom}
                 animationTo={greetingAnimationTo}
@@ -222,7 +224,7 @@ export default function Landing({ centerFormOnLanding }: { centerFormOnLanding: 
               key={`split-text-${greetingText}${user?.name ? '-user' : ''}`}
               text={greetingText}
               className={`${getTextSizeClass(greetingText)} font-medium text-text-primary`}
-              delay={50}
+              delay={greetingLetterDelay}
               textAlign="center"
               animationFrom={greetingAnimationFrom}
               animationTo={greetingAnimationTo}

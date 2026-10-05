@@ -1,3 +1,4 @@
+// Deloitte Custom Change: covers mixed image and Code Interpreter file artifacts.
 const { Tools } = require('librechat-data-provider');
 
 // Mock all dependencies before requiring the module
@@ -695,6 +696,53 @@ describe('createToolEndCallback', () => {
       expect(res.write).toHaveBeenCalledTimes(1);
     });
 
+    it('processes code files when an artifact also contains generated images', async () => {
+      const { processCodeOutput } = require('~/server/services/Files/Code/process');
+      const { saveBase64Image } = require('~/server/services/Files/process');
+      res.headersSent = true;
+      saveBase64Image.mockResolvedValue({ file_id: 'image-1', filename: 'chart.png' });
+      processCodeOutput.mockResolvedValue({
+        file: {
+          file_id: 'file-1',
+          filename: 'report.pdf',
+          filepath: '/uploads/report.pdf',
+          type: 'application/pdf',
+          messageId: 'run-mixed',
+          toolCallId: 'tool-mixed',
+          status: 'ready',
+        },
+      });
+
+      const toolEndCallback = createToolEndCallback({ req, res, artifactPromises });
+      await toolEndCallback(
+        {
+          output: {
+            name: 'sp_download_file_mcp_sharepoint',
+            tool_call_id: 'tool-mixed',
+            artifact: {
+              __librechat_file_authoring: true,
+              content: [
+                { type: 'image_url', image_url: { url: 'data:image/png;base64,aGVsbG8=' } },
+              ],
+              session_id: 'session-1',
+              files: [{ id: 'file-1', name: 'report.pdf', storage_session_id: 'storage-1' }],
+            },
+          },
+        },
+        { run_id: 'run-mixed', thread_id: 'thread-mixed', provider: 'openai' },
+      );
+      await Promise.all(artifactPromises);
+
+      expect(saveBase64Image).toHaveBeenCalledTimes(1);
+      expect(processCodeOutput).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'file-1',
+          name: 'report.pdf',
+          session_id: 'storage-1',
+        }),
+      );
+    });
+
     it('does not process arbitrary user tool artifacts named create_file as code outputs', async () => {
       res.headersSent = true;
       const toolEndCallback = createToolEndCallback({ req, res, artifactPromises });
@@ -851,5 +899,45 @@ describe('isStreamWritable', () => {
 
   it('returns true on the happy path: headers sent, not ended, no streamId', () => {
     expect(isStreamWritable({ headersSent: true, writableEnded: false }, null)).toBe(true);
+  });
+});
+
+// Deloitte Custom Change: verify tool-call args normalization feeding MCP citation-link builders.
+describe('normalizeMCPToolArgs', () => {
+  const { normalizeMCPToolArgs } = require('../callbacks');
+
+  it('returns a plain object input as-is', () => {
+    expect(normalizeMCPToolArgs({ code: '56162', country: 'AU' })).toEqual({
+      code: '56162',
+      country: 'AU',
+    });
+  });
+
+  it('parses a JSON-string input into an object', () => {
+    expect(normalizeMCPToolArgs('{"code":"56162","country":"AU"}')).toEqual({
+      code: '56162',
+      country: 'AU',
+    });
+  });
+
+  it('returns undefined for malformed JSON', () => {
+    expect(normalizeMCPToolArgs('{not valid json')).toBeUndefined();
+  });
+
+  it('returns undefined for a JSON string that parses to a non-object (e.g. a number)', () => {
+    expect(normalizeMCPToolArgs('42')).toBeUndefined();
+  });
+
+  it('returns undefined when input is null or undefined', () => {
+    expect(normalizeMCPToolArgs(null)).toBeUndefined();
+    expect(normalizeMCPToolArgs(undefined)).toBeUndefined();
+  });
+
+  it('returns undefined for an array input', () => {
+    expect(normalizeMCPToolArgs(['56162', 'AU'])).toBeUndefined();
+  });
+
+  it('returns undefined for a JSON string that parses to an array', () => {
+    expect(normalizeMCPToolArgs('["56162","AU"]')).toBeUndefined();
   });
 });

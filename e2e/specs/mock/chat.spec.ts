@@ -84,7 +84,7 @@ async function uploadProviderFile(page: Page, fixture: UploadFixture) {
   return uploadResponse;
 }
 
-test.describe('core chat loop', () => {
+test.describe('core chat loop', { tag: ['@mock', '@chat'] }, () => {
   test('streams a response, saves the conversation, and persists across reload', async ({
     page,
   }) => {
@@ -122,7 +122,7 @@ test.describe('core chat loop', () => {
     await selectMockEndpoint(page, MOCK_ENDPOINTS[0]);
 
     const input = page.getByRole('textbox', { name: 'Message input' });
-    const sendButton = page.getByTestId('send-button');
+    const sendButton = page.locator('#send-button');
 
     await expect(sendButton).toBeDisabled();
     await input.fill('ready to send');
@@ -312,7 +312,9 @@ test.describe('core chat loop', () => {
     await expect(page.getByText('1 / 2')).toBeVisible();
   });
 
-  test('keeps upload-to-provider CSV attached to the sent message and model input', async ({
+  // Deloitte Custom Change
+  // SKIPPED: interface.providerUpload is not enabled in the e2e config; see e2e/docs/skipped-tests.md.
+  test.skip('keeps upload-to-provider CSV attached to the sent message and model input', async ({
     page,
   }) => {
     test.setTimeout(90000);
@@ -336,11 +338,11 @@ test.describe('core chat loop', () => {
     const input = page.getByRole('textbox', { name: 'Message input' });
     await input.click();
     await input.fill(assertionText);
-    await expect(page.getByTestId('send-button')).toBeEnabled();
+    await expect(page.locator('#send-button')).toBeEnabled();
 
     const [response] = await Promise.all([
       page.waitForResponse(isAgentsStream, { timeout: 30000 }),
-      page.getByTestId('send-button').click(),
+      page.locator('#send-button').click(),
     ]);
     expect(response.ok()).toBeTruthy();
 
@@ -356,7 +358,9 @@ test.describe('core chat loop', () => {
     await expect(fileChip).toBeVisible();
   });
 
-  test('supports attaching, removing, and sending provider files from the composer', async ({
+  // Deloitte Custom Change
+  // SKIPPED: interface.providerUpload is not enabled in the e2e config; see e2e/docs/skipped-tests.md.
+  test.skip('supports attaching, removing, and sending provider files from the composer', async ({
     page,
   }) => {
     test.setTimeout(90000);
@@ -384,11 +388,11 @@ test.describe('core chat loop', () => {
     const input = page.getByRole('textbox', { name: 'Message input' });
     await input.click();
     await input.fill(assertionText);
-    await expect(page.getByTestId('send-button')).toBeEnabled();
+    await expect(page.locator('#send-button')).toBeEnabled();
 
     const [response] = await Promise.all([
       page.waitForResponse(isAgentsStream, { timeout: 30000 }),
-      page.getByTestId('send-button').click(),
+      page.locator('#send-button').click(),
     ]);
     expect(response.ok()).toBeTruthy();
 

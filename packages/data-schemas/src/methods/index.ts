@@ -117,6 +117,7 @@ export {
 };
 export { AUDIT_SCHEMA_VERSION, MAX_AUDIT_EXPORT_ROWS, MAX_AUDIT_LOG_LIMIT, MAX_AUDIT_VERIFY_ROWS };
 export { MAX_TOOL_FAVORITES };
+export { MAX_TUTORIAL_RATINGS } from './user';
 
 export type AllMethods = UserMethods &
   SessionMethods &

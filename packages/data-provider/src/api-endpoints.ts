@@ -106,9 +106,14 @@ export const revokeAllUserKeys = () => `${keysEndpoint}?all=true`;
 
 const apiKeysEndpoint = `${BASE_URL}/api/api-keys`;
 
-export const apiKeys = () => apiKeysEndpoint;
+// Deloitte Custom Change: scopes API key lifecycle requests to an administrator-selected service account.
+export const apiKeys = (userEmail?: string) =>
+  userEmail ? `${apiKeysEndpoint}?userEmail=${encodeURIComponent(userEmail)}` : apiKeysEndpoint;
 
-export const apiKeyById = (id: string) => `${apiKeysEndpoint}/${id}`;
+export const apiKeyById = (id: string, userEmail?: string) =>
+  userEmail
+    ? `${apiKeysEndpoint}/${id}?userEmail=${encodeURIComponent(userEmail)}`
+    : `${apiKeysEndpoint}/${id}`;
 
 export const conversationsRoot = `${BASE_URL}/api/convos`;
 
@@ -483,6 +488,7 @@ export const addTagToConversation = (conversationId: string) =>
 
 export const userTerms = () => `${BASE_URL}/api/user/terms`;
 export const acceptUserTerms = () => `${BASE_URL}/api/user/terms/accept`;
+export const userTutorialState = () => `${BASE_URL}/api/user/tutorial`;
 export const banner = () => `${BASE_URL}/api/banner`;
 
 // Message Feedback

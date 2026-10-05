@@ -120,7 +120,7 @@ async function expectAnthropicStyleModelParameters(page: Page) {
   );
 }
 
-test.describe('agent builder', () => {
+test.describe('agent builder', { tag: ['@mock', '@agents'] }, () => {
   test('creates an agent, persists its configuration, and can chat with it', async ({ page }) => {
     test.setTimeout(120000);
 

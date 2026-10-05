@@ -1,3 +1,5 @@
+export { formatDisplayDate } from 'librechat-data-provider';
+
 /** Strips HTML tags/entities down to plain text, collapsing whitespace. */
 export function stripHtmlTags(html: string): string {
   return html

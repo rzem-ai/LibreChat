@@ -34,6 +34,11 @@ export function hasConfiguredIcon(icons: Partial<ThemedIconPaths>): boolean {
   return Boolean(icons.iconPath || icons.iconPathLight || icons.iconPathDark);
 }
 
+/** Whether this server is marked by its operator as having limited access. */
+export function hasLimitedAccess(server: Pick<MCPServerDefinition, 'config'>): boolean {
+  return server.config?.limitedAccess === true;
+}
+
 // Deloitte Custom Change: light/dark themed MCP server icons.
 /**
  * Resolves the icon path to show in each theme, given a server's configured icon fields.

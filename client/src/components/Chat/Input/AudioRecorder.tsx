@@ -109,6 +109,7 @@ export default memo(function AudioRecorder({
       render={
         <button
           id="audio-recorder"
+          data-testid="audio-recorder-button"
           type="button"
           aria-label={localize('com_ui_use_micrphone')}
           onClick={isListening === true ? handleStopRecording : handleStartRecording}

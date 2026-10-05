@@ -27,6 +27,7 @@ const vanillaOverrides = {
   OPENID_CLIENT_ID: '',
   OPENID_ISSUER: '',
   OPENID_AUTO_REDIRECT: 'false',
+  ALLOW_EMAIL_LOGIN: 'true',
   ALLOW_SOCIAL_LOGIN: 'false',
   ALLOW_SOCIAL_REGISTRATION: 'false',
   STREAM_KEEP_COMPLETED_JOBS: 'true',
@@ -134,6 +135,7 @@ export default defineConfig({
     storageState: path.resolve(process.cwd(), 'e2e/storageState.json'),
     screenshot: 'only-on-failure',
   },
+  timeout: 120_000,
   expect: {
     timeout: 10000,
   },

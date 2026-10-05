@@ -357,6 +357,7 @@ Please follow these instructions when using tools from the respective MCP server
     graphTokenResolver,
     oboTokenResolver,
     oboTrustChecker,
+    extractSharePointAttachment,
   }: {
     user?: IUser;
     serverName: string;
@@ -376,6 +377,8 @@ Please follow these instructions when using tools from the respective MCP server
     graphTokenResolver?: GraphTokenResolver;
     oboTokenResolver?: OboTokenResolver;
     oboTrustChecker?: OboTrustChecker;
+    /** Deloitte Custom Change: parse attachment metadata only for the trusted SharePoint gateway. */
+    extractSharePointAttachment?: boolean;
   }): Promise<t.FormattedToolResponse> {
     /** User-specific connection */
     let connection: MCPConnection | undefined;
@@ -511,6 +514,20 @@ Please follow these instructions when using tools from the respective MCP server
 
       connection.setRequestHeaders(resolvedHeaders);
 
+      // Deloitte Custom Change: bind trusted download artifacts to the configured gateway origin.
+      let gatewayOrigin: string | undefined;
+      if (
+        extractSharePointAttachment &&
+        'url' in currentOptions &&
+        typeof currentOptions.url === 'string'
+      ) {
+        try {
+          gatewayOrigin = new URL(currentOptions.url).origin;
+        } catch {
+          logger.warn(`${logPrefix} Trusted SharePoint gateway URL is invalid; attachment extraction disabled`);
+        }
+      }
+
       const result = await connection.client.request(
         {
           method: 'tools/call',
@@ -532,7 +549,12 @@ Please follow these instructions when using tools from the respective MCP server
         this.updateUserLastActivity(userId);
       }
       this.checkIdleConnections();
-      return formatToolContent(result as t.MCPToolCallResponse, provider);
+      return formatToolContent(
+        result as t.MCPToolCallResponse,
+        provider,
+        extractSharePointAttachment,
+        gatewayOrigin,
+      );
     } catch (error) {
       // Log with context and re-throw or handle as needed
       logger.error(`${logPrefix}[${toolName}] Tool call failed`, error);

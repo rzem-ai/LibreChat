@@ -27,7 +27,12 @@ module.exports = {
     '\\.[jt]sx?$': [
       'babel-jest',
       {
-        presets: [['@babel/preset-env', { targets: { node: 'current' } }]],
+        presets: [
+          ['@babel/preset-env', { targets: { node: 'current' } }],
+          // Required to parse TypeScript files loaded via jest.requireActual from
+          // packages/ (e.g. packages/api/src/tutorial/tutorialState.ts).
+          ['@babel/preset-typescript'],
+        ],
       },
     ],
   },

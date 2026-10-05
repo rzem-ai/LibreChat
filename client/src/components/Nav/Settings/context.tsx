@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useRecoilValue } from 'recoil';
-import { PermissionTypes, Permissions } from 'librechat-data-provider';
+import { PermissionTypes, Permissions, SystemRoles } from 'librechat-data-provider';
 import type { SettingsContextValue } from './types';
 import useProviderKeys from '../SettingsTabs/ProviderKeys/useProviderKeys';
 import usePersonalizationAccess from '~/hooks/usePersonalizationAccess';
@@ -36,10 +36,14 @@ export function useSettingsContext(): SettingsContextValue {
   const customDeloitteFeatureFlags = startupConfig?.interface?.customDeloitteFeatureFlags;
   const accountsTabEnabled = customDeloitteFeatureFlags?.accountsTab !== false;
   const dataApiKeysEnabled = customDeloitteFeatureFlags?.dataApiKeys !== false;
+  // Deloitte Custom Change: opt in to the restricted service account key-management UI.
+  const adminAgentApiKeysEnabled = customDeloitteFeatureFlags?.adminAgentApiKeys === true;
   const dataDangerZoneEnabled = customDeloitteFeatureFlags?.dataDangerZone !== false;
   const hasRemoteAgentsBool = hasRemoteAgents === true;
   const hasMultiConvoBool = hasMultiConvo === true;
   const hasPromptsBool = hasPrompts === true;
+  // Deloitte Custom Change: the UI mirrors the server's administrator-only lifecycle authorization.
+  const isAdmin = user?.role === SystemRoles.ADMIN;
   const engineTTS = useRecoilValue<string>(store.engineTTS);
   const hasUserProvidedEndpoints = useProviderKeys().length > 0;
 
@@ -58,6 +62,8 @@ export function useSettingsContext(): SettingsContextValue {
       aboutEnabled,
       accountsTabEnabled,
       dataApiKeysEnabled,
+      adminAgentApiKeysEnabled,
+      isAdmin,
       dataDangerZoneEnabled,
       engineTTS,
       langfuseConnectionAccess,
@@ -76,6 +82,8 @@ export function useSettingsContext(): SettingsContextValue {
       aboutEnabled,
       accountsTabEnabled,
       dataApiKeysEnabled,
+      adminAgentApiKeysEnabled,
+      isAdmin,
       dataDangerZoneEnabled,
       engineTTS,
       langfuseConnectionAccess,

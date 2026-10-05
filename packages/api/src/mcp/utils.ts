@@ -441,6 +441,7 @@ export function redactServerSecrets(
     iconPath: config.iconPath,
     iconPathLight: config.iconPathLight, // Deloitte Custom Change: light/dark themed MCP server icons.
     iconPathDark: config.iconPathDark, // Deloitte Custom Change: light/dark themed MCP server icons.
+    limitedAccess: config.limitedAccess,
     chatMenu: config.chatMenu,
     requiresOAuth: config.requiresOAuth,
     capabilities: config.capabilities,

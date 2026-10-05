@@ -1,4 +1,4 @@
-const BINARY_CHECK_BYTES = 8192;
+export const BINARY_CHECK_BYTES = 8192;
 const BINARY_THRESHOLD = 0.1;
 
 /**

@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 const mime = require('mime');
-const axios = require('axios');
 const fetch = require('node-fetch');
 const { logger } = require('@librechat/data-schemas');
 const {
@@ -27,6 +26,7 @@ const { AZURE_STORAGE_PUBLIC_ACCESS = 'true', AZURE_CONTAINER_NAME = 'files' } =
  * @param {string} params.fileName - The name of the file.
  * @param {string} [params.basePath='images'] - The base folder within the container.
  * @param {string} [params.containerName] - The Azure Blob container name.
+ * @param {boolean} [params.returnProxyPath=false] - Deloitte Custom Change: return the authenticated avatar proxy path.
  * @returns {Promise<string>} The URL of the uploaded blob.
  */
 async function saveBufferToAzure({
@@ -35,6 +35,7 @@ async function saveBufferToAzure({
   fileName,
   basePath = defaultBasePath,
   containerName,
+  returnProxyPath = false,
 }) {
   try {
     const containerClient = await getAzureContainerClient(containerName);
@@ -44,6 +45,10 @@ async function saveBufferToAzure({
     const blobPath = `${basePath}/${userId}/${fileName}`;
     const blockBlobClient = containerClient.getBlockBlobClient(blobPath);
     await blockBlobClient.uploadData(buffer);
+    // Deloitte Custom Change: private avatars must be fetched through the authenticated API.
+    if (returnProxyPath) {
+      return `/api/files/images/avatar?file=${Buffer.from(blobPath).toString('base64url')}`;
+    }
     return blockBlobClient.url;
   } catch (error) {
     logger.error('[saveBufferToAzure] Error uploading buffer:', error);
@@ -125,7 +130,13 @@ async function deleteFileFromAzure(req, file) {
 
   try {
     const containerClient = await getAzureContainerClient(AZURE_CONTAINER_NAME);
-    const blobPath = file.filepath.split(`${AZURE_CONTAINER_NAME}/`)[1];
+    // Deloitte Custom Change: resolve proxy paths so replaced private avatars are removed from Azure.
+    const avatarProxyPath = '/api/files/images/avatar';
+    const url = new URL(file.filepath, 'http://localhost');
+    const encodedPath = url.pathname === avatarProxyPath ? url.searchParams.get('file') : null;
+    const blobPath = encodedPath
+      ? Buffer.from(encodedPath, 'base64url').toString()
+      : file.filepath.split(`${AZURE_CONTAINER_NAME}/`)[1];
     if (!blobPath.includes(req.user.id)) {
       throw new Error('User ID not found in blob path');
     }
@@ -255,7 +266,9 @@ async function getAzureFileStream(_req, fileURL) {
     logger.debug(`[getAzureFileStream] container=${AZURE_CONTAINER_NAME} url=${fileURL}`);
     const containerClient = await getAzureContainerClient(AZURE_CONTAINER_NAME);
     if (!containerClient) {
-      throw new Error('[getAzureFileStream] getAzureContainerClient returned null (check AZURE_STORAGE_ACCOUNT_NAME)');
+      throw new Error(
+        '[getAzureFileStream] getAzureContainerClient returned null (check AZURE_STORAGE_ACCOUNT_NAME)',
+      );
     }
     const blobPath = fileURL.split(`${AZURE_CONTAINER_NAME}/`)[1];
     if (!blobPath) {
@@ -265,7 +278,9 @@ async function getAzureFileStream(_req, fileURL) {
     const blockBlobClient = containerClient.getBlockBlobClient(blobPath);
     // Empty options: clear default lease/ETag conditions to avoid 409 on upload settlement.
     const response = await blockBlobClient.download(0, undefined, {});
-    logger.debug(`[getAzureFileStream] ok status=${response._response?.status} bytes=${response.contentLength}`);
+    logger.debug(
+      `[getAzureFileStream] ok status=${response._response?.status} bytes=${response.contentLength}`,
+    );
     return response.readableStreamBody;
   } catch (error) {
     logger.error('[getAzureFileStream] Error getting blob stream:', {

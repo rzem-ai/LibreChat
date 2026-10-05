@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-namespace */
 import type { TTokenUsageEvent, TContextUsageEvent, TPendingSteer } from './runs';
+import type { MCPToolClass } from '../mcpToolClass';
 import type { FunctionToolCall, SummaryContentPart } from './assistants';
 import type { TAttachment, TPlugin } from 'src/schemas';
 import { StepTypes, ContentTypes, ToolCallTypes } from './runs';
@@ -95,6 +96,8 @@ export namespace Agents {
       actionId: string;
       allowed_decisions: ToolApprovalDecisionType[];
       description?: string;
+      /** Deloitte Custom Change: Server-validated MCP tool classification, when supplied by the gateway. */
+      toolClass?: MCPToolClass;
     };
   };
 
@@ -336,6 +339,8 @@ export namespace Agents {
     tool_call_id: string;
     /** Optional human-readable description shown alongside the prompt */
     description?: string;
+    /** Deloitte Custom Change: Server-validated MCP tool classification, when supplied by the gateway. */
+    toolClass?: MCPToolClass;
   }
 
   /**

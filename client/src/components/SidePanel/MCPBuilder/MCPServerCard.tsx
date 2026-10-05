@@ -3,6 +3,10 @@ import { MCPIcon } from '@librechat/client';
 import { PermissionBits, hasPermissions } from 'librechat-data-provider';
 import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusIcon';
 import type { MCPServerDefinition } from '~/hooks';
+import { hasConfiguredIcon, hasLimitedAccess } from '~/components/MCP/mcpServerUtils';
+// Deloitte Custom Change: SharePoint MCP is limited to a subset of users.
+import { LimitedAccessPill } from '~/components/SidePanel/Agents/Advanced/ui';
+import MCPServerIcon from '~/components/MCP/MCPServerIcon';
 import { useLocalize } from '~/hooks';
 import { getStatusDotColor } from './MCPStatusBadge';
 import MCPServerDialog from './MCPServerDialog';
@@ -41,20 +45,15 @@ export default function MCPServerCard({
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const statusIconProps = getServerStatusIconProps(server.serverName);
-  const {
-    serverStatus,
-    onConfigClick,
-    isInitializing,
-    canCancel,
-    onCancel,
-    hasCustomUserVars,
-  } = statusIconProps;
+  const { serverStatus, onConfigClick, isInitializing, canCancel, onCancel, hasCustomUserVars } =
+    statusIconProps;
 
   const canEditThisServer = hasPermissions(server.effectivePermissions, PermissionBits.EDIT);
   const displayName = server.config?.title || server.serverName;
   const description = server.config?.description;
   const statusDotColor = getStatusDotColor(serverStatus, isInitializing);
   const canEdit = canCreateEditMCPs && canEditThisServer;
+  const limitedAccess = hasLimitedAccess(server);
 
   // Deloitte Custom Change: connectOrConfigureServer (shared with toggleSelectAll) decides
   // whether to open the config dialog or initialize directly, based on hasCustomUserVars.
@@ -97,13 +96,17 @@ export default function MCPServerCard({
       >
         {/* Server Icon with Status Dot */}
         <div className="relative flex-shrink-0">
-          {server.config?.iconPath ? (
-            <img
-              src={server.config.iconPath}
-              className="size-8 rounded-lg object-cover"
-              alt=""
-              aria-hidden="true"
-            />
+          {/* Deloitte Custom Change */}
+          {hasConfiguredIcon(server.config ?? {}) ? (
+            <span aria-hidden="true">
+              <MCPServerIcon
+                iconPath={server.config?.iconPath ?? null}
+                iconPathLight={server.config?.iconPathLight ?? null}
+                iconPathDark={server.config?.iconPathDark ?? null}
+                alt=""
+                className="size-8 rounded-lg object-cover"
+              />
+            </span>
           ) : (
             <div className="flex size-8 items-center justify-center rounded-lg bg-surface-tertiary">
               <MCPIcon className="size-5 text-text-secondary" aria-hidden="true" />
@@ -123,7 +126,13 @@ export default function MCPServerCard({
 
         {/* Server Info */}
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium text-text-primary">{displayName}</div>
+          <div className="flex items-center gap-1.5">
+            <span className="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
+              {displayName}
+            </span>
+            {/* Deloitte Custom Change: SharePoint MCP is limited to a subset of users. */}
+            {limitedAccess && <LimitedAccessPill wrap />}
+          </div>
           {description && <p className="truncate text-xs text-text-secondary">{description}</p>}
         </div>
 

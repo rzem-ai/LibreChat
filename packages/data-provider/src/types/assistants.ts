@@ -171,6 +171,8 @@ export type AgentModelParameters = {
   frequency_penalty: AgentParameterValue;
   presence_penalty: AgentParameterValue;
   useResponsesApi?: boolean;
+  /** Deloitte Custom Change: native provider web-search toggle, gated by `nativeWebSearch.supportedModels` */
+  web_search?: boolean;
 };
 
 export interface AgentBaseResource {

@@ -571,6 +571,72 @@ describe('skill scanner', () => {
       expect(frontmatterText).toMatch(/alwaysApply/);
     });
 
+    // Deloitte Custom Change: Verify hidden files and artifact directories are stripped
+    // before scanning by stripZipArtifacts, without removing valid underscore-prefixed
+    // Python modules.
+    it('strips hidden files and artifact directories before scanning', async () => {
+      const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
+      global.fetch = fetchSpy as unknown as typeof fetch;
+
+      // Level 3 skill with macOS Finder artifacts injected by right-click → Compress
+      const zip = new JSZip();
+      zip.file(
+        'skill-name/SKILL.md',
+        ['---', 'name: mac-skill', 'description: A macOS-created skill.', '---', '# Body'].join(
+          '\n',
+        ),
+      );
+      zip.file('skill-name/FORMS.md', '# Form-filling guide');
+      zip.file('skill-name/scripts/fill_form.py', 'print("hello")');
+      zip.file('skill-name/scripts/_helpers.py', 'def helper(): pass');
+      zip.file('skill-name/scripts/__init__.py', '');
+      zip.file('skill-name/references/api-schema.json', '{"api": "schema"}');
+      zip.file('skill-name/assets/template.txt', 'template');
+      // Hidden files at multiple depths
+      zip.file('skill-name/.DS_Store', '');
+      zip.file('skill-name/scripts/.DS_Store', '');
+      zip.file('.DS_Store', '');
+      zip.file('skill-name/.env', 'SECRET=value');
+      zip.file('skill-name/.gitignore', '.venv/');
+      // __MACOSX/ mirror — Finder injects one sidecar per file with extended attributes
+      zip.file('__MACOSX/skill-name/._SKILL.md', '');
+      zip.file('__MACOSX/skill-name/._FORMS.md', '');
+      zip.file('__MACOSX/skill-name/scripts/._fill_form.py', '');
+      zip.file('__MACOSX/skill-name/references/._api-schema.json', '');
+      zip.file('__MACOSX/skill-name/assets/._template.txt', '');
+      // Accidental dependency and source-control directories nested under the skill root
+      zip.file('skill-name/.venv/bin/python', '');
+      zip.file('skill-name/scripts/__pycache__/fill_form.cpython-311.pyc', '');
+      zip.file('skill-name/assets/node_modules/lodash/index.js', '');
+      zip.file('skill-name/references/.git/config', '');
+      const archive = await zip.generateAsync({ type: 'uint8array' });
+
+      await scanSkillUpload({ archive, fileName: 'skill-name.zip' });
+
+      // Inspect what the scanner actually received
+      const scannedZip = await scannedArchiveFrom(fetchSpy.mock.calls[0]);
+      const scannedEntries = Object.keys(scannedZip.files);
+
+      // Real skill files must be present — stripInternalFrontmatterFromZip re-roots
+      // the archive by stripping the skill-name/ prefix before sending to the scanner
+      expect(scannedEntries).toContain('SKILL.md');
+      expect(scannedEntries).toContain('FORMS.md');
+      expect(scannedEntries).toContain('scripts/fill_form.py');
+      expect(scannedEntries).toContain('scripts/_helpers.py');
+      expect(scannedEntries).toContain('scripts/__init__.py');
+      expect(scannedEntries).toContain('references/api-schema.json');
+      expect(scannedEntries).toContain('assets/template.txt');
+
+      // No hidden files or configured artifact directories reach the scanner
+      expect(
+        scannedEntries.some((e) => e.split('/').some((segment) => segment.startsWith('.'))),
+      ).toBe(false);
+      expect(scannedEntries.some((e) => e.split('/').includes('__MACOSX'))).toBe(false);
+      expect(scannedEntries.some((e) => e.split('/').includes('__pycache__'))).toBe(false);
+      expect(scannedEntries.some((e) => e.split('/').includes('node_modules'))).toBe(false);
+      expect(scannedEntries.some((e) => (e.split('/').pop() ?? '').startsWith('._'))).toBe(false);
+    });
+
     it('strips always-apply out of a zip upload while preserving companion files', async () => {
       const fetchSpy = jest.fn().mockResolvedValue(passingResponse());
       global.fetch = fetchSpy as unknown as typeof fetch;

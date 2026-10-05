@@ -180,8 +180,10 @@ async function deleteInaccessibleSkill(skillId: string) {
   }
 }
 
-test.describe('model spec skills', () => {
-  test('loads accessible configured skills and skips missing or inaccessible names', async ({
+test.describe('model spec skills', { tag: ['@mock', '@model-specs'] }, () => {
+  // Deloitte Custom Change
+  // SKIPPED: requires the external SKILL_SCANNER_URL service; see e2e/docs/skipped-tests.md.
+  test.skip('loads accessible configured skills and skips missing or inaccessible names', async ({
     page,
   }) => {
     test.setTimeout(120000);

@@ -26,6 +26,8 @@ export interface OpenAIConfigOptions {
   addParams?: Record<string, unknown>;
   dropParams?: string[];
   customParams?: Partial<TConfig['customParams']>;
+  /** Deloitte Custom Change: admin-configured allowlist gating the native `web_search` tool per model */
+  supportedWebSearchModels?: string[];
 }
 
 export type OpenAIConfiguration = OpenAIClientOptions['configuration'];

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { getPrimaryE2EUser } from '../../setup/users.mock';
 import { NEW_CHAT_PATH } from './helpers';
 
-test.describe('app loads cleanly', () => {
+test.describe('app loads cleanly', { tag: '@mock' }, () => {
   test('authenticated user lands on a rendered chat view without runtime errors', async ({
     page,
   }) => {
