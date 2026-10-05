@@ -2898,7 +2898,7 @@ describe('User parameter passing tests', () => {
         });
 
         expect(result).toBe(
-          'File "report.xlsx" could not be attached to this conversation for use in Code Interpreter. The XLSX file is too large to upload right now—please try a file under 1MB. We\'re actively working to increase this limit.',
+          'File "report.xlsx" could not be attached to this conversation for use in Code Interpreter. The XLSX file upload timed out. Please try again; using a smaller file may help. We\'re actively working to increase the size limit.',
         );
       });
 
@@ -2940,33 +2940,39 @@ describe('User parameter passing tests', () => {
         const result = await invokeWithArtifact({ user, req, artifacts: gatewayArtifact() });
 
         expect(result).toBe(
-          'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
+          'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again; using a smaller file may help. We\'re actively working to increase the size limit.',
         );
       });
 
-      it('names the file type and configured limit for Code Runtime size rejections', async () => {
-        const user = { id: 'gateway-code-runtime-size-user', role: 'USER' };
-        const req = requestWithAgentFileConfig(user, {});
-        mockCodeFileDownloadGet.mockResolvedValue({
-          status: 200,
-          headers: { 'content-type': 'application/pdf', 'content-length': '42' },
-          data: gatewayStream(42),
-        });
-        const error = new Error(
-          'Error uploading code environment file: Request failed with status code 413',
-        );
-        error.codeRuntimeUploadFailure = {
-          code: 'upload_size_limit',
-          maxFileSizeBytes: 100 * 1024 * 1024,
-        };
-        mockUploadCodeEnvFile.mockRejectedValue(error);
+      it.each([
+        [100 * 1024 * 1024, '100 MB'],
+        [4096, '4096 bytes'],
+      ])(
+        'names the file type and exact configured limit for Code Runtime size rejections',
+        async (maxFileSizeBytes, limit) => {
+          const user = { id: 'gateway-code-runtime-size-user', role: 'USER' };
+          const req = requestWithAgentFileConfig(user, {});
+          mockCodeFileDownloadGet.mockResolvedValue({
+            status: 200,
+            headers: { 'content-type': 'application/pdf', 'content-length': '42' },
+            data: gatewayStream(42),
+          });
+          const error = new Error(
+            'Error uploading code environment file: Request failed with status code 413',
+          );
+          error.codeRuntimeUploadFailure = {
+            code: 'upload_size_limit',
+            maxFileSizeBytes,
+          };
+          mockUploadCodeEnvFile.mockRejectedValue(error);
 
-        const result = await invokeWithArtifact({ user, req, artifacts: gatewayArtifact() });
+          const result = await invokeWithArtifact({ user, req, artifacts: gatewayArtifact() });
 
-        expect(result).toBe(
-          'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The PDF file is too large to attach to Code Interpreter. Please use a smaller PDF file (under 100 MB).',
-        );
-      });
+          expect(result).toBe(
+            `File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The PDF file is too large to attach to Code Interpreter. Please use a smaller PDF file (under ${limit}).`,
+          );
+        },
+      );
 
       it('rejects a gateway artifact whose declared MIME type is not permitted', async () => {
         const user = { id: 'gateway-mime-user', role: 'USER' };

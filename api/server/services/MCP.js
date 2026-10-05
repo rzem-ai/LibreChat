@@ -288,14 +288,17 @@ function getCodeFileTypeLabel(filename) {
  */
 function getUploadTimeoutMessage(fileType) {
   if (fileType === 'XLSX file') {
-    return "The XLSX file is too large to upload right now—please try a file under 1MB. We're actively working to increase this limit.";
+    return "The XLSX file upload timed out. Please try again; using a smaller file may help. We're actively working to increase the size limit.";
   }
-  return "The file upload timed out. Please try again with a smaller file (under 1MB). We're actively working to increase the size limit.";
+  return "The file upload timed out. Please try again; using a smaller file may help. We're actively working to increase the size limit.";
 }
 
 function formatFileSizeLimit(maxFileSizeBytes) {
-  const megabytes = maxFileSizeBytes / (1024 * 1024);
-  return `${Number.isInteger(megabytes) ? megabytes : megabytes.toFixed(2)} MB`;
+  const megabyte = 1024 * 1024;
+  if (maxFileSizeBytes % megabyte === 0) {
+    return `${maxFileSizeBytes / megabyte} MB`;
+  }
+  return `${maxFileSizeBytes} bytes`;
 }
 
 /**
