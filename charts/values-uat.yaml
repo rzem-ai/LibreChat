@@ -27,7 +27,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'uat@sha256:c951981009e5c408d2eb4c8b47d6d72881ffe795fc867603e5541189c7e582c6'
+          tag: 'uat@sha256:7d0ac4753f86a080c410064a979e3f20e461730ea11e43a16ffbb63fab1bd9e0'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://foundry-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -51,7 +51,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'uat@sha256:71e6c7de1fb0c39ac643d88e3d93353ea14e746a5f19638cdbfa3e176c56d59b'
+          tag: 'uat@sha256:350ada413ac417447a0a725ae8f5ef97dc5ea7832304938206d971192d0e0baa'
         env:
           ADMIN_PANEL_URL: 'https://myassist-uat.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -162,7 +162,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'uat@sha256:aa8cf85aa3750f80e8aaafc69e63c7d5a3740814cb26c7fbf3fe3aec876c267f'
+          tag: 'uat@sha256:6a47a1600115576584cee20be9fcc8c5f019dbab25b2a978bdcca79d0a61de08'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -219,7 +219,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'uat@sha256:0afa389650f90fa0307270b662c8007e340da6f111b9b21321d3ef07557d2785'
+          tag: 'uat@sha256:6cbb4cad6eef13e2ad9191fb2d8ed5582881ad8007ea0d5bf70c7cbfbb0f44b6'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
