@@ -115,7 +115,7 @@ async function getConversationFiles(requestBody, user) {
   const { fileIds } = getThreadData(messages ?? [], requestBody.parentMessageId);
   return db.getCodeGeneratedFiles(requestBody.conversationId, fileIds, {
     userId: user.id,
-    tenantId: user.tenantId,
+    tenantId: getTenantId(),
   });
 }
 
@@ -209,7 +209,11 @@ async function resolveAttachmentUpload({ toolArguments, requestBody, req, res, u
     dependencies: {
       getRequestAttachment: async (fileId) =>
         requestFileIds.has(fileId)
-          ? ((await db.getFiles({ file_id: fileId, user: user?.id }, null, { text: 0 })) ?? [])
+          ? ((await db.getFiles(
+              { file_id: fileId, user: user?.id, tenantId: getTenantId() },
+              null,
+              { text: 0 },
+            )) ?? [])
           : [],
       getThreadFiles: () => getConversationFiles(requestBody, user),
       getDownloadStream: (attachment) => getAttachmentDownloadStream(attachment, req, res),

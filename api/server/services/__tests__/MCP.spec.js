@@ -655,7 +655,7 @@ describe('resolveAttachmentUpload', () => {
     );
     expect(getCodeGeneratedFiles).toHaveBeenCalledWith('conversation-1', ['file-1'], {
       userId: 'user-1',
-      tenantId: undefined,
+      tenantId: 'tenant-1',
     });
     expect(result).toEqual({
       content: Buffer.from('pptx bytes').toString('base64'),
