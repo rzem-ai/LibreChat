@@ -33,8 +33,11 @@ jest.mock('@librechat/api', () => {
   const http = require('http');
   const https = require('https');
   return {
-    appendCodeEnvFile: jest.fn((form, stream, filename) => {
-      form.append('file', stream, { filename });
+    appendCodeEnvFile: jest.fn((form, stream, filename, contentLength) => {
+      form.append('file', stream, {
+        filename,
+        ...(contentLength !== undefined ? { knownLength: contentLength } : {}),
+      });
     }),
     appendCodeEnvFileIdentity: jest.fn((form, identity) => {
       validateIdentity(identity, 'appendCodeEnvFileIdentity');
@@ -57,6 +60,7 @@ jest.mock('@librechat/api', () => {
 });
 
 const {
+  appendCodeEnvFile,
   codeServerHttpAgent,
   codeServerHttpsAgent,
   getCodeApiAuthHeaders,
@@ -285,6 +289,50 @@ describe('Code CRUD', () => {
 
       const callConfig = mockAxios.post.mock.calls[0][2];
       expect(callConfig.timeout).toBe(120000);
+    });
+
+    // Deloitte Custom Change: only trusted structured errors reach MCP feedback.
+    it('preserves allowlisted Code Runtime timeout details for MCP feedback', async () => {
+      mockAxios.post.mockRejectedValue(
+        Object.assign(new Error('Request failed with status code 504'), {
+          response: {
+            status: 504,
+            data: { code: 'upload_timeout', timeout_seconds: 60 },
+          },
+        }),
+      );
+
+      await expect(uploadCodeEnvFile(baseUploadParams)).rejects.toMatchObject({
+        codeRuntimeUploadFailure: { code: 'upload_timeout', timeoutSeconds: 60 },
+      });
+    });
+
+    // Deloitte Custom Change: known stream length prevents chunked upload transfer.
+    it('sets the multipart known length when the source stream length is available', async () => {
+      const FormData = require('form-data');
+      const appendSpy = jest.spyOn(FormData.prototype, 'append');
+      mockAxios.post.mockResolvedValue({
+        data: {
+          message: 'success',
+          storage_session_id: 'sess-1',
+          files: [{ fileId: 'fid-1', filename: 'data.csv' }],
+        },
+      });
+
+      await uploadCodeEnvFile({ ...baseUploadParams, contentLength: 5 * 1024 * 1024 });
+
+      expect(appendSpy).toHaveBeenCalledWith(
+        'file',
+        baseUploadParams.stream,
+        expect.objectContaining({ knownLength: 5 * 1024 * 1024 }),
+      );
+      expect(appendCodeEnvFile).toHaveBeenCalledWith(
+        expect.anything(),
+        baseUploadParams.stream,
+        baseUploadParams.filename,
+        5 * 1024 * 1024,
+      );
+      appendSpy.mockRestore();
     });
 
     it('should return { storage_session_id, file_id } on success', async () => {

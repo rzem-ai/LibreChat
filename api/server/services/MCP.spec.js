@@ -2047,7 +2047,7 @@ describe('User parameter passing tests', () => {
       });
       mockCodeFileDownloadGet.mockResolvedValue({
         status: 200,
-        headers: { 'content-type': 'application/pdf' },
+        headers: { 'content-type': 'application/pdf', 'content-length': '5242880' },
         data: 'fake-stream',
       });
       mockUploadCodeEnvFile.mockResolvedValue({
@@ -2092,6 +2092,7 @@ describe('User parameter passing tests', () => {
         req: mockReq,
         stream: 'fake-stream',
         filename: 'report.pdf',
+        contentLength: 5242880,
         kind: 'user',
         id: mockUser.id,
       });
@@ -2856,7 +2857,82 @@ describe('User parameter passing tests', () => {
           }),
         );
         expect(result).toBe(
-          'File "report.pdf" could not be attached to this conversation for use in Code Interpreter.',
+          'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file exceeds the configured size limit for Code Interpreter.',
+        );
+      });
+
+      // Deloitte Custom Change: timeout feedback stays specific without exposing transport details.
+      it('explains a Code Interpreter upload gateway timeout without exposing upstream details', async () => {
+        const user = { id: 'gateway-timeout-user', role: 'USER' };
+        const req = requestWithAgentFileConfig(user, {});
+        mockCodeFileDownloadGet.mockResolvedValue({
+          status: 200,
+          headers: {
+            'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'content-length': '42',
+          },
+          data: gatewayStream(42),
+        });
+        mockUploadCodeEnvFile.mockRejectedValue(
+          new Error('Error uploading code environment file: Request failed with status code 504'),
+        );
+
+        const result = await invokeWithArtifact({
+          user,
+          req,
+          artifacts: gatewayArtifact({
+            name: 'report.xlsx',
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          }),
+        });
+
+        expect(result).toBe(
+          'File "report.xlsx" could not be attached to this conversation for use in Code Interpreter. The XLSX file is too large to upload right now—please try a file under 1MB. We\'re actively working to increase this limit.',
+        );
+      });
+
+      it('uses allowlisted Code Runtime timeout details in the attachment explanation', async () => {
+        const user = { id: 'gateway-code-runtime-timeout-user', role: 'USER' };
+        const req = requestWithAgentFileConfig(user, {});
+        mockCodeFileDownloadGet.mockResolvedValue({
+          status: 200,
+          headers: { 'content-type': 'application/pdf', 'content-length': '42' },
+          data: gatewayStream(42),
+        });
+        const error = new Error(
+          'Error uploading code environment file: Request failed with status code 504',
+        );
+        error.codeRuntimeUploadFailure = { code: 'upload_timeout', timeoutSeconds: 60 };
+        mockUploadCodeEnvFile.mockRejectedValue(error);
+
+        const result = await invokeWithArtifact({ user, req, artifacts: gatewayArtifact() });
+
+        expect(result).toBe(
+          'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
+        );
+      });
+
+      it('names the file type and configured limit for Code Runtime size rejections', async () => {
+        const user = { id: 'gateway-code-runtime-size-user', role: 'USER' };
+        const req = requestWithAgentFileConfig(user, {});
+        mockCodeFileDownloadGet.mockResolvedValue({
+          status: 200,
+          headers: { 'content-type': 'application/pdf', 'content-length': '42' },
+          data: gatewayStream(42),
+        });
+        const error = new Error(
+          'Error uploading code environment file: Request failed with status code 413',
+        );
+        error.codeRuntimeUploadFailure = {
+          code: 'upload_size_limit',
+          maxFileSizeBytes: 100 * 1024 * 1024,
+        };
+        mockUploadCodeEnvFile.mockRejectedValue(error);
+
+        const result = await invokeWithArtifact({ user, req, artifacts: gatewayArtifact() });
+
+        expect(result).toBe(
+          'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The PDF file is too large to attach to Code Interpreter. Please use a smaller PDF file.',
         );
       });
 

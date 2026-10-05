@@ -17,6 +17,35 @@ const axios = createAxiosInstance();
 const MAX_FILE_SIZE = 150 * 1024 * 1024;
 
 /**
+ * Deloitte Custom Change: extracts only the allowlisted Code Runtime failure
+ * metadata that is safe to use in the MCP attachment status.
+ *
+ * @param {unknown} error - Upload error returned by Axios.
+ * @returns {{ code: 'upload_timeout'; timeoutSeconds: number } | { code: 'upload_size_limit'; maxFileSizeBytes: number } | undefined}
+ */
+function getCodeRuntimeUploadFailure(error) {
+  const response = error?.response;
+  const data = response?.data;
+  if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+    return undefined;
+  }
+
+  if (response.status === 504 && data.code === 'upload_timeout') {
+    const timeoutSeconds = data.timeout_seconds;
+    if (Number.isSafeInteger(timeoutSeconds) && timeoutSeconds > 0) {
+      return { code: 'upload_timeout', timeoutSeconds };
+    }
+  }
+
+  if (response.status === 413 && data.code === 'upload_size_limit') {
+    const maxFileSizeBytes = data.max_file_size_bytes;
+    if (Number.isSafeInteger(maxFileSizeBytes) && maxFileSizeBytes > 0) {
+      return { code: 'upload_size_limit', maxFileSizeBytes };
+    }
+  }
+}
+
+/**
  * Retrieves a download stream for a specified file.
  * @param {string} fileIdentifier - The identifier for the file (e.g., "session_id/fileId").
  * @param {{ kind: 'skill' | 'agent' | 'user'; id: string; version?: number }} identity
@@ -137,6 +166,7 @@ async function deleteCodeEnvFile(req, file) {
  * @param {ServerRequest} params.req - The request object from Express. It should have a `user` property with an `id` representing the user
  * @param {import('fs').ReadStream | import('stream').Readable} params.stream - The read stream for the file.
  * @param {string} params.filename - The name of the file.
+ * @param {number} [params.contentLength] - The validated byte length of the stream, when known.
  * @param {'skill' | 'agent' | 'user'} params.kind - Resource kind that owns this file's storage session.
  * @param {string} params.id - Resource id (skillId / agentId / userId). Codeapi
  *   ignores this for `kind: 'user'` (auth context provides userId), but it's
@@ -146,11 +176,12 @@ async function deleteCodeEnvFile(req, file) {
  *   The codeapi storage location of the uploaded file.
  * @throws {Error} If there's an error during the upload process.
  */
-async function uploadCodeEnvFile({ req, stream, filename, kind, id, version }) {
+async function uploadCodeEnvFile({ req, stream, filename, contentLength, kind, id, version }) {
   try {
     const form = new FormData();
     appendCodeEnvFileIdentity(form, { kind, id, version });
-    appendCodeEnvFile(form, stream, filename);
+    // Deloitte Custom Change: preserve a trusted source length for non-chunked uploads.
+    appendCodeEnvFile(form, stream, filename, contentLength);
 
     const baseURL = getCodeBaseURL();
     const authHeaders = await getCodeApiAuthHeaders(req);
@@ -183,12 +214,18 @@ async function uploadCodeEnvFile({ req, stream, filename, kind, id, version }) {
       file_id: result.files[0].fileId,
     };
   } catch (error) {
-    throw new Error(
+    const uploadError = new Error(
       logAxiosError({
         message: `Error uploading code environment file: ${error.message}`,
         error,
       }),
     );
+    // Deloitte Custom Change: retain only the safe response contract for MCP feedback.
+    const failure = getCodeRuntimeUploadFailure(error);
+    if (failure) {
+      uploadError.codeRuntimeUploadFailure = failure;
+    }
+    throw uploadError;
   }
 }
 
