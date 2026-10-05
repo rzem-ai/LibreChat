@@ -220,6 +220,8 @@ async function uploadCodeEnvFile({ req, stream, filename, contentLength, kind, i
         error,
       }),
     );
+    // Deloitte Custom Change: distinguish upload failures from source-download failures.
+    uploadError.codeRuntimeUploadError = true;
     // Deloitte Custom Change: retain only the safe response contract for MCP feedback.
     const failure = getCodeRuntimeUploadFailure(error);
     if (failure) {

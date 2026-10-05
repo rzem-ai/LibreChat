@@ -2873,9 +2873,11 @@ describe('User parameter passing tests', () => {
           },
           data: gatewayStream(42),
         });
-        mockUploadCodeEnvFile.mockRejectedValue(
-          new Error('Error uploading code environment file: Request failed with status code 504'),
+        const error = new Error(
+          'Error uploading code environment file: Request failed with status code 504',
         );
+        error.codeRuntimeUploadError = true;
+        mockUploadCodeEnvFile.mockRejectedValue(error);
 
         const result = await invokeWithArtifact({
           user,
@@ -2888,6 +2890,27 @@ describe('User parameter passing tests', () => {
 
         expect(result).toBe(
           'File "report.xlsx" could not be attached to this conversation for use in Code Interpreter. The XLSX file is too large to upload right now—please try a file under 1MB. We\'re actively working to increase this limit.',
+        );
+      });
+
+      it('keeps a source-download 504 generic', async () => {
+        const user = { id: 'gateway-download-timeout-user', role: 'USER' };
+        const req = requestWithAgentFileConfig(user, {});
+        mockCodeFileDownloadGet.mockRejectedValue(
+          new Error('Code file download failed with status code 504'),
+        );
+
+        const result = await invokeWithArtifact({
+          user,
+          req,
+          artifacts: gatewayArtifact({
+            name: 'report.xlsx',
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          }),
+        });
+
+        expect(result).toBe(
+          'File "report.xlsx" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
         );
       });
 

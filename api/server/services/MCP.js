@@ -320,11 +320,8 @@ function getCodeFileAttachmentFailureReason(error, filename) {
   const message = typeof error?.message === 'string' ? error.message : '';
   const status = message.match(/\bstatus(?: code)?\s+(\d{3})\b/i)?.[1];
 
-  if (status === '504') {
+  if (error?.codeRuntimeUploadError === true && status === '504') {
     return getUploadTimeoutMessage(fileType);
-  }
-  if (status) {
-    return `The Code Interpreter transfer service returned HTTP ${status}.`;
   }
   if (message.includes('exceeds the configured Agents file size limit')) {
     return 'The file exceeds the configured size limit for Code Interpreter.';
