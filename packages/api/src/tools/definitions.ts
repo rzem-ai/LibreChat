@@ -70,9 +70,9 @@ export interface LoadToolDefinitionsParams {
    * unavailable server's names.
    */
   accessibleServerNames?: readonly string[];
-  /** Operator-approved upload tools, keyed by their raw MCP server name. */
+  /** Deloitte Custom Change: Operator-approved upload tools, keyed by their raw MCP server name. */
   attachmentUploadTools?: Record<string, readonly string[]>;
-  /** Files attached to this request, exposed as references instead of tool-call bytes. */
+  /** Deloitte Custom Change: Files attached to this request, exposed as references instead of tool-call bytes. */
   attachmentFiles?: Array<{ file_id?: string; filename?: string }>;
 }
 
@@ -153,6 +153,10 @@ export async function loadToolDefinitions(
     }
     const normalized = normalizeJsonSchema(resolveJsonSchemaRefs(mcpParams));
     const providerSchema = isGoogle ? sanitizeGeminiSchema(normalized) : normalized;
+    // Deloitte Custom Change: hide file bytes from the model for operator-approved upload
+    // tools. `toolName` here is the full model-facing key (e.g. `sp_upload_file_mcp_sharepoint`),
+    // but `attachmentUploadTools` is configured with the raw tool name — split it back out
+    // before comparing, or this check silently never matches.
     const [rawToolName] = toolName ? splitMCPToolKey(toolName, serverName ? [serverName] : []) : [];
     const isAttachmentUpload =
       serverName != null &&

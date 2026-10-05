@@ -31,6 +31,8 @@ describe('definitions.ts', () => {
   });
 
   describe('loadToolDefinitions', () => {
+    // Deloitte Custom Change: the definitions-only path must hide file bytes from the
+    // model for operator-approved upload tools, same as the full tool-dispatch path.
     it('rewrites approved attachment upload schemas in the definitions-only path', async () => {
       const params: LoadToolDefinitionsParams = {
         userId: 'user-123',

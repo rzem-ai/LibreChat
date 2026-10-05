@@ -907,6 +907,7 @@ describe('addAttachmentUploadHints', () => {
   });
 });
 
+// Deloitte Custom Change: only explicitly trusted MCP tools may receive attachment bytes.
 describe('supportsAttachmentUpload', () => {
   it('requires an explicit server configuration allowlist entry', () => {
     expect(

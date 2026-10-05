@@ -99,7 +99,7 @@ function applyAttachmentUploadConfig(serverConfig, serverName, appConfig) {
 }
 
 /**
- * Resolves code-generated files only from the current user's active conversation thread.
+ * Deloitte Custom Change: Resolve generated files only from the current user's active conversation thread.
  * @param {import('@librechat/api').RequestBody | undefined} requestBody - Current request body.
  * @param {import('librechat-data-provider').TUser | undefined} user - Current authenticated user.
  * @returns {Promise<object[]>} Conversation files that belong to the current user.
@@ -143,6 +143,8 @@ async function getConversationFiles(requestBody, user) {
 }
 
 /**
+ * Deloitte Custom Change: Resolve an authorized attachment's bytes from whichever storage
+ * backend actually holds them, so upload tools never need provider-specific download logic.
  * Returns a Node-readable stream for an authorized persisted file.
  * OpenAI and Azure files require an endpoint-specific client; other storage
  * strategies use the standard request/path stream signature.

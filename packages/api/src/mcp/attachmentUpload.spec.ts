@@ -5,6 +5,8 @@ import {
   supportsAttachmentUpload,
 } from './attachmentUpload';
 
+// Deloitte Custom Change: covers the trusted-tool attachment upload pipeline
+// (packages/api/src/mcp/attachmentUpload.ts), which does not exist upstream.
 describe('attachment uploads', () => {
   it('only resolves generated filenames returned for the active thread', async () => {
     const inThread = { file_id: 'thread-file', filename: 'report.csv' };

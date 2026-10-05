@@ -33,6 +33,10 @@ type AttachmentUploadSchema = {
   allOf?: unknown[];
 };
 
+/**
+ * Deloitte Custom Change: Only explicitly trusted MCP tools may receive attachment bytes.
+ * Determines whether an admin-configured MCP server may receive attachment bytes for a tool.
+ */
 export function supportsAttachmentUpload(
   serverConfig: { source?: string; dbId?: unknown; attachmentUploadTools?: string[] } | undefined,
   toolName: string,
@@ -53,7 +57,10 @@ export function getAttachmentSourceField(
     : 'sourceFileName';
 }
 
-/** Reads an authorized stream while retaining only base64 output in memory. */
+/**
+ * Deloitte Custom Change: Encode attachment bytes locally so the language model never relays them.
+ * Reads an authorized stream while retaining only base64 output in memory.
+ */
 export async function readStreamAsBase64(stream: Readable, signal?: AbortSignal): Promise<string> {
   const maxBytes = getAttachmentUploadMaxBytes();
   const encodedChunks: string[] = [];
@@ -104,7 +111,11 @@ type ResolveAttachmentUploadParams<TAttachment> = {
   signal?: AbortSignal;
 };
 
-/** Resolves a model-provided attachment reference immediately before MCP dispatch. */
+/**
+ * Deloitte Custom Change: Resolve only files attached to the active request (or generated
+ * earlier in the active thread) before tool dispatch, so the model never handles file bytes.
+ * Resolves a model-provided attachment reference immediately before MCP dispatch.
+ */
 export async function resolveAttachmentUpload<TAttachment extends Attachment>({
   toolArguments,
   dependencies,
@@ -184,6 +195,7 @@ export function rewriteAttachmentUploadSchema<TSchema extends AttachmentUploadSc
   const required = (schema.required ?? []).filter(
     (property) => !['content', 'encoding', 'sourceFileId', 'sourceFileName'].includes(property),
   );
+  // Deloitte Custom Change: prevent the model from streaming file bytes through the tool call.
   const { content: _content, encoding: _encoding, ...properties } = schema.properties ?? {};
   const uploadSchema = {
     ...schema,
@@ -221,6 +233,10 @@ export function rewriteAttachmentUploadSchema<TSchema extends AttachmentUploadSc
   return uploadSchema;
 }
 
+/**
+ * Deloitte Custom Change: Give approved upload tools the active request's attachment IDs.
+ * Adds current-request attachment identifiers to an authorized upload tool schema.
+ */
 export function addAttachmentUploadHints(
   schema: JsonSchema | null,
   toolName: string,
