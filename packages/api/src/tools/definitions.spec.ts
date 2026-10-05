@@ -53,6 +53,7 @@ describe('definitions.ts', () => {
                   encoding: { type: 'string' },
                 },
                 required: ['driveId', 'content'],
+                oneOf: [{ required: ['driveId'] }],
               },
             },
           },
@@ -68,10 +69,10 @@ describe('definitions.ts', () => {
       expect(definition?.parameters?.properties).toHaveProperty('sourceFileId');
       expect(definition?.parameters?.properties).toHaveProperty('sourceFileName');
       expect(definition?.parameters?.required).toEqual(['driveId']);
-      expect(definition?.parameters?.oneOf).toEqual([
-        { required: ['sourceFileId'] },
-        { required: ['sourceFileName'] },
-      ]);
+      expect(definition?.parameters?.oneOf).toEqual([{ required: ['driveId'] }]);
+      expect(definition?.parameters?.allOf).toContainEqual({
+        oneOf: [{ required: ['sourceFileId'] }, { required: ['sourceFileName'] }],
+      });
     });
 
     it('should return empty result for empty tools array', async () => {

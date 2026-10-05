@@ -201,7 +201,10 @@ export async function loadToolDefinitions(
         }
       : {
           ...uploadSchema,
-          oneOf: [{ required: ['sourceFileId'] }, { required: ['sourceFileName'] }],
+          allOf: [
+            ...(uploadSchema.allOf ?? []),
+            { oneOf: [{ required: ['sourceFileId'] }, { required: ['sourceFileName'] }] },
+          ],
         };
     return isGoogle ? sanitizeGeminiSchema(schema) : schema;
   };

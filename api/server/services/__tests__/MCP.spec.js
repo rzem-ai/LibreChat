@@ -495,6 +495,7 @@ describe('createMCPTool', () => {
         type: 'object',
         properties: { fileName: { type: 'string' }, content: { type: 'string' } },
         required: ['fileName', 'content'],
+        oneOf: [{ required: ['fileName'] }],
       },
     };
     getAppConfig.mockResolvedValue({
@@ -514,6 +515,11 @@ describe('createMCPTool', () => {
     expect(toolInstance.name).toBe(uploadKey);
     expect(toolInstance.mcpJsonSchema.properties.content).toBeUndefined();
     expect(toolInstance.mcpJsonSchema.properties.sourceFileName).toBeDefined();
+    expect(toolInstance.mcpJsonSchema.oneOf).toEqual([{ required: ['fileName'] }]);
+    expect(toolInstance.mcpJsonSchema.allOf).toContainEqual({
+      oneOf: [{ required: ['sourceFileId'] }, { required: ['sourceFileName'] }],
+    });
+    expect(toolInstance.description).toContain('Upload a file');
   });
 
   it('instructs the model to use an attachment ID when a file is attached', async () => {
@@ -680,7 +686,9 @@ describe('resolveAttachmentUpload', () => {
   it('uses an endpoint-specific client for OpenAI-backed files', async () => {
     const { Readable } = require('stream');
     const openai = {};
-    const getDownloadStream = jest.fn().mockResolvedValue({ body: Readable.from([Buffer.from('pptx bytes')]) });
+    const getDownloadStream = jest
+      .fn()
+      .mockResolvedValue({ body: Readable.from([Buffer.from('pptx bytes')]) });
     mockGetStrategyFunctions.mockReturnValue({ getDownloadStream });
     getOpenAIClient.mockResolvedValue({ openai });
     getFiles.mockResolvedValue([

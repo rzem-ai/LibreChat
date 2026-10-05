@@ -138,7 +138,9 @@ async function readStreamAsBase64(stream) {
     const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
     size += bytes.length;
     if (size > MAX_ATTACHMENT_UPLOAD_BYTES) {
-      throw new Error(`Attachment exceeds the ${MAX_ATTACHMENT_UPLOAD_BYTES / (1024 * 1024)}MB upload limit`);
+      throw new Error(
+        `Attachment exceeds the ${MAX_ATTACHMENT_UPLOAD_BYTES / (1024 * 1024)}MB upload limit`,
+      );
     }
     const data = remainder.length > 0 ? Buffer.concat([remainder, bytes]) : bytes;
     const completeLength = data.length - (data.length % 3);
@@ -270,15 +272,20 @@ async function resolveAttachmentUpload({ toolArguments, requestBody, req, res, u
   }
 
   const requestFileIds = new Set(
-    (requestBody?.files ?? []).map((file) => file?.file_id).filter((fileId) => typeof fileId === 'string'),
+    (requestBody?.files ?? [])
+      .map((file) => file?.file_id)
+      .filter((fileId) => typeof fileId === 'string'),
   );
-  const matchingAttachments = hasSourceFileId || (hasSourceFile && requestFileIds.has(sourceFile))
-    ? requestFileIds.has(sourceFileId ?? sourceFile)
-      ? (await db.getFiles({ file_id: sourceFileId ?? sourceFile, user: user?.id }, null, { text: 0 })) ?? []
-      : []
-    : (await getConversationFiles(requestBody, user)).filter(
-        (file) => file?.filename === (sourceFileName ?? sourceFile),
-      );
+  const matchingAttachments =
+    hasSourceFileId || (hasSourceFile && requestFileIds.has(sourceFile))
+      ? requestFileIds.has(sourceFileId ?? sourceFile)
+        ? ((await db.getFiles({ file_id: sourceFileId ?? sourceFile, user: user?.id }, null, {
+            text: 0,
+          })) ?? [])
+        : []
+      : (await getConversationFiles(requestBody, user)).filter(
+          (file) => file?.filename === (sourceFileName ?? sourceFile),
+        );
   if (matchingAttachments.length !== 1) {
     throw new Error('Attachment source must identify a file available to the current user');
   }
@@ -342,7 +349,8 @@ function addAttachmentUploadHints(schema, toolName, serverConfig, requestBody, i
       },
       sourceFileName: {
         type: 'string',
-        description: 'Exact filename of a file created earlier in this conversation. LibreChat resolves it to the original bytes.',
+        description:
+          'Exact filename of a file created earlier in this conversation. LibreChat resolves it to the original bytes.',
       },
     },
     required,
@@ -361,7 +369,13 @@ function addAttachmentUploadHints(schema, toolName, serverConfig, requestBody, i
       required: [...required, 'sourceFile'],
     };
   }
-  return { ...uploadSchema, oneOf: [{ required: ['sourceFileId'] }, { required: ['sourceFileName'] }] };
+  return {
+    ...uploadSchema,
+    allOf: [
+      ...(uploadSchema.allOf ?? []),
+      { oneOf: [{ required: ['sourceFileId'] }, { required: ['sourceFileName'] }] },
+    ],
+  };
 }
 
 /**
@@ -1349,11 +1363,20 @@ function createToolInstance({
   }
 
   // Deloitte Custom Change: expose current attachment IDs only to configured trusted upload tools.
-  schema = addAttachmentUploadHints(schema, toolName, capturedServerConfig, capturedRequestBody, isGoogle);
+  schema = addAttachmentUploadHints(
+    schema,
+    toolName,
+    capturedServerConfig,
+    capturedRequestBody,
+    isGoogle,
+  );
   const attachmentUpload = supportsAttachmentUpload(capturedServerConfig, toolName);
-  const attachmentSourceField = isGoogle ? 'sourceFile' : getAttachmentSourceField(capturedRequestBody);
+  const attachmentSourceField = isGoogle
+    ? 'sourceFile'
+    : getAttachmentSourceField(capturedRequestBody);
+  const attachmentInstructions = `Upload a file already available in this conversation. Provide the destination fields and ${attachmentSourceField}. Never provide content, file bytes, or encoding: LibreChat reads and encodes the file after this tool call.`;
   const attachmentUploadDescription = attachmentUpload
-    ? `Upload a file already available in this conversation. Provide the destination fields and ${attachmentSourceField}. Never provide content, file bytes, or encoding: LibreChat reads and encodes the file after this tool call.`
+    ? [description, attachmentInstructions].filter(Boolean).join('\n\n')
     : description || '';
 
   const normalizedToolKey = `${toolName}${Constants.mcp_delimiter}${normalizeServerName(serverName)}`;
@@ -1477,16 +1500,11 @@ function createToolInstance({
        * without a substitute the Assistants endpoint would return nothing at
        * all for a tool call that otherwise succeeded. */
       // Deloitte Custom Change: register MCP download resources with Code Interpreter.
-      if (
-        artifacts?.codeFile &&
-        isAssistantsEndpoint(provider)
-      ) {
+      if (artifacts?.codeFile && isAssistantsEndpoint(provider)) {
         if (Array.isArray(result) && !result[0]) {
           result[0] = `File "${sanitizeFilename(artifacts.codeFile.name)}" could not be attached to this conversation for use in Code Interpreter.`;
         }
-      } else if (
-        artifacts?.codeFile
-      ) {
+      } else if (artifacts?.codeFile) {
         const { name, url, mimeType, gatewayDownload, size, expiresAt } = artifacts.codeFile;
         // Deloitte Custom Change: gateway filenames are untrusted and must never reach model context or logs unsanitized.
         const sanitizedFilename = sanitizeFilename(name);
@@ -1518,7 +1536,7 @@ function createToolInstance({
         if (!req) {
           codeFileRegistrationFailed = true;
           logger.warn(
-              `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": no request context available to register it with Code Interpreter.`,
+            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": no request context available to register it with Code Interpreter.`,
           );
         } else if (capabilityCheckFailed) {
           codeFileRegistrationFailed = true;
@@ -1526,7 +1544,7 @@ function createToolInstance({
         } else if (!hasExecuteCodeCapability) {
           codeFileRegistrationFailed = true;
           logger.warn(
-              `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": Code Interpreter is not enabled for this endpoint.`,
+            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": Code Interpreter is not enabled for this endpoint.`,
           );
         } else if (config?.configurable?.codeEnvAvailable !== true) {
           /* `checkCapability` above is only the endpoint-level admin gate; the
@@ -1536,7 +1554,7 @@ function createToolInstance({
            * from. */
           codeFileRegistrationFailed = true;
           logger.warn(
-              `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": this agent does not have Code Interpreter (execute_code) available.`,
+            `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": this agent does not have Code Interpreter (execute_code) available.`,
           );
         } else {
           let stream;
@@ -1562,8 +1580,14 @@ function createToolInstance({
               .split(';', 1)[0]
               .trim()
               .toLowerCase();
-            if (gatewayDownload && responseMimeType && responseMimeType !== mimeType?.toLowerCase()) {
-              throw new Error('codeFile download content type does not match the gateway declaration');
+            if (
+              gatewayDownload &&
+              responseMimeType &&
+              responseMimeType !== mimeType?.toLowerCase()
+            ) {
+              throw new Error(
+                'codeFile download content type does not match the gateway declaration',
+              );
             }
             const uploaded = await uploadCodeEnvFile({
               req,
