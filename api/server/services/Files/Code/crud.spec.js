@@ -60,7 +60,6 @@ jest.mock('@librechat/api', () => {
 });
 
 const {
-  appendCodeEnvFile,
   codeServerHttpAgent,
   codeServerHttpsAgent,
   getCodeApiAuthHeaders,
