@@ -288,9 +288,9 @@ function getCodeFileTypeLabel(filename) {
  */
 function getUploadTimeoutMessage(fileType) {
   if (fileType === 'XLSX file') {
-    return "The XLSX file upload timed out. Please try again; using a smaller file may help. We're actively working to increase the size limit.";
+    return "The XLSX file is too large to upload right now - please try a file under 1MB. We're actively working to increase this limit.";
   }
-  return "The file upload timed out. Please try again; using a smaller file may help. We're actively working to increase the size limit.";
+  return "The file upload timed out. Please try again with a smaller file (under 1MB). We're actively working to increase the size limit.";
 }
 
 function formatFileSizeLimit(maxFileSizeBytes) {
@@ -1448,12 +1448,17 @@ function createToolInstance({
       // Deloitte Custom Change: register MCP download resources with Code Interpreter.
       if (artifacts?.codeFile && isAssistantsEndpoint(provider)) {
         if (Array.isArray(result) && !result[0]) {
-          result[0] = `File "${sanitizeFilename(artifacts.codeFile.name)}" could not be attached to this conversation for use in Code Interpreter.`;
+          const sanitizedFilename = sanitizeFilename(artifacts.codeFile.name);
+          const failureReason = getUploadTimeoutMessage(getCodeFileTypeLabel(sanitizedFilename));
+          result[0] = `File "${sanitizedFilename}" could not be attached to this conversation for use in Code Interpreter. ${failureReason}`;
         }
       } else if (artifacts?.codeFile) {
         const { name, url, mimeType, gatewayDownload, size, expiresAt } = artifacts.codeFile;
         // Deloitte Custom Change: gateway filenames are untrusted and must never reach model context or logs unsanitized.
         const sanitizedFilename = sanitizeFilename(name);
+        const attachmentRetryMessage = getUploadTimeoutMessage(
+          getCodeFileTypeLabel(sanitizedFilename),
+        );
         delete artifacts?.codeFile;
         const req = res?.req;
         /* `checkCapability` hits the DB/role-permissions layer, so a transient
@@ -1482,14 +1487,17 @@ function createToolInstance({
         }
         if (!req) {
           codeFileRegistrationFailed = true;
+          codeFileFailureReason = attachmentRetryMessage;
           logger.warn(
             `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": no request context available to register it with Code Interpreter.`,
           );
         } else if (capabilityCheckFailed) {
           codeFileRegistrationFailed = true;
+          codeFileFailureReason = attachmentRetryMessage;
           // Already logged above.
         } else if (!hasExecuteCodeCapability) {
           codeFileRegistrationFailed = true;
+          codeFileFailureReason = attachmentRetryMessage;
           logger.warn(
             `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": Code Interpreter is not enabled for this endpoint.`,
           );
@@ -1500,6 +1508,7 @@ function createToolInstance({
            * in which case it has no Code Interpreter session to use this file
            * from. */
           codeFileRegistrationFailed = true;
+          codeFileFailureReason = attachmentRetryMessage;
           logger.warn(
             `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": this agent does not have Code Interpreter (execute_code) available.`,
           );

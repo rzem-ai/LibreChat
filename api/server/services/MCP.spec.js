@@ -2262,7 +2262,7 @@ describe('User parameter passing tests', () => {
       expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(result).toBe(
-        'File "report.pdf" could not be attached to this conversation for use in Code Interpreter.',
+        'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
       );
     });
 
@@ -2535,7 +2535,7 @@ describe('User parameter passing tests', () => {
         expect.stringContaining('Code Interpreter is not enabled'),
       );
       expect(result).toBe(
-        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter.',
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
       );
       if (originalDownloadToolName === undefined) {
         delete process.env.SHAREPOINT_MCP_DOWNLOAD_TOOL;
@@ -2601,7 +2601,7 @@ describe('User parameter passing tests', () => {
         expect.objectContaining({ message: 'transient config load failure' }),
       );
       expect(result).toBe(
-        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter.',
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
       );
     });
 
@@ -2658,7 +2658,7 @@ describe('User parameter passing tests', () => {
       expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(result).toBe(
-        'File "report.pdf" could not be attached to this conversation for use in Code Interpreter.',
+        'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
       );
     });
 
@@ -2720,7 +2720,7 @@ describe('User parameter passing tests', () => {
         expect.stringContaining('does not have Code Interpreter (execute_code) available'),
       );
       expect(result).toBe(
-        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter.',
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
       );
     });
 
@@ -2776,7 +2776,7 @@ describe('User parameter passing tests', () => {
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Dropped codeFile'));
       expect(result).toBe(
-        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter.',
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
       );
     });
 
@@ -2898,7 +2898,7 @@ describe('User parameter passing tests', () => {
         });
 
         expect(result).toBe(
-          'File "report.xlsx" could not be attached to this conversation for use in Code Interpreter. The XLSX file upload timed out. Please try again; using a smaller file may help. We\'re actively working to increase the size limit.',
+          'File "report.xlsx" could not be attached to this conversation for use in Code Interpreter. The XLSX file is too large to upload right now - please try a file under 1MB. We\'re actively working to increase this limit.',
         );
       });
 
@@ -2940,7 +2940,7 @@ describe('User parameter passing tests', () => {
         const result = await invokeWithArtifact({ user, req, artifacts: gatewayArtifact() });
 
         expect(result).toBe(
-          'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again; using a smaller file may help. We\'re actively working to increase the size limit.',
+          'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
         );
       });
 
@@ -3632,7 +3632,7 @@ describe('User parameter passing tests', () => {
       expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(result).toBe(
-        'File "report.pdf" could not be attached to this conversation for use in Code Interpreter.',
+        'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
       );
     });
 
