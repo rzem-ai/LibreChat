@@ -16,6 +16,7 @@ import type { LCToolRegistry, JsonSchemaType, LCTool, GenericTool } from '@libre
 import type { AgentToolOptions } from 'librechat-data-provider';
 import type { ToolDefinition } from './classification';
 import { resolveJsonSchemaRefs, normalizeJsonSchema, sanitizeGeminiSchema } from '~/mcp/zod';
+import { rewriteAttachmentUploadSchema } from '~/mcp/attachmentUpload';
 import { buildToolClassification } from './classification';
 import { getToolDefinition } from './registry/definitions';
 import { toolkitExpansion } from './toolkits/mapping';
@@ -69,6 +70,10 @@ export interface LoadToolDefinitionsParams {
    * unavailable server's names.
    */
   accessibleServerNames?: readonly string[];
+  /** Deloitte Custom Change: Operator-approved upload tools, keyed by their raw MCP server name. */
+  attachmentUploadTools?: Record<string, readonly string[]>;
+  /** Deloitte Custom Change: Files attached to this request, exposed as references instead of tool-call bytes. */
+  attachmentFiles?: Array<{ file_id?: string; filename?: string }>;
 }
 
 export interface ActionToolDefinition {
@@ -124,6 +129,8 @@ export async function loadToolDefinitions(
     mcpServerNames,
     rawServerNames,
     accessibleServerNames,
+    attachmentUploadTools,
+    attachmentFiles,
   } = params;
   const {
     getOrFetchMCPServerTools,
@@ -136,12 +143,29 @@ export async function loadToolDefinitions(
   const isGoogle = provider === Providers.GOOGLE || provider === Providers.VERTEXAI;
 
   /** Normalizes MCP tool params, additionally union-flattening for the Gemini/Vertex path. */
-  const buildMcpParameters = (mcpParams?: JsonSchemaType): JsonSchemaType | undefined => {
+  const buildMcpParameters = (
+    mcpParams: JsonSchemaType | undefined,
+    serverName?: string,
+    toolName?: string,
+  ): JsonSchemaType | undefined => {
     if (!mcpParams) {
       return undefined;
     }
     const normalized = normalizeJsonSchema(resolveJsonSchemaRefs(mcpParams));
-    return isGoogle ? sanitizeGeminiSchema(normalized) : normalized;
+    const providerSchema = isGoogle ? sanitizeGeminiSchema(normalized) : normalized;
+    // Deloitte Custom Change: hide file bytes from the model for operator-approved upload
+    // tools. `toolName` here is the full model-facing key (e.g. `sp_upload_file_mcp_sharepoint`),
+    // but `attachmentUploadTools` is configured with the raw tool name — split it back out
+    // before comparing, or this check silently never matches.
+    const [rawToolName] = toolName ? splitMCPToolKey(toolName, serverName ? [serverName] : []) : [];
+    const isAttachmentUpload =
+      serverName != null &&
+      toolName != null &&
+      attachmentUploadTools?.[serverName]?.includes(rawToolName ?? toolName);
+    if (!isAttachmentUpload) {
+      return providerSchema;
+    }
+    return rewriteAttachmentUploadSchema(providerSchema, attachmentFiles, isGoogle);
   };
 
   const emptyResult: LoadToolDefinitionsResult = {
@@ -268,7 +292,11 @@ export async function loadToolDefinitions(
           mcpToolDefs.push({
             name: actualToolName,
             description: toolDef.function.description || undefined,
-            parameters: buildMcpParameters(toolDef.function.parameters),
+            parameters: buildMcpParameters(
+              toolDef.function.parameters,
+              serverName,
+              toolDef.function.name ?? actualToolName,
+            ),
             serverName,
             // Deloitte Custom Change: the "all tools from this server" pin
             // expands to every catalog entry, so the class must be carried per
@@ -287,7 +315,11 @@ export async function loadToolDefinitions(
       mcpToolDefs.push({
         name: toolName,
         description: toolDef.function.description || undefined,
-        parameters: buildMcpParameters(toolDef.function.parameters),
+        parameters: buildMcpParameters(
+          toolDef.function.parameters,
+          serverName,
+          toolDef.function.name ?? toolName,
+        ),
         serverName,
         // Deloitte Custom Change: retain the class on single-tool pins so the
         // approval pipeline sees the same class the gateway assigned.

@@ -10,7 +10,6 @@ import {
   expectCanaryReply,
   selectModel,
   sendMessage,
-  setToolEnabled,
 } from './helpers';
 
 /**
@@ -104,11 +103,6 @@ test.describe.serial('live file search (RAG)', { tag: ['@live'] }, () => {
       }
       uploadedFilename = null;
     }
-    try {
-      await setToolEnabled(page, 'File Search', false);
-    } catch (error) {
-      console.warn('[live] file search tool disable failed', error);
-    }
   });
 
   for (const config of FILE_TYPES) {
@@ -123,7 +117,6 @@ test.describe.serial('live file search (RAG)', { tag: ['@live'] }, () => {
 
       await page.goto('/c/new', { timeout: 15000 });
       await selectModel(page, ENDPOINT, MODEL);
-      await setToolEnabled(page, 'File Search', true);
 
       await page.locator('#attach-file-menu-button').click();
       const chooserPromise = page.waitForEvent('filechooser');

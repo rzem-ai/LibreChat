@@ -44,6 +44,7 @@ const ADMIN_CONFIGURABLE_FIELDS = [
   'startup',
   'chatMenu',
   'serverInstructions',
+  'attachmentUploadTools', // Deloitte Custom Change: preserve the trusted attachment upload allowlist.
   'customUserVars',
   'timeout',
   'sseReadTimeout',

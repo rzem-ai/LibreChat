@@ -2,8 +2,37 @@ const fs = require('fs');
 const axios = require('axios');
 const FormData = require('form-data');
 const { logger } = require('@librechat/data-schemas');
-const { FileSources } = require('librechat-data-provider');
+const { FileSources, EModelEndpoint } = require('librechat-data-provider');
 const { logAxiosError, generateShortLivedToken } = require('@librechat/api');
+const { getAgent } = require('~/models');
+
+function resolveRegionFromEndpoint(endpoint, endpoints) {
+  const customEndpoint = endpoints?.custom?.find((config) => config.name === endpoint);
+  const endpointConfig = {
+    ...(endpoints?.[endpoint] ?? customEndpoint ?? {}),
+    ...(endpoints?.all ?? {}),
+  };
+  return endpointConfig?.regional === true ? 'regional' : 'global';
+}
+
+async function getEmbeddingRegion(req) {
+  const endpoint = req.body?.endpoint;
+  const endpoints = req.config?.endpoints;
+
+  if (endpoint === EModelEndpoint.agents) {
+    const agentId = req.body?.agent_id;
+    if (!agentId) {
+      throw new Error('File upload is not supported: no agent_id in request body.');
+    }
+    const agent = await getAgent({ id: agentId });
+    if (!agent?.provider) {
+      throw new Error('File upload is not supported: the agent has no configured provider.');
+    }
+    return resolveRegionFromEndpoint(agent.provider, endpoints);
+  }
+
+  return resolveRegionFromEndpoint(endpoint, endpoints);
+}
 
 /**
  * Deletes a file from the vector database. This function takes a file object, constructs the full path, and
@@ -71,9 +100,11 @@ async function uploadVectors({ req, file, file_id, entity_id, storageMetadata })
 
   try {
     const jwtToken = generateShortLivedToken(req.user.id);
+    const embeddingRegion = await getEmbeddingRegion(req);
     const formData = new FormData();
     formData.append('file_id', file_id);
     formData.append('file', fs.createReadStream(file.path));
+    formData.append('embedding_region', embeddingRegion);
     if (entity_id != null && entity_id) {
       formData.append('entity_id', entity_id);
     }

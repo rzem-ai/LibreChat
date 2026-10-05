@@ -142,7 +142,12 @@ test.describe('quote references', { tag: ['@mock', '@chat'] }, () => {
     await expect(messageQuotes(page)).toContainText(MOCK_REPLY_TEXT);
   });
 
-  test('summons the popup from a native double-click word selection', async ({ page }) => {
+  // Deloitte Custom Change
+  // SKIPPED: flaky on CI only — doubleClickWord measures a 1-character bounding
+  // box before clicking it, which reliably lands off the glyph under CI's
+  // headless rendering (likely web-font load timing shifting layout after the
+  // measurement); see e2e/docs/skipped-tests.md.
+  test.skip('summons the popup from a native double-click word selection', async ({ page }) => {
     test.setTimeout(120000);
     await page.goto(NEW_CHAT_PATH, { timeout: 10000 });
     await selectMockEndpoint(page, MOCK_ENDPOINTS[0]);

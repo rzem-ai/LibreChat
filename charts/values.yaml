@@ -85,6 +85,11 @@ pods:
           MODEL_PRICING_REFERENCE_MODEL_ID: 'gpt-56-luna'
           RAG_API_URL: 'http://127.0.0.1:8000'
           RAG_USE_FULL_CONTEXT: 'false'
+          # Deloitte Custom Change: bounds memory use for the trusted-tool attachment
+          # upload feature. Max bytes read into memory + base64-encoded for a trusted
+          # MCP attachment upload tool (e.g. SharePoint's sp_upload_file). Default
+          # matches the app's own built-in default (7 MiB) — override per-environment as needed.
+          MCP_ATTACHMENT_UPLOAD_MAX_BYTES: '7340032'
           USE_ENTRA_ID_FOR_PEOPLE_SEARCH: 'true'
           ENTRA_ID_INCLUDE_OWNERS_AS_MEMBERS: 'true'
           # OpenTelemetry Tracing

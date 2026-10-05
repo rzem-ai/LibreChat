@@ -7,6 +7,35 @@ import {
 } from '../src/mcp';
 
 describe('MCPOptionsSchema', () => {
+  // Deloitte Custom Change: attachment-byte access is admin configured and not user configurable.
+  describe('attachment upload tools', () => {
+    it('accepts an admin-configured attachment upload allowlist', () => {
+      const result = MCPOptionsSchema.safeParse({
+        type: 'streamable-http',
+        url: 'https://mcp-server.com/http',
+        attachmentUploadTools: ['upload_file'],
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.attachmentUploadTools).toEqual(['upload_file']);
+      }
+    });
+
+    it('strips attachment uploads from user-managed MCP server configuration', () => {
+      const result = MCPServerUserInputSchema.safeParse({
+        type: 'streamable-http',
+        url: 'https://mcp-server.com/http',
+        attachmentUploadTools: ['upload_file'],
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.attachmentUploadTools).toBeUndefined();
+      }
+    });
+  });
+
   describe('OBO transport support', () => {
     it('should accept obo on SSE transport', () => {
       const result = MCPOptionsSchema.safeParse({

@@ -10,8 +10,11 @@ async function _get<T>(url: string, options?: AxiosRequestConfig): Promise<T> {
   return response.data;
 }
 
-async function _getResponse<T = AxiosResponse>(url: string, options?: AxiosRequestConfig): Promise<T> {
-  return (await axios.get(url, { ...options })) as T;
+async function _getResponse<T = unknown>(
+  url: string,
+  options?: AxiosRequestConfig,
+): Promise<AxiosResponse<T>> {
+  return axios.get<T>(url, { ...options });
 }
 
 async function _post(url: string, data?: any) {

@@ -312,7 +312,9 @@ test.describe('core chat loop', { tag: ['@mock', '@chat'] }, () => {
     await expect(page.getByText('1 / 2')).toBeVisible();
   });
 
-  test('keeps upload-to-provider CSV attached to the sent message and model input', async ({
+  // Deloitte Custom Change
+  // SKIPPED: interface.providerUpload is not enabled in the e2e config; see e2e/docs/skipped-tests.md.
+  test.skip('keeps upload-to-provider CSV attached to the sent message and model input', async ({
     page,
   }) => {
     test.setTimeout(90000);
@@ -356,7 +358,9 @@ test.describe('core chat loop', { tag: ['@mock', '@chat'] }, () => {
     await expect(fileChip).toBeVisible();
   });
 
-  test('supports attaching, removing, and sending provider files from the composer', async ({
+  // Deloitte Custom Change
+  // SKIPPED: interface.providerUpload is not enabled in the e2e config; see e2e/docs/skipped-tests.md.
+  test.skip('supports attaching, removing, and sending provider files from the composer', async ({
     page,
   }) => {
     test.setTimeout(90000);
