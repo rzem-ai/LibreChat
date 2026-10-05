@@ -268,6 +268,83 @@ function validateGatewayCodeFile({ req, mimeType, size }) {
   }
 }
 
+/**
+ * Deloitte Custom Change: derives a display-only type label from a sanitized filename.
+ *
+ * @param {unknown} filename - Sanitized Code Interpreter attachment filename.
+ * @returns {string} Uppercase extension label, or a generic file label.
+ */
+function getCodeFileTypeLabel(filename) {
+  const extension =
+    typeof filename === 'string' ? filename.match(/\.([a-z0-9]+)$/i)?.[1] : undefined;
+  return extension ? `${extension.toUpperCase()} file` : 'file';
+}
+
+/**
+ * Deloitte Custom Change: returns the approved agent-facing timeout guidance.
+ *
+ * @param {string} fileType - Display-only file type label.
+ * @returns {string} Safe attachment timeout guidance.
+ */
+function getUploadTimeoutMessage(fileType) {
+  if (fileType === 'XLSX file') {
+    return "The XLSX file is too large to upload right now - please try a file under 1MB. We're actively working to increase this limit.";
+  }
+  return "The file upload timed out. Please try again with a smaller file (under 1MB). We're actively working to increase the size limit.";
+}
+
+function formatFileSizeLimit(maxFileSizeBytes) {
+  const megabyte = 1024 * 1024;
+  if (maxFileSizeBytes % megabyte === 0) {
+    return `${maxFileSizeBytes / megabyte} MB`;
+  }
+  return `${maxFileSizeBytes} bytes`;
+}
+
+/**
+ * Deloitte Custom Change: maps trusted upload failures to agent-safe guidance
+ * without exposing signed URLs, response bodies, or infrastructure details.
+ *
+ * @param {unknown} error - Code Interpreter attachment error.
+ * @param {string} filename - Sanitized attachment filename.
+ * @returns {string} Agent-visible attachment failure reason.
+ */
+function getCodeFileAttachmentFailureReason(error, filename) {
+  const fileType = getCodeFileTypeLabel(filename);
+  const codeRuntimeFailure = error?.codeRuntimeUploadFailure;
+  if (
+    codeRuntimeFailure?.code === 'upload_timeout' &&
+    Number.isSafeInteger(codeRuntimeFailure.timeoutSeconds)
+  ) {
+    return getUploadTimeoutMessage(fileType);
+  }
+  if (
+    codeRuntimeFailure?.code === 'upload_size_limit' &&
+    Number.isSafeInteger(codeRuntimeFailure.maxFileSizeBytes)
+  ) {
+    const limit = formatFileSizeLimit(codeRuntimeFailure.maxFileSizeBytes);
+    return `The ${fileType} is too large to attach to Code Interpreter. Please use a smaller ${fileType} (under ${limit}).`;
+  }
+
+  const message = typeof error?.message === 'string' ? error.message : '';
+  const status = message.match(/\bstatus(?: code)?\s+(\d{3})\b/i)?.[1];
+
+  if (error?.codeRuntimeUploadError === true && status === '504') {
+    return getUploadTimeoutMessage(fileType);
+  }
+  if (message.includes('exceeds the configured Agents file size limit')) {
+    return 'The file exceeds the configured size limit for Code Interpreter.';
+  }
+  if (message.includes('Unsupported codeFile MIME type')) {
+    return 'The file type is not supported by Code Interpreter.';
+  }
+  if (message.includes('file uploads are disabled')) {
+    return 'Code Interpreter file uploads are disabled for this agent.';
+  }
+
+  return 'The file transfer to Code Interpreter failed.';
+}
+
 async function userCanUseMCPServers(user, req) {
   if (!user?.id || !user?.role) {
     return false;
@@ -1371,12 +1448,17 @@ function createToolInstance({
       // Deloitte Custom Change: register MCP download resources with Code Interpreter.
       if (artifacts?.codeFile && isAssistantsEndpoint(provider)) {
         if (Array.isArray(result) && !result[0]) {
-          result[0] = `File "${sanitizeFilename(artifacts.codeFile.name)}" could not be attached to this conversation for use in Code Interpreter.`;
+          const sanitizedFilename = sanitizeFilename(artifacts.codeFile.name);
+          const failureReason = getUploadTimeoutMessage(getCodeFileTypeLabel(sanitizedFilename));
+          result[0] = `File "${sanitizedFilename}" could not be attached to this conversation for use in Code Interpreter. ${failureReason}`;
         }
       } else if (artifacts?.codeFile) {
         const { name, url, mimeType, gatewayDownload, size, expiresAt } = artifacts.codeFile;
         // Deloitte Custom Change: gateway filenames are untrusted and must never reach model context or logs unsanitized.
         const sanitizedFilename = sanitizeFilename(name);
+        const attachmentRetryMessage = getUploadTimeoutMessage(
+          getCodeFileTypeLabel(sanitizedFilename),
+        );
         delete artifacts?.codeFile;
         const req = res?.req;
         /* `checkCapability` hits the DB/role-permissions layer, so a transient
@@ -1391,6 +1473,7 @@ function createToolInstance({
          * a substitute message, the model sees a completely empty tool
          * result with no indication the download happened (or failed). */
         let codeFileRegistrationFailed = false;
+        let codeFileFailureReason;
         if (req) {
           try {
             hasExecuteCodeCapability = await checkCapability(req, AgentCapabilities.execute_code);
@@ -1404,14 +1487,17 @@ function createToolInstance({
         }
         if (!req) {
           codeFileRegistrationFailed = true;
+          codeFileFailureReason = attachmentRetryMessage;
           logger.warn(
             `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": no request context available to register it with Code Interpreter.`,
           );
         } else if (capabilityCheckFailed) {
           codeFileRegistrationFailed = true;
+          codeFileFailureReason = attachmentRetryMessage;
           // Already logged above.
         } else if (!hasExecuteCodeCapability) {
           codeFileRegistrationFailed = true;
+          codeFileFailureReason = attachmentRetryMessage;
           logger.warn(
             `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": Code Interpreter is not enabled for this endpoint.`,
           );
@@ -1422,6 +1508,7 @@ function createToolInstance({
            * in which case it has no Code Interpreter session to use this file
            * from. */
           codeFileRegistrationFailed = true;
+          codeFileFailureReason = attachmentRetryMessage;
           logger.warn(
             `[MCP][${serverName}][${toolName}][User: ${userId}] Dropped codeFile artifact "${sanitizedFilename}": this agent does not have Code Interpreter (execute_code) available.`,
           );
@@ -1486,6 +1573,11 @@ function createToolInstance({
              *  transient network blip, a disallowed/redirected URL, or an
              *  expired short-lived download URL. */
             codeFileRegistrationFailed = true;
+            // Deloitte Custom Change: retain a safe reason for marker-only MCP responses.
+            codeFileFailureReason = getCodeFileAttachmentFailureReason(
+              codeFileError,
+              sanitizedFilename,
+            );
             logger.warn(
               `[MCP][${serverName}][${toolName}][User: ${userId}] Failed to register codeFile artifact "${sanitizedFilename}" with Code Interpreter:`,
               /** Axios attaches the raw (signed) request URL to `error.config`/
@@ -1506,16 +1598,14 @@ function createToolInstance({
             }
           }
         }
-        /* Marker-only tool responses (`result[0] === ''`) rely entirely on the
-         * codeFile artifact to tell the model anything happened. Losing that
-         * artifact above without a substitute leaves the model with no signal
-         * at all, so fall back to a plain, non-secret status line instead.
-         * This also fires when `fetchAllowedCodeFileStream`/`uploadCodeEnvFile`
-         * themselves failed (disallowed/expired URL, network error), so the
-         * wording must stay neutral about whether the download itself
-         * succeeded. */
-        if (codeFileRegistrationFailed && Array.isArray(result) && !result[0]) {
-          result[0] = `File "${sanitizedFilename}" could not be attached to this conversation for use in Code Interpreter.`;
+        /* Preserve the tool result while always making failed attachment
+         * registration visible to the model. This can happen after a successful
+         * download, so the status wording stays neutral about download success. */
+        if (codeFileRegistrationFailed && Array.isArray(result)) {
+          // Deloitte Custom Change: preserve the agent signal when attachment registration fails.
+          const failureReason = codeFileFailureReason ? ` ${codeFileFailureReason}` : '';
+          const attachmentStatus = `File "${sanitizedFilename}" could not be attached to this conversation for use in Code Interpreter.${failureReason}`;
+          result[0] = result[0] ? `${result[0]}\n${attachmentStatus}` : attachmentStatus;
         }
       }
 

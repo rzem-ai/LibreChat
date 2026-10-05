@@ -2047,7 +2047,7 @@ describe('User parameter passing tests', () => {
       });
       mockCodeFileDownloadGet.mockResolvedValue({
         status: 200,
-        headers: { 'content-type': 'application/pdf' },
+        headers: { 'content-type': 'application/pdf', 'content-length': '5242880' },
         data: 'fake-stream',
       });
       mockUploadCodeEnvFile.mockResolvedValue({
@@ -2262,7 +2262,7 @@ describe('User parameter passing tests', () => {
       expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(result).toBe(
-        'File "report.pdf" could not be attached to this conversation for use in Code Interpreter.',
+        'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
       );
     });
 
@@ -2402,7 +2402,9 @@ describe('User parameter passing tests', () => {
           message: expect.stringContaining('requires an IP-literal or explicitly allowed host'),
         }),
       );
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+      );
     });
 
     it('should route a proxied codeFile download to a public IP-literal host under SSRF protection', async () => {
@@ -2532,7 +2534,9 @@ describe('User parameter passing tests', () => {
       expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Code Interpreter is not enabled'),
       );
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
+      );
       if (originalDownloadToolName === undefined) {
         delete process.env.SHAREPOINT_MCP_DOWNLOAD_TOOL;
       } else {
@@ -2596,7 +2600,9 @@ describe('User parameter passing tests', () => {
         expect.stringContaining('failed to check Code Interpreter capability'),
         expect.objectContaining({ message: 'transient config load failure' }),
       );
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
+      );
     });
 
     it('should substitute a status message when dropping a codeFile artifact leaves an empty marker-only tool result', async () => {
@@ -2652,7 +2658,7 @@ describe('User parameter passing tests', () => {
       expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(result).toBe(
-        'File "report.pdf" could not be attached to this conversation for use in Code Interpreter.',
+        'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
       );
     });
 
@@ -2713,7 +2719,9 @@ describe('User parameter passing tests', () => {
       expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('does not have Code Interpreter (execute_code) available'),
       );
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
+      );
     });
 
     it('should drop a codeFile artifact and warn when no request context is available', async () => {
@@ -2767,7 +2775,9 @@ describe('User parameter passing tests', () => {
       expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Dropped codeFile'));
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
+      );
     });
 
     // Deloitte Custom Change: gateway admission is centralized in validateGatewayCodeFile.
@@ -2856,9 +2866,113 @@ describe('User parameter passing tests', () => {
           }),
         );
         expect(result).toBe(
-          'File "report.pdf" could not be attached to this conversation for use in Code Interpreter.',
+          'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file exceeds the configured size limit for Code Interpreter.',
         );
       });
+
+      // Deloitte Custom Change: timeout feedback stays specific without exposing transport details.
+      it('explains a Code Interpreter upload gateway timeout without exposing upstream details', async () => {
+        const user = { id: 'gateway-timeout-user', role: 'USER' };
+        const req = requestWithAgentFileConfig(user, {});
+        mockCodeFileDownloadGet.mockResolvedValue({
+          status: 200,
+          headers: {
+            'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'content-length': '42',
+          },
+          data: gatewayStream(42),
+        });
+        const error = new Error(
+          'Error uploading code environment file: Request failed with status code 504',
+        );
+        error.codeRuntimeUploadError = true;
+        mockUploadCodeEnvFile.mockRejectedValue(error);
+
+        const result = await invokeWithArtifact({
+          user,
+          req,
+          artifacts: gatewayArtifact({
+            name: 'report.xlsx',
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          }),
+        });
+
+        expect(result).toBe(
+          'File "report.xlsx" could not be attached to this conversation for use in Code Interpreter. The XLSX file is too large to upload right now - please try a file under 1MB. We\'re actively working to increase this limit.',
+        );
+      });
+
+      it('keeps a source-download 504 generic', async () => {
+        const user = { id: 'gateway-download-timeout-user', role: 'USER' };
+        const req = requestWithAgentFileConfig(user, {});
+        mockCodeFileDownloadGet.mockRejectedValue(
+          new Error('Code file download failed with status code 504'),
+        );
+
+        const result = await invokeWithArtifact({
+          user,
+          req,
+          artifacts: gatewayArtifact({
+            name: 'report.xlsx',
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          }),
+        });
+
+        expect(result).toBe(
+          'File "report.xlsx" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+        );
+      });
+
+      it('uses allowlisted Code Runtime timeout details in the attachment explanation', async () => {
+        const user = { id: 'gateway-code-runtime-timeout-user', role: 'USER' };
+        const req = requestWithAgentFileConfig(user, {});
+        mockCodeFileDownloadGet.mockResolvedValue({
+          status: 200,
+          headers: { 'content-type': 'application/pdf', 'content-length': '42' },
+          data: gatewayStream(42),
+        });
+        const error = new Error(
+          'Error uploading code environment file: Request failed with status code 504',
+        );
+        error.codeRuntimeUploadFailure = { code: 'upload_timeout', timeoutSeconds: 60 };
+        mockUploadCodeEnvFile.mockRejectedValue(error);
+
+        const result = await invokeWithArtifact({ user, req, artifacts: gatewayArtifact() });
+
+        expect(result).toBe(
+          'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
+        );
+      });
+
+      it.each([
+        [100 * 1024 * 1024, '100 MB'],
+        [4096, '4096 bytes'],
+      ])(
+        'names the file type and exact configured limit for Code Runtime size rejections',
+        async (maxFileSizeBytes, limit) => {
+          const user = { id: 'gateway-code-runtime-size-user', role: 'USER' };
+          const req = requestWithAgentFileConfig(user, {});
+          mockCodeFileDownloadGet.mockResolvedValue({
+            status: 200,
+            headers: { 'content-type': 'application/pdf', 'content-length': '42' },
+            data: gatewayStream(42),
+          });
+          const error = new Error(
+            'Error uploading code environment file: Request failed with status code 413',
+          );
+          error.codeRuntimeUploadFailure = {
+            code: 'upload_size_limit',
+            maxFileSizeBytes,
+          };
+          mockUploadCodeEnvFile.mockRejectedValue(error);
+
+          const result = await invokeWithArtifact({ user, req, artifacts: gatewayArtifact() });
+
+          expect(result).toBe(
+            `File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The PDF file is too large to attach to Code Interpreter. Please use a smaller PDF file (under ${limit}).`,
+          );
+        },
+      );
 
       it('rejects a gateway artifact whose declared MIME type is not permitted', async () => {
         const user = { id: 'gateway-mime-user', role: 'USER' };
@@ -3046,7 +3160,9 @@ describe('User parameter passing tests', () => {
         expect.stringContaining('Failed to register codeFile artifact'),
         expect.objectContaining({ message: expect.stringContaining('domain is not allowed') }),
       );
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+      );
     });
 
     it('should not follow a redirect to a disallowed domain when downloading a codeFile', async () => {
@@ -3115,7 +3231,9 @@ describe('User parameter passing tests', () => {
           message: expect.stringContaining('redirect target is private or reserved'),
         }),
       );
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+      );
     });
 
     it('should not follow a redirect to a private/reserved target even when the download allowlist matches it', async () => {
@@ -3185,7 +3303,9 @@ describe('User parameter passing tests', () => {
           message: expect.stringContaining('redirect target is private or reserved'),
         }),
       );
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+      );
     });
 
     it('should shrink the download timeout budget across redirect hops instead of resetting it', async () => {
@@ -3340,7 +3460,9 @@ describe('User parameter passing tests', () => {
           message: expect.stringContaining('timed out following redirects'),
         }),
       );
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+      );
 
       Date.now.mockRestore();
     });
@@ -3400,7 +3522,9 @@ describe('User parameter passing tests', () => {
         expect.stringContaining('Failed to register codeFile artifact'),
         expect.objectContaining({ message: 'download URL expired' }),
       );
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+      );
     });
 
     it('should not upload a codeFile artifact for the Assistants endpoint', async () => {
@@ -3508,7 +3632,7 @@ describe('User parameter passing tests', () => {
       expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(result).toBe(
-        'File "report.pdf" could not be attached to this conversation for use in Code Interpreter.',
+        'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
       );
     });
 
