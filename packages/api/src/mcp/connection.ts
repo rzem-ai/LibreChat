@@ -126,7 +126,7 @@ const MAX_REDIRECTS = 5;
 const DEFAULT_MCP_STREAMABLE_HTTP_MAX_RESPONSE_BYTES = 16 * 1024 * 1024;
 const DEFAULT_MCP_STREAMABLE_HTTP_MAX_LINE_BYTES = 5 * 1024 * 1024;
 
-function getNonNegativeIntegerEnv(name: string, defaultValue: number): number {
+export function getNonNegativeIntegerEnv(name: string, defaultValue: number): number {
   const raw = process.env[name];
   if (raw == null || raw.trim() === '') {
     return defaultValue;

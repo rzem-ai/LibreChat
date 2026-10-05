@@ -1,6 +1,15 @@
 import type { Readable } from 'node:stream';
+import { getNonNegativeIntegerEnv } from './connection';
 
-const MAX_ATTACHMENT_UPLOAD_BYTES = 7 * 1024 * 1024;
+const DEFAULT_ATTACHMENT_UPLOAD_MAX_BYTES = 7 * 1024 * 1024; //7MB, set as base, in case env variable is not set.
+
+/** Override via `MCP_ATTACHMENT_UPLOAD_MAX_BYTES`; read per-call so tests/ops changes apply immediately. */
+function getAttachmentUploadMaxBytes(): number {
+  return getNonNegativeIntegerEnv(
+    'MCP_ATTACHMENT_UPLOAD_MAX_BYTES',
+    DEFAULT_ATTACHMENT_UPLOAD_MAX_BYTES,
+  );
+}
 
 type Attachment = {
   file_id?: string;
@@ -46,6 +55,7 @@ export function getAttachmentSourceField(
 
 /** Reads an authorized stream while retaining only base64 output in memory. */
 export async function readStreamAsBase64(stream: Readable, signal?: AbortSignal): Promise<string> {
+  const maxBytes = getAttachmentUploadMaxBytes();
   const encodedChunks: string[] = [];
   let remainder = Buffer.alloc(0);
   let size = 0;
@@ -63,10 +73,8 @@ export async function readStreamAsBase64(stream: Readable, signal?: AbortSignal)
       }
       const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
       size += bytes.length;
-      if (size > MAX_ATTACHMENT_UPLOAD_BYTES) {
-        throw new Error(
-          `Attachment exceeds the ${MAX_ATTACHMENT_UPLOAD_BYTES / (1024 * 1024)}MB upload limit`,
-        );
+      if (size > maxBytes) {
+        throw new Error(`Attachment exceeds the ${maxBytes / (1024 * 1024)}MB upload limit`);
       }
       const data = remainder.length > 0 ? Buffer.concat([remainder, bytes]) : bytes;
       const completeLength = data.length - (data.length % 3);
@@ -207,13 +215,10 @@ export function rewriteAttachmentUploadSchema<TSchema extends AttachmentUploadSc
       required: [...required, 'sourceFile'],
     };
   }
-  return {
-    ...uploadSchema,
-    allOf: [
-      ...(uploadSchema.allOf ?? []),
-      { oneOf: [{ required: ['sourceFileId'] }, { required: ['sourceFileName'] }] },
-    ],
-  };
+  // Deloitte Custom Change: OpenAI-style strict function schemas reject
+  // oneOf/anyOf/allOf at the schema root, so "exactly one of sourceFileId or
+  // sourceFileName" is enforced at runtime (resolveAttachmentUpload) instead.
+  return uploadSchema;
 }
 
 export function addAttachmentUploadHints(

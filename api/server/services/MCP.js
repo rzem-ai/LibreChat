@@ -113,10 +113,33 @@ async function getConversationFiles(requestBody, user) {
     'messageId parentMessageId files attachments',
   );
   const { fileIds } = getThreadData(messages ?? [], requestBody.parentMessageId);
-  return db.getCodeGeneratedFiles(requestBody.conversationId, fileIds, {
-    userId: user.id,
-    tenantId: getTenantId(),
-  });
+  const threadFiles =
+    (await db.getCodeGeneratedFiles(requestBody.conversationId, fileIds, {
+      userId: user.id,
+      tenantId: getTenantId(),
+    })) ?? [];
+  // Deloitte Custom Change: a file generated earlier in THIS still-in-progress
+  // turn has no saved message yet, so `getThreadData` above can't see it via
+  // the thread's persisted `files`/`attachments`. Match it directly by the
+  // in-flight response message id so "generate, then upload" works in one turn.
+  if (!requestBody.messageId) {
+    return threadFiles;
+  }
+  const currentTurnFiles =
+    (await db.getFiles(
+      {
+        conversationId: requestBody.conversationId,
+        user: user.id,
+        tenantId: getTenantId(),
+        context: 'execute_code',
+        messageId: requestBody.messageId,
+        'metadata.codeEnvRef': { $exists: true },
+      },
+      null,
+      { text: 0 },
+    )) ?? [];
+  const seenFileIds = new Set(threadFiles.map((file) => file.file_id));
+  return [...threadFiles, ...currentTurnFiles.filter((file) => !seenFileIds.has(file.file_id))];
 }
 
 /**

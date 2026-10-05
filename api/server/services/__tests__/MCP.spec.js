@@ -519,9 +519,9 @@ describe('createMCPTool', () => {
     expect(toolInstance.mcpJsonSchema.properties.content).toBeUndefined();
     expect(toolInstance.mcpJsonSchema.properties.sourceFileName).toBeDefined();
     expect(toolInstance.mcpJsonSchema.oneOf).toEqual([{ required: ['fileName'] }]);
-    expect(toolInstance.mcpJsonSchema.allOf).toContainEqual({
-      oneOf: [{ required: ['sourceFileId'] }, { required: ['sourceFileName'] }],
-    });
+    // Strict function-calling providers (e.g. OpenAI) reject oneOf/anyOf/allOf
+    // at the schema root, so the upload tools must not add one here.
+    expect(toolInstance.mcpJsonSchema.allOf).toBeUndefined();
     expect(toolInstance.description).toContain('Upload a file');
   });
 
@@ -667,6 +667,65 @@ describe('resolveAttachmentUpload', () => {
       { kind: 'skill', id: 'skill-1', version: 2 },
       expect.any(Object),
     );
+  });
+
+  it('resolves a file generated earlier in the same still-in-progress turn', async () => {
+    const { Readable } = require('stream');
+    const getCodeStream = jest.fn().mockResolvedValue({
+      data: Readable.from([Buffer.from('pptx bytes')]),
+    });
+    mockGetStrategyFunctions.mockImplementation((source) =>
+      source === 'execute_code' ? { getDownloadStream: getCodeStream } : {},
+    );
+    // No saved message references this file yet, so the thread-scoped lookup is empty.
+    getMessages.mockResolvedValue([]);
+    getCodeGeneratedFiles.mockResolvedValue([]);
+    // The file record itself already exists, tagged with the in-flight response message id.
+    getFiles.mockResolvedValue([
+      {
+        file_id: 'file-2',
+        filename: 'retail-outlook.pptx',
+        source: 'azure_blob',
+        filepath: '/uploads/file-2',
+        context: 'execute_code',
+        messageId: 'response-1',
+        metadata: {
+          codeEnvRef: {
+            storage_session_id: 'storage-session-2',
+            file_id: 'code-file-2',
+            kind: 'skill',
+            id: 'skill-2',
+            version: 1,
+          },
+        },
+      },
+    ]);
+
+    const result = await resolveAttachmentUpload({
+      toolArguments: { sourceFileName: 'retail-outlook.pptx' },
+      requestBody: {
+        conversationId: 'conversation-1',
+        parentMessageId: 'parent-1',
+        messageId: 'response-1',
+      },
+      req: {},
+      user: { id: 'user-1' },
+    });
+
+    expect(getFiles).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: 'conversation-1',
+        user: 'user-1',
+        context: 'execute_code',
+        messageId: 'response-1',
+      }),
+      null,
+      { text: 0 },
+    );
+    expect(result).toEqual({
+      content: Buffer.from('pptx bytes').toString('base64'),
+      encoding: 'base64',
+    });
   });
 
   it('rejects a missing source reference', async () => {

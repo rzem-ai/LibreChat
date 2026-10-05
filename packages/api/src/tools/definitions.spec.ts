@@ -70,9 +70,9 @@ describe('definitions.ts', () => {
       expect(definition?.parameters?.properties).toHaveProperty('sourceFileName');
       expect(definition?.parameters?.required).toEqual(['driveId']);
       expect(definition?.parameters?.oneOf).toEqual([{ required: ['driveId'] }]);
-      expect(definition?.parameters?.allOf).toContainEqual({
-        oneOf: [{ required: ['sourceFileId'] }, { required: ['sourceFileName'] }],
-      });
+      // Strict function-calling providers (e.g. OpenAI) reject oneOf/anyOf/allOf
+      // at the schema root, so the upload tools must not add one here.
+      expect(definition?.parameters?.allOf).toBeUndefined();
     });
 
     it('should return empty result for empty tools array', async () => {
