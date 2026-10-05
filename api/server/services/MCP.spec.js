@@ -2536,7 +2536,7 @@ describe('User parameter passing tests', () => {
         expect.stringContaining('Code Interpreter is not enabled'),
       );
       expect(result).toBe(
-        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter.',
       );
       if (originalDownloadToolName === undefined) {
         delete process.env.SHAREPOINT_MCP_DOWNLOAD_TOOL;
@@ -2602,7 +2602,7 @@ describe('User parameter passing tests', () => {
         expect.objectContaining({ message: 'transient config load failure' }),
       );
       expect(result).toBe(
-        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter.',
       );
     });
 
@@ -2721,7 +2721,7 @@ describe('User parameter passing tests', () => {
         expect.stringContaining('does not have Code Interpreter (execute_code) available'),
       );
       expect(result).toBe(
-        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter.',
       );
     });
 
@@ -2776,7 +2776,9 @@ describe('User parameter passing tests', () => {
       expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Dropped codeFile'));
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter.',
+      );
     });
 
     // Deloitte Custom Change: gateway admission is centralized in validateGatewayCodeFile.
@@ -3153,7 +3155,9 @@ describe('User parameter passing tests', () => {
         expect.stringContaining('Failed to register codeFile artifact'),
         expect.objectContaining({ message: expect.stringContaining('domain is not allowed') }),
       );
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+      );
     });
 
     it('should not follow a redirect to a disallowed domain when downloading a codeFile', async () => {
@@ -3222,7 +3226,9 @@ describe('User parameter passing tests', () => {
           message: expect.stringContaining('redirect target is private or reserved'),
         }),
       );
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+      );
     });
 
     it('should not follow a redirect to a private/reserved target even when the download allowlist matches it', async () => {
@@ -3292,7 +3298,9 @@ describe('User parameter passing tests', () => {
           message: expect.stringContaining('redirect target is private or reserved'),
         }),
       );
-      expect(result).toBe('downloaded report.pdf');
+      expect(result).toBe(
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+      );
     });
 
     it('should shrink the download timeout budget across redirect hops instead of resetting it', async () => {
