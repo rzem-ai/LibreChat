@@ -9,7 +9,7 @@ llmGateway:
 # Not used until LIBRECHAT_CODE_BASEURL below is also switched to the
 # in-cluster URL.
 codeInterpreter:
-  namespace: 'code-interpreter-dev'
+  namespace: 'code-runtime-dev'
 
 serviceAccount:
   name: sa-librechat-dev
@@ -108,7 +108,7 @@ pods:
           # NOTE: switch to the direct in-cluster URL below (and set
           # codeInterpreter.namespace) to bypass the Cilium Ingress/Envoy
           # ~1MiB buffer limit on large file uploads:
-          LIBRECHAT_CODE_BASEURL: 'http://code-runtime-dev-code-interpreter-service.code-interpreter-dev.svc.cluster.local:3112/v1'
+          LIBRECHAT_CODE_BASEURL: 'http://code-runtime-dev-code-interpreter-service.code-runtime-dev.svc.cluster.local:3112/v1'
           # LIBRECHAT_CODE_BASEURL: 'https://code-runtime-dev.ctk.au.deloitte.com/v1'
           CODEAPI_AUTH_PROVIDER: 'librechat-jwt'
           CODEAPI_JWT_ALGORITHM: 'EdDSA'
