@@ -33,6 +33,7 @@ const {
   processAgentFileUpload,
 } = require('~/server/services/Files/process');
 const { fileAccess } = require('~/server/middleware/accessResources/fileAccess');
+const { ensureFilePreview } = require('~/server/services/Files/previewExtraction');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { getOpenAIClient } = require('~/server/controllers/assistants/helpers');
 const { hasCapability } = require('~/server/middleware/roles/capabilities');
@@ -431,6 +432,16 @@ router.get('/:file_id/preview', fileAccess, async (req, res) => {
      * is N pending polls + 1 ready, so this avoids ~N redundant text
      * reads per file. */
     let file = req.fileAccess.file;
+    /* Lazily render a preview for files the code-interpreter pipeline never
+     * touched (regular uploads, RAG knowledge-base sources) — a no-op for
+     * any record that already has a `status`/`text` set. Re-fetch so the
+     * rest of this handler sees the freshly-persisted fields. */
+    if (file.status == null && file.text == null) {
+      const persisted = await ensureFilePreview({ req, file });
+      if (persisted) {
+        file = (await db.findFileById(file_id)) ?? file;
+      }
+    }
     /* Lazy sweep: if stuck `pending` past the cutoff, mark `failed`
      * conditional on the observed `updatedAt` (concurrent legitimate
      * updates win). */

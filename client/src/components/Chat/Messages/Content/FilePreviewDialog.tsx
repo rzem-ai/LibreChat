@@ -2,10 +2,19 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import copy from 'copy-to-clipboard';
 import { useRecoilValue } from 'recoil';
 import { Download } from 'lucide-react';
+import type { SandpackPreviewRef } from '@codesandbox/sandpack-react/unstyled';
 import { OGDialog, OGDialogContent, OGDialogTitle, OGDialogDescription } from '@librechat/client';
-import { useFileDownload, useSharedFileDownload } from '~/data-provider';
+import {
+  useFileDownload,
+  useFilePreview,
+  useGetStartupConfig,
+  useSharedFileDownload,
+  useGetSharedStartupConfig,
+} from '~/data-provider';
 import { logger, sortPagesByRelevance, triggerDownload } from '~/utils';
+import { ArtifactPreview } from '~/components/Artifacts/ArtifactPreview';
 import CopyButton from '~/components/Messages/Content/CopyButton';
+import { getProps } from '~/utils/artifacts';
 import { useShareContext } from '~/Providers';
 import { useLocalize } from '~/hooks';
 import store from '~/store';
@@ -28,12 +37,21 @@ function getFileExtension(filename: string): string {
   return dot > 0 ? filename.slice(dot + 1).toLowerCase() : '';
 }
 
-function canPreviewByMime(mime?: string): 'pdf' | 'text' | false {
+function canPreviewByMime(mime?: string): 'pdf' | 'text' | 'office' | false {
   if (!mime) {
     return false;
   }
   if (mime.includes('pdf')) {
     return 'pdf';
+  }
+  if (mime.includes('officedocument')) {
+    // PPTX rendering isn't enabled for this dialog yet — fall through to
+    // "Preview unavailable" like any other unsupported type. DOCX/XLSX
+    // (wordprocessingml/spreadsheetml) still get the office HTML preview.
+    if (mime.includes('presentationml')) {
+      return false;
+    }
+    return 'office';
   }
   if (
     mime.startsWith('text/') ||
@@ -155,11 +173,36 @@ export default function FilePreviewDialog({
   const loadingRef = useRef(false);
 
   const previewKind = canPreviewByMime(fileType) || canPreviewByExt(fileName);
+  const isOfficeKind = previewKind === 'office';
+
+  const previewRef = useRef<SandpackPreviewRef>();
+  const { data: startupConfig } = useGetStartupConfig({ enabled: isOfficeKind && !useShared });
+  const { data: sharedStartupConfig } = useGetSharedStartupConfig(shareId, {
+    enabled: isOfficeKind && useShared,
+  });
+  const resolvedStartupConfig = useShared ? sharedStartupConfig : startupConfig;
+  const officePreview = useFilePreview(
+    fileId,
+    { enabled: isOfficeKind },
+    useShared ? shareId : undefined,
+  );
+  const officeStatus = officePreview.data?.status;
+  const officeHtml =
+    officeStatus === 'ready' && officePreview.data?.textFormat === 'html'
+      ? officePreview.data.text
+      : undefined;
+  const officeLoading = isOfficeKind && (officeStatus == null || officeStatus === 'pending');
+  const officeUnavailable =
+    isOfficeKind &&
+    (officePreview.isError ||
+      officeStatus === 'failed' ||
+      (officeStatus === 'ready' && !officeHtml));
+  const officeSharedProps = useMemo(() => getProps('text/html'), []);
 
   const cancelledRef = useRef(false);
 
   const loadPreview = useCallback(async () => {
-    if (!fileId || !previewKind || loadingRef.current) {
+    if (!fileId || !previewKind || previewKind === 'office' || loadingRef.current) {
       return;
     }
     loadingRef.current = true;
@@ -294,18 +337,30 @@ export default function FilePreviewDialog({
         </div>
 
         <div className="relative min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-4">
-          {loading && (
+          {(loading || officeLoading) && (
             <div className="flex h-60 items-center justify-center rounded-lg bg-surface-secondary">
               <span className="shimmer text-sm text-text-secondary">
                 {localize('com_ui_loading')}
               </span>
             </div>
           )}
-          {previewError && (
+          {(previewError || officeUnavailable) && (
             <div className="flex h-32 items-center justify-center rounded-lg bg-surface-secondary">
               <span className="text-sm text-text-secondary">
                 {localize('com_ui_preview_unavailable')}
               </span>
+            </div>
+          )}
+          {officeHtml != null && (
+            <div className="h-[70vh] w-full overflow-hidden rounded-lg border border-border-light">
+              <ArtifactPreview
+                files={{ 'index.html': officeHtml }}
+                fileKey="index.html"
+                template="static"
+                previewRef={previewRef as React.MutableRefObject<SandpackPreviewRef>}
+                sharedProps={officeSharedProps}
+                startupConfig={resolvedStartupConfig}
+              />
             </div>
           )}
           {fileBlobUrl && (
