@@ -10,25 +10,26 @@ describe('getCourseSteps', () => {
   describe('getting-started-guide', () => {
     const steps = getCourseSteps('getting-started-guide');
 
-    it('starts with the merged welcome / new chat step', () => {
+    it('starts with separate welcome and new chat steps', () => {
       expect(steps[0]).toEqual({
         element: '#new-chat-button',
         title: 'Welcome to MyAssist',
         description:
-          "Welcome to the new and improved MyAssist! We've rebuilt from the ground up to give you access to more powerful AI tools, and this guided tour will get you comfortable navigating the chat interface and side panel.<br><br>This button starts a brand new conversation any time — your current chat is saved automatically, so nothing is lost.",
+          "Welcome to the new and improved MyAssist! We've rebuilt from the ground up to give you access to more powerful AI tools.<br><br>In this guided tour, we'll take you through the chat interface and side panel, so you are comfortable navigating through the platform.",
         side: 'right',
       });
-      expect(steps[1].title).toBe('Model');
+      expect(steps[1].title).toBe('New Chat');
+      expect(steps[2].title).toBe('Model');
     });
 
-    it('defines 16 steps, unconditionally including the agent-selection steps', () => {
-      expect(steps).toHaveLength(16);
-      expect(steps.slice(9, 12).map((step) => step.title)).toEqual([
+    it('defines 24 steps, unconditionally including the agent-selection steps', () => {
+      expect(steps).toHaveLength(24);
+      expect(steps.slice(13, 16).map((step) => step.title)).toEqual([
         'Agent Builder',
         'Agent Marketplace',
         'Switch Back to a Model',
       ]);
-      expect(steps[11]).toEqual({
+      expect(steps[15]).toEqual({
         id: 'switch-back-to-model',
         element: '#model-selector-button',
         title: 'Switch Back to a Model',
@@ -39,8 +40,8 @@ describe('getCourseSteps', () => {
     });
 
     it('tags the two agent-selection steps for conditional filtering', () => {
-      expect(steps[10].id).toBe('agent-marketplace');
-      expect(steps[11].id).toBe('switch-back-to-model');
+      expect(steps[14].id).toBe('agent-marketplace');
+      expect(steps[15].id).toBe('switch-back-to-model');
     });
 
     it('flags the Conversations step to expand the sidebar', () => {
@@ -51,10 +52,14 @@ describe('getCourseSteps', () => {
       ]);
     });
 
-    it('ends with Library & Connectors, Personalize & Manage, MyAssist Academy, Account Menu', () => {
-      expect(steps.slice(12).map((step) => step.title)).toEqual([
-        'Library & Connectors',
-        'Personalize & Manage',
+    it('ends with the individual library/connector/panel steps, MyAssist Academy, Account Menu', () => {
+      expect(steps.slice(16).map((step) => step.title)).toEqual([
+        'Skill Library',
+        'Prompt Library',
+        'Memories',
+        'Files',
+        'Parameters',
+        'Connectors',
         'MyAssist Academy',
         'Account Menu',
       ]);
