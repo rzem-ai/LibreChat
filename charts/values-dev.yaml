@@ -9,7 +9,7 @@ llmGateway:
 # Not used until LIBRECHAT_CODE_BASEURL below is also switched to the
 # in-cluster URL.
 codeInterpreter:
-  namespace: 'code-interpreter-dev'
+  namespace: 'code-runtime-dev'
 
 serviceAccount:
   name: sa-librechat-dev
