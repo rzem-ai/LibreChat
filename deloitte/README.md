@@ -183,19 +183,22 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 26. BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com
 27. `BASE_URL_AZURE_GLOBAL=https://us-openai-exp.ctk.au.deloitte.com/openai/v1`
 28. `BASE_URL_AZURE_FOUNDRY_AU=https://au-foundry-exp.ctk.au.deloitte.com/openai/v1`
-29. `BEDROCK_AWS_DEFAULT_REGION=ap-southeast-2`
-30. `BEDROCK_AWS_ACCESS_KEY_ID=unused`
-31. `BEDROCK_AWS_SECRET_ACCESS_KEY=unused`
-32. `BEDROCK_AWS_MODELS=au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0`
-33. `BEDROCK_REVERSE_PROXY=au-bedrock-exp.ctk.au.deloitte.com`
-34. `BEDROCK_GATEWAY_URL=http://gateway-proxy:8081`
-35. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
-36. `MCP_GATEWAY_URL=https://mcp-gw-dev.ctk.au.deloitte.com/mcp`
-37. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims,sharepoint`
-38. `MCP_GATEWAY_OBO_SCOPE=api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user`
-39. `MODEL_PRICING_REFERENCE_MODEL_ID=gpt-56-luna`
-40. `MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT=0.1`
-41. `MODEL_PRICING_MIN_MULTIPLIER=0.1`
+29. `AZURE_OPENAI_GLOBAL_HOST=https://us-openai-exp.ctk.au.deloitte.com/openai/v1`
+30. `RAG_OPENAI_REGIONAL_BASEURL=http://gateway-proxy:8081/azure-au`
+31. `RAG_OPENAI_GLOBAL_BASEURL=http://gateway-proxy:8081/azure-global`
+32. `BEDROCK_AWS_DEFAULT_REGION=ap-southeast-2`
+33. `BEDROCK_AWS_ACCESS_KEY_ID=unused`
+34. `BEDROCK_AWS_SECRET_ACCESS_KEY=unused`
+35. `BEDROCK_AWS_MODELS=au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0`
+36. `BEDROCK_REVERSE_PROXY=au-bedrock-exp.ctk.au.deloitte.com`
+37. `BEDROCK_GATEWAY_URL=http://gateway-proxy:8081`
+38. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
+39. `MCP_GATEWAY_URL=https://mcp-gw-dev.ctk.au.deloitte.com/mcp`
+40. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims,sharepoint`
+41. `MCP_GATEWAY_OBO_SCOPE=api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user`
+42. `MODEL_PRICING_REFERENCE_MODEL_ID=gpt-56-luna`
+43. `MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT=0.1`
+44. `MODEL_PRICING_MIN_MULTIPLIER=0.1`
 > The **ClearTrack MCP Gateway** connection (`mcpServers` block in `librechat.yaml` at repo root and `charts/config/librechat.yaml` for Helm) uses On-Behalf-Of (OBO) auth, not a dedicated OAuth client — it reuses `OPENID_CLIENT_ID`/`OPENID_CLIENT_SECRET` from item 8–9 to exchange the user's login token for one scoped to the gateway. There are no gateway-specific client credentials to set; the only requirement is that `OPENID_SCOPE` (item 12) includes the gateway's audience scope.
 
 ### Code API / Code Interpreter .env vars

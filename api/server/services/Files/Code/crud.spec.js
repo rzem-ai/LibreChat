@@ -33,8 +33,11 @@ jest.mock('@librechat/api', () => {
   const http = require('http');
   const https = require('https');
   return {
-    appendCodeEnvFile: jest.fn((form, stream, filename) => {
-      form.append('file', stream, { filename });
+    appendCodeEnvFile: jest.fn((form, stream, filename, contentLength) => {
+      form.append('file', stream, {
+        filename,
+        ...(contentLength !== undefined ? { knownLength: contentLength } : {}),
+      });
     }),
     appendCodeEnvFileIdentity: jest.fn((form, identity) => {
       validateIdentity(identity, 'appendCodeEnvFileIdentity');
@@ -417,6 +420,39 @@ describe('Code CRUD', () => {
 
       const callConfig = mockAxios.post.mock.calls[0][2];
       expect(callConfig.timeout).toBe(120000);
+    });
+
+    // Deloitte Custom Change: only trusted structured errors reach MCP feedback.
+    it('preserves allowlisted Code Runtime timeout details for MCP feedback', async () => {
+      mockAxios.post.mockRejectedValue(
+        Object.assign(new Error('Request failed with status code 504'), {
+          response: {
+            status: 504,
+            data: { code: 'upload_timeout', timeout_seconds: 60 },
+          },
+        }),
+      );
+
+      await expect(uploadCodeEnvFile(baseUploadParams)).rejects.toMatchObject({
+        codeRuntimeUploadError: true,
+        codeRuntimeUploadFailure: { code: 'upload_timeout', timeoutSeconds: 60 },
+      });
+    });
+
+    it('does not mark local upload failures as Code Runtime upload errors', async () => {
+      mockAxios.post.mockResolvedValue({
+        data: { message: 'quota_exceeded', storage_session_id: 's', files: [] },
+      });
+
+      let uploadError;
+      try {
+        await uploadCodeEnvFile(baseUploadParams);
+      } catch (error) {
+        uploadError = error;
+      }
+
+      expect(uploadError).toBeDefined();
+      expect(uploadError.codeRuntimeUploadError).toBeUndefined();
     });
 
     it('should return { storage_session_id, file_id } on success', async () => {

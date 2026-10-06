@@ -684,6 +684,8 @@ export const baseEndpointSchema = z.object({
    * this long per provider chunk (default 1ms), with no adaptive smoothing.
    */
   streamRate: z.number().min(0).optional(),
+  /** Whether endpoint data must be processed through the regional RAG embedding deployment. */
+  regional: z.boolean().optional(),
   baseURL: z.string().optional(),
   /**
    * Custom request headers forwarded to the provider on every request. Values
@@ -1864,6 +1866,7 @@ export const azureEndpointSchema = z
         reasoningLabelUpdateChars: true,
         reasoningLabelUpdateIntervalMs: true,
         reasoningLabelMaxPerRun: true,
+        regional: true,
       })
       .partial(),
   );

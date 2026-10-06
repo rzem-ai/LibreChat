@@ -47,6 +47,8 @@ export * from './mcp/utils';
 // Deloitte Custom Change: expose the MCP Code Interpreter download bridge.
 export * from './mcp/codeFile';
 export * from './mcp/domainValidation';
+// Deloitte Custom Change: expose trusted-tool attachment upload helpers.
+export * from './mcp/attachmentUpload';
 export * from './mcp/context';
 export * from './utils';
 export { default as Tokenizer, countTokens } from './utils/tokenizer';

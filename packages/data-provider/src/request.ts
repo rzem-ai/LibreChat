@@ -10,16 +10,11 @@ async function _get<T>(url: string, options?: AxiosRequestConfig): Promise<T> {
   return response.data;
 }
 
-/**
- * Deloitte Custom Change: returns `Promise<T>` directly (not `Promise<AxiosResponse<T>>`)
- * so callers can pass the full `AxiosResponse<Blob>` shape as `T` and read `.data` off the
- * result — relied on by `useAuthenticatedBlobUrl` and `useAuthenticatedImageSrc`.
- */
-async function _getResponse<T = AxiosResponse>(
+async function _getResponse<T = unknown>(
   url: string,
   options?: AxiosRequestConfig,
-): Promise<T> {
-  return (await axios.get(url, { ...options })) as T;
+): Promise<AxiosResponse<T>> {
+  return axios.get<T>(url, { ...options });
 }
 
 async function _post(url: string, data?: any) {

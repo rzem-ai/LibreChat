@@ -950,6 +950,16 @@ async function loadToolDefinitionsWrapper({
   } = hasFilteredMCPTools
     ? await resolveMcpServerContext(req)
     : { configServers: {}, serverNames: [], rawServerNames: [] };
+  // Deloitte Custom Change: forward the operator-approved upload allowlist (and this
+  // request's attachments) into the definitions-only path, so it can hide file bytes
+  // from the model the same way the full tool-dispatch path already does.
+  const attachmentUploadTools = Object.fromEntries(
+    Object.entries(appConfig?.mcpConfig ?? {}).flatMap(([serverName, serverConfig]) =>
+      Array.isArray(serverConfig?.attachmentUploadTools)
+        ? [[serverName, serverConfig.attachmentUploadTools]]
+        : [],
+    ),
+  );
 
   /**
    * Shadowed servers must not emit definitions: their normalized function
@@ -1361,6 +1371,8 @@ async function loadToolDefinitionsWrapper({
       mcpServerNames,
       rawServerNames: mcpRawServerNames,
       accessibleServerNames: defsAccessibleServerNames,
+      attachmentUploadTools,
+      attachmentFiles: req.body?.files,
     },
     {
       isBuiltInTool,
@@ -1462,6 +1474,8 @@ async function loadToolDefinitionsWrapper({
           mcpServerNames,
           rawServerNames: mcpRawServerNames,
           accessibleServerNames: defsAccessibleServerNames,
+          attachmentUploadTools,
+          attachmentFiles: req.body?.files,
         },
         {
           isBuiltInTool,
