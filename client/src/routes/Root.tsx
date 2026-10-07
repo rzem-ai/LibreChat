@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, startTransition } from 'react';
-import { useRecoilValue } from 'recoil';
+import { useRecoilState, useRecoilValue } from 'recoil';
 import { Outlet } from 'react-router-dom';
 import { useMediaQuery } from '@librechat/client';
 import { useGetModelsQuery } from 'librechat-data-provider/react-query';
@@ -67,6 +67,9 @@ function KeyboardShortcutsProvider() {
 
 export default function Root() {
   const [showTerms, setShowTerms] = useState(false);
+  // Deloitte Custom Change: separate Recoil-backed open state for the avatar menu's
+  // read-only "view terms" action, independent of the acceptance-gate flow above.
+  const [showTermsViewer, setShowTermsViewer] = useRecoilState(store.showTermsModal);
   const [bannerHeight, setBannerHeight] = useState(0);
   /** Shared with the drawer so the two agree on the breakpoint-transition frame. */
   const {
@@ -259,13 +262,26 @@ export default function Root() {
                     </div>
                   </PromptGroupsProvider>
                 </AgentsMapContext.Provider>
-                {config?.interface?.termsOfService?.modalAcceptance === true && (
+                {termsEnabled && config?.interface?.termsOfService != null && (
                   <TermsAndConditionsModal
                     open={showTerms}
                     onOpenChange={setShowTerms}
                     onAccept={handleAcceptTerms}
                     onDecline={handleDeclineTerms}
                     title={config.interface.termsOfService.modalTitle}
+                    // Deloitte Custom Change: eyebrow shows the deployment's product name above the title
+                    eyebrow={config.appTitle}
+                    modalContent={config.interface.termsOfService.modalContent}
+                  />
+                )}
+                {/* Deloitte Custom Change: read-only terms viewer, opened from the avatar menu —
+                    no Accept/Decline, since the user has already made that choice to sign in. */}
+                {termsEnabled && config?.interface?.termsOfService != null && (
+                  <TermsAndConditionsModal
+                    open={showTermsViewer}
+                    onOpenChange={setShowTermsViewer}
+                    title={config.interface.termsOfService.modalTitle}
+                    eyebrow={config.appTitle}
                     modalContent={config.interface.termsOfService.modalContent}
                   />
                 )}

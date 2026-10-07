@@ -1,13 +1,16 @@
 import React from 'react';
 import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import AccountSettings from '../AccountSettings';
 
 const mockSetShowShortcutsDialog = jest.fn();
+const mockSetShowTermsModal = jest.fn();
 const mockLogout = jest.fn();
+let mockStartupConfigData: Record<string, unknown> = {};
 
 jest.mock('recoil', () => ({
-  useSetRecoilState: () => mockSetShowShortcutsDialog,
+  useSetRecoilState: (atomKey: string) =>
+    atomKey === 'showTermsModal' ? mockSetShowTermsModal : mockSetShowShortcutsDialog,
 }));
 
 jest.mock('@ariakit/react/menu', () => {
@@ -40,7 +43,11 @@ jest.mock('@librechat/client', () => ({
 }));
 
 jest.mock('~/data-provider', () => ({
-  useGetStartupConfig: () => ({ data: {} }),
+  useGetStartupConfig: () => ({
+    get data() {
+      return mockStartupConfigData;
+    },
+  }),
   useGetUserBalance: () => ({ data: null }),
 }));
 
@@ -68,10 +75,16 @@ jest.mock('~/components/Chat/Input/Files/MyFilesModal', () => ({
 
 jest.mock('~/store', () => ({
   __esModule: true,
-  default: { showShortcutsDialog: 'showShortcutsDialog' },
+  default: { showShortcutsDialog: 'showShortcutsDialog', showTermsModal: 'showTermsModal' },
 }));
 
 describe('AccountSettings', () => {
+  beforeEach(() => {
+    mockStartupConfigData = {};
+  });
+
+  afterEach(() => jest.clearAllMocks());
+
   it('renders the account trigger with the stable nav-user id', () => {
     render(<AccountSettings collapsed />);
 
@@ -79,5 +92,21 @@ describe('AccountSettings', () => {
       'id',
       'nav-user',
     );
+  });
+
+  it('does not render the Terms and Conditions item when the modal flow is disabled', () => {
+    render(<AccountSettings collapsed />);
+    fireEvent.click(screen.getByRole('button', { name: 'com_nav_account_settings' }));
+
+    expect(screen.queryByText('com_ui_terms_and_conditions')).not.toBeInTheDocument();
+  });
+
+  it('opens the Terms and Conditions viewer from the avatar menu when enabled', () => {
+    mockStartupConfigData = { interface: { termsOfService: { modalAcceptance: true } } };
+    render(<AccountSettings collapsed />);
+    fireEvent.click(screen.getByRole('button', { name: 'com_nav_account_settings' }));
+    fireEvent.click(screen.getByText('com_ui_terms_and_conditions'));
+
+    expect(mockSetShowTermsModal).toHaveBeenCalledWith(true);
   });
 });

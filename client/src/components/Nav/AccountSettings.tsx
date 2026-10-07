@@ -10,6 +10,7 @@ import {
   LifeBuoy,
   LogOut,
   Scale,
+  ScrollText,
   ShieldCheck,
 } from 'lucide-react';
 import { ArchivedChatsModal } from '~/components/Nav/SettingsTabs/General/ArchivedChatsModal';
@@ -25,17 +26,21 @@ function HelpSubmenu({
   termsOfServiceURL,
   privacyPolicyURL,
   onShowShortcuts,
+  // Deloitte Custom Change: reopen the in-app Terms and Conditions modal on demand.
+  onShowTerms,
 }: {
   helpAndFaqURL?: string;
   termsOfServiceURL?: string;
   privacyPolicyURL?: string;
   onShowShortcuts: () => void;
+  onShowTerms?: () => void;
 }) {
   const localize = useLocalize();
   const hasHelpFaq = !!helpAndFaqURL && helpAndFaqURL !== '/';
   const hasTos = !!termsOfServiceURL;
+  const hasTermsModal = !!onShowTerms;
   const hasPrivacy = !!privacyPolicyURL;
-  const showLegalDivider = (hasHelpFaq || true) && (hasTos || hasPrivacy);
+  const showLegalDivider = (hasHelpFaq || true) && (hasTos || hasTermsModal || hasPrivacy);
 
   return (
     <Menu.MenuProvider placement="right-start">
@@ -67,7 +72,7 @@ function HelpSubmenu({
           <Keyboard className="icon-md" aria-hidden="true" />
           {localize('com_shortcut_keyboard_shortcuts')}
         </Menu.MenuItem>
-        {showLegalDivider && (hasTos || hasPrivacy) && <DropdownMenuSeparator />}
+        {showLegalDivider && (hasTos || hasTermsModal || hasPrivacy) && <DropdownMenuSeparator />}
         {hasTos && (
           <Menu.MenuItem
             onClick={() => openInNewTab(termsOfServiceURL)}
@@ -75,6 +80,12 @@ function HelpSubmenu({
           >
             <Scale className="icon-md" aria-hidden="true" />
             {localize('com_ui_terms_of_service')}
+          </Menu.MenuItem>
+        )}
+        {hasTermsModal && (
+          <Menu.MenuItem onClick={onShowTerms} className="select-item text-sm">
+            <ScrollText className="icon-md" aria-hidden="true" />
+            {localize('com_ui_terms_and_conditions')}
           </Menu.MenuItem>
         )}
         {hasPrivacy && (
@@ -100,6 +111,9 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
   });
   const [showSettings, setShowSettings] = useState(false);
   const setShowShortcutsDialog = useSetRecoilState(store.showShortcutsDialog);
+  // Deloitte Custom Change: lets users reopen the Terms and Conditions modal (read-only) from the avatar menu.
+  const setShowTermsModal = useSetRecoilState(store.showTermsModal);
+  const termsModalEnabled = startupConfig?.interface?.termsOfService?.modalAcceptance === true;
   const [showArchived, setShowArchived] = useState(false);
   const accountSettingsButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -158,6 +172,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           termsOfServiceURL={startupConfig?.interface?.termsOfService?.externalUrl}
           privacyPolicyURL={startupConfig?.interface?.privacyPolicy?.externalUrl}
           onShowShortcuts={() => setShowShortcutsDialog(true)}
+          onShowTerms={termsModalEnabled ? () => setShowTermsModal(true) : undefined}
         />
         <Menu.MenuItem onClick={() => setShowArchived(true)} className="select-item text-sm">
           <Archive className="icon-md" aria-hidden="true" />
