@@ -61,7 +61,7 @@ export interface AdminExchangeResponse {
  */
 export function serializeUserForExchange(user: IUser): AdminExchangeUser {
   const userId = String(user._id);
-  // No avatar: base64 data URIs overflow the admin-session cookie.
+  // Deloitte Custom Change: Exclude avatars because base64 data URIs can overflow the admin-session cookie.
   return {
     _id: userId,
     id: userId,
