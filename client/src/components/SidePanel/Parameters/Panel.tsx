@@ -234,8 +234,9 @@ export default function Parameters() {
         </Button>
       </div>
       <div className="mt-2 flex justify-center">
+        {/* Deloitte Custom Change: use the submit variant so this button matches the submit button's color */}
         <Button
-          variant="default"
+          variant="submit"
           onClick={openDialog}
           className="flex w-full items-center justify-center px-4 py-2 font-semibold"
           type="button"

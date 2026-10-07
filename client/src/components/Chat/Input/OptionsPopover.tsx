@@ -62,8 +62,9 @@ export default function OptionsPopover({
           >
             <div className="flex w-full items-center bg-surface-tertiary px-2 py-2">
               {presetsDisabled ? null : (
+                // Deloitte Custom Change: use the submit variant so this button matches the submit button's color
                 <Button
-                  variant="default"
+                  variant="submit"
                   type="button"
                   className="h-8 w-[150px] justify-start rounded-md px-2 text-xs font-normal"
                   onClick={saveAsPreset}
