@@ -39,7 +39,9 @@ describe('Footer', () => {
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
-  test('keeps privacy policy and terms of service links in the same tab', () => {
+  // Deloitte Custom Change: privacy policy / terms of service links now open
+  // in a new tab, matching the other external footer links.
+  test('opens privacy policy and terms of service links in a new tab', () => {
     render(
       <Footer
         startupConfig={{
@@ -50,7 +52,21 @@ describe('Footer', () => {
         }}
       />,
     );
-    expect(screen.getByRole('link', { name: 'Privacy policy' })).not.toHaveAttribute('target');
-    expect(screen.getByRole('link', { name: 'Terms of service' })).not.toHaveAttribute('target');
+    expect(screen.getByRole('link', { name: 'Privacy policy' })).toHaveAttribute(
+      'target',
+      '_blank',
+    );
+    expect(screen.getByRole('link', { name: 'Privacy policy' })).toHaveAttribute(
+      'rel',
+      'noopener noreferrer',
+    );
+    expect(screen.getByRole('link', { name: 'Terms of service' })).toHaveAttribute(
+      'target',
+      '_blank',
+    );
+    expect(screen.getByRole('link', { name: 'Terms of service' })).toHaveAttribute(
+      'rel',
+      'noopener noreferrer',
+    );
   });
 });

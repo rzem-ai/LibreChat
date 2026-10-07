@@ -228,7 +228,13 @@ describe('SearchResults', () => {
 
   it('assigns search option positions across specs, marketplace, and endpoint rows', () => {
     mockSelectedValues = { endpoint: '', model: '', modelSpec: '' };
-    const spec = { name: 'preset', label: 'Preset' } as TModelSpec;
+    // Deloitte Custom Change: ModelCost (rendered for spec rows) reads spec.preset.model,
+    // so the mock spec needs a real preset instead of an empty object.
+    const spec = {
+      name: 'preset',
+      label: 'Preset',
+      preset: { endpoint: 'anthropic', model: 'claude-opus-4-6' },
+    } as TModelSpec;
     const models = Array.from({ length: 101 }, (_, index) => ({
       name: `agent-${index}`,
     }));

@@ -116,8 +116,15 @@ describe('Citation', () => {
   it('uses the semantic active surface for a highlighted passage', () => {
     const highlightedPassage = 'Highlighted passage';
     render(
+      // Deloitte Custom Change: CitationContext now tracks a Set of hovered
+      // citation ids (hoveredCitationIds/setHoveredCitationIds) instead of a
+      // single hoveredCitationId, to support highlighting multiple citations
+      // that share the same quoted span.
       <CitationContext.Provider
-        value={{ hoveredCitationId: 'cite-highlight', setHoveredCitationId: jest.fn() }}
+        value={{
+          hoveredCitationIds: new Set(['cite-highlight']),
+          setHoveredCitationIds: jest.fn(),
+        }}
       >
         <HighlightedText citationId="cite-highlight">{highlightedPassage}</HighlightedText>
       </CitationContext.Provider>,
@@ -734,12 +741,14 @@ describe('Citation', () => {
     const span = screen.getByText(quotedSpanText);
     const chip = screen.getByRole('link', { name: 'example.com' });
 
-    expect(span).not.toHaveClass('bg-amber-300/20');
+    // Deloitte Custom Change: GEL design-system semantic token (bg-surface-active)
+    // replaced the literal Tailwind amber highlight color.
+    expect(span).not.toHaveClass('bg-surface-active');
 
     fireEvent.mouseEnter(chip);
-    expect(span).toHaveClass('bg-amber-300/20');
+    expect(span).toHaveClass('bg-surface-active');
 
     fireEvent.mouseLeave(chip);
-    expect(span).not.toHaveClass('bg-amber-300/20');
+    expect(span).not.toHaveClass('bg-surface-active');
   });
 });

@@ -19,6 +19,19 @@ import { hasCopyableText } from '~/hooks/Messages/useCopyToClipboard';
 import HoverButtons from '~/components/Chat/Messages/HoverButtons';
 import store from '~/store';
 
+// Deloitte Custom Change: HoverButtons gates Edit/Regenerate/Fork behind
+// librechat.yaml feature flags read from startup config.
+jest.mock('~/data-provider', () => ({
+  ...jest.requireActual('~/data-provider'),
+  useGetStartupConfig: () => ({
+    data: {
+      interface: {
+        customDeloitteFeatureFlags: { editChat: true, regenerate: true, forkChat: true },
+      },
+    },
+  }),
+}));
+
 const conversation = {
   conversationId: 'convo-1',
   endpoint: EModelEndpoint.agents,
@@ -134,7 +147,10 @@ describe('HoverButtons edit affordance', () => {
     expect(container.querySelectorAll('button')).toHaveLength(0);
   });
 
-  it('offers copy for an error response', () => {
+  /* Deloitte Custom Change: an error response renders only the regenerate-gated
+   * toolbar (see HoverButtons.tsx), not the per-button inline `!error` checks
+   * upstream used to render a disabled/enabled copy button from. */
+  it('shows only the regenerate control for an error response', () => {
     const errorMessage = {
       ...userMessage,
       messageId: 'assistant-error',
@@ -150,10 +166,11 @@ describe('HoverButtons edit affordance', () => {
       latestMessageId: errorMessage.messageId,
     });
 
-    expect(screen.getByTestId('copy-response-button')).toBeEnabled();
+    expect(screen.queryByTestId('copy-response-button')).toBeNull();
+    expect(screen.getByTestId('regenerate-generation-button')).toBeEnabled();
   });
 
-  it('disables copy when the response serializes to nothing', () => {
+  it('omits the copy button when the response serializes to nothing', () => {
     const errorPartMessage = {
       ...userMessage,
       messageId: 'assistant-error-part',
@@ -170,7 +187,7 @@ describe('HoverButtons edit affordance', () => {
       latestMessageId: errorPartMessage.messageId,
     });
 
-    expect(screen.getByTestId('copy-response-button')).toBeDisabled();
+    expect(screen.queryByTestId('copy-response-button')).toBeNull();
   });
 
   it('never inspects a response that is still streaming', () => {

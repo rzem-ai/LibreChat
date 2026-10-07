@@ -21,6 +21,15 @@ jest.mock('librechat-data-provider', () => ({
 }));
 jest.mock('~/data-provider', () => ({ useGetStartupConfig: () => ({ data: undefined }) }));
 jest.mock('~/hooks', () => ({ useHasAccess: () => false }));
+/*
+ * Deloitte Custom Change: ConversationTitle now renders the shared rename UI
+ * (ConvoOptions/RenameForm), pulling in a much larger dependency graph
+ * (data-provider mutations, @librechat/client's provider icon registry, etc.)
+ * than this stacking-order suite's narrow mocks can satisfy. These tests only
+ * assert on Header's own layout/mount behavior, so mock it out directly
+ * instead of growing every transitive mock to match.
+ */
+jest.mock('../ConversationTitle', () => () => null);
 jest.mock('~/store', () => ({
   __esModule: true,
   default: {

@@ -39,6 +39,9 @@ jest.mock('~/data-provider', () => ({
     isPaused: false,
     isSuccess: true,
   }),
+  // Deloitte Custom Change: useUploadOptions now reads the providerUpload
+  // feature flag from startup config.
+  useGetStartupConfig: () => ({ data: { interface: { providerUpload: false } } }),
 }));
 
 const render = () => renderHook(() => useUploadOptions(), { wrapper: RecoilRoot });

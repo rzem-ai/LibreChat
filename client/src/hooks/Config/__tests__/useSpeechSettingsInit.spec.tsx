@@ -8,8 +8,19 @@ jest.mock('librechat-data-provider/react-query', () => ({
   useGetCustomConfigSpeechQuery: () => mockUseGetCustomConfigSpeechQuery(),
 }));
 
+// Deloitte Custom Change: spread the real module so transitively-imported
+// helpers like `cn` still work; the upstream test only stubbed `logger`.
 jest.mock('~/utils', () => ({
+  ...jest.requireActual('~/utils'),
   logger: { log: jest.fn() },
+}));
+
+// Deloitte Custom Change: useSpeechSettingsInit now gates on the
+// externalVoiceProvider feature flag via this hook, which itself calls the
+// real useGetStartupConfig (a react-query hook) — stub it out rather than
+// standing up a QueryClientProvider this suite doesn't otherwise need.
+jest.mock('~/hooks/Audio', () => ({
+  useExternalVoiceProviderEnabled: () => true,
 }));
 
 import useSpeechSettingsInit from '../useSpeechSettingsInit';

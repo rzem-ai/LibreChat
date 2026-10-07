@@ -20,6 +20,16 @@ jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string) => key,
   useNavigateToConvo: () => ({ navigateToConvo: jest.fn() }),
   useShiftKey: () => false,
+  // Deloitte Custom Change: Convo.tsx now sources rename state from the shared
+  // useConversationRename hook instead of local state.
+  useConversationRename: () => ({
+    titleInput: '',
+    setTitleInput: jest.fn(),
+    renaming: false,
+    handleRename: jest.fn(),
+    handleRenameSubmit: jest.fn(),
+    handleCancelRename: jest.fn(),
+  }),
 }));
 
 jest.mock('~/data-provider', () => ({
