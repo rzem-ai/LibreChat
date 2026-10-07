@@ -501,6 +501,54 @@ describe('retention helpers', () => {
     expect(createMinimalRetentionRequest()).toBeUndefined();
   });
 
+  describe('independent file retention (fileRetentionHours)', () => {
+    it('short-circuits with an upload-anchored expiry when configured, bypassing conversation lookup', async () => {
+      const now = Date.now();
+      const result = await getRetentionExpiry(
+        request({
+          config: { interfaceConfig: { fileRetentionHours: 1440 } },
+        }),
+        dependencies,
+      );
+
+      const expectedMs = 1440 * 60 * 60 * 1000;
+      expect(result.expiredAt?.getTime()).toBeGreaterThanOrEqual(now + expectedMs);
+      expect(result.expiredAt?.getTime()).toBeLessThan(now + expectedMs + 1000);
+      expect(dependencies.getConvo).not.toHaveBeenCalled();
+      expect(dependencies.createExpirationDate).not.toHaveBeenCalled();
+    });
+
+    it('ignores retentionMode/conversation branches entirely once configured', async () => {
+      const req = request({
+        config: {
+          interfaceConfig: { fileRetentionHours: 24, retentionMode: RetentionMode.ALL },
+        },
+      });
+      req.fileRetentionSource = { isTemporary: true, expiredAt: expirationDate };
+
+      const result = await getRetentionExpiry(req, dependencies);
+
+      expect(result.expiredAt).not.toEqual(expirationDate);
+      expect(dependencies.getConvo).not.toHaveBeenCalled();
+    });
+
+    it('falls through to conversation-inherited behavior when unset', async () => {
+      dependencies.getConvo.mockResolvedValue(null);
+      await getRetentionExpiry(request({ body: { isTemporary: false } }), dependencies);
+      expect(dependencies.getConvo).toHaveBeenCalledWith('user-1', 'convo-1');
+    });
+
+    it('is part of the cache key, so toggling it recomputes rather than reusing a stale expiry', async () => {
+      const req = request({ config: { interfaceConfig: { fileRetentionHours: 1 } } });
+      const first = await getRetentionExpiry(req, dependencies);
+
+      req.config!.interfaceConfig!.fileRetentionHours = 2;
+      const second = await getRetentionExpiry(req, dependencies);
+
+      expect(second.expiredAt?.getTime()).not.toEqual(first.expiredAt?.getTime());
+    });
+  });
+
   describe('getSharedLinkExpiration', () => {
     it('returns undefined when the conversation id is missing', async () => {
       await expect(

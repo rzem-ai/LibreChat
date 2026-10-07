@@ -218,6 +218,10 @@ export type TFile = {
   llmDeliveryPath?: 'provider' | 'text' | 'none';
   createdAt?: string | Date;
   updatedAt?: string | Date;
+  /** Retention deadline, present only when the file has one. */
+  expiredAt?: string | Date | null;
+  /** Independent file-retention anchor, advanced on every use or renewal. */
+  lastUsedAt?: string | Date | null;
 };
 
 export type TFileUpload = TFile & {
@@ -300,6 +304,20 @@ export type TFilesUsageBody = {
 export type TFilesUsageResponse = {
   /** Count of queued uploads whose TTL hold was extended. */
   held: number;
+};
+
+export type TFileRenewResponse = {
+  file: TFile;
+};
+
+export type TFilesExpiringSoonResponse = {
+  files: TFile[];
+};
+
+export type RenewFileMutationOptions = {
+  onSuccess?: (data: TFileRenewResponse, variables: string, context?: unknown) => void;
+  onMutate?: (variables: string) => void | Promise<unknown>;
+  onError?: (error: unknown, variables: string, context?: unknown) => void;
 };
 
 export type DeleteFilesResponse = {

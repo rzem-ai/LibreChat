@@ -949,7 +949,7 @@ export interface InitializeAgentDbMethods extends EndpointDbMethods {
   updateFilesUsage: (
     files: Array<{ file_id: string }>,
     fileIds?: string[],
-    options?: { user?: string; tenantId?: string | null },
+    options?: { user?: string; tenantId?: string | null; fileRetentionHours?: number },
   ) => Promise<unknown[]>;
   /** Get files from database */
   getFiles: (filter: unknown, sort: unknown, select: unknown) => Promise<unknown[]>;
@@ -1758,12 +1758,14 @@ export async function initializeAgent(
     await db.updateFilesUsage(requestUsageFiles, undefined, {
       user: requestFileOwnerId,
       tenantId: user?.tenantId,
+      fileRetentionHours: appConfig?.interfaceConfig?.fileRetentionHours,
     });
   }
   if (requestFileOwnerId && toolUsageFiles.length > 0) {
     await db.updateFilesUsage(toolUsageFiles, undefined, {
       user: requestFileOwnerId,
       tenantId: user?.tenantId,
+      fileRetentionHours: appConfig?.interfaceConfig?.fileRetentionHours,
     });
   }
 

@@ -371,6 +371,11 @@ export const filePreview = (fileId: string) =>
 export const fileConfig = () => `${BASE_URL}/api/files/config`;
 /** Owner-scoped usage touch so queued attachments outlive the upload-window TTL. */
 export const fileUsage = () => `${BASE_URL}/api/files/usage`;
+/** Owner-scoped renewal of a file's independent retention deadline. */
+export const fileRenew = (fileId: string) =>
+  `${BASE_URL}/api/files/${encodeURIComponent(fileId)}/renew`;
+/** Owner-scoped list of the caller's files expiring within the warning window. */
+export const filesExpiringSoon = () => `${BASE_URL}/api/files/expiring`;
 export const agentFiles = (agentId: string) => `${BASE_URL}/api/files/agent/${agentId}`;
 
 export const images = () => `${files()}/images`;

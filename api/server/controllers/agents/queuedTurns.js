@@ -23,6 +23,7 @@ const dependencies = (req) => {
     updateFilesUsage: db.updateFilesUsage,
     checkAgentAccess: createAgentAccessCheck(req),
     isPrincipalActive: db.isAgentTriggerPrincipalActive,
+    fileRetentionHours: req.config?.interfaceConfig?.fileRetentionHours,
   };
 };
 

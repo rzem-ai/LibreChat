@@ -167,6 +167,13 @@ export interface IMongoFile extends Omit<Document, 'model'> {
   expiresAt?: Date;
   expiredAt?: Date | null;
   /**
+   * Independent per-file retention anchor: set on create and re-stamped on
+   * every usage touch (send, renewal). Distinct from `updatedAt`, which
+   * several writers deliberately avoid perturbing because it's read
+   * elsewhere as a writer-order signal.
+   */
+  lastUsedAt?: Date;
+  /**
    * Consecutive failed retention-sweep deletions. The sweep backs off
    * between attempts and parks the file once this reaches the configured
    * cap, so a file whose backing storage refuses deletion cannot occupy

@@ -112,5 +112,11 @@ export {
   backfillMCPServerNormalizedNames,
   backfillConversationRetention,
   dropRetentionTTLIndexes,
+  backfillFileRetention,
 } from './migrations';
-export type { RetentionBackfillResult, RetentionBackfillOptions } from './migrations';
+export type {
+  RetentionBackfillResult,
+  RetentionBackfillOptions,
+  FileRetentionBackfillResult,
+  FileRetentionBackfillOptions,
+} from './migrations';

@@ -513,6 +513,113 @@ describe('File Methods', () => {
     });
   });
 
+  describe('getFilesExpiringSoon', () => {
+    it("returns only the owner's files whose deadline falls within the window", async () => {
+      const ownerId = new mongoose.Types.ObjectId();
+      const otherUserId = new mongoose.Types.ObjectId();
+      const now = new Date('2030-01-01T00:00:00.000Z');
+      const soonFileId = uuidv4();
+      const farFileId = uuidv4();
+      const alreadyExpiredFileId = uuidv4();
+      const otherOwnerFileId = uuidv4();
+
+      await fileMethods.createFile(
+        {
+          file_id: soonFileId,
+          user: ownerId,
+          filename: 'soon.txt',
+          filepath: '/uploads/soon.txt',
+          type: 'text/plain',
+          bytes: 100,
+          expiredAt: new Date('2030-01-02T00:00:00.000Z'),
+        },
+        true,
+      );
+      await fileMethods.createFile(
+        {
+          file_id: farFileId,
+          user: ownerId,
+          filename: 'far.txt',
+          filepath: '/uploads/far.txt',
+          type: 'text/plain',
+          bytes: 100,
+          expiredAt: new Date('2030-06-01T00:00:00.000Z'),
+        },
+        true,
+      );
+      await fileMethods.createFile(
+        {
+          file_id: alreadyExpiredFileId,
+          user: ownerId,
+          filename: 'expired.txt',
+          filepath: '/uploads/expired.txt',
+          type: 'text/plain',
+          bytes: 100,
+          expiredAt: new Date('2029-12-31T00:00:00.000Z'),
+        },
+        true,
+      );
+      await fileMethods.createFile(
+        {
+          file_id: otherOwnerFileId,
+          user: otherUserId,
+          filename: 'other-owner.txt',
+          filepath: '/uploads/other-owner.txt',
+          type: 'text/plain',
+          bytes: 100,
+          expiredAt: new Date('2030-01-02T00:00:00.000Z'),
+        },
+        true,
+      );
+
+      const withinMs = 7 * 24 * 60 * 60 * 1000;
+      const files = await fileMethods.getFilesExpiringSoon(
+        { userId: ownerId.toString() },
+        withinMs,
+        { now },
+      );
+
+      expect(files.map((file) => file.file_id)).toEqual([soonFileId]);
+    });
+
+    it('respects tenant scoping', async () => {
+      const ownerId = new mongoose.Types.ObjectId();
+      const fileId = uuidv4();
+      const now = new Date('2030-01-01T00:00:00.000Z');
+
+      await runAsSystem(() =>
+        fileMethods.createFile(
+          {
+            file_id: fileId,
+            user: ownerId,
+            tenantId: 'tenant-a',
+            filename: 'tenant-scoped.txt',
+            filepath: '/uploads/tenant-scoped.txt',
+            type: 'text/plain',
+            bytes: 100,
+            expiredAt: new Date('2030-01-02T00:00:00.000Z'),
+          },
+          true,
+        ),
+      );
+
+      const withinMs = 7 * 24 * 60 * 60 * 1000;
+      const wrongTenant = await fileMethods.getFilesExpiringSoon(
+        { userId: ownerId.toString(), tenantId: 'tenant-b' },
+        withinMs,
+        { now },
+      );
+      const rightTenant = await fileMethods.getFilesExpiringSoon(
+        { userId: ownerId.toString(), tenantId: 'tenant-a' },
+        withinMs,
+        { now },
+      );
+
+      expect(wrongTenant).toEqual([]);
+      expect(rightTenant.map((file) => file.file_id)).toEqual([fileId]);
+    });
+  });
+
   describe('deferExpiredFile', () => {
     const createDeferrableFile = async (file_id: string) => {
       await fileMethods.createFile(
@@ -1664,6 +1771,67 @@ describe('File Methods', () => {
       expect(allowed?.temp_file_id).toBeUndefined();
       expect(allowed?.expiresAt).toBeUndefined();
     });
+
+    it('stamps lastUsedAt on every touch', async () => {
+      const fileId = uuidv4();
+      const userId = new mongoose.Types.ObjectId();
+
+      await fileMethods.createFile({
+        file_id: fileId,
+        user: userId,
+        filename: 'last-used.txt',
+        filepath: '/uploads/last-used.txt',
+        type: 'text/plain',
+        bytes: 100,
+      });
+
+      const before = Date.now();
+      const updated = await fileMethods.updateFileUsage({ file_id: fileId });
+      expect(updated?.lastUsedAt).toBeInstanceOf(Date);
+      expect(updated!.lastUsedAt!.getTime()).toBeGreaterThanOrEqual(before);
+    });
+
+    it('recomputes expiredAt from fileRetentionHours when provided', async () => {
+      const fileId = uuidv4();
+      const userId = new mongoose.Types.ObjectId();
+
+      await fileMethods.createFile({
+        file_id: fileId,
+        user: userId,
+        filename: 'renewable.txt',
+        filepath: '/uploads/renewable.txt',
+        type: 'text/plain',
+        bytes: 100,
+        expiredAt: new Date('2029-01-01T00:00:00.000Z'),
+      });
+
+      const before = Date.now();
+      const updated = await fileMethods.updateFileUsage({
+        file_id: fileId,
+        fileRetentionHours: 24,
+      });
+
+      expect(updated?.expiredAt?.getTime()).toBeGreaterThanOrEqual(before + 24 * 3600000);
+    });
+
+    it('leaves expiredAt untouched when fileRetentionHours is not provided', async () => {
+      const fileId = uuidv4();
+      const userId = new mongoose.Types.ObjectId();
+      const originalExpiredAt = new Date('2029-01-01T00:00:00.000Z');
+
+      await fileMethods.createFile({
+        file_id: fileId,
+        user: userId,
+        filename: 'unmanaged.txt',
+        filepath: '/uploads/unmanaged.txt',
+        type: 'text/plain',
+        bytes: 100,
+        expiredAt: originalExpiredAt,
+      });
+
+      const updated = await fileMethods.updateFileUsage({ file_id: fileId });
+      expect(updated?.expiredAt).toEqual(originalExpiredAt);
+    });
   });
 
   describe('updateFilesUsage', () => {
@@ -1834,6 +2002,62 @@ describe('File Methods', () => {
       expect(otherFile?.usage).toBe(0);
       expect(otherFile?.temp_file_id).toBe('tmp-other');
       expect(otherFile?.expiresAt).toBeDefined();
+    });
+
+    it('recomputes expiredAt from fileRetentionHours across every file in the batch', async () => {
+      const userId = new mongoose.Types.ObjectId();
+      const fileIds = [uuidv4(), uuidv4()];
+      const originalExpiredAt = new Date('2029-01-01T00:00:00.000Z');
+
+      for (const fileId of fileIds) {
+        await fileMethods.createFile({
+          file_id: fileId,
+          user: userId,
+          filename: `${fileId}.txt`,
+          filepath: `/uploads/${fileId}.txt`,
+          type: 'text/plain',
+          bytes: 100,
+          expiredAt: originalExpiredAt,
+        });
+      }
+
+      const before = Date.now();
+      const updated = await fileMethods.updateFilesUsage(
+        fileIds.map((file_id) => ({ file_id })),
+        undefined,
+        { fileRetentionHours: 24 },
+      );
+
+      expect(updated).toHaveLength(2);
+      for (const file of updated) {
+        expect(file.lastUsedAt).toBeInstanceOf(Date);
+        expect(file.expiredAt?.getTime()).toBeGreaterThanOrEqual(before + 24 * 3600000);
+      }
+    });
+
+    it('leaves expiredAt untouched across the batch when fileRetentionHours is not provided', async () => {
+      const userId = new mongoose.Types.ObjectId();
+      const fileIds = [uuidv4(), uuidv4()];
+      const originalExpiredAt = new Date('2029-01-01T00:00:00.000Z');
+
+      for (const fileId of fileIds) {
+        await fileMethods.createFile({
+          file_id: fileId,
+          user: userId,
+          filename: `${fileId}.txt`,
+          filepath: `/uploads/${fileId}.txt`,
+          type: 'text/plain',
+          bytes: 100,
+          expiredAt: originalExpiredAt,
+        });
+      }
+
+      const updated = await fileMethods.updateFilesUsage(fileIds.map((file_id) => ({ file_id })));
+
+      expect(updated).toHaveLength(2);
+      for (const file of updated) {
+        expect(file.expiredAt).toEqual(originalExpiredAt);
+      }
     });
   });
 

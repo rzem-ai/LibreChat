@@ -56,6 +56,22 @@ export const useGetAgentFiles = <TData = t.TFile[]>(
   );
 };
 
+export const useGetFilesExpiringSoonQuery = <TData = t.TFile[]>(
+  config?: UseQueryOptions<t.TFile[], unknown, TData>,
+): QueryObserverResult<TData, unknown> => {
+  const queriesEnabled = useRecoilValue<boolean>(store.queriesEnabled);
+  return useQuery<t.TFile[], unknown, TData>(
+    [QueryKeys.filesExpiringSoon],
+    async () => (await dataService.getFilesExpiringSoon()).files,
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      ...config,
+      enabled: (config?.enabled ?? true) === true && queriesEnabled,
+    },
+  );
+};
+
 export const useGetFileConfig = <TData = t.TFileConfig>(
   config?: UseQueryOptions<t.TFileConfig, unknown, TData>,
 ): QueryObserverResult<TData, unknown> => {

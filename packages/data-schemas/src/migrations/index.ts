@@ -5,3 +5,8 @@ export { MCPServerNameMigrationError, backfillMCPServerNormalizedNames } from '.
 export { backfillConversationRetention } from './retentionBackfill';
 export type { RetentionBackfillResult, RetentionBackfillOptions } from './retentionBackfill';
 export { dropRetentionTTLIndexes } from './retentionTTLIndex';
+export { backfillFileRetention } from './fileRetentionBackfill';
+export type {
+  FileRetentionBackfillResult,
+  FileRetentionBackfillOptions,
+} from './fileRetentionBackfill';

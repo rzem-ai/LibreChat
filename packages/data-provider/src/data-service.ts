@@ -630,6 +630,16 @@ export const markFilesUsage = (body: f.TFilesUsageBody): Promise<f.TFilesUsageRe
   return request.post(endpoints.fileUsage(), body);
 };
 
+/** Renews a file's independent retention deadline (owner-scoped). */
+export const renewFile = (fileId: string): Promise<f.TFileRenewResponse> => {
+  return request.post(endpoints.fileRenew(fileId), {});
+};
+
+/** Lists the caller's own files expiring within the configured warning window. */
+export const getFilesExpiringSoon = (): Promise<f.TFilesExpiringSoonResponse> => {
+  return request.get(endpoints.filesExpiringSoon());
+};
+
 /* actions */
 
 export const updateAction = (data: m.UpdateActionVariables): Promise<m.UpdateActionResponse> => {

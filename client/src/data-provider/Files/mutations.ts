@@ -167,6 +167,27 @@ export const useMarkFilesUsageMutation = (): UseMutationResult<
   });
 };
 
+export const useRenewFileMutation = (
+  _options?: t.RenewFileMutationOptions,
+): UseMutationResult<
+  t.TFileRenewResponse, // response data
+  unknown, // error
+  string, // request: file_id
+  unknown // context
+> => {
+  const queryClient = useQueryClient();
+  const { onSuccess, ...options } = _options || {};
+  return useMutation([MutationKeys.fileRenew], {
+    mutationFn: (fileId: string) => dataService.renewFile(fileId),
+    ...options,
+    onSuccess: (data, fileId, context) => {
+      queryClient.invalidateQueries([QueryKeys.filesExpiringSoon]);
+      queryClient.invalidateQueries([QueryKeys.files]);
+      onSuccess?.(data, fileId, context);
+    },
+  });
+};
+
 export const useDeleteFilesMutation = (
   _options?: t.DeleteMutationOptions,
 ): UseMutationResult<

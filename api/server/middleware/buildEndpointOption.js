@@ -184,6 +184,7 @@ async function buildEndpointOption(req, res, next) {
       req.body.endpointOption.attachments = updateFilesUsage(req.body.files, undefined, {
         user: req.user.id,
         tenantId: req.user.tenantId,
+        fileRetentionHours: req.config?.interfaceConfig?.fileRetentionHours,
       });
     }
 

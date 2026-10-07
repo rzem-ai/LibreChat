@@ -201,6 +201,13 @@ const file: Schema<IMongoFile> = new Schema(
        * backing storage first, then removes this metadata record. */
       type: Date,
     },
+    lastUsedAt: {
+      /* Independent per-file retention anchor: set on create and re-stamped on
+       * every usage touch (send, renewal). Distinct from `updatedAt`, which
+       * several writers deliberately avoid perturbing (see claimCodeFile,
+       * deferExpiredFile) because it's read elsewhere as a writer-order signal. */
+      type: Date,
+    },
     deletionAttempts: {
       /* Consecutive failed sweep deletions, driving the backoff below. A
        * file at or past `FILE_RETENTION_SWEEP_MAX_ATTEMPTS` is parked

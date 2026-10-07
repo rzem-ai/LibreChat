@@ -2395,6 +2395,8 @@ export const interfaceSchema = z
     autoSubmitFromUrl: z.boolean().optional(),
     retentionMode: z.nativeEnum(RetentionMode).default(RetentionMode.TEMPORARY),
     retainAgentFiles: z.boolean().optional(),
+    fileRetentionHours: z.number().min(1).max(8760).optional(),
+    fileRetentionWarningHours: z.number().min(1).max(8760).optional(),
     runCode: z.boolean().optional(),
     webSearch: z.boolean().optional(),
     contextUsage: z.boolean().optional(),

@@ -1,5 +1,5 @@
 import { RetentionMode } from 'librechat-data-provider';
-import { createFallbackRetentionDate } from '@librechat/data-schemas';
+import { createFallbackRetentionDate, getFileRetentionHours } from '@librechat/data-schemas';
 import type { AppConfig } from '@librechat/data-schemas';
 
 type InterfaceConfig = AppConfig['interfaceConfig'];
@@ -100,6 +100,7 @@ const getRetentionCacheKey = (req: RetentionRequest): string =>
     req.config?.interfaceConfig?.retentionMode ?? '',
     req.config?.interfaceConfig?.temporaryChatRetention ?? '',
     req.config?.interfaceConfig?.generalChatRetention ?? '',
+    req.config?.interfaceConfig?.fileRetentionHours ?? '',
     req.user?.id ?? '',
     req.body?.conversationId ?? '',
     String(req.body?.isTemporary ?? ''),
@@ -113,6 +114,11 @@ async function computeRetentionExpiry(
   dependencies: RetentionDependencies,
 ): Promise<RetentionExpiry> {
   const interfaceConfig = req?.config?.interfaceConfig;
+  const fileRetentionHours = getFileRetentionHours(interfaceConfig);
+  if (fileRetentionHours !== undefined) {
+    return { expiredAt: new Date(Date.now() + fileRetentionHours * 60 * 60 * 1000) };
+  }
+
   const isRetentionAll = interfaceConfig?.retentionMode === RetentionMode.ALL;
   const conversationId = req?.body?.conversationId;
   const userId = req?.user?.id;

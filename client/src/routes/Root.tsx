@@ -44,6 +44,7 @@ import CourseCompletionModal from '~/components/Learning/CourseCompletionModal';
 import KeyboardShortcutsDialog from '~/components/Nav/KeyboardShortcutsDialog';
 import TutorialPromptModal from '~/components/Learning/TutorialPromptModal';
 import KeyboardDeleteDialog from '~/components/Nav/KeyboardDeleteDialog';
+import ExpiringFilesBanner from '~/components/Files/ExpiringFilesBanner';
 import { MobileDrawerScrim } from '~/components/UnifiedSidebar/mobile';
 import useKeyboardShortcuts from '~/hooks/useKeyboardShortcuts';
 import useDrawerDismiss from '~/hooks/Nav/useDrawerDismiss';
@@ -187,6 +188,7 @@ export default function Root() {
                 <AgentsMapContext.Provider value={agentsMap}>
                   <PromptGroupsProvider>
                     <Banner onHeightChange={setBannerHeight} />
+                    <ExpiringFilesBanner />
                     {/* Deloitte Custom Change: Add Deloitte Header to top of view */}
                     <div
                       style={

@@ -136,6 +136,11 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
     selectFields?: Record<string, 0 | 1> | string | null,
   ) => Promise<IMongoFile[] | null>;
   getExpiredFiles: (limit?: number, options?: ExpiredFileQueryOptions) => Promise<IMongoFile[]>;
+  getFilesExpiringSoon: (
+    owner: FileOwnerScope,
+    withinMs: number,
+    options?: ExpiredFileQueryOptions & { limit?: number },
+  ) => Promise<IMongoFile[]>;
   incrementFileDeletionAttempts: (file_id: string) => Promise<number>;
   deferExpiredFile: (file_id: string, deletionRetryAt: Date) => Promise<void>;
   getToolFilesByIds: (
@@ -189,6 +194,7 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
     inc?: number;
     user?: string;
     tenantId?: string | null;
+    fileRetentionHours?: number;
   }) => Promise<IMongoFile | null>;
   deleteFile: (file_id: string) => Promise<IMongoFile | null>;
   deleteFiles: (file_ids: string[], user?: string) => Promise<{ deletedCount?: number }>;
@@ -204,7 +210,7 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
   updateFilesUsage: (
     files: Array<{ file_id: string }>,
     fileIds?: string[],
-    options?: { user?: string; tenantId?: string | null },
+    options?: { user?: string; tenantId?: string | null; fileRetentionHours?: number },
   ) => Promise<IMongoFile[]>;
   extendFilesTTL: (
     fileIds: string[],
@@ -411,6 +417,31 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
       expiredAt: { $ne: null, $lte: now },
       $or: [{ deletionRetryAt: null }, { deletionRetryAt: { $lte: now } }],
     })
+      .sort({ expiredAt: 1 })
+      .limit(limit)
+      .lean<IMongoFile[]>();
+  }
+
+  /**
+   * Finds a user's own files whose retention deadline falls within the given
+   * warning window, so the renewal prompt can surface them before the sweep
+   * deletes them. Excludes already-expired files (those are the sweep's job,
+   * not the renewal prompt's).
+   */
+  async function getFilesExpiringSoon(
+    owner: FileOwnerScope,
+    withinMs: number,
+    { now = new Date(), limit = 100 }: ExpiredFileQueryOptions & { limit?: number } = {},
+  ): Promise<IMongoFile[]> {
+    const File = mongoose.models.File as Model<IMongoFile>;
+    return await File.find(
+      withOwnerScope(
+        {
+          expiredAt: { $ne: null, $gt: now, $lte: new Date(now.getTime() + withinMs) },
+        },
+        owner,
+      ),
+    )
       .sort({ expiredAt: 1 })
       .limit(limit)
       .lean<IMongoFile[]>();
@@ -948,10 +979,18 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
     inc?: number;
     user?: string;
     tenantId?: string | null;
+    fileRetentionHours?: number;
   }): Promise<IMongoFile | null> {
     const File = mongoose.models.File as Model<IMongoFile>;
-    const { file_id, inc = 1, user, tenantId } = data;
+    const { file_id, inc = 1, user, tenantId, fileRetentionHours } = data;
+    const now = new Date();
     const updateOperation = {
+      $set: {
+        lastUsedAt: now,
+        ...(fileRetentionHours != null
+          ? { expiredAt: new Date(now.getTime() + fileRetentionHours * 60 * 60 * 1000) }
+          : {}),
+      },
       $inc: { usage: inc },
       $unset: { expiresAt: '', temp_file_id: '' },
     };
@@ -1047,13 +1086,14 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
   async function updateFilesUsage(
     files: Array<{ file_id: string }>,
     fileIds?: string[],
-    options?: { user?: string; tenantId?: string | null },
+    options?: { user?: string; tenantId?: string | null; fileRetentionHours?: number },
   ): Promise<IMongoFile[]> {
     const promises: Promise<IMongoFile | null>[] = [];
     const seen = new Set<string>();
     // Preserve the same owner scope for every deduped ID in this batch.
     const user = options?.user;
     const tenantId = options?.tenantId;
+    const fileRetentionHours = options?.fileRetentionHours;
 
     for (const file of files) {
       const { file_id } = file;
@@ -1061,7 +1101,7 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
         continue;
       }
       seen.add(file_id);
-      promises.push(updateFileUsage({ file_id, user, tenantId }));
+      promises.push(updateFileUsage({ file_id, user, tenantId, fileRetentionHours }));
     }
 
     if (!fileIds) {
@@ -1074,7 +1114,7 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
         continue;
       }
       seen.add(file_id);
-      promises.push(updateFileUsage({ file_id, user, tenantId }));
+      promises.push(updateFileUsage({ file_id, user, tenantId, fileRetentionHours }));
     }
 
     const results = await Promise.all(promises);
@@ -1208,6 +1248,7 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
     findFileById,
     getFiles,
     getExpiredFiles,
+    getFilesExpiringSoon,
     incrementFileDeletionAttempts,
     deferExpiredFile,
     getToolFilesByIds,
