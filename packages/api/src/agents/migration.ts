@@ -1,10 +1,28 @@
 import { logger } from '@librechat/data-schemas';
 import { AccessRoleIds, ResourceType, PrincipalType } from 'librechat-data-provider';
-import { ensureRequiredCollectionsExist } from '../db/utils';
 import type { AccessRoleMethods, IAgent } from '@librechat/data-schemas';
-import type { Model, Mongoose } from 'mongoose';
+import type { Model, Mongoose, mongo } from 'mongoose';
+import { ensureRequiredCollectionsExist } from '../db/utils';
 
 const GLOBAL_PROJECT_NAME = 'instance';
+
+/**
+ * Legacy pre-ACL-migration fallback: agents created before the granular permission
+ * system have no `AclEntry` rows at all. Their sharing state instead lives on the
+ * `projects` doc named `instance` (`agentIds` = every globally-visible agent's
+ * custom `id`, keyed separately from `isCollaborative` which distinguishes edit vs.
+ * view access). Used by the RET-04 retention classifier to decide whether a
+ * zero-ACL-entry agent counts as shared or private.
+ */
+export async function getGlobalAgentIds(db: mongo.Db | undefined): Promise<Set<string>> {
+  if (!db) {
+    return new Set();
+  }
+  const project = await db
+    .collection('projects')
+    .findOne({ name: GLOBAL_PROJECT_NAME }, { projection: { agentIds: 1 } });
+  return new Set(project?.agentIds || []);
+}
 
 export interface MigrationCheckDbMethods {
   findRoleByIdentifier: AccessRoleMethods['findRoleByIdentifier'];
@@ -69,13 +87,7 @@ export async function checkAgentPermissionsMigration({
       };
     }
 
-    let globalAgentIds = new Set<string>();
-    if (db) {
-      const project = await db
-        .collection('projects')
-        .findOne({ name: GLOBAL_PROJECT_NAME }, { projection: { agentIds: 1 } });
-      globalAgentIds = new Set(project?.agentIds || []);
-    }
+    const globalAgentIds = await getGlobalAgentIds(db);
 
     const AclEntry = mongoose.model('AclEntry');
     const migratedAgentIds = await AclEntry.distinct('resourceId', {

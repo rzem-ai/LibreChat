@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import {
   ResourceType,
   SkillsScope,
@@ -43,6 +44,16 @@ export type ValidationIssue = {
    */
   severity?: 'error' | 'warning';
 };
+
+/** A skill claimed by the retention purge sweep, enough to classify and cascade-delete it. */
+export interface ClaimedPurgeSkill {
+  resourceId: string;
+  author: string;
+  source: string;
+  tenantId?: string;
+  purgeClaimId: string;
+  purgeAttempts: number;
+}
 
 export type DeleteSkillCleanupStep = 'agent_allowlists' | 'skill_files' | 'permissions';
 
@@ -1033,7 +1044,10 @@ export function createSkillMethods(
   mongoose: typeof import('mongoose'),
   deps: SkillDeps,
 ): {
-  createSkill: (data: CreateSkillInput) => Promise<CreateSkillResult>;
+  createSkill: (
+    data: CreateSkillInput,
+    options?: { retentionHours?: number },
+  ) => Promise<CreateSkillResult>;
   getSkillById: (id: string | Types.ObjectId) => Promise<(ISkill & { _id: Types.ObjectId }) | null>;
   getSkillByName: (
     name: string,
@@ -1073,6 +1087,7 @@ export function createSkillMethods(
     id: string;
     expectedVersion: number;
     update: UpdateSkillInput;
+    retentionHours?: number;
   }) => Promise<UpdateSkillResult>;
   deleteSkill: (id: string) => Promise<DeleteSkillResult>;
   deleteUserSkills: (userId: Types.ObjectId | string) => Promise<number>;
@@ -1110,6 +1125,31 @@ export function createSkillMethods(
       codeEnvRef: CodeEnvRef;
     }>,
   ) => Promise<{ matchedCount: number; modifiedCount: number }>;
+  claimExpiredSkills: (
+    limit: number,
+    options: { leaseMs: number; now?: Date },
+  ) => Promise<ClaimedPurgeSkill[]>;
+  releaseSkillPurgeClaim: (
+    resourceId: Types.ObjectId | string,
+    options: { success: boolean; retryDelayMs?: number },
+  ) => Promise<void>;
+  touchSkillsLastActivity: (
+    skillIds: Array<Types.ObjectId | string>,
+    retentionHours: number,
+    minIntervalMs?: number,
+  ) => Promise<void>;
+  renewSkillActivity: (
+    id: string,
+    author: Types.ObjectId | string,
+    retentionHours: number,
+  ) => Promise<(ISkill & { _id: Types.ObjectId }) | null>;
+  getSkillsExpiringSoon: (
+    owner: { userId: string; tenantId?: string | null },
+    withinMs: number,
+    options?: { now?: Date; limit?: number },
+  ) => Promise<
+    Array<Pick<ISkillDocument, '_id' | 'name' | 'author' | 'source' | 'tenantId' | 'expiredAt'>>
+  >;
 } {
   const { ObjectId } = mongoose.Types;
 
@@ -1164,7 +1204,10 @@ export function createSkillMethods(
     ).toString('base64');
   }
 
-  async function createSkill(data: CreateSkillInput): Promise<CreateSkillResult> {
+  async function createSkill(
+    data: CreateSkillInput,
+    options: { retentionHours?: number } = {},
+  ): Promise<CreateSkillResult> {
     const normalizedFrontmatter = isPlainObject(data.frontmatter)
       ? normalizeSkillFrontmatterKeys(data.frontmatter)
       : undefined;
@@ -1235,6 +1278,7 @@ export function createSkillMethods(
     }
 
     const derived = deriveStructuredFrontmatterFields(frontmatter);
+    const now = new Date();
     const doc = await Skill.create({
       name: data.name,
       displayTitle: data.displayTitle,
@@ -1256,6 +1300,12 @@ export function createSkillMethods(
         bodyAlwaysApply,
       ),
       tenantId: data.tenantId,
+      ...(options.retentionHours != null
+        ? {
+            lastActivityAt: now,
+            expiredAt: new Date(now.getTime() + options.retentionHours * 60 * 60 * 1000),
+          }
+        : {}),
       ...derived,
     });
     return {
@@ -1493,8 +1543,9 @@ export function createSkillMethods(
     id: string;
     expectedVersion: number;
     update: UpdateSkillInput;
+    retentionHours?: number;
   }): Promise<UpdateSkillResult> {
-    const { id, expectedVersion, update } = params;
+    const { id, expectedVersion, update, retentionHours } = params;
     if (!isValidObjectIdString(id)) {
       return { status: 'not_found' };
     }
@@ -1632,6 +1683,11 @@ export function createSkillMethods(
     }
     if (derivedAlwaysApply !== undefined) {
       setPayload.alwaysApply = derivedAlwaysApply;
+    }
+    if (retentionHours != null) {
+      const now = new Date();
+      setPayload.lastActivityAt = now;
+      setPayload.expiredAt = new Date(now.getTime() + retentionHours * 60 * 60 * 1000);
     }
 
     const updateOps: Record<string, unknown> = {
@@ -2013,6 +2069,181 @@ export function createSkillMethods(
     return { matchedCount: result.matchedCount, modifiedCount: result.modifiedCount };
   }
 
+  /**
+   * Leases up to `limit` expired, non-exempt skills for the retention purge
+   * sweep. Mirrors `claimExpiredAgents`/`claimExpiredConversations`: each claim
+   * is a conditional `findOneAndUpdate` per candidate, atomic without relying
+   * on DocumentDB's unsupported pipeline-form updates. A skill already leased
+   * by a live claim is skipped; one whose lease expired (`purgeClaimedAt`
+   * older than `leaseMs`) is reclaimed. Classification (private vs. shared,
+   * inline vs. synced) happens in the caller after claiming — see
+   * `classifyPrivateSkills` in `@librechat/api`.
+   */
+  async function claimExpiredSkills(
+    limit: number,
+    { leaseMs, now = new Date() }: { leaseMs: number; now?: Date },
+  ): Promise<ClaimedPurgeSkill[]> {
+    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
+    const leaseExpiry = new Date(now.getTime() - leaseMs);
+    const unclaimedOrExpiredLease = {
+      $or: [{ purgeClaimId: { $exists: false } }, { purgeClaimedAt: { $lte: leaseExpiry } }],
+    };
+    const eligibilityFilter = {
+      expiredAt: { $lte: now },
+      'retentionException.exempt': { $ne: true },
+      $and: [
+        { $or: [{ purgeNotBefore: { $exists: false } }, { purgeNotBefore: { $lte: now } }] },
+        unclaimedOrExpiredLease,
+      ],
+    } as FilterQuery<ISkillDocument>;
+
+    const candidates = await Skill.find(eligibilityFilter)
+      .select({ _id: 1, author: 1, source: 1, tenantId: 1 })
+      .sort({ expiredAt: 1 })
+      .limit(limit)
+      .lean<Array<Pick<ISkillDocument, '_id' | 'author' | 'source' | 'tenantId'>>>();
+
+    const claimed: ClaimedPurgeSkill[] = [];
+    for (const candidate of candidates) {
+      const purgeClaimId = crypto.randomUUID();
+      const result = await Skill.findOneAndUpdate(
+        { _id: candidate._id, ...unclaimedOrExpiredLease },
+        { $set: { purgeClaimId, purgeClaimedAt: now }, $inc: { purgeAttempts: 1 } },
+        { new: true },
+      ).lean<Pick<
+        ISkillDocument,
+        '_id' | 'author' | 'source' | 'tenantId' | 'purgeAttempts'
+      > | null>();
+
+      if (result?._id != null) {
+        claimed.push({
+          resourceId: String(result._id),
+          author: String(result.author),
+          source: result.source ?? 'inline',
+          tenantId: result.tenantId,
+          purgeClaimId,
+          purgeAttempts: result.purgeAttempts ?? 1,
+        });
+      }
+    }
+
+    return claimed;
+  }
+
+  /**
+   * Releases a purge claim after the sweep either finished the cascade
+   * (`success: true`) or failed/declined it (`success: false`, parking the
+   * row behind `purgeNotBefore` for `retryDelayMs`). Mirrors
+   * `releaseAgentPurgeClaim`/`releaseConversationPurgeClaim`.
+   */
+  async function releaseSkillPurgeClaim(
+    resourceId: Types.ObjectId | string,
+    { success, retryDelayMs }: { success: boolean; retryDelayMs?: number },
+  ): Promise<void> {
+    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
+    const update: FilterQuery<ISkillDocument> = {
+      $unset: { purgeClaimId: '', purgeClaimedAt: '' },
+    };
+    if (!success) {
+      update.$set = { purgeNotBefore: new Date(Date.now() + (retryDelayMs ?? 0)) };
+    }
+    await Skill.updateOne({ _id: resourceId }, update);
+  }
+
+  /**
+   * Fire-and-forget activity touch for skills primed into a turn. Throttled
+   * to a single write per `minIntervalMs` window (default 1 hour) via a
+   * guard on the update filter, so repeat use of the same skill within the
+   * window is a no-op write rather than one write per turn.
+   */
+  async function touchSkillsLastActivity(
+    skillIds: Array<Types.ObjectId | string>,
+    retentionHours: number,
+    minIntervalMs: number = 60 * 60 * 1000,
+  ): Promise<void> {
+    if (skillIds.length === 0) {
+      return;
+    }
+    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
+    const now = new Date();
+    const throttleWindow = new Date(now.getTime() - minIntervalMs);
+    await Skill.updateMany(
+      {
+        _id: { $in: skillIds },
+        $or: [{ lastActivityAt: { $exists: false } }, { lastActivityAt: { $lte: throttleWindow } }],
+      },
+      {
+        $set: {
+          lastActivityAt: now,
+          expiredAt: new Date(now.getTime() + retentionHours * 60 * 60 * 1000),
+        },
+      },
+    );
+  }
+
+  /**
+   * Unconditionally re-stamps a skill's retention anchor, regardless of the
+   * throttle window `touchSkillsLastActivity` applies to the hot path. Used
+   * by the explicit renew-request handler, where a user action should always
+   * move the deadline forward. Scoped to `(id, author)` so a caller can't
+   * renew a skill it doesn't own even if the handler's own check is bypassed.
+   */
+  async function renewSkillActivity(
+    id: string,
+    author: Types.ObjectId | string,
+    retentionHours: number,
+  ): Promise<(ISkill & { _id: Types.ObjectId }) | null> {
+    if (!isValidObjectIdString(id)) {
+      return null;
+    }
+    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
+    const now = new Date();
+    const result = await Skill.findOneAndUpdate(
+      { _id: new ObjectId(id), author },
+      {
+        $set: {
+          lastActivityAt: now,
+          expiredAt: new Date(now.getTime() + retentionHours * 60 * 60 * 1000),
+        },
+      },
+      { new: true },
+    ).lean();
+    return result as unknown as (ISkill & { _id: Types.ObjectId }) | null;
+  }
+
+  /**
+   * Owner-scoped list of skills expiring within the warning window, for the
+   * client's renewal banner. Excludes exempted and non-`inline` (synced)
+   * skills outright; the caller still needs to run `classifyPrivateSkills`
+   * over the result, since an author-owned skill shared via ACL is not
+   * purge-eligible and should not prompt renewal.
+   */
+  async function getSkillsExpiringSoon(
+    owner: { userId: string; tenantId?: string | null },
+    withinMs: number,
+    { now = new Date(), limit = 100 }: { now?: Date; limit?: number } = {},
+  ): Promise<
+    Array<Pick<ISkillDocument, '_id' | 'name' | 'author' | 'source' | 'tenantId' | 'expiredAt'>>
+  > {
+    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
+    const filter: FilterQuery<ISkillDocument> = {
+      author: owner.userId,
+      expiredAt: { $ne: null, $gt: now, $lte: new Date(now.getTime() + withinMs) },
+      'retentionException.exempt': { $ne: true },
+      source: 'inline',
+    };
+    if (owner.tenantId) {
+      filter.tenantId = owner.tenantId;
+    }
+    return await Skill.find(filter)
+      .select({ _id: 1, name: 1, author: 1, source: 1, tenantId: 1, expiredAt: 1 })
+      .sort({ expiredAt: 1 })
+      .limit(limit)
+      .lean<
+        Array<Pick<ISkillDocument, '_id' | 'name' | 'author' | 'source' | 'tenantId' | 'expiredAt'>>
+      >();
+  }
+
   return {
     createSkill,
     getSkillById,
@@ -2031,6 +2262,11 @@ export function createSkillMethods(
     getSkillFileByPath,
     updateSkillFileContent,
     updateSkillFileCodeEnvIds,
+    claimExpiredSkills,
+    releaseSkillPurgeClaim,
+    touchSkillsLastActivity,
+    renewSkillActivity,
+    getSkillsExpiringSoon,
   };
 }
 

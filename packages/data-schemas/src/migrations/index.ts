@@ -10,3 +10,13 @@ export type {
   FileRetentionBackfillResult,
   FileRetentionBackfillOptions,
 } from './fileRetentionBackfill';
+export { backfillAgentRetention } from './agentRetentionBackfill';
+export type {
+  AgentRetentionBackfillResult,
+  AgentRetentionBackfillOptions,
+} from './agentRetentionBackfill';
+export { backfillSkillRetention } from './skillRetentionBackfill';
+export type {
+  SkillRetentionBackfillResult,
+  SkillRetentionBackfillOptions,
+} from './skillRetentionBackfill';

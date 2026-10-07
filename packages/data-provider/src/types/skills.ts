@@ -195,7 +195,13 @@ export type TSkill = {
    * responses.
    */
   warnings?: TSkillWarning[];
+  /** Retention deadline for private inline skills; absent/null means not yet eligible or exempt. */
+  expiredAt?: string | null;
 };
+
+export type TSkillRenewResponse = { skill: TSkill };
+
+export type TSkillsExpiringSoonResponse = { skills: TSkill[] };
 
 /**
  * Summary shape used in list endpoints — omits `body` and `frontmatter` to keep

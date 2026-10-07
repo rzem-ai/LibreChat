@@ -845,6 +845,7 @@ export interface MessageMethods {
     hydrate?: boolean,
   ): Promise<Awaited<ReturnType<SchemaWithMeiliMethods['meiliSearch']>>>;
   deleteMessages(filter: FilterQuery<IMessage>): Promise<DeleteResult>;
+  getFileIdsAttachedToLiveConversations(fileIds: string[]): Promise<Set<string>>;
 }
 
 /** The agent-ownership rule shared by background-tool settling and claiming:
@@ -3800,6 +3801,47 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
    * Performs a MeiliSearch query on the Message collection.
    * Requires the meilisearch plugin to be registered on the Message model.
    */
+  /**
+   * Resolves which of the given file ids are still attached to a message in a
+   * conversation that has not expired. Agent/skill cascade deletion uses this
+   * so it never destroys storage a live conversation still renders.
+   */
+  async function getFileIdsAttachedToLiveConversations(fileIds: string[]): Promise<Set<string>> {
+    if (fileIds.length === 0) {
+      return new Set();
+    }
+    const Message = mongoose.models.Message as Model<IMessage>;
+    const Conversation = mongoose.models.Conversation as Model<IConversation>;
+    const fileIdSet = new Set(fileIds);
+    const messages = await Message.find(
+      { 'attachments.file_id': { $in: fileIds } },
+      { conversationId: 1, attachments: 1 },
+    ).lean<Array<Pick<IMessage, 'conversationId' | 'attachments'>>>();
+    if (messages.length === 0) {
+      return new Set();
+    }
+
+    const conversationIds = Array.from(new Set(messages.map((message) => message.conversationId)));
+    const liveConversations = await Conversation.find(
+      { conversationId: { $in: conversationIds }, ...activeExpirationFilter<IConversation>() },
+      { conversationId: 1 },
+    ).lean<Array<Pick<IConversation, 'conversationId'>>>();
+    const liveConversationIds = new Set(liveConversations.map((convo) => convo.conversationId));
+
+    const liveFileIds = new Set<string>();
+    for (const message of messages) {
+      if (!liveConversationIds.has(message.conversationId)) {
+        continue;
+      }
+      for (const attachment of (message.attachments ?? []) as Array<{ file_id?: string }>) {
+        if (attachment?.file_id && fileIdSet.has(attachment.file_id)) {
+          liveFileIds.add(attachment.file_id);
+        }
+      }
+    }
+    return liveFileIds;
+  }
+
   async function searchMessages(
     query: string,
     searchOptions: SearchParams,
@@ -3836,5 +3878,6 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
     getMessagesByCursor,
     searchMessages,
     deleteMessages,
+    getFileIdsAttachedToLiveConversations,
   };
 }

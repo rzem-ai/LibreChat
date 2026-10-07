@@ -24,6 +24,8 @@ const {
 const { checkBan, configMiddleware, createFileLimiters } = require('~/server/middleware');
 const { hasCapability } = require('~/server/middleware/roles/capabilities');
 const { checkPermission, findAccessibleResources } = require('~/server/services/PermissionService');
+const { getStrategyFunctions } = require('~/server/services/Files/strategies');
+const { processDeleteRequest } = require('~/server/services/Files/process');
 const { createMulterInstance } = require('~/server/routes/files/multer');
 const { handleFileUpload } = require('~/server/routes/files/files');
 const { checkCapability, getEndpointsConfig } = require('~/server/services/Config');
@@ -56,6 +58,21 @@ const deleteHandler = createAgentManagementDeleteHandler({
   getAgentWithVersionCount: db.getAgentWithVersionCount,
   checkPermission,
   hasCapability,
+  getAgent: db.getAgent,
+  getFiles: db.getFiles,
+  getFileIdsAttachedToLiveConversations: db.getFileIdsAttachedToLiveConversations,
+  getSharedResourceFileIds: db.getSharedResourceFileIds,
+  removeAgentResourceFiles: db.removeAgentResourceFiles,
+  deleteFiles: (req, files) => processDeleteRequest({ req, files }),
+  deleteAvatarBlob: (req, avatar) => {
+    const { deleteFile } = getStrategyFunctions(avatar.source);
+    return deleteFile(req, {
+      filepath: avatar.filepath,
+      user: req.user.id,
+      tenantId: req.user.tenantId,
+    });
+  },
+  deleteFileByFilter: db.deleteFileByFilter,
   deleteAgent: db.deleteAgent,
 });
 const fileHandlers = createAgentManagementFileHandlers({

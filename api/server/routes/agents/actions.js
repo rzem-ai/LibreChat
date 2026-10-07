@@ -1,6 +1,6 @@
 const express = require('express');
 const { nanoid } = require('nanoid');
-const { logger } = require('@librechat/data-schemas');
+const { logger, getAgentRetentionHours } = require('@librechat/data-schemas');
 const {
   generateCheckAccess,
   planAgentActionUpdate,
@@ -238,6 +238,7 @@ router.post(
         {
           updatingUserId: req.user.id,
           forceVersion: true,
+          retentionHours: getAgentRetentionHours(appConfig?.interfaceConfig),
         },
       );
       await attachOwnerContacts([updatedAgent]);
@@ -322,7 +323,11 @@ router.delete(
       await db.updateAgent(
         { id: agent_id },
         { tools: updatedTools, actions: updatedActions },
-        { updatingUserId: req.user.id, forceVersion: true },
+        {
+          updatingUserId: req.user.id,
+          forceVersion: true,
+          retentionHours: getAgentRetentionHours(req.config?.interfaceConfig),
+        },
       );
       const deleted = await db.deleteAction({ actionId: action_id, agentId: agent_id });
       if (!deleted) {

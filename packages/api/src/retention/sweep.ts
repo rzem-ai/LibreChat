@@ -5,9 +5,21 @@ const DEFAULT_CONVERSATION_PURGE_SWEEP_INTERVAL_MS = 60 * 60 * 1000;
 const DEFAULT_CONVERSATION_PURGE_BATCH_SIZE = 200;
 const DEFAULT_CONVERSATION_PURGE_MAX_ATTEMPTS = 10;
 const DEFAULT_CONVERSATION_PURGE_CLAIM_LEASE_MS = 10 * 60 * 1000;
-const MIN_CONVERSATION_PURGE_RETRY_BASE_MS = 60 * 1000;
-const CONVERSATION_PURGE_RETRY_MAX_MS = 24 * 60 * 60 * 1000;
-const CONVERSATION_PURGE_PARK_MS = 30 * 24 * 60 * 60 * 1000;
+
+const DEFAULT_AGENT_PURGE_SWEEP_INTERVAL_MS = 60 * 60 * 1000;
+const DEFAULT_AGENT_PURGE_BATCH_SIZE = 200;
+const DEFAULT_AGENT_PURGE_MAX_ATTEMPTS = 10;
+const DEFAULT_AGENT_PURGE_CLAIM_LEASE_MS = 10 * 60 * 1000;
+
+const DEFAULT_SKILL_PURGE_SWEEP_INTERVAL_MS = 60 * 60 * 1000;
+const DEFAULT_SKILL_PURGE_BATCH_SIZE = 200;
+const DEFAULT_SKILL_PURGE_MAX_ATTEMPTS = 10;
+const DEFAULT_SKILL_PURGE_CLAIM_LEASE_MS = 10 * 60 * 1000;
+
+/** Shared backoff bounds — identical ladder shape for every purge-sweep resource type. */
+const MIN_PURGE_RETRY_BASE_MS = 60 * 1000;
+const PURGE_RETRY_MAX_MS = 24 * 60 * 60 * 1000;
+const PURGE_PARK_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** A conversation this tick successfully leased, ready for the cascade. */
 export type ClaimedPurgeConversation = {
@@ -122,22 +134,101 @@ export function getConversationPurgeClaimLeaseMs(
 
 /**
  * Backoff before the next attempt, doubling from one sweep interval up to a day.
- * `attempts` is the conversation's failure count including the one just recorded, so
- * the first retry lands on the following sweep. A conversation that exhausts
+ * `attempts` is the resource's failure count including the one just recorded, so
+ * the first retry lands on the following sweep. A resource that exhausts
  * `maxAttempts` is parked for a month instead, mirroring `getExpiredFileRetryDelay`.
+ * Shared across conversation/agent/skill purge sweeps — each passes its own
+ * sweep interval so the backoff ladder follows that resource type's cadence.
  */
-export function getConversationPurgeRetryDelay(attempts: number, maxAttempts: number): number {
+export function computePurgeRetryDelay(
+  attempts: number,
+  maxAttempts: number,
+  intervalMs: number,
+): number {
   if (attempts >= maxAttempts) {
-    return CONVERSATION_PURGE_PARK_MS;
+    return PURGE_PARK_MS;
   }
 
-  const interval = getConversationPurgeSweepInterval();
   const base = Math.max(
-    interval > 0 ? interval : DEFAULT_CONVERSATION_PURGE_SWEEP_INTERVAL_MS,
-    MIN_CONVERSATION_PURGE_RETRY_BASE_MS,
+    intervalMs > 0 ? intervalMs : DEFAULT_CONVERSATION_PURGE_SWEEP_INTERVAL_MS,
+    MIN_PURGE_RETRY_BASE_MS,
   );
   const exponent = Math.max(0, attempts - 1);
-  return Math.min(base * 2 ** exponent, CONVERSATION_PURGE_RETRY_MAX_MS);
+  return Math.min(base * 2 ** exponent, PURGE_RETRY_MAX_MS);
+}
+
+export function getConversationPurgeRetryDelay(attempts: number, maxAttempts: number): number {
+  return computePurgeRetryDelay(attempts, maxAttempts, getConversationPurgeSweepInterval());
+}
+
+function resolveSweepIntervalMs(envValue: string | undefined, defaultMs: number): number {
+  if (envValue == null || envValue.trim() === '') {
+    return defaultMs;
+  }
+  const value = Number(envValue);
+  if (!Number.isFinite(value) || value < 0 || (value > 0 && value < 1)) {
+    return defaultMs;
+  }
+  return value;
+}
+
+function resolvePositiveInt(envValue: string | undefined, defaultValue: number): number {
+  if (envValue == null || envValue.trim() === '') {
+    return defaultValue;
+  }
+  const value = Number(envValue);
+  if (!Number.isInteger(value) || value < 1) {
+    return defaultValue;
+  }
+  return value;
+}
+
+export function getAgentPurgeSweepInterval(
+  interval: string | undefined = process.env.AGENT_PURGE_SWEEP_INTERVAL_MS,
+): number {
+  return resolveSweepIntervalMs(interval, DEFAULT_AGENT_PURGE_SWEEP_INTERVAL_MS);
+}
+
+export function getAgentPurgeBatchSize(
+  batchSize: string | undefined = process.env.AGENT_PURGE_BATCH_SIZE,
+): number {
+  return resolvePositiveInt(batchSize, DEFAULT_AGENT_PURGE_BATCH_SIZE);
+}
+
+export function getAgentPurgeMaxAttempts(
+  maxAttempts: string | undefined = process.env.AGENT_PURGE_SWEEP_MAX_ATTEMPTS,
+): number {
+  return resolvePositiveInt(maxAttempts, DEFAULT_AGENT_PURGE_MAX_ATTEMPTS);
+}
+
+export function getAgentPurgeClaimLeaseMs(
+  leaseMs: string | undefined = process.env.AGENT_PURGE_CLAIM_LEASE_MS,
+): number {
+  return resolveSweepIntervalMs(leaseMs, DEFAULT_AGENT_PURGE_CLAIM_LEASE_MS);
+}
+
+export function getSkillPurgeSweepInterval(
+  interval: string | undefined = process.env.SKILL_PURGE_SWEEP_INTERVAL_MS,
+): number {
+  return resolveSweepIntervalMs(interval, DEFAULT_SKILL_PURGE_SWEEP_INTERVAL_MS);
+}
+
+export function getSkillPurgeBatchSize(
+  batchSize: string | undefined = process.env.SKILL_PURGE_BATCH_SIZE,
+): number {
+  return resolvePositiveInt(batchSize, DEFAULT_SKILL_PURGE_BATCH_SIZE);
+}
+
+export function getSkillPurgeMaxAttempts(
+  maxAttempts: string | undefined = process.env.SKILL_PURGE_SWEEP_MAX_ATTEMPTS,
+): number {
+  return resolvePositiveInt(maxAttempts, DEFAULT_SKILL_PURGE_MAX_ATTEMPTS);
+}
+
+export function getSkillPurgeClaimLeaseMs(
+  leaseMs: string | undefined = process.env.SKILL_PURGE_CLAIM_LEASE_MS,
+): number {
+  return resolveSweepIntervalMs(leaseMs, DEFAULT_SKILL_PURGE_CLAIM_LEASE_MS);
 }
 
 /**
@@ -223,6 +314,151 @@ export function startConversationPurgeSweep(
       await runAsSystem(() => purgeExpiredConversations(options));
     } catch (error) {
       logger.error('[purgeExpiredConversations] Background sweep failed:', error);
+    } finally {
+      isSweeping = false;
+    }
+  };
+
+  runSweep();
+  const interval = setInterval(runSweep, intervalMs);
+  interval.unref?.();
+  return interval;
+}
+
+/** The minimal shape every generic-sweep candidate needs — the engine itself only
+ *  ever reads these three fields; resource-specific fields (author, isPromoted,
+ *  source, ...) pass through untouched to `classify`/`cascade`. */
+export type ClaimedRetentionResource = {
+  resourceId: string;
+  purgeClaimId: string;
+  purgeAttempts: number;
+};
+
+export type GenericPurgeSweepDeps<TCandidate extends ClaimedRetentionResource> = {
+  claim: (limit: number, options: { leaseMs: number; now?: Date }) => Promise<TCandidate[]>;
+  release: (
+    resourceId: string,
+    options: { success: boolean; retryDelayMs?: number },
+  ) => Promise<void>;
+  /** Returns the subset of the claimed batch's `resourceId`s still private-and-eligible. */
+  classify: (candidates: TCandidate[]) => Promise<Set<string>>;
+  cascade: (candidate: TCandidate) => Promise<void>;
+  logger: SweepLogger;
+};
+
+export type GenericPurgeSweepConfig = {
+  label: string;
+  batchSize: number;
+  leaseMs: number;
+  maxAttempts: number;
+  intervalMs: number;
+};
+
+/**
+ * Model-agnostic claim → classify → cascade engine shared by the agent and skill
+ * purge sweeps. Mirrors `purgeExpiredConversations`'s claim-lease/backoff/
+ * per-item-isolation shape, with one added branch: a claimed candidate that
+ * `classify` excludes (now shared, promoted, or synced) is released with
+ * `success: false` and backoff — never deleted, never reclaimed every tick.
+ */
+export async function sweepGenericRetention<TCandidate extends ClaimedRetentionResource>(
+  options: PurgeSweepOptions | undefined,
+  deps: GenericPurgeSweepDeps<TCandidate>,
+  config: GenericPurgeSweepConfig,
+): Promise<PurgeSweepResult> {
+  const { limit = config.batchSize, now = new Date() } = options ?? {};
+  const claimed = await deps.claim(limit, { leaseMs: config.leaseMs, now });
+  if (claimed.length === 0) {
+    return { scanned: 0, purged: 0, failed: 0 };
+  }
+
+  const eligibleIds = await deps.classify(claimed);
+  let purged = 0;
+  let failed = 0;
+
+  for (const candidate of claimed) {
+    if (!eligibleIds.has(candidate.resourceId)) {
+      const retryDelayMs = computePurgeRetryDelay(
+        candidate.purgeAttempts,
+        config.maxAttempts,
+        config.intervalMs,
+      );
+      try {
+        await deps.release(candidate.resourceId, { success: false, retryDelayMs });
+      } catch (releaseError) {
+        deps.logger.error(
+          `[${config.label}] Failed to release no-longer-eligible claim for ${candidate.resourceId}:`,
+          releaseError,
+        );
+      }
+      continue;
+    }
+
+    try {
+      await deps.cascade(candidate);
+      await deps.release(candidate.resourceId, { success: true });
+      purged++;
+    } catch (error) {
+      failed++;
+      deps.logger.error(`[${config.label}] Failed to purge ${candidate.resourceId}:`, error);
+      const retryDelayMs = computePurgeRetryDelay(
+        candidate.purgeAttempts,
+        config.maxAttempts,
+        config.intervalMs,
+      );
+      try {
+        await deps.release(candidate.resourceId, { success: false, retryDelayMs });
+      } catch (releaseError) {
+        deps.logger.error(
+          `[${config.label}] Failed to release purge claim for ${candidate.resourceId}:`,
+          releaseError,
+        );
+      }
+    }
+  }
+
+  if (purged > 0 || failed > 0) {
+    deps.logger.info(
+      `[${config.label}] Processed ${claimed.length} claimed: ${purged} purged, ${failed} failed`,
+    );
+  }
+
+  return { scanned: claimed.length, purged, failed };
+}
+
+export type StartGenericPurgeSweepDeps = {
+  sweep: (options?: PurgeSweepOptions) => Promise<PurgeSweepResult>;
+  runAsSystem: <T>(fn: () => Promise<T>) => Promise<T>;
+  isLeader: () => Promise<boolean>;
+  logger: SweepLogger;
+};
+
+/** Shared leader-election/reentrancy-guard wiring for the generic resource sweeps. */
+export function startGenericPurgeSweep(
+  options: PurgeSweepOptions | undefined,
+  intervalMs: number,
+  label: string,
+  { sweep, runAsSystem, isLeader, logger }: StartGenericPurgeSweepDeps,
+): NodeJS.Timeout | null {
+  if (intervalMs === 0) {
+    logger.info(`[${label}] Disabled by sweep interval = 0`);
+    return null;
+  }
+
+  let isSweeping = false;
+  const runSweep = async () => {
+    if (isSweeping) {
+      return;
+    }
+
+    isSweeping = true;
+    try {
+      if (!(await isLeader())) {
+        return;
+      }
+      await runAsSystem(() => sweep(options));
+    } catch (error) {
+      logger.error(`[${label}] Background sweep failed:`, error);
     } finally {
       isSweeping = false;
     }

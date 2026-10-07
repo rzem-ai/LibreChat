@@ -1,7 +1,7 @@
 import path from 'path';
 import JSZip from 'jszip';
 import crypto from 'crypto';
-import { logger, validateRelativePath } from '@librechat/data-schemas';
+import { logger, validateRelativePath, getAgentRetentionHours } from '@librechat/data-schemas';
 import {
   ResourceType,
   DEFAULT_SKILL_IMPORT_CLEANUP_CONCURRENCY,
@@ -148,7 +148,10 @@ function isDuplicateKeyError(error: unknown): boolean {
 
 export interface ImportSkillDeps {
   limits?: Partial<ImportLimits> | ((req: ServerRequest) => Partial<ImportLimits> | undefined);
-  createSkill: (data: CreateSkillInput) => Promise<CreateSkillResult>;
+  createSkill: (
+    data: CreateSkillInput,
+    options?: { retentionHours?: number },
+  ) => Promise<CreateSkillResult>;
   getSkillById: (id: string | Types.ObjectId) => Promise<(ISkill & { _id: Types.ObjectId }) | null>;
   deleteSkill: (id: string) => Promise<DeleteSkillResult>;
   upsertSkillFile: (row: UpsertSkillFileInput) => Promise<ISkillFile & { _id: Types.ObjectId }>;
@@ -510,15 +513,18 @@ async function handleMarkdown(
     return res;
   }
 
-  const result = await deps.createSkill({
-    name: inferredName,
-    description: description || inferredName,
-    body: content,
-    author: authorId,
-    authorName,
-    alwaysApply,
-    tenantId,
-  });
+  const result = await deps.createSkill(
+    {
+      name: inferredName,
+      description: description || inferredName,
+      body: content,
+      author: authorId,
+      authorName,
+      alwaysApply,
+      tenantId,
+    },
+    { retentionHours: getAgentRetentionHours(req.config?.interfaceConfig) },
+  );
 
   const skill = result.skill as ISkill & { _id: Types.ObjectId };
   const grant = await grantOwnership(deps, req.user.id, skill._id);
@@ -1249,15 +1255,18 @@ async function handleZip(
   }
 
   const { authorId, authorName, tenantId } = getAuthorInfo(req);
-  const result = await deps.createSkill({
-    name: inferredName,
-    description: description || inferredName,
-    body: skillMdContent,
-    author: authorId,
-    authorName,
-    alwaysApply,
-    tenantId,
-  });
+  const result = await deps.createSkill(
+    {
+      name: inferredName,
+      description: description || inferredName,
+      body: skillMdContent,
+      author: authorId,
+      authorName,
+      alwaysApply,
+      tenantId,
+    },
+    { retentionHours: getAgentRetentionHours(req.config?.interfaceConfig) },
+  );
 
   const skill = result.skill as ISkill & { _id: Types.ObjectId };
 

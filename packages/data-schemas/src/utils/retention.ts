@@ -118,3 +118,87 @@ export function getFileRetentionWarningHours(
 
   return configValue;
 }
+
+/**
+ * Default independent agent/skill-retention period in hours (90 days), used when
+ * `agentRetentionHours` is unset. Unlike files, agents/skills have no "inherit from
+ * conversation" fallback state, so this always resolves to a concrete number.
+ */
+export const DEFAULT_AGENT_RETENTION_HOURS: number = 24 * 90; // 90 days
+
+/**
+ * Default lead time, in hours, before expiry that the agent/skill renewal prompt surfaces.
+ */
+export const DEFAULT_AGENT_RETENTION_WARNING_HOURS: number = 24 * 7; // 7 days
+
+/**
+ * Resolves the independent agent/skill-retention period from config. Always returns a
+ * usable number, defaulting to {@link DEFAULT_AGENT_RETENTION_HOURS}.
+ */
+export function getAgentRetentionHours(
+  interfaceConfig?: AppConfig['interfaceConfig'] | null,
+): number {
+  const configValue = interfaceConfig?.agentRetentionHours;
+  if (configValue === undefined) {
+    return DEFAULT_AGENT_RETENTION_HOURS;
+  }
+
+  if (typeof configValue !== 'number' || isNaN(configValue)) {
+    logger.warn(
+      `Invalid agentRetentionHours in config: ${configValue}. Using default: ${DEFAULT_AGENT_RETENTION_HOURS} hours.`,
+    );
+    return DEFAULT_AGENT_RETENTION_HOURS;
+  }
+
+  if (configValue < MIN_RETENTION_HOURS) {
+    logger.warn(
+      `Agent retention period ${configValue} is below minimum ${MIN_RETENTION_HOURS} hours. Using minimum value.`,
+    );
+    return MIN_RETENTION_HOURS;
+  }
+
+  if (configValue > MAX_RETENTION_HOURS) {
+    logger.warn(
+      `Agent retention period ${configValue} exceeds maximum ${MAX_RETENTION_HOURS} hours. Using maximum value.`,
+    );
+    return MAX_RETENTION_HOURS;
+  }
+
+  return configValue;
+}
+
+/**
+ * Resolves how many hours before expiry the agent/skill-renewal prompt should surface.
+ * Always returns a usable number, defaulting to {@link DEFAULT_AGENT_RETENTION_WARNING_HOURS}.
+ */
+export function getAgentRetentionWarningHours(
+  interfaceConfig?: AppConfig['interfaceConfig'] | null,
+): number {
+  const configValue = interfaceConfig?.agentRetentionWarningHours;
+  if (configValue === undefined) {
+    return DEFAULT_AGENT_RETENTION_WARNING_HOURS;
+  }
+
+  if (typeof configValue !== 'number' || isNaN(configValue)) {
+    logger.warn(
+      `Invalid agentRetentionWarningHours in config: ${configValue}. Using default: ${DEFAULT_AGENT_RETENTION_WARNING_HOURS} hours.`,
+    );
+    return DEFAULT_AGENT_RETENTION_WARNING_HOURS;
+  }
+
+  if (configValue < MIN_RETENTION_HOURS) {
+    logger.warn(
+      `Agent retention warning period ${configValue} is below minimum ${MIN_RETENTION_HOURS} hours. Using minimum value.`,
+    );
+    return MIN_RETENTION_HOURS;
+  }
+
+  if (configValue > MAX_RETENTION_HOURS) {
+    logger.warn(
+      `Agent retention warning period ${configValue} exceeds maximum ${MAX_RETENTION_HOURS} hours. Using maximum value.`,
+    );
+    return MAX_RETENTION_HOURS;
+  }
+
+  return configValue;
+}

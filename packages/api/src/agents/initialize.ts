@@ -1,5 +1,5 @@
 import { Providers } from '@librechat/agents';
-import { logger } from '@librechat/data-schemas';
+import { logger, getAgentRetentionHours } from '@librechat/data-schemas';
 import {
   Tools,
   Constants,
@@ -1034,6 +1034,11 @@ export interface InitializeAgentDbMethods extends EndpointDbMethods {
   /** Resolves a role by name for the tool role-permission grants. Optional: when
    *  absent the role half of the web-search gate is not applied. */
   getRoleByName?: CheckAccessParams['getRoleByName'];
+  /** Throttled fire-and-forget activity stamp for skills primed into the turn. */
+  touchSkillsLastActivity?: (
+    skillIds: Array<import('mongoose').Types.ObjectId | string>,
+    retentionHours: number,
+  ) => Promise<void>;
 }
 
 /**
@@ -1262,6 +1267,18 @@ export async function initializeAgent(
     manualSkillPrimes = manualSkillPrimes == null ? undefined : selectedPrimes.manualSkillPrimes;
     alwaysApplySkillPrimes =
       alwaysApplySkillPrimes == null ? undefined : selectedPrimes.alwaysApplySkillPrimes;
+
+    const primedSkillIds = [...(manualSkillPrimes ?? []), ...(alwaysApplySkillPrimes ?? [])].map(
+      (prime) => prime._id,
+    );
+    if (primedSkillIds.length > 0 && db?.touchSkillsLastActivity) {
+      db.touchSkillsLastActivity(
+        primedSkillIds,
+        getAgentRetentionHours(appConfig?.interfaceConfig),
+      ).catch((error: unknown) => {
+        logger.error('[initializeAgent] Error touching skill last activity', error);
+      });
+    }
 
     assertResolvedSkillContentAllowed(
       [

@@ -1335,6 +1335,7 @@ describe('createImportHandler', () => {
         expect.objectContaining({
           body: expect.stringContaining('cat references/many-fortunes.md'),
         }),
+        expect.anything(),
       );
 
       const body = res.body as { warnings?: Array<{ code: string; message: string }> };

@@ -757,6 +757,16 @@ export const revertAgentVersion = ({
   version_index: number;
 }): Promise<ag.Agent> => request.post(endpoints.revertAgentVersion(agent_id), { version_index });
 
+/** Renews a private agent's independent retention deadline (owner-scoped). */
+export const renewAgent = (agentId: string): Promise<ag.TAgentRenewResponse> => {
+  return request.post(endpoints.agentRenew(agentId), {});
+};
+
+/** Lists the caller's own private agents expiring within the configured warning window. */
+export const getAgentsExpiringSoon = (): Promise<ag.TAgentsExpiringSoonResponse> => {
+  return request.get(endpoints.agentsExpiringSoon());
+};
+
 /* Marketplace */
 
 /**
@@ -1309,6 +1319,16 @@ export function updateSkill(variables: sk.TUpdateSkillVariables): Promise<sk.TUp
 
 export function deleteSkill(id: string): Promise<sk.TDeleteSkillResponse> {
   return request.delete(endpoints.getSkill(id));
+}
+
+/** Renews a private inline skill's independent retention deadline (owner-scoped). */
+export function renewSkill(skillId: string): Promise<sk.TSkillRenewResponse> {
+  return request.post(endpoints.skillRenew(skillId), {});
+}
+
+/** Lists the caller's own private inline skills expiring within the configured warning window. */
+export function getSkillsExpiringSoon(): Promise<sk.TSkillsExpiringSoonResponse> {
+  return request.get(endpoints.skillsExpiringSoon());
 }
 
 export function listSkillFiles(skillId: string): Promise<sk.TListSkillFilesResponse> {

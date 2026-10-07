@@ -31,6 +31,7 @@ export enum QueryKeys {
   assistant = 'assistant',
   agents = 'agents',
   agent = 'agent',
+  agentsExpiringSoon = 'agentsExpiringSoon',
   files = 'files',
   fileConfig = 'fileConfig',
   filesExpiringSoon = 'filesExpiringSoon',
@@ -84,6 +85,7 @@ export enum QueryKeys {
   /* Skills */
   skills = 'skills',
   skill = 'skill',
+  skillsExpiringSoon = 'skillsExpiringSoon',
   skillFiles = 'skillFiles',
   skillFileContent = 'skillFileContent',
   /* Skill tree (phase 2 — filesystem-style node view) */
@@ -146,6 +148,8 @@ export enum MutationKeys {
   deleteAction = 'deleteAction',
   deleteAgentAction = 'deleteAgentAction',
   revertAgentVersion = 'revertAgentVersion',
+  agentRenew = 'agentRenew',
+  skillRenew = 'skillRenew',
   deleteUser = 'deleteUser',
   updateUserPreferences = 'updateUserPreferences',
   updateRole = 'updateRole',

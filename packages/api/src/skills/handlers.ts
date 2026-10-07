@@ -1,4 +1,4 @@
-import { logger } from '@librechat/data-schemas';
+import { logger, getAgentRetentionHours } from '@librechat/data-schemas';
 import {
   ResourceType,
   AccessRoleIds,
@@ -58,13 +58,17 @@ type DuplicateKeyError = Error & { code?: number | string };
  */
 export interface SkillsHandlersDeps {
   /** Skill CRUD — from `@librechat/data-schemas` `createMethods` output. */
-  createSkill: (data: CreateSkillInput) => Promise<CreateSkillResult>;
+  createSkill: (
+    data: CreateSkillInput,
+    options?: { retentionHours?: number },
+  ) => Promise<CreateSkillResult>;
   getSkillById: (id: string | Types.ObjectId) => Promise<(ISkill & { _id: Types.ObjectId }) | null>;
   listSkillsByAccess: (params: ListSkillsByAccessParams) => Promise<ListSkillsByAccessResult>;
   updateSkill: (params: {
     id: string;
     expectedVersion: number;
     update: UpdateSkillInput;
+    retentionHours?: number;
   }) => Promise<UpdateSkillResult>;
   deleteSkill: (id: string) => Promise<DeleteSkillResult>;
   listSkillFiles: (
@@ -468,18 +472,21 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
 
       let createResult: CreateSkillResult;
       try {
-        createResult = await createSkill({
-          name: body.name,
-          displayTitle: body.displayTitle,
-          description: body.description,
-          body: body.body,
-          frontmatter: body.frontmatter as Record<string, unknown> | undefined,
-          category: body.category,
-          alwaysApply: body.alwaysApply,
-          author: authorId,
-          authorName,
-          tenantId: user.tenantId,
-        });
+        createResult = await createSkill(
+          {
+            name: body.name,
+            displayTitle: body.displayTitle,
+            description: body.description,
+            body: body.body,
+            frontmatter: body.frontmatter as Record<string, unknown> | undefined,
+            category: body.category,
+            alwaysApply: body.alwaysApply,
+            author: authorId,
+            authorName,
+            tenantId: user.tenantId,
+          },
+          { retentionHours: getAgentRetentionHours(req.config?.interfaceConfig) },
+        );
       } catch (error) {
         if (isValidationError(error)) {
           return res.status(400).json({ error: 'Validation failed', issues: error.issues });
@@ -629,9 +636,17 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
         throw error;
       }
 
+      const isInlineSkill = (currentSkill.source ?? 'inline') === 'inline';
       let result: UpdateSkillResult;
       try {
-        result = await updateSkill({ id, expectedVersion, update });
+        result = await updateSkill({
+          id,
+          expectedVersion,
+          update,
+          ...(isInlineSkill
+            ? { retentionHours: getAgentRetentionHours(req.config?.interfaceConfig) }
+            : {}),
+        });
       } catch (error) {
         if (isValidationError(error)) {
           return res.status(400).json({ error: 'Validation failed', issues: error.issues });

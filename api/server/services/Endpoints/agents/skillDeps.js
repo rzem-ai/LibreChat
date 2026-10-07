@@ -49,6 +49,7 @@ const deploymentSkillMethods = createDeploymentSkillMethods({
   getSkillFileByPath: db.getSkillFileByPath,
   updateSkillFileContent: db.updateSkillFileContent,
   updateSkillFileCodeEnvIds: db.updateSkillFileCodeEnvIds,
+  touchSkillsLastActivity: db.touchSkillsLastActivity,
 });
 
 function getSkillDbMethods() {

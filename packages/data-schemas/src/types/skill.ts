@@ -1,5 +1,6 @@
 import type { CodeEnvRef, CodeEnvRefMap } from 'librechat-data-provider';
 import type { Document, Types } from 'mongoose';
+import type { IRetentionException } from '~/types/convo';
 
 /**
  * Skill — the single source of truth for a LibreChat skill.
@@ -94,6 +95,14 @@ export interface ISkill {
   updatedAt?: Date;
   /** Computed from ACL at read time, never persisted. */
   isPublic?: boolean;
+  /** Explicit activity anchor for retention; never inferred from `updatedAt`. */
+  lastActivityAt?: Date;
+  expiredAt?: Date;
+  retentionException?: IRetentionException;
+  purgeClaimId?: string;
+  purgeClaimedAt?: Date;
+  purgeAttempts?: number;
+  purgeNotBefore?: Date;
 }
 
 export interface ISkillDocument extends ISkill, Document {}

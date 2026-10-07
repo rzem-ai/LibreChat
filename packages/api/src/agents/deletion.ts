@@ -5,16 +5,27 @@ import {
   PermissionTypes,
   ResourceType,
 } from 'librechat-data-provider';
-import type { IAgent, IRole, IUser, SystemCapability } from '@librechat/data-schemas';
+import type { IAgent, IMongoFile, IRole, IUser, SystemCapability } from '@librechat/data-schemas';
+import type { FilterQuery, Types } from 'mongoose';
 import type { Request, Response } from 'express';
-import type { Types } from 'mongoose';
+import type { AgentResourceDeletionDeps, FileDeletionOutcome } from '../files/deletion';
 import type { AgentManagementProjectionSource } from './management';
 import { agentManagementDeleteResponseSchema, mapAgentManagementError } from './management';
+import { collectToolResourceFileIds, TOOL_RESOURCE_KEYS } from './orphans';
 import { checkAccessWithRequestCache } from '../middleware/access';
+import { deleteAgentResourceFiles } from '../files/deletion';
 
 type AgentManagementRecord = AgentManagementProjectionSource & { _id: Types.ObjectId };
 
-export interface AgentManagementDeleteDeps {
+export interface AgentManagementDeleteDeps
+  extends Pick<
+    CascadeDeleteAgentDeps,
+    | 'getFiles'
+    | 'getFileIdsAttachedToLiveConversations'
+    | 'getSharedResourceFileIds'
+    | 'removeAgentResourceFiles'
+    | 'deleteFileByFilter'
+  > {
   getRoleByName: (roleName: string, fieldsToSelect?: string | string[]) => Promise<IRole | null>;
   getAgentWithVersionCount: (search: {
     id: string;
@@ -28,6 +39,9 @@ export interface AgentManagementDeleteDeps {
     requiredPermission: PermissionBits;
   }) => Promise<boolean>;
   hasCapability: (user: IUser, capability: SystemCapability) => Promise<boolean>;
+  getAgent: (search: { id: string; tenantId: string }) => Promise<IAgent | null>;
+  deleteFiles: (req: Request, files: IMongoFile[]) => Promise<FileDeletionOutcome>;
+  deleteAvatarBlob: (req: Request, avatar: { filepath: string; source: string }) => Promise<void>;
   deleteAgent: (search: { id: string; tenantId: string }) => Promise<IAgent | null>;
 }
 
@@ -92,7 +106,18 @@ export function createAgentManagementDeleteHandler(
         return sendError(res, 'permission_denied');
       }
 
-      const deleted = await deps.deleteAgent({ id: req.params.id, tenantId: user.tenantId });
+      const tenantId = user.tenantId;
+      const deleted = await cascadeDeleteAgent(req.params.id, {
+        getAgent: () => deps.getAgent({ id: req.params.id, tenantId }),
+        getFiles: deps.getFiles,
+        getFileIdsAttachedToLiveConversations: deps.getFileIdsAttachedToLiveConversations,
+        getSharedResourceFileIds: deps.getSharedResourceFileIds,
+        removeAgentResourceFiles: deps.removeAgentResourceFiles,
+        deleteFiles: (files) => deps.deleteFiles(req, files),
+        deleteAvatarBlob: (avatar) => deps.deleteAvatarBlob(req, avatar),
+        deleteFileByFilter: deps.deleteFileByFilter,
+        deleteAgent: () => deps.deleteAgent({ id: req.params.id, tenantId }),
+      });
       if (!deleted) {
         return sendError(res, 'not_found');
       }
@@ -108,4 +133,91 @@ export function createAgentManagementDeleteHandler(
       return sendError(res, 'internal_error');
     }
   };
+}
+
+export interface CascadeDeleteAgentDeps {
+  getAgent: (searchParameter: FilterQuery<IAgent>) => Promise<IAgent | null>;
+  getFiles: (filter: FilterQuery<IMongoFile>) => Promise<IMongoFile[] | null>;
+  getFileIdsAttachedToLiveConversations: (fileIds: string[]) => Promise<Set<string>>;
+  getSharedResourceFileIds: AgentResourceDeletionDeps<IMongoFile>['getSharedResourceFileIds'];
+  removeAgentResourceFiles: AgentResourceDeletionDeps<IMongoFile>['removeAgentResourceFiles'];
+  deleteFiles: AgentResourceDeletionDeps<IMongoFile>['deleteFiles'];
+  deleteAvatarBlob: (avatar: { filepath: string; source: string }) => Promise<void>;
+  deleteFileByFilter: (filter: { user: string; filepath: string }) => Promise<unknown>;
+  deleteAgent: (searchParameter: FilterQuery<IAgent>) => Promise<IAgent | null>;
+}
+
+/**
+ * Removes an agent's resource files (except any still attached to a live
+ * conversation, or still shared with another agent), its avatar blob, and
+ * then the agent document itself via the existing `deleteAgent` cleanup
+ * (ACL, handoff edges, favorites). Each cleanup step is isolated: a failure
+ * in one tool resource or the avatar does not prevent the others from
+ * running or the agent document from being removed.
+ */
+export async function cascadeDeleteAgent(
+  agentId: string,
+  deps: CascadeDeleteAgentDeps,
+): Promise<IAgent | null> {
+  const agent = await deps.getAgent({ id: agentId });
+  if (!agent) {
+    return null;
+  }
+
+  const allFileIds = collectToolResourceFileIds(agent.tool_resources);
+  if (allFileIds.length > 0) {
+    const [liveFileIds, dbFiles] = await Promise.all([
+      deps.getFileIdsAttachedToLiveConversations(allFileIds),
+      deps.getFiles({ file_id: { $in: allFileIds } }),
+    ]);
+    const fileById = new Map((dbFiles ?? []).map((file) => [file.file_id, file]));
+
+    for (const toolResource of TOOL_RESOURCE_KEYS) {
+      const attachedFileIds = agent.tool_resources?.[toolResource]?.file_ids ?? [];
+      const requestedFileIds = attachedFileIds.filter((fileId) => !liveFileIds.has(fileId));
+      if (requestedFileIds.length === 0) {
+        continue;
+      }
+      try {
+        await deleteAgentResourceFiles(
+          {
+            agentId: agent.id,
+            agentObjectId: String(agent._id),
+            toolResource,
+            requestedFileIds,
+            attachedFileIds,
+            files: requestedFileIds
+              .map((fileId) => fileById.get(fileId))
+              .filter((file): file is IMongoFile => file != null)
+              .map((file) => ({ file_id: file.file_id, owner: file.user.toString(), file })),
+            userId: String(agent.author),
+          },
+          {
+            getSharedResourceFileIds: deps.getSharedResourceFileIds,
+            removeAgentResourceFiles: deps.removeAgentResourceFiles,
+            deleteFiles: deps.deleteFiles,
+          },
+        );
+      } catch (error) {
+        logger.error(
+          `[cascadeDeleteAgent] Error deleting "${toolResource}" files for agent ${agentId}`,
+          error,
+        );
+      }
+    }
+  }
+
+  if (agent.avatar?.source && agent.avatar.filepath) {
+    try {
+      await deps.deleteAvatarBlob(agent.avatar);
+      await deps.deleteFileByFilter({
+        user: String(agent.author),
+        filepath: agent.avatar.filepath,
+      });
+    } catch (error) {
+      logger.error(`[cascadeDeleteAgent] Error deleting avatar for agent ${agentId}`, error);
+    }
+  }
+
+  return deps.deleteAgent({ id: agentId });
 }

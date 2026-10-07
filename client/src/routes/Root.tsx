@@ -39,6 +39,7 @@ import {
   useUserTermsQuery,
 } from '~/data-provider';
 import { DeloitteHeader } from '~/components/DeloitteComponents/DeloitteTopHeader';
+import ExpiringResourceBanner from '~/components/Retention/ExpiringResourceBanner';
 import { LearningTourProvider } from '~/components/Learning/LearningTourContext';
 import CourseCompletionModal from '~/components/Learning/CourseCompletionModal';
 import KeyboardShortcutsDialog from '~/components/Nav/KeyboardShortcutsDialog';
@@ -189,6 +190,8 @@ export default function Root() {
                   <PromptGroupsProvider>
                     <Banner onHeightChange={setBannerHeight} />
                     <ExpiringFilesBanner />
+                    <ExpiringResourceBanner resourceType="agent" />
+                    <ExpiringResourceBanner resourceType="skill" />
                     {/* Deloitte Custom Change: Add Deloitte Header to top of view */}
                     <div
                       style={

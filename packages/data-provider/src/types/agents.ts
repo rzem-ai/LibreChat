@@ -1082,9 +1082,15 @@ export type Agent = {
   subagents?: AgentSubagentsConfig;
   /** Memory partition: `agent` isolates memories per (user, agent); default shared pool */
   memory_scope?: MemoryScope;
+  /** Retention deadline for private agents; absent/null means not yet eligible or exempt. */
+  expiredAt?: string | null;
 };
 
 export type TAgentsMap = Record<string, Agent | undefined>;
+
+export type TAgentRenewResponse = { agent: Agent };
+
+export type TAgentsExpiringSoonResponse = { agents: Agent[] };
 
 export type AgentCreateParams = {
   git_identity?: AgentGitIdentity;

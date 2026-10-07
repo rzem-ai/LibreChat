@@ -358,6 +358,11 @@ export const mcpServer = (serverName: string) => `${BASE_URL}/api/mcp/servers/${
 
 export const revertAgentVersion = (agent_id: string) => `${agents({ path: `${agent_id}/revert` })}`;
 
+/** Owner-scoped renewal of a private agent's independent retention deadline. */
+export const agentRenew = (agent_id: string) => `${agents({ path: `${agent_id}/renew` })}`;
+/** Owner-scoped list of the caller's private agents expiring within the warning window. */
+export const agentsExpiringSoon = () => `${agents({ path: 'expiring' })}`;
+
 export const files = () => `${BASE_URL}/api/files`;
 export const fileUpload = () => `${BASE_URL}/api/files`;
 export const fileDelete = () => `${BASE_URL}/api/files`;
@@ -460,6 +465,11 @@ export const skills = () => `${BASE_URL}/api/skills`;
 export const importSkill = () => `${skills()}/import`;
 
 export const getSkill = (id: string) => `${skills()}/${encodeURIComponent(id)}`;
+
+/** Owner-scoped renewal of a private inline skill's independent retention deadline. */
+export const skillRenew = (skillId: string) => `${skills()}/${encodeURIComponent(skillId)}/renew`;
+/** Owner-scoped list of the caller's private inline skills expiring within the warning window. */
+export const skillsExpiringSoon = () => `${skills()}/expiring`;
 
 export const listSkillsWithFilters = (
   filter: Record<string, string | number | undefined | null>,
