@@ -35,6 +35,7 @@ const {
   getRoleByName,
 } = require('~/models');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
+const { ensureFilePreview } = require('~/server/services/Files/previewExtraction');
 const { cleanFileName, getContentDisposition, SAFE_INLINE_TYPES } = require('~/server/utils/files');
 const canAccessSharedLink = require('~/server/middleware/canAccessSharedLink');
 const { forkSharedConversation } = require('~/server/utils/import/fork');
@@ -293,6 +294,16 @@ if (allowSharedLinks) {
       try {
         const { file_id } = req.params;
         let liveFile = req.liveFile;
+        // Lazily render a preview for files the code-interpreter pipeline never
+        // touched (mirrors the owner preview route) — a no-op for any record
+        // that already has a `status`/`text` set.
+        if (liveFile?.status == null && liveFile?.text == null) {
+          const persisted = await ensureFilePreview({ req, file: liveFile });
+          if (persisted) {
+            const [refreshed] = await getFiles({ file_id }, null, {});
+            liveFile = refreshed ?? liveFile;
+          }
+        }
         // Lazy-sweep orphaned pending records to 'failed' so the client preview
         // poller reaches a terminal state (mirrors the owner preview route).
         if (liveFile?.status === 'pending' && liveFile.updatedAt instanceof Date) {

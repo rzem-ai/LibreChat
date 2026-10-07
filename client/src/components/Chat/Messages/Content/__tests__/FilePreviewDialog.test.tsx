@@ -145,4 +145,49 @@ describe('FilePreviewDialog office preview', () => {
     );
     expect(screen.queryByTestId('artifact-preview')).not.toBeInTheDocument();
   });
+
+  it('classifies DOCX/XLSX as office via extension when the MIME type is generic', () => {
+    mockUseFilePreview.mockReturnValue({ data: undefined, isError: false });
+
+    renderDialog({ fileType: 'application/octet-stream', fileName: 'report.docx' });
+
+    expect(mockUseFilePreview).toHaveBeenCalledWith(
+      'file-1',
+      expect.objectContaining({ enabled: true }),
+      undefined,
+    );
+  });
+
+  it('does not classify PPTX as office via extension even with a generic MIME type', () => {
+    mockUseFilePreview.mockReturnValue({ data: undefined, isError: false });
+
+    renderDialog({ fileType: 'application/zip', fileName: 'deck.pptx' });
+
+    expect(mockUseFilePreview).toHaveBeenCalledWith(
+      'file-1',
+      expect.objectContaining({ enabled: false }),
+      undefined,
+    );
+  });
+
+  it('does not enable the office preview query while the dialog is closed', () => {
+    mockUseFilePreview.mockReturnValue({ data: undefined, isError: false });
+
+    renderDialog({ open: false });
+
+    expect(mockUseFilePreview).toHaveBeenCalledWith(
+      'file-1',
+      expect.objectContaining({ enabled: false }),
+      undefined,
+    );
+  });
+
+  it('shows only "Preview unavailable" (not also a loading spinner) on a query error', () => {
+    mockUseFilePreview.mockReturnValue({ data: undefined, isError: true });
+
+    renderDialog();
+
+    expect(screen.getByText('Preview unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('Loading...')).not.toBeInTheDocument();
+  });
 });

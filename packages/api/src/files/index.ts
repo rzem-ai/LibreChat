@@ -8,6 +8,7 @@ export * from './filter';
 export * from './mistral/crud';
 export * from './ocr';
 export * from './parse';
+export * from './previewExtraction';
 export * from './rag';
 export * from './retention';
 export * from './sse';

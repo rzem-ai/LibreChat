@@ -1,16 +1,13 @@
 const { Readable } = require('stream');
-const { FileSources, FileContext } = require('librechat-data-provider');
 
-const mockClassifyCodeArtifact = jest.fn(() => 'document');
-const mockExtractCodeArtifactText = jest.fn(async () => '<html>preview</html>');
-const mockGetExtractedTextFormat = jest.fn((_name, _mime, text) => (text == null ? null : 'html'));
-const mockHasOfficeHtmlPath = jest.fn(() => true);
+const mockDecideFilePreviewAction = jest.fn(() => 'extract');
+const mockRenderFilePreviewText = jest.fn(async () => ({
+  text: '<html>preview</html>',
+  textFormat: 'html',
+}));
 jest.mock('@librechat/api', () => ({
-  classifyCodeArtifact: (...args) => mockClassifyCodeArtifact(...args),
-  extractCodeArtifactText: (...args) => mockExtractCodeArtifactText(...args),
-  getExtractedTextFormat: (...args) => mockGetExtractedTextFormat(...args),
-  hasOfficeHtmlPath: (...args) => mockHasOfficeHtmlPath(...args),
-  MAX_TEXT_EXTRACT_BYTES: 2 * 1024 * 1024,
+  decideFilePreviewAction: (...args) => mockDecideFilePreviewAction(...args),
+  renderFilePreviewText: (...args) => mockRenderFilePreviewText(...args),
 }));
 
 jest.mock('@librechat/data-schemas', () => ({
@@ -36,21 +33,19 @@ describe('ensureFilePreview', () => {
     filename: 'report.docx',
     type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     bytes: 1024,
-    source: FileSources.local,
+    source: 'local',
     storageKey: null,
     filepath: '/uploads/report.docx',
-    context: FileContext.message_attachment,
   };
   const req = {};
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockClassifyCodeArtifact.mockReturnValue('document');
-    mockHasOfficeHtmlPath.mockReturnValue(true);
-    mockExtractCodeArtifactText.mockResolvedValue('<html>preview</html>');
-    mockGetExtractedTextFormat.mockImplementation((_name, _mime, text) =>
-      text == null ? null : 'html',
-    );
+    mockDecideFilePreviewAction.mockReturnValue('extract');
+    mockRenderFilePreviewText.mockResolvedValue({
+      text: '<html>preview</html>',
+      textFormat: 'html',
+    });
     mockUpdateFile.mockResolvedValue({});
     mockGetDownloadStream.mockImplementation(async () =>
       Readable.from([Buffer.from('PK\x03\x04')]),
@@ -58,52 +53,22 @@ describe('ensureFilePreview', () => {
     getStrategyFunctions.mockReturnValue({ getDownloadStream: mockGetDownloadStream });
   });
 
-  it('is a no-op when the file already has a status', async () => {
-    await ensureFilePreview({ req, file: { ...baseFile, status: 'ready' } });
+  it('is a no-op when decideFilePreviewAction says skip', async () => {
+    mockDecideFilePreviewAction.mockReturnValue('skip');
 
+    const result = await ensureFilePreview({ req, file: baseFile });
+
+    expect(result).toBe(false);
     expect(getStrategyFunctions).not.toHaveBeenCalled();
     expect(mockUpdateFile).not.toHaveBeenCalled();
   });
 
-  it('is a no-op when the file already has cached text', async () => {
-    await ensureFilePreview({ req, file: { ...baseFile, text: 'already extracted' } });
+  it('marks oversized files as failed without reading storage, when decided too_large', async () => {
+    mockDecideFilePreviewAction.mockReturnValue('too_large');
 
-    expect(mockUpdateFile).not.toHaveBeenCalled();
-  });
+    const result = await ensureFilePreview({ req, file: baseFile });
 
-  it('skips OpenAI/Azure-assistants-storage files', async () => {
-    await ensureFilePreview({ req, file: { ...baseFile, source: FileSources.openai } });
-
-    expect(getStrategyFunctions).not.toHaveBeenCalled();
-    expect(mockUpdateFile).not.toHaveBeenCalled();
-  });
-
-  it('skips execute_code context files (already handled by the code-interpreter pipeline)', async () => {
-    await ensureFilePreview({
-      req,
-      file: { ...baseFile, context: FileContext.execute_code },
-    });
-
-    expect(getStrategyFunctions).not.toHaveBeenCalled();
-    expect(mockUpdateFile).not.toHaveBeenCalled();
-  });
-
-  it('skips files with no extractable preview path', async () => {
-    mockHasOfficeHtmlPath.mockReturnValue(false);
-    mockClassifyCodeArtifact.mockReturnValue('other');
-
-    await ensureFilePreview({
-      req,
-      file: { ...baseFile, filename: 'photo.png', type: 'image/png' },
-    });
-
-    expect(getStrategyFunctions).not.toHaveBeenCalled();
-    expect(mockUpdateFile).not.toHaveBeenCalled();
-  });
-
-  it('marks oversized files as failed without reading storage', async () => {
-    await ensureFilePreview({ req, file: { ...baseFile, bytes: 10 * 1024 * 1024 } });
-
+    expect(result).toBe(true);
     expect(getStrategyFunctions).not.toHaveBeenCalled();
     expect(mockUpdateFile).toHaveBeenCalledWith({
       file_id: 'file-1',
@@ -113,15 +78,15 @@ describe('ensureFilePreview', () => {
   });
 
   it('renders and persists a successful extraction', async () => {
-    await ensureFilePreview({ req, file: baseFile });
+    const result = await ensureFilePreview({ req, file: baseFile });
 
-    expect(getStrategyFunctions).toHaveBeenCalledWith(FileSources.local);
+    expect(result).toBe(true);
+    expect(getStrategyFunctions).toHaveBeenCalledWith('local');
     expect(mockGetDownloadStream).toHaveBeenCalledWith(req, baseFile.filepath);
-    expect(mockExtractCodeArtifactText).toHaveBeenCalledWith(
+    expect(mockRenderFilePreviewText).toHaveBeenCalledWith(
       expect.any(Buffer),
       baseFile.filename,
       baseFile.type,
-      'document',
     );
     expect(mockUpdateFile).toHaveBeenCalledWith({
       file_id: 'file-1',
@@ -138,8 +103,8 @@ describe('ensureFilePreview', () => {
     expect(mockGetDownloadStream).toHaveBeenCalledWith(req, 's3/key.docx');
   });
 
-  it('persists a failed status when extraction returns null (HTML-or-null contract)', async () => {
-    mockExtractCodeArtifactText.mockResolvedValue(null);
+  it('persists a failed status when rendering returns null (HTML-or-null contract)', async () => {
+    mockRenderFilePreviewText.mockResolvedValue({ text: null, textFormat: null });
 
     await ensureFilePreview({ req, file: baseFile });
 
@@ -155,8 +120,9 @@ describe('ensureFilePreview', () => {
   it('persists a failed status when the storage read throws', async () => {
     mockGetDownloadStream.mockRejectedValue(new Error('storage unavailable'));
 
-    await ensureFilePreview({ req, file: baseFile });
+    const result = await ensureFilePreview({ req, file: baseFile });
 
+    expect(result).toBe(true);
     expect(mockUpdateFile).toHaveBeenCalledWith({
       file_id: 'file-1',
       status: 'failed',
@@ -167,8 +133,20 @@ describe('ensureFilePreview', () => {
   it('is a no-op when the storage source has no download strategy', async () => {
     getStrategyFunctions.mockReturnValue({ getDownloadStream: undefined });
 
-    await ensureFilePreview({ req, file: baseFile });
+    const result = await ensureFilePreview({ req, file: baseFile });
 
+    expect(result).toBe(false);
+    expect(mockUpdateFile).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op and does not throw when decideFilePreviewAction itself throws', async () => {
+    mockDecideFilePreviewAction.mockImplementation(() => {
+      throw new Error('malformed file record');
+    });
+
+    const result = await ensureFilePreview({ req, file: baseFile });
+
+    expect(result).toBe(false);
     expect(mockUpdateFile).not.toHaveBeenCalled();
   });
 });

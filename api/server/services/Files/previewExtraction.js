@@ -1,12 +1,5 @@
 const { logger } = require('@librechat/data-schemas');
-const {
-  classifyCodeArtifact,
-  extractCodeArtifactText,
-  getExtractedTextFormat,
-  MAX_TEXT_EXTRACT_BYTES,
-  hasOfficeHtmlPath,
-} = require('@librechat/api');
-const { FileContext, checkOpenAIStorage } = require('librechat-data-provider');
+const { decideFilePreviewAction, renderFilePreviewText } = require('@librechat/api');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { updateFile } = require('~/models');
 
@@ -27,73 +20,55 @@ async function streamToBuffer(stream) {
  * fills the same generic fields lazily, on the first `/preview` request, so
  * a second request for the same file is served from the cache instantly.
  *
- * No-ops (leaves `status` unset, same as today) for:
- *  - files that already have a `status` or cached `text` — the fast path
- *  - file types with no inline-preview path (not an office-HTML bucket and
- *    not a recognized text/document category)
- *  - OpenAI/Azure-assistants-storage and execute_code sources — out of
- *    scope here; execute_code files already get a status from the existing
- *    pipeline, and OpenAI-storage downloads need a model-scoped client this
- *    function doesn't have
- *  - files over `MAX_TEXT_EXTRACT_BYTES` — persisted as `failed` so the
- *    route's existing back-compat default doesn't re-attempt on every call
- *
- * Never throws — any unexpected failure (including a malformed file record
- * missing a field classification depends on) is logged and treated as a
- * no-op, same as today's behavior for a type with no preview path.
+ * Thin orchestration only — classification and rendering are pure,
+ * type-checked functions in `@librechat/api` (`decideFilePreviewAction`,
+ * `renderFilePreviewText`); this layer just does the I/O those functions
+ * can't do themselves: reading storage and persisting the result.
  *
  * @param {object} params
  * @param {import('express').Request} params.req
  * @param {import('mongoose').Document} params.file - Mongo file record
- *   (e.g. `req.fileAccess.file`).
+ *   (e.g. `req.fileAccess.file` / `req.liveFile`).
  * @returns {Promise<boolean>} `true` if a `status`/`text` was persisted
  *   (caller should re-fetch the record), `false` for a no-op.
  */
 async function ensureFilePreview({ req, file }) {
-  if (file.status != null || file.text != null) {
-    return false;
-  }
-  if (checkOpenAIStorage(file.source) || file.context === FileContext.execute_code) {
-    return false;
-  }
-
-  /* Decide whether this file is even a candidate for extraction. Kept in
-   * its own try/catch, separate from the attempt below: a malformed record
-   * (e.g. missing the otherwise-required `type` field) shouldn't persist a
-   * `failed` status for a file we never actually tried to render — that
-   * would permanently suppress a later, valid attempt once the data is
-   * fixed. Silently no-op instead, same as an unsupported file type. */
-  let category;
-  let getDownloadStream;
+  let action;
   try {
-    category = classifyCodeArtifact(file.filename, file.type);
-    if (!hasOfficeHtmlPath(file.filename, file.type) && category === 'other') {
-      return false;
-    }
-
-    if (file.bytes > MAX_TEXT_EXTRACT_BYTES) {
-      await updateFile({
-        file_id: file.file_id,
-        status: 'failed',
-        previewError: 'file_too_large',
-      });
-      return true;
-    }
-
-    ({ getDownloadStream } = getStrategyFunctions(file.source));
-    if (!getDownloadStream) {
-      return false;
-    }
+    action = decideFilePreviewAction(file);
   } catch (error) {
     logger.error(`[ensureFilePreview] ${file.file_id}: failed to classify file:`, error);
+    return false;
+  }
+
+  if (action === 'skip') {
+    return false;
+  }
+
+  if (action === 'too_large') {
+    await updateFile({
+      file_id: file.file_id,
+      status: 'failed',
+      previewError: 'file_too_large',
+    });
+    return true;
+  }
+
+  let getDownloadStream;
+  try {
+    ({ getDownloadStream } = getStrategyFunctions(file.source));
+  } catch (error) {
+    logger.error(`[ensureFilePreview] ${file.file_id}: failed to resolve storage strategy:`, error);
+    return false;
+  }
+  if (!getDownloadStream) {
     return false;
   }
 
   try {
     const stream = await getDownloadStream(req, file.storageKey || file.filepath);
     const buffer = await streamToBuffer(stream);
-    const text = await extractCodeArtifactText(buffer, file.filename, file.type, category);
-    const textFormat = getExtractedTextFormat(file.filename, file.type, text);
+    const { text, textFormat } = await renderFilePreviewText(buffer, file.filename, file.type);
     await updateFile({
       file_id: file.file_id,
       text,

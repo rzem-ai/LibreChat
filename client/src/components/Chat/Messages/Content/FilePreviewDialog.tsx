@@ -67,10 +67,18 @@ function canPreviewByMime(mime?: string): 'pdf' | 'text' | 'office' | false {
   return false;
 }
 
-function canPreviewByExt(filename: string): 'pdf' | 'text' | false {
+function canPreviewByExt(filename: string): 'pdf' | 'text' | 'office' | false {
   const ext = getFileExtension(filename);
   if (ext === 'pdf') {
     return 'pdf';
+  }
+  // Generic/missing MIME types (application/octet-stream, application/zip)
+  // still have a usable extension — route DOCX/XLSX through the office HTML
+  // preview the same as a well-formed MIME would. PPTX stays excluded, same
+  // as the MIME-based check in canPreviewByMime.
+  const officeExts = new Set(['docx', 'xlsx', 'xls']);
+  if (officeExts.has(ext)) {
+    return 'office';
   }
   const textExts = new Set([
     'txt',
@@ -176,14 +184,17 @@ export default function FilePreviewDialog({
   const isOfficeKind = previewKind === 'office';
 
   const previewRef = useRef<SandpackPreviewRef>();
-  const { data: startupConfig } = useGetStartupConfig({ enabled: isOfficeKind && !useShared });
+  const isOfficePreviewActive = isOfficeKind && open;
+  const { data: startupConfig } = useGetStartupConfig({
+    enabled: isOfficePreviewActive && !useShared,
+  });
   const { data: sharedStartupConfig } = useGetSharedStartupConfig(shareId, {
-    enabled: isOfficeKind && useShared,
+    enabled: isOfficePreviewActive && useShared,
   });
   const resolvedStartupConfig = useShared ? sharedStartupConfig : startupConfig;
   const officePreview = useFilePreview(
     fileId,
-    { enabled: isOfficeKind },
+    { enabled: isOfficePreviewActive },
     useShared ? shareId : undefined,
   );
   const officeStatus = officePreview.data?.status;
@@ -191,7 +202,8 @@ export default function FilePreviewDialog({
     officeStatus === 'ready' && officePreview.data?.textFormat === 'html'
       ? officePreview.data.text
       : undefined;
-  const officeLoading = isOfficeKind && (officeStatus == null || officeStatus === 'pending');
+  const officeLoading =
+    isOfficeKind && !officePreview.isError && (officeStatus == null || officeStatus === 'pending');
   const officeUnavailable =
     isOfficeKind &&
     (officePreview.isError ||
