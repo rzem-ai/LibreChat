@@ -143,6 +143,18 @@ describe('applyAdminRefresh', () => {
       expect(deps.onRefreshSuccess).toHaveBeenCalledWith(user, tokenset);
     });
 
+    it('omits a data-URI avatar from the refreshed user', async () => {
+      const user = makeUser({
+        avatar: `data:image/png;base64,${'A'.repeat(10000)}`,
+      } as Partial<IUser>);
+      const deps = makeDeps(user);
+
+      const result = await applyAdminRefresh(makeTokenset(), deps);
+
+      expect(result.user).not.toHaveProperty('avatar');
+      expect(JSON.stringify(result.user)).not.toContain('data:image');
+    });
+
     it('uses findUsers when no userId is supplied', async () => {
       const user = makeUser();
       const deps = makeDeps(user);
