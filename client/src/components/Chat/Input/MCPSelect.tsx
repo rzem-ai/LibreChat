@@ -163,9 +163,11 @@ function MCPSelectContent() {
             <span
               aria-hidden="true"
               className={cn(
-                'flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-sm border',
+                // Deloitte Custom Change: sized up to match the per-server checkboxes below
+                'flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-sm border',
+                // Deloitte Custom Change: recolored to bg-surface-submit to match the submit button
                 allConnectorsSelected || someConnectorsSelected
-                  ? 'border-primary bg-primary text-primary-foreground'
+                  ? 'border-surface-submit bg-surface-submit text-text-on-status'
                   : 'border-border-xheavy bg-transparent',
               )}
             >

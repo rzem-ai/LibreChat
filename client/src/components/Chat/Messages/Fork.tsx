@@ -279,7 +279,7 @@ function Fork({
         conversationId,
         option: ForkOptions.TARGET_LEVEL,
         splitAtTarget: false,
-        latestMessageId,
+        latestMessageId: getLatestMessageId?.(),
       });
     };
 
