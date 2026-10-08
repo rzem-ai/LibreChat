@@ -1,5 +1,13 @@
-import type { TConversation, TEndpointOption, TEphemeralAgent } from 'librechat-data-provider';
-import type { IUser, AppConfig } from '@librechat/data-schemas';
+import type {
+  Agents,
+  CodeApprovalMode,
+  CodeEnvironmentMode,
+  CodeWorkspaceSelection,
+  TEndpointOption,
+  // Deloitte Custom Change: ephemeral agent per-message tool/capability bundle
+  TEphemeralAgent,
+} from 'librechat-data-provider';
+import type { IUser, AppConfig, IConversation } from '@librechat/data-schemas';
 import type { Request } from 'express';
 
 /**
@@ -14,6 +22,7 @@ export type RequestBody = {
   endpoint?: string;
   endpointType?: string;
   model?: string;
+  imageDetail?: Agents.ImageDetail;
   key?: string;
   endpointOption?: Partial<TEndpointOption>;
   /** Browser IANA timezone used to resolve local-time prompt variables (e.g. `{{current_datetime}}`). */
@@ -24,15 +33,21 @@ export type RequestBody = {
    * conversation, as an alternative to selecting a saved Agent document.
    */
   ephemeralAgent?: TEphemeralAgent;
+  codeApprovalMode?: CodeApprovalMode;
+  codeEnvironmentMode?: CodeEnvironmentMode;
+  codeWorkspaces?: CodeWorkspaceSelection[];
 };
 
 export type ServerRequest = Request<unknown, unknown, RequestBody> & {
   user?: IUser;
   config?: AppConfig;
-  /** Server-captured conversation creation time used to anchor dynamic prompt variables. */
+  /** Server-captured generation start time used to anchor dynamic prompt variables. */
+  turnStartedAt?: number;
+  /** Server-captured conversation creation time used when inserting conversation metadata. */
   conversationCreatedAt?: string;
-  /** Conversation loaded while resolving the prompt timestamp anchor, reused by save logic. */
-  resolvedConversation?: Partial<TConversation> | null;
+  /** Conversation read by request middleware (`null` = looked up, absent), reused by the
+   *  subagent guard, agent initialization, and the first save instead of re-reading it. */
+  resolvedConversation?: Partial<IConversation> | null;
   /** Passport strategy that populated req.user for this request. */
   authStrategy?: string;
 };

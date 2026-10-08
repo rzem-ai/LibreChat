@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import type { TSkill } from 'librechat-data-provider';
+import type { TSkillSummary } from 'librechat-data-provider';
 import SkillList from '../SkillList';
 
 jest.mock('~/hooks', () => ({
@@ -17,14 +17,13 @@ jest.mock('react-router-dom', () => ({
    resolvable under Jest's CJS transform. */
 jest.mock('../SkillListItem', () => ({
   __esModule: true,
-  default: ({ skill }: { skill: TSkill }) => <div>{skill.name}</div>,
+  default: ({ skill }: { skill: TSkillSummary }) => <div>{skill.name}</div>,
 }));
 
-const makeSkill = (overrides: Partial<TSkill>): TSkill => ({
+const makeSkill = (overrides: Partial<TSkillSummary>): TSkillSummary => ({
   _id: overrides.name ?? 'id',
   name: 'skill',
   description: 'description',
-  body: '',
   author: 'user-1',
   authorName: 'User One',
   version: 1,
@@ -37,7 +36,7 @@ const makeSkill = (overrides: Partial<TSkill>): TSkill => ({
 
 describe('SkillList', () => {
   it('shows the empty-catalog message when there are no skills at all', () => {
-    render(<SkillList skills={[]} isLoading={false} />);
+    render(<SkillList skills={[]} sectionOpen={true} onSectionOpenChange={jest.fn()} />);
     expect(screen.getByText('com_ui_skills_empty')).toBeInTheDocument();
   });
 
@@ -48,7 +47,7 @@ describe('SkillList', () => {
       makeSkill({ name: 'my-skill', author: 'user-1' }),
     ];
 
-    render(<SkillList skills={skills} isLoading={false} />);
+    render(<SkillList skills={skills} sectionOpen={true} onSectionOpenChange={jest.fn()} />);
 
     expect(screen.getByText('com_ui_skills_view_public')).toBeInTheDocument();
     expect(screen.getByText('com_ui_skills_view_shared')).toBeInTheDocument();
@@ -61,7 +60,7 @@ describe('SkillList', () => {
   it('hides a section entirely when it has no matching skills', () => {
     const skills = [makeSkill({ name: 'my-skill', author: 'user-1' })];
 
-    render(<SkillList skills={skills} isLoading={false} />);
+    render(<SkillList skills={skills} sectionOpen={true} onSectionOpenChange={jest.fn()} />);
 
     expect(screen.queryByText('com_ui_skills_view_public')).toBeNull();
     expect(screen.queryByText('com_ui_skills_view_shared')).toBeNull();

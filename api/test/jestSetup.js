@@ -29,8 +29,9 @@ process.env.BAN_INTERVAL = '20';
 process.env.CI = 'true';
 process.env.JWT_SECRET = 'test';
 process.env.JWT_REFRESH_SECRET = 'test';
-process.env.CREDS_KEY = 'test';
-process.env.CREDS_IV = 'test';
+// Startup rejects malformed explicitly configured AES credentials. Use valid test-only hex fixtures.
+process.env.CREDS_KEY = '0123456789abcdef'.repeat(4);
+process.env.CREDS_IV = '0123456789abcdef'.repeat(2);
 process.env.ALLOW_EMAIL_LOGIN = 'true';
 process.env.AI_REGISTRY_CLIENT_ID = '4aeebbdc-56f5-4329-b40e-3d0a243bf74a';
 

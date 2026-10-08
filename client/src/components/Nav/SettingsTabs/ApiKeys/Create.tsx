@@ -66,11 +66,7 @@ export default function Create({ userEmail, onCreated, onCancel }: CreateProps) 
           placeholder={localize('com_ui_api_key_name_placeholder')}
         />
         {nameError && (
-          <p
-            id="api-key-name-error"
-            role="alert"
-            className="text-xs text-red-500 dark:text-red-400"
-          >
+          <p id="api-key-name-error" role="alert" className="text-xs text-text-destructive">
             {localize('com_ui_api_key_name_required')}
           </p>
         )}

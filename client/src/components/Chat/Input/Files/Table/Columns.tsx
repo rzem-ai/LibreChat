@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-import { ArrowUpDown, ArrowUp, ArrowDown, Database, Download } from 'lucide-react';
 import { FileSources, FileContext } from 'librechat-data-provider';
+// Deloitte Custom Change (PR #164): Download icon for the per-row attachment download button.
+import { ArrowUpDown, ArrowUp, ArrowDown, Database, Download } from 'lucide-react';
 import {
   Button,
   Checkbox,
@@ -25,6 +26,7 @@ const contextMap: Record<any, TranslationKeys> = {
   [FileContext.image_generation]: 'com_ui_image_gen',
   [FileContext.assistants_output]: 'com_ui_assistants_output',
   [FileContext.message_attachment]: 'com_ui_attachment',
+  [FileContext.run_artifact]: 'com_ui_published_file',
 };
 
 export const columns: ColumnDef<TFile>[] = [

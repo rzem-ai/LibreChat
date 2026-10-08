@@ -6,26 +6,27 @@
  * @import { MCPServerDocument } from 'librechat-data-provider'
  */
 const { randomUUID } = require('crypto');
-const { logger, SystemCapabilities } = require('@librechat/data-schemas');
+const mongoose = require('mongoose');
+const { logger, getTenantId, SystemCapabilities } = require('@librechat/data-schemas');
 const {
   checkAccess,
   isUserSourced,
+  createAuthIdentityContext,
   MCPConnection,
-  MCPErrorCodes,
+  MCPCatalogCapacityError,
   splitMCPToolKey,
   normalizeServerName,
   findShadowedServerNames,
   redactServerSecrets,
+  sanitizeMcpIconPath,
   redactAllServerSecrets,
-  isMCPDomainNotAllowedError,
-  isMCPInspectionFailedError,
-  isMCPOAuthSecretReentryRequiredError,
-  getUserMCPAuthMap,
-  requiresUserScopedConnection,
-  // Deloitte Custom Change: reuse the circuit breaker's backoff constant for reinitMCPServerDeduped
-  // instead of duplicating the value, aliased to avoid shadowing the per-request `mcpConfig`
-  // (resolved server configs) used throughout getMCPTools.
-  mcpConfig: mcpCircuitBreakerConfig,
+  // Deloitte Custom Change: MCPErrorCodes is still referenced below by
+  // MCP_ERROR_GENERIC_MESSAGES, the non-reflective error-message map used by
+  // handleMCPError.
+  MCPErrorCodes,
+  getMCPErrorResponse,
+  prepareMCPServerOAuthDeletion,
+  cleanupDeletedMCPServerOAuthUsers,
 } = require('@librechat/api');
 const {
   Constants,
@@ -41,8 +42,14 @@ const {
   resolveMcpConfigNames,
   resolveAllMcpConfigs,
 } = require('~/server/services/MCP');
-const { cacheMCPServerTools, getMCPServerTools } = require('~/server/services/Config');
-const { reinitMCPServer } = require('~/server/services/Tools/mcp'); // Deloitte Custom Change: proactive tool discovery for OBO-scoped servers in getMCPTools
+const { loadMCPServerCatalogs } = require('~/server/services/Tools/mcp');
+const { createOpenIDSessionTokenProvider } = require('~/server/services/OpenIDSessionRefresh');
+const {
+  cacheMCPServerTools,
+  getMCPServerTools,
+  getMCPToolsCacheGeneration,
+  invalidateCachedTools,
+} = require('~/server/services/Config');
 const { getResourcePermissionsMap } = require('~/server/services/PermissionService');
 const { hasCapability } = require('~/server/middleware/roles/capabilities');
 const { getMCPManager, getMCPServersRegistry } = require('~/config');
@@ -89,54 +96,80 @@ const MCP_ERROR_FALLBACK_MESSAGE = 'An error occurred processing the MCP request
  * @returns {import('express').Response | null} Response if handled, null if not an MCP error
  */
 function handleMCPError(error, res) {
-  if (isMCPDomainNotAllowedError(error)) {
-    return res.status(error.statusCode).json({
-      error: error.code,
-      message: MCP_ERROR_GENERIC_MESSAGES[error.code] ?? MCP_ERROR_FALLBACK_MESSAGE,
-    });
+  const response = getMCPErrorResponse(error);
+  if (!response) {
+    return null;
   }
+  // Deloitte Custom Change: never reflect the underlying error's message in the
+  // response body (Checkmarx XSS remediation) - substitute a generic,
+  // code-keyed message instead of trusting `response.body.message`, which can
+  // echo request-derived values (domain, server name, field list).
+  return res.status(response.statusCode).json({
+    error: response.body.error,
+    message: MCP_ERROR_GENERIC_MESSAGES[response.body.error] ?? MCP_ERROR_FALLBACK_MESSAGE,
+  });
+}
 
-  if (isMCPInspectionFailedError(error)) {
-    return res.status(error.statusCode).json({
-      error: error.code,
-      message: MCP_ERROR_GENERIC_MESSAGES[error.code] ?? MCP_ERROR_FALLBACK_MESSAGE,
-    });
+/** Disposes a stale local connection after its DB-backed config has changed. */
+async function disconnectLocalMCPServer(userId, serverName) {
+  try {
+    await getMCPManager()?.disconnectUserConnection(userId, serverName);
+  } catch (error) {
+    logger.warn(
+      `[MCP Cache] Failed to disconnect the local connection for ${serverName} (user: ${userId}):`,
+      error,
+    );
   }
+}
 
-  if (isMCPOAuthSecretReentryRequiredError(error)) {
-    return res.status(error.statusCode).json({
-      error: error.code,
-      message: MCP_ERROR_GENERIC_MESSAGES[error.code] ?? MCP_ERROR_FALLBACK_MESSAGE,
-    });
+const POST_COMMIT_FENCE_RETRY_DELAYS_MS = [0, 50, 200];
+
+/** Retries the shared fence after persistence; config-bound connections remain a durable
+ * fallback if Redis stays unavailable, so an old connection cannot serve the new config. */
+async function fenceCommittedMCPMutation({ userId, serverName }) {
+  let lastError;
+  for (const delay of POST_COMMIT_FENCE_RETRY_DELAYS_MS) {
+    if (delay > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+    try {
+      await invalidateCachedTools({ userId, serverName });
+      return;
+    } catch (error) {
+      lastError = error;
+      logger.warn(
+        `[MCP Cache] Failed to fence committed mutation for ${serverName} (user: ${userId}); retrying:`,
+        error,
+      );
+    }
   }
+  throw lastError;
+}
 
-  // Fallback for legacy string-based error handling (backwards compatibility)
-  if (error.message?.startsWith(MCPErrorCodes.DOMAIN_NOT_ALLOWED)) {
-    return res.status(403).json({
-      error: MCPErrorCodes.DOMAIN_NOT_ALLOWED,
-      message:
-        MCP_ERROR_GENERIC_MESSAGES[MCPErrorCodes.DOMAIN_NOT_ALLOWED] ?? MCP_ERROR_FALLBACK_MESSAGE,
-    });
+/**
+ * Republishes the pre-mutation catalog under the new fence when persistence
+ * fails. The retained connection will reacquire that generation on its next
+ * use; this snapshot keeps every replica authoritative in the meantime.
+ */
+async function restoreRetainedServerCatalog({ userId, serverName, serverConfig, serverTools }) {
+  if (serverTools == null) {
+    return;
   }
-
-  if (error.message?.startsWith(MCPErrorCodes.INSPECTION_FAILED)) {
-    return res.status(400).json({
-      error: MCPErrorCodes.INSPECTION_FAILED,
-      message:
-        MCP_ERROR_GENERIC_MESSAGES[MCPErrorCodes.INSPECTION_FAILED] ?? MCP_ERROR_FALLBACK_MESSAGE,
+  try {
+    const publicationGeneration = await getMCPToolsCacheGeneration({ userId, serverName });
+    await cacheMCPServerTools({
+      userId,
+      serverName,
+      serverConfig,
+      serverTools,
+      publicationGeneration,
     });
+  } catch (error) {
+    logger.error(
+      `[MCP Cache] Failed to restore the retained catalog for ${serverName} (user: ${userId}):`,
+      error,
+    );
   }
-
-  if (error.message?.startsWith(MCPErrorCodes.OAUTH_SECRET_REENTRY_REQUIRED)) {
-    return res.status(400).json({
-      error: MCPErrorCodes.OAUTH_SECRET_REENTRY_REQUIRED,
-      message:
-        MCP_ERROR_GENERIC_MESSAGES[MCPErrorCodes.OAUTH_SECRET_REENTRY_REQUIRED] ??
-        MCP_ERROR_FALLBACK_MESSAGE,
-    });
-  }
-
-  return null;
 }
 
 /**
@@ -150,114 +183,6 @@ function handleMCPError(error, res) {
  */
 function getInvalidConfigFieldPaths(zodValidationError) {
   return zodValidationError.errors.map((issue) => issue.path.join('.') || '(root)');
-}
-
-/**
- * Deloitte Custom Change: dedupe/backoff state for the `reinitMCPServer` fallback
- * in `getMCPTools`, keyed by `${userId}:${serverName}`. Without this, concurrent
- * page loads (or repeated polling) for the same uncached user-scoped server would
- * each trigger their own connection/token-exchange attempt, and a server that's
- * genuinely down would be retried on every single request. Entries are removed
- * as soon as they resolve (in-flight) or their backoff window elapses (failed),
- * so the map never accumulates stale state.
- */
-const reinitAttempts = new Map();
-/**
- * Deloitte Custom Change: reuse the circuit breaker's base backoff duration
- * (packages/api/src/mcp/mcpConfig.ts) instead of a separate hardcoded value,
- * so the two cooldowns stay in sync if the env-configured default changes.
- */
-const REINIT_FAILURE_BACKOFF_MS = mcpCircuitBreakerConfig.CB_BASE_BACKOFF_MS;
-
-/**
- * Deloitte Custom Change: runs `reinitMCPServer` at most once at a time per
- * user/server, and skips retrying for `REINIT_FAILURE_BACKOFF_MS` after a
- * failure, so concurrent or repeated `getMCPTools` calls for the same
- * uncached user-scoped server don't each trigger their own connection attempt.
- * @param {string} dedupeKey - Identifies the attempt, formatted as `${userId}:${serverName}`.
- * @param {Parameters<typeof reinitMCPServer>[0]} reinitParams - Forwarded as-is to `reinitMCPServer`.
- * @returns {Promise<Awaited<ReturnType<typeof reinitMCPServer>> | null>} The
- *   `reinitMCPServer` result, or `null` if a prior failed attempt is still
- *   within its backoff window (no new attempt is made in that case).
- */
-async function reinitMCPServerDeduped(dedupeKey, reinitParams) {
-  const existingAttempt = reinitAttempts.get(dedupeKey);
-  if (existingAttempt?.promise) {
-    return existingAttempt.promise;
-  }
-  if (existingAttempt?.failedUntil && Date.now() < existingAttempt.failedUntil) {
-    return null;
-  }
-
-  const attemptPromise = reinitMCPServer(reinitParams).finally(() => {
-    const latestAttempt = reinitAttempts.get(dedupeKey);
-    if (latestAttempt?.promise === attemptPromise) {
-      reinitAttempts.delete(dedupeKey);
-    }
-  });
-  // Deloitte Custom Change: `reinitMCPServer` swallows its own errors and always
-  // resolves rather than rejecting, and a resolved `success: true` doesn't
-  // guarantee usable tools - `connectionDeferred` (runtime body placeholders)
-  // and an OAuth-ready-but-undiscovered flow both resolve `success: true` with
-  // `availableTools: null`, and neither will produce tools on a bare retry
-  // (they need a chat turn or a completed OAuth flow, not another `/api/mcp/tools`
-  // poll). So backoff is keyed on the absence of usable `availableTools` (null,
-  // undefined, or an empty map), not `success`, covering rejections, resolved
-  // failures, and resolved-but-toolless outcomes (including a genuinely empty
-  // tool map, which `getMCPTools` treats the same as "no tools" downstream).
-  const registerFailure = () => {
-    const failedUntil = Date.now() + REINIT_FAILURE_BACKOFF_MS;
-    reinitAttempts.set(dedupeKey, { promise: null, failedUntil });
-    // Self-clean so the map doesn't grow unbounded for servers/users that never
-    // retry again after the backoff window passes. `unref` is optional-chained
-    // since some timer implementations (e.g. Jest's modern fake timers) return a
-    // handle without a Node `Timeout`'s `unref` method.
-    const cleanupTimer = setTimeout(() => {
-      const latestAttempt = reinitAttempts.get(dedupeKey);
-      if (latestAttempt?.failedUntil === failedUntil) {
-        reinitAttempts.delete(dedupeKey);
-      }
-    }, REINIT_FAILURE_BACKOFF_MS);
-    cleanupTimer?.unref?.();
-  };
-  attemptPromise.then((result) => {
-    if (!result?.availableTools || Object.keys(result.availableTools).length === 0) {
-      registerFailure();
-    }
-  }, registerFailure);
-  reinitAttempts.set(dedupeKey, { promise: attemptPromise, failedUntil: 0 });
-  return attemptPromise;
-}
-
-/**
- * Deloitte Custom Change: cap on simultaneous in-flight tasks in
- * `runWithConcurrency` for `getMCPTools`'s per-server discovery/reinit work,
- * so a page load with many uncached user-scoped servers doesn't fire off a
- * connection attempt for every one of them at once.
- */
-const MCP_TOOLS_DISCOVERY_CONCURRENCY = 3;
-
-/**
- * Deloitte Custom Change: runs zero-arg async `tasks` with at most
- * `concurrency` in flight at a time, so one slow/unreachable task (e.g. a
- * live MCP reinitialize attempt) doesn't serially block the rest.
- * @param {Array<() => Promise<unknown>>} tasks
- * @param {number} concurrency
- * @returns {Promise<void>} Resolves once every task has settled; rejections
- *   are caught and logged so one failing task never aborts the others.
- */
-async function runWithConcurrency(tasks, concurrency) {
-  const executing = new Set();
-  for (const task of tasks) {
-    const runningTask = task()
-      .catch((error) => logger.error('[runWithConcurrency] Task failed', error))
-      .finally(() => executing.delete(runningTask));
-    executing.add(runningTask);
-    if (executing.size >= concurrency) {
-      await Promise.race(executing);
-    }
-  }
-  await Promise.all(executing);
 }
 
 /**
@@ -292,131 +217,48 @@ const getMCPTools = async (req, res) => {
       return res.status(200).json({ servers: {} });
     }
 
-    const mcpManager = getMCPManager();
     const mcpServers = {};
-
-    const serverToolsMap = new Map();
-    const cacheResults = await Promise.all(
-      configuredServers.map(async (serverName) => {
-        try {
-          return {
-            serverName,
-            tools: await getMCPServerTools(userId, serverName, mcpConfig[serverName]),
-          };
-        } catch (error) {
-          logger.error(`[getMCPTools] Error fetching cached tools for ${serverName}:`, error);
-          return { serverName, tools: null };
-        }
-      }),
-    );
-
-    // Deloitte Custom Change: lazily resolved (once, however many servers need it
-    // concurrently below) only if a server needs the reinitialize fallback.
-    let configServersPromise;
-    const getConfigServers = () => (configServersPromise ??= resolveConfigServers(req));
-
-    /**
-     * Deloitte Custom Change: resolves cached-vs-live tools for one server,
-     * establishing a connection via `reinitMCPServerDeduped` when needed. Run
-     * with bounded concurrency below (not serially) so one slow/unreachable
-     * user-scoped server doesn't hold up discovery for every other server on
-     * this request.
-     */
-    const processServerTools = async (serverName, tools) => {
-      if (tools) {
-        serverToolsMap.set(serverName, tools);
-        return;
-      }
-
-      let serverTools;
-      try {
-        serverTools = await mcpManager.getServerToolFunctions(userId, serverName);
-      } catch (error) {
-        logger.error(`[getMCPTools] Error fetching tools for server ${serverName}:`, error);
-        return;
-      }
-
-      // Deloitte Custom Change: reinitMCPServer already caches internally via updateMCPServerTools.
-      let alreadyCached = false;
-      if (!serverTools && requiresUserScopedConnection(mcpConfig[serverName])) {
-        /**
-         * Deloitte Custom Change: no cache entry and no existing live connection -
-         * the normal state for OBO/user-scoped servers, which never get an
-         * app-level connection and otherwise only connect on first chat use.
-         * Establish the connection now (mirrors the `/reinitialize` route) so
-         * tools appear without requiring a prior chat turn. Scoped to
-         * user-scoped servers only - non-user-scoped servers get an app-level
-         * connection at startup, so a missing connection here means startup
-         * failed or is still in progress, not a case to eagerly retry on
-         * every request. Deduped/backed-off per user+server so concurrent or
-         * repeated requests don't pile up connection attempts (see
-         * reinitMCPServerDeduped). `customUserVars` servers also satisfy
-         * `requiresUserScopedConnection`, so their auth map is resolved here
-         * too - without it, `reinitMCPServer` always sees the vars as unset
-         * and short-circuits as missing, wasting the attempt and backoff
-         * window even after the user has configured them.
-         */
-        try {
-          const configServers = await getConfigServers();
-          let userMCPAuthMap;
-          if (mcpConfig[serverName]?.customUserVars) {
-            try {
-              userMCPAuthMap = await getUserMCPAuthMap({
-                userId,
-                servers: [serverName],
-                findPluginAuthsByKeys: db.findPluginAuthsByKeys,
-              });
-            } catch (error) {
-              logger.warn(
-                `[getMCPTools] Could not resolve customUserVars for ${serverName}:`,
-                error,
-              );
-            }
-          }
-          const result = await reinitMCPServerDeduped(`${userId}:${serverName}`, {
-            user: req.user,
-            serverName,
-            serverConfig: mcpConfig[serverName],
-            configServers,
-            userMCPAuthMap,
-          });
-          serverTools = result?.availableTools ?? null;
-          alreadyCached = true;
-        } catch (error) {
-          logger.error(
-            `[getMCPTools] Error establishing connection for server ${serverName}:`,
-            error,
-          );
-        }
-      }
-
-      if (!serverTools || Object.keys(serverTools).length === 0) {
-        logger.debug(`[getMCPTools] No tools found for server ${serverName}`);
-        return;
-      }
-      serverToolsMap.set(serverName, serverTools);
-
-      if (!alreadyCached) {
-        // Cache asynchronously without blocking
-        cacheMCPServerTools({
-          userId,
-          serverName,
-          serverTools,
-          serverConfig: mcpConfig[serverName],
-        }).catch((err) =>
-          logger.error(`[getMCPTools] Failed to cache tools for ${serverName}:`, err),
-        );
+    const oboIdentityContext = createAuthIdentityContext({
+      user: req.user,
+      tenantId: getTenantId(),
+    });
+    const catalogAbortController = new AbortController();
+    const abortCatalogLoad = () => {
+      if (!res.writableEnded) {
+        catalogAbortController.abort();
       }
     };
-
-    await runWithConcurrency(
-      cacheResults.map(
-        ({ serverName, tools }) =>
-          () =>
-            processServerTools(serverName, tools),
-      ),
-      MCP_TOOLS_DISCOVERY_CONCURRENCY,
-    );
+    res.once('close', abortCatalogLoad);
+    let catalogResult;
+    try {
+      catalogResult = await loadMCPServerCatalogs({
+        user: req.user,
+        servers: configuredServers.map((serverName) => ({
+          serverName,
+          serverConfig: mcpConfig[serverName],
+        })),
+        upstreamTokenProvider: createOpenIDSessionTokenProvider({
+          req,
+          res,
+          user: req.user,
+          identityContext: oboIdentityContext,
+          tokenPreference: 'access_token',
+        }),
+        oboIdentityContext,
+        signal: catalogAbortController.signal,
+        recoveryPolicy: req.config?.mcpSettings?.catalogRecovery,
+      });
+    } finally {
+      res.off('close', abortCatalogLoad);
+    }
+    const { serverTools: serverToolsMap, serversWithoutTools } = catalogResult;
+    const reauthRequiredServers = catalogResult.reauthRequiredServers ?? new Set();
+    const reauthRequiredGenerations = catalogResult.reauthRequiredGenerations ?? new Map();
+    if (serversWithoutTools.length > 0) {
+      logger.debug(
+        `[getMCPTools] No tools (${serversWithoutTools.length}): ${serversWithoutTools.join(', ')}`,
+      );
+    }
 
     // Process each configured server
     for (const serverName of configuredServers) {
@@ -428,7 +270,11 @@ const getMCPTools = async (req, res) => {
         const server = {
           name: serverName,
           icon: serverConfig?.iconPath || '',
-          authenticated: true,
+          authenticated: !reauthRequiredServers.has(serverName),
+          ...(reauthRequiredServers.has(serverName) && {
+            authorizationState: 'reauth_required',
+            authorizationGeneration: reauthRequiredGenerations.get(serverName),
+          }),
           authConfig: [],
           tools: [],
         };
@@ -462,6 +308,10 @@ const getMCPTools = async (req, res) => {
               name: toolName,
               pluginKey: toolKey,
               description: toolData.function.description || '',
+              /** Upstream identity for keys that stripped a redundant
+               *  server-name prefix — the agent editor migrates legacy
+               *  persisted ids only when this proves the same tool. */
+              ...(toolData.serverToolName != null && { serverToolName: toolData.serverToolName }),
             });
           }
         }
@@ -478,7 +328,11 @@ const getMCPTools = async (req, res) => {
     res.status(200).json({ servers: mcpServers });
   } catch (error) {
     logger.error('[getMCPTools]', error);
-    res.status(500).json({ message: error.message });
+    if (res.destroyed || res.headersSent) {
+      return;
+    }
+    const status = error instanceof MCPCatalogCapacityError ? 503 : 500;
+    res.status(status).json({ message: error.message });
   }
 };
 /**
@@ -624,6 +478,9 @@ const createMCPServerController = async (req, res) => {
         errors: getInvalidConfigFieldPaths(validation.error),
       });
     }
+    if (validation.data.iconPath) {
+      validation.data.iconPath = sanitizeMcpIconPath(validation.data.iconPath);
+    }
     if (configHasObo(validation.data) && !(await callerCanConfigureObo(req))) {
       logger.warn(
         `[createMCPServer] User ${userId} attempted to configure OBO without ${Permissions.CONFIGURE_OBO} permission`,
@@ -718,6 +575,9 @@ const updateMCPServerController = async (req, res) => {
         errors: getInvalidConfigFieldPaths(validation.error),
       });
     }
+    if (validation.data.iconPath) {
+      validation.data.iconPath = sanitizeMcpIconPath(validation.data.iconPath);
+    }
 
     /**
      * On an existing OBO server, lock down every user-input field except the
@@ -750,16 +610,37 @@ const updateMCPServerController = async (req, res) => {
 
     const configForUpdate = {
       ...validation.data,
+      // Deloitte Custom Change: preserve the existing `limitedAccess` flag across
+      // updates - MCPServerUserInputSchema doesn't carry this field, so without
+      // this an update would silently clear it.
       ...(existingConfig?.limitedAccess !== undefined && {
         limitedAccess: existingConfig.limitedAccess,
       }),
     };
-    const parsedConfig = await getMCPServersRegistry().updateServer(
+    const registry = getMCPServersRegistry();
+    const parsedConfig = await registry.inspectServerUpdate(
       serverName,
       configForUpdate,
       'DB',
       userId,
     );
+    const retainedTools = await getMCPServerTools(userId, serverName, existingConfig);
+    await invalidateCachedTools({ userId, serverName });
+    try {
+      await registry.commitServerUpdate(serverName, parsedConfig, 'DB', userId);
+    } catch (error) {
+      await restoreRetainedServerCatalog({
+        userId,
+        serverName,
+        serverConfig: existingConfig,
+        serverTools: retainedTools,
+      });
+      throw error;
+    }
+    /** Fence connections another replica could have created from the old DB
+     * config between the pre-commit fence and the committed update. */
+    await fenceCommittedMCPMutation({ userId, serverName });
+    await disconnectLocalMCPServer(userId, serverName);
 
     res.status(200).json(redactServerSecrets(parsedConfig, { canEdit: true }));
   } catch (error) {
@@ -778,11 +659,74 @@ const updateMCPServerController = async (req, res) => {
  * Delete MCP server
  * @route DELETE /api/mcp/servers/:serverName
  */
-const deleteMCPServerController = async (req, res) => {
+const deleteMCPServerController = async (req, res, uninstallOAuthMCP) => {
   try {
     const userId = req.user?.id;
     const { serverName } = req.params;
-    await getMCPServersRegistry().removeServer(serverName, 'DB', userId);
+    const registry = getMCPServersRegistry();
+    const existingConfig = await registry.getServerConfig(serverName, userId);
+    const tokenIdentifier = `mcp:${serverName}`;
+    const getTokenUserIds = () =>
+      mongoose.models.Token
+        ? mongoose.models.Token.distinct('userId', {
+            identifier: {
+              $in: [tokenIdentifier, `${tokenIdentifier}:client`, `${tokenIdentifier}:refresh`],
+            },
+          })
+        : Promise.resolve([]);
+    const getAclEntries = () =>
+      existingConfig?.dbId && mongoose.models.AclEntry
+        ? mongoose.models.AclEntry.find({
+            resourceType: ResourceType.MCPSERVER,
+            resourceId: existingConfig.dbId,
+            permBits: { $bitsAnySet: PermissionBits.VIEW },
+          }).lean()
+        : Promise.resolve([]);
+    const [oauthDeletionSnapshot, retainedTools] = await Promise.all([
+      prepareMCPServerOAuthDeletion({ getTokenUserIds, getAclEntries }),
+      getMCPServerTools(userId, serverName, existingConfig),
+    ]);
+    await invalidateCachedTools({ userId, serverName });
+    try {
+      await registry.removeServer(serverName, 'DB', userId);
+    } catch (error) {
+      await restoreRetainedServerCatalog({
+        userId,
+        serverName,
+        serverConfig: existingConfig,
+        serverTools: retainedTools,
+      });
+      throw error;
+    }
+    /** Fence connections another replica could have created before deletion committed. */
+    await fenceCommittedMCPMutation({ userId, serverName });
+    await disconnectLocalMCPServer(userId, serverName);
+    try {
+      await cleanupDeletedMCPServerOAuthUsers({
+        ownerUserId: userId,
+        serverName,
+        serverConfig: existingConfig,
+        snapshot: oauthDeletionSnapshot,
+        getTokenUserIds,
+        getUserPrincipals: (candidateUserId) => db.getUserPrincipals({ userId: candidateUserId }),
+        resolveAllowlists: (candidateUserId) =>
+          registry.resolveAllowlists({ userId: candidateUserId }),
+        fenceAndDisconnectUser: async (candidateUserId) => {
+          if (candidateUserId === userId) {
+            return;
+          }
+          await fenceCommittedMCPMutation({ userId: candidateUserId, serverName });
+          await disconnectLocalMCPServer(candidateUserId, serverName);
+        },
+        uninstallOAuthMCP,
+      });
+    } catch (error) {
+      logger.warn(
+        `[deleteMCPServer] Server ${serverName} was deleted, but OAuth cleanup failed for user ${userId}:`,
+        error,
+      );
+      throw error;
+    }
     res.status(200).json({ message: 'MCP server deleted successfully' });
   } catch (error) {
     logger.error('[deleteMCPServer]', error);
