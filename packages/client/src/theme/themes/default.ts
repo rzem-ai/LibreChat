@@ -34,9 +34,12 @@ export const defaultTheme: IThemeRGB = {
   // Surface colors
   'rgb-surface-active': '236 236 236', // #ececec (gray-100)
   'rgb-surface-active-alt': '227 227 227', // #e3e3e3 (gray-200)
-  'rgb-surface-hover': '227 227 227', // #e3e3e3 (gray-200)
+  // Deloitte Custom Change: the v0.8.8 upstream sync stopped aliasing --surface-hover
+  // to --gray-200 and gave it its own literal value; mirrored here and kept equal to
+  // composer-hover below since style.css still aliases composer-hover to surface-hover.
+  'rgb-surface-hover': '232 232 232', // #e8e8e8
   'rgb-surface-hover-alt': '205 205 205', // #cdcdcd (gray-300)
-  'rgb-surface-composer-hover': '227 227 227', // #e3e3e3 (gray-200)
+  'rgb-surface-composer-hover': '232 232 232', // #e8e8e8
   'rgb-surface-primary': '255 255 255', // #fff (white)
   'rgb-chart-widget-surface': '255 255 255', // #fff (Click UI chart widget)
   'rgb-chart-widget-stroke': '230 231 233', // #e6e7e9 (Click UI chart widget)

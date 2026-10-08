@@ -52,7 +52,8 @@ describe('ExportAndShareMenu link status', () => {
   it('shows a blue circular indicator when the conversation has a link', () => {
     mockShareId = 'share-1';
 
-    render(<ExportAndShareMenu isSharedButtonEnabled={true} />);
+    // Deloitte Custom Change: isExportEnabled is required by ExportAndShareMenuProps upstream
+    render(<ExportAndShareMenu isExportEnabled={true} isSharedButtonEnabled={true} />);
 
     expect(screen.getByTestId('header-shared-link-indicator')).toHaveClass(
       'rounded-full',
@@ -68,7 +69,7 @@ describe('ExportAndShareMenu link status', () => {
   });
 
   it('uses the default share control when the conversation has no link', () => {
-    render(<ExportAndShareMenu isSharedButtonEnabled={true} />);
+    render(<ExportAndShareMenu isExportEnabled={true} isSharedButtonEnabled={true} />);
 
     expect(screen.queryByTestId('header-shared-link-indicator')).not.toBeInTheDocument();
     expect(screen.getByRole('button')).toHaveAttribute('aria-label', 'com_endpoint_export_share');

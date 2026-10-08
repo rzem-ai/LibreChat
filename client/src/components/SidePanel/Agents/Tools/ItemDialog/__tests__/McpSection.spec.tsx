@@ -223,13 +223,14 @@ describe('McpSection', () => {
   });
 
   test('interpolates the server name when another manager reports a connecting state', () => {
+    // Deloitte Custom Change: partial fixture cast since MCPServerStatusIconProps gained required fields upstream
     mockGetServerStatusIconProps.mockReturnValue({
       serverStatus: {
         connectionState: 'connecting',
         requiresOAuth: true,
       },
       isInitializing: false,
-    });
+    } as unknown as MCPServerStatusIconProps);
 
     render(<McpSection item={item} />);
 
@@ -330,12 +331,13 @@ describe('McpSection', () => {
   test.each([true, false])(
     'offers cancellation for pending OAuth (local initialization=%s)',
     (isInitializing) => {
+      // Deloitte Custom Change: partial fixture cast since MCPServerStatusIconProps gained required fields upstream
       mockGetServerStatusIconProps.mockReturnValue({
         serverStatus: { connectionState: 'connecting', requiresOAuth: true },
         isInitializing,
         canCancel: true,
         onCancel: mockCancelOAuth,
-      });
+      } as unknown as MCPServerStatusIconProps);
 
       render(<McpSection item={item} />);
 
@@ -351,10 +353,11 @@ describe('McpSection', () => {
   );
 
   test('keeps Connect disabled until initialization becomes cancellable', () => {
+    // Deloitte Custom Change: partial fixture cast since MCPServerStatusIconProps gained required fields upstream
     mockGetServerStatusIconProps.mockReturnValue({
       isInitializing: true,
       canCancel: false,
-    });
+    } as unknown as MCPServerStatusIconProps);
 
     render(<McpSection item={item} />);
 
@@ -372,21 +375,23 @@ describe('McpSection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'com_nav_mcp_connect_server' }));
     expect(await screen.findByTestId('oauth-dialog')).toBeInTheDocument();
 
+    // Deloitte Custom Change: partial fixture cast since MCPServerStatusIconProps gained required fields upstream
     mockGetServerStatusIconProps.mockReturnValue({
       isInitializing: true,
       canCancel: true,
       onCancel: mockCancelOAuth,
-    });
+    } as unknown as MCPServerStatusIconProps);
     rerender(<McpSection item={item} />);
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_cancel' }));
 
     expect(screen.queryByTestId('oauth-dialog')).not.toBeInTheDocument();
     expect(mockCancelOAuth).toHaveBeenCalledTimes(1);
+    // Deloitte Custom Change: partial fixture cast since MCPServerStatus gained required requiresOAuth field upstream
     mockGetServerStatusIconProps.mockReturnValue({
       serverStatus: { connectionState: 'connected' },
       isInitializing: false,
       canCancel: false,
-    });
+    } as unknown as MCPServerStatusIconProps);
     rerender(<McpSection item={item} />);
     expect(mockSetValue).not.toHaveBeenCalled();
   });
@@ -403,11 +408,12 @@ describe('McpSection', () => {
       'https://oauth.example/first',
     );
 
+    // Deloitte Custom Change: partial fixture cast since MCPServerStatusIconProps gained required fields upstream
     mockGetServerStatusIconProps.mockReturnValue({
       isInitializing: true,
       canCancel: true,
       onCancel: mockCancelOAuth,
-    });
+    } as unknown as MCPServerStatusIconProps);
     rerender(<McpSection item={item} />);
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_cancel' }));
 
