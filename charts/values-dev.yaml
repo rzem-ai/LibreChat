@@ -4,6 +4,13 @@ branch: 'develop'
 llmGateway:
   namespace: 'llm-gateway-ctnp'
 
+# ea-code-runtime's namespace — enables a direct in-cluster egress rule in
+# networkpolicy.yaml (bypasses Cilium Ingress/Envoy's ~1MiB buffer limit).
+# Not used until LIBRECHAT_CODE_BASEURL below is also switched to the
+# in-cluster URL.
+codeInterpreter:
+  namespace: 'code-runtime-dev'
+
 serviceAccount:
   name: sa-librechat-dev
 
@@ -51,7 +58,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:06b22bdcfe4b2ee6a3af823994c718a3ab8770e51dff8f6ae8ec7aee46b9190c'
+          tag: 'develop@sha256:ce0b57602e15dea773bf027001636cd1559a263b6a68b3fa41c18dfac0c5da5a'
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -97,7 +104,11 @@ pods:
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
           RAG_PORT: '8000'
           # ClearTrack Code Interpreter (ea-code-runtime)
-          LIBRECHAT_CODE_BASEURL: 'https://code-runtime-dev.ctk.au.deloitte.com/v1'
+          # NOTE: switch to the direct in-cluster URL below (and set
+          # codeInterpreter.namespace) to bypass the Cilium Ingress/Envoy
+          # ~1MiB buffer limit on large file uploads:
+          LIBRECHAT_CODE_BASEURL: 'http://code-runtime-dev-code-interpreter-service.code-runtime-dev.svc.cluster.local:3112/v1'
+          # LIBRECHAT_CODE_BASEURL: 'https://code-runtime-dev.ctk.au.deloitte.com/v1'
           CODEAPI_AUTH_PROVIDER: 'librechat-jwt'
           CODEAPI_JWT_ALGORITHM: 'EdDSA'
           CODEAPI_JWT_KID: 'lc-codeapi-dev-2026-05'
@@ -161,7 +172,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:47d7c13c1b7a2647f9add4b36ec053c4cb0b6a6e53651788eee37c104bcb295d'
+          tag: 'develop@sha256:be04c39c684b45839779e2e4d065d6f95f555dd4227d11101e5a282f81a66d1d'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -218,7 +229,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:d6187701d7ffe0b2d48f0f645483a2d984f34566401c49aecb398103bb5c5259'
+          tag: 'develop@sha256:f66a11e7665ecba0250ae131a67129e18c560c9673bfa15da77bf66a25c92bd9'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
