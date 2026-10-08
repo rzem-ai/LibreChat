@@ -88,13 +88,33 @@ describe('ensureFilePreview', () => {
       baseFile.filename,
       baseFile.type,
     );
-    expect(mockUpdateFile).toHaveBeenCalledWith({
+    expect(mockUpdateFile).toHaveBeenNthCalledWith(
+      1,
+      { file_id: 'file-1', status: 'pending' },
+      { status: { $exists: false }, text: { $exists: false } },
+    );
+    expect(mockUpdateFile).toHaveBeenNthCalledWith(2, {
       file_id: 'file-1',
       text: '<html>preview</html>',
       textFormat: 'html',
       status: 'ready',
       previewError: null,
     });
+  });
+
+  it('claims the record before downloading or rendering, and bails out without doing either when the claim loses the race', async () => {
+    mockUpdateFile.mockResolvedValueOnce(null);
+
+    const result = await ensureFilePreview({ req, file: baseFile });
+
+    expect(result).toBe(true);
+    expect(mockUpdateFile).toHaveBeenCalledTimes(1);
+    expect(mockUpdateFile).toHaveBeenCalledWith(
+      { file_id: 'file-1', status: 'pending' },
+      { status: { $exists: false }, text: { $exists: false } },
+    );
+    expect(mockGetDownloadStream).not.toHaveBeenCalled();
+    expect(mockRenderFilePreviewText).not.toHaveBeenCalled();
   });
 
   it('prefers storageKey over filepath when downloading', async () => {

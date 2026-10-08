@@ -29,8 +29,9 @@ async function streamToBuffer(stream) {
  * @param {import('express').Request} params.req
  * @param {import('mongoose').Document} params.file - Mongo file record
  *   (e.g. `req.fileAccess.file` / `req.liveFile`).
- * @returns {Promise<boolean>} `true` if a `status`/`text` was persisted
- *   (caller should re-fetch the record), `false` for a no-op.
+ * @returns {Promise<boolean>} `true` if a `status`/`text` was persisted —
+ *   by this call, or by a concurrent call that won the claim race instead
+ *   (caller should re-fetch the record either way); `false` for a no-op.
  */
 async function ensureFilePreview({ req, file }) {
   let action;
@@ -63,6 +64,22 @@ async function ensureFilePreview({ req, file }) {
   }
   if (!getDownloadStream) {
     return false;
+  }
+
+  /* Atomically claim the record before downloading/rendering: concurrent
+   * first-requests for the same file (two citations, owner + shared-link,
+   * etc.) would otherwise all observe an unset status and redundantly
+   * download and render the same file. The conditional update below only
+   * commits for whichever request gets here first; everyone else loses the
+   * race (`claimed` is `null`) and defers to that request — still
+   * returning `true` so the caller re-fetches and sees the now-persisted
+   * `pending` status to poll on, instead of racing storage/render again. */
+  const claimed = await updateFile(
+    { file_id: file.file_id, status: 'pending' },
+    { status: { $exists: false }, text: { $exists: false } },
+  );
+  if (!claimed) {
+    return true;
   }
 
   try {
