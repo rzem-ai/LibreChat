@@ -637,6 +637,7 @@
   "com_files_download_progress": "{{0}} of {{1}} files",
   "com_files_downloading": "Downloading Files",
   "com_files_expiring_soon_renew": "Renew",
+  "com_files_expiring_soon_renew_failed": "Failed to renew file",
   "com_files_expiring_soon_renewed": "File renewed",
   "com_files_expiring_soon_title": "{{count}} files will be deleted soon unless renewed",
   "com_files_expiring_soon_title_one": "{{count}} file will be deleted soon unless renewed",

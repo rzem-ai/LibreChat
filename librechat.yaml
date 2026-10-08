@@ -24,6 +24,10 @@ interface:
 
   buildInfo: false # Set to false to hide the About section in settings
 
+  fileRetentionHours: 1440 # Independent per-file retention deadline in hours (60 days)
+
+  fileRetentionWarningHours: 168 # Lead time before expiry the renewal prompt surfaces (7 days)
+
   # Pin tools to the prompt bar by default for all users
   defaultPinnedTools:
     - 'file_search'

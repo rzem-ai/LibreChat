@@ -237,6 +237,14 @@ router.post('/:file_id/renew', async (req, res) => {
         fileRetentionHours: getFileRetentionHours(req.config?.interfaceConfig),
       },
     );
+    if (status >= 400) {
+      logger.warn('[/files/:file_id/renew] Renewal rejected', {
+        userId: req.user?.id,
+        file_id: req.params.file_id,
+        status,
+        code: body?.code,
+      });
+    }
     return res.status(status).json(body);
   } catch (error) {
     logger.error('[/files/:file_id/renew] Failed to renew file', error);

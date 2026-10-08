@@ -176,7 +176,9 @@ export const useRenewFileMutation = (
   unknown // context
 > => {
   const queryClient = useQueryClient();
-  const { onSuccess, ...options } = _options || {};
+  const { showToast } = useToastContext();
+  const localize = useLocalize();
+  const { onSuccess, onError, ...options } = _options || {};
   return useMutation([MutationKeys.fileRenew], {
     mutationFn: (fileId: string) => dataService.renewFile(fileId),
     ...options,
@@ -184,6 +186,13 @@ export const useRenewFileMutation = (
       queryClient.invalidateQueries([QueryKeys.filesExpiringSoon]);
       queryClient.invalidateQueries([QueryKeys.files]);
       onSuccess?.(data, fileId, context);
+    },
+    onError: (error, fileId, context) => {
+      showToast({
+        message: localize('com_files_expiring_soon_renew_failed'),
+        status: 'error',
+      });
+      onError?.(error, fileId, context);
     },
   });
 };
