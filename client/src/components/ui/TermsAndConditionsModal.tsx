@@ -89,7 +89,7 @@ const TermsAndConditionsModal = ({
         <section
           // Motivation: This is a dialog, so its content should be focusable
           tabIndex={0}
-          className="max-h-[60vh] overflow-y-auto px-6 py-4"
+          className="max-h-[60vh] overflow-y-auto border-y border-border-light px-6 py-4"
           aria-label={localize('com_ui_terms_and_conditions')}
         >
           <div className="prose dark:prose-invert w-full max-w-none !text-text-primary">
