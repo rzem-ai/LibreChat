@@ -96,7 +96,7 @@ commit as either represented by one of those PRs or a direct commit. Fetch
 metadata for any missing PR number directly before writing; do not compare
 the number of PRs with the commit count because one PR can contain multiple
 commits.
-write the notes from a partial set because "the first page looked like
+Do not write the notes from a partial set because "the first page looked like
 enough."
 
 **If the range is large (roughly >60 commits or >30 PRs)**, don't try to
