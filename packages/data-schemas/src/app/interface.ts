@@ -88,6 +88,8 @@ export async function loadDefaultInterface({
     generalChatRetention: interfaceConfig?.generalChatRetention,
     retentionMode: interfaceConfig?.retentionMode,
     retainAgentFiles: interfaceConfig?.retainAgentFiles,
+    fileRetentionHours: interfaceConfig?.fileRetentionHours,
+    fileRetentionWarningHours: interfaceConfig?.fileRetentionWarningHours,
     runCode: interfaceConfig?.runCode,
     webSearch: interfaceConfig?.webSearch,
     fileSearch: interfaceConfig?.fileSearch,

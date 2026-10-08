@@ -38,14 +38,19 @@ const initialize = async () => {
    *  trailing-slash request onto the upload quota instead. */
   const isUsagePath = (path) => path.replace(/\/+$/, '') === '/usage';
 
+  /** `/:file_id/renew` carries a dynamic segment, so this matches by suffix
+   *  rather than an exact path like `isUsagePath` does. */
+  const isRenewPath = (path) => /\/renew\/?$/.test(path);
+
   /** Apply rate limiters to all POST routes (excluding /speech which is handled
-   *  above). `/usage` is a metadata touch, so it gets its own limiter rather
-   *  than consuming upload quota, but it is never left unmetered. */
+   *  above). `/usage` and `/:file_id/renew` are metadata touches, so they share
+   *  their own limiter rather than consuming upload quota, but neither is ever
+   *  left unmetered. */
   router.use((req, res, next) => {
     if (req.method !== 'POST' || req.path.startsWith('/speech')) {
       return next();
     }
-    if (isUsagePath(req.path)) {
+    if (isUsagePath(req.path) || isRenewPath(req.path)) {
       return fileUsageLimiter(req, res, next);
     }
     return fileUploadIpLimiter(req, res, (err) => {
