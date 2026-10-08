@@ -24,7 +24,6 @@ export interface AdminExchangeUser {
   name: string;
   username: string;
   role: string;
-  avatar?: string;
   provider?: string;
   openidId?: string;
 }
@@ -62,6 +61,7 @@ export interface AdminExchangeResponse {
  */
 export function serializeUserForExchange(user: IUser): AdminExchangeUser {
   const userId = String(user._id);
+  // Deloitte Custom Change: Exclude avatars because base64 data URIs can overflow the admin-session cookie.
   return {
     _id: userId,
     id: userId,
@@ -69,7 +69,6 @@ export function serializeUserForExchange(user: IUser): AdminExchangeUser {
     name: user.name ?? '',
     username: user.username ?? '',
     role: user.role ?? 'USER',
-    avatar: user.avatar,
     provider: user.provider,
     openidId: user.openidId,
   };
