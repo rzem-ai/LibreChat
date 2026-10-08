@@ -276,7 +276,7 @@ function defaultPortForProtocol(protocol: SupportedProtocol | string | null): st
   return '';
 }
 
-// Deloitte Custom Change: share normalized URL port handling with MCP downloads.
+// Deloitte Custom Change: share normalized URL port handling with MCP downloads (PR #1055).
 export function getEffectivePort(
   protocol: SupportedProtocol | string | null,
   port?: string | null,

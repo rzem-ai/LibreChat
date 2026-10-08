@@ -7,7 +7,13 @@ import {
   mergeFileConfig,
   fileConfig as defaultFileConfig,
 } from 'librechat-data-provider';
-import type { TSkillWarning } from 'librechat-data-provider';
+import type {
+  TSkillWarning,
+  SkillImportFailureReason,
+  TSkillImportFailedFile,
+  TSkillImportFailedResponse,
+} from 'librechat-data-provider';
+import type { TranslationKeys } from '~/hooks';
 import { useGetFileConfig, useImportSkillMutation } from '~/data-provider';
 import { cn, formatSkillScanError } from '~/utils';
 import { useLocalize } from '~/hooks';
@@ -22,12 +28,79 @@ function formatMegabytes(bytes: number): string {
   return Number.isInteger(value) ? `${value}` : value.toFixed(1);
 }
 
+/** Localization key per failure reason; `limitMb` fills `{{0}}` where present. */
+const FAILURE_REASON_KEYS: Record<SkillImportFailureReason, TranslationKeys> = {
+  invalid_path: 'com_ui_skill_upload_reason_invalid_path',
+  file_too_large: 'com_ui_skill_upload_reason_file_too_large',
+  archive_too_large: 'com_ui_skill_upload_reason_archive_too_large',
+  archive_entry_changed: 'com_ui_skill_upload_reason_archive_entry_changed',
+  persistence_failed: 'com_ui_skill_upload_reason_persistence_failed',
+};
+
+type ImportFailure = {
+  /** `skill_import_rollback_failed` also means the leftover skill needs deleting. */
+  code: TSkillImportFailedResponse['error'];
+  files: TSkillImportFailedFile[];
+};
+
+/**
+ * An import that could not persist every bundled file is rolled back whole and
+ * answered with `failedFiles`. Those paths are the only place the user learns
+ * which resources their archive lost, so they are rendered in the dialog
+ * instead of being flattened into a toast that disappears.
+ */
+function getImportFailure(error: unknown): ImportFailure | null {
+  const data = (error as { response?: { data?: unknown } })?.response?.data;
+  if (data == null || typeof data !== 'object') {
+    return null;
+  }
+  const body = data as Partial<TSkillImportFailedResponse>;
+  if (
+    (body.error !== 'skill_import_incomplete' &&
+      body.error !== 'skill_import_rollback_failed' &&
+      body.error !== 'skill_import_cleanup_incomplete') ||
+    !Array.isArray(body.failedFiles)
+  ) {
+    return null;
+  }
+  return { code: body.error, files: body.failedFiles };
+}
+
+function failureMessageKey(code: ImportFailure['code']): TranslationKeys {
+  if (code === 'skill_import_rollback_failed') {
+    return 'com_ui_skill_upload_rollback_failed';
+  }
+  if (code === 'skill_import_cleanup_incomplete') {
+    return 'com_ui_skill_upload_cleanup_incomplete';
+  }
+  return 'com_ui_skill_upload_incomplete';
+}
+
+function failureHeadingKey(code: ImportFailure['code']): TranslationKeys {
+  if (code === 'skill_import_rollback_failed') {
+    return 'com_ui_skill_upload_rollback_failed_files';
+  }
+  if (code === 'skill_import_cleanup_incomplete') {
+    return 'com_ui_skill_upload_cleanup_incomplete_files';
+  }
+  return 'com_ui_skill_upload_failed_files';
+}
+
 export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDialogProps) {
   const localize = useLocalize();
   const navigate = useNavigate();
   const { showToast } = useToastContext();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [failure, setFailure] = useState<ImportFailure | null>(null);
+  /**
+   * The dialog outlives any single upload: `CreateSkillMenu` keeps it mounted
+   * and only toggles `isOpen`. Closing it mid-import cannot cancel the request,
+   * so each session is numbered and a response that resolves after its own
+   * session ended is dropped rather than repopulating a dismissed panel.
+   */
+  const dialogSessionRef = useRef(0);
+  const requestSessionRef = useRef(0);
   const {
     data: skillFileConfig = { configuredSizeLimitMb: undefined, fileConfig: defaultFileConfig },
   } = useGetFileConfig({
@@ -49,7 +122,12 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
 
   const importMutation = useImportSkillMutation({
     onSuccess: (skill) => {
+      if (requestSessionRef.current !== dialogSessionRef.current) {
+        return;
+      }
       const warnings: TSkillWarning[] | undefined = skill.warnings;
+      // Deloitte Custom Change: Show the scanner's warnings (if present) alongside the
+      // success toast, instead of a plain success message.
       showToast({
         status: warnings && warnings.length > 0 ? 'warning' : 'success',
         message:
@@ -57,14 +135,41 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
             ? warnings.map((w) => w.message).join('\n')
             : localize('com_ui_skill_created'),
       });
+      setFailure(null);
       // Deloitte Custom Change: Clear any previous inline scanner failure after a successful upload.
       setScanError(null);
       setIsOpen(false);
       navigate(`/skills/${skill._id}`);
     },
     onError: (error: unknown) => {
-      // Deloitte Custom Change: Surface the scanner's validation error inline so it stays on screen
-      // until the user retries, instead of an auto-dismissing toast.
+      if (requestSessionRef.current !== dialogSessionRef.current) {
+        return;
+      }
+      const importFailure = getImportFailure(error);
+      if (importFailure != null) {
+        /** Keep the dialog open: the archive has to be fixed before a retry can
+         *  succeed, and the failed paths are only listed here. */
+        setFailure(importFailure);
+        // Deloitte Custom Change: Clear any previous inline scanner failure — the
+        // partial-import file list below is the authoritative error surface here.
+        setScanError(null);
+        showToast({
+          status: 'error',
+          message: localize(failureMessageKey(importFailure.code), {
+            0: `${importFailure.files.length}`,
+          }),
+        });
+        return;
+      }
+      setFailure(null);
+      /**
+       * Deloitte Custom Change: Surface the scanner's validation error (or any other
+       * non-partial-import failure) inline so it stays on screen until the user
+       * retries, instead of an auto-dismissing toast. `formatSkillScanError`'s
+       * fallback chain (issue messages, then `errData.message`, then
+       * `errData.error`, then the caller's default) already covers the generic
+       * server-message case upstream handled here.
+       */
       setScanError(formatSkillScanError(error, localize('com_ui_create_skill_upload_error')));
     },
   });
@@ -74,6 +179,7 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
       if (importMutation.isLoading) {
         return;
       }
+      setFailure(null);
       // Deloitte Custom Change: Clear stale scanner output before retrying upload.
       setScanError(null);
       if (file.size > skillImportSizeLimit) {
@@ -85,6 +191,7 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
       }
       const formData = new FormData();
       formData.append('file', file, file.name);
+      requestSessionRef.current = dialogSessionRef.current;
       importMutation.mutate(formData);
     },
     [displayedSizeLimit, importMutation, localize, showToast, skillImportSizeLimit],
@@ -113,14 +220,6 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
     [handleFile],
   );
 
-  // Deloitte Custom Change: Reset inline scanner output when the upload dialog closes.
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
-      setScanError(null);
-    }
-    setIsOpen(open);
-  };
-
   // Deloitte Custom Change: Render scanner failures inline with preserved line breaks for readability.
   const scanErrorMessage = scanError ? (
     <p className="whitespace-pre-line text-xs text-red-500" role="alert">
@@ -129,7 +228,18 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
   ) : null;
 
   return (
-    <OGDialog open={isOpen} onOpenChange={handleOpenChange}>
+    <OGDialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          dialogSessionRef.current += 1;
+          setFailure(null);
+          // Deloitte Custom Change: Reset inline scanner output when the upload dialog closes.
+          setScanError(null);
+        }
+        setIsOpen(open);
+      }}
+    >
       <OGDialogContent className="w-11/12 max-w-lg overflow-hidden">
         <div className="flex flex-col gap-6 p-1 sm:p-2">
           <h2 className="text-lg font-bold text-text-primary">
@@ -147,6 +257,7 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
               disabled={importMutation.isLoading}
+              aria-busy={importMutation.isLoading || undefined}
               className={cn(
                 'flex h-[120px] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-sm text-text-secondary transition-colors',
                 isDragging
@@ -160,8 +271,38 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
               ) : (
                 <Upload className="size-8 text-text-secondary" aria-hidden="true" />
               )}
-              {localize('com_ui_skill_upload_drag')}
+              {/* Deloitte Custom Change: Tell the user the upload is waiting on the skill scanner. */}
+              {importMutation.isLoading
+                ? localize('com_ui_skill_scanning')
+                : localize('com_ui_skill_upload_drag')}
             </button>
+
+            {failure != null && failure.files.length > 0 && (
+              <div
+                role="alert"
+                className="flex flex-col gap-1 rounded-lg border border-border-medium bg-surface-secondary p-3 text-xs"
+              >
+                <p className="font-medium text-text-destructive">
+                  {localize(failureHeadingKey(failure.code))}
+                </p>
+                {/* An archive may hold up to 500 entries, and the dialog's own
+                    overflow-hidden would clip a long list past the viewport. */}
+                <ul className="max-h-40 list-inside list-disc overflow-y-auto text-text-secondary">
+                  {failure.files.map((failedFile) => (
+                    <li key={failedFile.path}>
+                      <span className="break-all font-medium text-text-primary">
+                        {failedFile.path}
+                      </span>
+                      {FAILURE_REASON_KEYS[failedFile.reason] != null
+                        ? ` — ${localize(FAILURE_REASON_KEYS[failedFile.reason], {
+                            0: `${failedFile.limitMb ?? ''}`,
+                          })}`
+                        : ''}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <div className="flex flex-col gap-3 text-xs text-text-secondary">
               <div>

@@ -106,10 +106,10 @@ pods:
           OPENID_REUSE_TOKENS: 'true'
           OPENID_SCOPE: 'openid profile email offline_access https://myassist.ctk.au.deloitte.com/access_user'
           RAG_API_URL: 'http://127.0.0.1:8000'
-          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_REGIONAL_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_GLOBAL_BASEURL: 'http://127.0.0.1:8081/azure-global'
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
           RAG_PORT: '8000'
-          REFRESH_TOKEN_EXPIRY: '86400000' # (ms) - 1 day refresh token expiration
           # ClearTrack Code Interpreter (ea-code-runtime)
           LIBRECHAT_CODE_BASEURL: 'https://code-runtime.ctk.au.deloitte.com/v1' # TODO: Confirm
           CODEAPI_AUTH_PROVIDER: 'librechat-jwt'
@@ -196,7 +196,8 @@ pods:
           RAG_PORT: '8000'
           EMBEDDINGS_PROVIDER: 'openai'
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
-          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_REGIONAL_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_GLOBAL_BASEURL: 'http://127.0.0.1:8081/azure-global'
         secrets:
           JWT_SECRET: librechat-jwt-secret
         service:
@@ -243,6 +244,7 @@ pods:
           SESSION_COOKIE_SECURE: 'true'
         secrets:
           SESSION_SECRET: librechat-admin-panel-session-secret
+          ADMIN_PANEL_METRICS_SECRET: librechat-admin-panel-metrics-secret
         service:
           enabled: true
           type: ClusterIP

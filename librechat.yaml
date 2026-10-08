@@ -1,4 +1,4 @@
-version: 1.3.13 # Copy from librechat.example.yaml
+version: 1.3.17 # Copy from librechat.example.yaml
 cache: true
 
 # 'includedTools' restricts the list of tools available in the Agent Builder.
@@ -52,7 +52,7 @@ interface:
       - Have read and understand Deloitte Australia's [AI Usage Statement and AI Guidance](https://ausdeloitte.sharepoint.com/sites/DAIS/Shared%20Documents/Forms/AllItems.aspx?id=%2fsites%2fDAIS%2fShared+Documents%2fAI+Usage+Statement+and+AI+Guidance.pdf&parent=%2fsites%2fDAIS%2fShared+Documents&xsdata=MDV8MDJ8aWVkd2FyZHNAZGVsb2l0dGUuY29tLmF1fDM1N2RkNWIwNDE4MTRhZjM3ZWY0MDhkZjAzMGU4MTA1fDM2ZGE0NWYxZGQyYzRkMWZhZjEzNWFiZTQ2Yjk5OTIxfDB8MHw2MzkyMzMwMzI5OTA2MDY2MTh8VW5rbm93bnxUV0ZwYkdac2IzZDhleUpGYlhCMGVVMWhjR2tpT25SeWRXVXNJbFlpT2lJd0xqQXVNREF3TUNJc0lsQWlPaUpYYVc0ek1pSXNJa0ZPSWpvaVRXRnBiQ0lzSWxkVUlqb3lmUT09fDB8fHw%3d&sdata=T2w5MFNlSFVSdmJOZ1ozMFRVWGF3c1FDV25zOGoxdDVhNTBFWDJTV0pWQT0%3d);
       These guidelines apply to all users. Users from other member firms with questions on compliance should contact their local Q&R team. New Zealand users: nzdataoffice@deloitte.co.nz.
       - Understand that you are permitted to upload Deloitte or client confidential information to MyAssist, provided that you respect any client contractual obligations, including restrictions on the purpose for which client data may be used.
-      - Understand that if your client contract restricts Deloitte from processing client confidential information offshore, you must use an "Azure AU" model which can be selected in the model dropdown list.
+       - Understand that if your client contract restricts Deloitte from processing client confidential information offshore, you must use an "AU Regional" model which can be selected in the model dropdown list.
       - Understand that you are NOT permitted to use personal information or high-risk confidential information (e.g. market sensitive information such as financials, acquisition details, strategic plans) in your prompts when the “Web Search” feature is enabled.
       - Will review and fact-check any outputs generated using MyAssist, be transparent with your team about how you have used it in your work, and remain responsible for approving any actions performed by MyAssist on your behalf and for the outcomes of those action.
       - Will always act in accordance with your [Global Principles of Business Conduct](https://ausdeloitte.sharepoint.com/:b:/r/sites/DAISPolicies/QR%20Policies/Deloitte%20Global%20Principles%20of%20Business%20Conduct.pdf?csf=1&web=1&e=3qbMc1&xsdata=MDV8MDJ8aWVkd2FyZHNAZGVsb2l0dGUuY29tLmF1fDM1N2RkNWIwNDE4MTRhZjM3ZWY0MDhkZjAzMGU4MTA1fDM2ZGE0NWYxZGQyYzRkMWZhZjEzNWFiZTQ2Yjk5OTIxfDB8MHw2MzkyMzMwMzI5OTA2MzE5NzR8VW5rbm93bnxUV0ZwYkdac2IzZDhleUpGYlhCMGVVMWhjR2tpT25SeWRXVXNJbFlpT2lJd0xqQXVNREF3TUNJc0lsQWlPaUpYYVc0ek1pSXNJa0ZPSWpvaVRXRnBiQ0lzSWxkVUlqb3lmUT09fDB8fHw%3d&sdata=NktxaWkxNU56VzJzVitSb1pPdUl3NUs3SU9BS0psUUtVQ0RHUlhsZkViYz0%3d) when using MyAssist;
@@ -138,6 +138,7 @@ interface:
     conversationIcon: true # Set to false to hide model or endpoint icons in conversation history
     accountsTab: false # Set to false to hide the Account settings tab
     dataApiKeys: false # Set to false to hide the API keys section under Data controls settings
+    adminAgentApiKeys: true # Set to true to allow administrators to manage service account Agent API keys
     dataDangerZone: false # Set to false to hide the Danger zone section under Data controls settings
     externalVoiceProvider: false # Set to false to hide the external voice provider option in Speech settings (browser voice only)
     artifactsShadcnOnly: true # Set to true to force the shadcn/ui artifacts mode and hide other artifact mode options
@@ -149,6 +150,7 @@ fileConfig:
       fileLimit: 50
     agents:
       fileLimit: 50
+  legacyFileUploadUX: true
 
 memory:
   disabled: false # Set to true to completely disable memory
@@ -158,11 +160,13 @@ memory:
   messageWindowSize: 5 # Number of recent messages to consider
   agent:
     enabled: true
-    provider: 'VertexAI US'
-    model: 'google/gemini-2.5-flash'
+    provider: 'anthropic'
+    model: 'claude-haiku-4-5'
     instructions: |
-      Only store stated preferences (e.g. I like X, I dislike Y) and any important facts/context about the user's work at Deloitte (e.g. current projects, team composition).
-      Update or delete out-of-date information promptly.
+      You are a memory extraction assistant.
+      CRITICAL: Do not create a memory for general conversational remarks, fleeting topics, or casual statements.
+      Only extract core biographical details, permanent user preferences, or facts the user explicitly asks you to remember.
+      Be highly conservative. If a detail seems temporary or minor, DO NOT store it.
 
 endpoints:
   # ========================================
@@ -222,8 +226,9 @@ endpoints:
   # Custom endpoints (OpenAI-compatible format)
   # ========================================
   custom:
-    # --- Azure AU (aus-east) ---
+    # --- Azure Australia (aus-east) ---
     - name: 'Azure AU'
+      regional: true
       apiKey: 'dummy'
       baseURL: '${BASE_URL_AZURE_AU}'
       models:
@@ -236,7 +241,7 @@ endpoints:
         fetch: false
       titleConvo: true
       titleModel: 'gpt-4o-mini'
-      modelDisplayLabel: 'Azure AU'
+      modelDisplayLabel: 'Azure Australia'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
@@ -268,7 +273,10 @@ endpoints:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
       nativeWebSearch:
-        supportedModels: []
+        supportedModels:
+          - 'gpt-56-luna'
+          - 'gpt-56-terra'
+          - 'gpt-56-sol'
 
     # --- VertexAI / Google (us-central1) ---
     # OpenAI-compatible endpoint, model names use google/ prefix
@@ -292,9 +300,10 @@ endpoints:
       nativeWebSearch:
         supportedModels: []
 
-  # Anthropic AU models use Bedrock's native API and inference-profile IDs.
+  # Anthropic Regional models use Bedrock's native API and inference-profile IDs.
   bedrock:
-    modelDisplayLabel: 'Claude AU'
+    regional: true
+    modelDisplayLabel: 'Anthropic Australia'
     models:
       - 'au.anthropic.claude-sonnet-4-6'
       - 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
@@ -450,7 +459,7 @@ modelSpecs:
 
     - name: 'anthropic-au-claude-sonnet-4-6'
       label: 'Claude Sonnet 4.6'
-      group: 'Anthropic AU'
+      group: 'Anthropic Australia'
       groupIcon: 'anthropic'
       iconURL: 'anthropic'
       preset:
@@ -460,7 +469,7 @@ modelSpecs:
 
     - name: 'anthropic-au-claude-haiku-4-5'
       label: 'Claude Haiku 4.5'
-      group: 'Anthropic AU'
+      group: 'Anthropic Australia'
       iconURL: 'anthropic'
       preset:
         endpoint: 'bedrock'
@@ -526,6 +535,9 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     url: '${MCP_GATEWAY_URL}?toolsets=sharepoint'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    # Deloitte Custom Change: Only this trusted tool may receive current-request attachment bytes.
+    attachmentUploadTools:
+      - sp_upload_file
     iconPathLight: '/assets/mcp/sharepoint-light.png'
     iconPathDark: '/assets/mcp/sharepoint-dark.png'
     limitedAccess: true
@@ -536,10 +548,13 @@ mcpSettings:
   allowedDomains:
     - mcp-gw-dev.ctk.au.deloitte.com
     - mcp-gateway.ctk.au.deloitte.com
-  # Deloitte Custom Change: The SharePoint gateway returns Graph's short-lived, pre-authorized
-  # download URLs as librechat-download resources for Code Interpreter.
+  # Deloitte Custom Change: The trusted SharePoint gateway returns a short-lived download URL;
+  # LibreChat validates and streams it server-side to Code Interpreter.
   codeFileAllowedDomains:
     - '*.sharepoint.com'
+    # Required for the trusted SharePoint gateway download URL.
+    - 'https://mcp-gw-dev.ctk.au.deloitte.com'
+    - 'https://mcp-gateway.ctk.au.deloitte.com'
 
 speech: # https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/speech
   speechTab:

@@ -1,5 +1,5 @@
-import { useSprings, animated, SpringConfig } from '@react-spring/web';
 import { useEffect, useRef, useState } from 'react';
+import { useSprings, animated, SpringConfig } from '@react-spring/web';
 
 interface SegmenterOptions {
   granularity?: 'grapheme' | 'word' | 'sentence';
@@ -61,7 +61,7 @@ const splitGraphemes = (text: string): string[] => {
 const SplitText: React.FC<SplitTextProps> = ({
   text = '',
   className = '',
-  delay = 100,
+  delay = 50,
   animationFrom = { opacity: 0, transform: 'translate3d(0,40px,0)' },
   animationTo = { opacity: 1, transform: 'translate3d(0,0,0)' },
   easing = (t: number) => t,
@@ -91,7 +91,7 @@ const SplitText: React.FC<SplitTextProps> = ({
           }
         : animationFrom,
       delay: i * delay,
-      config: { easing },
+      config: { easing, duration: 220 },
     }),
     [inView, text, delay, animationFrom, animationTo, easing, onLetterAnimationComplete],
   );
@@ -135,15 +135,22 @@ const SplitText: React.FC<SplitTextProps> = ({
 
   return (
     <>
-      <span className="sr-only">{text}</span>
       <p
         ref={ref}
-        className={`split-parent inline overflow-hidden ${className}`}
+        dir="auto"
+        // Deloitte Custom Change: omit overflow-hidden, it clipped letter descenders (e.g. "g", "y") in the welcome text animation
+        className={`split-parent inline ${className}`}
         style={{ textAlign, whiteSpace: 'normal', wordWrap: 'break-word' }}
-        aria-hidden="true"
       >
+        {/* The paragraph's auto direction ignores word boxes with their own dir. */}
+        <span className="sr-only">{text}</span>
         {words.map((word, wordIndex) => (
-          <span key={wordIndex} style={{ display: 'inline-block', whiteSpace: 'nowrap' }}>
+          <span
+            key={wordIndex}
+            dir="auto"
+            aria-hidden="true"
+            style={{ display: 'inline-block', whiteSpace: 'nowrap' }}
+          >
             {word.map((letter, letterIndex) => {
               const index =
                 words.slice(0, wordIndex).reduce((acc, w) => acc + w.length, 0) + letterIndex;

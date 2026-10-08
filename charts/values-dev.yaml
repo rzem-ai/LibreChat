@@ -4,6 +4,13 @@ branch: 'develop'
 llmGateway:
   namespace: 'llm-gateway-ctnp'
 
+# ea-code-runtime's namespace — enables a direct in-cluster egress rule in
+# networkpolicy.yaml (bypasses Cilium Ingress/Envoy's ~1MiB buffer limit).
+# Not used until LIBRECHAT_CODE_BASEURL below is also switched to the
+# in-cluster URL.
+codeInterpreter:
+  namespace: 'code-runtime-dev'
+
 serviceAccount:
   name: sa-librechat-dev
 
@@ -31,7 +38,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'develop@sha256:5e71af45f812b4f1a42b21cea6e38506a986bdc24d0ab1c0c3935d5222f9854f'
+          tag: 'develop@sha256:e9ce6a34b7e7294c08ddd0d2ef18342ab3719873afc3a7f448a830c871d12e80'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://foundry-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -51,7 +58,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:f0d350e07df04091a0d59e185df894993741b306d2f2d92658d393659c0d4a98'
+          tag: 'develop@sha256:0ebfa4f8e3080d00d988ac9dc8da0076fc4e992078015652776b2abb177a1e67'
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -92,12 +99,16 @@ pods:
           RAG_API_URL: 'http://127.0.0.1:8000'
           #RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
           #RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com'
-          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_REGIONAL_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_GLOBAL_BASEURL: 'http://127.0.0.1:8081/azure-global'
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
           RAG_PORT: '8000'
-          REFRESH_TOKEN_EXPIRY: '86400000' # (ms) - 1 day refresh token expiration
           # ClearTrack Code Interpreter (ea-code-runtime)
-          LIBRECHAT_CODE_BASEURL: 'https://code-runtime-dev.ctk.au.deloitte.com/v1'
+          # NOTE: switch to the direct in-cluster URL below (and set
+          # codeInterpreter.namespace) to bypass the Cilium Ingress/Envoy
+          # ~1MiB buffer limit on large file uploads:
+          LIBRECHAT_CODE_BASEURL: 'http://code-runtime-dev-code-interpreter-service.code-runtime-dev.svc.cluster.local:3112/v1'
+          # LIBRECHAT_CODE_BASEURL: 'https://code-runtime-dev.ctk.au.deloitte.com/v1'
           CODEAPI_AUTH_PROVIDER: 'librechat-jwt'
           CODEAPI_JWT_ALGORITHM: 'EdDSA'
           CODEAPI_JWT_KID: 'lc-codeapi-dev-2026-05'
@@ -125,7 +136,7 @@ pods:
           OTEL_LOG_LEVEL: 'INFO'
           OTEL_IOREDIS_TRACING_ENABLED: 'false'
           DEBUG_LOGGING: 'false'
-          DEBUG_CONSOLE: 'false'
+          DEBUG_CONSOLE: 'true'
           AGENT_DEBUG_LOGGING: 'true'
           # Skill Security Scanner
           SKILL_SCANNER_URL: 'https://ai-registry-dev.ctk.au.deloitte.com/v1/scan?verbose=false'
@@ -161,7 +172,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:75f98c793bec3d2adf4bd3ed3d429a79fd11a949f6f6b4a5614799ade5485f1a'
+          tag: 'develop@sha256:47c60f15c2314140bc15e744c378b976abfd04bcd12f123c5ec088c82bcff261'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -177,7 +188,8 @@ pods:
           # RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
           # RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
           EMBEDDINGS_PROVIDER: 'openai'
-          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_REGIONAL_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_GLOBAL_BASEURL: 'http://127.0.0.1:8081/azure-global'
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
         secrets:
           # AZURE_OPENAI_API_KEY: librechat-azure-api-key
@@ -217,7 +229,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:aa3f1ff34a381a2c5cbf732ee9793a6eedcdbdde0898af554caf724fd992fc4e'
+          tag: 'develop@sha256:3557c93e2ecfd1c70415b42e803340307b05b2aaed04efb45fdb4c952076ecae'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
@@ -227,6 +239,7 @@ pods:
           SESSION_COOKIE_SECURE: 'true'
         secrets:
           SESSION_SECRET: librechat-admin-panel-session-secret-dev
+          ADMIN_PANEL_METRICS_SECRET: librechat-admin-panel-metrics-secret-dev
         service:
           enabled: true
           type: ClusterIP
@@ -240,7 +253,7 @@ pods:
 
 valkey:
   image:
-    tag: 'develop@sha256:87ebb22a20d8ee2f450574f70068388acb9d2b5b60f74b9cf873c6be845102b3'
+    tag: 'develop@sha256:4fdf384b8cad080df2e9429b4aa512c090cb9d83368488ba0aa9d58e7c2e1d0e'
   persistence:
     storageClass: 'managed-csi-standard-private'
   passwordSecretName: 'librechat-valkey-password-dev'

@@ -169,33 +169,37 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 12. `OPENID_SCOPE="openid profile email offline_access https://librechat-dev.ctk.au.deloitte.com/access_user"` (the `access_user` scope audiences the login token to LibreChat itself; required for the ClearTrack MCP Gateway's OBO exchange — see the note below)
 13. `OPENID_CALLBACK_URL=/oauth/openid/callback`
 14. `OPENID_REUSE_TOKENS=true`
-15. `OPENID_REQUIRED_ROLE=`
-16. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
-17. `OPENID_BUTTON_LABEL="Continue with SSO"`
-18. `OPENID_IMAGE_URL=/assets/favicon.svg`
-19. `ALLOW_EMAIL_LOGIN=false`
-20. `ALLOW_REGISTRATION=false`
-21. `ALLOW_SOCIAL_REGISTRATION=false`
-22. Comment out `OPENAI_API_KEY=`
-23. Comment out `ASSISTANTS_API_KEY=`
-24. BASE_URL_AZURE_AU=https://au-openai-exp.ctk.au.deloitte.com/openai/v1
-25. BASE_URL_AZURE_US=https://us-openai-exp.ctk.au.deloitte.com/openai/v1
-26. BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com
-27. `BASE_URL_AZURE_GLOBAL=https://us-openai-exp.ctk.au.deloitte.com/openai/v1`
-28. `BASE_URL_AZURE_FOUNDRY_AU=https://au-foundry-exp.ctk.au.deloitte.com/openai/v1`
-29. `BEDROCK_AWS_DEFAULT_REGION=ap-southeast-2`
-30. `BEDROCK_AWS_ACCESS_KEY_ID=unused`
-31. `BEDROCK_AWS_SECRET_ACCESS_KEY=unused`
-32. `BEDROCK_AWS_MODELS=au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0`
-33. `BEDROCK_REVERSE_PROXY=au-bedrock-exp.ctk.au.deloitte.com`
-34. `BEDROCK_GATEWAY_URL=http://gateway-proxy:8081`
-35. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
-36. `MCP_GATEWAY_URL=https://mcp-gw-dev.ctk.au.deloitte.com/mcp`
-37. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims,sharepoint`
-38. `MCP_GATEWAY_OBO_SCOPE=api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user`
-39. `MODEL_PRICING_REFERENCE_MODEL_ID=gpt-56-luna`
-40. `MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT=0.1`
-41. `MODEL_PRICING_MIN_MULTIPLIER=0.1`
+15. `OPENID_REUSE_MAX_SESSION_AGE_MS=86400000` (keep equal to `SESSION_EXPIRY` and `REFRESH_TOKEN_EXPIRY`, both also `86400000`/24h)
+16. `OPENID_REQUIRED_ROLE=`
+17. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
+18. `OPENID_BUTTON_LABEL="Continue with SSO"`
+19. `OPENID_IMAGE_URL=/assets/favicon.svg`
+20. `ALLOW_EMAIL_LOGIN=false`
+21. `ALLOW_REGISTRATION=false`
+22. `ALLOW_SOCIAL_REGISTRATION=false`
+23. Comment out `OPENAI_API_KEY=`
+24. Comment out `ASSISTANTS_API_KEY=`
+25. BASE_URL_AZURE_AU=https://au-openai-exp.ctk.au.deloitte.com/openai/v1
+26. BASE_URL_AZURE_US=https://us-openai-exp.ctk.au.deloitte.com/openai/v1
+27. BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com
+28. `BASE_URL_AZURE_GLOBAL=https://us-openai-exp.ctk.au.deloitte.com/openai/v1`
+29. `BASE_URL_AZURE_FOUNDRY_AU=https://au-foundry-exp.ctk.au.deloitte.com/openai/v1`
+30. `AZURE_OPENAI_GLOBAL_HOST=https://us-openai-exp.ctk.au.deloitte.com/openai/v1`
+31. `RAG_OPENAI_REGIONAL_BASEURL=http://gateway-proxy:8081/azure-au`
+32. `RAG_OPENAI_GLOBAL_BASEURL=http://gateway-proxy:8081/azure-global`
+33. `BEDROCK_AWS_DEFAULT_REGION=ap-southeast-2`
+34. `BEDROCK_AWS_ACCESS_KEY_ID=unused`
+35. `BEDROCK_AWS_SECRET_ACCESS_KEY=unused`
+36. `BEDROCK_AWS_MODELS=au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0`
+37. `BEDROCK_REVERSE_PROXY=au-bedrock-exp.ctk.au.deloitte.com`
+38. `BEDROCK_GATEWAY_URL=http://gateway-proxy:8081`
+39. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
+40. `MCP_GATEWAY_URL=https://mcp-gw-dev.ctk.au.deloitte.com/mcp`
+41. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims,sharepoint`
+42. `MCP_GATEWAY_OBO_SCOPE=api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user`
+43. `MODEL_PRICING_REFERENCE_MODEL_ID=gpt-56-luna`
+44. `MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT=0.1`
+45. `MODEL_PRICING_MIN_MULTIPLIER=0.1`
 > The **ClearTrack MCP Gateway** connection (`mcpServers` block in `librechat.yaml` at repo root and `charts/config/librechat.yaml` for Helm) uses On-Behalf-Of (OBO) auth, not a dedicated OAuth client — it reuses `OPENID_CLIENT_ID`/`OPENID_CLIENT_SECRET` from item 8–9 to exchange the user's login token for one scoped to the gateway. There are no gateway-specific client credentials to set; the only requirement is that `OPENID_SCOPE` (item 12) includes the gateway's audience scope.
 
 ### Code API / Code Interpreter .env vars
@@ -405,6 +409,28 @@ docker compose restart
 Open your configured `DOMAIN_CLIENT` URL in **Safari** (e.g. `https://AU-ABC123123.local`). You should see the LibreChat login page.
 
 Note that you must use **VPN** to access the LLM Gateway.
+
+---
+
+## Running the frontend directly (outside Docker)
+
+For fast iteration on frontend-only changes, you can skip the Docker rebuild loop and run the Vite dev server directly against your already-running backend container:
+
+```zsh
+BACKEND_PORT=3080 npm run frontend:dev
+```
+
+This starts Vite on `http://localhost:3090` with hot module reload, proxying API calls to `BACKEND_PORT`.
+
+### Telling parallel instances apart (`VITE_WORKSPACE_NAME`)
+
+If you run more than one frontend at once — e.g. separate git worktrees/branches, or multiple [Conductor](https://conductor.build) workspaces — set `VITE_WORKSPACE_NAME` when starting the dev server:
+
+```zsh
+VITE_WORKSPACE_NAME="my-branch" PORT=3091 npm run frontend:dev
+```
+
+This appends `/ my-branch` to the Deloitte header title in the browser, so you can tell which tab belongs to which instance at a glance instead of every tab looking identical. It's a one-off env var for the process running `npm run frontend:dev` — it doesn't need to be added to `.env`, and has no effect on the Docker Compose workflow.
 
 ---
 

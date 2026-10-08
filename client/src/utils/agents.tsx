@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Feather } from 'lucide-react';
-import { Skeleton } from '@librechat/client';
+import { Skeleton, useAuthenticatedImageSrc } from '@librechat/client';
 import type t from 'librechat-data-provider';
 
 /**
@@ -33,6 +33,11 @@ const LazyAgentAvatar = ({
   imgClass: string;
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
+  const {
+    src: authenticatedImageSrc,
+    isLoading: isImageLoading,
+    isError: imageFetchError,
+  } = useAuthenticatedImageSrc(url);
 
   useEffect(() => {
     setIsLoaded(false);
@@ -40,19 +45,23 @@ const LazyAgentAvatar = ({
 
   return (
     <>
-      <img
-        src={url}
-        alt={alt}
-        className={imgClass}
-        loading="lazy"
-        onLoad={() => setIsLoaded(true)}
-        onError={() => setIsLoaded(false)}
-        style={{
-          opacity: isLoaded ? 1 : 0,
-          transition: 'opacity 0.2s ease-in-out',
-        }}
-      />
-      {!isLoaded && <Skeleton className="absolute inset-0 rounded-full" aria-hidden="true" />}
+      {!isImageLoading && (
+        <img
+          src={authenticatedImageSrc}
+          alt={alt}
+          className={imgClass}
+          loading="lazy"
+          onLoad={() => setIsLoaded(true)}
+          onError={() => setIsLoaded(false)}
+          style={{
+            opacity: isLoaded ? 1 : 0,
+            transition: 'opacity 0.2s ease-in-out',
+          }}
+        />
+      )}
+      {!isLoaded && !imageFetchError && (
+        <Skeleton className="absolute inset-0 rounded-full" aria-hidden="true" />
+      )}
     </>
   );
 };

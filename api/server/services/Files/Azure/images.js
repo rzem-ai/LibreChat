@@ -2,9 +2,15 @@ const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 const { logger } = require('@librechat/data-schemas');
+const { CacheKeys } = require('librechat-data-provider');
+const { invalidateCachedAuthUserDoc } = require('@librechat/api');
 const { resizeImageBuffer } = require('../images/resize');
 const { updateUser, updateFile } = require('~/models');
+const getLogStores = require('~/cache/getLogStores');
 const { saveBufferToAzure } = require('./crud');
+
+// Deloitte Custom Change: private Azure containers require application-authenticated avatar delivery.
+const { AZURE_STORAGE_PUBLIC_ACCESS = 'true' } = process.env;
 
 /**
  * Uploads an image file to Azure Blob Storage.
@@ -121,13 +127,17 @@ async function processAzureAvatar({
       fileName,
       basePath,
       containerName,
+      // Deloitte Custom Change: retain direct URLs for public containers and proxy private avatars.
+      returnProxyPath: AZURE_STORAGE_PUBLIC_ACCESS.toLowerCase() !== 'true',
     });
     const isManual = manual === 'true';
-    const url = `${downloadURL}?manual=${isManual}`;
+    // Deloitte Custom Change: preserve the proxy's file query when recording the manual-upload flag.
+    const url = `${downloadURL}${downloadURL.includes('?') ? '&' : '?'}manual=${isManual}`;
 
     // Only update user record if this is a user avatar (manual === 'true')
     if (isManual && !agentId) {
       await updateUser(userId, { avatar: url });
+      await invalidateCachedAuthUserDoc(getLogStores(CacheKeys.AUTH_USER_DOC), { userId });
     }
 
     return url;

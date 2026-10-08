@@ -109,6 +109,14 @@ jobs:
 
       # Self-hosted runners keep their working directory, so the live session
       # files must not survive the job.
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-live
+          path: e2e/playwright-report/**
+          retention-days: 30
+
       - name: Remove captured session
         if: always()
         shell: pwsh

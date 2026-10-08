@@ -9,12 +9,13 @@ const { CacheKeys, ErrorTypes, SystemRoles } = require('librechat-data-provider'
 const {
   isEnabled,
   logHeaders,
-  safeStringify,
+  logOpenIdRequestBody,
   findOpenIDUser,
   getOpenIdEmail,
   getOpenIdIssuer,
   getBalanceConfig,
   selectOpenIdRole,
+  getTokenCacheTtlMs,
   getAvatarSaveParams,
   isEmailDomainAllowed,
   getAvatarFileStrategy,
@@ -23,7 +24,9 @@ const {
   getOpenIdRoleSyncOptions,
   getOpenIdRolesForOpenIdSync,
   getLibreChatRolesForOpenIdSync,
+  // Deloitte Custom Change: invalidate cached auth user doc so refreshed Entra avatar/profile data is reflected (PR #1202)
   invalidateCachedAuthUserDoc,
+  DEFAULT_OAUTH_TOKEN_TTL_SECONDS,
 } = require('@librechat/api');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { resizeAvatar } = require('~/server/services/Files/images/avatar');
@@ -49,15 +52,7 @@ async function customFetch(url, options) {
     logger.debug(`[openidStrategy] Request method: ${options.method || 'GET'}`);
     logger.debug(`[openidStrategy] Request headers: ${logHeaders(options.headers)}`);
     if (options.body) {
-      let bodyForLogging = '';
-      if (options.body instanceof URLSearchParams) {
-        bodyForLogging = options.body.toString();
-      } else if (typeof options.body === 'string') {
-        bodyForLogging = options.body;
-      } else {
-        bodyForLogging = safeStringify(options.body);
-      }
-      logger.debug(`[openidStrategy] Request body: ${bodyForLogging}`);
+      logger.debug(`[openidStrategy] Request body: ${logOpenIdRequestBody(options.body)}`);
     }
   }
 
@@ -190,7 +185,7 @@ const exchangeAccessTokenIfNeeded = async (config, accessToken, sub, fromCache =
       {
         access_token: grantResponse.access_token,
       },
-      grantResponse.expires_in * 1000,
+      getTokenCacheTtlMs(grantResponse.expires_in, DEFAULT_OAUTH_TOKEN_TTL_SECONDS),
     );
     return grantResponse.access_token;
   }
@@ -334,6 +329,16 @@ const resizeIdentityProviderAvatar = async (url, userId, config, accessToken, su
   }
 };
 
+// Deloitte Custom Change: a malformed Graph photo must not prevent a valid Entra user from signing in.
+const resizeGraphAvatar = async (image, userId) => {
+  try {
+    return await resizeAvatar({ userId, input: image });
+  } catch (error) {
+    logger.error(`[openidStrategy] Failed to process Microsoft Graph profile photo: ${error}`);
+    return '';
+  }
+};
+
 /**
  * Determines the full name of a user based on OpenID userinfo and environment configuration.
  *
@@ -429,12 +434,11 @@ async function exchangeTokenForOverage(accessToken, sub) {
     );
   }
 
-  const ttlMs =
-    Number.isFinite(grantResponse.expires_in) && grantResponse.expires_in > 0
-      ? grantResponse.expires_in * 1000
-      : 3600 * 1000;
-
-  await tokensCache.set(cacheKey, { access_token: grantResponse.access_token }, ttlMs);
+  await tokensCache.set(
+    cacheKey,
+    { access_token: grantResponse.access_token },
+    getTokenCacheTtlMs(grantResponse.expires_in, DEFAULT_OAUTH_TOKEN_TTL_SECONDS),
+  );
 
   return grantResponse.access_token;
 }
@@ -871,8 +875,13 @@ async function processOpenIDAuth(tokenset, existingUsersOnly = false) {
               tokenset.access_token,
               userinfo.sub,
             )
-          : image;
-      if (imageBuffer) {
+          : await resizeGraphAvatar(image, userId);
+      if (imageBuffer && graphImage) {
+        // Deloitte Custom Change: persist the normalized Graph avatar inline so private Blob access is not required.
+        const mimeType = imageBuffer.subarray(0, 3).toString() === 'GIF' ? 'gif' : 'png';
+        user.avatar = `data:image/${mimeType};base64,${imageBuffer.toString('base64')}`;
+        logger.debug('[openidStrategy] Graph avatar image encoded for user record');
+      } else if (imageBuffer) {
         logger.debug('[openidStrategy] Avatar image processed; saving avatar');
         const fileStrategy = getAvatarFileStrategy(appConfig, process.env.CDN_PROVIDER);
         const { saveBuffer } = getStrategyFunctions(fileStrategy);
@@ -1062,6 +1071,11 @@ function getOpenIdConfig() {
   }
   return openidConfig;
 }
+
+// Deloitte Custom Change: registers `getOpenIdConfig` with OboTokenService instead of
+// OboTokenService requiring this module directly — a direct require would create a
+// static cycle (this file -> GraphTokenService -> OboTokenService -> this file).
+require('~/server/services/OboTokenService').registerOpenIdConfigGetter(getOpenIdConfig);
 
 module.exports = {
   setupOpenId,

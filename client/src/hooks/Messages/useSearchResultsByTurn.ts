@@ -21,19 +21,11 @@ interface MCPAttachmentPayload {
   sources?: MCPResultSource[];
 }
 
-interface DeduplicatedSource {
-  fileId: string;
-  fileName: string;
-  pages: number[];
-  relevance: number;
-  pageRelevance: Record<string, number>;
-  metadata?: FileReferenceMetadata;
-}
-
 /**
  * `MCPResultSource.content` is `title + description` joined for server-side citation
  * matching; strip the leading title back off so the chip doesn't show it twice.
  */
+// Deloitte Custom Change: supports MCP result citation chips (PR #526)
 function getMCPSnippet(source: MCPResultSource): string {
   const description =
     source.title && source.content.startsWith(source.title)
@@ -86,42 +78,17 @@ export function useSearchResultsByTurn(attachments?: TAttachment[]) {
       if (attachment.type === Tools.file_search && attachment[Tools.file_search]) {
         const sources = getFileSearchSources(attachment[Tools.file_search]);
 
-        // Deduplicate sources by fileId and merge pages
-        const deduplicatedSources = new Map<string, DeduplicatedSource>();
-
-        sources.forEach((source: FileSource) => {
-          const fileId = source.fileId;
-          if (deduplicatedSources.has(fileId)) {
-            // Merge pages for the same file
-            const existing = deduplicatedSources.get(fileId);
-            if (existing) {
-              const existingPages = existing.pages || [];
-              const newPages = source.pages || [];
-              const allPages = [...existingPages, ...newPages];
-              const uniquePages = [...new Set(allPages)].sort((a, b) => a - b);
-              const mergedPageRelevance = {
-                ...existing.pageRelevance,
-                ...source.pageRelevance,
-              };
-              existing.pages = uniquePages;
-              existing.relevance = Math.max(existing.relevance || 0, source.relevance || 0);
-              existing.pageRelevance = mergedPageRelevance;
-            }
-          } else {
-            deduplicatedSources.set(fileId, {
-              fileId: source.fileId,
-              fileName: source.fileName,
-              pages: source.pages || [],
-              relevance: source.relevance || 0.5,
-              pageRelevance: source.pageRelevance || {},
-              metadata: source.metadata,
-            });
-          }
-        });
-
+        /* Dedup-by-fileId is intentionally not done here: merging would desync
+         * reference array indices from the citation markers anchored in the message
+         * text. Per-file merging (for the aggregate Sources panel) happens downstream
+         * in Sources.tsx, which reads `relevance`/`pages`/`pageRelevance` off each
+         * raw reference below. */
         const agentSearchData: SearchResultData = {
           turn: agentFileSearchTurn,
-          references: Array.from(deduplicatedSources.values()).map(
+          organic: [], // Agent file search doesn't have organic web results
+          topStories: [], // No top stories for file search
+          images: [], // No images for file search
+          references: sources.map(
             (source) =>
               ({
                 title: source.fileName || localize('com_file_unknown'),
@@ -134,8 +101,10 @@ export function useSearchResultsByTurn(attachments?: TAttachment[]) {
                 type: 'file' as const,
                 fileId: source.fileId,
                 fileName: source.fileName,
-                pages: source.pages,
-                pageRelevance: source.pageRelevance,
+                pages: source.pages || [],
+                pageRelevance: source.pageRelevance || {},
+                // Deloitte Custom Change: powers the inline file-citation relevance
+                // badge (Citation.tsx) and the cross-reference merge in Sources.tsx.
                 relevance: source.relevance,
                 metadata: source.metadata,
               }) as ResultReference,

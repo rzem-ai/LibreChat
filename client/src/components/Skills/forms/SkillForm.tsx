@@ -2,7 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Info, AlertTriangle } from 'lucide-react';
 import { useForm, Controller, FormProvider } from 'react-hook-form';
-import { Input, Button, Skeleton, TextareaAutosize, useToastContext } from '@librechat/client';
+import {
+  Label,
+  Input,
+  Button,
+  Spinner,
+  Skeleton,
+  TextareaAutosize,
+  useToastContext,
+} from '@librechat/client';
 import {
   InvocationMode,
   SKILL_NAME_PATTERN,
@@ -12,8 +20,9 @@ import {
 import type { TSkill, TSkillWarning, TUpdateSkillPayload } from 'librechat-data-provider';
 import { useGetSkillQuery, useUpdateSkillMutation } from '~/data-provider';
 import { useLocalize, useSkillPermissions } from '~/hooks';
-import InvocationModePicker from './InvocationModePicker';
 import SkillContentEditor from './SkillContentEditor';
+// Deloitte Custom Change: `cn` for conditional button styling, `formatSkillScanError` for
+// surfacing OBO skill-scanner failures inline (PR #635) — neither exists upstream.
 import { cn, formatSkillScanError } from '~/utils';
 import CategorySelector from './CategorySelector';
 import DeleteSkill from '../dialogs/DeleteSkill';
@@ -196,7 +205,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
                 },
               }}
               render={({ field }) => (
-                <div className="relative mb-1 flex w-full flex-col sm:w-auto md:mb-0">
+                <div className="relative mb-1 flex w-full min-w-0 flex-col sm:flex-1 md:mb-0">
                   <Input
                     {...field}
                     id="skill-name"
@@ -219,7 +228,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
                   <div
                     id="skill-name-error"
                     className={cn(
-                      'mt-1 w-56 text-sm text-red-500',
+                      'mt-1 w-56 text-sm text-text-destructive',
                       errors.name ? 'visible h-auto' : 'invisible h-0',
                     )}
                     role={errors.name ? 'alert' : undefined}
@@ -252,7 +261,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
         {readOnly && (
           <div
             role="note"
-            className="mt-4 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-600 dark:text-amber-400"
+            className="mt-4 flex items-start gap-2 rounded-md border border-status-warning-border bg-status-warning-subtle p-3 text-sm text-status-warning"
           >
             <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <span>{localize('com_ui_skill_no_edit_permission')}</span>
@@ -262,7 +271,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
         {warnings && warnings.length > 0 && (
           <div
             role="alert"
-            className="mt-4 flex flex-col gap-1 rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm text-amber-600 dark:text-amber-400"
+            className="mt-4 flex flex-col gap-1 rounded-md border border-status-warning-border bg-status-warning-subtle p-3 text-sm text-status-warning"
           >
             <div className="flex items-center gap-2 font-semibold">
               <AlertTriangle className="size-4" aria-hidden="true" />
@@ -293,13 +302,13 @@ export default function SkillForm({ skillId }: SkillFormProps) {
             }}
             render={({ field }) => (
               <div className="flex flex-col">
-                <label
+                <Label
                   htmlFor="skill-description"
                   className="mb-1 text-sm font-medium text-text-secondary"
                 >
                   {localize('com_ui_description')}
-                  <span className="ml-0.5 text-red-500">*</span>
-                </label>
+                  <span className="ml-0.5 text-text-destructive">*</span>
+                </Label>
                 <TextareaAutosize
                   {...field}
                   id="skill-description"
@@ -317,7 +326,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
                 {errors.description && (
                   <p
                     id="skill-description-error"
-                    className="mt-1 text-sm text-red-500"
+                    className="mt-1 text-sm text-text-destructive"
                     role="alert"
                   >
                     {errors.description.message}
@@ -348,9 +357,14 @@ export default function SkillForm({ skillId }: SkillFormProps) {
                 type="submit"
                 disabled={saveDisabled}
                 aria-disabled={saveDisabled || undefined}
-                className={cn('w-full sm:w-auto', saveDisabled && 'opacity-50')}
+                aria-busy={updateSkill.isLoading || undefined}
+                className={cn('w-full gap-2 sm:w-auto', saveDisabled && 'opacity-50')}
               >
-                {localize('com_ui_save')}
+                {/* Deloitte Custom Change: Show a loading indicator while the skill scanner runs. */}
+                {updateSkill.isLoading && <Spinner className="size-4" aria-hidden="true" />}
+                {updateSkill.isLoading
+                  ? localize('com_ui_skill_scanning')
+                  : localize('com_ui_save')}
               </Button>
             </div>
           )}
