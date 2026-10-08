@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Button } from '@librechat/client';
 import { Check, Clock, Code2, Captions, Info, Zap } from 'lucide-react';
 import type { AgentToolType } from 'librechat-data-provider';
 import OptionToggle from './OptionToggle';
@@ -17,6 +18,7 @@ interface MCPToolItemProps {
   intentDisabled: boolean;
   deferredToolsEnabled: boolean;
   programmaticToolsEnabled: boolean;
+  programmaticToolsAvailable: boolean;
   backgroundToolsEnabled: boolean;
   toolIntentsEnabled: boolean;
   onToggleSelect: () => void;
@@ -26,8 +28,7 @@ interface MCPToolItemProps {
   onToggleIntent: () => void;
 }
 
-const iconButton =
-  'flex size-6 items-center justify-center rounded-md transition-colors hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary';
+const iconButton = 'size-6 rounded-md';
 
 export default function MCPToolItem({
   tool,
@@ -44,6 +45,7 @@ export default function MCPToolItem({
   onToggleIntent,
   deferredToolsEnabled,
   programmaticToolsEnabled,
+  programmaticToolsAvailable,
   backgroundToolsEnabled,
   toolIntentsEnabled,
 }: MCPToolItemProps) {
@@ -70,7 +72,7 @@ export default function MCPToolItem({
             aria-hidden="true"
             className={cn(
               'flex size-4 shrink-0 items-center justify-center rounded border border-border-medium transition-colors',
-              isSelected && 'bg-primary text-primary-foreground',
+              isSelected && 'bg-surface-inverted text-text-inverted',
             )}
           >
             {isSelected && <Check className="size-4" />}
@@ -86,7 +88,7 @@ export default function MCPToolItem({
               pressed={isDeferred}
               label={localize('com_ui_mcp_defer_loading')}
               tooltip={localize('com_ui_mcp_click_to_defer')}
-              activeClass="text-amber-500"
+              activeClass="border-series-4 text-series-4 hover:text-series-4"
               onToggle={onToggleDefer}
             />
           )}
@@ -95,8 +97,13 @@ export default function MCPToolItem({
               icon={Code2}
               pressed={isProgrammatic}
               label={localize('com_ui_mcp_programmatic')}
-              tooltip={localize('com_ui_mcp_click_to_programmatic')}
-              activeClass="text-violet-500"
+              tooltip={localize(
+                programmaticToolsAvailable
+                  ? 'com_ui_mcp_click_to_programmatic'
+                  : 'com_ui_mcp_programmatic_requires_code',
+              )}
+              activeClass="border-series-6 text-series-6 hover:text-series-6"
+              disabled={!programmaticToolsAvailable && !isProgrammatic}
               onToggle={onToggleProgrammatic}
             />
           )}
@@ -106,7 +113,7 @@ export default function MCPToolItem({
               pressed={isBackground}
               label={localize('com_ui_mcp_background')}
               tooltip={localize('com_ui_mcp_click_to_background')}
-              activeClass="text-sky-500"
+              activeClass="border-series-1 text-series-1 hover:text-series-1"
               onToggle={onToggleBackground}
             />
           )}
@@ -119,12 +126,13 @@ export default function MCPToolItem({
               tooltip={localize(
                 intentDisabled ? 'com_ui_mcp_intent_programmatic' : 'com_ui_mcp_click_to_intent',
               )}
-              activeClass="text-teal-500"
+              activeClass="border-series-3 text-series-3 hover:text-series-3"
               onToggle={onToggleIntent}
             />
           )}
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setExpanded((value) => !value)}
             aria-expanded={expanded}
             aria-controls={detailsId}
@@ -135,7 +143,7 @@ export default function MCPToolItem({
             )}
           >
             <Info className="size-4" aria-hidden="true" />
-          </button>
+          </Button>
         </div>
       </div>
       {/* Auto-height reveal via grid-template-rows 0fr -> 1fr so the panel — and

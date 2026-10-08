@@ -1,6 +1,6 @@
 import { memo, useState, useContext, useCallback } from 'react';
-import { formatDisplayDate, normalizeServerName } from 'librechat-data-provider';
 import { FileText, Folder, TriangleAlert } from 'lucide-react';
+import { formatDisplayDate, normalizeServerName } from 'librechat-data-provider';
 import type { ReactNode, MouseEvent } from 'react';
 import type { SourceData } from '~/components/Web/SourceHovercard';
 import type { CitationProps } from './types';
@@ -13,6 +13,7 @@ import { cn } from '~/utils';
 interface FileCitationMetadata {
   fileBytes?: number;
   fileType?: string;
+  storageType?: string;
   /** Deloitte Custom Change: ISO timestamp the file was uploaded. */
   uploadedAt?: string;
 }
@@ -354,6 +355,7 @@ function CitationChip({ source, citationIds }: CitationChipProps) {
           pages={filePages}
           pageRelevance={filePageRelevance}
           fileType={fileMeta?.fileType}
+          fileSource={fileMeta?.storageType}
           fileSize={fileMeta?.fileBytes}
         />
       )}
@@ -379,6 +381,9 @@ export function CompositeCitation(props: CompositeCitationProps) {
 
   return (
     <>
+      {/* Deloitte Custom Change: one chip per distinct source — sibling MCP citations sharing
+          a source are already merged in useCompositeCitations — instead of upstream's single
+          paginated hovercard with Prev/Next controls over all sources */}
       {sources.map((source, i) => {
         const fileSource = source as FileCitationSource;
         const citationIds =
@@ -411,6 +416,9 @@ export function Citation(props: CitationComponentProps) {
     return null;
   }
 
+  // Deloitte Custom Change: shares the CitationChip renderer with CompositeCitation — unifies
+  // file/MCP/web tooltip, connector label, and logo logic — instead of upstream's separate
+  // inline per-type hovercard markup
   return <CitationChip source={refData} citationIds={citationId ? [citationId] : []} />;
 }
 
@@ -427,7 +435,7 @@ export const HighlightedText = memo(function HighlightedText({
 
   return (
     <span
-      className={`rounded px-0 py-0.5 transition-colors ${isHighlighted ? 'bg-amber-300/20' : ''}`}
+      className={`rounded px-0 py-0.5 transition-colors ${isHighlighted ? 'bg-surface-active' : ''}`}
     >
       {children}
     </span>

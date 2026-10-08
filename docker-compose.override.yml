@@ -76,6 +76,7 @@ services:
       args:
         VITE_BASE_PATH: /admin
     environment:
+      - VITE_BASE_PATH=/admin
       - PORT=3000
       - SESSION_SECRET=${ADMIN_PANEL_SESSION_SECRET}
       - API_SERVER_URL=http://api:3080

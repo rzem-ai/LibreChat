@@ -236,7 +236,7 @@ export default function ActionsInput({
           </div>
           */}
         </div>
-        <div className="border-token-border-medium bg-token-surface-primary hover:border-token-border-hover mb-4 w-full overflow-hidden rounded-lg border ring-0">
+        <div className="border-token-border-medium mb-4 w-full overflow-hidden rounded-lg border bg-surface-primary ring-0 hover:border-border-heavy">
           <div className="relative">
             <textarea
               id="schemaInput"
@@ -249,7 +249,7 @@ export default function ActionsInput({
             {/* TODO: format input button */}
           </div>
           {validationResult && validationResult.message !== 'OpenAPI spec is valid.' && (
-            <div className="border-token-border-light border-t p-2 text-red-500">
+            <div className="border-token-border-light border-t p-2 text-text-destructive">
               {validationResult.message.split('\n').map((line: string, i: number) => (
                 <div key={i}>{line}</div>
               ))}
@@ -274,7 +274,7 @@ export default function ActionsInput({
             {localize('com_ui_privacy_policy_url')}
           </label>
         </div>
-        <div className="border-token-border-medium bg-token-surface-primary hover:border-token-border-hover flex h-9 w-full rounded-lg border">
+        <div className="border-token-border-medium flex h-9 w-full rounded-lg border bg-surface-primary hover:border-border-heavy">
           <input
             type="text"
             placeholder="https://api.example-weather-app.com/privacy"
@@ -286,7 +286,7 @@ export default function ActionsInput({
         <button
           disabled={!functions || !functions.length}
           onClick={saveAction}
-          className="focus:shadow-outline mt-1 flex min-w-[100px] items-center justify-center rounded bg-surface-submit px-4 py-2 font-medium text-white transition-opacity hover:bg-surface-submit-hover focus:border-primary focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface-submit"
+          className="mt-1 flex min-w-[100px] items-center justify-center rounded bg-surface-submit px-4 py-2 font-semibold text-text-on-status hover:bg-surface-submit-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary disabled:opacity-50"
           type="button"
         >
           {submitContext()}

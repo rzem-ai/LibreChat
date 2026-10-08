@@ -8,7 +8,13 @@ import {
   uniqueAgentName,
   waitForPersistedAgent,
 } from './agents.helpers';
-import { MOCK_ENDPOINTS, fetchJson, getAccessToken, mockReply, sendMessage } from './helpers';
+import {
+  MOCK_ENDPOINTS,
+  fetchJson,
+  getAccessToken,
+  mockReply,
+  sendMessageAndWaitForCompletion,
+} from './helpers';
 
 const MCP_SERVER_NAME = 'e2e-memory';
 const MCP_TOOL_NAME = 'remember_fact';
@@ -77,7 +83,9 @@ async function expectSelectedMCPServerTools(form: Locator) {
 test.describe('agent builder MCP tools', { tag: ['@mock', '@mcp'] }, () => {
   // Deloitte Custom Change
   // SKIPPED: Tool Library's e2e-memory button doesn't render in time; see e2e/docs/skipped-tests.md.
-  test.skip('creates an agent with MCP server tools and persists the selection', async ({ page }) => {
+  test.skip('creates an agent with MCP server tools and persists the selection', async ({
+    page,
+  }) => {
     test.setTimeout(120000);
 
     const agentName = uniqueAgentName('E2E MCP Agent');
@@ -137,7 +145,7 @@ test.describe('agent builder MCP tools', { tag: ['@mock', '@mcp'] }, () => {
 
       await reopenedForm.getByRole('button', { name: 'Select Agent' }).click();
 
-      const response = await sendMessage(page, `hello from ${agentName}`);
+      const response = await sendMessageAndWaitForCompletion(page, `hello from ${agentName}`);
       expect(response.ok()).toBeTruthy();
       await expect(mockReply(page)).toBeVisible({ timeout: 30000 });
     } finally {

@@ -1,4 +1,4 @@
-version: 1.3.13 # Copy from librechat.example.yaml
+version: 1.3.17 # Copy from librechat.example.yaml
 cache: true
 
 # 'includedTools' restricts the list of tools available in the Agent Builder.
@@ -150,6 +150,7 @@ fileConfig:
       fileLimit: 50
     agents:
       fileLimit: 50
+  legacyFileUploadUX: true
 
 memory:
   disabled: false # Set to true to completely disable memory

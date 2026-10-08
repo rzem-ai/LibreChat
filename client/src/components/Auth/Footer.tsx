@@ -11,6 +11,7 @@ function Footer({ startupConfig }: { startupConfig: TStartupConfig | null | unde
 
   const privacyPolicyRender = privacyPolicy?.externalUrl && (
     <a
+      // Deloitte Custom Change: GEL design system color tokens (PR #138)
       className="text-sm text-primary underline decoration-transparent transition-all duration-200 hover:text-primary-hover hover:decoration-primary focus:text-primary-hover focus:decoration-primary"
       href={privacyPolicy.externalUrl}
       // Removed for WCAG compliance
@@ -23,6 +24,7 @@ function Footer({ startupConfig }: { startupConfig: TStartupConfig | null | unde
 
   const termsOfServiceRender = termsOfService?.externalUrl && (
     <a
+      // Deloitte Custom Change: GEL design system color tokens (PR #138)
       className="text-sm text-primary underline decoration-transparent transition-all duration-200 hover:text-primary-hover hover:decoration-primary focus:text-primary-hover focus:decoration-primary"
       href={termsOfService.externalUrl}
       // Removed for WCAG compliance
@@ -37,7 +39,7 @@ function Footer({ startupConfig }: { startupConfig: TStartupConfig | null | unde
     <div className="align-end m-4 flex justify-center gap-2" role="contentinfo">
       {privacyPolicyRender}
       {privacyPolicyRender && termsOfServiceRender && (
-        <div className="border-r-[1px] border-gray-300 dark:border-gray-600" />
+        <div className="border-r-[1px] border-border-medium" />
       )}
       {termsOfServiceRender}
     </div>

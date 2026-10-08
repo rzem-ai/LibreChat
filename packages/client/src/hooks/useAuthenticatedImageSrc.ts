@@ -49,7 +49,7 @@ export default function useAuthenticatedImageSrc(url: string): {
   }, [url, requiresAuth]);
 
   return {
-    src: requiresAuth ? blobUrl ?? '' : url,
+    src: requiresAuth ? (blobUrl ?? '') : url,
     isLoading: requiresAuth && !blobUrl && !isError,
     isError,
   };

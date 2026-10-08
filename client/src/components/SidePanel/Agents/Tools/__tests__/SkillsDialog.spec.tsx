@@ -111,6 +111,9 @@ jest.mock('@librechat/client', () => ({
     </button>
   ),
   Input: (props: React.ComponentProps<'input'>) => <input {...props} />,
+  Label: ({ children, ...props }: React.ComponentProps<'label'>) => (
+    <label {...props}>{children}</label>
+  ),
   Radio: ({
     options,
     onChange,
@@ -133,6 +136,9 @@ jest.mock('@librechat/client', () => ({
   ),
   OGDialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
   OGDialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  /** The header renders one DOM order per breakpoint; these cases are about
+   *  pagination, so they run as the desktop one. */
+  useMediaQuery: () => true,
 }));
 
 function makeSkill(

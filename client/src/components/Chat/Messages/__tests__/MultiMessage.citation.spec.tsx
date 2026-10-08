@@ -29,6 +29,14 @@ function MockCitationConsumerRow({ message }: { message: TMessage }) {
 
 jest.mock('../Message', () => ({ __esModule: true, default: MockCitationConsumerRow }));
 
+// Deloitte Custom Change: MultiMessage now also mounts EventSubagentActivityGroup
+// per row, which pulls in a dependency graph this citation-wiring suite doesn't
+// otherwise need — mock it out, mirroring MultiMessage.spec.tsx.
+jest.mock('~/components/Chat/Subagents/EventSubagentActivityGroup', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 describe('MultiMessage citation hover-highlight wiring', () => {
   it('covers the legacy Message row (no `content` field) with a real stateful provider', () => {
     const message = {

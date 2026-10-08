@@ -58,7 +58,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:06b22bdcfe4b2ee6a3af823994c718a3ab8770e51dff8f6ae8ec7aee46b9190c'
+          tag: 'develop@sha256:0ebfa4f8e3080d00d988ac9dc8da0076fc4e992078015652776b2abb177a1e67'
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -103,7 +103,6 @@ pods:
           RAG_OPENAI_GLOBAL_BASEURL: 'http://127.0.0.1:8081/azure-global'
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
           RAG_PORT: '8000'
-          REFRESH_TOKEN_EXPIRY: '86400000' # (ms) - 1 day refresh token expiration
           # ClearTrack Code Interpreter (ea-code-runtime)
           # NOTE: switch to the direct in-cluster URL below (and set
           # codeInterpreter.namespace) to bypass the Cilium Ingress/Envoy
@@ -173,7 +172,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:47d7c13c1b7a2647f9add4b36ec053c4cb0b6a6e53651788eee37c104bcb295d'
+          tag: 'develop@sha256:47c60f15c2314140bc15e744c378b976abfd04bcd12f123c5ec088c82bcff261'
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -230,7 +229,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:d6187701d7ffe0b2d48f0f645483a2d984f34566401c49aecb398103bb5c5259'
+          tag: 'develop@sha256:3557c93e2ecfd1c70415b42e803340307b05b2aaed04efb45fdb4c952076ecae'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
