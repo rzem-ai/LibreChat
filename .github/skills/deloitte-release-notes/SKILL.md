@@ -33,7 +33,7 @@ Find the last release that actually landed on `main` and when it landed:
 
 ```bash
 last_tag=$(git tag --merged origin/main | sort -V | tail -1)
-last_tag_date=$(git log -1 --format=%aI "$last_tag")
+last_tag_date=$(TZ=UTC git log -1 --date=format-local:'%Y-%m-%dT%H:%M:%SZ' --format=%ad "$last_tag")
 ```
 
 Propose the next version by bumping `last_tag`'s patch number (e.g.
@@ -51,6 +51,8 @@ gh pr list --repo <owner/repo> --base main --head develop --state open \
 
 - If `$ARGUMENTS` names a PR number, use it directly.
 - If exactly one open PR is found, use it.
+- If multiple open PRs are found, show their numbers and titles and ask the
+  user which one to use.
 - If none exists yet, proceed without a PR link (placeholder `PR #TBD`) and
   tell the user you'll need the number once they open it — don't invent one.
 
@@ -83,16 +85,17 @@ easily has 100+ merged PRs, well past one page, and a fixed `--limit`
 quietly truncates to "whatever fit":
 
 ```bash
-gh pr list --repo <owner/repo> --base develop --state merged --paginate \
-  --json number,title,body,mergedAt,url \
-  | jq --arg since "$last_tag_date" '[.[] | select(.mergedAt > $since)]'
+gh api --paginate "repos/<owner/repo>/pulls?state=closed&base=develop&per_page=100" \
+  | jq -s --arg since "$last_tag_date" \
+    '[.[][] | select(.merged_at != null and .merged_at > $since) | {number, title, body, mergedAt: .merged_at, url: .html_url}]'
 ```
 
-Treat `git rev-list --count` from above as the number your PR list plus
-direct-commit bullets must collectively account for. If the PR numbers
-you found plus the non-PR commits cover meaningfully fewer commits than
-that count, go back and fetch the rest (loop `gh pr list --page`/`-L`, or
-fetch the missing PR numbers directly) before writing anything — don't
+Use the full commit log as the coverage ledger: verify that every PR number
+extracted from a subject has fetched metadata, and classify every remaining
+commit as either represented by one of those PRs or a direct commit. Fetch
+metadata for any missing PR number directly before writing; do not compare
+the number of PRs with the commit count because one PR can contain multiple
+commits.
 write the notes from a partial set because "the first page looked like
 enough."
 
@@ -172,11 +175,11 @@ markdown, and the terse, instructional bullet style.
 Template:
 
 ```markdown
-🚀 MyAssist NextGen Platform Update: New Improvements Ready for Testing! (v<version>)
+# 🚀 MyAssist NextGen Platform Update: New Improvements Ready for Testing! (v<version>)
 📢 General We've just released a range of enhancements to improve MyAssist NextGen! Here's what's new 👇
 
 <emoji> <Theme>
-<one or two plain-English sentences per item, no PR numbers, no file names>
+- <one or two plain-English sentences per item, no PR numbers, no file names>
 ```
 
 Rules for this doc:
