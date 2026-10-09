@@ -194,7 +194,7 @@ endpoints:
         'skills',
         'tools',
       ]
-    minRelevanceScore: 0.3
+    minRelevanceScore: 0.6
     # Restrict Agent Builder to the providers supported by the curated model catalog.
     allowedProviders:
       - 'Azure Global'
