@@ -150,7 +150,7 @@ fileConfig:
       fileLimit: 50
     agents:
       fileLimit: 50
-  legacyFileUploadUX: true
+  # legacyFileUploadUX: true
 
 memory:
   disabled: false # Set to true to completely disable memory

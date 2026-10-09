@@ -10,6 +10,7 @@ map $http_authorization $token {
 # ===========================================
 server {
     listen 8080;
+    client_max_body_size 25M;
 
     location / {
         proxy_set_header x-id-token $http_x_api_key;
@@ -35,6 +36,7 @@ server {
 # ===========================================
 server {
     listen 8081;
+    client_max_body_size 25M;
 
      location /model {
          proxy_set_header x-id-token $http_x_id_token;
