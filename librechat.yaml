@@ -59,6 +59,12 @@ interface:
       - Acknowledge that your use of MyAssist is monitored and that your prompts and usage data may be collected and analysed to understand how MyAssist is being used and to identify opportunities for improving the platform.
       - You have read, understood, and will always comply with the Third Party Content Guidelines and, when using web search, web crawling, or external content retrieval capabilities, you must also comply with applicable website terms of use, licensing conditions, copyright obligations, and any restrictions on the intended use of the content. [Third Party Content Guidelines](https://ausdeloitte.sharepoint.com/sites/DOL-c-DTTL-ResearchAUS/SitePages/Usage-guidelines.aspx?xsdata=MDV8MDJ8aWVkd2FyZHNAZGVsb2l0dGUuY29tLmF1fDM1N2RkNWIwNDE4MTRhZjM3ZWY0MDhkZjAzMGU4MTA1fDM2ZGE0NWYxZGQyYzRkMWZhZjEzNWFiZTQ2Yjk5OTIxfDB8MHw2MzkyMzMwMzI5OTA2NTQ0MTN8VW5rbm93bnxUV0ZwYkdac2IzZDhleUpGYlhCMGVVMWhjR2tpT25SeWRXVXNJbFlpT2lJd0xqQXVNREF3TUNJc0lsQWlPaUpYYVc0ek1pSXNJa0ZPSWpvaVRXRnBiQ0lzSWxkVUlqb3lmUT09fDB8fHw%3d&sdata=UmlOQjNaREpSeFVzTm9NQ0laait6VXBRSlJVR3FyclpHcVNWVmtFdHpMRT0%3d&SafelinksUrl=https%3a%2f%2fausdeloitte.sharepoint.com%2fsites%2fDOL-c-DTTL-ResearchAUS%2fSitePages%2fUsage-guidelines.aspx).
 
+  # Deloitte Custom Change: Learning Center menu bar — the FAQ agent id differs per
+  # environment (dev/uat/prd), so it's injected via env var rather than hardcoded here.
+  learningCenter:
+    faqAgentId: '${LEARNING_CENTER_FAQ_AGENT_ID}'
+    feedbackUrl: 'https://forms.cloud.microsoft/e/E9AyvN4Ayx'
+
   marketplace:
     use: true
     # Deloitte Custom Change: replace the hardcoded HR/R&D/Finance/IT/Sales/After Sales tabs

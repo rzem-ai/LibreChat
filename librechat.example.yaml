@@ -183,6 +183,14 @@ interface:
     # If omitted, all matching results are returned.
     # allowedDomains:
     #   - example.com
+  # Deloitte Custom Change: configures the Learning Center menu bar's FAQ agent and
+  # feedback link. faqAgentId must be set per deployment (it is a specific agent's
+  # id, which differs between environments) — the menu item is hidden entirely if
+  # unset or if the id doesn't resolve to an existing agent. feedbackUrl is likewise
+  # hidden if unset.
+  # learningCenter:
+  #   faqAgentId: 'agent_abc123'
+  #   feedbackUrl: 'https://example.com/feedback-form'
   marketplace:
     use: false
     # Deloitte Custom Change: documents the `interface.marketplace.categories` config block,
