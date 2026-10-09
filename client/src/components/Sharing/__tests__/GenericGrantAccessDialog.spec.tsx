@@ -152,6 +152,10 @@ describe('GenericGrantAccessDialog - permissions load failure', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('com_ui_share_access_description')).toHaveClass('sr-only');
     expect(screen.getByTestId('unified-people-search').closest('section')).toHaveClass('w-full');
+    expect(screen.getByText('com_ui_share_publish_capability_prompt')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'com_ui_share_publish_capability_link' }),
+    ).toHaveAttribute('href', 'https://forms.cloud.microsoft/e/19c6RVYQvx');
     expect(screen.getByTestId('public-toggle').parentElement).toHaveClass('border-t');
     expect(screen.getByTestId('admin-settings')).toBeInTheDocument();
     expect(dialog.firstElementChild).not.toHaveClass('border-b');

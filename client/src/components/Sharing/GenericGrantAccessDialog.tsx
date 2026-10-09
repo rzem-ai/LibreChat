@@ -369,6 +369,17 @@ export default function GenericGrantAccessDialog({
                       typeFilter={peoplePickerTypeFilter}
                       excludeIds={allShares.map((s) => s.idOnTheSource)}
                     />
+                    <p className="text-xs text-text-secondary">
+                      {localize('com_ui_share_publish_capability_prompt')}{' '}
+                      <a
+                        href="https://forms.cloud.microsoft/e/19c6RVYQvx"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-text-primary underline underline-offset-2"
+                      >
+                        {localize('com_ui_share_publish_capability_link')}
+                      </a>
+                    </p>
 
                     {!hasAtLeastOneOwner && hasChanges && (
                       <Alert id={ownerErrorId} variant="error">
