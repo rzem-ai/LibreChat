@@ -85,9 +85,6 @@ export function useSearchResultsByTurn(attachments?: TAttachment[]) {
          * raw reference below. */
         const agentSearchData: SearchResultData = {
           turn: agentFileSearchTurn,
-          organic: [], // Agent file search doesn't have organic web results
-          topStories: [], // No top stories for file search
-          images: [], // No images for file search
           references: sources.map(
             (source) =>
               ({

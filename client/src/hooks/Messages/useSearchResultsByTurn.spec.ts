@@ -14,7 +14,9 @@ describe('useSearchResultsByTurn', () => {
         type: Tools.web_search,
         [Tools.web_search]: {
           turn: 0,
-          organic: [{ title: 'Desk Booking', link: 'https://example.com', snippet: 'Book a desk.' }],
+          organic: [
+            { title: 'Desk Booking', link: 'https://example.com', snippet: 'Book a desk.' },
+          ],
         },
       },
       {
