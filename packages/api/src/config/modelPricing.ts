@@ -9,9 +9,10 @@ import { collectTokenConfigOverrides } from '~/endpoints/tokenConfig';
  * badge (a multiplier against a configured reference model) shown in the model selector.
  * That file has been removed — pricing now lives as native `tokenConfig` blocks on each
  * endpoint in `librechat.yaml`, and the badge is now an absolute 1-5 `$` tier derived from
- * each model's own blended price, with no reference model needed. The 4 breakpoints
- * separating the 5 tiers are configurable via `modelPricing.tierBreakpoints` in
- * `librechat.yaml`, falling back to `DEFAULT_PRICE_TIER_BREAKPOINTS` when unset.
+ * each model's own blended price, with no reference model needed. The badge is gated by
+ * `interface.customDeloitteFeatureFlags.showModelPricingIndicator`, and the 4 breakpoints
+ * separating the 5 tiers are configurable via `customDeloitteFeatureFlags.modelPricingTierBreakpoints`
+ * in `librechat.yaml`, falling back to `DEFAULT_PRICE_TIER_BREAKPOINTS` when unset.
  * `getModelPricing` below is a pure projection over `collectTokenConfigOverrides` with
  * no file I/O or caching (appConfig is already cached upstream).
  */
@@ -30,13 +31,20 @@ function getPriceTier(blendedCost: number, breakpoints: number[]): number {
 
 /**
  * Flattens every endpoint's static yaml `tokenConfig` into the price-tier
- * badge's `{ inputPer1M, outputPer1M, provider, tier }` shape. Pure projection
- * over the already-cached `appConfig` — no file I/O, no caching needed here.
+ * badge's `{ inputPer1M, outputPer1M, provider, tier }` shape. Returns an empty
+ * map when `customDeloitteFeatureFlags.showModelPricingIndicator` isn't enabled,
+ * so the badge stays hidden and no pricing data is sent to the client. Pure
+ * projection over the already-cached `appConfig` — no file I/O, no caching needed here.
  */
 export function getModelPricing(appConfig?: AppConfig): TModelPricing {
+  const customDeloitteFeatureFlags = appConfig?.interfaceConfig?.customDeloitteFeatureFlags;
+  if (customDeloitteFeatureFlags?.showModelPricingIndicator !== true) {
+    return {};
+  }
+
   const overrides = collectTokenConfigOverrides(appConfig);
   const breakpoints =
-    appConfig?.config?.modelPricing?.tierBreakpoints ?? DEFAULT_PRICE_TIER_BREAKPOINTS;
+    customDeloitteFeatureFlags.modelPricingTierBreakpoints ?? DEFAULT_PRICE_TIER_BREAKPOINTS;
   const pricing: TModelPricing = {};
 
   for (const [endpoint, tokenConfig] of Object.entries(overrides)) {

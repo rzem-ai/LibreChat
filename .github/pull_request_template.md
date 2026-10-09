@@ -1,4 +1,4 @@
- Goal 🎯
+# Goal 🎯
 
 Why does this PR exist? What problem does it solve? What value does it add to the repo or the business?
 

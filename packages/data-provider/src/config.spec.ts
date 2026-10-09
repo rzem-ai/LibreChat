@@ -1105,21 +1105,34 @@ describe('agent background task config', () => {
   });
 });
 
-describe('modelPricing config', () => {
-  it('accepts a valid ascending tierBreakpoints array', () => {
+describe('customDeloitteFeatureFlags.modelPricingTierBreakpoints', () => {
+  it('accepts a valid ascending tierBreakpoints array alongside the indicator flag', () => {
     const result = configSchema.safeParse({
       version: '1.0',
-      modelPricing: { tierBreakpoints: [2, 5, 8, 15] },
+      interface: {
+        customDeloitteFeatureFlags: {
+          showModelPricingIndicator: true,
+          modelPricingTierBreakpoints: [2, 5, 8, 15],
+        },
+      },
     });
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.modelPricing?.tierBreakpoints).toEqual([2, 5, 8, 15]);
+      const flags = result.data.interface?.customDeloitteFeatureFlags;
+      expect(flags?.showModelPricingIndicator).toBe(true);
+      expect(flags?.modelPricingTierBreakpoints).toEqual([2, 5, 8, 15]);
     }
   });
 
   it('is optional', () => {
     expect(configSchema.safeParse({ version: '1.0' }).success).toBe(true);
+    expect(
+      configSchema.safeParse({
+        version: '1.0',
+        interface: { customDeloitteFeatureFlags: {} },
+      }).success,
+    ).toBe(true);
   });
 
   it.each([[[1, 2, 3]], [[1, 2, 3, 4, 5]]])(
@@ -1128,7 +1141,7 @@ describe('modelPricing config', () => {
       expect(
         configSchema.safeParse({
           version: '1.0',
-          modelPricing: { tierBreakpoints: breakpoints },
+          interface: { customDeloitteFeatureFlags: { modelPricingTierBreakpoints: breakpoints } },
         }).success,
       ).toBe(false);
     },
@@ -1138,7 +1151,9 @@ describe('modelPricing config', () => {
     expect(
       configSchema.safeParse({
         version: '1.0',
-        modelPricing: { tierBreakpoints: [2, 5, 5, 15] },
+        interface: {
+          customDeloitteFeatureFlags: { modelPricingTierBreakpoints: [2, 5, 5, 15] },
+        },
       }).success,
     ).toBe(false);
   });
@@ -1147,7 +1162,9 @@ describe('modelPricing config', () => {
     expect(
       configSchema.safeParse({
         version: '1.0',
-        modelPricing: { tierBreakpoints: [-1, 2, 5, 8] },
+        interface: {
+          customDeloitteFeatureFlags: { modelPricingTierBreakpoints: [-1, 2, 5, 8] },
+        },
       }).success,
     ).toBe(false);
   });
