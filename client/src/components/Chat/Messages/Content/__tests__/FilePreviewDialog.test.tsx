@@ -27,6 +27,7 @@ jest.mock('~/components/Artifacts/ArtifactPreview', () => ({
 jest.mock('~/data-provider', () => ({
   useFileDownload: jest.fn(() => ({ refetch: jest.fn() })),
   useSharedFileDownload: jest.fn(() => ({ refetch: jest.fn() })),
+  useFilePreviewBlob: jest.fn(() => ({ refetch: jest.fn() })),
   useFilePreview: jest.fn(),
   useGetStartupConfig: jest.fn(() => ({ data: undefined })),
   useGetSharedStartupConfig: jest.fn(() => ({ data: undefined })),
@@ -35,12 +36,14 @@ jest.mock('~/data-provider', () => ({
 const mockedDataProvider = jest.requireMock('~/data-provider') as {
   useFileDownload: jest.Mock;
   useSharedFileDownload: jest.Mock;
+  useFilePreviewBlob: jest.Mock;
   useFilePreview: jest.Mock;
   useGetStartupConfig: jest.Mock;
   useGetSharedStartupConfig: jest.Mock;
 };
 const mockUseFileDownload = mockedDataProvider.useFileDownload;
 const mockUseSharedFileDownload = mockedDataProvider.useSharedFileDownload;
+const mockUseFilePreviewBlob = mockedDataProvider.useFilePreviewBlob;
 const mockUseFilePreview = mockedDataProvider.useFilePreview;
 const mockUseGetStartupConfig = mockedDataProvider.useGetStartupConfig;
 const mockUseGetSharedStartupConfig = mockedDataProvider.useGetSharedStartupConfig;
@@ -65,6 +68,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockUseFileDownload.mockReturnValue({ refetch: jest.fn() });
   mockUseSharedFileDownload.mockReturnValue({ refetch: jest.fn() });
+  mockUseFilePreviewBlob.mockReturnValue({ refetch: jest.fn() });
   mockUseGetStartupConfig.mockReturnValue({ data: undefined });
   mockUseGetSharedStartupConfig.mockReturnValue({ data: undefined });
 });

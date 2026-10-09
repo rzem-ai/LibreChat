@@ -1,7 +1,9 @@
 import { FileSources } from 'librechat-data-provider';
 import type { TFile } from 'librechat-data-provider';
 
-type PreviewKind = 'pdf' | 'text' | false;
+type PreviewKind = 'pdf' | 'text' | 'office' | false;
+
+const OFFICE_EXTENSIONS = new Set(['docx', 'xlsx', 'xls']);
 
 const TEXT_EXTENSIONS = new Set([
   'txt',
@@ -58,6 +60,15 @@ function getPreviewKindByMime(mime?: string): PreviewKind {
   if (mime.includes('pdf')) {
     return 'pdf';
   }
+  if (mime.includes('officedocument')) {
+    // PPTX rendering isn't enabled for this dialog yet — fall through to
+    // "Preview unavailable" like any other unsupported type. DOCX/XLSX
+    // (wordprocessingml/spreadsheetml) still get the office HTML preview.
+    if (mime.includes('presentationml')) {
+      return false;
+    }
+    return 'office';
+  }
   if (
     mime.startsWith('text/') ||
     mime.includes('json') ||
@@ -76,6 +87,13 @@ function getPreviewKindByExtension(filename: string): PreviewKind {
   const extension = getFileExtension(filename);
   if (extension === 'pdf') {
     return 'pdf';
+  }
+  // Generic/missing MIME types (application/octet-stream, application/zip)
+  // still have a usable extension — route DOCX/XLSX through the office HTML
+  // preview the same as a well-formed MIME would. PPTX stays excluded, same
+  // as the MIME-based check in getPreviewKindByMime.
+  if (OFFICE_EXTENSIONS.has(extension)) {
+    return 'office';
   }
   return TEXT_EXTENSIONS.has(extension) ? 'text' : false;
 }
