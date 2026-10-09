@@ -19,6 +19,16 @@ jest.mock('@librechat/api', () => ({
   refreshS3FileUrls: jest.fn(),
   resolveUploadErrorMessage: jest.fn(),
   verifyAgentUploadPermission: jest.fn(),
+  /* `ensureFilePreview` (on-demand preview extraction, called by this
+   * route for records with no `status`/`text` yet) depends on these.
+   * Default to "nothing is extractable" so the pre-existing fixtures in
+   * this file — which test auth/lazy-sweep/status-propagation, not
+   * extraction — stay no-ops exactly as before that feature existed. */
+  classifyCodeArtifact: jest.fn(() => 'other'),
+  hasOfficeHtmlPath: jest.fn(() => false),
+  extractCodeArtifactText: jest.fn(async () => null),
+  getExtractedTextFormat: jest.fn(() => null),
+  MAX_TEXT_EXTRACT_BYTES: 2 * 1024 * 1024,
 }));
 
 const mockFindFileById = jest.fn();

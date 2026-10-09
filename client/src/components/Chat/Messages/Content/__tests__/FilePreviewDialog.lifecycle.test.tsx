@@ -48,6 +48,8 @@ jest.mock('~/data-provider', () => ({
   useSharedFileDownload: (_share: string, _file: string, purpose?: string) => ({
     refetch: purpose === 'preview' ? mockSharedPreview : mockDownload,
   }),
+  useGetStartupConfig: () => ({ data: undefined }),
+  useGetSharedStartupConfig: () => ({ data: undefined }),
   revokeDownloadURL: (url: string) => mockRevoke(url),
 }));
 jest.mock('@librechat/client', () => ({

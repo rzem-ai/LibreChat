@@ -185,6 +185,10 @@ const mockGetStrategyFunctions = jest.fn();
 jest.mock('~/server/services/Files/strategies', () => ({
   getStrategyFunctions: (...args) => mockGetStrategyFunctions(...args),
 }));
+const mockEnsureFilePreview = jest.fn().mockResolvedValue(false);
+jest.mock('~/server/services/Files/previewExtraction', () => ({
+  ensureFilePreview: (...args) => mockEnsureFilePreview(...args),
+}));
 jest.mock('~/server/utils/files', () => ({
   cleanFileName: jest.fn((name) => name),
   getContentDisposition: jest.fn((name, disposition = 'attachment') => `${disposition}; ${name}`),
@@ -1893,6 +1897,45 @@ describe('share-scoped file routes', () => {
       textFormat: 'text',
     });
     expect(getFiles).toHaveBeenCalledWith({ file_id: 'file-1' }, null, {});
+  });
+
+  it('lazily renders a preview for a never-touched record, mirroring the owner route', async () => {
+    getSharedLinkFile.mockResolvedValue({
+      file: { file_id: 'file-1', source: 'local' },
+      hasSnapshots: true,
+    });
+    getFiles
+      .mockResolvedValueOnce([{ file_id: 'file-1', source: 'local' }])
+      .mockResolvedValueOnce([{ status: 'ready', text: '<html></html>', textFormat: 'html' }]);
+    mockEnsureFilePreview.mockResolvedValueOnce(true);
+
+    const response = await request(buildApp()).get('/api/share/share-123/files/file-1/preview');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      file_id: 'file-1',
+      status: 'ready',
+      text: '<html></html>',
+      textFormat: 'html',
+    });
+    expect(mockEnsureFilePreview).toHaveBeenCalledWith(
+      expect.objectContaining({ file: expect.objectContaining({ file_id: 'file-1' }) }),
+    );
+    expect(getFiles).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not re-fetch or call ensureFilePreview for a record that already has a status', async () => {
+    getSharedLinkFile.mockResolvedValue({
+      file: { file_id: 'file-1', source: 'local' },
+      hasSnapshots: true,
+    });
+    getFiles.mockResolvedValue([{ status: 'ready', text: 'extracted text', textFormat: 'text' }]);
+
+    const response = await request(buildApp()).get('/api/share/share-123/files/file-1/preview');
+
+    expect(response.status).toBe(200);
+    expect(mockEnsureFilePreview).not.toHaveBeenCalled();
+    expect(getFiles).toHaveBeenCalledTimes(1);
   });
 
   it('404s for a file not in the snapshot without rebuilding it', async () => {
