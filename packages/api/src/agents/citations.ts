@@ -9,15 +9,13 @@
  * answer quality.
  *
  * Matching is lexical: a sentence is anchored to a passage when enough of its
- * content words also appear in that passage. Two profiles exist because
- * sources differ in how closely the model paraphrases them: file_search
- * chunks are long and often quoted closely, so they use the strict, unstemmed
- * `SIMILARITY_THRESHOLD`; MCP and web_search (organic/news) sources are short,
- * loosely-paraphrased article excerpts, so they use the looser
- * `MCP_SIMILARITY_THRESHOLD` with `tokenizeStemmed` — a strict/unstemmed
- * profile on these sources tends to only match a sentence that echoes a
- * source's title near-verbatim (e.g. a heading) while starving every
- * paraphrased body claim of a citation. Each anchor encodes the coordinates
+ * content words also appear in that passage. file_search uses the strict,
+ * unstemmed `SIMILARITY_THRESHOLD`; MCP and web_search (organic/news) sources
+ * are short, loosely-paraphrased excerpts, so they use the looser, stemmed
+ * `MCP_SIMILARITY_THRESHOLD`/`WEB_SEARCH_SIMILARITY_THRESHOLD`. A profile too
+ * strict for its source tends to only match a sentence that echoes a source's
+ * title near-verbatim (e.g. a heading) while starving every paraphrased body
+ * claim of a citation. Each anchor encodes the coordinates
  * the frontend resolves — `turn{N}file{M}` for file_search (N is the
  * attachment index, M the first-seen fileId index within it),
  * `turn{N}search{M}`/`turn{N}news{M}` for web_search (N is the attachment's
@@ -41,12 +39,19 @@ const MIN_SENTENCE_CONTENT_WORDS = 4;
 /** Fraction of a sentence's content tokens that must appear in a passage. */
 const SIMILARITY_THRESHOLD = 0.6;
 /**
- * Lower similarity bar used for MCP citations. File_search sentences tend to
- * closely paraphrase a retrieved chunk; MCP answers summarize a news article
- * much more freely (different wording, added context), so the same 0.6 bar
- * used for file citations misses most true matches.
+ * Similarity bar used for MCP citations. File_search sentences tend to closely
+ * paraphrase a retrieved chunk; MCP answers summarize a result much more
+ * freely (different wording, added context), so the same 0.6 bar used for
+ * file citations misses most true matches.
  */
 const MCP_SIMILARITY_THRESHOLD = 0.35;
+/**
+ * Lower similarity bar used for web_search organic/news citations. Those
+ * sources are short, loosely-paraphrased article excerpts — summarized much
+ * more freely than a file_search chunk — so the stricter 0.6 bar misses most
+ * true matches.
+ */
+const WEB_SEARCH_SIMILARITY_THRESHOLD = 0.35;
 /**
  * Upper bound on citation anchors appended to a single sentence. When more than
  * three distinct sources clear the `SIMILARITY_THRESHOLD`, the highest-similarity
@@ -178,6 +183,12 @@ interface Passage {
   fileIndex: number;
   /** Normalised content-word tokens of the passage, used for similarity matching. */
   tokens: Set<string>;
+  /**
+   * Stemmed, stopword-filtered title tokens — set only for identity-bound MCP sources
+   * (KX/DPN, Entities) with a title. Unset for everything else, where `filterPassagesForLine`
+   * leaves the passage list untouched.
+   */
+  titleTokens?: Set<string>;
 }
 
 function tokenize(text: string): string[] {
@@ -639,6 +650,52 @@ function withAnchors(sentence: string, anchors: string[]): string {
   return `${trimmed} ${anchors.join(' ')}${trailing}`;
 }
 
+/** True when every one of `passage.titleTokens` appears in `lineTokens` — a partial-name match (e.g. a shared surname) does not count. */
+function fullyNamesPassage(lineTokens: Set<string>, passage: Passage): boolean {
+  if (!passage.titleTokens || passage.titleTokens.size === 0) {
+    return false;
+  }
+  for (const token of passage.titleTokens) {
+    if (!lineTokens.has(token)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * If this line fully names one or more identity-bound passages (KX/DPN, Entities), restricts
+ * `passages` to just those — every other identity-bound passage is excluded from this line even
+ * if it would otherwise clear the containment threshold (prevents e.g. a "Jane Doe" line from
+ * also citing an unrelated "John Doe" profile via shared boilerplate, or a shared surname). If
+ * the line names no one specifically, every passage stays eligible — a catch-all "here are other
+ * relevant testers" line must still freely cite multiple unnamed candidates via normal threshold
+ * ranking, not be gated into citing none of them. Passages without `titleTokens` (file_search,
+ * web_search, and every non-identity-bound MCP connector) are never affected either way.
+ */
+function filterPassagesForLine(
+  line: string,
+  passages: Passage[],
+  tokenizeFn: (text: string) => string[],
+): Passage[] {
+  const identityBound = passages.filter((passage) => passage.titleTokens);
+  if (identityBound.length === 0) {
+    return passages;
+  }
+  const lineTokens = new Set(tokenizeFn(line));
+  const namedKeys = new Set(
+    identityBound
+      .filter((passage) => fullyNamesPassage(lineTokens, passage))
+      .map((passage) => `${passage.turn}:${passage.fileIndex}`),
+  );
+  if (namedKeys.size === 0) {
+    return passages;
+  }
+  return passages.filter(
+    (passage) => !passage.titleTokens || namedKeys.has(`${passage.turn}:${passage.fileIndex}`),
+  );
+}
+
 /**
  * Anchors a single text blob against `passages`, line by line. A line that parses as a markdown
  * table row (via `splitTableRowCells`) is scored as one unit and its anchors are inserted into the
@@ -676,11 +733,12 @@ function anchorTextPart(
     }
 
     const lineCoords = new Set<string>();
+    const eligiblePassages = filterPassagesForLine(line, passages, options.tokenizeFn ?? tokenize);
     const tableRow =
       !excluded && tableLineIndices.has(index) ? splitTableRowCells(line) : undefined;
 
     if (tableRow) {
-      const { anchors, coords } = anchorsForSentence(line, passages, {
+      const { anchors, coords } = anchorsForSentence(line, eligiblePassages, {
         ...anchorOptions,
         excludeCoords: lineCoords,
       });
@@ -698,7 +756,7 @@ function anchorTextPart(
 
     return splitIntoSentences(line)
       .map((sentence) => {
-        const { anchors, coords } = anchorsForSentence(sentence, passages, {
+        const { anchors, coords } = anchorsForSentence(sentence, eligiblePassages, {
           ...anchorOptions,
           excludeCoords: lineCoords,
         });
@@ -859,11 +917,10 @@ function buildWebSearchPassages(webSearchAttachments: TAttachment[]): {
 /**
  * Deterministically inserts web search citation anchors (`turn{N}search{M}`/`turn{N}news{M}`)
  * into the assistant's text content parts by matching each sentence against the organic/news
- * results, the same lexical approach `insertMCPCitations` uses for article-style sources
- * (stemmed tokens, `MCP_SIMILARITY_THRESHOLD`) rather than `insertFileCitations`'s strict
- * profile — a heading that echoes a source's title verbatim will always clear a strict
- * threshold, while paraphrased body claims further down the response won't, silently starving
- * them of citations. Mutates in place.
+ * results, using stemmed tokens and the looser `WEB_SEARCH_SIMILARITY_THRESHOLD` rather than
+ * `insertFileCitations`'s strict profile — a heading that echoes a source's title verbatim will
+ * always clear a strict threshold, while paraphrased body claims further down the response
+ * won't, silently starving them of citations. Mutates in place.
  *
  * Scoped to organic and news results only — both carry real paraphrasable body text (title +
  * snippet/scraped content), so lexical matching works the same way it does for MCP article
@@ -882,7 +939,7 @@ export function insertWebSearchCitations(
   ] as const) {
     applyPassageAnchors(contentParts, passages, {
       anchorTag,
-      threshold: MCP_SIMILARITY_THRESHOLD,
+      threshold: WEB_SEARCH_SIMILARITY_THRESHOLD,
       tokenizeFn: tokenizeStemmed,
     });
   }
@@ -902,9 +959,19 @@ function buildMCPPassages(mcpAttachments: TAttachment[], turnOffset: number): Pa
     }
     payload.sources.forEach((source, fileIndex) => {
       const tokens = new Set(tokenizeStemmed(source.content ?? ''));
-      if (tokens.size > 0) {
-        passages.push({ turn, fileIndex, tokens });
+      if (tokens.size === 0) {
+        return;
       }
+      const titleTokens =
+        source.title && isIdentityBoundSource(source)
+          ? new Set(tokenizeStemmed(source.title))
+          : undefined;
+      passages.push({
+        turn,
+        fileIndex,
+        tokens,
+        ...(titleTokens && titleTokens.size > 0 ? { titleTokens } : {}),
+      });
     });
     turn += 1;
   }
@@ -913,8 +980,8 @@ function buildMCPPassages(mcpAttachments: TAttachment[], turnOffset: number): Pa
 
 /**
  * Inserts MCP citation anchors (`turn{N}mcp0`) into assistant text parts by
- * matching each sentence against the MCP tool result content, using the more
- * lenient `MCP_SIMILARITY_THRESHOLD`. Mutates in place. Returns the
+ * matching each sentence against the MCP tool result content, using stemmed
+ * tokens and `MCP_SIMILARITY_THRESHOLD`. Mutates in place. Returns the
  * `"turn:fileIndex"` coordinates that matched, so callers can detect sources
  * the lexical pass missed entirely (see `appendGuaranteedMCPCitations`) — a
  * sentence inside an excluded (fenced-code) range still contributes its
@@ -1022,6 +1089,20 @@ function isSharePointSource(source: MCPResultSource): boolean {
  */
 function isSharePointListingSource(source: MCPResultSource): boolean {
   return isSharePointSource(source) && source.toolName !== SHAREPOINT_CONTENT_TOOL;
+}
+
+/**
+ * Tool-name prefixes for MCP connectors whose `title` identifies a specific person or entity
+ * that a correct answer reliably names — KX/DPN profiles and DESC/GIMS business entities. An
+ * allowlist, not a denylist: AFR news (headlines are rarely restated verbatim), IBISWorld
+ * research (report/section titles are rarely restated), SharePoint (already has its own
+ * separate line/filename matching), and any generic third-party MCP connector (never sets
+ * `title` at all) are excluded by default, with no extra exclusion logic needed for them.
+ */
+const IDENTITY_BOUND_TOOL_PREFIXES = ['kx_', 'desc_', 'gims_'];
+
+function isIdentityBoundSource(source: MCPResultSource): boolean {
+  return IDENTITY_BOUND_TOOL_PREFIXES.some((prefix) => source.toolName?.startsWith(prefix));
 }
 
 /**

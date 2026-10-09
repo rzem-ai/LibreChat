@@ -752,12 +752,14 @@ describe('insertMCPCitations', () => {
     expect(readText(parts[0])).toBe(original);
   });
 
-  it('anchors a paraphrased sentence that clears the lower MCP threshold but not the file threshold', () => {
-    // Overlap ratio here is 5/9 ≈ 0.56: above MCP_SIMILARITY_THRESHOLD (0.35),
-    // below the stricter file_search SIMILARITY_THRESHOLD (0.6).
+  it('anchors a paraphrased sentence that clears the lower MCP/web_search thresholds but not the file threshold', () => {
+    // Overlap ratio here is 5/9 ≈ 0.56: above MCP_SIMILARITY_THRESHOLD and
+    // WEB_SEARCH_SIMILARITY_THRESHOLD (both 0.35), below the stricter file_search
+    // `SIMILARITY_THRESHOLD` (0.6).
     const passageContent =
       'macquarie group appointed ward chief executive mandate accelerate technology globally';
     const sentence = 'Macquarie Group named Ward as its new chief executive this week overall.';
+
     const mcpParts = [textPart(sentence)];
     insertMCPCitations(
       mcpParts,
@@ -771,6 +773,12 @@ describe('insertMCPCitations', () => {
       fileSearchAttachment([{ fileId: 'fileA', content: passageContent }]),
     ]);
     expect(readText(fileParts[0])).toBe(sentence);
+
+    const webSearchParts = [textPart(sentence)];
+    insertWebSearchCitations(webSearchParts, [
+      webSearchAttachment(0, [{ title: 'Macquarie Group CEO', content: passageContent }]),
+    ]);
+    expect(readText(webSearchParts[0])).toContain(`${MARKER}turn0search0`);
   });
 
   it('returns the "turn:fileIndex" coordinates that received an anchor', () => {
@@ -912,6 +920,234 @@ describe('insertMCPCitations', () => {
     expect(cells[2]).toContain(`${MARKER}turn0mcp0`);
     expect(cells[2]).toContain(`${MARKER}turn0mcp1`);
     expect(coords).toEqual(new Set(['0:0', '0:1']));
+  });
+
+  describe('identity-bound connectors (KX/DPN, Entities)', () => {
+    it('does not let an unrelated MCP source outrank the one the sentence names', () => {
+      const sentence =
+        'Jane Doe has fifteen years of experience advising clients on regulatory compliance programs.';
+      const parts = [textPart(sentence)];
+      const coords = insertMCPCitations(
+        parts,
+        [
+          mcpAttachment([
+            {
+              toolName: 'kx_search',
+              serverName: 'kx',
+              title: 'Jane Doe',
+              content:
+                'Jane Doe has fifteen years of experience advising clients on regulatory compliance programs.',
+            },
+            {
+              toolName: 'kx_search',
+              serverName: 'kx',
+              title: 'Alex Rivera',
+              content:
+                'Alex Rivera has fifteen years of experience advising clients on regulatory compliance programs.',
+            },
+          ]),
+        ],
+        0,
+      );
+      const text = readText(parts[0]);
+      expect(text).toContain(`${MARKER}turn0mcp0`);
+      expect(text).not.toContain(`${MARKER}turn0mcp1`);
+      expect(coords).toEqual(new Set(['0:0']));
+    });
+
+    it('does not let a shared surname alone satisfy the name gate for a different person', () => {
+      const sentence = 'Jane Doe has fifteen years of experience in regulatory compliance.';
+      const parts = [textPart(sentence)];
+      const coords = insertMCPCitations(
+        parts,
+        [
+          mcpAttachment([
+            {
+              toolName: 'kx_search',
+              serverName: 'kx',
+              title: 'Jane Doe',
+              content: 'Jane Doe has fifteen years of experience in regulatory compliance.',
+            },
+            {
+              toolName: 'kx_search',
+              serverName: 'kx',
+              title: 'John Doe',
+              content: 'John Doe has fifteen years of experience in regulatory compliance.',
+            },
+          ]),
+        ],
+        0,
+      );
+      const text = readText(parts[0]);
+      expect(text).toContain(`${MARKER}turn0mcp0`);
+      expect(text).not.toContain(`${MARKER}turn0mcp1`);
+      expect(coords).toEqual(new Set(['0:0']));
+    });
+
+    it('does not gate identity-bound sources on a line that names no one specifically', () => {
+      const sentence =
+        'Here are other relevant testers with experience in automated test coverage and release validation.';
+      const parts = [textPart(sentence)];
+      const coords = insertMCPCitations(
+        parts,
+        [
+          mcpAttachment([
+            {
+              toolName: 'kx_search',
+              serverName: 'kx',
+              title: 'Priya Natarajan',
+              content:
+                'Priya Natarajan has experience in automated test coverage and release validation.',
+            },
+            {
+              toolName: 'kx_search',
+              serverName: 'kx',
+              title: 'Marco Bellini',
+              content:
+                'Marco Bellini has experience in automated test coverage and release validation.',
+            },
+          ]),
+        ],
+        0,
+      );
+      const text = readText(parts[0]);
+      expect(text).toContain(`${MARKER}turn0mcp0`);
+      expect(text).toContain(`${MARKER}turn0mcp1`);
+      expect(coords).toEqual(new Set(['0:0', '0:1']));
+    });
+
+    it('anchors both sources when a line legitimately names two people', () => {
+      const sentence =
+        'Jane Doe and Alex Rivera are both senior partners with experience in regulatory compliance programs.';
+      const parts = [textPart(sentence)];
+      const coords = insertMCPCitations(
+        parts,
+        [
+          mcpAttachment([
+            {
+              toolName: 'kx_search',
+              serverName: 'kx',
+              title: 'Jane Doe',
+              content:
+                'Jane Doe is a senior partner with experience in regulatory compliance programs.',
+            },
+            {
+              toolName: 'kx_search',
+              serverName: 'kx',
+              title: 'Alex Rivera',
+              content:
+                'Alex Rivera is a senior partner with experience in regulatory compliance programs.',
+            },
+          ]),
+        ],
+        0,
+      );
+      const text = readText(parts[0]);
+      expect(text).toContain(`${MARKER}turn0mcp0`);
+      expect(text).toContain(`${MARKER}turn0mcp1`);
+      expect(coords).toEqual(new Set(['0:0', '0:1']));
+    });
+
+    it('keeps a pronoun-only continuation sentence eligible for a source named earlier on the same line', () => {
+      // "Jane Doe." is too short to independently clear MIN_SENTENCE_CONTENT_WORDS, so it
+      // claims no anchor itself — isolating whether the *continuation* sentence, which shares
+      // no title tokens of its own, is still eligible because the line (not just its own
+      // sentence) named her. A per-sentence gate would wrongly exclude it; the per-line gate
+      // does not.
+      const docContent =
+        'Jane Doe has fifteen years of experience advising clients on regulatory compliance programs.';
+      const parts = [
+        textPart(
+          'Jane Doe. She has advised clients on regulatory compliance programs for over a decade.',
+        ),
+      ];
+      const coords = insertMCPCitations(
+        parts,
+        [
+          mcpAttachment([
+            { toolName: 'kx_search', serverName: 'kx', title: 'Jane Doe', content: docContent },
+          ]),
+        ],
+        0,
+      );
+      const text = readText(parts[0]);
+      expect(anchorCount(text, `${MARKER}turn0mcp0`)).toBe(1);
+      expect(coords).toEqual(new Set(['0:0']));
+    });
+
+    it('anchors an MCP source by its title tokens even when content does not start with the title', () => {
+      const parts = [
+        textPart(
+          "Project Phoenix involved modernizing the client's legacy claims platform over an eighteen month period.",
+        ),
+      ];
+      const coords = insertMCPCitations(
+        parts,
+        [
+          mcpAttachment([
+            {
+              toolName: 'kx_search',
+              serverName: 'kx',
+              title: 'Project Phoenix',
+              content:
+                "This engagement involved modernizing the client's legacy claims platform over an eighteen month period.",
+            },
+          ]),
+        ],
+        0,
+      );
+      expect(readText(parts[0])).toContain(`${MARKER}turn0mcp0`);
+      expect(coords).toEqual(new Set(['0:0']));
+    });
+
+    it('does not gate AFR sources even when they have a title that never appears in the citing sentence', () => {
+      const parts = [textPart(AFR_ARTICLE)];
+      const coords = insertMCPCitations(
+        parts,
+        [
+          mcpAttachment([
+            {
+              toolName: 'afr_get_latest_news',
+              serverName: 'afr',
+              title: 'RBA holds rates steady amid inflation concerns',
+              content: AFR_ARTICLE,
+            },
+          ]),
+        ],
+        0,
+      );
+      expect(readText(parts[0])).toContain(`${MARKER}turn0mcp0`);
+      expect(coords).toEqual(new Set(['0:0']));
+    });
+
+    it('applies the same name gate to Entities (DESC/GIMS) sources as KX', () => {
+      const sentence = 'Acme Holdings reported strong revenue growth in the past fiscal year.';
+      const parts = [textPart(sentence)];
+      const coords = insertMCPCitations(
+        parts,
+        [
+          mcpAttachment([
+            {
+              toolName: 'desc_search',
+              serverName: 'desc',
+              title: 'Acme Holdings',
+              content: 'Acme Holdings reported strong revenue growth in the past fiscal year.',
+            },
+            {
+              toolName: 'desc_search',
+              serverName: 'desc',
+              title: 'Globex Corporation',
+              content: 'Globex Corporation reported strong revenue growth in the past fiscal year.',
+            },
+          ]),
+        ],
+        0,
+      );
+      const text = readText(parts[0]);
+      expect(text).toContain(`${MARKER}turn0mcp0`);
+      expect(text).not.toContain(`${MARKER}turn0mcp1`);
+      expect(coords).toEqual(new Set(['0:0']));
+    });
   });
 });
 
