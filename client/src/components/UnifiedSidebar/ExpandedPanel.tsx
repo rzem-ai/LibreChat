@@ -3,7 +3,7 @@ import { useRecoilValue } from 'recoil';
 import * as Menu from '@ariakit/react/menu';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, MessageCircleQuestion, MessageSquareHeart, SquarePen } from 'lucide-react';
-import { QueryKeys, PermissionBits } from 'librechat-data-provider';
+import { QueryKeys } from 'librechat-data-provider';
 import { useQueryClient } from '@tanstack/react-query';
 import { Skeleton, Sidebar, Button, TooltipAnchor } from '@librechat/client';
 import type { NavLink } from '~/common';
@@ -11,32 +11,29 @@ import { useShortcutAriaKey, useShortcutHint } from '~/hooks/useKeyboardShortcut
 import { useActivePanel, resolveActivePanel, DEFAULT_PANEL } from '~/Providers';
 import { CLOSE_SIDEBAR_ID } from '~/components/Chat/Menus/OpenSidebar';
 import { useLearningTour } from '~/components/Learning/LearningTourContext';
-import { useMarketplaceAgentsInfiniteQuery } from '~/data-provider/Agents/queries';
+import { useFaqAgent, useLearningCenterConfig } from '~/hooks/Learning';
 import { useLocalize, useNewConvo } from '~/hooks';
 import { clearMessagesCache, cn } from '~/utils';
 import store from '~/store';
 
 const AccountSettings = lazy(() => import('~/components/Nav/AccountSettings'));
-const FAQ_AGENT_NAME = 'MyAssist FAQs';
-const FEEDBACK_URL = 'https://forms.cloud.microsoft/e/E9AyvN4Ayx';
 
 function LearningMenu({ link }: { link: NavLink }) {
   const localize = useLocalize();
   const navigate = useNavigate();
   const { startGettingStartedTour } = useLearningTour();
-  const { data } = useMarketplaceAgentsInfiniteQuery({
-    requiredPermission: PermissionBits.VIEW,
-    search: FAQ_AGENT_NAME,
-    limit: 50,
-  });
-  const faqAgent = data?.pages
-    .flatMap((page) => page.data)
-    .find((item) => item.name?.toLowerCase() === FAQ_AGENT_NAME.toLowerCase());
+  const { faqAgentName, feedbackUrl } = useLearningCenterConfig();
+  const { faqAgent } = useFaqAgent(faqAgentName);
 
   const openFaqAgent = () => {
     if (faqAgent) {
       navigate(`/c/new?agent_id=${encodeURIComponent(faqAgent.id)}`);
+      return;
     }
+    // No live match yet (still loading, or the agent was renamed/removed) — send
+    // the user to a marketplace search for the configured name instead of
+    // silently doing nothing.
+    navigate(`/agents/all?q=${encodeURIComponent(faqAgentName)}`);
   };
 
   return (
@@ -57,14 +54,12 @@ function LearningMenu({ link }: { link: NavLink }) {
           <BookOpen className="icon-md" aria-hidden="true" />
           {localize('com_learning_take_guided_tutorial')}
         </Menu.MenuItem>
-        {faqAgent && (
-          <Menu.MenuItem onClick={openFaqAgent} className="select-item text-sm">
-            <MessageCircleQuestion className="icon-md" aria-hidden="true" />
-            {localize('com_learning_ask_faq_agent')}
-          </Menu.MenuItem>
-        )}
+        <Menu.MenuItem onClick={openFaqAgent} className="select-item text-sm">
+          <MessageCircleQuestion className="icon-md" aria-hidden="true" />
+          {localize('com_learning_ask_faq_agent', { 0: faqAgent?.name ?? faqAgentName })}
+        </Menu.MenuItem>
         <Menu.MenuItem
-          onClick={() => window.open(FEEDBACK_URL, '_blank', 'noopener,noreferrer')}
+          onClick={() => window.open(feedbackUrl, '_blank', 'noopener,noreferrer')}
           className="select-item text-sm"
         >
           <MessageSquareHeart className="icon-md" aria-hidden="true" />

@@ -1523,6 +1523,14 @@ export const interfaceSchema = z
           .optional(),
       })
       .optional(),
+    // Deloitte Custom Change: let `librechat.yaml` configure the Learning Center
+    // menu bar's FAQ agent and feedback link per environment (dev/uat/prd).
+    learningCenter: z
+      .object({
+        faqAgentName: z.string().optional(),
+        feedbackUrl: z.string().optional(),
+      })
+      .optional(),
     fileSearch: z.boolean().optional(),
     // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
     providerUpload: z.boolean().optional(),
@@ -1600,6 +1608,10 @@ export const interfaceSchema = z
     },
     marketplace: {
       use: false,
+    },
+    learningCenter: {
+      faqAgentName: 'MyAssist FAQs',
+      feedbackUrl: 'https://forms.cloud.microsoft/e/E9AyvN4Ayx',
     },
     mcpServers: {
       use: true,

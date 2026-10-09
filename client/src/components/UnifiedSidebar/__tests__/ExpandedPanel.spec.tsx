@@ -3,7 +3,7 @@ import { RecoilRoot } from 'recoil';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import '@testing-library/jest-dom/extend-expect';
 import { MessagesSquare, NotebookPen } from 'lucide-react';
-import { render, fireEvent, screen, waitFor } from '@testing-library/react';
+import { render, fireEvent, screen, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { MutableSnapshot } from 'recoil';
 import { ActivePanelProvider, DEFAULT_PANEL } from '~/Providers/ActivePanelContext';
@@ -23,6 +23,10 @@ jest.mock('librechat-data-provider', () => {
 
 jest.mock('~/components/Learning/LearningTourContext', () => ({
   useLearningTour: () => ({ startGettingStartedTour: mockStartGettingStartedTour }),
+}));
+
+jest.mock('~/data-provider', () => ({
+  useGetStartupConfig: () => ({ data: undefined }),
 }));
 
 jest.mock('~/store', () => {
@@ -261,13 +265,19 @@ describe('ExpandedPanel', () => {
     );
   });
 
-  it('opens the matching FAQ agent chat', async () => {
+  it('opens the matching FAQ agent chat, trusting the search match over an exact name', async () => {
+    // Deliberately a different display name than the configured search term —
+    // the component should trust the backend's search result, not re-filter by name.
     mockGetMarketplaceAgents.mockResolvedValue({
       data: [{ id: 'faq-agent-id', name: 'FAQ Agent' }],
     });
     renderPanel();
 
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_learning_hub' }));
+    await waitFor(() => expect(mockGetMarketplaceAgents).toHaveBeenCalled());
+    // Flush the mocked promise through react-query's state update and re-render
+    // before clicking, so the handler closes over the resolved (or errored) data.
+    await act(async () => {});
     fireEvent.click(screen.getByText('com_learning_ask_faq_agent'));
 
     await waitFor(() =>
@@ -275,15 +285,19 @@ describe('ExpandedPanel', () => {
     );
   });
 
-  it('falls back to marketplace search when the FAQ agent is unavailable', async () => {
+  it('falls back to a marketplace search when no FAQ agent match is available', async () => {
     mockGetMarketplaceAgents.mockRejectedValue(new Error('Unavailable'));
     renderPanel();
 
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_learning_hub' }));
+    await waitFor(() => expect(mockGetMarketplaceAgents).toHaveBeenCalled());
+    // Flush the mocked promise through react-query's state update and re-render
+    // before clicking, so the handler closes over the resolved (or errored) data.
+    await act(async () => {});
     fireEvent.click(screen.getByText('com_learning_ask_faq_agent'));
 
     await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent('/agents/all?q=FAQ%20Agent'),
+      expect(screen.getByTestId('location')).toHaveTextContent('/agents/all?q=MyAssist%20FAQs'),
     );
   });
 
