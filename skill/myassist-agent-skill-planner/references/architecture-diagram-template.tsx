@@ -2,7 +2,7 @@
 
 /**
  * MyAssist Agent & Skill Architecture Diagram Template
- * 
+ *
  * This file contains 3 layout patterns for visualising agent + skill architectures.
  * When adapting this template, follow the anti-overlap rules strictly:
  *
