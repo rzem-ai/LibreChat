@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, CopyCheck } from 'lucide';
-import { Share2Icon, Users, UserCheck, AlertCircle } from 'lucide-react';
+import { Share2Icon, Users, UserCheck, AlertCircle, ExternalLink } from 'lucide-react';
 import { AccessRoleIds, ResourceType, SystemRoles } from 'librechat-data-provider';
 import {
   Alert,
@@ -372,23 +372,6 @@ export default function GenericGrantAccessDialog({
                       typeFilter={peoplePickerTypeFilter}
                       excludeIds={allShares.map((s) => s.idOnTheSource)}
                     />
-                    {canPublishCapability && (
-                      <>
-                        {/* Deloitte Custom Change: invite users to publish shared capabilities firm-wide. */}
-                        <p className="text-xs text-text-secondary">
-                          {localize('com_ui_share_publish_capability_prompt')}{' '}
-                          <a
-                            href="https://forms.cloud.microsoft/e/19c6RVYQvx"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-text-primary underline underline-offset-2"
-                          >
-                            {localize('com_ui_share_publish_capability_link')}
-                          </a>
-                        </p>
-                      </>
-                    )}
-
                     {!hasAtLeastOneOwner && hasChanges && (
                       <Alert id={ownerErrorId} variant="error">
                         {localize('com_ui_at_least_one_owner_required')}
@@ -416,6 +399,21 @@ export default function GenericGrantAccessDialog({
                         showInsightsAccess={canEditAgentInsights}
                         onInsightsAccessChange={handleInsightsChange}
                       />
+                    )}
+                    {canPublishCapability && (
+                      <p className="px-1 text-sm text-text-primary">
+                        {/* Deloitte Custom Change: invite users to publish shared capabilities firm-wide. */}
+                        {localize('com_ui_share_publish_capability_prompt')}{' '}
+                        <a
+                          href="https://forms.cloud.microsoft/e/19c6RVYQvx"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-text-secondary underline underline-offset-2 hover:text-text-primary"
+                        >
+                          {localize('com_ui_share_publish_capability_link')}
+                          <ExternalLink className="size-3.5" aria-hidden="true" />
+                        </a>
+                      </p>
                     )}
                   </>
                 )}
