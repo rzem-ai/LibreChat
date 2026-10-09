@@ -57,7 +57,12 @@ describe('getModelPricing', () => {
     } as Partial<AppConfig>);
 
     expect(getModelPricing(appConfig)).toEqual({
-      'gpt-56-luna': { inputPer1M: 1, outputPer1M: 6, provider: 'Azure Global', tier: 2 },
+      'Azure Global:gpt-56-luna': {
+        inputPer1M: 1,
+        outputPer1M: 6,
+        provider: 'Azure Global',
+        tier: 2,
+      },
     });
   });
 
@@ -73,7 +78,7 @@ describe('getModelPricing', () => {
     } as Partial<AppConfig>);
 
     expect(getModelPricing(appConfig)).toEqual({
-      'claude-sonnet-4-6': {
+      'anthropic:claude-sonnet-4-6': {
         inputPer1M: 3,
         outputPer1M: 15,
         provider: EModelEndpoint.anthropic,
@@ -106,18 +111,40 @@ describe('getModelPricing', () => {
     } as Partial<AppConfig>);
 
     expect(getModelPricing(appConfig)).toEqual({
-      'google/gemini-2.5-pro': {
+      'VertexAI US:google/gemini-2.5-pro': {
         inputPer1M: 1.25,
         outputPer1M: 10,
         provider: 'VertexAI US',
         tier: 3,
       },
-      'au.anthropic.claude-haiku-4-5-20251001-v1:0': {
+      'bedrock:au.anthropic.claude-haiku-4-5-20251001-v1:0': {
         inputPer1M: 1,
         outputPer1M: 5,
         provider: EModelEndpoint.bedrock,
         tier: 2,
       },
+    });
+  });
+
+  it('keeps pricing for the same model separate per endpoint', () => {
+    const appConfig = buildAppConfig({
+      endpoints: {
+        [EModelEndpoint.anthropic]: {
+          tokenConfig: {
+            'shared-model': { prompt: 1, completion: 1, context: 1 },
+          },
+        },
+        [EModelEndpoint.bedrock]: {
+          tokenConfig: {
+            'shared-model': { prompt: 10, completion: 10, context: 1 },
+          },
+        },
+      },
+    } as Partial<AppConfig>);
+
+    expect(getModelPricing(appConfig)).toMatchObject({
+      'anthropic:shared-model': { inputPer1M: 1, outputPer1M: 1 },
+      'bedrock:shared-model': { inputPer1M: 10, outputPer1M: 10 },
     });
   });
 
@@ -143,7 +170,7 @@ describe('getModelPricing', () => {
       },
     } as Partial<AppConfig>);
 
-    expect(getModelPricing(appConfig)['test-model'].tier).toBe(expectedTier);
+    expect(getModelPricing(appConfig)['anthropic:test-model'].tier).toBe(expectedTier);
   });
 
   it('uses custom modelPricingTierBreakpoints from customDeloitteFeatureFlags when provided', () => {
@@ -158,7 +185,7 @@ describe('getModelPricing', () => {
       },
     } as Partial<AppConfig>);
 
-    expect(getModelPricing(appConfig)['test-model'].tier).toBe(4);
+    expect(getModelPricing(appConfig)['anthropic:test-model'].tier).toBe(4);
   });
 
   it('falls back to the default breakpoints when modelPricingTierBreakpoints is absent', () => {
@@ -172,6 +199,6 @@ describe('getModelPricing', () => {
       },
     } as Partial<AppConfig>);
 
-    expect(getModelPricing(appConfig)['test-model'].tier).toBe(2);
+    expect(getModelPricing(appConfig)['anthropic:test-model'].tier).toBe(2);
   });
 });

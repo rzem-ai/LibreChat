@@ -115,7 +115,7 @@ function EndpointModelItemComponent({
         <span className="truncate">{modelName}</span>
         {isGlobal && <EarthIcon className="ml-1 size-4 text-surface-submit" />}
       </div>
-      <ModelCost modelId={modelId} />
+      <ModelCost modelId={modelId} endpoint={endpoint.value} />
       <button
         type="button"
         tabIndex={isActive ? 0 : -1}

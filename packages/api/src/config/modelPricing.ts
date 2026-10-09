@@ -31,7 +31,8 @@ function getPriceTier(blendedCost: number, breakpoints: number[]): number {
 
 /**
  * Flattens every endpoint's static yaml `tokenConfig` into the price-tier
- * badge's `{ inputPer1M, outputPer1M, provider, tier }` shape. Returns an empty
+ * badge's `{ inputPer1M, outputPer1M, provider, tier }` shape, keyed by endpoint and
+ * model. Returns an empty
  * map when `customDeloitteFeatureFlags.showModelPricingIndicator` isn't enabled,
  * so the badge stays hidden and no pricing data is sent to the client. Pure
  * projection over the already-cached `appConfig` — no file I/O, no caching needed here.
@@ -53,7 +54,12 @@ export function getModelPricing(appConfig?: AppConfig): TModelPricing {
     }
     for (const [model, { prompt, completion }] of Object.entries(tokenConfig)) {
       const tier = getPriceTier((prompt + completion) / 2, breakpoints);
-      pricing[model] = { inputPer1M: prompt, outputPer1M: completion, provider: endpoint, tier };
+      pricing[`${endpoint}:${model}`] = {
+        inputPer1M: prompt,
+        outputPer1M: completion,
+        provider: endpoint,
+        tier,
+      };
     }
   }
 
