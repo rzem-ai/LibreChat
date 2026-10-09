@@ -369,10 +369,11 @@ endpoints:
         completion: 5
         context: 200000
 
-# Deloitte Custom Change: model pricing uses this baseline when no environment override is set.
-# Keep it aligned with the soft-default model.
+# Deloitte Custom Change: the 4 ascending $/1M blended-cost breakpoints splitting
+# models into the 5 price tiers (`$` to `$$$$$`) shown in the model selector.
+# Optional — defaults to [2, 5, 8, 15] when omitted.
 modelPricing:
-  referenceModelId: 'gpt-56-luna'
+  tierBreakpoints: [2, 5, 8, 15]
 
 modelSpecs:
   # enforce: true would block requests without a spec name — this breaks the Agents endpoint

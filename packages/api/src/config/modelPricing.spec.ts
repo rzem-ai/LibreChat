@@ -1,48 +1,6 @@
 import { EModelEndpoint } from 'librechat-data-provider';
 import type { AppConfig } from '@librechat/data-schemas';
-import { getModelPricing, getEndpointCostConfig } from './modelPricing';
-
-const originalReferenceModelId = process.env.MODEL_PRICING_REFERENCE_MODEL_ID;
-
-afterEach(() => {
-  if (originalReferenceModelId === undefined) {
-    delete process.env.MODEL_PRICING_REFERENCE_MODEL_ID;
-    return;
-  }
-  process.env.MODEL_PRICING_REFERENCE_MODEL_ID = originalReferenceModelId;
-});
-
-describe('getEndpointCostConfig', () => {
-  it('uses the configured YAML reference model when no environment override is set', () => {
-    delete process.env.MODEL_PRICING_REFERENCE_MODEL_ID;
-
-    expect(getEndpointCostConfig('gpt-56-luna').REFERENCE_MODEL_ID).toBe('gpt-56-luna');
-  });
-
-  it('uses the environment reference model over the YAML value', () => {
-    process.env.MODEL_PRICING_REFERENCE_MODEL_ID = 'gpt-56-terra';
-
-    expect(getEndpointCostConfig('gpt-56-luna').REFERENCE_MODEL_ID).toBe('gpt-56-terra');
-  });
-
-  it('uses the YAML value when the environment override is blank', () => {
-    process.env.MODEL_PRICING_REFERENCE_MODEL_ID = '   ';
-
-    expect(getEndpointCostConfig('gpt-56-luna').REFERENCE_MODEL_ID).toBe('gpt-56-luna');
-  });
-
-  it('uses Luna as the final fallback when neither override is configured', () => {
-    delete process.env.MODEL_PRICING_REFERENCE_MODEL_ID;
-
-    expect(getEndpointCostConfig().REFERENCE_MODEL_ID).toBe('gpt-56-luna');
-  });
-
-  it('uses Luna as the final fallback when the YAML value is blank', () => {
-    delete process.env.MODEL_PRICING_REFERENCE_MODEL_ID;
-
-    expect(getEndpointCostConfig('   ').REFERENCE_MODEL_ID).toBe('gpt-56-luna');
-  });
-});
+import { getModelPricing } from './modelPricing';
 
 describe('getModelPricing', () => {
   it('returns an empty map when no endpoint has a static tokenConfig', () => {
@@ -65,7 +23,7 @@ describe('getModelPricing', () => {
     } as unknown as AppConfig;
 
     expect(getModelPricing(appConfig)).toEqual({
-      'gpt-56-luna': { inputPer1M: 1, outputPer1M: 6, provider: 'Azure Global' },
+      'gpt-56-luna': { inputPer1M: 1, outputPer1M: 6, provider: 'Azure Global', tier: 2 },
     });
   });
 
@@ -81,7 +39,12 @@ describe('getModelPricing', () => {
     } as unknown as AppConfig;
 
     expect(getModelPricing(appConfig)).toEqual({
-      'claude-sonnet-4-6': { inputPer1M: 3, outputPer1M: 15, provider: EModelEndpoint.anthropic },
+      'claude-sonnet-4-6': {
+        inputPer1M: 3,
+        outputPer1M: 15,
+        provider: EModelEndpoint.anthropic,
+        tier: 4,
+      },
     });
   });
 
@@ -109,12 +72,77 @@ describe('getModelPricing', () => {
     } as unknown as AppConfig;
 
     expect(getModelPricing(appConfig)).toEqual({
-      'google/gemini-2.5-pro': { inputPer1M: 1.25, outputPer1M: 10, provider: 'VertexAI US' },
+      'google/gemini-2.5-pro': {
+        inputPer1M: 1.25,
+        outputPer1M: 10,
+        provider: 'VertexAI US',
+        tier: 3,
+      },
       'au.anthropic.claude-haiku-4-5-20251001-v1:0': {
         inputPer1M: 1,
         outputPer1M: 5,
         provider: EModelEndpoint.bedrock,
+        tier: 2,
       },
     });
+  });
+
+  it.each([
+    [0, 1],
+    [1.99, 1],
+    [2, 2],
+    [4.99, 2],
+    [5, 3],
+    [7.99, 3],
+    [8, 4],
+    [14.99, 4],
+    [15, 5],
+    [100, 5],
+  ])('maps a blended cost of $%s/1M to tier %i', (blendedCost, expectedTier) => {
+    const appConfig = {
+      endpoints: {
+        [EModelEndpoint.anthropic]: {
+          tokenConfig: {
+            'test-model': { prompt: blendedCost, completion: blendedCost, context: 1 },
+          },
+        },
+      },
+    } as unknown as AppConfig;
+
+    expect(getModelPricing(appConfig)['test-model'].tier).toBe(expectedTier);
+  });
+
+  it('uses custom tierBreakpoints from config.modelPricing when provided', () => {
+    const appConfig = {
+      config: {
+        modelPricing: {
+          tierBreakpoints: [1, 2, 3, 4],
+        },
+      },
+      endpoints: {
+        [EModelEndpoint.anthropic]: {
+          tokenConfig: {
+            'test-model': { prompt: 3, completion: 3, context: 1 },
+          },
+        },
+      },
+    } as unknown as AppConfig;
+
+    expect(getModelPricing(appConfig)['test-model'].tier).toBe(4);
+  });
+
+  it('falls back to the default breakpoints when config.modelPricing is absent', () => {
+    const appConfig = {
+      config: {},
+      endpoints: {
+        [EModelEndpoint.anthropic]: {
+          tokenConfig: {
+            'test-model': { prompt: 3, completion: 3, context: 1 },
+          },
+        },
+      },
+    } as unknown as AppConfig;
+
+    expect(getModelPricing(appConfig)['test-model'].tier).toBe(2);
   });
 });

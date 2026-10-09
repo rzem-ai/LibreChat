@@ -17,7 +17,6 @@ const {
   resolveCodeEnvironmentTransitionVersion,
   // Deloitte Custom Change: imported directly from @librechat/api now that the
   // `~/server/services/Config/modelPricing` re-export shim has been removed.
-  getEndpointCostConfig,
   getModelPricing,
 } = require('@librechat/api');
 const { EModelEndpoint, defaultSocialLogins } = require('librechat-data-provider');
@@ -270,12 +269,9 @@ router.get('/', async function (req, res) {
     const langfuseConnectionAvailable = isLangfuseConnectionAvailable();
     let langfuseConnectionAccess = false;
 
-    // Deloitte Custom Change: model pricing is derived from each endpoint's `tokenConfig`,
-    // using the configured reference model unless explicitly overridden.
+    // Deloitte Custom Change: model pricing (incl. the 1-5 price tier) is derived
+    // from each endpoint's `tokenConfig`.
     const modelPricing = getModelPricing(appConfig);
-    const endpointCostConfig = getEndpointCostConfig(
-      appConfig?.config?.modelPricing?.referenceModelId,
-    );
 
     if (langfuseConnectionAvailable) {
       try {
@@ -315,7 +311,6 @@ router.get('/', async function (req, res) {
       turnstile: appConfig?.turnstileConfig,
       modelSpecs: sanitizeModelSpecs(excludeHiddenModelSpecs(appConfig?.modelSpecs)),
       ...(Object.keys(modelPricing).length ? { modelPricing } : {}),
-      endpointCostConfig,
       balance: balanceConfig,
       bundlerURL: process.env.SANDPACK_BUNDLER_URL,
       staticBundlerURL: process.env.SANDPACK_STATIC_BUNDLER_URL,

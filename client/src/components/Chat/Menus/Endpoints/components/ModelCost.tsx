@@ -1,30 +1,11 @@
 import type { TModelPricing } from 'librechat-data-provider';
 import { useModelSelectorContext } from '../ModelSelectorContext';
 
-function formatMultiplier(value: number) {
-  return `${value.toLocaleString(undefined, {
-    maximumFractionDigits: 3,
-  })}x`;
-}
-
 function formatPrice(value: number) {
   return `$${value.toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 3,
   })}`;
-}
-
-function getCostFactor(
-  inputCost: number,
-  outputCost: number,
-  referenceInputCost: number,
-  referenceOutputCost: number,
-  roundingIncrement: number,
-  minMultiplier: number,
-) {
-  const factor = (inputCost / referenceInputCost + outputCost / referenceOutputCost) / 2;
-
-  return Math.max(Math.ceil(factor / roundingIncrement) * roundingIncrement, minMultiplier);
 }
 
 export function getModelCost(modelId: string | null | undefined, modelPricing: TModelPricing = {}) {
@@ -40,28 +21,12 @@ export function getModelCost(modelId: string | null | undefined, modelPricing: T
 }
 
 export default function ModelCost({ modelId }: { modelId: string | null | undefined }) {
-  const { modelPricing = {}, endpointCostConfig } = useModelSelectorContext();
+  const { modelPricing = {} } = useModelSelectorContext();
   const pricing = getModelCost(modelId, modelPricing);
 
-  if (!pricing || !endpointCostConfig) {
+  if (!pricing) {
     return null;
   }
-
-  const { REFERENCE_MODEL_ID, MULTIPLIER_ROUNDING_INCREMENT, MIN_MULTIPLIER } = endpointCostConfig;
-  const referencePricing = getModelCost(REFERENCE_MODEL_ID, modelPricing);
-
-  if (!referencePricing) {
-    return null;
-  }
-
-  const costFactor = getCostFactor(
-    pricing.inputPer1M,
-    pricing.outputPer1M,
-    referencePricing.inputPer1M,
-    referencePricing.outputPer1M,
-    MULTIPLIER_ROUNDING_INCREMENT,
-    MIN_MULTIPLIER,
-  );
 
   return (
     <span
@@ -70,7 +35,7 @@ export default function ModelCost({ modelId }: { modelId: string | null | undefi
         pricing.outputPer1M,
       )} (USD) per 1M output tokens`}
     >
-      {formatMultiplier(costFactor)}
+      {'$'.repeat(pricing.tier)}
     </span>
   );
 }
