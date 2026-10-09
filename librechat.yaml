@@ -221,6 +221,29 @@ endpoints:
         - 'claude-sonnet-4-6'
         - 'claude-opus-4-6'
         - 'claude-opus-4-8'
+    # Deloitte Custom Change: pricing used for real token billing and the relative-cost
+    # badge in the model selector. Prices are USD per 1M tokens; context is in tokens.
+    tokenConfig:
+      claude-haiku-4-5:
+        prompt: 1
+        completion: 5
+        context: 200000
+      claude-sonnet-5:
+        prompt: 2
+        completion: 10
+        context: 200000
+      claude-sonnet-4-6:
+        prompt: 3
+        completion: 15
+        context: 200000
+      claude-opus-4-6:
+        prompt: 5
+        completion: 25
+        context: 200000
+      claude-opus-4-8:
+        prompt: 5
+        completion: 25
+        context: 200000
 
   # ========================================
   # Custom endpoints (OpenAI-compatible format)
@@ -277,6 +300,22 @@ endpoints:
           - 'gpt-56-luna'
           - 'gpt-56-terra'
           - 'gpt-56-sol'
+      # Deloitte Custom Change: pricing used for real token billing and the relative-cost
+      # badge in the model selector. Prices are USD per 1M tokens; context is in tokens.
+      # GPT-5.6 Sol/Luna/Terra publish a 1,050,000-token context window (128,000 max output).
+      tokenConfig:
+        gpt-56-luna:
+          prompt: 1
+          completion: 6
+          context: 1050000
+        gpt-56-terra:
+          prompt: 2.5
+          completion: 15
+          context: 1050000
+        gpt-56-sol:
+          prompt: 5
+          completion: 30
+          context: 1050000
 
     # --- VertexAI / Google (us-central1) ---
     # OpenAI-compatible endpoint, model names use google/ prefix
@@ -299,6 +338,17 @@ endpoints:
       # is load-bearing — deleting this key would show a Web Search pill that errors.
       nativeWebSearch:
         supportedModels: []
+      # Deloitte Custom Change: pricing used for real token billing and the relative-cost
+      # badge in the model selector. Prices are USD per 1M tokens; context is in tokens.
+      tokenConfig:
+        google/gemini-2.5-flash:
+          prompt: 0.3
+          completion: 2.5
+          context: 1000000
+        google/gemini-2.5-pro:
+          prompt: 1.25
+          completion: 10
+          context: 1000000
 
   # Anthropic Regional models use Bedrock's native API and inference-profile IDs.
   bedrock:
@@ -307,9 +357,20 @@ endpoints:
     models:
       - 'au.anthropic.claude-sonnet-4-6'
       - 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
+    # Deloitte Custom Change: pricing used for real token billing and the relative-cost
+    # badge in the model selector. Prices are USD per 1M tokens; context is in tokens.
+    tokenConfig:
+      'au.anthropic.claude-sonnet-4-6':
+        prompt: 3
+        completion: 15
+        context: 200000
+      'au.anthropic.claude-haiku-4-5-20251001-v1:0':
+        prompt: 1
+        completion: 5
+        context: 200000
 
 # Deloitte Custom Change: model pricing uses this baseline when no environment override is set.
-# Keep it aligned with the soft-default model and endpoint-costs.yaml.
+# Keep it aligned with the soft-default model.
 modelPricing:
   referenceModelId: 'gpt-56-luna'
 

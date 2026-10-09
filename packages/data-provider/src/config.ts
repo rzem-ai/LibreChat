@@ -762,6 +762,25 @@ export const baseEndpointSchema = z.object({
   reasoningLabelMaxPerRun: z.number().int().positive().optional(),
   /** Maximum characters allowed in a single tool result before truncation. */
   maxToolResultChars: z.number().positive().optional(),
+  /**
+   * Static per-model token config: context window and per-million-token rates.
+   *
+   * Deloitte Custom Change: lives on `baseEndpointSchema` (rather than only the
+   * `custom` endpoint schema) so every endpoint that merges this base — anthropic,
+   * bedrock, google, openAI, agents, assistants, etc. — can also declare a static
+   * `tokenConfig`, not just `endpoints.custom` entries.
+   */
+  tokenConfig: z
+    .record(
+      z.object({
+        prompt: z.number(),
+        completion: z.number(),
+        context: z.number(),
+        cacheRead: z.number().optional(),
+        cacheWrite: z.number().optional(),
+      }),
+    )
+    .optional(),
 });
 
 export type TBaseEndpoint = z.infer<typeof baseEndpointSchema>;
@@ -1807,18 +1826,6 @@ export const endpointSchema = baseEndpointSchema.merge(
       .optional(),
     directEndpoint: z.boolean().optional(),
     titleMessageRole: z.enum(['system', 'user', 'assistant']).optional(),
-    /** Static per-model token config: context window and per-million-token rates */
-    tokenConfig: z
-      .record(
-        z.object({
-          prompt: z.number(),
-          completion: z.number(),
-          context: z.number(),
-          cacheRead: z.number().optional(),
-          cacheWrite: z.number().optional(),
-        }),
-      )
-      .optional(),
     nativeWebSearch: nativeWebSearchSchema.optional(),
   }),
 );
@@ -1867,6 +1874,10 @@ export const azureEndpointSchema = z
         reasoningLabelUpdateIntervalMs: true,
         reasoningLabelMaxPerRun: true,
         regional: true,
+        // Deloitte Custom Change: azureEndpointSchema picks fields off `endpointSchema`
+        // rather than merging `baseEndpointSchema` directly, so `tokenConfig` must be
+        // explicitly added here too for Azure OpenAI groups to support it.
+        tokenConfig: true,
       })
       .partial(),
   );

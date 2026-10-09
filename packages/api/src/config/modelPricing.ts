@@ -1,106 +1,22 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { logger } from '@librechat/data-schemas';
 import type { TEndpointCostConfig, TModelPricing } from 'librechat-data-provider';
+import type { AppConfig } from '@librechat/data-schemas';
+import { collectTokenConfigOverrides } from '~/endpoints/tokenConfig';
 
-const DEFAULT_PRICING_PATH = '/app/endpoint-costs.yaml';
-const LOCAL_CONFIGMAP_PATH = path.resolve(process.cwd(), 'charts/config/endpoint-costs.yaml');
+/**
+ * Deloitte Custom Change: this entire file is a Deloitte addition with no upstream
+ * LibreChat equivalent. It used to read and hand-parse a bespoke `endpoint-costs.yaml`
+ * ConfigMap (providers -> models -> input_per_1m/output_per_1m) to build the relative-cost
+ * badge shown in the model selector. That file has been removed — pricing now lives as
+ * native `tokenConfig` blocks on each endpoint in `librechat.yaml`, so `getModelPricing`
+ * below is a pure projection over `collectTokenConfigOverrides` with no file I/O or caching
+ * (appConfig is already cached upstream). `getEndpointCostConfig`'s env-var-override
+ * precedence logic is unchanged from the original implementation.
+ */
 const DEFAULT_ENDPOINT_COST_CONFIG: TEndpointCostConfig = {
   REFERENCE_MODEL_ID: 'gpt-56-luna',
   MULTIPLIER_ROUNDING_INCREMENT: 0.1,
   MIN_MULTIPLIER: 0.1,
 };
-
-let cachedEndpointCosts:
-  | { modelPricing: TModelPricing; endpointCostConfig: TEndpointCostConfig }
-  | undefined;
-
-function readFirstExisting(paths: Array<string | undefined>): string | null {
-  for (const filePath of paths) {
-    if (!filePath || !fs.existsSync(filePath)) {
-      continue;
-    }
-    return fs.readFileSync(filePath, 'utf8');
-  }
-  return null;
-}
-
-function extractPricingYaml(contents: string): string {
-  if (!contents.includes('pricing.yaml: |')) {
-    return contents;
-  }
-
-  const lines = contents.split('\n');
-  const startIndex = lines.findIndex((line) => line.includes('pricing.yaml: |'));
-  if (startIndex === -1) {
-    return contents;
-  }
-
-  const pricingLines: string[] = [];
-  for (const line of lines.slice(startIndex + 1)) {
-    if (line.trim().startsWith('{{-')) {
-      break;
-    }
-    if (line.trim() && !line.startsWith('    ')) {
-      break;
-    }
-    pricingLines.push(line.startsWith('    ') ? line.slice(4) : line);
-  }
-
-  return pricingLines.join('\n');
-}
-
-function parsePricingYaml(pricingYaml: string): TModelPricing {
-  const pricing: TModelPricing = {};
-  let provider: string | undefined;
-  let model: string | undefined;
-
-  for (const line of pricingYaml.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#') || trimmed === 'providers:' || trimmed === 'models:') {
-      continue;
-    }
-
-    const indentation = line.search(/\S/);
-    const sectionMatch = trimmed.match(/^([^:]+):$/);
-    if (sectionMatch) {
-      if (indentation === 2) {
-        provider = sectionMatch[1];
-        model = undefined;
-      } else if (provider) {
-        model = sectionMatch[1];
-        pricing[model] = { inputPer1M: Number.NaN, outputPer1M: Number.NaN, provider };
-      }
-      continue;
-    }
-
-    if (!model) {
-      continue;
-    }
-
-    const valueMatch = trimmed.match(/^(input_per_1m|output_per_1m):\s*([0-9.]+)$/);
-    if (!valueMatch) {
-      continue;
-    }
-    const value = Number(valueMatch[2]);
-    if (!Number.isFinite(value)) {
-      continue;
-    }
-    if (valueMatch[1] === 'input_per_1m') {
-      pricing[model].inputPer1M = value;
-    } else {
-      pricing[model].outputPer1M = value;
-    }
-  }
-
-  for (const [modelName, modelPricing] of Object.entries(pricing)) {
-    if (!Number.isFinite(modelPricing.inputPer1M) || !Number.isFinite(modelPricing.outputPer1M)) {
-      delete pricing[modelName];
-    }
-  }
-
-  return pricing;
-}
 
 function applyEndpointCostOverrides(
   config: TEndpointCostConfig,
@@ -128,52 +44,27 @@ function applyEndpointCostOverrides(
   return nextConfig;
 }
 
-function getEndpointCosts() {
-  if (cachedEndpointCosts) {
-    return cachedEndpointCosts;
-  }
+/**
+ * Flattens every endpoint's static yaml `tokenConfig` into the relative-cost
+ * badge's `{ inputPer1M, outputPer1M, provider }` shape. Pure projection over
+ * the already-cached `appConfig` — no file I/O, no caching needed here.
+ */
+export function getModelPricing(appConfig?: AppConfig): TModelPricing {
+  const overrides = collectTokenConfigOverrides(appConfig);
+  const pricing: TModelPricing = {};
 
-  try {
-    const rawContents = readFirstExisting([
-      process.env.ENDPOINT_COSTS_CONFIG_PATH,
-      process.env.LLM_PRICING_CONFIG_PATH,
-      DEFAULT_PRICING_PATH,
-      LOCAL_CONFIGMAP_PATH,
-    ]);
-    if (!rawContents) {
-      cachedEndpointCosts = {
-        modelPricing: {},
-        endpointCostConfig: DEFAULT_ENDPOINT_COST_CONFIG,
-      };
-      return cachedEndpointCosts;
+  for (const [endpoint, tokenConfig] of Object.entries(overrides)) {
+    if (!tokenConfig) {
+      continue;
     }
-
-    const pricingYaml = extractPricingYaml(rawContents);
-    const endpointCostConfig = DEFAULT_ENDPOINT_COST_CONFIG;
-    cachedEndpointCosts = {
-      modelPricing: parsePricingYaml(pricingYaml),
-      endpointCostConfig,
-    };
-    return cachedEndpointCosts;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    logger.warn(`[config] Failed to load model pricing: ${message}`);
-    cachedEndpointCosts = {
-      modelPricing: {},
-      endpointCostConfig: DEFAULT_ENDPOINT_COST_CONFIG,
-    };
-    return cachedEndpointCosts;
+    for (const [model, { prompt, completion }] of Object.entries(tokenConfig)) {
+      pricing[model] = { inputPer1M: prompt, outputPer1M: completion, provider: endpoint };
+    }
   }
-}
 
-export function getModelPricing(): TModelPricing {
-  return getEndpointCosts().modelPricing;
+  return pricing;
 }
 
 export function getEndpointCostConfig(referenceModelId?: string): TEndpointCostConfig {
-  return applyEndpointCostOverrides(getEndpointCosts().endpointCostConfig, referenceModelId);
-}
-
-export function clearModelPricingCache(): void {
-  cachedEndpointCosts = undefined;
+  return applyEndpointCostOverrides(DEFAULT_ENDPOINT_COST_CONFIG, referenceModelId);
 }

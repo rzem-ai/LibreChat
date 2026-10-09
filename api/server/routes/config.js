@@ -15,6 +15,10 @@ const {
   resolveCodeEnvironmentDecisionVersion,
   resolveCodeEnvironmentMoveCapabilities,
   resolveCodeEnvironmentTransitionVersion,
+  // Deloitte Custom Change: imported directly from @librechat/api now that the
+  // `~/server/services/Config/modelPricing` re-export shim has been removed.
+  getEndpointCostConfig,
+  getModelPricing,
 } = require('@librechat/api');
 const { EModelEndpoint, defaultSocialLogins } = require('librechat-data-provider');
 const { logger, getTenantId, SystemCapabilities } = require('@librechat/data-schemas');
@@ -22,7 +26,6 @@ const { hasCapability, hasConfigCapability } = require('~/server/middleware/role
 const { getLdapConfig } = require('~/server/services/Config/ldap');
 const { getRumConfig } = require('~/server/services/Config/rum');
 const { getAppConfig } = require('~/server/services/Config/app');
-const { getEndpointCostConfig, getModelPricing } = require('~/server/services/Config/modelPricing');
 
 const router = express.Router();
 const emailLoginEnabled =
@@ -267,9 +270,12 @@ router.get('/', async function (req, res) {
     const langfuseConnectionAvailable = isLangfuseConnectionAvailable();
     let langfuseConnectionAccess = false;
 
-    // Deloitte Custom Change: model pricing uses the YAML reference model unless explicitly overridden.
-    const modelPricing = getModelPricing();
-    const endpointCostConfig = getEndpointCostConfig(appConfig.modelPricing?.referenceModelId);
+    // Deloitte Custom Change: model pricing is derived from each endpoint's `tokenConfig`,
+    // using the configured reference model unless explicitly overridden.
+    const modelPricing = getModelPricing(appConfig);
+    const endpointCostConfig = getEndpointCostConfig(
+      appConfig?.config?.modelPricing?.referenceModelId,
+    );
 
     if (langfuseConnectionAvailable) {
       try {

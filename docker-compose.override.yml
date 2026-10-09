@@ -38,10 +38,6 @@ services:
       - type: bind
         source: ./librechat.yaml
         target: /app/librechat.yaml
-      - type: bind
-        source: ./charts/config/endpoint-costs.yaml
-        target: /app/endpoint-costs.yaml
-        read_only: true
       # Deloitte GEL assets — auto-injected at container start via command above
       - type: bind
         source: ./deloitte/assets
