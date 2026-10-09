@@ -961,6 +961,7 @@ describe('initializeAgent — provider web_search precedence', () => {
     type: 'web_search_20250305',
     name: Tools.web_search,
   };
+  const openAINativeWebSearchTool = { type: 'web_search' };
   const nativeGoogleSearchTool = { googleSearch: {} };
   const libreChatWebSearchDefinition = {
     name: Tools.web_search,
@@ -1249,9 +1250,65 @@ describe('initializeAgent — provider web_search precedence', () => {
   });
 
   it('leaves providers without a native web search conflict unchanged', async () => {
+    // Bedrock has no native-web-search branch in resolveProviderToolConflicts (unlike
+    // Anthropic/Google/OpenAI/Azure), so a provider tool that happens to look like a web
+    // search tool must still pass through untouched for it.
+    const { agent, req, res, loadTools, db } = createMocks({
+      provider: Providers.BEDROCK,
+      providerTools: [nativeWebSearchTool],
+      loadedToolDefinitions: [libreChatWebSearchDefinition],
+    });
+    agent.tools = [Tools.web_search];
+
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.BEDROCK]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    expect(result.tools).toEqual([nativeWebSearchTool]);
+    expect(countNamedWebSearchTools(result.tools)).toBe(1);
+    expect(countWebSearchDefinitions(result.toolDefinitions)).toBe(1);
+  });
+
+  it('keeps OpenAI native web_search when LibreChat search is not selected', async () => {
     const { agent, req, res, loadTools, db } = createMocks({
       provider: Providers.OPENAI,
-      providerTools: [nativeWebSearchTool],
+      providerTools: [openAINativeWebSearchTool],
+    });
+
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.OPENAI]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    expect(result.tools).toEqual([openAINativeWebSearchTool]);
+  });
+
+  it('prefers LibreChat web_search when OpenAI native search is also enabled', async () => {
+    // Regression test: OpenAI's native web_search tool ({ type: 'web_search' }, no `name`
+    // field) previously fell through resolveProviderToolConflicts's shouldRemoveTool with no
+    // matching branch, so both the native tool and the LibreChat tool stayed bound at once —
+    // the model could pick its own native search instead of the LibreChat one, whose results
+    // never reach citations.ts (its answer gets no citation chips).
+    const { agent, req, res, loadTools, db } = createMocks({
+      provider: Providers.OPENAI,
+      providerTools: [openAINativeWebSearchTool],
       loadedToolDefinitions: [libreChatWebSearchDefinition],
     });
     agent.tools = [Tools.web_search];
@@ -1269,8 +1326,33 @@ describe('initializeAgent — provider web_search precedence', () => {
       db,
     );
 
-    expect(result.tools).toEqual([nativeWebSearchTool]);
-    expect(countNamedWebSearchTools(result.tools)).toBe(1);
+    expect(result.tools).toEqual([]);
+    expect(countNamedWebSearchTools(result.tools)).toBe(0);
+    expect(countWebSearchDefinitions(result.toolDefinitions)).toBe(1);
+  });
+
+  it('prefers LibreChat web_search when Azure native search is also enabled', async () => {
+    const { agent, req, res, loadTools, db } = createMocks({
+      provider: Providers.AZURE,
+      providerTools: [openAINativeWebSearchTool],
+      loadedToolDefinitions: [libreChatWebSearchDefinition],
+    });
+    agent.tools = [Tools.web_search];
+
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.AZURE]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    expect(result.tools).toEqual([]);
     expect(countWebSearchDefinitions(result.toolDefinitions)).toBe(1);
   });
 
