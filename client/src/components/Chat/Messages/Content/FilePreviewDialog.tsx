@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import copy from 'copy-to-clipboard';
 import { useRecoilValue } from 'recoil';
 import { Download } from 'lucide-react';
@@ -27,12 +27,22 @@ import {
   shouldUseSharedFileDownload,
 } from './preview';
 import { getDownloadFilename, logger, sortPagesByRelevance, triggerDownload } from '~/utils';
-import { ArtifactPreview } from '~/components/Artifacts/ArtifactPreview';
 import CopyButton from '~/components/Messages/Content/CopyButton';
 import { useFileMapContext, useShareContext } from '~/Providers';
 import { getProps } from '~/utils/artifacts';
 import { useLocalize } from '~/hooks';
 import store from '~/store';
+
+/* Lazy: this pulls in the Sandpack/CodeSandbox bundle, which must stay out of
+ * the main chunk for any component that reaches FilePreviewDialog through
+ * `~/hooks` (e.g. citation chips) — mirrors ArtifactTabs' own lazy split for
+ * the same reason (see its SandboxArtifactTabs). Named export, not default,
+ * so `lazy()` needs a thin adapter. */
+const ArtifactPreview = lazy(() =>
+  import('~/components/Artifacts/ArtifactPreview').then((mod) => ({
+    default: mod.ArtifactPreview,
+  })),
+);
 
 interface FilePreviewDialogProps {
   open: boolean;
@@ -326,14 +336,24 @@ export default function FilePreviewDialog({
           )}
           {officeHtml != null && (
             <div className="h-[70vh] w-full overflow-hidden rounded-lg border border-border-light">
-              <ArtifactPreview
-                files={{ 'index.html': officeHtml }}
-                fileKey="index.html"
-                template="static"
-                previewRef={previewRef as React.MutableRefObject<SandpackPreviewRef>}
-                sharedProps={officeSharedProps}
-                startupConfig={resolvedStartupConfig}
-              />
+              <Suspense
+                fallback={
+                  <div className="flex h-full items-center justify-center bg-surface-secondary">
+                    <span className="shimmer text-sm text-text-secondary">
+                      {localize('com_ui_loading')}
+                    </span>
+                  </div>
+                }
+              >
+                <ArtifactPreview
+                  files={{ 'index.html': officeHtml }}
+                  fileKey="index.html"
+                  template="static"
+                  previewRef={previewRef as React.MutableRefObject<SandpackPreviewRef>}
+                  sharedProps={officeSharedProps}
+                  startupConfig={resolvedStartupConfig}
+                />
+              </Suspense>
             </div>
           )}
           {fileBlobUrl && !showExtractedText && (

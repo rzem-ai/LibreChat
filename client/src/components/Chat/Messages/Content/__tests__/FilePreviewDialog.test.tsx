@@ -85,7 +85,7 @@ describe('FilePreviewDialog office preview', () => {
     expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 
-  it('renders the extracted HTML via ArtifactPreview once ready', () => {
+  it('renders the extracted HTML via ArtifactPreview once ready', async () => {
     mockUseFilePreview.mockReturnValue({
       data: {
         file_id: 'file-1',
@@ -98,7 +98,10 @@ describe('FilePreviewDialog office preview', () => {
 
     renderDialog();
 
-    expect(screen.getByTestId('artifact-preview')).toHaveTextContent('<p>hello</p>');
+    // ArtifactPreview is lazy-loaded (keeps the Sandpack bundle out of the
+    // main chunk — see FilePreviewDialog.tsx), so it only appears after the
+    // dynamic import resolves.
+    expect(await screen.findByTestId('artifact-preview')).toHaveTextContent('<p>hello</p>');
   });
 
   it('shows "Preview unavailable" when the deferred render failed', () => {
