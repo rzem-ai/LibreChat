@@ -152,6 +152,7 @@ describe('GenericGrantAccessDialog - permissions load failure', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('com_ui_share_access_description')).toHaveClass('sr-only');
     expect(screen.getByTestId('unified-people-search').closest('section')).toHaveClass('w-full');
+    // Deloitte Custom Change: verify the firm-wide capability publication prompt and form link.
     expect(screen.getByText('com_ui_share_publish_capability_prompt')).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: 'com_ui_share_publish_capability_link' }),

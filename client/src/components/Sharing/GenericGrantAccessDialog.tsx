@@ -369,6 +369,7 @@ export default function GenericGrantAccessDialog({
                       typeFilter={peoplePickerTypeFilter}
                       excludeIds={allShares.map((s) => s.idOnTheSource)}
                     />
+                    {/* Deloitte Custom Change: invite users to publish shared capabilities firm-wide. */}
                     <p className="text-xs text-text-secondary">
                       {localize('com_ui_share_publish_capability_prompt')}{' '}
                       <a
