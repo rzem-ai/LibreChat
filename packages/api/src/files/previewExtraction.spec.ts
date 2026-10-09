@@ -1,8 +1,8 @@
-import path from 'path';
 import fs from 'fs';
+import path from 'path';
 import { FileContext, FileSources } from 'librechat-data-provider';
-import { decideFilePreviewAction, renderFilePreviewText } from './previewExtraction';
 import type { FilePreviewCandidate } from './previewExtraction';
+import { decideFilePreviewAction, renderFilePreviewText } from './previewExtraction';
 
 const baseFile: FilePreviewCandidate = {
   filename: 'report.docx',
@@ -41,6 +41,25 @@ describe('decideFilePreviewAction', () => {
    */
   it('skips FileSources.text records so model-context text is never overwritten', () => {
     expect(decideFilePreviewAction({ ...baseFile, source: FileSources.text })).toBe('skip');
+  });
+
+  /**
+   * Regression guard: `llmDeliveryPath: 'text'` marks a regular (non-RAG)
+   * upload whose `text` field already holds the plain-text content
+   * delivered to the model (`resolveUploadLLMDeliveryPath`'s default for
+   * non-media MIME types). Same hazard as the `FileSources.text` case
+   * above — without this check, an oversized file of this kind would fall
+   * through to `too_large` and get marked `failed`, clobbering the text
+   * the client's extracted-text preview depends on.
+   */
+  it('skips llmDeliveryPath text-delivery records so model-context text is never overwritten', () => {
+    expect(
+      decideFilePreviewAction({
+        ...baseFile,
+        bytes: 10 * 1024 * 1024,
+        llmDeliveryPath: 'text',
+      }),
+    ).toBe('skip');
   });
 
   it('skips files with no extractable preview path', () => {

@@ -1,5 +1,5 @@
 import { FileContext, FileSources, checkOpenAIStorage } from 'librechat-data-provider';
-import type { IMongoFile } from '@librechat/data-schemas';
+import type { TFile } from 'librechat-data-provider';
 import {
   classifyCodeArtifact,
   extractCodeArtifactText,
@@ -9,14 +9,16 @@ import {
 } from '~/files/code';
 
 /**
- * Minimal shape `decideFilePreviewAction` needs from a Mongo file record.
- * Callers typically pass an `IMongoFile` (or the reduced projection
- * `fileAccess`/`resolveShareFile` middleware attach to the request), so this
- * is a subset rather than the full type.
+ * Minimal shape `decideFilePreviewAction` needs from a file record. Expressed
+ * against the shared `TFile` contract (not the Mongo-specific `IMongoFile`)
+ * so this stays a pure, storage-agnostic classifier — callers typically pass
+ * a Mongoose document (or the reduced projection `fileAccess`/
+ * `resolveShareFile` middleware attach to the request), which satisfies this
+ * structurally.
  */
 export type FilePreviewCandidate = Pick<
-  IMongoFile,
-  'filename' | 'type' | 'bytes' | 'source' | 'context' | 'status' | 'text'
+  TFile,
+  'filename' | 'type' | 'bytes' | 'source' | 'context' | 'status' | 'text' | 'llmDeliveryPath'
 >;
 
 export type FilePreviewAction = 'skip' | 'too_large' | 'extract';
@@ -41,6 +43,13 @@ export type FilePreviewAction = 'skip' | 'too_large' | 'extract';
  *    can be `undefined` here even though the DB record has real content —
  *    the explicit source check is the actual guard against overwriting it
  *    with rendered preview HTML (or `null` on a failed render).
+ *  - `llmDeliveryPath === 'text'` — same hazard as the `FileSources.text`
+ *    case above, for a different signal: regular (non-RAG) uploads whose
+ *    content is delivered to the model as extracted text by default
+ *    (`resolveUploadLLMDeliveryPath`) persist that same text in `file.text`.
+ *    Without this check, an oversized one of these would fall through to
+ *    `'too_large'` below and get marked `failed`, clobbering the extracted
+ *    text the client's extracted-text preview depends on.
  *  - No extractable preview path (not an office-HTML bucket and not a
  *    recognized text/document category).
  *
@@ -55,9 +64,10 @@ export function decideFilePreviewAction(file: FilePreviewCandidate): FilePreview
     return 'skip';
   }
   if (
-    checkOpenAIStorage(file.source) ||
+    checkOpenAIStorage(file.source ?? '') ||
     file.context === FileContext.execute_code ||
-    file.source === FileSources.text
+    file.source === FileSources.text ||
+    file.llmDeliveryPath === 'text'
   ) {
     return 'skip';
   }
