@@ -1524,10 +1524,12 @@ export const interfaceSchema = z
       })
       .optional(),
     // Deloitte Custom Change: let `librechat.yaml` configure the Learning Center
-    // menu bar's FAQ agent and feedback link per environment (dev/uat/prd).
+    // menu bar's FAQ agent and feedback link per environment (dev/uat/prd) — the
+    // FAQ agent's id differs per environment, so there is no safe shared default;
+    // the menu item is hidden entirely when faqAgentId is unset or unresolvable.
     learningCenter: z
       .object({
-        faqAgentName: z.string().optional(),
+        faqAgentId: z.string().optional(),
         feedbackUrl: z.string().optional(),
       })
       .optional(),
@@ -1608,10 +1610,6 @@ export const interfaceSchema = z
     },
     marketplace: {
       use: false,
-    },
-    learningCenter: {
-      faqAgentName: 'MyAssist FAQs',
-      feedbackUrl: 'https://forms.cloud.microsoft/e/E9AyvN4Ayx',
     },
     mcpServers: {
       use: true,

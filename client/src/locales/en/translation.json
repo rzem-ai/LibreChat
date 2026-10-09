@@ -2190,7 +2190,7 @@
   "com_learning_rate_comment_count": "{{0}}/200",
   "com_learning_rate_submit": "Submit Feedback",
   "com_learning_start_tour": "Start tour",
-  "com_learning_take_guided_tutorial": "Take the Getting Started tour",
+  "com_learning_take_guided_tutorial": "Guided Walkthrough",
   "com_learning_ask_faq_agent": "Ask {{0}}",
   "com_learning_give_feedback": "Give Feedback",
   "com_learning_complete_title": "Tour complete!",

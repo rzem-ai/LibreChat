@@ -11,13 +11,15 @@ import { ActivePanelProvider, DEFAULT_PANEL } from '~/Providers/ActivePanelConte
 const mockNewConversation = jest.fn();
 const mockClearMessagesCache = jest.fn();
 const mockStartGettingStartedTour = jest.fn();
-const mockGetMarketplaceAgents = jest.fn();
+const mockGetAgentById = jest.fn();
+const FAQ_AGENT_ID = 'agent_faq-agent-id';
+const FEEDBACK_URL = 'https://forms.cloud.microsoft/e/E9AyvN4Ayx';
 
 jest.mock('librechat-data-provider', () => {
   const actual = jest.requireActual('librechat-data-provider');
   return {
     ...actual,
-    dataService: { ...actual.dataService, getMarketplaceAgents: () => mockGetMarketplaceAgents() },
+    dataService: { ...actual.dataService, getAgentById: () => mockGetAgentById() },
   };
 });
 
@@ -26,7 +28,9 @@ jest.mock('~/components/Learning/LearningTourContext', () => ({
 }));
 
 jest.mock('~/data-provider', () => ({
-  useGetStartupConfig: () => ({ data: undefined }),
+  useGetStartupConfig: () => ({
+    data: { interface: { learningCenter: { faqAgentId: FAQ_AGENT_ID, feedbackUrl: FEEDBACK_URL } } },
+  }),
 }));
 
 jest.mock('~/store', () => {
@@ -142,6 +146,7 @@ describe('ExpandedPanel', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
+    mockGetAgentById.mockResolvedValue({ id: FAQ_AGENT_ID, name: 'MyAssist FAQs' });
   });
 
   afterEach(() => jest.restoreAllMocks());
@@ -232,7 +237,7 @@ describe('ExpandedPanel', () => {
     );
   });
 
-  it('opens the Learn menu on click, not hover, and starts the guided tutorial', () => {
+  it('opens the Learn menu on click, not hover, and starts the guided tutorial', async () => {
     renderPanel();
 
     const learnButton = screen.getByRole('button', { name: 'com_ui_learning_hub' });
@@ -242,7 +247,7 @@ describe('ExpandedPanel', () => {
     ).not.toBeInTheDocument();
     fireEvent.click(learnButton);
     expect(screen.getByText('com_learning_take_guided_tutorial')).toBeInTheDocument();
-    expect(screen.getByText('com_learning_ask_faq_agent')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('com_learning_ask_faq_agent')).toBeInTheDocument());
     expect(screen.getByText('com_learning_give_feedback')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('com_learning_take_guided_tutorial'));
@@ -265,40 +270,26 @@ describe('ExpandedPanel', () => {
     );
   });
 
-  it('opens the matching FAQ agent chat, trusting the search match over an exact name', async () => {
-    // Deliberately a different display name than the configured search term —
-    // the component should trust the backend's search result, not re-filter by name.
-    mockGetMarketplaceAgents.mockResolvedValue({
-      data: [{ id: 'faq-agent-id', name: 'FAQ Agent' }],
-    });
+  it('opens the configured FAQ agent chat by id', async () => {
     renderPanel();
 
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_learning_hub' }));
-    await waitFor(() => expect(mockGetMarketplaceAgents).toHaveBeenCalled());
-    // Flush the mocked promise through react-query's state update and re-render
-    // before clicking, so the handler closes over the resolved (or errored) data.
-    await act(async () => {});
+    await waitFor(() => expect(screen.getByText('com_learning_ask_faq_agent')).toBeInTheDocument());
     fireEvent.click(screen.getByText('com_learning_ask_faq_agent'));
 
     await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent('/c/new?agent_id=faq-agent-id'),
+      expect(screen.getByTestId('location')).toHaveTextContent(`/c/new?agent_id=${FAQ_AGENT_ID}`),
     );
   });
 
-  it('falls back to a marketplace search when no FAQ agent match is available', async () => {
-    mockGetMarketplaceAgents.mockRejectedValue(new Error('Unavailable'));
+  it('hides the Ask FAQ Agent item entirely when no agent resolves', async () => {
+    mockGetAgentById.mockRejectedValue(new Error('Unavailable'));
     renderPanel();
 
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_learning_hub' }));
-    await waitFor(() => expect(mockGetMarketplaceAgents).toHaveBeenCalled());
-    // Flush the mocked promise through react-query's state update and re-render
-    // before clicking, so the handler closes over the resolved (or errored) data.
     await act(async () => {});
-    fireEvent.click(screen.getByText('com_learning_ask_faq_agent'));
-
-    await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent('/agents/all?q=MyAssist%20FAQs'),
-    );
+    expect(screen.getByText('com_learning_take_guided_tutorial')).toBeInTheDocument();
+    expect(screen.queryByText('com_learning_ask_faq_agent')).not.toBeInTheDocument();
   });
 
   it('opens the feedback form in a new tab', () => {
@@ -309,7 +300,7 @@ describe('ExpandedPanel', () => {
     fireEvent.click(screen.getByText('com_learning_give_feedback'));
 
     expect(open).toHaveBeenCalledWith(
-      'https://forms.cloud.microsoft/e/E9AyvN4Ayx',
+      FEEDBACK_URL,
       '_blank',
       'noopener,noreferrer',
     );

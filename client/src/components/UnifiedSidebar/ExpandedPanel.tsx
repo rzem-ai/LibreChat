@@ -22,18 +22,13 @@ function LearningMenu({ link }: { link: NavLink }) {
   const localize = useLocalize();
   const navigate = useNavigate();
   const { startGettingStartedTour } = useLearningTour();
-  const { faqAgentName, feedbackUrl } = useLearningCenterConfig();
-  const { faqAgent } = useFaqAgent(faqAgentName);
+  const { faqAgentId, feedbackUrl } = useLearningCenterConfig();
+  const { faqAgent } = useFaqAgent(faqAgentId);
 
   const openFaqAgent = () => {
     if (faqAgent) {
       navigate(`/c/new?agent_id=${encodeURIComponent(faqAgent.id)}`);
-      return;
     }
-    // No live match yet (still loading, or the agent was renamed/removed) — send
-    // the user to a marketplace search for the configured name instead of
-    // silently doing nothing.
-    navigate(`/agents/all?q=${encodeURIComponent(faqAgentName)}`);
   };
 
   return (
@@ -54,17 +49,21 @@ function LearningMenu({ link }: { link: NavLink }) {
           <BookOpen className="icon-md" aria-hidden="true" />
           {localize('com_learning_take_guided_tutorial')}
         </Menu.MenuItem>
-        <Menu.MenuItem onClick={openFaqAgent} className="select-item text-sm">
-          <MessageCircleQuestion className="icon-md" aria-hidden="true" />
-          {localize('com_learning_ask_faq_agent', { 0: faqAgent?.name ?? faqAgentName })}
-        </Menu.MenuItem>
-        <Menu.MenuItem
-          onClick={() => window.open(feedbackUrl, '_blank', 'noopener,noreferrer')}
-          className="select-item text-sm"
-        >
-          <MessageSquareHeart className="icon-md" aria-hidden="true" />
-          {localize('com_learning_give_feedback')}
-        </Menu.MenuItem>
+        {faqAgent && (
+          <Menu.MenuItem onClick={openFaqAgent} className="select-item text-sm">
+            <MessageCircleQuestion className="icon-md" aria-hidden="true" />
+            {localize('com_learning_ask_faq_agent', { 0: faqAgent.name })}
+          </Menu.MenuItem>
+        )}
+        {feedbackUrl && (
+          <Menu.MenuItem
+            onClick={() => window.open(feedbackUrl, '_blank', 'noopener,noreferrer')}
+            className="select-item text-sm"
+          >
+            <MessageSquareHeart className="icon-md" aria-hidden="true" />
+            {localize('com_learning_give_feedback')}
+          </Menu.MenuItem>
+        )}
       </Menu.Menu>
     </Menu.MenuProvider>
   );
