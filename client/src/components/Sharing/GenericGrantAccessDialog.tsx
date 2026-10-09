@@ -62,6 +62,9 @@ export default function GenericGrantAccessDialog({
   const peopleSectionId = React.useId();
   const ownerErrorId = React.useId();
   const canSharePublic = useCanSharePublic(resourceType);
+  // Deloitte Custom Change: firm-wide capability publication applies only to agents and skills.
+  const canPublishCapability =
+    resourceType === ResourceType.AGENT || resourceType === ResourceType.SKILL;
   const canEditAgentInsights =
     resourceType === ResourceType.AGENT && user?.role === SystemRoles.ADMIN;
   const { hasPeoplePickerAccess, peoplePickerTypeFilter } = usePeoplePickerPermissions();
@@ -369,18 +372,22 @@ export default function GenericGrantAccessDialog({
                       typeFilter={peoplePickerTypeFilter}
                       excludeIds={allShares.map((s) => s.idOnTheSource)}
                     />
-                    {/* Deloitte Custom Change: invite users to publish shared capabilities firm-wide. */}
-                    <p className="text-xs text-text-secondary">
-                      {localize('com_ui_share_publish_capability_prompt')}{' '}
-                      <a
-                        href="https://forms.cloud.microsoft/e/19c6RVYQvx"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-text-primary underline underline-offset-2"
-                      >
-                        {localize('com_ui_share_publish_capability_link')}
-                      </a>
-                    </p>
+                    {canPublishCapability && (
+                      <>
+                        {/* Deloitte Custom Change: invite users to publish shared capabilities firm-wide. */}
+                        <p className="text-xs text-text-secondary">
+                          {localize('com_ui_share_publish_capability_prompt')}{' '}
+                          <a
+                            href="https://forms.cloud.microsoft/e/19c6RVYQvx"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-text-primary underline underline-offset-2"
+                          >
+                            {localize('com_ui_share_publish_capability_link')}
+                          </a>
+                        </p>
+                      </>
+                    )}
 
                     {!hasAtLeastOneOwner && hasChanges && (
                       <Alert id={ownerErrorId} variant="error">

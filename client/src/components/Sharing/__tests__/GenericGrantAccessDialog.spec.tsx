@@ -70,13 +70,13 @@ jest.mock('../PeoplePicker', () => ({
   SelectedPrincipalsList: () => <div data-testid="principals-list" />,
 }));
 
-const renderDialog = () =>
+const renderDialog = (resourceType: ResourceType = ResourceType.AGENT) =>
   render(
     <GenericGrantAccessDialog
       resourceDbId="agent-db-1"
       resourceId="agent-1"
       resourceName="Test Agent"
-      resourceType={ResourceType.AGENT}
+      resourceType={resourceType}
     />,
   );
 
@@ -167,6 +167,18 @@ describe('GenericGrantAccessDialog - permissions load failure', () => {
     expect(saveButton).toHaveClass('sm:w-auto');
     expect(saveButton).not.toHaveClass('min-w-[140px]');
     expect(screen.queryByRole('button', { name: 'com_ui_cancel' })).not.toBeInTheDocument();
+  });
+
+  it('does not show the capability publication prompt for other resource types', () => {
+    mockUseResourcePermissionState.mockReturnValue(baseState());
+
+    renderDialog(ResourceType.REMOTE_AGENT);
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_share_var' }));
+
+    expect(screen.queryByText('com_ui_share_publish_capability_prompt')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'com_ui_share_publish_capability_link' }),
+    ).not.toBeInTheDocument();
   });
 
   it('lets an admin manage agent principals without people picker or public sharing permissions', () => {
