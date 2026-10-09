@@ -6,9 +6,11 @@ describe('Tag', () => {
   it('uses semantic status tokens while preserving the success default', () => {
     render(<Tag label="Enabled" onRemove={jest.fn()} />);
 
+    // Deloitte Custom Change: success keeps the GEL surface-submit brand token instead of
+    // the generic status-success tokens (see Tag.tsx), so assert that branding here too.
     expect(screen.getByText('Enabled').parentElement).toHaveClass(
-      'bg-status-success-subtle',
-      'text-status-success',
+      'bg-surface-submit/20',
+      'text-surface-submit',
     );
   });
 

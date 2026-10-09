@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { lazy, Suspense, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import copy from 'copy-to-clipboard';
-import { Download } from 'lucide-react';
 import { useRecoilValue } from 'recoil';
+import { Download } from 'lucide-react';
 import {
   Button,
   OGDialog,
@@ -9,7 +9,16 @@ import {
   OGDialogTitle,
   OGDialogDescription,
 } from '@librechat/client';
+import type { SandpackPreviewRef } from '@codesandbox/sandpack-react/unstyled';
 import type { TFile } from 'librechat-data-provider';
+import {
+  useFilePreview,
+  useFileDownload,
+  useGetStartupConfig,
+  useFilePreviewBlob,
+  useSharedFileDownload,
+  useGetSharedStartupConfig,
+} from '~/data-provider';
 import {
   getFileExtension,
   getPreviewKind,
@@ -17,17 +26,23 @@ import {
   shouldUseExtractedTextPreview,
   shouldUseSharedFileDownload,
 } from './preview';
-import {
-  useFilePreview,
-  useFilePreviewBlob,
-  useFileDownload,
-  useSharedFileDownload,
-} from '~/data-provider';
 import { getDownloadFilename, logger, sortPagesByRelevance, triggerDownload } from '~/utils';
 import CopyButton from '~/components/Messages/Content/CopyButton';
 import { useFileMapContext, useShareContext } from '~/Providers';
+import { getProps } from '~/utils/artifacts';
 import { useLocalize } from '~/hooks';
 import store from '~/store';
+
+/* Lazy: this pulls in the Sandpack/CodeSandbox bundle, which must stay out of
+ * the main chunk for any component that reaches FilePreviewDialog through
+ * `~/hooks` (e.g. citation chips) — mirrors ArtifactTabs' own lazy split for
+ * the same reason (see its SandboxArtifactTabs). Named export, not default,
+ * so `lazy()` needs a thin adapter. */
+const ArtifactPreview = lazy(() =>
+  import('~/components/Artifacts/ArtifactPreview').then((mod) => ({
+    default: mod.ArtifactPreview,
+  })),
+);
 
 interface FilePreviewDialogProps {
   open: boolean;
@@ -106,19 +121,6 @@ export default function FilePreviewDialog({
   const showExtractedText = shouldUseExtractedTextPreview(
     deliveryPath ?? (!shareId && fileId ? fileMap?.[fileId]?.llmDeliveryPath : undefined),
   );
-  const {
-    data: extractedPreview,
-    isInitialLoading: extractedTextLoading,
-    isFetching: extractedTextFetching,
-    isError: extractedTextError,
-    refetch: refetchExtractedPreview,
-  } = useFilePreview(
-    fileId,
-    {
-      enabled: open && showExtractedText && !!fileId,
-    },
-    shareId,
-  );
   // Downloads own URLs; previews share bytes and create only their display URL.
   const { refetch: downloadOwned } = useFileDownload(user?.id ?? '', fileId, { direct: false });
   const { refetch: downloadShared } = useSharedFileDownload(shareId, fileId);
@@ -135,22 +137,54 @@ export default function FilePreviewDialog({
   const [isCopied, setIsCopied] = useState(false);
 
   const previewKind = showExtractedText ? false : getPreviewKind(fileName, fileType, fileSource);
+  const isOfficeKind = previewKind === 'office';
+  const useServerPreview = isOfficeKind || showExtractedText;
   const downloadFilename = getDownloadFilename(fileName, fileId, fileSource);
+
+  const previewRef = useRef<SandpackPreviewRef>();
+  const { data: startupConfig } = useGetStartupConfig({
+    enabled: isOfficeKind && open && !useShared,
+  });
+  const { data: sharedStartupConfig } = useGetSharedStartupConfig(shareId, {
+    enabled: isOfficeKind && open && useShared,
+  });
+  const resolvedStartupConfig = useShared ? sharedStartupConfig : startupConfig;
+  const officeSharedProps = useMemo(() => getProps('text/html'), []);
+
+  const {
+    data: extractedPreview,
+    isInitialLoading: extractedTextLoading,
+    isFetching: extractedTextFetching,
+    isError: extractedTextError,
+    refetch: refetchExtractedPreview,
+  } = useFilePreview(
+    fileId,
+    {
+      enabled: open && useServerPreview && !!fileId,
+    },
+    shareId,
+  );
+
+  const officeHtml =
+    isOfficeKind && extractedPreview?.status === 'ready' && extractedPreview?.textFormat === 'html'
+      ? extractedPreview.text
+      : undefined;
   const displayedText = showExtractedText ? (extractedPreview?.text ?? null) : fileContent;
+  const readyButEmpty =
+    extractedPreview?.status === 'ready' &&
+    (isOfficeKind ? officeHtml == null : extractedPreview?.text == null);
   const isLoading =
-    (!showExtractedText && loading) ||
-    (showExtractedText &&
+    (!useServerPreview && loading) ||
+    (useServerPreview &&
       isExtractedTextPreviewLoading(
         extractedPreview?.status,
         extractedTextLoading,
         extractedTextError,
       ));
   const hasPreviewError =
-    (!showExtractedText && previewError) ||
-    (showExtractedText &&
-      (extractedTextError ||
-        extractedPreview?.status === 'failed' ||
-        (extractedPreview?.status === 'ready' && extractedPreview.text == null)));
+    (!useServerPreview && previewError) ||
+    (useServerPreview &&
+      (extractedTextError || extractedPreview?.status === 'failed' || readyButEmpty));
 
   useEffect(() => {
     let cancelled = false;
@@ -159,7 +193,7 @@ export default function FilePreviewDialog({
     setFileBlobUrl(null);
     setPreviewError(false);
     setLoading(false);
-    if (!open || !fileId || !previewKind) {
+    if (!open || !fileId || !previewKind || previewKind === 'office') {
       return;
     }
 
@@ -298,6 +332,28 @@ export default function FilePreviewDialog({
                   {localize('com_ui_retry')}
                 </Button>
               )}
+            </div>
+          )}
+          {officeHtml != null && (
+            <div className="h-[70vh] w-full overflow-hidden rounded-lg border border-border-light">
+              <Suspense
+                fallback={
+                  <div className="flex h-full items-center justify-center bg-surface-secondary">
+                    <span className="shimmer text-sm text-text-secondary">
+                      {localize('com_ui_loading')}
+                    </span>
+                  </div>
+                }
+              >
+                <ArtifactPreview
+                  files={{ 'index.html': officeHtml }}
+                  fileKey="index.html"
+                  template="static"
+                  previewRef={previewRef as React.MutableRefObject<SandpackPreviewRef>}
+                  sharedProps={officeSharedProps}
+                  startupConfig={resolvedStartupConfig}
+                />
+              </Suspense>
             </div>
           )}
           {fileBlobUrl && !showExtractedText && (

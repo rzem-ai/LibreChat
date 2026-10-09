@@ -31,8 +31,8 @@ const TagPrimitiveRoot = React.forwardRef<HTMLDivElement, TagProps>(
     const variantClassName = {
       neutral: 'border-status-neutral-border bg-status-neutral-subtle text-status-neutral',
       info: 'border-status-info-border bg-status-info-subtle text-status-info',
-      // Deloitte Custom Change: success (the default variant) keeps the GEL surface-submit brand token and dark:text-white instead of the generic status-success tokens, preserving the original single Tag style
-      success: 'border-green-600 bg-surface-submit/20 text-green-600 dark:text-white',
+      // Deloitte Custom Change: success (the default variant) keeps the GEL surface-submit brand token and dark:text-white instead of the generic status-success tokens, preserving the original single Tag style. Uses the surface-submit token (not raw green-600) to satisfy the shared-component color guardrail.
+      success: 'border-surface-submit bg-surface-submit/20 text-surface-submit dark:text-white',
       warning: 'border-status-warning-border bg-status-warning-subtle text-status-warning',
       error: 'border-status-error-border bg-status-error-subtle text-status-error',
     }[variant];

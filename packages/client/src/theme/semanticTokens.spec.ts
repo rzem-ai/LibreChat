@@ -65,54 +65,67 @@ describe('shared component color guardrail', () => {
 });
 
 describe('dark dialog surface', () => {
-  it('matches the legacy rendered background in CSS and the runtime theme', () => {
+  it('matches the runtime theme in the dark stylesheet', () => {
     const appStyles = readFileSync(
       join(__dirname, '..', '..', '..', '..', 'client', 'src', 'style.css'),
       'utf8',
     );
 
-    expect(appStyles).toMatch(/--gray-875:\s*18 18 18;/);
-    expect(appStyles).toMatch(/--surface-dialog:\s*var\(--gray-875\);/);
-    expect(darkTheme['rgb-surface-dialog']).toBe('18 18 18');
+    // Deloitte Custom Change: the v0.8.8 upstream sync stopped aliasing --surface-dialog
+    // to --gray-875 and gave it its own literal value per mode (aliased to --popover in
+    // style.css), so assert the declared literal instead of the old gray-scale alias.
+    expect(appStyles).toMatch(/--surface-dialog:\s*23 23 23;/);
+    expect(darkTheme['rgb-surface-dialog']).toBe('23 23 23');
   });
 });
 
 describe('dark hover surface', () => {
-  it('uses the gray-650 midpoint in both CSS and the runtime theme', () => {
+  it('matches the runtime theme in the dark stylesheet', () => {
     const appStyles = readFileSync(
       join(__dirname, '..', '..', '..', '..', 'client', 'src', 'style.css'),
       'utf8',
     );
 
-    expect(appStyles).toMatch(/--gray-650:\s*57 57 57;/);
-    expect(appStyles).toMatch(/--surface-hover:\s*var\(--gray-650\);/);
-    expect(darkTheme['rgb-surface-hover']).toBe('57 57 57');
+    // Deloitte Custom Change: the v0.8.8 upstream sync stopped aliasing --surface-hover
+    // to --gray-650 and gave it its own literal value, so assert the declared literal
+    // instead of the old gray-scale alias.
+    expect(appStyles).toMatch(/--surface-hover:\s*46 46 46;/);
+    expect(darkTheme['rgb-surface-hover']).toBe('46 46 46');
   });
 });
 
 describe('composer hover surface', () => {
-  it('keeps light hover unchanged and uses the lighter dark hover surface', () => {
+  it('aliases the hover surface in both modes', () => {
     const appStyles = readFileSync(
       join(__dirname, '..', '..', '..', '..', 'client', 'src', 'style.css'),
       'utf8',
     );
 
-    expect(appStyles).toMatch(/--surface-composer-hover:\s*var\(--gray-200\);/);
-    expect(appStyles).toMatch(/--surface-composer-hover:\s*var\(--gray-600\);/);
-    expect(defaultTheme['rgb-surface-composer-hover']).toBe('227 227 227');
-    expect(darkTheme['rgb-surface-composer-hover']).toBe('66 66 66');
+    const declared = [...appStyles.matchAll(/--surface-composer-hover:\s*([^;]+);/g)].map((match) =>
+      match[1].trim(),
+    );
+
+    // Deloitte Custom Change: the v0.8.8 upstream sync re-aliased --surface-composer-hover
+    // to --surface-hover in both modes (previously a direct --gray-200/--gray-600 alias),
+    // so assert the alias and that the registry mirrors it instead of a fixed gray step.
+    expect(declared).toEqual(['var(--surface-hover)', 'var(--surface-hover)']);
+    expect(defaultTheme['rgb-surface-composer-hover']).toBe(defaultTheme['rgb-surface-hover']);
+    expect(darkTheme['rgb-surface-composer-hover']).toBe(darkTheme['rgb-surface-hover']);
   });
 });
 
 describe('dark destructive text', () => {
-  it('uses red-400 without changing the status error token', () => {
+  it('matches the runtime theme without changing the status error token', () => {
     const appStyles = readFileSync(
       join(__dirname, '..', '..', '..', '..', 'client', 'src', 'style.css'),
       'utf8',
     );
 
-    expect(appStyles).toMatch(/--text-destructive:\s*var\(--red-400\);/);
-    expect(darkTheme['rgb-text-destructive']).toBe('248 113 113');
+    // Deloitte Custom Change: the v0.8.8 upstream sync stopped aliasing --text-destructive
+    // to --red-400 and gave it its own literal value in dark mode (aliased to --destructive
+    // in style.css), so assert the declared literal instead of the old gray-scale alias.
+    expect(appStyles).toMatch(/--text-destructive:\s*255 100 103;/);
+    expect(darkTheme['rgb-text-destructive']).toBe('255 100 103');
     expect(darkTheme['rgb-status-error']).toBe('252 165 165');
   });
 });
@@ -524,10 +537,16 @@ describe('switch track defaults', () => {
       match[1].trim(),
     );
 
-    expect(declared).toEqual([
-      defaultTheme['rgb-switch-unchecked'],
-      darkTheme['rgb-switch-unchecked'],
-    ]);
+    // Deloitte Custom Change: style.css's GEL tier declares this token as
+    // oklch(0.55 0 0) / oklch(0.45 0 0) (see createTailwindColors.js's withAlpha
+    // wrapper). The precise oklch->sRGB conversion is 113 113 113 / 85 85 85, but the
+    // dark value only clears 2.61:1 against surface-primary, under the 3:1 mark floor
+    // the switch-track tests above enforce. The registry intentionally keeps its own
+    // WCAG-safe triplets (148 148 148 / 102 102 102, tuned for >=3:1) instead of
+    // mirroring style.css's literal value here.
+    expect(declared).toEqual(['oklch(0.55 0 0)', 'oklch(0.45 0 0)']);
+    expect(defaultTheme['rgb-switch-unchecked']).toBe('148 148 148');
+    expect(darkTheme['rgb-switch-unchecked']).toBe('102 102 102');
   });
 });
 

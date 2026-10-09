@@ -23,7 +23,8 @@ const Switch: React.ForwardRefExoticComponent<
   ({ className, ...props }, ref) => (
     <SwitchPrimitives.Root
       className={cn(
-        'peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-surface-inverted data-[state=unchecked]:bg-switch-unchecked',
+        // Deloitte Custom Change: checked state recolored to bg-surface-submit to match the submit button
+        'peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-surface-submit data-[state=unchecked]:bg-switch-unchecked',
         className,
       )}
       {...props}

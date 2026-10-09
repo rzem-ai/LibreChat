@@ -77,6 +77,10 @@ pods:
           OPENID_ON_BEHALF_FLOW_USERINFO_SCOPE: 'user.read'
           OPENID_REQUIRED_ROLE_TOKEN_KIND: 'id'
           OPENID_REUSE_TOKENS: 'true'
+          # 86400000 ms = 24 hours - standardise token expiry for login and MCP OBO
+          OPENID_REUSE_MAX_SESSION_AGE_MS: '86400000'
+          SESSION_EXPIRY: '86400000'
+          REFRESH_TOKEN_EXPIRY: '86400000'
           OPENID_USE_END_SESSION_ENDPOINT: 'true'
           OPENID_BUTTON_LABEL: 'Continue with SSO'
           OPENID_IMAGE_URL: '/assets/favicon.svg'
@@ -85,6 +89,11 @@ pods:
           MODEL_PRICING_REFERENCE_MODEL_ID: 'gpt-56-luna'
           RAG_API_URL: 'http://127.0.0.1:8000'
           RAG_USE_FULL_CONTEXT: 'false'
+          # Deloitte Custom Change: bounds memory use for the trusted-tool attachment
+          # upload feature. Max bytes read into memory + base64-encoded for a trusted
+          # MCP attachment upload tool (e.g. SharePoint's sp_upload_file). Default
+          # matches the app's own built-in default (7 MiB) — override per-environment as needed.
+          MCP_ATTACHMENT_UPLOAD_MAX_BYTES: '7340032'
           USE_ENTRA_ID_FOR_PEOPLE_SEARCH: 'true'
           ENTRA_ID_INCLUDE_OWNERS_AS_MEMBERS: 'true'
           # OpenTelemetry Tracing

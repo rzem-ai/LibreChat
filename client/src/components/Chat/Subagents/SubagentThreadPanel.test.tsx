@@ -390,6 +390,9 @@ jest.mock('@librechat/client', () => ({
   ),
   useMediaQuery: (query: string) => (query.includes('hover') ? mockCoarsePointer : mockIsMobile),
   useToastContext: () => ({ showToast: mockShowToast }),
+  // Deloitte Custom Change: the agent avatar now resolves its src through
+  // useAuthenticatedImageSrc instead of using the raw filepath directly.
+  useAuthenticatedImageSrc: (url: string) => ({ src: url, isLoading: false, isError: false }),
 }));
 
 jest.mock('lucide-react', () => ({

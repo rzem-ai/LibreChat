@@ -57,7 +57,9 @@ jest.mock('~/utils', () => ({
 
 import SearchBar from '../SearchBar';
 
-const input = () => screen.getByTestId('nav-search-input') as HTMLInputElement;
+// Deloitte Custom Change: the search input no longer carries a data-testid;
+// query it the same way a user would, via its accessible label.
+const input = () => screen.getByLabelText('com_nav_search_placeholder') as HTMLInputElement;
 
 const type = (value: string) => fireEvent.change(input(), { target: { value } });
 

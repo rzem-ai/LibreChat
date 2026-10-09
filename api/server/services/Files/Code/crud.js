@@ -22,6 +22,35 @@ const axios = createAxiosInstance();
 const MAX_FILE_SIZE = 150 * 1024 * 1024;
 
 /**
+ * Deloitte Custom Change: extracts only the allowlisted Code Runtime failure
+ * metadata that is safe to use in the MCP attachment status.
+ *
+ * @param {unknown} error - Upload error returned by Axios.
+ * @returns {{ code: 'upload_timeout'; timeoutSeconds: number } | { code: 'upload_size_limit'; maxFileSizeBytes: number } | undefined}
+ */
+function getCodeRuntimeUploadFailure(error) {
+  const response = error?.response;
+  const data = response?.data;
+  if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+    return undefined;
+  }
+
+  if (response?.status === 504 && data.code === 'upload_timeout') {
+    const timeoutSeconds = data.timeout_seconds;
+    if (Number.isSafeInteger(timeoutSeconds) && timeoutSeconds > 0) {
+      return { code: 'upload_timeout', timeoutSeconds };
+    }
+  }
+
+  if (response?.status === 413 && data.code === 'upload_size_limit') {
+    const maxFileSizeBytes = data.max_file_size_bytes;
+    if (Number.isSafeInteger(maxFileSizeBytes) && maxFileSizeBytes > 0) {
+      return { code: 'upload_size_limit', maxFileSizeBytes };
+    }
+  }
+}
+
+/**
  * Retrieves a download stream for a specified file.
  * @param {string} fileIdentifier - The identifier for the file (e.g., "session_id/fileId").
  * @param {{ kind: 'skill' | 'agent' | 'user'; id: string; version?: number }} identity
@@ -240,7 +269,20 @@ async function uploadCodeEnvFile({
       filename: result.files[0].filename,
     };
   } catch (error) {
-    throw wrapCodeApiUploadError(error, `Error uploading code environment file: ${error.message}`);
+    const uploadError = wrapCodeApiUploadError(
+      error,
+      `Error uploading code environment file: ${error.message}`,
+    );
+    // Deloitte Custom Change: distinguish HTTP upload failures from source-download failures.
+    if (error?.response || error?.request) {
+      uploadError.codeRuntimeUploadError = true;
+    }
+    // Deloitte Custom Change: retain only the safe response contract for MCP feedback.
+    const failure = getCodeRuntimeUploadFailure(error);
+    if (failure) {
+      uploadError.codeRuntimeUploadFailure = failure;
+    }
+    throw uploadError;
   }
 }
 

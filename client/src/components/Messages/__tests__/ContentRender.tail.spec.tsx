@@ -1,9 +1,23 @@
 import React, { useMemo, useState } from 'react';
 import { RecoilRoot } from 'recoil';
 import { act, render } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { TConversation, TMessage } from 'librechat-data-provider';
 import { ChatContext, MessagesViewProvider, useChatContext } from '~/Providers';
 import MessageContent from '../MessageContent';
+
+// Deloitte Custom Change: MessageContent's import graph now reaches a hook that
+// reads from react-query, so a provider is required even though this suite
+// doesn't touch query state directly.
+function createQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+}
 
 const mockRowRenders = new Map<string, number>();
 
@@ -173,6 +187,8 @@ function Thread() {
   );
 }
 
+const queryClient = createQueryClient();
+
 function rendersOf(...ids: string[]) {
   return ids.map((id) => mockRowRenders.get(id) ?? 0);
 }
@@ -181,9 +197,11 @@ describe('message rows across a send', () => {
   beforeEach(() => {
     mockRowRenders.clear();
     render(
-      <RecoilRoot>
-        <Thread />
-      </RecoilRoot>,
+      <QueryClientProvider client={queryClient}>
+        <RecoilRoot>
+          <Thread />
+        </RecoilRoot>
+      </QueryClientProvider>,
     );
     mockRowRenders.clear();
   });

@@ -24,7 +24,13 @@ describe('shared header glyphs', () => {
     const images = Array.from(container.querySelectorAll('img'));
     expect(images).toHaveLength(2);
     expect(images[0]).toHaveAttribute('src', 'https://example.com/weather.svg');
-    expect(images[1]).toHaveAttribute('alt', 'source.example');
+    // Deloitte Custom Change: favicon images are decorative (alt="") since the
+    // domain is always shown as adjacent visible text; the domain now lives in
+    // the favicon URL's `domain` query param instead of `alt`.
+    expect(images[1]).toHaveAttribute('alt', '');
+    expect(new URL(images[1].getAttribute('src') ?? '').searchParams.get('domain')).toBe(
+      'source.example',
+    );
     expect(container.querySelector('.lucide-users')).not.toBeNull();
     expect(container.querySelector('.lucide-globe')).toBeNull();
   });

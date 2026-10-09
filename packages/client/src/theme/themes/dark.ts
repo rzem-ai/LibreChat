@@ -12,7 +12,9 @@ export const darkTheme: IThemeRGB = {
   'rgb-text-tertiary': '153 150 150', // #999696 (gray-400)
   'rgb-text-muted': '179 182 189', // #b3b6bd (Click UI text.muted)
   'rgb-text-warning': '245 158 11', // #f59e0b (amber-500)
-  'rgb-text-destructive': '248 113 113', // #f87171 (red-400)
+  // Deloitte Custom Change: the v0.8.8 upstream sync stopped aliasing --text-destructive
+  // to --red-400 and gave it its own literal value (aliased to --destructive in style.css).
+  'rgb-text-destructive': '255 100 103', // #ff6467 (GEL --destructive)
   'rgb-shimmer-base': '255 255 255', // #ffffff, carried at 0.8 alpha
   'rgb-shimmer-dip': '179 179 179', // #b3b3b3
 
@@ -34,9 +36,12 @@ export const darkTheme: IThemeRGB = {
   // Surface colors
   'rgb-surface-active': '89 89 89', // #595959 (gray-500)
   'rgb-surface-active-alt': '47 47 47', // #2f2f2f (gray-700)
-  'rgb-surface-hover': '57 57 57', // #393939 (gray-650)
+  // Deloitte Custom Change: the v0.8.8 upstream sync stopped aliasing --surface-hover
+  // to --gray-650 and gave it its own literal value; mirrored here and kept equal to
+  // composer-hover below since style.css still aliases composer-hover to surface-hover.
+  'rgb-surface-hover': '46 46 46', // #2e2e2e
   'rgb-surface-hover-alt': '66 66 66', // #424242 (gray-600)
-  'rgb-surface-composer-hover': '66 66 66', // #424242 (gray-600)
+  'rgb-surface-composer-hover': '46 46 46', // #2e2e2e
   'rgb-surface-primary': '13 13 13', // #0d0d0d (gray-900)
   'rgb-chart-widget-surface': '40 40 40', // #282828 (Click UI chart widget)
   'rgb-chart-widget-stroke': '50 50 50', // #323232 (Click UI chart widget)
@@ -46,7 +51,9 @@ export const darkTheme: IThemeRGB = {
   'rgb-surface-secondary-alt': '33 33 33', // #212121 (gray-800)
   'rgb-surface-tertiary': '47 47 47', // #2f2f2f (gray-700)
   'rgb-surface-tertiary-alt': '47 47 47', // #2f2f2f (gray-700)
-  'rgb-surface-dialog': '18 18 18', // #121212 (legacy dark dialog)
+  // Deloitte Custom Change: the v0.8.8 upstream sync stopped aliasing --surface-dialog
+  // to --gray-875 and gave it its own literal value (aliased to --popover in style.css).
+  'rgb-surface-dialog': '23 23 23', // #171717 (gray-850, GEL --popover)
   'rgb-surface-overlay': '0 0 0', // #000 (black)
   'rgb-surface-submit': '4 120 87', // #047857 (green-700)
   'rgb-surface-submit-hover': '6 95 70', // #065f46 (green-800)

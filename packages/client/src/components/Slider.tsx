@@ -41,7 +41,8 @@ const Slider: React.ForwardRefExoticComponent<SliderProps & React.RefAttributes<
             className: 'relative h-2 w-full grow overflow-hidden rounded-full bg-surface-tertiary',
           }}
         >
-          <SliderPrimitive.Range {...{ className: 'absolute h-full bg-surface-inverted' }} />
+          {/* Deloitte Custom Change: range fill recolored to bg-surface-submit to match the submit button */}
+          <SliderPrimitive.Range {...{ className: 'absolute h-full bg-surface-submit' }} />
         </SliderPrimitive.Track>
         <SliderPrimitive.Thumb
           {...{

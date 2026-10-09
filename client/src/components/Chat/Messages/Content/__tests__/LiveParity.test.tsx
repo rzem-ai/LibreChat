@@ -695,8 +695,13 @@ describe('live fold parity with the cards it hides', () => {
       },
     } as unknown as TAttachment;
     const search = toPart({ name: Tools.web_search, output: 'results' });
+    // Deloitte Custom Change: favicon images are decorative (alt="") so a
+    // screen reader doesn't announce the domain twice alongside its visible
+    // text; the domain now lives in the favicon URL's `domain` query param.
     const sites = (root: HTMLElement) =>
-      Array.from(root.querySelectorAll('img')).map((image) => image.getAttribute('alt'));
+      Array.from(root.querySelectorAll('img')).map((image) =>
+        new URL(image.getAttribute('src') ?? '').searchParams.get('domain'),
+      );
 
     const summary = (end: number, label = 'Reviewed the work'): TMessageContentParts =>
       ({

@@ -22,6 +22,25 @@ describe('FilePreviewDialog text-source behavior', () => {
     expect(getDownloadFilename('report.pdf', 'file-3', FileSources.local)).toBe('report.pdf');
   });
 
+  /**
+   * Regression guard: extension must win over a mislabeled MIME. Without
+   * this precedence, a `.docx` reported as `text/plain` would be classified
+   * `'text'` and rendered as garbled binary via `blob.text()` — the exact
+   * bug this preview feature exists to fix.
+   */
+  it('classifies by extension even when the MIME type is mislabeled as text', () => {
+    expect(getPreviewKind('report.docx', 'text/plain')).toBe('office');
+    expect(getPreviewKind('sheet.xlsx', 'text/csv')).toBe('office');
+  });
+
+  it('still excludes PPTX via extension when the MIME type is mislabeled as text', () => {
+    expect(getPreviewKind('deck.pptx', 'text/plain')).toBe(false);
+  });
+
+  it('falls back to MIME only when the extension is unrecognized', () => {
+    expect(getPreviewKind('export', 'application/pdf')).toBe('pdf');
+  });
+
   it('uses stored extracted text when the delivery path is text', () => {
     expect(shouldUseExtractedTextPreview('text')).toBe(true);
     expect(shouldUseExtractedTextPreview('provider')).toBe(false);

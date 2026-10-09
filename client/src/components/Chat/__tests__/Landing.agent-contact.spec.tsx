@@ -35,7 +35,12 @@ jest.mock('~/Providers', () => ({
 }));
 
 jest.mock('~/data-provider', () => ({
-  useGetStartupConfig: () => ({ data: { interface: {} } }),
+  // Deloitte Custom Change: ConvoIcon only renders on the landing page when
+  // the landingIcon feature flag is on (see Landing.tsx) — enable it here so
+  // the pre-existing "shows the icon" assertions keep their original intent.
+  useGetStartupConfig: () => ({
+    data: { interface: { customDeloitteFeatureFlags: { landingIcon: true } } },
+  }),
   useGetEndpointsQuery: () => ({ data: {} }),
 }));
 

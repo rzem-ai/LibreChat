@@ -23,7 +23,10 @@ jest.mock('~/hooks', () => ({
     initializeServer: mockInitializeServer,
     availableMCPServers: [{ serverName: 'server' }],
     availableMCPServersMap: { server: { requestScoped: true } },
-    connectionStatus: { server: mockConnectionStatus() },
+    // Deloitte Custom Change: ServerInitializationSection now reads status
+    // through getEffectiveServerStatus instead of the raw connectionStatus map.
+    getEffectiveServerStatus: (serverName: string) =>
+      serverName === 'server' ? mockConnectionStatus() : undefined,
     revokeOAuthForServer: jest.fn(),
   }),
 }));

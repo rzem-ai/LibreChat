@@ -100,6 +100,23 @@ describe('admin OAuth code exchange', () => {
     });
   });
 
+  describe('avatar exclusion', () => {
+    it('does not include a data-URI avatar in the exchanged user', async () => {
+      const { cache } = createCache();
+      const avatarUser = {
+        ...user,
+        avatar: `data:image/png;base64,${'A'.repeat(10000)}`,
+      } as unknown as IUser;
+      const exchangeCode = await generateAdminExchangeCode(cache, avatarUser, 'jwt-token');
+
+      const result = await exchangeAdminCode(cache, exchangeCode);
+
+      expect(result).not.toBeNull();
+      expect(result!.user).not.toHaveProperty('avatar');
+      expect(JSON.stringify(result!.user)).not.toContain('data:image');
+    });
+  });
+
   describe('one-time use', () => {
     it('rejects code that has already been used', async () => {
       const { cache } = createCache();

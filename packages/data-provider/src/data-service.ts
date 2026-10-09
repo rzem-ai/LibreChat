@@ -1366,13 +1366,10 @@ export function getSkillFileBlob(
   skillId: string,
   relativePath: string,
 ): Promise<AxiosResponse<Blob>> {
-  return request.getResponse<AxiosResponse<Blob>>(
-    `${endpoints.skillFile(skillId, relativePath)}?raw=true`,
-    {
-      responseType: 'blob',
-      headers: { Accept: 'application/octet-stream' },
-    },
-  );
+  return request.getResponse<Blob>(`${endpoints.skillFile(skillId, relativePath)}?raw=true`, {
+    responseType: 'blob',
+    headers: { Accept: 'application/octet-stream' },
+  });
 }
 
 export function deleteSkillFile(

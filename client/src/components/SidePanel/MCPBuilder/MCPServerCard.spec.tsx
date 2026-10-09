@@ -61,6 +61,9 @@ const renderCard = (isInitializing: boolean, sharedOAuthUrl: string | null = nul
     <MCPServerCard
       server={server}
       getServerStatusIconProps={() => statusProps}
+      // Deloitte Custom Change: connectOrConfigureServer/revokeOAuthForServer are now required by MCPServerCardProps upstream
+      connectOrConfigureServer={jest.fn()}
+      revokeOAuthForServer={jest.fn()}
       canCreateEditMCPs={false}
     />
   );

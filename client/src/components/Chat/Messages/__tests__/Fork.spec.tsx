@@ -9,6 +9,11 @@ const mockMutate = jest.fn();
 
 jest.mock('~/data-provider', () => ({
   useForkConvoMutation: () => ({ mutate: mockMutate }),
+  // Deloitte Custom Change: Fork.tsx reads the simplifyFork feature flag from
+  // startup config; keep it off so the existing popover-menu assertions hold.
+  useGetStartupConfig: () => ({
+    data: { interface: { customDeloitteFeatureFlags: { simplifyFork: false } } },
+  }),
 }));
 
 jest.mock('~/hooks', () => ({

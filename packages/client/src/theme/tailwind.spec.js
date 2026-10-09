@@ -86,7 +86,15 @@ describe('LibreChat Tailwind preset', () => {
     );
 
     Object.entries(themeAppearanceProperties).forEach(([key, property]) => {
+      // Deloitte Custom Change: fontFamily is intentionally overridden to the GEL brand
+      // font (Open Sans Variable) in client/src/style.css instead of the registry default.
+      if (key === 'fontFamily') {
+        return;
+      }
       expect(applicationStyles).toContain(`${property}: ${defaultAppearance[key]};`);
     });
+    expect(applicationStyles).toContain(
+      "--theme-font-family: 'Open Sans Variable', ui-sans-serif, sans-serif, system-ui;",
+    );
   });
 });

@@ -1,4 +1,5 @@
 import { Providers, WebSearchToolDefinition } from '@librechat/agents';
+import type { JsonSchemaType } from '@librechat/agents';
 import type {
   LoadToolDefinitionsParams,
   LoadToolDefinitionsDeps,
@@ -31,6 +32,57 @@ describe('definitions.ts', () => {
   });
 
   describe('loadToolDefinitions', () => {
+    // Deloitte Custom Change: the definitions-only path must hide file bytes from the
+    // model for operator-approved upload tools, same as the full tool-dispatch path.
+    it('rewrites approved attachment upload schemas in the definitions-only path', async () => {
+      const params: LoadToolDefinitionsParams = {
+        userId: 'user-123',
+        agentId: 'agent-123',
+        tools: ['sp_upload_file_mcp_sharepoint'],
+        rawServerNames: ['sharepoint'],
+        attachmentUploadTools: { sharepoint: ['sp_upload_file'] },
+        attachmentFiles: [{ file_id: 'file-123', filename: 'report.pptx' }],
+      };
+      const deps: LoadToolDefinitionsDeps = {
+        getOrFetchMCPServerTools: jest.fn().mockResolvedValue({
+          sp_upload_file_mcp_sharepoint: {
+            function: {
+              name: 'sp_upload_file',
+              parameters: {
+                type: 'object',
+                properties: {
+                  driveId: { type: 'string' },
+                  content: { type: 'string' },
+                  encoding: { type: 'string' },
+                },
+                required: ['driveId', 'content'],
+                oneOf: [{ required: ['driveId'] }],
+              },
+            },
+          },
+        }),
+        isBuiltInTool: mockIsBuiltInTool,
+      };
+
+      const result = await loadToolDefinitions(params, deps);
+      const definition = result.toolDefinitions[0];
+      // `rewriteAttachmentUploadSchema` adds raw JSON Schema combinators that
+      // `@librechat/agents`'s `JsonSchemaType` doesn't model yet.
+      const parameters = definition?.parameters as
+        | (JsonSchemaType & { oneOf?: Array<{ required?: string[] }>; allOf?: unknown[] })
+        | undefined;
+
+      expect(parameters?.properties).not.toHaveProperty('content');
+      expect(parameters?.properties).not.toHaveProperty('encoding');
+      expect(parameters?.properties).toHaveProperty('sourceFileId');
+      expect(parameters?.properties).toHaveProperty('sourceFileName');
+      expect(parameters?.required).toEqual(['driveId']);
+      expect(parameters?.oneOf).toEqual([{ required: ['driveId'] }]);
+      // Strict function-calling providers (e.g. OpenAI) reject oneOf/anyOf/allOf
+      // at the schema root, so the upload tools must not add one here.
+      expect(parameters?.allOf).toBeUndefined();
+    });
+
     it('should return empty result for empty tools array', async () => {
       const params: LoadToolDefinitionsParams = {
         userId: 'user-123',
