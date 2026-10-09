@@ -701,6 +701,10 @@ export function createAgentMethods(
     searchParameter: FilterQuery<IAgent>,
     retentionHours: number,
   ) => Promise<IAgent | null>;
+  setAgentRetentionException: (
+    agentId: string,
+    update: { exempt: boolean; reason?: string; setBy: string; setAt: Date },
+  ) => Promise<Pick<IAgent, 'id' | 'retentionException'> | null>;
   getAgentsExpiringSoon: (
     owner: { userId: string; tenantId?: string | null },
     withinMs: number,
@@ -1829,8 +1833,8 @@ export function createAgentMethods(
    * `findOneAndUpdate` per candidate, atomic without relying on DocumentDB's
    * unsupported pipeline-form updates. An agent already leased by a live claim is
    * skipped; one whose lease expired (`purgeClaimedAt` older than `leaseMs`) is
-   * reclaimed. Classification (private vs. shared/promoted) happens in the caller
-   * after claiming — see `classifyPrivateAgents` in `@librechat/api`.
+   * reclaimed. Eligibility (promoted/legacy-global vs. not) happens in the caller
+   * after claiming — see `classifyAgentPurgeEligibility` in `@librechat/api`.
    */
   async function claimExpiredAgents(
     limit: number,
@@ -1957,11 +1961,28 @@ export function createAgentMethods(
   }
 
   /**
+   * Admin-only, unconditional retention carve-out — the one lever that
+   * permanently exempts a specific agent from the purge sweep, independent of
+   * promotion/catalog status and regardless of who it's shared with. Not
+   * owner-scoped: the caller's route is responsible for admin authorization.
+   */
+  async function setAgentRetentionException(
+    agentId: string,
+    update: { exempt: boolean; reason?: string; setBy: string; setAt: Date },
+  ): Promise<Pick<IAgent, 'id' | 'retentionException'> | null> {
+    const Agent = mongoose.models.Agent as Model<IAgent>;
+    return await Agent.findOneAndUpdate(
+      { id: agentId },
+      { $set: { retentionException: update } },
+      { new: true, projection: { id: 1, retentionException: 1 } },
+    ).lean<Pick<IAgent, 'id' | 'retentionException'>>();
+  }
+
+  /**
    * Owner-scoped list of agents expiring within the warning window, for the
    * client's renewal banner. Excludes promoted (catalog) agents and
-   * exempted agents outright; the caller still needs to run
-   * `classifyPrivateAgents` over the result, since an author-owned agent
-   * shared via ACL is not purge-eligible and should not prompt renewal.
+   * exempted agents outright. Sharing an agent does not exempt it from
+   * expiry, so a shared agent still appears here if its owner should renew it.
    */
   async function getAgentsExpiringSoon(
     owner: { userId: string; tenantId?: string | null },
@@ -2018,6 +2039,7 @@ export function createAgentMethods(
     releaseAgentPurgeClaim,
     touchAgentLastActivity,
     renewAgentActivity,
+    setAgentRetentionException,
     getAgentsExpiringSoon,
   };
 }

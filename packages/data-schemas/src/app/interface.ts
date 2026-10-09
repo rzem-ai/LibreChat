@@ -90,6 +90,8 @@ export async function loadDefaultInterface({
     retainAgentFiles: interfaceConfig?.retainAgentFiles,
     fileRetentionHours: interfaceConfig?.fileRetentionHours,
     fileRetentionWarningHours: interfaceConfig?.fileRetentionWarningHours,
+    agentRetentionHours: interfaceConfig?.agentRetentionHours,
+    agentRetentionWarningHours: interfaceConfig?.agentRetentionWarningHours,
     runCode: interfaceConfig?.runCode,
     webSearch: interfaceConfig?.webSearch,
     fileSearch: interfaceConfig?.fileSearch,

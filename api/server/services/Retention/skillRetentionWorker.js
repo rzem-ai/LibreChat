@@ -2,7 +2,7 @@ const { logger, runAsSystem } = require('@librechat/data-schemas');
 const {
   isLeader,
   cascadeDeleteSkill,
-  classifyPrivateSkills,
+  classifySkillPurgeEligibility,
   sweepGenericRetention: sweepGenericRetentionWithDeps,
   startGenericPurgeSweep: startGenericPurgeSweepWithDeps,
   getSkillPurgeSweepInterval,
@@ -55,9 +55,10 @@ async function cascadeDeleteClaimedSkill(candidate, appConfig) {
 /**
  * Claims private, expired inline skills and cascades each one through
  * `cascadeDeleteSkill`, mirroring `purgeExpiredConversations`'s per-item
- * isolation. A claimed skill that `classifyPrivateSkills` finds no longer
- * eligible (now shared, or no longer `source: 'inline'`) is released with
- * backoff instead of being deleted.
+ * isolation. A claimed skill that `classifySkillPurgeEligibility` finds no
+ * longer eligible (no longer `source: 'inline'`) is released with backoff
+ * instead of being deleted. Sharing a skill never affects its eligibility —
+ * only `source` and the admin-controlled `retentionException.exempt` do.
  *
  * @param {object} [options]
  * @param {AppConfig} [options.appConfig]
@@ -74,10 +75,7 @@ async function purgeExpiredSkills(options = {}) {
     {
       claim: db.claimExpiredSkills,
       release: db.releaseSkillPurgeClaim,
-      classify: (candidates) =>
-        classifyPrivateSkills(candidates, {
-          findEntriesByResources: db.findEntriesByResources,
-        }),
+      classify: classifySkillPurgeEligibility,
       cascade: (candidate) => cascadeDeleteClaimedSkill(candidate, resolvedAppConfig),
       logger,
     },

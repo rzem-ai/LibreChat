@@ -28,6 +28,10 @@ interface:
 
   fileRetentionWarningHours: 168 # Lead time before expiry the renewal prompt surfaces (7 days)
 
+  agentRetentionHours: 2160 # Private agent/skill retention deadline in hours (90 days)
+
+  agentRetentionWarningHours: 168 # Lead time before expiry the renewal prompt surfaces (7 days)
+
   # Pin tools to the prompt bar by default for all users
   defaultPinnedTools:
     - 'file_search'

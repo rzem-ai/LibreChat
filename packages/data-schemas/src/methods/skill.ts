@@ -1143,6 +1143,10 @@ export function createSkillMethods(
     author: Types.ObjectId | string,
     retentionHours: number,
   ) => Promise<(ISkill & { _id: Types.ObjectId }) | null>;
+  setSkillRetentionException: (
+    skillId: string,
+    update: { exempt: boolean; reason?: string; setBy: string; setAt: Date },
+  ) => Promise<Pick<ISkillDocument, 'retentionException'> | null>;
   getSkillsExpiringSoon: (
     owner: { userId: string; tenantId?: string | null },
     withinMs: number,
@@ -2075,9 +2079,9 @@ export function createSkillMethods(
    * is a conditional `findOneAndUpdate` per candidate, atomic without relying
    * on DocumentDB's unsupported pipeline-form updates. A skill already leased
    * by a live claim is skipped; one whose lease expired (`purgeClaimedAt`
-   * older than `leaseMs`) is reclaimed. Classification (private vs. shared,
-   * inline vs. synced) happens in the caller after claiming — see
-   * `classifyPrivateSkills` in `@librechat/api`.
+   * older than `leaseMs`) is reclaimed. Eligibility (inline vs. synced)
+   * happens in the caller after claiming — see `classifySkillPurgeEligibility`
+   * in `@librechat/api`.
    */
   async function claimExpiredSkills(
     limit: number,
@@ -2212,11 +2216,32 @@ export function createSkillMethods(
   }
 
   /**
+   * Admin-only, unconditional retention carve-out — the one lever that
+   * permanently exempts a specific skill from the purge sweep, independent of
+   * `source`/sync status and regardless of who it's shared with. Not
+   * owner-scoped: the caller's route is responsible for admin authorization.
+   */
+  async function setSkillRetentionException(
+    skillId: string,
+    update: { exempt: boolean; reason?: string; setBy: string; setAt: Date },
+  ): Promise<Pick<ISkillDocument, 'retentionException'> | null> {
+    if (!isValidObjectIdString(skillId)) {
+      return null;
+    }
+    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
+    const result = await Skill.findOneAndUpdate(
+      { _id: new ObjectId(skillId) },
+      { $set: { retentionException: update } },
+      { new: true, projection: { retentionException: 1 } },
+    ).lean<Pick<ISkillDocument, 'retentionException'>>();
+    return result;
+  }
+
+  /**
    * Owner-scoped list of skills expiring within the warning window, for the
    * client's renewal banner. Excludes exempted and non-`inline` (synced)
-   * skills outright; the caller still needs to run `classifyPrivateSkills`
-   * over the result, since an author-owned skill shared via ACL is not
-   * purge-eligible and should not prompt renewal.
+   * skills outright. Sharing a skill does not exempt it from expiry, so a
+   * shared skill still appears here if its owner should renew it.
    */
   async function getSkillsExpiringSoon(
     owner: { userId: string; tenantId?: string | null },
@@ -2266,6 +2291,7 @@ export function createSkillMethods(
     releaseSkillPurgeClaim,
     touchSkillsLastActivity,
     renewSkillActivity,
+    setSkillRetentionException,
     getSkillsExpiringSoon,
   };
 }

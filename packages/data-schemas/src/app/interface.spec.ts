@@ -445,6 +445,33 @@ describe('loadDefaultInterface', () => {
     expect(interfaceConfig).not.toHaveProperty('fileRetentionWarningHours');
   });
 
+  it('preserves the configured agent retention periods', async () => {
+    const config: Partial<TCustomConfig> = {
+      interface: {
+        agentRetentionHours: 720,
+        agentRetentionWarningHours: 48,
+      },
+    };
+
+    const interfaceConfig = await loadDefaultInterface({
+      config,
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.agentRetentionHours).toBe(720);
+    expect(interfaceConfig?.agentRetentionWarningHours).toBe(48);
+  });
+
+  it('omits agent retention periods when not explicitly configured', async () => {
+    const interfaceConfig = await loadDefaultInterface({
+      config: {},
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig).not.toHaveProperty('agentRetentionHours');
+    expect(interfaceConfig).not.toHaveProperty('agentRetentionWarningHours');
+  });
+
   it('passes the trace viewer section through unchanged', async () => {
     const traceViewer = { enabled: true, showInputOutput: false, maxRecords: 200 };
     const interfaceConfig = await loadDefaultInterface({

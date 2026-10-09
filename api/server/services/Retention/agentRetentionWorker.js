@@ -3,7 +3,7 @@ const { logger, runAsSystem } = require('@librechat/data-schemas');
 const {
   isLeader,
   cascadeDeleteAgent,
-  classifyPrivateAgents,
+  classifyAgentPurgeEligibility,
   getGlobalAgentIds,
   sweepGenericRetention: sweepGenericRetentionWithDeps,
   startGenericPurgeSweep: startGenericPurgeSweepWithDeps,
@@ -61,8 +61,11 @@ async function cascadeDeleteClaimedAgent(candidate, appConfig) {
 /**
  * Claims private, expired agents and cascades each one through `cascadeDeleteAgent`,
  * mirroring `purgeExpiredConversations`'s per-item isolation. A claimed agent that
- * `classifyPrivateAgents` finds no longer private (now shared or promoted) is
- * released with backoff instead of being deleted.
+ * `classifyAgentPurgeEligibility` finds no longer eligible (promoted, or a
+ * legacy pre-ACL agent on the admin-maintained global list) is released with
+ * backoff instead of being deleted. Sharing an agent never affects its
+ * eligibility — only promotion, the legacy global list, and the
+ * admin-controlled `retentionException.exempt` do.
  *
  * @param {object} [options]
  * @param {AppConfig} [options.appConfig]
@@ -80,7 +83,7 @@ async function purgeExpiredAgents(options = {}) {
       claim: db.claimExpiredAgents,
       release: db.releaseAgentPurgeClaim,
       classify: (candidates) =>
-        classifyPrivateAgents(
+        classifyAgentPurgeEligibility(
           candidates.map((candidate) => ({ ...candidate, legacyId: candidate.id })),
           {
             findEntriesByResources: db.findEntriesByResources,

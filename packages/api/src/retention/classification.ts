@@ -1,8 +1,8 @@
-import { ResourceType, PrincipalType } from 'librechat-data-provider';
+import { ResourceType } from 'librechat-data-provider';
 import type { IAclEntry } from '@librechat/data-schemas';
 import type { Types } from 'mongoose';
 
-/** One claimed candidate's identity, enough to classify it as private-and-eligible. */
+/** One claimed candidate's identity, enough to classify its purge eligibility. */
 export interface RetentionClassificationCandidate {
   /** Mongo `_id` — what `AclEntry.resourceId` references. */
   resourceId: Types.ObjectId | string;
@@ -10,7 +10,7 @@ export interface RetentionClassificationCandidate {
 }
 
 export interface AgentRetentionCandidate extends RetentionClassificationCandidate {
-  /** Promoted (catalog) agents are never purge-eligible regardless of sharing. */
+  /** Promoted (catalog) agents are never purge-eligible. Admin-controlled, not sharing. */
   isPromoted: boolean;
   /** The custom `agent.id` string, keyed by the legacy `projects.agentIds` fallback. */
   legacyId: string;
@@ -21,54 +21,32 @@ export interface SkillRetentionCandidate extends RetentionClassificationCandidat
   source: string;
 }
 
-export interface ClassificationDeps {
+export interface AgentClassificationDeps {
   findEntriesByResources: (
     resourceType: string,
     resourceIds: Array<string | Types.ObjectId>,
   ) => Promise<IAclEntry[]>;
-}
-
-export interface AgentClassificationDeps extends ClassificationDeps {
   /** Legacy pre-ACL-migration fallback: `projects` doc named `instance`. */
   getGlobalAgentIds: () => Promise<Set<string>>;
 }
 
-function isOtherPrincipalEntry(
-  entry: Pick<IAclEntry, 'principalType' | 'principalId'>,
-  authorId: string,
-): boolean {
-  if (entry.principalType === PrincipalType.PUBLIC) {
-    return true;
-  }
-  if (entry.principalType === PrincipalType.GROUP || entry.principalType === PrincipalType.ROLE) {
-    return true;
-  }
-  return String(entry.principalId) !== authorId;
-}
-
-function groupEntriesByResource(entries: IAclEntry[]): Map<string, IAclEntry[]> {
-  const byResource = new Map<string, IAclEntry[]>();
+function resourceIdsWithEntries(entries: IAclEntry[]): Set<string> {
+  const ids = new Set<string>();
   for (const entry of entries) {
-    const key = String(entry.resourceId);
-    const list = byResource.get(key);
-    if (list) {
-      list.push(entry);
-    } else {
-      byResource.set(key, [entry]);
-    }
+    ids.add(String(entry.resourceId));
   }
-  return byResource;
+  return ids;
 }
 
 /**
- * Classifies a claimed batch of agents as private-and-eligible for retention purge.
- * Promoted (catalog) agents are excluded outright. For the rest, "private" means no
- * ACL entry (any permission level, under either `AGENT` or `REMOTE_AGENT`) grants
- * access to any principal other than the author. Agents with zero ACL entries
- * (not yet migrated to the granular permission system) fall back to the legacy
- * `projects` "instance" doc: present in `agentIds` means shared, absent means private.
+ * Determines which claimed agents are still eligible for retention purge.
+ * Eligibility is an admin decision, never a function of who an agent is shared
+ * with: promoted (catalog) agents are always excluded, and agents from before
+ * the ACL system existed (zero ACL entries) fall back to the legacy `projects`
+ * "instance" doc — an admin-maintained, instance-wide list, not per-user sharing.
+ * Every other agent — shared or not — is eligible.
  */
-export async function classifyPrivateAgents(
+export async function classifyAgentPurgeEligibility(
   candidates: AgentRetentionCandidate[],
   deps: AgentClassificationDeps,
 ): Promise<Set<string>> {
@@ -83,67 +61,39 @@ export async function classifyPrivateAgents(
     deps.findEntriesByResources(ResourceType.REMOTE_AGENT, resourceIds),
     deps.getGlobalAgentIds(),
   ]);
-  const entriesByResource = groupEntriesByResource([...agentEntries, ...remoteAgentEntries]);
+  const idsWithEntries = resourceIdsWithEntries([...agentEntries, ...remoteAgentEntries]);
 
-  const privateIds = new Set<string>();
+  const eligibleIds = new Set<string>();
   for (const candidate of classifiable) {
     const key = String(candidate.resourceId);
-    const entries = entriesByResource.get(key);
-    const authorId = String(candidate.author);
 
-    if (!entries || entries.length === 0) {
+    if (!idsWithEntries.has(key)) {
       if (!globalAgentIds.has(candidate.legacyId)) {
-        privateIds.add(key);
+        eligibleIds.add(key);
       }
       continue;
     }
 
-    const hasOtherPrincipal = entries.some((entry) => isOtherPrincipalEntry(entry, authorId));
-    if (!hasOtherPrincipal) {
-      privateIds.add(key);
-    }
+    eligibleIds.add(key);
   }
 
-  return privateIds;
+  return eligibleIds;
 }
 
 /**
- * Classifies a claimed batch of skills as private-and-eligible for retention purge.
- * GitHub/Notion-synced skills (`source !== 'inline'`) are exempt regardless of
- * privacy. Skills are ACL-only since inception (no legacy fallback): a skill with
- * zero ACL entries is private by construction.
+ * Determines which claimed skills are still eligible for retention purge.
+ * GitHub/Notion-synced skills (`source !== 'inline'`) are exempt; every inline
+ * skill is eligible regardless of sharing — skills have no admin-controlled
+ * exemption lever beyond `retentionException.exempt`, which is enforced at claim time.
  */
-export async function classifyPrivateSkills(
+export async function classifySkillPurgeEligibility(
   candidates: SkillRetentionCandidate[],
-  deps: ClassificationDeps,
 ): Promise<Set<string>> {
-  const classifiable = candidates.filter((candidate) => candidate.source === 'inline');
-  if (classifiable.length === 0) {
-    return new Set();
-  }
-
-  const resourceIds = classifiable.map((candidate) => candidate.resourceId);
-  const entries = await deps.findEntriesByResources(ResourceType.SKILL, resourceIds);
-  const entriesByResource = groupEntriesByResource(entries);
-
-  const privateIds = new Set<string>();
-  for (const candidate of classifiable) {
-    const key = String(candidate.resourceId);
-    const authorId = String(candidate.author);
-    const resourceEntries = entriesByResource.get(key);
-
-    if (!resourceEntries || resourceEntries.length === 0) {
-      privateIds.add(key);
-      continue;
-    }
-
-    const hasOtherPrincipal = resourceEntries.some((entry) =>
-      isOtherPrincipalEntry(entry, authorId),
-    );
-    if (!hasOtherPrincipal) {
-      privateIds.add(key);
+  const eligibleIds = new Set<string>();
+  for (const candidate of candidates) {
+    if (candidate.source === 'inline') {
+      eligibleIds.add(String(candidate.resourceId));
     }
   }
-
-  return privateIds;
+  return eligibleIds;
 }
