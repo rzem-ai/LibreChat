@@ -9,8 +9,10 @@ import { attachCardChevron } from './tourChevron';
 import TourPopover from './TourPopover';
 import { useLocalize } from '~/hooks';
 
-// driver.js's own default styling still applies to the wrapper — reset it so
-// the card is the only visible surface (otherwise it double-frames the card).
+// driver.js's own default styling (from its bundled driver.css) still applies to
+// the wrapper — reset it so the card is the only visible surface (otherwise it
+// double-frames the card). Inline style, not a Tailwind class, because nothing
+// guarantees our stylesheet loads after driver.css in the cascade.
 const WRAPPER_RESET_STYLE: Partial<CSSStyleDeclaration> = {
   background: 'transparent',
   padding: '0',
@@ -66,6 +68,7 @@ export default function useCourseTour(
   const startTour = useCallback(() => {
     let completedFromLastStepNext = false;
     let currentPopoverRoot: Root | null = null;
+    const steps = getSteps().map(toEngineStep);
 
     const renderPopover = (popover: PopoverDOM, driverInstance: Driver, step: EngineStep) => {
       currentPopoverRoot?.unmount();
@@ -84,11 +87,13 @@ export default function useCourseTour(
       const nextLabel = localize(driverInstance.isLastStep() ? 'com_ui_done' : 'com_ui_next');
       const canGoPrevious = !popover.previousButton.disabled;
 
-      popover.title.style.display = 'none';
-      popover.description.style.display = 'none';
-      popover.footer.style.display = 'none';
-      popover.closeButton.style.display = 'none';
-      popover.arrow.style.display = 'none';
+      // driver.js sets `display` on these via inline style on every render, so only
+      // another inline-style write (not a Tailwind class) can override it.
+      [popover.title, popover.description, popover.footer, popover.closeButton, popover.arrow].forEach(
+        (element) => {
+          element.style.display = 'none';
+        },
+      );
 
       Object.assign(popover.wrapper.style, WRAPPER_RESET_STYLE);
 
@@ -125,7 +130,6 @@ export default function useCourseTour(
       attachCardChevron(container, popover.arrow);
     };
 
-    const steps = getSteps().map(toEngineStep);
     const tourDriver = driver({
       showProgress: true,
       allowClose: true,
