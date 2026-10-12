@@ -1,6 +1,6 @@
 import type { TModelPricing } from 'librechat-data-provider';
 import type { AppConfig } from '@librechat/data-schemas';
-import { collectTokenConfigOverrides } from '~/endpoints/tokenConfig';
+import { collectCustomTokenConfigs } from '~/endpoints/tokenConfig';
 
 /**
  * Deloitte Custom Change: this entire file is a Deloitte addition with no upstream
@@ -8,13 +8,17 @@ import { collectTokenConfigOverrides } from '~/endpoints/tokenConfig';
  * ConfigMap (providers -> models -> input_per_1m/output_per_1m) to build a relative-cost
  * badge (a multiplier against a configured reference model) shown in the model selector.
  * That file has been removed — pricing now lives as native `tokenConfig` blocks on each
- * endpoint in `librechat.yaml`, and the badge is now an absolute 1-5 `$` tier derived from
- * each model's own blended price, with no reference model needed. The badge is gated by
- * `interface.customDeloitteFeatureFlags.showModelPricingIndicator`, and the 4 breakpoints
+ * custom endpoint in `librechat.yaml` (or the fetched-and-cached config for custom
+ * endpoints without a static override), and the badge is an absolute 1-5 `$` tier derived
+ * from each model's own blended price, with no reference model needed. The badge is gated
+ * by `interface.customDeloitteFeatureFlags.showModelPricingIndicator`, and the 4 breakpoints
  * separating the 5 tiers are configurable via `customDeloitteFeatureFlags.modelPricingTierBreakpoints`
  * in `librechat.yaml`, falling back to `DEFAULT_PRICE_TIER_BREAKPOINTS` when unset.
- * `getModelPricing` below is a pure projection over `collectTokenConfigOverrides` with
- * no file I/O or caching (appConfig is already cached upstream).
+ * `getModelPricing` below resolves pricing through `collectCustomTokenConfigs` — the same
+ * static-override-or-cached-fetch resolution `initializeCustom` uses for billing — so the
+ * badge can never advertise a rate the custom-endpoint agent isn't actually billed at.
+ * Only custom endpoints carry a `tokenConfig`; built-in named endpoints (OpenAI, Anthropic,
+ * Google, Bedrock) are priced by their built-in multipliers and have no badge entry.
  */
 const DEFAULT_PRICE_TIER_BREAKPOINTS = [2, 5, 8, 15];
 
@@ -30,20 +34,22 @@ function getPriceTier(blendedCost: number, breakpoints: number[]): number {
 }
 
 /**
- * Flattens every endpoint's static yaml `tokenConfig` into the price-tier
- * badge's `{ inputPer1M, outputPer1M, provider, tier }` shape, keyed by endpoint and
- * model. Returns an empty
- * map when `customDeloitteFeatureFlags.showModelPricingIndicator` isn't enabled,
- * so the badge stays hidden and no pricing data is sent to the client. Pure
- * projection over the already-cached `appConfig` — no file I/O, no caching needed here.
+ * Flattens every custom endpoint's resolved `tokenConfig` into the price-tier
+ * badge's `{ inputPer1M, outputPer1M, provider, tier }` shape, keyed by endpoint
+ * and model. Returns an empty map when `customDeloitteFeatureFlags.showModelPricingIndicator`
+ * isn't enabled, so the badge stays hidden and no pricing data is sent to the client.
  */
-export function getModelPricing(appConfig?: AppConfig): TModelPricing {
+export async function getModelPricing(
+  appConfig: AppConfig | undefined,
+  userId: string,
+  tenantId?: string | null,
+): Promise<TModelPricing> {
   const customDeloitteFeatureFlags = appConfig?.interfaceConfig?.customDeloitteFeatureFlags;
   if (customDeloitteFeatureFlags?.showModelPricingIndicator !== true) {
     return {};
   }
 
-  const overrides = collectTokenConfigOverrides(appConfig);
+  const overrides = await collectCustomTokenConfigs(appConfig, userId, tenantId);
   const breakpoints =
     customDeloitteFeatureFlags.modelPricingTierBreakpoints ?? DEFAULT_PRICE_TIER_BREAKPOINTS;
   const pricing: TModelPricing = {};

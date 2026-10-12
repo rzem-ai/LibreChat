@@ -270,8 +270,12 @@ router.get('/', async function (req, res) {
     let langfuseConnectionAccess = false;
 
     // Deloitte Custom Change: model pricing (incl. the 1-5 price tier) is derived
-    // from each endpoint's `tokenConfig`.
-    const modelPricing = getModelPricing(appConfig);
+    // from each custom endpoint's `tokenConfig`, resolved the same way as billing.
+    const modelPricing = await getModelPricing(
+      appConfig,
+      req.user.id ?? req.user._id?.toString(),
+      req.user.tenantId,
+    );
 
     if (langfuseConnectionAvailable) {
       try {

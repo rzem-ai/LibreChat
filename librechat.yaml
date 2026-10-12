@@ -225,29 +225,6 @@ endpoints:
         - 'claude-sonnet-4-6'
         - 'claude-opus-4-6'
         - 'claude-opus-4-8'
-    # Deloitte Custom Change: pricing used for real token billing and the relative-cost
-    # badge in the model selector. Prices are USD per 1M tokens; context is in tokens.
-    tokenConfig:
-      claude-haiku-4-5:
-        prompt: 1
-        completion: 5
-        context: 200000
-      claude-sonnet-5:
-        prompt: 2
-        completion: 10
-        context: 200000
-      claude-sonnet-4-6:
-        prompt: 3
-        completion: 15
-        context: 200000
-      claude-opus-4-6:
-        prompt: 5
-        completion: 25
-        context: 200000
-      claude-opus-4-8:
-        prompt: 5
-        completion: 25
-        context: 200000
 
   # ========================================
   # Custom endpoints (OpenAI-compatible format)
@@ -361,17 +338,6 @@ endpoints:
     models:
       - 'au.anthropic.claude-sonnet-4-6'
       - 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
-    # Deloitte Custom Change: pricing used for real token billing and the relative-cost
-    # badge in the model selector. Prices are USD per 1M tokens; context is in tokens.
-    tokenConfig:
-      'au.anthropic.claude-sonnet-4-6':
-        prompt: 3
-        completion: 15
-        context: 200000
-      'au.anthropic.claude-haiku-4-5-20251001-v1:0':
-        prompt: 1
-        completion: 5
-        context: 200000
 
 modelSpecs:
   # enforce: true would block requests without a spec name — this breaks the Agents endpoint
