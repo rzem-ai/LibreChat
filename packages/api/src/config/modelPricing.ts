@@ -1,5 +1,6 @@
-import type { TModelPricing } from 'librechat-data-provider';
+import type { TModelPricing, TModelsConfig } from 'librechat-data-provider';
 import type { AppConfig } from '@librechat/data-schemas';
+import { buildTokenConfigMap, type TokenomicsDeps } from '~/endpoints/pricing';
 import { collectCustomTokenConfigs } from '~/endpoints/tokenConfig';
 
 /**
@@ -14,11 +15,12 @@ import { collectCustomTokenConfigs } from '~/endpoints/tokenConfig';
  * by `interface.customDeloitteFeatureFlags.showModelPricingIndicator`, and the 4 breakpoints
  * separating the 5 tiers are configurable via `customDeloitteFeatureFlags.modelPricingTierBreakpoints`
  * in `librechat.yaml`, falling back to `DEFAULT_PRICE_TIER_BREAKPOINTS` when unset.
- * `getModelPricing` below resolves pricing through `collectCustomTokenConfigs` — the same
- * static-override-or-cached-fetch resolution `initializeCustom` uses for billing — so the
- * badge can never advertise a rate the custom-endpoint agent isn't actually billed at.
- * Only custom endpoints carry a `tokenConfig`; built-in named endpoints (OpenAI, Anthropic,
- * Google, Bedrock) are priced by their built-in multipliers and have no badge entry.
+ * `getModelPricing` below resolves every model's rate through `buildTokenConfigMap` — the
+ * same override-or-multiplier resolution used for real billing: custom endpoints use their
+ * static/cached `tokenConfig` override when present, and every other model (including
+ * built-in OpenAI/Anthropic/Google/Bedrock endpoints, which never carry a `tokenConfig`)
+ * falls back to the built-in `getMultiplier`/`getCacheMultiplier` tables — so the badge can
+ * never advertise a rate the request isn't actually billed at.
  */
 const DEFAULT_PRICE_TIER_BREAKPOINTS = [2, 5, 8, 15];
 
@@ -34,37 +36,43 @@ function getPriceTier(blendedCost: number, breakpoints: number[]): number {
 }
 
 /**
- * Flattens every custom endpoint's resolved `tokenConfig` into the price-tier
- * badge's `{ inputPer1M, outputPer1M, provider, tier }` shape, keyed by endpoint
- * and model. Returns an empty map when `customDeloitteFeatureFlags.showModelPricingIndicator`
+ * Flattens every configured model's resolved rate into the price-tier badge's
+ * `{ inputPer1M, outputPer1M, provider, tier }` shape, keyed by endpoint and
+ * model. Returns an empty map when `customDeloitteFeatureFlags.showModelPricingIndicator`
  * isn't enabled, so the badge stays hidden and no pricing data is sent to the client.
  */
 export async function getModelPricing(
   appConfig: AppConfig | undefined,
   userId: string,
-  tenantId?: string | null,
+  tenantId: string | null | undefined,
+  modelsConfig: TModelsConfig | undefined,
+  deps: TokenomicsDeps,
 ): Promise<TModelPricing> {
   const customDeloitteFeatureFlags = appConfig?.interfaceConfig?.customDeloitteFeatureFlags;
-  if (customDeloitteFeatureFlags?.showModelPricingIndicator !== true) {
+  if (customDeloitteFeatureFlags?.showModelPricingIndicator !== true || !modelsConfig) {
     return {};
   }
 
-  const overrides = await collectCustomTokenConfigs(appConfig, userId, tenantId);
+  const endpointTokenConfigs = await collectCustomTokenConfigs(appConfig, userId, tenantId);
+  const tokenConfigMap = buildTokenConfigMap(
+    { modelsConfig, endpointTokenConfigs, includePricing: true },
+    deps,
+  );
+
   const breakpoints =
     customDeloitteFeatureFlags.modelPricingTierBreakpoints ?? DEFAULT_PRICE_TIER_BREAKPOINTS;
   const pricing: TModelPricing = {};
 
-  for (const [endpoint, tokenConfig] of Object.entries(overrides)) {
-    if (!tokenConfig) {
-      continue;
-    }
-    for (const [model, { prompt, completion }] of Object.entries(tokenConfig)) {
-      const tier = getPriceTier((prompt + completion) / 2, breakpoints);
+  for (const [endpoint, models] of Object.entries(tokenConfigMap)) {
+    for (const [model, { prompt, completion }] of Object.entries(models)) {
+      if (prompt == null || completion == null) {
+        continue;
+      }
       pricing[`${endpoint}:${model}`] = {
         inputPer1M: prompt,
         outputPer1M: completion,
         provider: endpoint,
-        tier,
+        tier: getPriceTier((prompt + completion) / 2, breakpoints),
       };
     }
   }
