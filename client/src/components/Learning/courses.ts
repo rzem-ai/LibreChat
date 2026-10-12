@@ -6,10 +6,13 @@ export interface LearningCourse {
   comingSoon: boolean;
 }
 
+/** Single source of truth for the Getting Started course's id — also read by LearningTourContext. */
+export const GETTING_STARTED_COURSE_ID = 'getting-started-guide';
+
 /** Static MVP course catalog — no backend content system, just a plain list. */
 export const COURSES: LearningCourse[] = [
   {
-    id: 'getting-started-guide',
+    id: GETTING_STARTED_COURSE_ID,
     title: 'Getting Started Tour',
     description:
       'Learn how to get started with MyAssist in this quick introductory tour, highly recommended for new users',

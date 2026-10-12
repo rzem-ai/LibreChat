@@ -2,20 +2,21 @@ import { useCallback, useEffect, useRef } from 'react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import '../driver-theme.css';
+import type { DriveStep } from 'driver.js';
 import { isUnavailableElement } from '~/utils/elements';
 import { useShowMarketplace } from '~/hooks';
 import { mainTextareaId } from '~/common';
 
 /**
  * Index of the first step that requires the sidebar to be in its EXPANDED
- * state (panel body visible). Steps 0–10 target chat-area elements; from
- * step 11 (Conversations) onward the sidebar nav/content must be accessible.
+ * state (panel body visible). Steps 0–6 target chat-area elements; from
+ * step 7 (Conversations) onward the sidebar nav/content must be accessible.
  * Mobile: the sidebar is collapsed before the tour starts so chat steps are
  * unobstructed; it is re-expanded just before this index is reached.
  * Desktop: the sidebar panel body is hidden when collapsed, so we also
  * expand before this step regardless of the user's initial state.
  */
-const FIRST_NAV_STEP_INDEX = 11;
+const FIRST_NAV_STEP_INDEX = 7;
 
 /**
  * Builds the Driver.js Getting Started tour over the default chat interface.
@@ -24,31 +25,29 @@ const FIRST_NAV_STEP_INDEX = 11;
  * make each step tolerant of elements that are conditionally rendered (permissions,
  * feature flags, viewport) or that need a moment to mount after a panel switch.
  *
- * Step order (22 core steps, plus agent-selection steps when available):
- *   1  Welcome to MyAssist
- *   2  New Chat
- *   3  Model Selector
- *   4  Message Box
- *   5  Attach Files
- *   6  Run Code
- *   7  Skills toolbar
- *   8  Artifacts
- *   9  Connectors
- *   10 Send
- *   11 Sidebar Toggle
- *   12 Conversations
- *   13 Projects
- *   14 Agent Builder
- *   15 Agent Marketplace
- *   16 Switch Back to a Model
- *   17 Skill Library
- *   18 Prompt Library
- *   19 Memories
- *   20 Files
- *   21 Parameters
- *   22 Connectors List
- *   23 MyAssist Academy
- *   24 Account Menu
+ * Step order (14 core steps, plus agent-selection steps when available).
+ * Related items are merged into single multi-target steps (see the
+ * "Tools", "Library & Connectors", and "Personalize & Manage" steps below) —
+ * each uses a comma-separated selector so driver.js highlights whichever of
+ * the group is first available while the popover describes the group as a
+ * whole; skipMissingElement still tolerates any individual target being
+ * absent.
+ *   1  Welcome to MyAssist / New Chat
+ *   2  Model Selector
+ *   3  Message Box
+ *   4  Attach Files
+ *   5  Tools (Run Code, Skills, Artifacts, Connectors)
+ *   6  Send
+ *   7  Sidebar Toggle
+ *   8  Conversations
+ *   9  Projects
+ *   10 Agent Builder
+ *   11 Agent Marketplace
+ *   12 Switch Back to a Model
+ *   13 Library & Connectors (Skill Library, Prompt Library, Connectors List)
+ *   14 Personalize & Manage (Memories, Files, Parameters)
+ *   15 MyAssist Academy
+ *   16 Account Menu
  */
 interface TourOptions {
   /** Called when the tour ends (completed or cancelled). The caller uses this
@@ -91,22 +90,13 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
       showMarketplace &&
       hasAvailableTarget('#nav-panel-conversations') &&
       hasAvailableTarget('#nav-agents-marketplace-button');
-    const steps = [
+    const steps: DriveStep[] = [
       {
         element: '#new-chat-button',
         popover: {
           title: 'Welcome to MyAssist',
           description:
-            "Welcome to the new and improved MyAssist! We've rebuilt from the ground up to give you access to more powerful AI tools.<br><br>In this guided tour, we'll take you through the chat interface and side panel, so you are comfortable navigating through the platform.",
-          side: 'right',
-        },
-      },
-      {
-        element: '#new-chat-button',
-        popover: {
-          title: 'New Chat',
-          description:
-            'Click here any time to start a brand new conversation. Your current chat is saved automatically, so nothing is lost.',
+            "Welcome to the new and improved MyAssist! We've rebuilt from the ground up to give you access to more powerful AI tools, and this guided tour will get you comfortable navigating the chat interface and side panel.<br><br>This button starts a brand new conversation any time — your current chat is saved automatically, so nothing is lost.",
           side: 'right',
         },
       },
@@ -138,39 +128,12 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
         },
       },
       {
-        element: '#toolbar-toggle-code-interpreter',
-        popover: {
-          title: 'Run Code',
-          description:
-            'Gives MyAssist a secure working area to analyse data, work through calculations, transform files, and produce charts or tables for you behind the scenes.',
-          side: 'top',
-        },
-      },
-      {
-        element: '#toolbar-toggle-skills',
-        popover: {
-          title: 'Skills',
-          description:
-            'Skills are instruction files which give the AI access to repeatable patterns. If a skill is enabled, the AI will auto-select it when you send a relevant query.<br/><br/>For example, if you ask the AI to summarise a meeting, you may see the meeting-summariser skill get called.',
-          side: 'top',
-        },
-      },
-      {
-        element: '#toolbar-toggle-artifacts',
-        popover: {
-          title: 'Artifacts',
-          description:
-            'Produces rich outputs like formatted documents, diagrams, and interactive previews in a separate panel alongside your chat — ideal for iterating on deliverables such as reports, data visualisations, or presentation content.',
-          side: 'top',
-        },
-      },
-      {
         element:
-          '#toolbar-toggle-mcp-servers, #toolbar-toggle-web-search, #toolbar-toggle-memory, #toolbar-toggle-file-search',
+          '#toolbar-toggle-code-interpreter, #toolbar-toggle-skills, #toolbar-toggle-artifacts, #toolbar-toggle-mcp-servers, #toolbar-toggle-web-search, #toolbar-toggle-memory, #toolbar-toggle-file-search',
         popover: {
-          title: 'Connectors',
+          title: 'Tools',
           description:
-            'Use connectors to give MyAssist access to approved data sources and systems, so it can answer questions with information beyond the current chat.',
+            'The toolbar below your message box gives MyAssist extra capabilities:<br/><br/><strong>Run Code</strong> — a secure working area to analyse data, run calculations, transform files, and produce charts or tables.<br/><br/><strong>Skills</strong> — instruction files the AI can auto-select for repeatable patterns, like summarising a meeting.<br/><br/><strong>Artifacts</strong> — rich outputs like formatted documents, diagrams, and interactive previews in a separate panel.<br/><br/><strong>Connectors</strong> — give MyAssist access to approved data sources and systems, like web search or your memory.',
           side: 'top',
         },
       },
@@ -241,54 +204,20 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
           ] as const)
         : []),
       {
-        element: '#nav-panel-skills',
+        element: '#nav-panel-skills, #nav-panel-prompts, #nav-panel-mcp-builder',
         popover: {
-          title: 'Skill Library',
+          title: 'Library & Connectors',
           description:
-            'This is where you can create, edit and share skills. Skills are reusable instruction files that help the AI follow repeatable patterns.',
+            'From the sidebar you can also manage your <strong>Skills</strong> and <strong>Prompts</strong> — reusable instructions and templates you create, edit, and share — plus see the full list of <strong>Connectors</strong> available to you.',
           side: 'right',
         },
       },
       {
-        element: '#nav-panel-prompts',
+        element: '#nav-panel-memories, #nav-panel-files, #nav-panel-parameters',
         popover: {
-          title: 'Prompt Library',
+          title: 'Personalize & Manage',
           description:
-            'This is where you can create, edit and share prompts. Save prompt templates you use often, then trigger them in chat by typing / to bring up the prompt search, instead of retyping them.',
-          side: 'right',
-        },
-      },
-      {
-        element: '#nav-panel-memories',
-        popover: {
-          title: 'Memories',
-          description:
-            'Review and manage what the assistant remembers about you across conversations.',
-          side: 'right',
-        },
-      },
-      {
-        element: '#nav-panel-files',
-        popover: {
-          title: 'Files',
-          description:
-            'See every file you have uploaded across all your conversations in one place.',
-          side: 'right',
-        },
-      },
-      {
-        element: '#nav-panel-parameters',
-        popover: {
-          title: 'Parameters',
-          description: 'Adjust advanced response settings for the current conversation.',
-          side: 'right',
-        },
-      },
-      {
-        element: '#nav-panel-mcp-builder',
-        popover: {
-          title: 'Connectors',
-          description: 'This is where you see the list of connectors available to you.',
+            'A few more panels worth knowing about:<br/><br/><strong>Memories</strong> — review what the assistant remembers about you across conversations.<br/><br/><strong>Files</strong> — see every file you have uploaded across all your conversations in one place.<br/><br/><strong>Parameters</strong> — adjust advanced response settings for the current conversation.',
           side: 'right',
         },
       },
@@ -309,9 +238,7 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
           side: 'top',
         },
       },
-    ] as const;
-    // Cast to mutable array for driver() which expects DriveStep[]
-    const stepsArray = steps as unknown as Array<{ element: string; popover: { title: string; description: string; side: 'top' | 'right' | 'bottom' | 'left' } }>;
+    ];
     // Do NOT eagerly filter steps here. Driver.js's own skipMissingElement +
     // waitForElement handles two cases correctly at runtime as each step is
     // reached: (a) genuinely absent elements (e.g. feature-flagged buttons not
@@ -327,9 +254,17 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
       waitForElement: 600,
       stagePadding: 6,
       stageRadius: 8,
+      // driver.js's `animate: true` (the default) doesn't just fade the popover —
+      // it also runs a JS-driven loop that slides/resizes the spotlight cutout
+      // from the previous target's position to the next one over `duration` ms.
+      // That's a real glide/morph, not a fade, and there's no config to keep the
+      // fade while disabling it. So: turn animate off (the spotlight now snaps
+      // straight to each target) and fade the popover ourselves via a plain CSS
+      // animation in driver-theme.css instead.
+      animate: false,
       onHighlightStarted: (_element, step, opts) => {
         // Expand the sidebar exactly when the tour transitions from chat-area
-        // steps (0–10) to sidebar-nav steps (11+). This ensures:
+        // steps (0–6) to sidebar-nav steps (7+). This ensures:
         // - Mobile: sidebar was collapsed before step 0 so chat steps are
         //   unobstructed; re-expanded here so nav elements are visible.
         // - Desktop: sidebar panel body is opacity-0/pointer-events-none when
@@ -355,7 +290,7 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
         // Notify the caller so it can restore the pre-tour sidebar state.
         onEnd?.();
       },
-      steps: stepsArray,
+      steps,
     });
 
     // Store the instance so the useEffect cleanup can destroy it on unmount.

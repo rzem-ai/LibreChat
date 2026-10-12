@@ -131,7 +131,7 @@ describe('useGettingStartedTour', () => {
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
-  it('starts with the welcome step before new chat guidance', () => {
+  it('starts with the merged welcome / new chat step', () => {
     const { result } = renderHook(() => useGettingStartedTour());
     result.current.startTour();
 
@@ -140,24 +140,24 @@ describe('useGettingStartedTour', () => {
       popover: {
         title: 'Welcome to MyAssist',
         description:
-          "Welcome to the new and improved MyAssist! We've rebuilt from the ground up to give you access to more powerful AI tools.<br><br>In this guided tour, we'll take you through the chat interface and side panel, so you are comfortable navigating through the platform.",
+          "Welcome to the new and improved MyAssist! We've rebuilt from the ground up to give you access to more powerful AI tools, and this guided tour will get you comfortable navigating the chat interface and side panel.<br><br>This button starts a brand new conversation any time — your current chat is saved automatically, so nothing is lost.",
         side: 'right',
       },
     });
-    expect(capturedConfig?.steps?.[1]?.popover.title).toBe('New Chat');
+    expect(capturedConfig?.steps?.[1]?.popover.title).toBe('Model');
   });
 
-  it('defines 24 steps and revisits the model selector to explain exiting an agent', () => {
+  it('defines 16 steps and revisits the model selector to explain exiting an agent', () => {
     const { result } = renderHook(() => useGettingStartedTour());
     result.current.startTour();
 
-    expect(capturedConfig?.steps).toHaveLength(24);
-    expect(capturedConfig?.steps?.slice(13, 16).map((step) => step.popover.title)).toEqual([
+    expect(capturedConfig?.steps).toHaveLength(16);
+    expect(capturedConfig?.steps?.slice(9, 12).map((step) => step.popover.title)).toEqual([
       'Agent Builder',
       'Agent Marketplace',
       'Switch Back to a Model',
     ]);
-    expect(capturedConfig?.steps?.[15]).toEqual({
+    expect(capturedConfig?.steps?.[11]).toEqual({
       element: '#model-selector-button',
       popover: {
         title: 'Switch Back to a Model',
@@ -173,7 +173,7 @@ describe('useGettingStartedTour', () => {
     const { result } = renderHook(() => useGettingStartedTour());
     result.current.startTour();
 
-    expect(capturedConfig?.steps).toHaveLength(22);
+    expect(capturedConfig?.steps).toHaveLength(14);
     expect(
       capturedConfig?.steps?.some(
         (step) =>
@@ -181,8 +181,8 @@ describe('useGettingStartedTour', () => {
           step.popover.title === 'Switch Back to a Model',
       ),
     ).toBe(false);
-    expect(capturedConfig?.steps?.slice(19, 22).map((step) => step.popover.title)).toEqual([
-      'Connectors',
+    expect(capturedConfig?.steps?.slice(11, 14).map((step) => step.popover.title)).toEqual([
+      'Personalize & Manage',
       'MyAssist Academy',
       'Account Menu',
     ]);
@@ -193,7 +193,7 @@ describe('useGettingStartedTour', () => {
     const { result } = renderHook(() => useGettingStartedTour());
     result.current.startTour();
 
-    expect(capturedConfig?.steps).toHaveLength(22);
+    expect(capturedConfig?.steps).toHaveLength(14);
     expect(
       capturedConfig?.steps?.some(
         (step) =>
@@ -208,7 +208,7 @@ describe('useGettingStartedTour', () => {
     const { result } = renderHook(() => useGettingStartedTour());
     result.current.startTour();
 
-    expect(capturedConfig?.steps).toHaveLength(22);
+    expect(capturedConfig?.steps).toHaveLength(14);
     expect(
       capturedConfig?.steps?.some(
         (step) =>

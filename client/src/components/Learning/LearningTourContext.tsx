@@ -10,14 +10,12 @@ import {
 import { useRecoilState } from 'recoil';
 import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { DESKTOP_START_DELAY_MS, SIDEBAR_TRANSITION_SYNC_MS } from './timing';
 import useGettingStartedTour from './Courses/useGettingStartedTour';
 import useTutorialPrompt from '~/hooks/Learning/useTutorialPrompt';
+import { GETTING_STARTED_COURSE_ID } from './courses';
 import { useActivePanel } from '~/Providers';
 import store from '~/store';
-
-const GETTING_STARTED_COURSE_ID = 'getting-started-guide';
-const DESKTOP_START_DELAY_MS = 200;
-const MOBILE_START_DELAY_MS = 300;
 
 interface LearningTourContextType {
   startGettingStartedTour: () => void;
@@ -85,20 +83,20 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
 
     const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
     if (isSmallScreen) {
-      // On mobile, collapse the sidebar so chat-area steps (0–10) are
+      // On mobile, collapse the sidebar so chat-area steps (0–6) are
       // unobstructed by the sidebar overlay. The tour will re-expand it
-      // via onHighlightStarted when step 11 (Conversations) is reached.
+      // via onHighlightStarted when step 7 (Conversations) is reached.
       setSidebarExpanded(false);
     }
     // On desktop, leave the sidebar in whatever state the user had it — the
-    // tour's onHighlightStarted will ensure it's expanded before step 11.
+    // tour's onHighlightStarted will ensure it's expanded before step 7.
 
     startTimeoutRef.current = window.setTimeout(
       () => {
         startTimeoutRef.current = null;
         startTour();
       },
-      isSmallScreen ? MOBILE_START_DELAY_MS : DESKTOP_START_DELAY_MS,
+      isSmallScreen ? SIDEBAR_TRANSITION_SYNC_MS : DESKTOP_START_DELAY_MS,
     );
   }, [markPromptSeen, navigate, setActive, setSidebarExpanded, sidebarExpanded, startTour]);
 

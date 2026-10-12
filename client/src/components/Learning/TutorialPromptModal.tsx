@@ -3,6 +3,7 @@ import { useRecoilState } from 'recoil';
 import { GraduationCap } from 'lucide-react';
 import * as Popover from '@radix-ui/react-popover';
 import { Button, useMediaQuery } from '@librechat/client';
+import { TUTORIAL_PROMPT_DELAY_MS, SIDEBAR_TRANSITION_SYNC_MS } from './timing';
 import useTutorialPrompt from '~/hooks/Learning/useTutorialPrompt';
 import { useLearningTour } from './LearningTourContext';
 import { useLocalize } from '~/hooks';
@@ -24,7 +25,8 @@ function getSidebarWidth(): number {
  *     pointed top-left corner aimed at the icon
  *
  * Ordering: Load page → disclaimer popup → close popup → chat UI fully loads
- * (endpoints + models queries resolve) → 800ms delay → this bubble appears.
+ * (endpoints + models queries resolve) → TUTORIAL_PROMPT_DELAY_MS delay → this
+ * bubble appears.
  *
  * Dismissal:
  *   - "Start Tour"  → starts the guided tour and marks tutorialPromptSeen
@@ -36,10 +38,6 @@ function getSidebarWidth(): number {
  * sets tutorialPromptSeen=true on the MongoDB user document — survives across
  * devices and sessions.
  */
-
-/** Delay (ms) after the terms modal closes before the bubble appears. */
-const TUTORIAL_PROMPT_DELAY_MS = 800;
-const MOBILE_SIDEBAR_TRANSITION_MS = 300;
 
 interface TutorialPromptModalProps {
   /** Pass `showTerms` from Root so the tutorial bubble waits until terms are dismissed. */
@@ -95,7 +93,7 @@ export default function TutorialPromptModal({
     if (!sidebarExpanded) {
       setSidebarExpanded(true);
     }
-    const timer = window.setTimeout(() => setMobilePromptReady(true), MOBILE_SIDEBAR_TRANSITION_MS);
+    const timer = window.setTimeout(() => setMobilePromptReady(true), SIDEBAR_TRANSITION_SYNC_MS);
     return () => window.clearTimeout(timer);
   }, [isVisible, isSmallScreen, sidebarExpanded, setSidebarExpanded]);
 
@@ -269,9 +267,10 @@ export default function TutorialPromptModal({
               <div className="flex items-center justify-between gap-2 pt-1">
                 <Button
                   type="button"
+                  variant="submit"
                   size="sm"
                   onClick={handleAccept}
-                  className="flex-1 bg-surface-submit text-white hover:bg-surface-submit-hover"
+                  className="flex-1"
                 >
                   {localize('com_learning_prompt_accept')}
                 </Button>
