@@ -4,13 +4,19 @@ map $http_authorization $token {
     default             "";
 }
 
+# Single source of truth for all providers proxied below (Anthropic, Azure OpenAI,
+# Bedrock): matches Anthropic's own 32MB total-request ceiling, which is also
+# generous enough for the others' smaller native per-item limits. Set once at this
+# http-level scope (this file is included inside the base image's http{} block via
+# /etc/nginx/templates) so it can't drift out of sync between the server blocks below.
+client_max_body_size 32M;
+
 # ===========================================
 # Anthropic Gateway Proxy (port 8080)
 # Translates x-api-key → x-id-token
 # ===========================================
 server {
     listen 8080;
-    client_max_body_size 25M;
 
     location / {
         proxy_set_header x-id-token $http_x_api_key;
@@ -36,7 +42,6 @@ server {
 # ===========================================
 server {
     listen 8081;
-    client_max_body_size 25M;
 
      location /model {
          proxy_set_header x-id-token $http_x_id_token;

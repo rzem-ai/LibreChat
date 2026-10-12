@@ -150,7 +150,14 @@ fileConfig:
       fileLimit: 50
     agents:
       fileLimit: 50
+  # Off globally; set under endpoints.<name>.legacyFileUploadUX to enable per-route.
   # legacyFileUploadUX: true
+  # Deloitte Custom Change: Word/Excel/PDF default to 'none' (file_search/code only).
+  defaultLLMDeliveryPath:
+    overrides:
+      application/vnd.openxmlformats-officedocument.wordprocessingml.document: none
+      application/vnd.openxmlformats-officedocument.spreadsheetml.sheet: none
+      application/pdf: none
 
 memory:
   disabled: false # Set to true to completely disable memory

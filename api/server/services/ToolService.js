@@ -885,10 +885,6 @@ async function loadToolDefinitionsWrapper({
 
   const filteredTools = agent.tools?.filter((tool) => {
     if (tool === Tools.file_search) {
-      // Deloitte Custom Change: the attachment gate previously kept file_search off
-      // until a file already had vectors, which it can only get by the tool being
-      // called first. Offer the tool on capability/permission alone so the model can
-      // trigger embedding on a freshly uploaded, not-yet-embedded file.
       return checkCapability(AgentCapabilities.file_search) && canUseTool(tool);
     }
     if (tool === Tools.execute_code) {
@@ -1736,8 +1732,6 @@ async function loadAgentTools({
   let includesWebSearch = false;
   const _agentTools = agent.tools?.filter((tool) => {
     if (tool === Tools.file_search) {
-      // Deloitte Custom Change: mirrors the tool-definitions path above — see the
-      // comment there.
       return checkCapability(AgentCapabilities.file_search) && canUseTool(tool);
     } else if (tool === Tools.execute_code) {
       return checkCapability(AgentCapabilities.execute_code) && canUseTool(tool);
