@@ -5,6 +5,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import type { Driver, DriveStep, PopoverDOM } from 'driver.js';
 import type { TourStep } from './content/schema';
+import { TRANSITION_MS } from '~/components/UnifiedSidebar/constants';
 import { attachCardChevron } from './tourChevron';
 import TourPopover from './TourPopover';
 import { useLocalize } from '~/hooks';
@@ -68,12 +69,17 @@ export default function useCourseTour(
   const startTour = useCallback(() => {
     let completedFromLastStepNext = false;
     let currentPopoverRoot: Root | null = null;
+    let sidebarSyncTimeout: number | null = null;
     const steps = getSteps().map(toEngineStep);
 
     // Shared by both exit paths: our own close button (fireComplete: false — closing
     // early isn't finishing the tour) and driver.js's own onDestroyStarted, which fires
     // for every other way the tour ends, including reaching "Done" on the last step.
     const endTour = (driverInstance: Driver, fireComplete: boolean) => {
+      if (sidebarSyncTimeout !== null) {
+        window.clearTimeout(sidebarSyncTimeout);
+        sidebarSyncTimeout = null;
+      }
       currentPopoverRoot?.unmount();
       currentPopoverRoot = null;
       driverInstance.destroy();
@@ -152,6 +158,16 @@ export default function useCourseTour(
       onHighlightStarted: (_element, step) => {
         if ((step as EngineStep).expandSidebarBefore) {
           optionsRef.current.setSidebarExpanded?.(true);
+          // driver.js (animate: false) measures and positions immediately, but the
+          // sidebar's own CSS transition takes TRANSITION_MS to actually finish
+          // expanding, and that transition emits no resize/scroll event driver.js
+          // would otherwise react to — so the spotlight/popover land at the
+          // collapsed/pre-transition coordinates and stay there. Re-measure once
+          // the transition has had time to finish.
+          sidebarSyncTimeout = window.setTimeout(() => {
+            sidebarSyncTimeout = null;
+            tourDriver.refresh();
+          }, TRANSITION_MS);
         }
       },
       onDestroyStarted: () => endTour(tourDriver, true),

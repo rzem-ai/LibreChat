@@ -1,6 +1,7 @@
 import { act, fireEvent, renderHook, within } from '@testing-library/react';
 import useCourseTour from '../useCourseTour';
 import type { TourStep } from '../content/schema';
+import { TRANSITION_MS } from '~/components/UnifiedSidebar/constants';
 
 type FakeStep = {
   element: string;
@@ -25,6 +26,7 @@ type FakeDriverInstance = {
   destroy: jest.Mock;
   moveNext: jest.Mock;
   movePrevious: jest.Mock;
+  refresh: jest.Mock;
   isLastStep: jest.Mock;
   getActiveIndex: jest.Mock;
 };
@@ -66,6 +68,7 @@ const mockDrive = jest.fn();
 const mockDestroy = jest.fn();
 const mockMoveNext = jest.fn();
 const mockMovePrevious = jest.fn();
+const mockRefresh = jest.fn();
 const mockGetActiveIndex = jest.fn().mockReturnValue(0);
 let mockIsLastStep = jest.fn();
 let capturedConfig: DriverConfig | undefined;
@@ -130,6 +133,7 @@ jest.mock('driver.js', () => ({
       destroy: mockDestroy,
       moveNext: mockMoveNext,
       movePrevious: mockMovePrevious,
+      refresh: mockRefresh,
       isLastStep: mockIsLastStep,
       getActiveIndex: mockGetActiveIndex,
     };
@@ -183,6 +187,47 @@ describe('useCourseTour', () => {
     const unflaggedStep = capturedConfig?.steps?.[0] as FakeStep;
     capturedConfig?.onHighlightStarted?.(undefined, unflaggedStep);
     expect(setSidebarExpanded).not.toHaveBeenCalled();
+  });
+
+  it('re-measures only after the sidebar transition finishes, not immediately', () => {
+    jest.useFakeTimers();
+    const { result } = renderHook(() =>
+      useCourseTour(() => FIXTURE_STEPS, undefined, { setSidebarExpanded: jest.fn() }),
+    );
+    result.current.startTour();
+
+    const flaggedStep = capturedConfig?.steps?.[1] as FakeStep;
+    capturedConfig?.onHighlightStarted?.(undefined, flaggedStep);
+    expect(mockRefresh).not.toHaveBeenCalled();
+
+    act(() => {
+      jest.advanceTimersByTime(TRANSITION_MS - 1);
+    });
+    expect(mockRefresh).not.toHaveBeenCalled();
+
+    act(() => {
+      jest.advanceTimersByTime(1);
+    });
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+    jest.useRealTimers();
+  });
+
+  it('cancels the pending re-measure if the tour ends before the transition finishes', () => {
+    jest.useFakeTimers();
+    const { result } = renderHook(() =>
+      useCourseTour(() => FIXTURE_STEPS, undefined, { setSidebarExpanded: jest.fn() }),
+    );
+    result.current.startTour();
+
+    const flaggedStep = capturedConfig?.steps?.[1] as FakeStep;
+    capturedConfig?.onHighlightStarted?.(undefined, flaggedStep);
+    capturedConfig?.onDestroyStarted?.();
+
+    act(() => {
+      jest.advanceTimersByTime(TRANSITION_MS);
+    });
+    expect(mockRefresh).not.toHaveBeenCalled();
+    jest.useRealTimers();
   });
 
   it('does not report completion when the tour is cancelled before the last step', () => {
