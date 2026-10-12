@@ -143,6 +143,31 @@ export function hasTextExtractionPath(mimeType: string): boolean {
   return TEXT_RECOVERABLE_MIME_TYPES.some((pattern) => pattern.test(mimeType));
 }
 
+/** Deloitte Custom Change: known non-canonical labels for a CSV file, all mapped to the
+ *  canonical `text/csv`. Deliberately excludes `application/vnd.ms-excel`: old IE/Excel
+ *  sometimes mislabels CSV downloads with it, but it's also the genuine legacy .xls mime
+ *  type, so folding it in here would misroute real Excel files as CSV. */
+const CSV_MIME_ALIASES = new Set([
+  'application/csv',
+  'text/comma-separated-values',
+  'text/x-csv',
+  'application/x-csv',
+  'text/x-comma-separated-values',
+]);
+
+/** Deloitte Custom Change: strips MIME parameters (e.g. "; charset=utf-8"), lowercases,
+ *  and maps every known CSV alias to the canonical `text/csv`. Applied once at the entry
+ *  of resolveDefaultLLMDeliveryPath and canToolResourceConsume — the two chokepoints for
+ *  route resolution and tool capability matching — so a decorated or oddly-cased
+ *  Content-Type (e.g. "TEXT/CSV", "text/csv; charset=utf-8") can't bypass a configured
+ *  `none` override, nor fail tool-capability matching while the other check still excludes
+ *  it (which would wrongly mark the file as orphaned even with a capable tool active). */
+function canonicalizeMimeType(mimeType: string): string {
+  const semi = mimeType.indexOf(';');
+  const base = (semi < 0 ? mimeType : mimeType.slice(0, semi)).trim().toLowerCase();
+  return CSV_MIME_ALIASES.has(base) ? 'text/csv' : base;
+}
+
 /**
  * Resolves the default file path destination for a given mime type.
  * Resolution chain: endpoint overrides -> endpoint fallback -> global overrides -> global fallback -> system defaults.
@@ -156,6 +181,7 @@ export function resolveDefaultLLMDeliveryPath(
   sttConfigured?: boolean,
   supportedMimeTypes?: RegexLike[],
 ): TDefaultLLMDeliveryPath {
+  mimeType = canonicalizeMimeType(mimeType);
   const wildcard = mimeType.split('/')[0] + '/*';
 
   if (endpointConfig?.overrides) {
@@ -337,18 +363,12 @@ export function resolveUploadLLMDeliveryPath({
 /** Deloitte Custom Change: CSV is tabular, not prose — vector search chunks rows
  *  semantically, which is both slow on large files and a poor fit for the exact
  *  lookups/aggregations tabular data needs. Code Interpreter handles it natively.
- *  Mirrors CSV_MIME_PATTERN in packages/api/src/files/documents/html.ts (data-provider
- *  can't import from packages/api, so this is duplicated rather than shared): covers the
- *  legacy text/comma-separated-values alias and is case-insensitive. MIME parameters
- *  (e.g. "; charset=utf-8") are stripped first so a decorated Content-Type still matches. */
-const CSV_MIME_PATTERN = /^(text\/csv|application\/csv|text\/comma-separated-values)$/i;
-const isCsvMimeType = (mimeType: string): boolean => {
-  const semi = mimeType.indexOf(';');
-  const base = (semi < 0 ? mimeType : mimeType.slice(0, semi)).trim();
-  return CSV_MIME_PATTERN.test(base);
-};
+ *  mimeType arrives already canonicalized (see canonicalizeMimeType), which maps every
+ *  known CSV alias to 'text/csv', so an exact check is all that's needed here. */
+const isCsvMimeType = (mimeType: string): boolean => mimeType === 'text/csv';
 
 export function canToolResourceConsume(toolResource: string, mimeType: string): boolean {
+  mimeType = canonicalizeMimeType(mimeType);
   if (toolResource === EToolResources.file_search) {
     /* The union of both readers rather than either alone: the extraction set describes
      * the document parser and omits presentations, which RAG does handle and the chooser
@@ -425,10 +445,17 @@ export function hasTurnFileConsumer(
  * leave the model with nothing before the first embed), not for "will anything ever be
  * able to read this." A file File Search hasn't embedded YET on its first turn is not
  * orphaned — it's working as designed.
+ *
+ * Code Interpreter's own mime-type capability is not re-checked: every type this codebase
+ * ever routes to 'none' is already inside its allow-list (the only types it can't read —
+ * audio/video — default to 'provider', never 'none'). So "Code Interpreter is active"
+ * is sufficient; re-verifying the type would just reintroduce the same normalization
+ * mismatch this function exists to avoid. File Search's allow-list is genuinely
+ * type-dependent (images/audio/video/csv excluded), so it still needs the real check.
  */
 function canAnyActiveToolConsume(mimeType: string, consumers: TurnFileConsumers): boolean {
   return (
-    (consumers.executeCode && canToolResourceConsume(EToolResources.execute_code, mimeType)) ||
+    consumers.executeCode === true ||
     (consumers.fileSearch && canToolResourceConsume(EToolResources.file_search, mimeType))
   );
 }

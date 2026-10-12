@@ -69,6 +69,19 @@ describe('resolveDefaultLLMDeliveryPath', () => {
     expect(resolveDefaultLLMDeliveryPath('image/jpeg', config)).toBe('none');
   });
 
+  it('matches a configured csv override regardless of case, params, or alias (regression)', () => {
+    /* Deloitte Custom Change: a decorated/aliased/mis-cased Content-Type used to bypass
+     * this override entirely and fall through to the 'text' system default, pasting the
+     * file straight into the prompt instead of routing it to a tool. */
+    const config: TDefaultLLMDeliveryPathConfig = {
+      overrides: { 'text/csv': 'none' },
+    };
+    expect(resolveDefaultLLMDeliveryPath('TEXT/CSV', config)).toBe('none');
+    expect(resolveDefaultLLMDeliveryPath('text/csv; charset=utf-8', config)).toBe('none');
+    expect(resolveDefaultLLMDeliveryPath('text/comma-separated-values', config)).toBe('none');
+    expect(resolveDefaultLLMDeliveryPath('application/csv', config)).toBe('none');
+  });
+
   it('should use config fallback when no override matches', () => {
     const config: TDefaultLLMDeliveryPathConfig = {
       fallback: 'none',
@@ -860,6 +873,19 @@ describe('isOrphanedTurnFile', () => {
     expect(
       isOrphanedTurnFile(
         { type: 'text/csv', llmDeliveryPath: 'none' },
+        { executeCode: true, fileSearch: false },
+      ),
+    ).toBe(false);
+  });
+
+  it('trusts Code Interpreter being active without re-checking its mime-type allow-list', () => {
+    /* Deloitte Custom Change: every type this codebase routes to 'none' is already in
+     * Code Interpreter's allow-list (the only types it can't read — audio/video —
+     * default to 'provider', never 'none'), so re-verifying mime-type capability here
+     * would just reintroduce the same normalization mismatch this function avoids. */
+    expect(
+      isOrphanedTurnFile(
+        { type: 'TEXT/CSV; charset=utf-8', llmDeliveryPath: 'none' },
         { executeCode: true, fileSearch: false },
       ),
     ).toBe(false);
