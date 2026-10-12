@@ -436,6 +436,7 @@ async function getAppConfigForUser(userId, user) {
   return await filterAppConfigMCPServers(appConfig, user ?? { id: userId });
 }
 
+/** Deloitte Custom Change: filters MCP server configuration by synchronized Entra memberships. */
 async function filterAppConfigMCPServers(appConfig, user) {
   const mcpConfig = appConfig?.mcpConfig;
   const getEntraGroupIds = async (userId) => {
@@ -1214,6 +1215,7 @@ async function createMCPTools({
   const serverConfig =
     config ?? (await getMCPServersRegistry().getServerConfig(serverName, user?.id, configServers));
 
+  // Deloitte Custom Change: deny direct tool construction when the user lacks the required group.
   if (serverConfig?.allowedEntraGroupIds?.length) {
     const filtered = await filterAppConfigMCPServers(
       { mcpConfig: { [serverName]: serverConfig } },
@@ -2032,6 +2034,7 @@ async function getMCPSetupData(userId, options = {}) {
   const { role, tenantId } = options;
 
   const rawAppConfig = options.appConfig ?? (await getAppConfig({ role, tenantId, userId }));
+  // Deloitte Custom Change: connection status must not disclose restricted MCP servers.
   const appConfig = await filterAppConfigMCPServers(rawAppConfig, options.user ?? { id: userId });
   const configServers = await registry.ensureConfigServers(appConfig?.mcpConfig || {});
   const mcpConfig = role

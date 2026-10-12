@@ -1,3 +1,4 @@
+/** Deloitte Custom Change: Entra group-based MCP server authorization utilities. */
 export type GroupRestrictedMCPConfig = {
   allowedEntraGroupIds?: readonly string[];
 };

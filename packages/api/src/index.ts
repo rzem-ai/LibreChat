@@ -21,6 +21,7 @@ export * from './auth';
 export * from './apiKeys';
 /* MCP */
 export * from './mcp/mcpConfig';
+/* Deloitte Custom Change: Entra group-based MCP server authorization. */
 export * from './mcp/access';
 export * from './mcp/authority';
 export * from './mcp/registry/MCPServersRegistry';

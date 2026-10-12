@@ -629,6 +629,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     iconPathLight: '/assets/mcp/sharepoint-light.png'
     iconPathDark: '/assets/mcp/sharepoint-dark.png'
     limitedAccess: true
+    # Deloitte Custom Change: restrict SharePoint to its Entra security group.
     allowedEntraGroupIds:
       - '00c0efc7-e8a7-448c-9480-834cbf1ebd60'
 #    oauth_headers:

@@ -212,7 +212,7 @@ const BaseOptionsSchema = z.object({
   description: z.string().optional(),
   /** Deloitte Custom Change: parent brand/grouping name shown as `${title} - ${parentGroup}` in the Tool Library. */
   parentGroup: z.string().optional(),
-  /** Entra security groups allowed to discover and invoke this server. */
+  /** Deloitte Custom Change: Entra security groups allowed to discover and invoke this server. */
   allowedEntraGroupIds: z.array(z.string().uuid()).min(1).optional(),
   /**
    * Controls whether the MCP server is initialized during application startup.
