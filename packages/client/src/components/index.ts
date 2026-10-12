@@ -35,6 +35,8 @@ export * from './Tooltip';
 export * from './Pagination';
 export * from './Progress';
 export * from './SegmentedMeter';
+// Deloitte Custom Change: export the new gel/ primitives directory added for the model info tooltip.
+export * from './gel';
 export * from './Collapsible';
 export * from './InputOTP';
 export * from './IconButton';

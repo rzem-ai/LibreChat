@@ -146,7 +146,7 @@ interface:
     showModelPricingIndicator: true # Set to false to hide the 1-5 $ price-tier badge in the model selector
     # The 4 ascending $/1M blended-cost breakpoints splitting models into the 5 price tiers
     # ($ to $$$$$) shown in the model selector. Optional — defaults to [2, 5, 8, 15] when omitted.
-    modelPricingTierBreakpoints: [2, 5, 8, 15]
+    modelPricingTierBreakpoints: [ 2, 5, 8, 15 ]
 
 fileConfig:
   endpoints:
@@ -196,7 +196,7 @@ endpoints:
         'execute_code',
         'file_search',
         'skills',
-        'tools',
+        'tools'
       ]
     minRelevanceScore: 0.3
     # Restrict Agent Builder to the providers supported by the curated model catalog.
@@ -269,7 +269,7 @@ endpoints:
       titleConvo: true
       titleModel: 'gpt-4o-mini'
       modelDisplayLabel: 'Azure Australia'
-      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
+      dropParams: [ 'stop', 'user', 'frequency_penalty', 'presence_penalty' ]
       headers:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
@@ -295,7 +295,7 @@ endpoints:
       titleConvo: true
       titleModel: 'gpt-56-terra'
       modelDisplayLabel: 'OpenAI'
-      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
+      dropParams: [ 'stop', 'user', 'frequency_penalty', 'presence_penalty' ]
       headers:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
@@ -334,7 +334,7 @@ endpoints:
       titleConvo: true
       titleModel: 'google/gemini-2.5-flash'
       modelDisplayLabel: 'Gemini'
-      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
+      dropParams: [ 'stop', 'user', 'frequency_penalty', 'presence_penalty' ]
       headers:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
@@ -428,6 +428,16 @@ modelSpecs:
       group: 'OpenAI Global'
       groupIcon: 'openAI'
       iconURL: 'openAI'
+      # Deloitte Custom Change: editorial metadata for the model info tooltip — 1-5 ratings
+      # and capability flags shown to users, separate from the tool-enablement flags below.
+      details:
+        speed: 2
+        intelligence: 5
+        supports:
+          webSearch: true
+          imageGeneration: false
+      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'gpt-5-6-terra'
       preset:
         endpoint: 'Azure Global'
         model: 'gpt-56-terra'
@@ -438,44 +448,67 @@ modelSpecs:
       group: 'OpenAI Global'
       iconURL: 'openAI'
       softDefault: true
+      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'gpt-5-6-luna'
       preset:
         endpoint: 'Azure Global'
         model: 'gpt-56-luna'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 3
+        intelligence: 4
 
     - name: 'azure-global-gpt-56-sol'
       label: 'GPT 5.6 Sol'
       group: 'OpenAI Global'
       iconURL: 'openAI'
+      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'gpt-5-6-sol'
       preset:
         endpoint: 'Azure Global'
         model: 'gpt-56-sol'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 3
+        intelligence: 5
 
     - name: 'vertexai-us-gemini-2-5-flash'
       label: 'Gemini 2.5 Flash'
       group: 'Gemini Global'
       groupIcon: 'google'
       iconURL: 'google'
+      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata to
+      # populate details.speed/intelligence above.
+      artificialAnalysisBenchmarkModelName: 'gemini-2-5-flash'
       preset:
         endpoint: 'VertexAI US'
         model: 'google/gemini-2.5-flash'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 5
+        intelligence: 1
 
     - name: 'vertexai-us-gemini-2-5-pro'
       label: 'Gemini 2.5 Pro'
       group: 'Gemini Global'
       iconURL: 'google'
+      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'gemini-2-5-pro'
       preset:
         endpoint: 'VertexAI US'
         model: 'google/gemini-2.5-pro'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 5
+        intelligence: 1
 
     - name: 'anthropic-claude-haiku-4-5'
       label: 'Claude Haiku 4.5'
       group: 'Anthropic Global'
       groupIcon: 'anthropic'
       iconURL: 'anthropic'
+      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-haiku-4-5'
       preset:
         endpoint: 'anthropic'
         model: 'claude-haiku-4-5'
@@ -485,52 +518,79 @@ modelSpecs:
       label: 'Claude Sonnet 5'
       group: 'Anthropic Global'
       iconURL: 'anthropic'
+      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-sonnet-5'
       preset:
         endpoint: 'anthropic'
         model: 'claude-sonnet-5'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 1
+        intelligence: 4
 
     - name: 'anthropic-claude-sonnet-4-6'
       label: 'Claude Sonnet 4.6'
       group: 'Anthropic Global'
       iconURL: 'anthropic'
+      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-sonnet-4-6'
       preset:
         endpoint: 'anthropic'
         model: 'claude-sonnet-4-6'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 5
+        intelligence: 2
 
     - name: 'anthropic-claude-opus-4-6'
       label: 'Claude Opus 4.6'
       group: 'Anthropic Global'
       iconURL: 'anthropic'
+      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-opus-4-6'
       preset:
         endpoint: 'anthropic'
         model: 'claude-opus-4-6'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 5
+        intelligence: 3
 
     - name: 'anthropic-claude-opus-4-8'
       label: 'Claude Opus 4.8'
       group: 'Anthropic Global'
       iconURL: 'anthropic'
+      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-opus-4-8'
       preset:
         endpoint: 'anthropic'
         model: 'claude-opus-4-8'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 4
+        intelligence: 5
 
     - name: 'anthropic-au-claude-sonnet-4-6'
       label: 'Claude Sonnet 4.6'
       group: 'Anthropic Australia'
       groupIcon: 'anthropic'
       iconURL: 'anthropic'
+      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-sonnet-4-6'
       preset:
         endpoint: 'bedrock'
         model: 'au.anthropic.claude-sonnet-4-6'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 5
+        intelligence: 2
 
     - name: 'anthropic-au-claude-haiku-4-5'
       label: 'Claude Haiku 4.5'
       group: 'Anthropic Australia'
       iconURL: 'anthropic'
+      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-haiku-4-5'
       preset:
         endpoint: 'bedrock'
         model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
@@ -539,7 +599,8 @@ modelSpecs:
 # MCP Servers configuration
 # Each entry filters the gateway to a single toolset via the `toolsets` query param.
 # See documentation: https://github.com/Deloitte-Australia/ea-mcp-gateway/blob/feature/prototype/docs/MCP_Gateway_Wiki.md
-mcpServers: # https://www.librechat.ai/docs/features/mcp
+mcpServers:
+  # https://www.librechat.ai/docs/features/mcp
   cleartrack-mcp-gateway-research:
     title: 'IBISWorld'
     parentGroup: 'ClearTrack MCP'
@@ -616,7 +677,8 @@ mcpSettings:
     - 'https://mcp-gw-dev.ctk.au.deloitte.com'
     - 'https://mcp-gateway.ctk.au.deloitte.com'
 
-speech: # https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/speech
+speech:
+  # https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/speech
   speechTab:
     conversationMode: true
     advancedMode: false

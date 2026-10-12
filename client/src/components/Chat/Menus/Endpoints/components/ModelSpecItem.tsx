@@ -8,6 +8,7 @@ import { useFavorites, useLocalize, useIsActiveItem } from '~/hooks';
 import { useModelSelectorContext } from '../ModelSelectorContext';
 import { CustomMenuItem as MenuItem } from '../CustomMenu';
 import { cn, getSpecAgentAvatarURL } from '~/utils';
+import ModelInfoTooltip from './ModelInfoTooltip';
 import SpecDescription from './SpecDescription';
 import ModelCost from './ModelCost';
 import SpecIcon from './SpecIcon';
@@ -45,26 +46,33 @@ export function ModelSpecItem({ spec, isSelected, posInSet, setSize }: ModelSpec
       aria-setsize={setSize}
       className="group flex w-full cursor-pointer items-center justify-between rounded-lg px-2 text-sm"
     >
-      <div
-        className={cn(
-          'flex w-full min-w-0 gap-2 px-1 py-1',
-          spec.description ? 'items-start' : 'items-center',
-        )}
+      {/* Deloitte Custom Change: adds a hover tooltip showing cost, speed, and other model details */}
+      <ModelInfoTooltip
+        spec={spec}
+        endpointsConfig={endpointsConfig}
+        agentAvatarURL={agentAvatarURL}
       >
-        {showIconInMenu && (
-          <div className="flex-shrink-0">
-            <SpecIcon
-              currentSpec={spec}
-              endpointsConfig={endpointsConfig}
-              agentAvatarURL={agentAvatarURL}
-            />
+        <div
+          className={cn(
+            'flex w-full min-w-0 gap-2 px-1 py-1',
+            spec.description ? 'items-start' : 'items-center',
+          )}
+        >
+          {showIconInMenu && (
+            <div className="flex-shrink-0">
+              <SpecIcon
+                currentSpec={spec}
+                endpointsConfig={endpointsConfig}
+                agentAvatarURL={agentAvatarURL}
+              />
+            </div>
+          )}
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="truncate text-left">{spec.label}</span>
+            <SpecDescription description={spec.description} />
           </div>
-        )}
-        <div className="flex min-w-0 flex-col gap-1">
-          <span className="truncate text-left">{spec.label}</span>
-          <SpecDescription description={spec.description} />
         </div>
-      </div>
+      </ModelInfoTooltip>
       <ModelCost modelId={spec.preset.model} />
       <button
         type="button"

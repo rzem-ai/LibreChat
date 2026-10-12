@@ -1,7 +1,8 @@
 import type { TModelPricing } from 'librechat-data-provider';
 import { useModelSelectorContext } from '../ModelSelectorContext';
 
-function formatPrice(value: number) {
+// Deloitte Custom Change: exported so ModelInfoTooltip can reuse this formatting.
+export function formatPrice(value: number) {
   return `$${value.toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 3,

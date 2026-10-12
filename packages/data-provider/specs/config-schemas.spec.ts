@@ -1666,6 +1666,46 @@ describe('specsConfigSchema', () => {
     expect(result.success).toBe(false);
   });
 
+  // Deloitte Custom Change: validates the new model spec `details` field and its 1-5 rating bounds.
+  it('accepts a spec with a valid details block', () => {
+    const result = specsConfigSchema.safeParse({
+      list: [
+        {
+          name: 'spec-1',
+          label: 'Spec 1',
+          preset: { endpoint: EModelEndpoint.openAI },
+          details: {
+            speed: 4,
+            intelligence: 5,
+            supports: { webSearch: true, imageGeneration: false, fileIngestion: true },
+          },
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.list[0].details).toEqual({
+        speed: 4,
+        intelligence: 5,
+        supports: { webSearch: true, imageGeneration: false, fileIngestion: true },
+      });
+    }
+  });
+
+  it.each([0, 6])('rejects a details rating of %i (out of the 1-5 range)', (rating) => {
+    const result = specsConfigSchema.safeParse({
+      list: [
+        {
+          name: 'spec-1',
+          label: 'Spec 1',
+          preset: { endpoint: EModelEndpoint.openAI },
+          details: { speed: rating },
+        },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+
   /**
    * The endpoint is inferable from `agent_id`, so config validation must not
    * reject the spec before `materializeModelSpecEndpoints` can fill it in.
