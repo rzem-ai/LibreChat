@@ -43,6 +43,13 @@ pods:
       librechat:
         image:
           tag: 'uat@sha256:9120e4cecdc870093758cd3db9ac192938fdb21157db4df2ac06a36cbc034da2'
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "32Gi"
+            cpu: "6000m"
         env:
           ADMIN_PANEL_URL: 'https://myassist-uat.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -84,9 +91,9 @@ pods:
           # RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
           RAG_API_URL: 'http://127.0.0.1:8000'
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
-          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_REGIONAL_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_GLOBAL_BASEURL: 'http://127.0.0.1:8081/azure-global'
           RAG_PORT: '8000'
-          REFRESH_TOKEN_EXPIRY: '86400000' # (ms) - 1 day refresh token expiration
           # ClearTrack Code Interpreter (ea-code-runtime)
           LIBRECHAT_CODE_BASEURL: 'https://code-runtime-uat.ctk.au.deloitte.com/v1'
           CODEAPI_AUTH_PROVIDER: 'librechat-jwt'
@@ -153,6 +160,13 @@ pods:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
           tag: 'uat@sha256:a5e1d60984c29b5fbbc2e12d1f7a7b1e77f3458bf458b984d5b9832ca5d4eb98'
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "32Gi"
+            cpu: "6000m"
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -169,7 +183,8 @@ pods:
           # RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
           # RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
-          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_REGIONAL_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_GLOBAL_BASEURL: 'http://127.0.0.1:8081/azure-global'
         secrets:
           # AZURE_OPENAI_API_KEY: librechat-azure-api-key
           # RAG_AZURE_OPENAI_API_KEY: librechat-azure-api-key
@@ -218,6 +233,7 @@ pods:
           SESSION_COOKIE_SECURE: 'true'
         secrets:
           SESSION_SECRET: librechat-admin-panel-session-secret-uat
+          ADMIN_PANEL_METRICS_SECRET: librechat-admin-panel-metrics-secret-uat
         service:
           enabled: true
           type: ClusterIP

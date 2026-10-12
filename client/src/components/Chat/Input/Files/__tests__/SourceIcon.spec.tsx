@@ -17,16 +17,18 @@ describe('SourceIcon', () => {
     expect(container.firstElementChild).toHaveClass('bg-black');
   });
 
+  // Deloitte Custom Change: adopted @librechat/client's semantic color tokens
+  // (bg-series-*) in place of literal Tailwind colors
   test('renders the file-search icon when isFileSearch is true', () => {
     const { container } = render(<SourceIcon isFileSearch />);
 
-    expect(container.firstElementChild).toHaveClass('bg-yellow-700');
+    expect(container.firstElementChild).toHaveClass('bg-series-4', 'text-text-on-status');
   });
 
   test('renders the file-search icon when source is vectordb, even without isFileSearch', () => {
     const { container } = render(<SourceIcon source={FileSources.vectordb} />);
 
-    expect(container.firstElementChild).toHaveClass('bg-yellow-700');
+    expect(container.firstElementChild).toHaveClass('bg-series-4', 'text-text-on-status');
   });
 
   test('prioritizes isCodeFile over isFileSearch', () => {
@@ -38,7 +40,7 @@ describe('SourceIcon', () => {
   test('renders the text-source icon when source is text', () => {
     const { container } = render(<SourceIcon source={FileSources.text} />);
 
-    expect(container.firstElementChild).toHaveClass('bg-blue-500');
+    expect(container.firstElementChild).toHaveClass('bg-series-1', 'text-text-on-status');
   });
 
   test('renders an endpoint icon for a known endpoint source', () => {

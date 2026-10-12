@@ -6,6 +6,7 @@ const mockMutate = jest.fn();
 const mockNavigate = jest.fn();
 const mockSetIsOpen = jest.fn();
 const mockShowToast = jest.fn();
+let mockIsLoading = false;
 
 // Deloitte Custom Change: Capture mutation callbacks so tests can simulate scanner results.
 interface MutationOptions {
@@ -34,6 +35,12 @@ jest.mock(
         ...props
       }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string }) =>
         React.createElement('button', props, children),
+      Input: React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+        (props, ref) => React.createElement('input', { ...props, ref }),
+      ),
+      Label: ({ children, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) =>
+        React.createElement('label', props, children),
+      Spinner: () => React.createElement('div', { 'data-testid': 'spinner' }),
       // Deloitte Custom Change: Expose dialog close callbacks so scanner error reset paths can be tested.
       OGDialog: ({
         open,
@@ -72,7 +79,7 @@ jest.mock('~/data-provider', () => ({
     capturedMutationOptions = options;
     return {
       mutate: mockMutate,
-      isLoading: false,
+      isLoading: mockIsLoading,
     };
   },
 }));
@@ -86,7 +93,10 @@ jest.mock('~/hooks', () => ({
       com_ui_cancel: 'Cancel',
       com_ui_create: 'Create',
       // Deloitte Custom Change: Provide the create fallback message used by scan error formatting.
-      com_ui_skill_create_error: 'Failed to create the skill',
+      com_ui_skill_create_error: 'Failed to create skill',
+      com_ui_skill_scanning: 'Reviewing your skill...',
+      com_ui_skill_name_exists: 'A skill with this name already exists',
+      com_ui_skill_name_reserved: 'This skill name is reserved',
     };
     return translations[key] ?? key;
   },
@@ -114,6 +124,74 @@ describe('CreateSkillDialog', () => {
     jest.clearAllMocks();
     capturedMutationOptions = undefined;
     capturedOnOpenChange = undefined;
+    mockIsLoading = false;
+  });
+
+  it('shows a busy create button while pending', () => {
+    mockIsLoading = true;
+    render(<CreateSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    const button = screen.getByRole('button', { name: 'Reviewing your skill...' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByTestId('spinner')).toBeInTheDocument();
+  });
+
+  it('restores the create button after a scanner error', () => {
+    mockIsLoading = true;
+    const { rerender } = render(<CreateSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    act(() => {
+      capturedMutationOptions?.onError?.(scanErrorFromIssues(['bad skill']));
+    });
+    mockIsLoading = false;
+    rerender(<CreateSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    const button = screen.getByRole('button', { name: 'Create' });
+    expect(button).not.toHaveAttribute('aria-busy');
+    expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('bad skill');
+  });
+
+  /**
+   * Deloitte Custom Change: these two assert against the inline `alert` text
+   * (not a toast) — structured field/code validation errors now share the
+   * same persistent inline surface as scanner errors (PR #635) instead of an
+   * auto-dismissing toast, so neither error type's visibility regresses.
+   */
+  it('localizes structured validation errors', () => {
+    render(<CreateSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    act(() => {
+      capturedMutationOptions?.onError?.({
+        response: {
+          status: 400,
+          data: {
+            issues: [{ field: 'name', code: 'RESERVED_WORD', message: 'settings is reserved' }],
+          },
+        },
+      });
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('This skill name is reserved');
+  });
+
+  it('preserves middleware messages and localizes duplicate names', () => {
+    render(<CreateSkillDialog isOpen={true} setIsOpen={mockSetIsOpen} />);
+
+    act(() => {
+      capturedMutationOptions?.onError?.({
+        response: { status: 403, data: { message: 'Permission denied' } },
+      });
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent('Permission denied');
+
+    act(() => {
+      capturedMutationOptions?.onError?.({
+        response: { status: 409, data: { error: 'server prose' } },
+      });
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent('A skill with this name already exists');
   });
 
   it('does not submit an ancestor form when rendered through a portal', async () => {

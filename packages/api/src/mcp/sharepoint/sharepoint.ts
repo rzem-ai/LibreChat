@@ -1,4 +1,6 @@
 import type { MCPResultSource, MCPSourcesResult } from 'librechat-data-provider';
+import { formatDisplayDate } from '../format';
+import { buildListSources } from '../listSources';
 
 /** Upper bound on results extracted from a single SharePoint response. */
 const MAX_SHAREPOINT_ITEMS = 100;
@@ -14,6 +16,14 @@ interface SharePointEntity {
   parentPath?: string;
   /** Full file content (e.g. markdown/text extracted by `sp_read_file`), if present. */
   content?: string;
+  /**
+   * Deloitte Custom Change: present on raw Graph objects (`sp_search`'s `resource`, and the
+   * `sites`/`drives`/`recentFiles`/`sharedFiles` list tools); absent from `sp_read_file`'s output.
+   */
+  createdDateTime?: string;
+  lastModifiedDateTime?: string;
+  /** Deloitte Custom Change: `sp_list_files`'s summarized `items` shape renames `lastModifiedDateTime` to this. */
+  lastModified?: string;
 }
 
 interface SharePointSearchHit {
@@ -47,6 +57,11 @@ function buildEntitySource(
     title,
     link: entity.webUrl,
     content: [title, detail].filter(Boolean).join('\n\n'),
+    // Deloitte Custom Change: citation date, preferring createdDateTime then falling back through the other timestamp fields
+    date:
+      formatDisplayDate(entity.createdDateTime) ??
+      formatDisplayDate(entity.lastModifiedDateTime) ??
+      formatDisplayDate(entity.lastModified),
   };
 }
 
@@ -55,14 +70,11 @@ function buildSourcesFromEntities(
   serverName: string,
   entities: SharePointEntity[],
 ): MCPResultSource[] {
-  const sources: MCPResultSource[] = [];
-  for (const entity of entities.slice(0, MAX_SHAREPOINT_ITEMS)) {
-    const source = buildEntitySource(toolName, serverName, entity);
-    if (source) {
-      sources.push(source);
-    }
-  }
-  return sources;
+  return buildListSources({
+    items: entities,
+    maxItems: MAX_SHAREPOINT_ITEMS,
+    mapItem: (entity) => buildEntitySource(toolName, serverName, entity),
+  });
 }
 
 /**
@@ -156,13 +168,11 @@ export function buildSharePointSources({
   }
 
   if (Array.isArray(parsed.results)) {
-    const sources: MCPResultSource[] = [];
-    for (const hit of parsed.results.slice(0, MAX_SHAREPOINT_ITEMS)) {
-      const source = buildEntitySource(toolName, serverName, hit.resource ?? {}, hit.summary);
-      if (source) {
-        sources.push(source);
-      }
-    }
+    const sources = buildListSources({
+      items: parsed.results,
+      maxItems: MAX_SHAREPOINT_ITEMS,
+      mapItem: (hit) => buildEntitySource(toolName, serverName, hit.resource ?? {}, hit.summary),
+    });
     return sources.length > 0 ? { sources } : undefined;
   }
 

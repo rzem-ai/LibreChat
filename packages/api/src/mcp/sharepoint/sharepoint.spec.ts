@@ -161,6 +161,45 @@ describe('buildSharePointSources', () => {
     );
   });
 
+  // Deloitte Custom Change: verify the new `date` field's 3-way timestamp fallback chain.
+  it('prefers createdDateTime, falling back to lastModifiedDateTime then lastModified', () => {
+    const content = JSON.stringify({
+      items: [
+        {
+          name: 'Both dates present.pdf',
+          webUrl: 'https://contoso.sharepoint.com/sites/finance/a.pdf',
+          createdDateTime: '2026-01-05T00:00:00Z',
+          lastModifiedDateTime: '2026-02-05T00:00:00Z',
+        },
+        {
+          name: 'Only lastModifiedDateTime.pdf',
+          webUrl: 'https://contoso.sharepoint.com/sites/finance/b.pdf',
+          lastModifiedDateTime: '2026-03-05T00:00:00Z',
+        },
+        {
+          name: 'Copy of GreenSheet[31].xlsx',
+          webUrl: 'https://contoso.sharepoint.com/sites/finance/c.xlsx',
+          lastModified: '2026-04-05T00:00:00Z',
+        },
+        {
+          name: 'No date at all.pdf',
+          webUrl: 'https://contoso.sharepoint.com/sites/finance/d.pdf',
+        },
+      ],
+    });
+
+    const result = buildSharePointSources({
+      toolName: 'sp_list_files',
+      serverName: 'cleartrack-mcp-gateway-sharepoint',
+      content,
+    });
+
+    expect(result?.sources[0].date).toBe('05 Jan 2026');
+    expect(result?.sources[1].date).toBe('05 Mar 2026');
+    expect(result?.sources[2].date).toBe('05 Apr 2026');
+    expect(result?.sources[3].date).toBeUndefined();
+  });
+
   it('returns undefined for an empty list result', () => {
     const content = JSON.stringify({ items: [], count: 0 });
 

@@ -11,6 +11,7 @@ jest.mock('librechat-data-provider/react-query', () => ({
 
 const mockDelete = useDeleteAgentApiKeyMutation as jest.Mock;
 
+// Deloitte Custom Change: verifies service account scope is preserved for key revocation.
 describe('DeleteKeyDialog', () => {
   let mutate: jest.Mock;
 
@@ -25,6 +26,7 @@ describe('DeleteKeyDialog', () => {
         id="key-1"
         name="CI Pipeline"
         keyPrefix="lc-abc123"
+        userEmail="eval@example.com"
         open={false}
         onOpenChange={jest.fn()}
       />,
@@ -34,13 +36,14 @@ describe('DeleteKeyDialog', () => {
   });
 
   it('shows the key details and deletes on confirm', async () => {
-    mutate.mockImplementation((id, opts) => opts?.onSuccess?.());
+    mutate.mockImplementation((_variables, opts) => opts?.onSuccess?.());
     const onOpenChange = jest.fn();
     const { getByRole, getByText } = render(
       <DeleteKeyDialog
         id="key-1"
         name="CI Pipeline"
         keyPrefix="lc-abc123"
+        userEmail="eval@example.com"
         open
         onOpenChange={onOpenChange}
       />,
@@ -50,7 +53,12 @@ describe('DeleteKeyDialog', () => {
     expect(getByText(/lc-abc123/)).toBeInTheDocument();
 
     fireEvent.click(getByRole('button', { name: 'Delete' }));
-    await waitFor(() => expect(mutate).toHaveBeenCalledWith('key-1', expect.any(Object)));
+    await waitFor(() =>
+      expect(mutate).toHaveBeenCalledWith(
+        { id: 'key-1', userEmail: 'eval@example.com' },
+        expect.any(Object),
+      ),
+    );
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

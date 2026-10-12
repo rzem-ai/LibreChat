@@ -14,6 +14,7 @@ import type { LucideIcon } from 'lucide-react';
 import type { BadgeItem } from '~/common';
 import { useGetStartupConfig } from '~/data-provider';
 import CodeInterpreter from './CodeInterpreter';
+import NativeWebSearch from './NativeWebSearch';
 import { BadgeRowProvider } from '~/Providers';
 import ToolsDropdown from './ToolsDropdown';
 import { useChatBadges } from '~/hooks';
@@ -330,6 +331,7 @@ function BadgeRow({
       conversationId={conversationId}
       specName={specName}
       isSubmitting={isSubmitting}
+      observeToolAuthorization={showEphemeralBadges === true}
     >
       <div ref={containerRef} className="relative flex flex-wrap items-center gap-2">
         {showEphemeralBadges === true &&
@@ -378,6 +380,8 @@ function BadgeRow({
         {showEphemeralBadges === true && (
           <>
             <WebSearch />
+            {/* Deloitte Custom Change: provider-native web search pill */}
+            <NativeWebSearch />
             <CodeInterpreter />
             <FileSearch />
             <Skills />

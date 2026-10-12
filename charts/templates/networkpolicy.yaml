@@ -1,5 +1,6 @@
 {{- $enabled := true -}}
 {{- $llmGatewayNamespace := dig "llmGateway" "namespace" "llm-gateway-ctnp" (merge (dict) .Values) -}}
+{{- $codeInterpreterNamespace := dig "codeInterpreter" "namespace" "" (merge (dict) .Values) -}}
 {{- if and (hasKey .Values "networkPolicy") (eq (toString .Values.networkPolicy.enabled) "false") -}}
   {{- $enabled = false -}}
 {{- end -}}
@@ -105,7 +106,7 @@ spec:
             - port: "443"
               protocol: TCP
 
-    # ── Code interpreter (ea-code-runtime) ───────────
+    # ── Code interpreter (ea-code-runtime), via Cilium Ingress ──────
     - toFQDNs:
         - matchName: "code-runtime-dev.ctk.au.deloitte.com"
         - matchName: "code-runtime-uat.ctk.au.deloitte.com"
@@ -114,6 +115,20 @@ spec:
         - ports:
             - port: "443"
               protocol: TCP
+
+    {{- if $codeInterpreterNamespace }}
+    # ── Code interpreter (ea-code-runtime), direct in-cluster call ──
+    # Bypasses the Cilium Ingress/Envoy L7 proxy — avoids Envoy's
+    # per_connection_buffer_limit_bytes default (~1MiB) that the Ingress
+    # path above is subject to. See LIBRECHAT_CODE_BASEURL in values-*.yaml.
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: {{ $codeInterpreterNamespace | quote }}
+      toPorts:
+        - ports:
+            - port: "3112"
+              protocol: TCP
+    {{- end }}
 
     # ── OTEL Exporter───────────
     - toFQDNs:

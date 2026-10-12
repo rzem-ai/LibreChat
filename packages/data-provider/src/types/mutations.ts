@@ -12,17 +12,13 @@ import type {
   TSkillListResponse,
 } from './skills';
 import {
-  Tools,
   Assistant,
   AssistantCreateParams,
   AssistantUpdateParams,
-  FunctionTool,
   AssistantDocument,
-  Agent,
-  AgentCreateParams,
-  AgentUpdateParams,
 } from './assistants';
-import { Action, ActionMetadata } from './agents';
+import { Action, ActionMetadata, Agent, AgentCreateParams, AgentUpdateParams } from './agents';
+import { Tools, FunctionTool } from './tools';
 import * as p from '../permissions';
 import * as types from '../types';
 import * as r from '../roles';
@@ -232,6 +228,11 @@ export type ArchiveConvoOptions = MutationOptions<
   types.TArchiveConversationRequest
 >;
 
+export type ArchiveAllConversationsOptions = MutationOptions<
+  types.TArchiveAllConversationsResponse,
+  void
+>;
+
 export type DeleteSharedLinkContext = { previousQueries?: Map<string, TDeleteSharedLinkResponse> };
 export type DeleteSharedLinkOptions = MutationOptions<
   TDeleteSharedLinkResponse,
@@ -437,6 +438,13 @@ export type AcceptTermsMutationOptions = MutationOptions<
   void,
   unknown,
   void
+>;
+
+export type UpdateTutorialStateMutationOptions = MutationOptions<
+  types.TTutorialStateResponse,
+  Partial<types.TTutorialStateResponse>,
+  unknown,
+  unknown
 >;
 
 /* Tools */

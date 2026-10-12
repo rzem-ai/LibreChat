@@ -4,6 +4,13 @@ map $http_authorization $token {
     default             "";
 }
 
+# Single source of truth for all providers proxied below (Anthropic, Azure OpenAI,
+# Bedrock): matches Anthropic's own 32MB total-request ceiling, which is also
+# generous enough for the others' smaller native per-item limits. Set once at this
+# http-level scope (this file is included inside the base image's http{} block via
+# /etc/nginx/templates) so it can't drift out of sync between the server blocks below.
+client_max_body_size 32M;
+
 # ===========================================
 # Anthropic Gateway Proxy (port 8080)
 # Translates x-api-key → x-id-token
@@ -50,6 +57,36 @@ server {
          proxy_read_timeout 300s;
          proxy_connect_timeout 10s;
      }
+
+    location /azure-au/ {
+        proxy_set_header x-id-token $token;
+        proxy_set_header Authorization "";
+        proxy_set_header Content-Type $http_content_type;
+        proxy_set_header Host ${AZURE_OPENAI_HOST};
+
+        proxy_pass https://${AZURE_OPENAI_HOST}/openai/v1/;
+        proxy_ssl_server_name on;
+
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 10s;
+    }
+
+    location /azure-global/ {
+        proxy_set_header x-id-token $token;
+        proxy_set_header Authorization "";
+        proxy_set_header Content-Type $http_content_type;
+        proxy_set_header Host ${AZURE_OPENAI_GLOBAL_HOST};
+
+        proxy_pass https://${AZURE_OPENAI_GLOBAL_HOST}/openai/v1/;
+        proxy_ssl_server_name on;
+
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 10s;
+    }
 
     location / {
         proxy_set_header x-id-token $token;

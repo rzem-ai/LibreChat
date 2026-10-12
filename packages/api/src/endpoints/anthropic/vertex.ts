@@ -2,6 +2,7 @@ import path from 'path';
 import { GoogleAuth } from 'google-auth-library';
 import { AuthKeys } from 'librechat-data-provider';
 import { AnthropicVertex } from '@anthropic-ai/vertex-sdk';
+import type { ClientOptions as VertexClientOptions } from '@anthropic-ai/vertex-sdk'; //Deloitte Custom Change
 import type { ClientOptions } from '@anthropic-ai/sdk';
 import type { AnthropicCredentials, VertexAIClientOptions } from '~/types/anthropic';
 import { loadServiceKey } from '~/utils/key';
@@ -217,7 +218,13 @@ export function createAnthropicVertexClient(
       region: region,
       googleAuth: googleAuth,
       ...(projectId && { projectId }),
-      ...filteredOptions,
+      /**
+       * Deloitte Custom Change
+       * `@librechat/agents` and `@anthropic-ai/vertex-sdk` currently pin different
+       * `@anthropic-ai/sdk` versions, so their `ClientOptions` types are structurally
+       * identical but nominally distinct. Cast at this single crossing point.
+       */
+      ...(filteredOptions as VertexClientOptions | undefined),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

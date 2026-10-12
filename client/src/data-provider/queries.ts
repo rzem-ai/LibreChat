@@ -1,3 +1,6 @@
+// Deloitte Custom Change: keep useRecoilValue for store.user, used by MyAssist Academy tour (PR #903)
+import { useRecoilValue } from 'recoil';
+import { useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import {
   QueryKeys,
   dataService,
@@ -6,14 +9,6 @@ import {
   defaultOrderQuery,
   defaultAssistantsVersion,
 } from 'librechat-data-provider';
-import { useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import type {
-  UseInfiniteQueryOptions,
-  QueryObserverResult,
-  UseQueryOptions,
-  InfiniteData,
-} from '@tanstack/react-query';
-import type t from 'librechat-data-provider';
 import type {
   Action,
   TPreset,
@@ -30,8 +25,16 @@ import type {
   SharedLinksListParams,
   SharedLinksResponse,
 } from 'librechat-data-provider';
+import type {
+  UseInfiniteQueryOptions,
+  QueryObserverResult,
+  UseQueryOptions,
+  InfiniteData,
+} from '@tanstack/react-query';
+import type t from 'librechat-data-provider';
 import type { ConversationCursorData } from '~/utils/convos';
 import { findConversationInInfinite, isNotFoundError } from '~/utils';
+import store from '~/store';
 
 export const useGetPresetsQuery = (
   config?: UseQueryOptions<TPreset[]>,
@@ -93,8 +96,8 @@ export const useConversationsInfiniteQuery = (
       isArchived ? QueryKeys.archivedConversations : QueryKeys.allConversations,
       { isArchived, sortBy, sortDirection, tags, search, projectId },
     ],
-    queryFn: ({ pageParam }) =>
-      dataService.listConversations({
+    queryFn: async ({ pageParam }) => {
+      const page = await dataService.listConversations({
         isArchived,
         sortBy,
         sortDirection,
@@ -102,13 +105,90 @@ export const useConversationsInfiniteQuery = (
         search,
         projectId,
         cursor: pageParam?.toString(),
-      }),
+      });
+      /* A row's own `isArchived` decides what its menu offers, so a backend that predates
+         that field in the list projection would make archived rows offer Archive and submit
+         a no-op. What the variant asked for is the answer for any row that omits it. */
+      return {
+        ...page,
+        conversations: page.conversations.map((conversation) =>
+          conversation.isArchived == null
+            ? { ...conversation, isArchived: isArchived === true }
+            : conversation,
+        ),
+      };
+    },
     getNextPageParam: (lastPage) => lastPage?.nextCursor ?? undefined,
     keepPreviousData: true,
     staleTime: 5 * 60 * 1000, // 5 minutes
     cacheTime: 30 * 60 * 1000, // 30 minutes
     ...config,
   });
+};
+
+/**
+ * Pinned chats are a hand-curated set, so the sidebar fetches the whole thing rather
+ * than paginating it: a pin older than the first page of the Chats list would
+ * otherwise stay hidden until that list scrolled far enough to reach it, and
+ * `groupConversations` keeps pins out of the Chats groups entirely, so any pin
+ * this query does not return is invisible in the sidebar. The page size is therefore a
+ * request size, not a cap; the query drains the cursor.
+ *
+ * It takes no filters on purpose: the Chats list's status, bookmark and sort choices
+ * narrow that list alone, and a curated shortcut row that emptied itself whenever a
+ * filter was on would be the opposite of a shortcut.
+ */
+export const pinnedConversationsPageSize = 100;
+
+export const usePinnedConversationsQuery = (
+  config?: UseQueryOptions<ConversationListResponse>,
+): QueryObserverResult<ConversationListResponse> => {
+  const queryClient = useQueryClient();
+  const queryKey = [QueryKeys.pinnedConversations];
+
+  return useQuery<ConversationListResponse>(
+    queryKey,
+    async ({ signal }) => {
+      const conversations: ConversationListResponse['conversations'] = [];
+      let cursor: string | undefined;
+
+      do {
+        let page: ConversationListResponse;
+        try {
+          page = await dataService.listConversations({
+            pinned: true,
+            limit: pinnedConversationsPageSize,
+            cursor,
+          });
+        } catch (error) {
+          signal?.throwIfAborted();
+          /** A page failing partway through the drain must not throw away the pins
+           * already loaded: publish them so the retry, which starts the drain over,
+           * renders against the partial set instead of an empty section. */
+          if (conversations.length > 0) {
+            queryClient.setQueryData<ConversationListResponse>(queryKey, {
+              conversations,
+              nextCursor: cursor ?? null,
+            });
+          }
+          throw error;
+        }
+        signal?.throwIfAborted();
+        conversations.push(...page.conversations);
+        cursor = page.nextCursor ?? undefined;
+      } while (cursor);
+
+      return { conversations, nextCursor: null };
+    },
+    {
+      /* Left on the React Query defaults for focus and reconnect, matching the
+         conversations query: a pin changed in another tab is only reconciled by a
+         refetch, since the mutation that made it never touched this cache. */
+      staleTime: 5 * 60 * 1000,
+      cacheTime: 30 * 60 * 1000,
+      ...config,
+    },
+  );
 };
 
 export const useMessagesInfiniteQuery = (
@@ -525,13 +605,52 @@ export const useGetRandomPrompts = (
   );
 };
 
+// Deloitte Custom Change: userId-scoped cache key and guard added so a second
+// account logging in within the same SPA session cannot reuse the previous
+// account's terms-accepted or tutorial state (cross-user cache leak fix).
 export const useUserTermsQuery = (
   config?: UseQueryOptions<t.TUserTermsResponse>,
 ): QueryObserverResult<t.TUserTermsResponse> => {
-  return useQuery<t.TUserTermsResponse>([QueryKeys.userTerms], () => dataService.getUserTerms(), {
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchOnMount: false,
-    ...config,
-  });
+  // Scope the cache key by userId so a second account logging in within the
+  // same SPA session cannot reuse the previous account's terms-accepted state.
+  const user = useRecoilValue<t.TUser | undefined>(store.user);
+  const userId = user?.id;
+  return useQuery<t.TUserTermsResponse>(
+    [QueryKeys.userTerms, userId],
+    () => dataService.getUserTerms(),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      ...config,
+      // userId guard must come after ...config so it cannot be overridden by
+      // a caller-supplied enabled condition that doesn't account for userId.
+      enabled: !!userId && (config?.enabled ?? true),
+    },
+  );
+};
+
+export const useTutorialStateQuery = (
+  config?: UseQueryOptions<t.TTutorialStateResponse>,
+): QueryObserverResult<t.TTutorialStateResponse> => {
+  // Scope the cache key by userId so a second account logging in within the
+  // same SPA session cannot reuse the previous account's tutorialPromptSeen
+  // or ratings data (the mutation writes back to this same scoped key).
+  const user = useRecoilValue<t.TUser | undefined>(store.user);
+  const userId = user?.id;
+  return useQuery<t.TTutorialStateResponse>(
+    [QueryKeys.userTutorialState, userId],
+    () => dataService.getUserTutorialState(),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      // refetchOnMount: true (default) so the same user always gets a fresh
+      // read after sign-out/sign-in or changes made from another device/tab,
+      // regardless of which auth path was taken (OAuth, SSO, token refresh).
+      ...config,
+      // userId guard must come after ...config so it cannot be overridden by
+      // a caller-supplied enabled condition that doesn't account for userId.
+      enabled: !!userId && (config?.enabled ?? true),
+    },
+  );
 };

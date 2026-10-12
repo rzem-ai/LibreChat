@@ -6,7 +6,6 @@ import {
   Archive,
   ChevronRight,
   CircleHelp,
-  FileText,
   Keyboard,
   LifeBuoy,
   LogOut,
@@ -14,9 +13,9 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { ArchivedChatsModal } from '~/components/Nav/SettingsTabs/General/ArchivedChatsModal';
-import { MyFilesModal } from '~/components/Chat/Input/Files/MyFilesModal';
 import { useGetStartupConfig, useGetUserBalance } from '~/data-provider';
 import { useAuthContext } from '~/hooks/AuthContext';
+import { openInNewTab } from '~/utils';
 import { useLocalize } from '~/hooks';
 import Settings from './Settings';
 import store from '~/store';
@@ -57,7 +56,7 @@ function HelpSubmenu({
       >
         {hasHelpFaq && (
           <Menu.MenuItem
-            onClick={() => window.open(helpAndFaqURL, '_blank', 'noopener,noreferrer')}
+            onClick={() => openInNewTab(helpAndFaqURL)}
             className="select-item text-sm"
           >
             <LifeBuoy className="icon-md" aria-hidden="true" />
@@ -71,7 +70,7 @@ function HelpSubmenu({
         {showLegalDivider && (hasTos || hasPrivacy) && <DropdownMenuSeparator />}
         {hasTos && (
           <Menu.MenuItem
-            onClick={() => window.open(termsOfServiceURL, '_blank', 'noopener,noreferrer')}
+            onClick={() => openInNewTab(termsOfServiceURL)}
             className="select-item text-sm"
           >
             <Scale className="icon-md" aria-hidden="true" />
@@ -80,7 +79,7 @@ function HelpSubmenu({
         )}
         {hasPrivacy && (
           <Menu.MenuItem
-            onClick={() => window.open(privacyPolicyURL, '_blank', 'noopener,noreferrer')}
+            onClick={() => openInNewTab(privacyPolicyURL)}
             className="select-item text-sm"
           >
             <ShieldCheck className="icon-md" aria-hidden="true" />
@@ -100,7 +99,6 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
     enabled: !!isAuthenticated && startupConfig?.balance?.enabled,
   });
   const [showSettings, setShowSettings] = useState(false);
-  const [showFiles, setShowFiles] = useState(false);
   const setShowShortcutsDialog = useSetRecoilState(store.showShortcutsDialog);
   const [showArchived, setShowArchived] = useState(false);
   const accountSettingsButtonRef = useRef<HTMLButtonElement>(null);
@@ -109,8 +107,9 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
     <Menu.MenuProvider placement={collapsed ? 'right-end' : undefined}>
       <Menu.MenuButton
         ref={accountSettingsButtonRef}
-        aria-label={localize('com_nav_account_settings')}
+        id="nav-user"
         data-testid="nav-user"
+        aria-label={localize('com_nav_account_settings')}
         className={
           collapsed
             ? 'flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-surface-active-alt aria-[expanded=true]:bg-surface-active-alt'
@@ -160,10 +159,6 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           privacyPolicyURL={startupConfig?.interface?.privacyPolicy?.externalUrl}
           onShowShortcuts={() => setShowShortcutsDialog(true)}
         />
-        <Menu.MenuItem onClick={() => setShowFiles(true)} className="select-item text-sm">
-          <FileText className="icon-md" aria-hidden="true" />
-          {localize('com_nav_my_files')}
-        </Menu.MenuItem>
         <Menu.MenuItem onClick={() => setShowArchived(true)} className="select-item text-sm">
           <Archive className="icon-md" aria-hidden="true" />
           {localize('com_nav_archived_chats')}
@@ -182,13 +177,6 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           {localize('com_nav_log_out')}
         </Menu.MenuItem>
       </Menu.Menu>
-      {showFiles && (
-        <MyFilesModal
-          open={showFiles}
-          onOpenChange={setShowFiles}
-          triggerRef={accountSettingsButtonRef}
-        />
-      )}
       {showArchived && (
         <ArchivedChatsModal
           open={showArchived}

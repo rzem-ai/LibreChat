@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { Keyv } from 'keyv';
 import { logger } from '@librechat/data-schemas';
 import type { IUser } from '@librechat/data-schemas';
+import { consumeCacheEntry } from '../cache/consume';
 
 /** Default admin panel URL for local development */
 const DEFAULT_ADMIN_PANEL_URL = 'http://localhost:3000';
@@ -24,7 +25,6 @@ export interface AdminExchangeUser {
   name: string;
   username: string;
   role: string;
-  avatar?: string;
   provider?: string;
   openidId?: string;
 }
@@ -50,6 +50,12 @@ export interface AdminExchangeData {
  */
 export interface AdminExchangeResponse {
   token: string;
+  /**
+   * When Google rotates the refresh token on use, this will differ from the
+   * token the client originally sent. Clients MUST persist this value; failing
+   * to do so causes future refresh calls to fail once Google's original grant
+   * expires or is revoked.
+   */
   refreshToken?: string;
   user: AdminExchangeUser;
   expiresAt?: number;
@@ -62,6 +68,7 @@ export interface AdminExchangeResponse {
  */
 export function serializeUserForExchange(user: IUser): AdminExchangeUser {
   const userId = String(user._id);
+  // Deloitte Custom Change: Exclude avatars because base64 data URIs can overflow the admin-session cookie.
   return {
     _id: userId,
     id: userId,
@@ -69,7 +76,6 @@ export function serializeUserForExchange(user: IUser): AdminExchangeUser {
     name: user.name ?? '',
     username: user.username ?? '',
     role: user.role ?? 'USER',
-    avatar: user.avatar,
     provider: user.provider,
     openidId: user.openidId,
   };
@@ -132,7 +138,7 @@ export async function generateAdminExchangeCode(
 
 /**
  * Exchanges an authorization code for tokens and user data.
- * The code is deleted immediately after retrieval (one-time use).
+ * The code is atomically removed before validation (one-time use).
  * @param cache - The Keyv cache instance for retrieving exchange data
  * @param code - The authorization code to exchange
  * @param requestOrigin - The origin of the requesting client for origin binding
@@ -145,10 +151,7 @@ export async function exchangeAdminCode(
   requestOrigin?: string,
   codeVerifier?: string,
 ): Promise<AdminExchangeResponse | null> {
-  const data = (await cache.get(code)) as AdminExchangeData | undefined;
-
-  /** Delete before validation — ensures one-time use even if subsequent checks throw */
-  await cache.delete(code);
+  const data = await consumeCacheEntry<AdminExchangeData>(cache, code);
 
   if (!data) {
     logger.warn('[adminExchange] Invalid or expired authorization code');

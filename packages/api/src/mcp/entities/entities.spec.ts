@@ -34,8 +34,10 @@ describe('buildEntitySources', () => {
     });
     expect(result?.sources[0].content).toContain('Entity ID: 127914');
     expect(result?.sources[0].content).toContain('Last approved: 2009-04-24T21:15:04.683');
+    expect(result?.sources[0].date).toBe('24 Apr 2009');
     expect(result?.sources[1]).toMatchObject({ title: 'Microsoft Corporation' });
     expect(result?.sources[1].content).not.toContain('Last approved');
+    expect(result?.sources[1].date).toBeUndefined();
   });
 
   it('builds a single source for a get_entity_by_id-style payload', () => {

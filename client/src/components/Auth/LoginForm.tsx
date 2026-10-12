@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useForm } from 'react-hook-form';
 import { Turnstile } from '@marsidev/react-turnstile';
-import { ThemeContext, SecretInput, Spinner, Button, isDark } from '@librechat/client';
+import { ThemeContext, SecretInput, Spinner, Button, Input, isDark } from '@librechat/client';
 import type { TLoginUser, TStartupConfig } from 'librechat-data-provider';
 import type { TAuthContext } from '~/common';
 import { useResendVerificationEmail, useGetStartupConfig } from '~/data-provider';
@@ -31,6 +31,7 @@ const LoginForm: React.FC<TLoginFormProps> = ({ onSubmit, startupConfig, error, 
   const useUsernameLogin = config?.ldap?.username;
   const validTheme = isDark(theme) ? 'dark' : 'light';
   const requireCaptcha = Boolean(startupConfig.turnstile?.siteKey);
+  // Deloitte Custom Change: GEL design system input styling (PR #138)
   const authInputClassName =
     'peer h-12 w-full rounded-lg border border-border-light bg-surface-primary px-4 text-text-primary transition-colors duration-200 hover:border-border-medium focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus-visible:border-primary';
   const authSecretInputClassName = `${authInputClassName} pr-12`;
@@ -59,7 +60,7 @@ const LoginForm: React.FC<TLoginFormProps> = ({ onSubmit, startupConfig, error, 
   const renderError = (fieldName: string) => {
     const errorMessage = errors[fieldName]?.message;
     return errorMessage ? (
-      <span role="alert" className="mt-1 text-sm text-red-600 dark:text-red-500">
+      <span role="alert" className="mt-1 text-sm text-text-destructive">
         {String(errorMessage)}
       </span>
     ) : null;
@@ -76,11 +77,12 @@ const LoginForm: React.FC<TLoginFormProps> = ({ onSubmit, startupConfig, error, 
   return (
     <>
       {showResendLink && (
+        // Deloitte Custom Change: GEL design system styling (PR #138)
         <div className="mt-2 rounded-md border border-primary bg-primary/10 px-3 py-2 text-sm text-gray-600 dark:text-gray-200">
           {localize('com_auth_email_verification_resend_prompt')}
           <button
             type="button"
-            className="ml-2 text-blue-600 hover:underline"
+            className="ml-2 text-link hover:underline"
             onClick={handleResendEmail}
             disabled={resendLinkMutation.isLoading}
           >
@@ -96,7 +98,7 @@ const LoginForm: React.FC<TLoginFormProps> = ({ onSubmit, startupConfig, error, 
       >
         <div className="mb-4">
           <div className="relative">
-            <input
+            <Input
               type="text"
               id="email"
               autoComplete={useUsernameLogin ? 'username' : 'email'}
@@ -148,6 +150,7 @@ const LoginForm: React.FC<TLoginFormProps> = ({ onSubmit, startupConfig, error, 
         {startupConfig.passwordResetEnabled && (
           <a
             href="/forgot-password"
+            // Deloitte Custom Change: GEL design system color tokens (PR #138)
             className="inline-flex p-1 text-sm font-medium text-primary underline decoration-transparent transition-all duration-200 hover:text-primary-hover hover:decoration-primary focus:text-primary-hover focus:decoration-primary"
           >
             {localize('com_auth_password_forgot')}

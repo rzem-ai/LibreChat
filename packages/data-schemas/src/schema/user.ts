@@ -1,5 +1,10 @@
 import { Schema } from 'mongoose';
-import { SystemRoles } from 'librechat-data-provider';
+import {
+  SystemRoles,
+  STATEFUL_CODE_ENVIRONMENTS,
+  // Deloitte Custom Change: tutorial feedback comment length cap
+  MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH,
+} from 'librechat-data-provider';
 import { IUser } from '~/types';
 
 // Session sub-schema
@@ -19,6 +24,27 @@ const BackupCodeSchema = new Schema(
     codeHash: { type: String, required: true },
     used: { type: Boolean, default: false },
     usedAt: { type: Date, default: null },
+  },
+  { _id: false },
+);
+
+const TutorialFeedbackSchema = new Schema(
+  {
+    score: {
+      type: Number,
+      min: 1,
+      max: 5,
+      required: true,
+    },
+    comment: {
+      type: String,
+      trim: true,
+      maxlength: MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { _id: false },
 );
@@ -131,11 +157,31 @@ const userSchema: Schema<IUser> = new Schema<IUser>(
       type: Date,
       default: null,
     },
+    agentTriggerDeletionStartedAt: {
+      type: Date,
+      select: false,
+    },
+    subagentAdmissionFences: {
+      type: [
+        {
+          token: { type: String, required: true },
+          expiresAt: { type: Date, required: true },
+        },
+      ],
+      _id: false,
+      select: false,
+      default: undefined,
+    },
     personalization: {
       type: {
         memories: {
           type: Boolean,
           default: true,
+        },
+        statefulCodeEnvironment: {
+          type: String,
+          enum: STATEFUL_CODE_ENVIRONMENTS,
+          default: 'user',
         },
       },
       default: {},
@@ -152,9 +198,36 @@ const userSchema: Schema<IUser> = new Schema<IUser>(
       ],
       default: [],
     },
+    /** Display order for the sidebar's Pinned section: favorite and pinned-chat
+     *  entry keys interleaved (`agent:`, `spec:`, `model:`, `convo:` prefixes).
+     *  Keys whose item no longer exists are ignored; unlisted items keep their
+     *  natural order after the listed ones. */
+    pinnedOrder: {
+      type: [String],
+      default: [],
+      /** Display-only, and allowed to grow large. Every authentication request
+       *  loads the user document, so leaving this selected would put hundreds
+       *  of kilobytes on paths that never read it. The pinned-order handler
+       *  asks for it explicitly with `+pinnedOrder`. */
+      select: false,
+    },
     skillStates: {
       type: Map,
       of: Boolean,
+      default: () => new Map(),
+    },
+    tutorialPromptSeen: {
+      type: Boolean,
+      default: false,
+    },
+    tutorialRatings: {
+      type: Map,
+      of: Number,
+      default: () => new Map(),
+    },
+    tutorialFeedback: {
+      type: Map,
+      of: TutorialFeedbackSchema,
       default: () => new Map(),
     },
     /** Field for external source identification (for consistency with TPrincipal schema) */

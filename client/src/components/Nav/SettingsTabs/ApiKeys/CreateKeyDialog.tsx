@@ -8,9 +8,11 @@ import Reveal from './Reveal';
 type CreateKeyDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Deloitte Custom Change: passes the selected service account to key creation. */
+  userEmail: string;
 };
 
-export default function CreateKeyDialog({ open, onOpenChange }: CreateKeyDialogProps) {
+export default function CreateKeyDialog({ open, onOpenChange, userEmail }: CreateKeyDialogProps) {
   const localize = useLocalize();
   const [createdKey, setCreatedKey] = useState<TAgentApiKeyCreateResponse | null>(null);
   const [prevOpen, setPrevOpen] = useState(open);
@@ -39,7 +41,11 @@ export default function CreateKeyDialog({ open, onOpenChange }: CreateKeyDialogP
         {createdKey != null ? (
           <Reveal createdKey={createdKey} onDone={() => onOpenChange(false)} />
         ) : (
-          <Create onCreated={setCreatedKey} onCancel={() => onOpenChange(false)} />
+          <Create
+            userEmail={userEmail}
+            onCreated={setCreatedKey}
+            onCancel={() => onOpenChange(false)}
+          />
         )}
       </OGDialogContent>
     </OGDialog>

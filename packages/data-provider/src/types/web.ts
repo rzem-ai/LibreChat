@@ -12,8 +12,8 @@ export enum DATE_RANGE {
   PAST_YEAR = 'y',
 }
 
-export type SearchProvider = 'serper' | 'searxng' | 'tavily';
-export type ScraperProvider = 'firecrawl' | 'serper' | 'tavily';
+export type SearchProvider = 'serper' | 'searxng' | 'tavily' | 'keenable';
+export type ScraperProvider = 'firecrawl' | 'serper' | 'tavily' | 'keenable';
 export type RerankerType = 'infinity' | 'jina' | 'cohere' | 'none';
 
 export interface Highlight {
@@ -38,6 +38,8 @@ export type ValidSource = ProcessedOrganic | ProcessedTopStory;
 export type FileReferenceMetadata = {
   fileBytes?: number;
   fileType?: string;
+  /** Deloitte Custom Change: ISO timestamp the file was uploaded, from the File record's `createdAt`. */
+  uploadedAt?: string;
 };
 
 export type ResultReference = {
@@ -63,6 +65,9 @@ export type MCPResultReference = {
   attribution: string;
   type: 'mcp';
   usageRestriction?: boolean;
+  /** Deloitte Custom Change: citation date, formatted for display (e.g. "06 Nov 2025"). */
+  date?: string;
+  usageRestrictionLink?: string;
 };
 
 export interface SearchResultData {
@@ -102,9 +107,13 @@ export interface SearchConfig {
   serperApiKey?: string;
   searxngInstanceUrl?: string;
   searxngApiKey?: string;
+  searxngSearchOptions?: z.infer<typeof webSearchSchema>['searxngSearchOptions'];
   tavilyApiKey?: string;
   tavilySearchUrl?: string;
   tavilySearchOptions?: TavilyConfig['tavilySearchOptions'];
+  keenableApiKey?: string;
+  keenableApiUrl?: string;
+  keenableSearchOptions?: KeenableConfig['keenableSearchOptions'];
 }
 
 export type References = {
@@ -167,6 +176,13 @@ export interface TavilyConfig {
   tavilyExtractUrl?: string;
   tavilySearchOptions?: z.infer<typeof webSearchSchema>['tavilySearchOptions'];
   tavilyScraperOptions?: z.infer<typeof webSearchSchema>['tavilyScraperOptions'];
+}
+
+export interface KeenableConfig {
+  keenableApiKey?: string;
+  keenableApiUrl?: string;
+  keenableSearchOptions?: z.infer<typeof webSearchSchema>['keenableSearchOptions'];
+  keenableScraperOptions?: z.infer<typeof webSearchSchema>['keenableScraperOptions'];
 }
 
 export interface ScraperContentResult {

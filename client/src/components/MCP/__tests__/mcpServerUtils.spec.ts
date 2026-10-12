@@ -5,6 +5,7 @@ import type { MCPServerStatusIconProps } from '../MCPServerStatusIcon';
 import {
   getSelectedServerIcons,
   hasConfiguredIcon,
+  hasLimitedAccess,
   resolveThemedIconPaths,
   shouldShowActionButton,
 } from '../mcpServerUtils';
@@ -108,6 +109,13 @@ describe('hasConfiguredIcon', () => {
     expect(hasConfiguredIcon({ iconPath: '/icon.png' })).toBe(true);
     expect(hasConfiguredIcon({ iconPathLight: '/light.png' })).toBe(true);
     expect(hasConfiguredIcon({ iconPathDark: '/dark.png' })).toBe(true);
+  });
+});
+
+describe('hasLimitedAccess', () => {
+  it('returns true only for servers configured with limited access', () => {
+    expect(hasLimitedAccess(makeServer('sharepoint', { limitedAccess: true }))).toBe(true);
+    expect(hasLimitedAccess(makeServer('other-server'))).toBe(false);
   });
 });
 

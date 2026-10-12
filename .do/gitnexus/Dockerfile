@@ -35,11 +35,25 @@ RUN echo "deb http://deb.debian.org/debian trixie main" > /etc/apt/sources.list.
 #    load-only policy and never installs them at runtime, so the cache
 #    must already exist. (GitNexus loads the vector extension itself
 #    via loadVectorExtension — no adapter patch needed.)
+#    Deloitte Custom Change: This runs as root, so the cache lands under /root/.kuzu; it's moved
+#    to the runtime user's home below so gitnexus serve (running as that
+#    user) still finds it via ~/.kuzu/extension/.
 COPY install-extensions.js /tmp/install-extensions.js
 RUN node /tmp/install-extensions.js && rm -rf /tmp/install-extensions.js /tmp/lbug-ext-install
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+#    Deloitte Custom Change: 4. Run as the image's built-in non-root "node" user (uid 1000) instead
+#    of root. Move the extension cache built in step 3 into its home so
+#    it's still found at ~/.kuzu/extension/.
+#    Note: /opt/gitnexus/indexes on the host must be readable by uid 1000
+#    for the bind-mounted /indexes to work under this user.
+RUN mkdir -p /home/node/.kuzu \
+    && mv /root/.kuzu/extension /home/node/.kuzu/extension \
+    && chown -R node:node /home/node/.kuzu
+ENV HOME=/home/node
+USER node
 
 EXPOSE 4747
 

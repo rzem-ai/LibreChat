@@ -20,6 +20,7 @@ import {
   useGetAgentsConfig,
   useToolToggle,
 } from '~/hooks';
+import useNativeWebSearchToggle from '~/hooks/Plugins/useNativeWebSearchToggle';
 import useArtifactsShadcnOnly from '~/hooks/Artifacts/useArtifactsShadcnOnly';
 import { getTimestampedValue } from '~/utils/timestamps';
 import { useGetStartupConfig } from '~/data-provider';
@@ -32,6 +33,8 @@ interface BadgeRowContextType {
   skills: ReturnType<typeof useToolToggle>;
   memory: ReturnType<typeof useToolToggle>;
   webSearch: ReturnType<typeof useToolToggle>;
+  // Deloitte Custom Change: native (provider) web-search pill state
+  nativeWebSearch: ReturnType<typeof useNativeWebSearchToggle>;
   artifacts: ReturnType<typeof useToolToggle>;
   fileSearch: ReturnType<typeof useToolToggle>;
   canUseFileSearchPill: boolean;
@@ -51,6 +54,7 @@ interface BadgeRowProviderProps {
   isSubmitting?: boolean;
   conversationId?: string | null;
   specName?: string | null;
+  observeToolAuthorization?: boolean;
 }
 
 export default function BadgeRowProvider({
@@ -58,6 +62,7 @@ export default function BadgeRowProvider({
   isSubmitting,
   conversationId,
   specName,
+  observeToolAuthorization = false,
 }: BadgeRowProviderProps) {
   const lastContextKeyRef = useRef<string>('');
   const hasInitializedRef = useRef(false);
@@ -248,6 +253,9 @@ export default function BadgeRowProvider({
     },
   });
 
+  // Deloitte Custom Change: native web search writes `conversation.web_search`, not `ephemeralAgent`
+  const nativeWebSearch = useNativeWebSearchToggle();
+
   /** FileSearch hook */
   const fileSearch = useToolToggle({
     conversationId,
@@ -337,12 +345,19 @@ export default function BadgeRowProvider({
     isAuthenticated: true,
   });
 
-  const mcpServerManager = useMCPServerManager({ conversationId, storageContextKey });
+  const mcpServerManager = useMCPServerManager({
+    conversationId,
+    storageContextKey,
+    specName,
+    ownsChatSelection: true,
+    observeToolAuthorization,
+  });
 
   const value: BadgeRowContextType = {
     skills,
     memory,
     webSearch,
+    nativeWebSearch,
     artifacts,
     fileSearch,
     canUseFileSearchPill, // Deloitte Custom Change

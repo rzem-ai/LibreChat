@@ -1,4 +1,4 @@
-version: 1.3.13 # Copy from librechat.example.yaml
+version: 1.3.17 # Copy from librechat.example.yaml
 cache: true
 
 # 'includedTools' restricts the list of tools available in the Agent Builder.
@@ -31,6 +31,8 @@ interface:
     - 'mcp'
     - 'execute_code'
     - 'artifacts'
+    # Deloitte Custom Change: pin the provider-native web search pill by default
+    - 'native_web_search'
 
   deloitteHeader:
     enabled: true
@@ -50,7 +52,7 @@ interface:
       - Have read and understand Deloitte Australia's [AI Usage Statement and AI Guidance](https://ausdeloitte.sharepoint.com/sites/DAIS/Shared%20Documents/Forms/AllItems.aspx?id=%2fsites%2fDAIS%2fShared+Documents%2fAI+Usage+Statement+and+AI+Guidance.pdf&parent=%2fsites%2fDAIS%2fShared+Documents&xsdata=MDV8MDJ8aWVkd2FyZHNAZGVsb2l0dGUuY29tLmF1fDM1N2RkNWIwNDE4MTRhZjM3ZWY0MDhkZjAzMGU4MTA1fDM2ZGE0NWYxZGQyYzRkMWZhZjEzNWFiZTQ2Yjk5OTIxfDB8MHw2MzkyMzMwMzI5OTA2MDY2MTh8VW5rbm93bnxUV0ZwYkdac2IzZDhleUpGYlhCMGVVMWhjR2tpT25SeWRXVXNJbFlpT2lJd0xqQXVNREF3TUNJc0lsQWlPaUpYYVc0ek1pSXNJa0ZPSWpvaVRXRnBiQ0lzSWxkVUlqb3lmUT09fDB8fHw%3d&sdata=T2w5MFNlSFVSdmJOZ1ozMFRVWGF3c1FDV25zOGoxdDVhNTBFWDJTV0pWQT0%3d);
       These guidelines apply to all users. Users from other member firms with questions on compliance should contact their local Q&R team. New Zealand users: nzdataoffice@deloitte.co.nz.
       - Understand that you are permitted to upload Deloitte or client confidential information to MyAssist, provided that you respect any client contractual obligations, including restrictions on the purpose for which client data may be used.
-      - Understand that if your client contract restricts Deloitte from processing client confidential information offshore, you must use an "Azure AU" model which can be selected in the model dropdown list.
+       - Understand that if your client contract restricts Deloitte from processing client confidential information offshore, you must use an "AU Regional" model which can be selected in the model dropdown list.
       - Understand that you are NOT permitted to use personal information or high-risk confidential information (e.g. market sensitive information such as financials, acquisition details, strategic plans) in your prompts when the “Web Search” feature is enabled.
       - Will review and fact-check any outputs generated using MyAssist, be transparent with your team about how you have used it in your work, and remain responsible for approving any actions performed by MyAssist on your behalf and for the outcomes of those action.
       - Will always act in accordance with your [Global Principles of Business Conduct](https://ausdeloitte.sharepoint.com/:b:/r/sites/DAISPolicies/QR%20Policies/Deloitte%20Global%20Principles%20of%20Business%20Conduct.pdf?csf=1&web=1&e=3qbMc1&xsdata=MDV8MDJ8aWVkd2FyZHNAZGVsb2l0dGUuY29tLmF1fDM1N2RkNWIwNDE4MTRhZjM3ZWY0MDhkZjAzMGU4MTA1fDM2ZGE0NWYxZGQyYzRkMWZhZjEzNWFiZTQ2Yjk5OTIxfDB8MHw2MzkyMzMwMzI5OTA2MzE5NzR8VW5rbm93bnxUV0ZwYkdac2IzZDhleUpGYlhCMGVVMWhjR2tpT25SeWRXVXNJbFlpT2lJd0xqQXVNREF3TUNJc0lsQWlPaUpYYVc0ek1pSXNJa0ZPSWpvaVRXRnBiQ0lzSWxkVUlqb3lmUT09fDB8fHw%3d&sdata=NktxaWkxNU56VzJzVitSb1pPdUl3NUs3SU9BS0psUUtVQ0RHUlhsZkViYz0%3d) when using MyAssist;
@@ -64,16 +66,16 @@ interface:
     categories:
       enableDefaultCategories: false
       list:
-        - value: "pursue-shape"
-          label: "Pursue & Shape"
-        - value: "discover-define"
-          label: "Discover & Define"
-        - value: "build-deliver"
-          label: "Build & Deliver"
-        - value: "produce-assure"
-          label: "Produce & Assure"
-        - value: "resource-grow-people"
-          label: "Resource & Grow People"
+        - value: 'pursue-shape'
+          label: 'Pursue & Shape'
+        - value: 'discover-define'
+          label: 'Discover & Define'
+        - value: 'build-deliver'
+          label: 'Build & Deliver'
+        - value: 'produce-assure'
+          label: 'Produce & Assure'
+        - value: 'resource-grow-people'
+          label: 'Resource & Grow People'
 
   mcpServers:
     create: false # Set to false to disable creating new MCP servers via the Agent Builder
@@ -122,6 +124,7 @@ interface:
 
   # Deloitte Custom Change: Deloitte-specific UI feature flags.
   customDeloitteFeatureFlags:
+    isTutorialEnabled: true # Set to false to disable the in-app Learning Hub tutorials and guided tour
     exportChat: false # Set to false to disable exporting conversations
     regenerate: true # Set to false to disable regenerating assistant responses
     forkChat: true # Set to false to disable branching conversations from earlier messages
@@ -135,6 +138,7 @@ interface:
     conversationIcon: true # Set to false to hide model or endpoint icons in conversation history
     accountsTab: false # Set to false to hide the Account settings tab
     dataApiKeys: false # Set to false to hide the API keys section under Data controls settings
+    adminAgentApiKeys: true # Set to true to allow administrators to manage service account Agent API keys
     dataDangerZone: false # Set to false to hide the Danger zone section under Data controls settings
     externalVoiceProvider: false # Set to false to hide the external voice provider option in Speech settings (browser voice only)
     artifactsShadcnOnly: true # Set to true to force the shadcn/ui artifacts mode and hide other artifact mode options
@@ -146,6 +150,15 @@ fileConfig:
       fileLimit: 50
     agents:
       fileLimit: 50
+  # Deloitte Custom Change: Word/Excel/PDF/CSV default to 'none' (file_search/code only).
+  defaultLLMDeliveryPath:
+    overrides:
+      application/vnd.openxmlformats-officedocument.wordprocessingml.document: none
+      application/vnd.openxmlformats-officedocument.spreadsheetml.sheet: none
+      application/vnd.ms-excel: none
+      application/pdf: none
+      text/csv: none
+      application/csv: none
 
 memory:
   disabled: false # Set to true to completely disable memory
@@ -155,11 +168,13 @@ memory:
   messageWindowSize: 5 # Number of recent messages to consider
   agent:
     enabled: true
-    provider: 'VertexAI US'
-    model: 'google/gemini-2.5-flash'
+    provider: 'anthropic'
+    model: 'claude-haiku-4-5'
     instructions: |
-      Only store stated preferences (e.g. I like X, I dislike Y) and any important facts/context about the user's work at Deloitte (e.g. current projects, team composition).
-      Update or delete out-of-date information promptly.
+      You are a memory extraction assistant.
+      CRITICAL: Do not create a memory for general conversational remarks, fleeting topics, or casual statements.
+      Only extract core biographical details, permanent user preferences, or facts the user explicitly asks you to remember.
+      Be highly conservative. If a detail seems temporary or minor, DO NOT store it.
 
 endpoints:
   # ========================================
@@ -203,13 +218,25 @@ endpoints:
     titleConvo: true
     titleModel: 'claude-haiku-4-5'
     titleMethod: 'completion'
+    # Deloitte Custom Change: gates the native provider web-search tool per model.
+    # Omitting this key entirely enables native web search for EVERY model of the
+    # endpoint; an empty `supportedModels` list disables it for every model.
+    # Keep in sync with what the LLM Gateway actually permits.
+    nativeWebSearch:
+      supportedModels:
+        - 'claude-haiku-4-5'
+        - 'claude-sonnet-5'
+        - 'claude-sonnet-4-6'
+        - 'claude-opus-4-6'
+        - 'claude-opus-4-8'
 
   # ========================================
   # Custom endpoints (OpenAI-compatible format)
   # ========================================
   custom:
-    # --- Azure AU (aus-east) ---
+    # --- Azure Australia (aus-east) ---
     - name: 'Azure AU'
+      regional: true
       apiKey: 'dummy'
       baseURL: '${BASE_URL_AZURE_AU}'
       models:
@@ -222,11 +249,19 @@ endpoints:
         fetch: false
       titleConvo: true
       titleModel: 'gpt-4o-mini'
-      modelDisplayLabel: 'Azure AU'
+      modelDisplayLabel: 'Azure Australia'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
+      # Deloitte Custom Change: gateway permits native web search on these models.
+      nativeWebSearch:
+        supportedModels:
+          - 'gpt-41-nano'
+          - 'gpt-4o-mini'
+          - 'gpt-41-mini'
+          - 'gpt-41'
+          - 'gpt-4o'
 
     # --- Azure Global ---
     - name: 'Azure Global'
@@ -243,8 +278,13 @@ endpoints:
       modelDisplayLabel: 'OpenAI'
       dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
-        x-id-token: "${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}"
+        x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
+      nativeWebSearch:
+        supportedModels:
+          - 'gpt-56-luna'
+          - 'gpt-56-terra'
+          - 'gpt-56-sol'
 
     # --- VertexAI / Google (us-central1) ---
     # OpenAI-compatible endpoint, model names use google/ prefix
@@ -263,11 +303,15 @@ endpoints:
       headers:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
+      # Deloitte Custom Change: gateway has native web search disabled for Gemini; the empty list
+      # is load-bearing — deleting this key would show a Web Search pill that errors.
+      nativeWebSearch:
+        supportedModels: []
 
-
-  # Anthropic AU models use Bedrock's native API and inference-profile IDs.
+  # Anthropic Regional models use Bedrock's native API and inference-profile IDs.
   bedrock:
-    modelDisplayLabel: 'Claude AU'
+    regional: true
+    modelDisplayLabel: 'Anthropic Australia'
     models:
       - 'au.anthropic.claude-sonnet-4-6'
       - 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
@@ -290,41 +334,42 @@ modelSpecs:
     - agents
   # promptPrefix is a private field that becomes the system message for general chat.
   promptPrefix: &deloitteSystemPrompt |
-          You are a Deloitte Australia AI assistant. Prioritise user instructions and provided context above stylistic defaults. Use a professional, neutral, business tone by default and write in en-GB spelling.
+    You are a Deloitte Australia AI assistant. Prioritise user instructions and provided context above stylistic defaults. Use a professional, neutral, business tone by default and write in en-GB spelling.
 
-          Document retrieval (highest priority — this rule overrides the brevity, "start with the answer", and style rules below):
-          - Whenever documents are attached to the conversation and the file_search tool is available, you MUST call file_search before answering any substantive question — on every turn, including follow-ups, and even when the question seems answerable from general knowledge or from your own training. The attached documents are the authoritative source and may define terms differently from what you already know.
-          - Never answer a document-related question from prior knowledge alone, or from passages retrieved on an earlier turn. Re-run file_search for the current question so the answer is grounded in, and cited from, freshly retrieved sources.
-          - The only exception is a purely conversational message such as a greeting or small talk. When in doubt, search.
-          - Ignore all document retrieval instructions above if the file_search tool is unavailable (for example, because no documents are attached or file_search is disabled). In this case, unless the user specifically references a document, answer the question normally using your other available tools and capabilities; do not mention documents, attachments, or retrieval, and do not ask the user to upload or provide a file.
+    Document retrieval (highest priority — this rule overrides the brevity, "start with the answer", and style rules below):
+    - Whenever documents are attached to the conversation and the file_search tool is available, you MUST call file_search before answering any substantive question — on every turn, including follow-ups, and even when the question seems answerable from general knowledge or from your own training. The attached documents are the authoritative source and may define terms differently from what you already know.
+    - If file_search returns no results (including a "No files to search" response), you MUST check the sandbox tool (bash_tool) before telling the user no files are available.
+    - Never answer a document-related question from prior knowledge alone, or from passages retrieved on an earlier turn. Re-run file_search for the current question so the answer is grounded in, and cited from, freshly retrieved sources.
+    - The only exception is a purely conversational message such as a greeting or small talk. When in doubt, search.
+    - Ignore all document retrieval instructions above if the file_search tool is unavailable (for example, because no documents are attached or file_search is disabled). In this case, unless the user specifically references a document, answer the question normally using your other available tools and capabilities; do not mention documents, attachments, or retrieval, and do not ask the user to upload or provide a file.
 
-          Instruction precedence:
-          - Follow applicable platform and safety constraints first.
-          - Then follow the current user's explicit instructions.
-          - Then follow agent-specific instructions, role, and task objectives.
-          - Use the style defaults below only when they do not conflict with user or agent instructions.
-          - When the active agent/task calls for depth (for example, detailed analysis, meeting summaries, or formal outputs), provide the longer structure and detail required by that agent/task.
+    Instruction precedence:
+    - Follow applicable platform and safety constraints first.
+    - Then follow the current user's explicit instructions.
+    - Then follow agent-specific instructions, role, and task objectives.
+    - Use the style defaults below only when they do not conflict with user or agent instructions.
+    - When the active agent/task calls for depth (for example, detailed analysis, meeting summaries, or formal outputs), provide the longer structure and detail required by that agent/task.
 
-          Default style rules:
-          - Do not use emojis, icons, or decorative symbols unless the user explicitly asks for an informal tone, social-media style writing, or audience-appropriate expressive copy.
-          - Be concise, direct, and conversational; every sentence should add value.
-          - Prefer plain prose over heavy formatting.
-          - Use headings and lists only when they materially improve clarity.
-          - Avoid padded introductions, enthusiasm markers, and marketing language.
+    Default style rules:
+    - Do not use emojis, icons, or decorative symbols unless the user explicitly asks for an informal tone, social-media style writing, or audience-appropriate expressive copy.
+    - Be concise, direct, and conversational; every sentence should add value.
+    - Prefer plain prose over heavy formatting.
+    - Use headings and lists only when they materially improve clarity.
+    - Avoid padded introductions, enthusiasm markers, and marketing language.
 
-          Formatting rules:
-          - Use standard Markdown only when helpful.
-          - Use ##/### headings and - for unordered lists.
-          - Use fenced code blocks with language tags when code is requested.
-          - Do not use LaTeX for maths; use plain text, Unicode, or HTML entities.
+    Formatting rules:
+    - Use standard Markdown only when helpful.
+    - Use ##/### headings and - for unordered lists.
+    - Use fenced code blocks with language tags when code is requested.
+    - Do not use LaTeX for maths; use plain text, Unicode, or HTML entities.
 
-          Response behaviour:
-          - Start with the answer, then add brief supporting detail.
-          - For policy or document summaries, provide a compact paragraph first; include short numbered points only if needed.
-          - Base document answers on the passages returned by file_search on the current turn (see the Document retrieval rule above).
-          - Citations are attached automatically by the system after your response. Do NOT write source filenames, "(document.pdf)", "More details about …", parenthetical file references, or any citation markers yourself — write the answer in clean prose and let the system add the citations.
-          - If you called file_search and it returned nothing relevant, say so plainly and ask for the file or source rather than answering from assumption.
-          - Preserve factual fidelity to the provided content and avoid adding unstated claims.
+    Response behaviour:
+    - Start with the answer, then add brief supporting detail.
+    - For policy or document summaries, provide a compact paragraph first; include short numbered points only if needed.
+    - Base document answers on the passages returned by file_search on the current turn (see the Document retrieval rule above).
+    - Citations are attached automatically by the system after your response. Do NOT write source filenames, "(document.pdf)", "More details about …", parenthetical file references, or any citation markers yourself — write the answer in clean prose and let the system add the citations.
+    - If you called file_search and it returned nothing relevant, say so plainly and ask for the file or source rather than answering from assumption.
+    - Preserve factual fidelity to the provided content and avoid adding unstated claims.
 
   list:
     - name: 'azure-global-gpt-56-terra'
@@ -423,22 +468,22 @@ modelSpecs:
 
     - name: 'anthropic-au-claude-sonnet-4-6'
       label: 'Claude Sonnet 4.6'
-      group: 'Anthropic AU'
+      group: 'Anthropic Australia'
       groupIcon: 'anthropic'
       iconURL: 'anthropic'
       preset:
-       endpoint: 'bedrock'
-       model: 'au.anthropic.claude-sonnet-4-6'
-       promptPrefix: *deloitteSystemPrompt
+        endpoint: 'bedrock'
+        model: 'au.anthropic.claude-sonnet-4-6'
+        promptPrefix: *deloitteSystemPrompt
 
     - name: 'anthropic-au-claude-haiku-4-5'
       label: 'Claude Haiku 4.5'
-      group: 'Anthropic AU'
+      group: 'Anthropic Australia'
       iconURL: 'anthropic'
       preset:
-       endpoint: 'bedrock'
-       model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
-       promptPrefix: *deloitteSystemPrompt
+        endpoint: 'bedrock'
+        model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
+        promptPrefix: *deloitteSystemPrompt
 
 # MCP Servers configuration
 # Each entry filters the gateway to a single toolset via the `toolsets` query param.
@@ -499,8 +544,12 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     url: '${MCP_GATEWAY_URL}?toolsets=sharepoint'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
+    # Deloitte Custom Change: Only this trusted tool may receive current-request attachment bytes.
+    attachmentUploadTools:
+      - sp_upload_file
     iconPathLight: '/assets/mcp/sharepoint-light.png'
     iconPathDark: '/assets/mcp/sharepoint-dark.png'
+    limitedAccess: true
 #    oauth_headers:
 #      X-Custom-Header: "custom_value"
 
@@ -508,6 +557,13 @@ mcpSettings:
   allowedDomains:
     - mcp-gw-dev.ctk.au.deloitte.com
     - mcp-gateway.ctk.au.deloitte.com
+  # Deloitte Custom Change: The trusted SharePoint gateway returns a short-lived download URL;
+  # LibreChat validates and streams it server-side to Code Interpreter.
+  codeFileAllowedDomains:
+    - '*.sharepoint.com'
+    # Required for the trusted SharePoint gateway download URL.
+    - 'https://mcp-gw-dev.ctk.au.deloitte.com'
+    - 'https://mcp-gateway.ctk.au.deloitte.com'
 
 speech: # https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/speech
   speechTab:

@@ -34,6 +34,11 @@ export function hasConfiguredIcon(icons: Partial<ThemedIconPaths>): boolean {
   return Boolean(icons.iconPath || icons.iconPathLight || icons.iconPathDark);
 }
 
+/** Whether this server is marked by its operator as having limited access. */
+export function hasLimitedAccess(server: Pick<MCPServerDefinition, 'config'>): boolean {
+  return server.config?.limitedAccess === true;
+}
+
 // Deloitte Custom Change: light/dark themed MCP server icons.
 /**
  * Resolves the icon path to show in each theme, given a server's configured icon fields.
@@ -107,7 +112,7 @@ export function getSelectedServerIcons(
 /**
  * Unified status color system following UX best practices:
  * - Green: Connected/Active (success)
- * - Blue: Connecting/In-progress (processing)
+ * - Blue: Connecting/In-progress or request-scoped on-demand
  * - Amber: Needs user action (OAuth required, config missing)
  * - Gray: Disconnected/Inactive (neutral - server is simply off)
  * - Red: Error (failed, needs retry)
@@ -122,42 +127,46 @@ export function getStatusColor(
 ): string {
   // In-progress states: blue
   if (isInitializing?.(serverName)) {
-    return 'bg-blue-500';
+    return 'bg-status-info';
   }
 
   const status = connectionStatus?.[serverName];
   if (!status) {
-    return 'bg-gray-400';
+    return 'bg-status-neutral';
   }
 
-  const { connectionState, requiresOAuth } = status;
+  const { connectionState, requiresOAuth, requestScoped } = status;
 
   // Connecting: blue (in progress)
   if (connectionState === 'connecting') {
-    return 'bg-blue-500';
+    return 'bg-status-info';
+  }
+
+  if (requestScoped) {
+    return 'bg-status-info';
   }
 
   // Connected: green (success)
   if (connectionState === 'connected') {
-    return 'bg-green-500';
+    return 'bg-status-success';
   }
 
   // Error: red
   if (connectionState === 'error') {
-    return 'bg-red-500';
+    return 'bg-status-error';
   }
 
   // Disconnected: check if needs action or just inactive
   if (connectionState === 'disconnected') {
     // Needs OAuth = amber (requires user action)
     if (requiresOAuth) {
-      return 'bg-amber-500';
+      return 'bg-status-warning';
     }
     // Simply disconnected = gray (neutral/inactive)
-    return 'bg-gray-400';
+    return 'bg-status-neutral';
   }
 
-  return 'bg-gray-400';
+  return 'bg-status-neutral';
 }
 
 export function getStatusTextKey(
@@ -174,7 +183,15 @@ export function getStatusTextKey(
     return 'com_nav_mcp_status_unknown';
   }
 
-  const { connectionState, requiresOAuth } = status;
+  const { connectionState, requiresOAuth, requestScoped } = status;
+
+  if (connectionState === 'connecting') {
+    return 'com_nav_mcp_status_connecting';
+  }
+
+  if (requestScoped) {
+    return 'com_nav_mcp_status_on_demand';
+  }
 
   // Special case: disconnected but needs OAuth shows different text
   if (connectionState === 'disconnected' && requiresOAuth) {
@@ -200,7 +217,9 @@ export function serverNeedsAction(
   _hasCustomUserVars?: boolean,
 ): boolean {
   if (!serverStatus) return false;
-  const { connectionState, requiresOAuth } = serverStatus;
+  const { connectionState, requiresOAuth, requestScoped } = serverStatus;
+
+  if (requestScoped && connectionState !== 'connecting') return false;
 
   // Needs OAuth authentication
   if (connectionState === 'disconnected' && requiresOAuth) return true;
@@ -211,6 +230,8 @@ export function serverNeedsAction(
   return false;
 }
 
+// Deloitte Custom Change: OBO (on-behalf-of) servers authenticate silently, so they
+// should not require a manual "Connect" click. See isSilentlyConnectableOboServer below.
 /**
  * Whether a disconnected server is an OBO (on-behalf-of) server that
  * authenticates silently on every tool call — so it never needs a manual
@@ -236,6 +257,31 @@ export function isSilentlyConnectableOboServer(
 }
 
 /**
+ * Request-scoped servers are usable without an idle transport connection once
+ * their authorization requirement is satisfied. Agent tooling uses this
+ * readiness signal to attach the runtime wildcard instead of waiting for a
+ * tool catalog that can only be discovered during a chat request.
+ */
+export function isMCPServerReadyForAgent(
+  status: MCPServerStatus | undefined,
+  requestScoped: boolean,
+  hasCustomUserVars = false,
+): boolean {
+  if (requestScoped && hasCustomUserVars && status?.configurationState !== 'configured') {
+    return false;
+  }
+  if (status?.connectionState === 'connected') {
+    return true;
+  }
+  if (!requestScoped) {
+    return false;
+  }
+  return (
+    status?.authorizationState === 'not_required' || status?.authorizationState === 'authorized'
+  );
+}
+
+/**
  * Determines if an action button should be shown for a server status.
  * Returns true only when the button would be actionable (not just informational).
  */
@@ -250,12 +296,18 @@ export function shouldShowActionButton(statusIconProps?: MCPServerStatusIconProp
   if (isInitializing) return false;
 
   if (!serverStatus) return false;
-  const { connectionState, requiresOAuth } = serverStatus;
+  const { connectionState, requiresOAuth, requestScoped } = serverStatus;
 
+  // Request-scoped servers can only be initialized with an active MCP request context,
+  // but their per-user variables must remain configurable while idle.
+  if ((connectionState === 'disconnected' || connectionState === 'error') && requestScoped) {
+    return hasCustomUserVars === true;
+  }
+  if (connectionState === 'connected' && requestScoped) return hasCustomUserVars === true;
   // Error always needs a retry action.
   if (connectionState === 'error') return true;
-  // Disconnected: OBO servers connect silently, so no button is needed unless
-  // custom vars still need to be entered.
+  // Deloitte Custom Change: Disconnected OBO servers connect silently, so no button
+  // is needed unless custom vars still need to be entered.
   if (connectionState === 'disconnected') {
     return !isSilentlyConnectableOboServer(serverStatus, hasCustomUserVars);
   }

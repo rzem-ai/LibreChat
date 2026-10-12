@@ -44,7 +44,9 @@ export default defineConfig({
   reporter: [['html', { outputFolder: 'playwright-report', open: 'never' }], ['list']],
   use: {
     baseURL,
-    trace: 'retain-on-failure',
+    // Traces capture full request/response headers (incl. Authorization/Cookie)
+    // from the live, authenticated session — never enable them here.
+    trace: 'off',
     screenshot: 'only-on-failure',
     ignoreHTTPSErrors: Boolean(localHost),
     headless: true,

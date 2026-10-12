@@ -6,14 +6,18 @@ import type {
   TCustomConfig,
   TMemoryConfig,
   EModelEndpoint,
+  TGoogleEndpoint,
+  TOpenAIEndpoint,
   TVertexAIConfig,
   TAgentsEndpoint,
+  TBedrockEndpoint,
   CloudFrontConfig,
   TCustomEndpoints,
   TAssistantEndpoint,
   TAnthropicEndpoint,
   SummarizationConfig,
   SkillSyncConfig,
+  FiltersConfig,
 } from 'librechat-data-provider';
 
 export type JsonSchemaType = {
@@ -63,6 +67,8 @@ export interface AppConfig {
   summarization?: SummarizationConfig;
   /** Web search configuration */
   webSearch?: TCustomConfig['webSearch'];
+  /** Source-scoped content filter configuration */
+  filters?: FiltersConfig;
   /** Message filter configuration (PII and future filter types) */
   messageFilter?: TCustomConfig['messageFilter'];
   /** Langfuse tracing configuration */
@@ -101,7 +107,7 @@ export interface AppConfig {
   mcpSettings?: TCustomConfig['mcpSettings'] | null;
   /** File configuration */
   fileConfig?: TFileConfig;
-  /** Secure image links configuration */
+  /** Secure image links configuration, enabled unless explicitly disabled */
   secureImageLinks?: TCustomConfig['secureImageLinks'];
   /** Processed model specifications */
   modelSpecs?: TCustomConfig['modelSpecs'];
@@ -111,11 +117,12 @@ export interface AppConfig {
     /** Admin exemption list of host:port pairs that bypass the SSRF private-IP block */
     allowedAddresses?: string[];
     /** OpenAI endpoint configuration */
-    openAI?: Partial<TEndpoint>;
+    // Deloitte Custom Change: endpoint-specific types so `nativeWebSearch` is typed without casts
+    openAI?: Partial<TOpenAIEndpoint>;
     /** Google endpoint configuration */
-    google?: Partial<TEndpoint>;
+    google?: Partial<TGoogleEndpoint>;
     /** Bedrock endpoint configuration */
-    bedrock?: Partial<TEndpoint>;
+    bedrock?: Partial<TBedrockEndpoint>;
     /** Anthropic endpoint configuration with optional Vertex AI support */
     anthropic?: Partial<TAnthropicEndpoint> & {
       /** Validated Vertex AI configuration */

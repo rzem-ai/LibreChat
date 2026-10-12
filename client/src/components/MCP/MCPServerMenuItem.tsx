@@ -7,10 +7,14 @@ import {
   getStatusColor,
   getStatusTextKey,
   hasConfiguredIcon,
+  hasLimitedAccess,
   shouldShowActionButton,
   type ConnectionStatusMap,
 } from './mcpServerUtils';
+// Deloitte Custom Change: SharePoint MCP is limited to a subset of users.
+import { LimitedAccessPill } from '~/components/SidePanel/Agents/Advanced/ui';
 import MCPServerStatusIcon from './MCPServerStatusIcon';
+// Deloitte Custom Change: light/dark themed MCP server icons.
 import MCPServerIcon from './MCPServerIcon';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -38,9 +42,12 @@ export default function MCPServerMenuItem({
   const statusTextKey = getStatusTextKey(server.serverName, connectionStatus, isInitializing);
   const statusText = localize(statusTextKey as Parameters<typeof localize>[0]);
   const showActionButton = shouldShowActionButton(statusIconProps);
+  const limitedAccess = hasLimitedAccess(server);
 
   // Include status in aria-label so screen readers announce it
-  const accessibleLabel = `${displayName}, ${statusText}`;
+  const accessibleLabel = limitedAccess
+    ? `${displayName}, ${localize('com_ui_limited_access')}, ${statusText}`
+    : `${displayName}, ${statusText}`;
 
   return (
     <Ariakit.MenuItemCheckbox
@@ -85,8 +92,12 @@ export default function MCPServerMenuItem({
 
       {/* Server Info */}
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <span className="truncate text-sm font-medium text-text-primary">{displayName}</span>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
+            {displayName}
+          </span>
+          {/* Deloitte Custom Change: SharePoint MCP is limited to a subset of users. */}
+          {limitedAccess && <LimitedAccessPill />}
         </div>
         {server.config?.description && (
           <p className="truncate text-xs text-text-secondary">{server.config.description}</p>
@@ -104,9 +115,11 @@ export default function MCPServerMenuItem({
       <span
         aria-hidden="true"
         className={cn(
-          'flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-sm border',
+          // Deloitte Custom Change: sized up to match the Connect All checkbox above
+          'flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-sm border',
+          // Deloitte Custom Change: recolored to bg-surface-submit to match the submit button
           isSelected
-            ? 'border-primary bg-primary text-primary-foreground'
+            ? 'border-border-xheavy bg-surface-submit text-text-on-status'
             : 'border-border-xheavy bg-transparent',
         )}
       >

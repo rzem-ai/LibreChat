@@ -194,6 +194,22 @@ Return:
 1. Final SKILL.md draft.
 2. Short quality summary (blockers/warnings).
 3. Suggested next step path: test first, then refine with skill-refiner.
+4. The following tool enablement reminder, presented verbatim to the user:
+
+---
+
+**Before using this skill — make sure to enable these functions**
+
+In MyAssist, turn on only the functionalities this skill needs — in your general chat settings or agent configuration:
+
+| Functionality | Enable when… |
+|---|---|
+| **Run code** | For data analysis, calculations, file manipulation, or chart generation |
+| **Skills** | For reusable procedures, templates, or domain-specific patterns |
+| **Artifacts** | For formatted documents, diagrams, visualisations, or HTML output |
+| **Connectors / MCP Servers** | For extracting data from external sources (select only what the skill requires) |
+
+---
 
 Ask:
 

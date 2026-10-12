@@ -38,7 +38,15 @@ function parseTokens(text: string): number {
 }
 
 async function readUsageTotals(page: Page): Promise<{ input: number; output: number }> {
-  await gauge(page).hover();
+  /** Click, not hover: hover only surfaces the compact snapshot tooltip. The
+   *  popover then opens to the gauge alone, with the totals behind a remembered
+   *  disclosure — idempotent, since the preference survives the previous turn. */
+  await gauge(page).click();
+  await expect(popover(page)).toBeVisible({ timeout: 15000 });
+  const toggle = popover(page).getByTestId('context-breakdown-toggle');
+  if ((await toggle.getAttribute('aria-expanded')) === 'false') {
+    await toggle.click();
+  }
   const section = popover(page).getByTestId('token-usage-totals');
   await expect(section).toBeVisible({ timeout: 15000 });
   const rows = section.locator('div');
@@ -59,7 +67,7 @@ async function sendTurn(page: Page, text: string) {
   await expect(page.getByRole('button', { name: 'Stop generating' })).toBeHidden({
     timeout: 90000,
   });
-  await expect(page.getByTestId('send-button')).toBeVisible({ timeout: 30000 });
+  await expect(page.locator('#send-button')).toBeVisible({ timeout: 30000 });
 }
 
 test.describe('context usage gauge with a real provider', () => {

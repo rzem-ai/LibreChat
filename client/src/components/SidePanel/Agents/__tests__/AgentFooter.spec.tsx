@@ -157,6 +157,14 @@ jest.mock('../DuplicateAgent', () => ({
 
 jest.mock('@librechat/client', () => ({
   Spinner: () => <div data-testid="spinner" />,
+  Button: ({
+    children,
+    variant: _variant,
+    size: _size,
+    ...props
+  }: React.ComponentProps<'button'> & { variant?: string; size?: string }) => (
+    <button {...props}>{children}</button>
+  ),
 }));
 
 jest.mock('~/components/Sharing', () => ({
@@ -345,6 +353,7 @@ describe('AgentFooter', () => {
 
     test('adjusts UI based on user role', () => {
       mockUseAuthContext.mockReturnValue(createAuthContext(mockUsers.admin));
+      mockUseHasAccess.mockReturnValue(false);
       const { unmount } = render(<AgentFooter {...defaultProps} />);
       expect(screen.getByTestId('admin-settings')).toBeInTheDocument();
       expect(screen.getByTestId('grant-access-dialog-agent')).toBeInTheDocument();

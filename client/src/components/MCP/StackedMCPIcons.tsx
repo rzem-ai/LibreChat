@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { MCPIcon } from '@librechat/client';
 import type { MCPServerDefinition } from '~/hooks/MCP/useMCPServerManager';
+// Deloitte Custom Change: light/dark themed MCP server icons.
 import { getSelectedServerIcons, hasConfiguredIcon } from './mcpServerUtils';
 import MCPServerIcon from './MCPServerIcon';
 import { cn } from '~/utils';
@@ -81,7 +82,7 @@ export default function StackedMCPIcons({
               iconPathLight={icon.iconPathLight}
               iconPathDark={icon.iconPathDark}
               alt={icon.displayName}
-              className={cn('rounded-full object-cover', sizes.icon)}
+              className={cn('rounded-full object-cover text-text-primary', sizes.icon)}
             />
           ) : (
             <MCPIcon className={cn('text-text-primary', sizes.icon)} />

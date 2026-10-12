@@ -1,6 +1,6 @@
 import { memo, useState, useContext, useCallback } from 'react';
-import { normalizeServerName } from 'librechat-data-provider';
 import { FileText, Folder, TriangleAlert } from 'lucide-react';
+import { formatDisplayDate, normalizeServerName } from 'librechat-data-provider';
 import type { ReactNode, MouseEvent } from 'react';
 import type { SourceData } from '~/components/Web/SourceHovercard';
 import type { CitationProps } from './types';
@@ -13,12 +13,17 @@ import { cn } from '~/utils';
 interface FileCitationMetadata {
   fileBytes?: number;
   fileType?: string;
+  storageType?: string;
+  /** Deloitte Custom Change: ISO timestamp the file was uploaded. */
+  uploadedAt?: string;
 }
 
 interface FileCitationSource {
   attribution?: string;
   citationId?: string | null;
   citationIds?: Array<string>;
+  /** Deloitte Custom Change: citation date, formatted for display (e.g. "06 Nov 2025"). */
+  date?: string;
   fileId?: string;
   fileName?: string;
   link?: string;
@@ -33,6 +38,7 @@ interface FileCitationSource {
   toolName?: string;
   serverName?: string;
   usageRestriction?: boolean;
+  usageRestrictionLink?: string;
 }
 
 // Deloitte Custom Change: max filename length shown on a file_search citation chip
@@ -92,6 +98,22 @@ function MCPIcon({
       onError={() => setFailedSrc(iconPath)}
     />
   );
+}
+
+const MCP_PUBLISHED_DATE_PATTERN = /(?:^|[,\n])\s*PublishedDate\s*:\s*([^,\n]+)/i;
+
+/**
+ * Deloitte Custom Change: some MCP tools return their metadata as a flat key/value
+ * string (e.g. "Country: AU, ..., PublishedDate: 2026-06-24T00:00:00, ...") rather
+ * than a structured field. Pulls a `PublishedDate` value out of that blob and
+ * formats it, since MCP sources have no dedicated date field of their own.
+ */
+function extractMCPPublishedDate(snippet?: string): string | undefined {
+  const match = snippet?.match(MCP_PUBLISHED_DATE_PATTERN);
+  if (!match) {
+    return undefined;
+  }
+  return formatDisplayDate(match[1].trim());
 }
 
 /** Deloitte Custom Change: chip icon — a folder for file_search citations, an MCP server logo (or fallback) for MCP citations. */
@@ -174,6 +196,7 @@ function toSourceData(source: FileCitationSource): SourceData {
     title: source.title,
     attribution: source.attribution,
     snippet: source.snippet,
+    date: source.date, // Deloitte Custom Change: citation date
   };
 }
 
@@ -248,6 +271,9 @@ function CitationChip({ source, citationIds }: CitationChipProps) {
           title={fileName || source.title || localize('com_file_source')}
           onClick={handleFileClick}
           subtitle={localize('com_ui_tool_name_file_search')}
+          // Deloitte Custom Change: uploaded date shown in the file_search tooltip
+          date={formatDisplayDate(fileMeta?.uploadedAt)}
+          dateLabelKey="com_citation_uploaded"
         >
           {(fileRelevance != null || (filePages && filePages.length > 0)) && (
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -286,13 +312,17 @@ function CitationChip({ source, citationIds }: CitationChipProps) {
           title={source.title || getCitationLabel()}
           href={isHttpLink(source.link) ? source.link : undefined}
           subtitle={getMCPSubtitle(mcpServerTitles, source.serverName, source.link)}
+          // Deloitte Custom Change: published date shown in the MCP tooltip
+          date={source.date ?? extractMCPPublishedDate(source.snippet)}
         >
           {source.snippet && (
             <p className="mt-1.5 line-clamp-3 break-words text-xs leading-snug text-text-secondary">
               {source.snippet}
             </p>
           )}
-          {source.usageRestriction && <UsageRestrictionNotice link={source.link} />}
+          {source.usageRestriction && (
+            <UsageRestrictionNotice link={source.usageRestrictionLink ?? source.link} />
+          )}
         </TooltipContent>
       );
     }
@@ -325,6 +355,7 @@ function CitationChip({ source, citationIds }: CitationChipProps) {
           pages={filePages}
           pageRelevance={filePageRelevance}
           fileType={fileMeta?.fileType}
+          fileSource={fileMeta?.storageType}
           fileSize={fileMeta?.fileBytes}
         />
       )}
@@ -350,6 +381,9 @@ export function CompositeCitation(props: CompositeCitationProps) {
 
   return (
     <>
+      {/* Deloitte Custom Change: one chip per distinct source — sibling MCP citations sharing
+          a source are already merged in useCompositeCitations — instead of upstream's single
+          paginated hovercard with Prev/Next controls over all sources */}
       {sources.map((source, i) => {
         const fileSource = source as FileCitationSource;
         const citationIds =
@@ -382,6 +416,9 @@ export function Citation(props: CitationComponentProps) {
     return null;
   }
 
+  // Deloitte Custom Change: shares the CitationChip renderer with CompositeCitation — unifies
+  // file/MCP/web tooltip, connector label, and logo logic — instead of upstream's separate
+  // inline per-type hovercard markup
   return <CitationChip source={refData} citationIds={citationId ? [citationId] : []} />;
 }
 
@@ -398,7 +435,7 @@ export const HighlightedText = memo(function HighlightedText({
 
   return (
     <span
-      className={`rounded px-0 py-0.5 transition-colors ${isHighlighted ? 'bg-amber-300/20' : ''}`}
+      className={`rounded px-0 py-0.5 transition-colors ${isHighlighted ? 'bg-surface-active' : ''}`}
     >
       {children}
     </span>

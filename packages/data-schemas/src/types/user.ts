@@ -1,6 +1,16 @@
-import type { RefillIntervalUnit, TUserFavorite } from 'librechat-data-provider';
+import type {
+  TUserFavorite,
+  RefillIntervalUnit,
+  StatefulCodeEnvironment,
+} from 'librechat-data-provider';
 import type { Document, Types } from 'mongoose';
 import { CursorPaginationParams } from '~/common';
+
+export interface TutorialFeedback {
+  score: number;
+  comment?: string;
+  updatedAt?: Date;
+}
 
 export interface IUser extends Document {
   _id: Types.ObjectId;
@@ -49,12 +59,29 @@ export interface IUser extends Document {
   expiresAt?: Date;
   termsAccepted?: boolean;
   termsAcceptedAt?: Date | null;
+  /** Internal fence that prevents agent-trigger admission during account deletion. */
+  agentTriggerDeletionStartedAt?: Date;
+  /** Expiring fences closing subagent admission while bulk deletions drain. */
+  subagentAdmissionFences?: Array<{
+    token: string;
+    expiresAt: Date;
+  }>;
   personalization?: {
     memories?: boolean;
+    statefulCodeEnvironment?: StatefulCodeEnvironment;
   };
   favorites?: TUserFavorite[];
+  /** Display order for the sidebar's Pinned section: favorite and pinned-chat
+   *  entry keys interleaved (`agent:`, `spec:`, `model:`, `convo:` prefixes). */
+  pinnedOrder?: string[];
   /** Per-skill active/inactive overrides. Key = skillId, value = active state. */
   skillStates?: Record<string, boolean>;
+  /** Whether the user has already been shown the "Would you like a tutorial?" prompt. */
+  tutorialPromptSeen?: boolean;
+  /** Per-course tutorial ratings. Key = course id, value = 1-5 star rating. */
+  tutorialRatings?: Record<string, number>;
+  /** Per-course tutorial feedback. Key = course id, value = rating plus optional comment. */
+  tutorialFeedback?: Record<string, TutorialFeedback>;
   createdAt?: Date;
   updatedAt?: Date;
   /** Field for external source identification (for consistency with TPrincipal schema) */
@@ -78,6 +105,7 @@ export interface BalanceConfig {
   refillIntervalValue?: number;
   refillIntervalUnit?: RefillIntervalUnit;
   refillAmount?: number;
+  reservationTtlMs?: number;
 }
 
 export interface CreateUserRequest extends Partial<IUser> {
@@ -97,8 +125,12 @@ export interface UpdateUserRequest {
   termsAcceptedAt?: Date | null;
   personalization?: {
     memories?: boolean;
+    statefulCodeEnvironment?: StatefulCodeEnvironment;
   };
   skillStates?: Record<string, boolean>;
+  tutorialPromptSeen?: boolean;
+  tutorialRatings?: Record<string, number>;
+  tutorialFeedback?: Record<string, TutorialFeedback>;
 }
 
 export interface UserDeleteResult {

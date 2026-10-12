@@ -3,6 +3,7 @@ import { isDark, useTheme } from '@librechat/client';
 import { normalizeServerName, buildServerNameAliases } from 'librechat-data-provider';
 import type { MCPServerDBObjectResponse } from 'librechat-data-provider';
 import { resolveThemedIconPaths } from '~/components/MCP/mcpServerUtils';
+import { useCatalogReady } from '../useCatalogWarmup';
 import { useMCPServersQuery } from '~/data-provider';
 
 // Deloitte Custom Change: single shared `matchMedia` subscription for OS dark-mode
@@ -60,7 +61,10 @@ function useMCPServerConfigMap({ enabled = true }: { enabled?: boolean } = {}): 
   string,
   MCPServerDBObjectResponse
 > {
-  const { data: servers } = useMCPServersQuery({ enabled });
+  // These observers mount from rendered messages, so they must not pull the
+  // server catalog onto the first-render path ahead of the warmup schedule.
+  const mcpServersReady = useCatalogReady('mcpServers');
+  const { data: servers } = useMCPServersQuery({ enabled: enabled && mcpServersReady });
 
   return useMemo(() => {
     const map = new Map<string, MCPServerDBObjectResponse>();
@@ -136,7 +140,10 @@ export function useMCPIconMap({ enabled = true }: { enabled?: boolean } = {}): M
  * names were normalized in tool keys may still carry a raw-suffixed name.
  */
 export function useMCPServerNames(): string[] {
-  const { data: servers } = useMCPServersQuery();
+  // Deloitte Custom Change: keep this query gated behind the same catalog-warmup
+  // schedule as useMCPServerConfigMap, so names aren't pulled ahead of first paint.
+  const mcpServersReady = useCatalogReady('mcpServers');
+  const { data: servers } = useMCPServersQuery({ enabled: mcpServersReady });
   return useMemo(() => {
     if (!servers) {
       return [];

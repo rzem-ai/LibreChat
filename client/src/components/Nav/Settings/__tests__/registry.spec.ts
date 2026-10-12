@@ -5,12 +5,14 @@ import en from '~/locales/en/translation.json';
 import { registry } from '../registry';
 import { TABS } from '../types';
 
+// Deloitte Custom Change: verifies administrator-only service account API key visibility.
 const validTabSections = new Map(TABS.map((t) => [t.id, new Set(t.sections.map((s) => s.id))]));
 
 const settingsContext: SettingsContextValue = {
   balanceEnabled: false,
   hasAnyPersonalizationFeature: false,
   hasMemoryOptOut: false,
+  hasStatefulCodeSessions: false,
   hasRemoteAgents: false,
   hasUserProvidedEndpoints: false,
   hasMultiConvo: false,
@@ -21,9 +23,12 @@ const settingsContext: SettingsContextValue = {
   aboutEnabled: false,
   accountsTabEnabled: true,
   dataApiKeysEnabled: true,
+  adminAgentApiKeysEnabled: false,
   dataDangerZoneEnabled: true,
+  isAdmin: false,
   engineTTS: 'browser',
   langfuseConnectionAccess: false,
+  adminPanelURL: '',
 };
 
 describe('settings registry', () => {
@@ -87,6 +92,43 @@ describe('settings registry', () => {
           langfuseConnectionAccess: true,
         }),
       ).toBe(true);
+    });
+  });
+
+  describe('stateful workspace default visibility', () => {
+    const entry = registry.find((setting) => setting.id === 'defaultStatefulWorkspace');
+
+    it('shows the setting when stateful code sessions are available', () => {
+      expect(entry?.show?.({ ...settingsContext, hasStatefulCodeSessions: true })).toBe(true);
+    });
+
+    it('hides the setting when stateful code sessions are unavailable', () => {
+      expect(entry?.show?.({ ...settingsContext, hasStatefulCodeSessions: false })).toBe(false);
+    });
+  });
+
+  // Deloitte Custom Change: verifies that only enabled administrators see Agent API key management.
+  describe('Agent API key visibility', () => {
+    const agentApiKeysEntry = registry.find((entry) => entry.id === 'agentApiKeys');
+
+    it('shows service-account key management only to administrators when enabled', () => {
+      expect(
+        agentApiKeysEntry?.show?.({
+          ...settingsContext,
+          adminAgentApiKeysEnabled: true,
+          isAdmin: true,
+        }),
+      ).toBe(true);
+    });
+
+    it('hides service-account key management from non-administrators', () => {
+      expect(
+        agentApiKeysEntry?.show?.({
+          ...settingsContext,
+          adminAgentApiKeysEnabled: true,
+          isAdmin: false,
+        }),
+      ).toBe(false);
     });
   });
 });
