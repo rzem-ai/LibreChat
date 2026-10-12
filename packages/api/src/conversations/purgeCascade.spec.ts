@@ -1,14 +1,7 @@
-import { logger } from '@librechat/data-schemas';
 import type { SubagentCancellationPlan } from '~/agents/subagentThreads';
 import type { CheckpointDeletion } from '~/agents/checkpoints/deletion';
 import type { PurgeCascadeDeps } from './purgeCascade';
 import { purgeConversationCascade } from './purgeCascade';
-
-jest.mock('@librechat/data-schemas', () => ({
-  logger: {
-    warn: jest.fn(),
-  },
-}));
 
 type DeleteConvosResult = { conversationIds: string[]; n: number };
 
@@ -203,35 +196,5 @@ describe('purgeConversationCascade', () => {
 
     expect(deps.checkpointDeletion.cleanup).not.toHaveBeenCalled();
     expect(deps.checkpointDeletion.acknowledge).not.toHaveBeenCalled();
-  });
-
-  it('logs and swallows a trace deletion hook failure, still acknowledging the deletion', async () => {
-    const hookError = new Error('langfuse unavailable');
-    const traceDeletionHook = jest.fn().mockRejectedValue(hookError);
-    const deps = createDeps({ traceDeletionHook });
-
-    const result = await purgeConversationCascade('user-1', undefined, ['root-convo'], deps);
-
-    expect(traceDeletionHook).toHaveBeenCalledWith(result.deletedConversationIds);
-    expect(logger.warn).toHaveBeenCalledWith(
-      '[purgeConversationCascade] trace deletion hook failed',
-      hookError,
-    );
-    expect(deps.checkpointDeletion.acknowledge).toHaveBeenCalled();
-  });
-
-  it('calls the trace deletion hook with the final deleted ids before acknowledging', async () => {
-    const callOrder: string[] = [];
-    const traceDeletionHook = jest.fn(async () => {
-      callOrder.push('traceDeletionHook');
-    });
-    const deps = createDeps({ traceDeletionHook });
-    (deps.checkpointDeletion.acknowledge as jest.Mock).mockImplementation(async () => {
-      callOrder.push('acknowledge');
-    });
-
-    await purgeConversationCascade('user-1', undefined, ['root-convo'], deps);
-
-    expect(callOrder).toEqual(['traceDeletionHook', 'acknowledge']);
   });
 });

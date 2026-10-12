@@ -1,5 +1,3 @@
-import { logger } from '@librechat/data-schemas';
-
 import type { TCheckpointerConfig } from 'librechat-data-provider';
 import type { SubagentCancellationPlan } from '~/agents/subagentThreads';
 import type { CheckpointDeletion } from '~/agents/checkpoints/deletion';
@@ -48,10 +46,6 @@ export interface PurgeCascadeDeps<TDeleteConvosResult extends { conversationIds:
     tenantId: string | undefined,
     deletion: CheckpointDeletion,
   ) => Promise<void>;
-  /** RET-09 seam: invoked after the cascade delete is confirmed and before the durable
-   * checkpoint-deletion intent is acknowledged. Unbound today; a future Langfuse trace
-   * deletion hook plugs in here without touching the cascade itself. */
-  traceDeletionHook?: (conversationIds: string[]) => Promise<void>;
 }
 
 export interface PurgeCascadeResult<TDeleteConvosResult> {
@@ -151,14 +145,6 @@ export async function purgeConversationCascade<
   await Promise.all(
     deletedConversationIds.map((id) => deps.deleteConvoSharedLinksWithCleanup(userId, id)),
   );
-
-  if (deps.traceDeletionHook) {
-    try {
-      await deps.traceDeletionHook(deletedConversationIds);
-    } catch (error) {
-      logger.warn('[purgeConversationCascade] trace deletion hook failed', error);
-    }
-  }
 
   await checkpointDeletion.acknowledge();
 

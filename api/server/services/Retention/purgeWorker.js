@@ -46,7 +46,6 @@ async function purgeExpiredConversations(options = {}) {
       retryPostDeleteCancellation,
       confirmAgentGenerationsDrained,
       drainDeletedAgentGenerations,
-      // RET-09 seam: no trace deletion hook bound yet.
     },
     logger,
   });
