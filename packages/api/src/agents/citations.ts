@@ -869,9 +869,12 @@ function extractWebSearchData(attachment: TAttachment): SearchResultData | undef
 
 /**
  * Builds passage lists for web_search organic and news results, keyed by each attachment's own
- * `turn` value — already assigned upstream (the same value `useSearchResultsByTurn` keys the
- * client's turnMap by) — rather than a fresh counter, so anchors line up with the turn numbering
- * the client already resolves.
+ * `turn` value. That value is NOT the raw, agent-assigned turn from the producing tool call —
+ * `applyEndOfTraceCitations` recounts it positionally across the whole message first (mirroring
+ * `buildMCPPassages`'s `turnOffset` + array-order approach), since a multi-agent/handoff response
+ * can have two different agents' web_search calls both independently labeled turn 0. By the time
+ * this function runs, `turn` is already message-unique, and `useSearchResultsByTurn` on the
+ * client keys its turnMap by that same, already-deduplicated value.
  *
  * Tokenized with `tokenizeStemmed`, the same as `buildMCPPassages` — organic/news results are
  * short, loosely-paraphrased article excerpts, not long chunks the model quotes closely like
@@ -1588,6 +1591,18 @@ export async function applyEndOfTraceCitations({
       (attachment): attachment is TAttachment =>
         attachment != null && attachment.type === Tools.web_search,
     );
+    // Each attachment's `turn` is assigned by whichever agent produced it, using that
+    // agent's own independently-scoped tool-call counter — in a multi-agent/handoff
+    // response, two different agents' web_search calls can both be turn 0. Recount
+    // positionally across the whole message instead of trusting the upstream value,
+    // the same way buildMCPPassages already does for MCP attachments (turnOffset +
+    // array order) rather than trusting any agent-local turn.
+    webSearchAttachments.forEach((attachment, index) => {
+      const data = attachment[Tools.web_search];
+      if (data) {
+        data.turn = index;
+      }
+    });
 
     // `fileCitations` is the file-search-specific citations permission — it must not also
     // gate web_search/MCP citations, which have no model-generated fallback to fall back on

@@ -2284,6 +2284,33 @@ describe('applyEndOfTraceCitations', () => {
     expect(readText(parts[0])).toContain(`${MARKER}turn0search0`);
   });
 
+  it("disambiguates two agents' web_search attachments that both arrive with the same raw turn", async () => {
+    // Simulates a multi-agent/handoff response: two different agents each used their own
+    // independently-scoped tool-call counter (see ToolNode in @librechat/agents), so both
+    // attachments arrive already labeled turn 0. applyEndOfTraceCitations must recount them
+    // positionally (0, 1, ...) so neither agent's results silently disappear or collide on
+    // the same anchor coordinate.
+    const parts = [
+      textPart(
+        'Employees can reserve a desk up to fourteen days in advance through the workspace booking portal. ' +
+          'Meeting rooms may be booked via the calendar system for up to two hours per session.',
+      ),
+    ];
+    await applyEndOfTraceCitations({
+      contentParts: parts,
+      artifactPromises: [
+        Promise.resolve(webSearchAttachment(0, [{ title: 'Desk Booking', content: DESK_CONTENT }])),
+        Promise.resolve(
+          webSearchAttachment(0, [{ title: 'Meeting Rooms', content: MEETING_CONTENT }]),
+        ),
+      ],
+      fileCitations: true,
+    });
+    const text = readText(parts[0]);
+    expect(text).toContain(`${MARKER}turn0search0`);
+    expect(text).toContain(`${MARKER}turn1search0`);
+  });
+
   it('ignores non-file_search attachments', async () => {
     const original = 'You can reserve a desk fourteen days in advance.';
     const parts = [textPart(original)];

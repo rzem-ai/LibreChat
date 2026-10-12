@@ -65,6 +65,12 @@ export function useSearchResultsByTurn(attachments?: TAttachment[]) {
       if (attachment.type === Tools.web_search && attachment[Tools.web_search]) {
         const searchData = attachment[Tools.web_search];
         if (searchData && typeof searchData.turn === 'number') {
+          // `searchData.turn` is trusted as unique across the whole message because the
+          // backend guarantees it — `applyEndOfTraceCitations` (citations.ts) recounts it
+          // positionally before persisting, specifically because a multi-agent/handoff
+          // response can have two different agents' web_search calls both independently
+          // labeled turn 0 by their own agent-scoped tool-call counters. Don't reintroduce
+          // trust in a raw, agent-local turn value here without that same guarantee.
           // Merge rather than overwrite: file_search/MCP count turns independently from
           // web_search, so the same numeric key can legitimately hold both a file_search
           // entry (`references`) and a web_search entry (`organic`/`topStories`/etc.) —
