@@ -5107,3 +5107,124 @@ describe('initializeAgent turn delivery routing', () => {
     expect(filesOrder).toBeLessThan(toolsOrder);
   });
 });
+
+describe('initializeAgent — file access guardrail (Deloitte Custom Change)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('flags a file routed to none that no tool this turn can read', async () => {
+    const { primeResources } = jest.requireMock('../resources') as { primeResources: jest.Mock };
+    const csvFile = {
+      file_id: 'csv-1',
+      filename: 'data.csv',
+      type: 'text/csv',
+      bytes: 10,
+      llmDeliveryPath: 'none',
+    } as IMongoFile;
+    primeResources.mockResolvedValueOnce({
+      attachments: [csvFile],
+      requestAttachments: [csvFile],
+      agentContextAttachments: [],
+      tool_resources: undefined,
+    });
+    const { agent, req, res, loadTools, db } = createMocks();
+
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.OPENAI]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    expect(result.dynamicToolContextMap?.file_access_guardrail).toEqual(
+      expect.stringContaining('"data.csv"'),
+    );
+  });
+
+  it('does not flag a file routed to none that Code Interpreter can read', async () => {
+    const { primeResources } = jest.requireMock('../resources') as { primeResources: jest.Mock };
+    const csvFile = {
+      file_id: 'csv-1',
+      filename: 'data.csv',
+      type: 'text/csv',
+      bytes: 10,
+      llmDeliveryPath: 'none',
+    } as IMongoFile;
+    primeResources.mockResolvedValueOnce({
+      attachments: [csvFile],
+      requestAttachments: [csvFile],
+      agentContextAttachments: [],
+      tool_resources: undefined,
+    });
+    const { agent, req, res, loadTools, db } = createMocks({
+      structuredTools: [{ name: Tools.execute_code }],
+      loadedToolDefinitions: [{ name: Tools.execute_code }],
+    });
+    agent.tools = [Tools.execute_code];
+
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        codeEnvAvailable: true,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.OPENAI]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    expect(result.dynamicToolContextMap?.file_access_guardrail).toBeUndefined();
+  });
+
+  it('names every orphaned file when more than one is unreadable this turn', async () => {
+    const { primeResources } = jest.requireMock('../resources') as { primeResources: jest.Mock };
+    const csvFile = {
+      file_id: 'csv-1',
+      filename: 'data.csv',
+      type: 'text/csv',
+      bytes: 10,
+      llmDeliveryPath: 'none',
+    } as IMongoFile;
+    const parquetFile = {
+      file_id: 'parquet-1',
+      filename: 'rows.parquet',
+      type: 'application/x-parquet',
+      bytes: 10,
+      llmDeliveryPath: 'none',
+    } as IMongoFile;
+    primeResources.mockResolvedValueOnce({
+      attachments: [csvFile, parquetFile],
+      requestAttachments: [csvFile, parquetFile],
+      agentContextAttachments: [],
+      tool_resources: undefined,
+    });
+    const { agent, req, res, loadTools, db } = createMocks();
+
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.OPENAI]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    const guardrail = result.dynamicToolContextMap?.file_access_guardrail;
+    expect(guardrail).toEqual(expect.stringContaining('"data.csv"'));
+    expect(guardrail).toEqual(expect.stringContaining('"rows.parquet"'));
+  });
+});
