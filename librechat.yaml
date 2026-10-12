@@ -155,6 +155,7 @@ fileConfig:
     overrides:
       application/vnd.openxmlformats-officedocument.wordprocessingml.document: none
       application/vnd.openxmlformats-officedocument.spreadsheetml.sheet: none
+      application/vnd.ms-excel: none
       application/pdf: none
       text/csv: none
       application/csv: none
