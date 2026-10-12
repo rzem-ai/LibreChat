@@ -3,9 +3,10 @@ import { useRecoilState } from 'recoil';
 import { GraduationCap } from 'lucide-react';
 import * as Popover from '@radix-ui/react-popover';
 import { Button, useMediaQuery } from '@librechat/client';
-import { TUTORIAL_PROMPT_DELAY_MS, SIDEBAR_TRANSITION_SYNC_MS } from './timing';
+import { TRANSITION_MS } from '~/components/UnifiedSidebar/constants';
 import useTutorialPrompt from '~/hooks/Learning/useTutorialPrompt';
 import { useLearningTour } from './LearningTourContext';
+import { TUTORIAL_PROMPT_DELAY_MS } from './timing';
 import { useLocalize } from '~/hooks';
 import store from '~/store';
 
@@ -93,7 +94,7 @@ export default function TutorialPromptModal({
     if (!sidebarExpanded) {
       setSidebarExpanded(true);
     }
-    const timer = window.setTimeout(() => setMobilePromptReady(true), SIDEBAR_TRANSITION_SYNC_MS);
+    const timer = window.setTimeout(() => setMobilePromptReady(true), TRANSITION_MS);
     return () => window.clearTimeout(timer);
   }, [isVisible, isSmallScreen, sidebarExpanded, setSidebarExpanded]);
 

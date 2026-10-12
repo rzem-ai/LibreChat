@@ -10,11 +10,12 @@ import {
 import { useRecoilState } from 'recoil';
 import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { DESKTOP_START_DELAY_MS, SIDEBAR_TRANSITION_SYNC_MS } from './timing';
-import useTutorialPrompt from '~/hooks/Learning/useTutorialPrompt';
 import { GETTING_STARTED_COURSE_ID, getCourseSteps } from './Courses/content/registry';
+import { TRANSITION_MS } from '~/components/UnifiedSidebar/constants';
+import useTutorialPrompt from '~/hooks/Learning/useTutorialPrompt';
 import { hasAvailableTarget } from '~/utils/elements';
 import useCourseTour from './Courses/useCourseTour';
+import { DESKTOP_START_DELAY_MS } from './timing';
 import { useActivePanel } from '~/Providers';
 import { useShowMarketplace } from '~/hooks';
 import store from '~/store';
@@ -117,7 +118,7 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
         startTimeoutRef.current = null;
         startTour();
       },
-      isSmallScreen ? SIDEBAR_TRANSITION_SYNC_MS : DESKTOP_START_DELAY_MS,
+      isSmallScreen ? TRANSITION_MS : DESKTOP_START_DELAY_MS,
     );
   }, [markPromptSeen, navigate, setActive, setSidebarExpanded, sidebarExpanded, startTour]);
 
