@@ -629,6 +629,8 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     iconPathLight: '/assets/mcp/sharepoint-light.png'
     iconPathDark: '/assets/mcp/sharepoint-dark.png'
     limitedAccess: true
+    allowedEntraGroupIds:
+      - '00c0efc7-e8a7-448c-9480-834cbf1ebd60'
 #    oauth_headers:
 #      X-Custom-Header: "custom_value"
 
