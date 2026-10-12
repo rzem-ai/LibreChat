@@ -1,8 +1,6 @@
 import { memo, useCallback, lazy, Suspense } from 'react';
 import { useRecoilValue } from 'recoil';
-import * as Menu from '@ariakit/react/menu';
-import { useNavigate } from 'react-router-dom';
-import { BookOpen, MessageCircleQuestion, MessageSquareHeart, SquarePen } from 'lucide-react';
+import { SquarePen } from 'lucide-react';
 import { QueryKeys } from 'librechat-data-provider';
 import { useQueryClient } from '@tanstack/react-query';
 import { Skeleton, Sidebar, Button, TooltipAnchor } from '@librechat/client';
@@ -10,64 +8,12 @@ import type { NavLink } from '~/common';
 import { useShortcutAriaKey, useShortcutHint } from '~/hooks/useKeyboardShortcuts';
 import { useActivePanel, resolveActivePanel, DEFAULT_PANEL } from '~/Providers';
 import { CLOSE_SIDEBAR_ID } from '~/components/Chat/Menus/OpenSidebar';
-import { useLearningTour } from '~/components/Learning/LearningTourContext';
-import { useFaqAgent, useLearningCenterConfig } from '~/hooks/Learning';
+import LearningMenu from '~/components/UnifiedSidebar/LearningMenu';
 import { useLocalize, useNewConvo } from '~/hooks';
 import { clearMessagesCache, cn } from '~/utils';
 import store from '~/store';
 
 const AccountSettings = lazy(() => import('~/components/Nav/AccountSettings'));
-
-function LearningMenu({ link }: { link: NavLink }) {
-  const localize = useLocalize();
-  const navigate = useNavigate();
-  const { startGettingStartedTour } = useLearningTour();
-  const { faqAgentId, feedbackUrl } = useLearningCenterConfig();
-  const { faqAgent } = useFaqAgent(faqAgentId);
-
-  const openFaqAgent = () => {
-    if (faqAgent) {
-      navigate(`/c/new?agent_id=${encodeURIComponent(faqAgent.id)}`);
-    }
-  };
-
-  return (
-    <Menu.MenuProvider placement="right-end">
-      <Menu.MenuButton
-        id="nav-panel-learning"
-        aria-label={localize(link.title)}
-        className="flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary transition-colors hover:bg-surface-active-alt aria-[expanded=true]:bg-surface-active-alt"
-      >
-        <link.icon className="h-5 w-5" aria-hidden="true" />
-      </Menu.MenuButton>
-      <Menu.Menu
-        portal
-        gutter={12}
-        className="account-settings-popover popover-ui z-[125] w-[244px] rounded-lg"
-      >
-        <Menu.MenuItem onClick={startGettingStartedTour} className="select-item text-sm">
-          <BookOpen className="icon-md" aria-hidden="true" />
-          {localize('com_learning_take_guided_tutorial')}
-        </Menu.MenuItem>
-        {faqAgent && (
-          <Menu.MenuItem onClick={openFaqAgent} className="select-item text-sm">
-            <MessageCircleQuestion className="icon-md" aria-hidden="true" />
-            {localize('com_learning_ask_faq_agent', { 0: faqAgent.name })}
-          </Menu.MenuItem>
-        )}
-        {feedbackUrl && (
-          <Menu.MenuItem
-            onClick={() => window.open(feedbackUrl, '_blank', 'noopener,noreferrer')}
-            className="select-item text-sm"
-          >
-            <MessageSquareHeart className="icon-md" aria-hidden="true" />
-            {localize('com_learning_give_feedback')}
-          </Menu.MenuItem>
-        )}
-      </Menu.Menu>
-    </Menu.MenuProvider>
-  );
-}
 
 const NewChatButton = memo(function NewChatButton({
   setActive,
@@ -194,6 +140,8 @@ function ExpandedPanel({
   const localize = useLocalize();
   const { active, setActive } = useActivePanel();
   const effectiveActive = resolveActivePanel(active, links);
+  const topLinks = links.filter((link) => link.id !== 'learning');
+  const learningLink = links.find((link) => link.id === 'learning');
 
   const toggleLabel = expanded ? 'com_nav_close_sidebar' : 'com_nav_open_sidebar';
   const toggleClick = expanded ? onCollapse : onExpand;
@@ -226,28 +174,24 @@ function ExpandedPanel({
       {/* Deloitte Custom Change: Learning Hub is pinned to the bottom group
           (directly above the account settings icon) so exclude it here */}
       <div className="flex flex-col gap-1 overflow-y-auto">
-        {links
-          .filter((link) => link.id !== 'learning')
-          .map((link) => (
-            <NavIconButton
-              key={link.id}
-              link={link}
-              isActive={link.id === effectiveActive}
-              expanded={expanded ?? true}
-              setActive={setActive}
-              onExpand={onExpand}
-              onCollapse={onCollapse}
-            />
-          ))}
+        {topLinks.map((link) => (
+          <NavIconButton
+            key={link.id}
+            link={link}
+            isActive={link.id === effectiveActive}
+            expanded={expanded ?? true}
+            setActive={setActive}
+            onExpand={onExpand}
+            onCollapse={onCollapse}
+          />
+        ))}
       </div>
 
       {/* Deloitte Custom Change: Learning Hub pinned directly above the account
           settings icon rather than floating at the end of the scrollable list
           with a large mt-auto gap between them */}
       <div className="mt-auto flex flex-col gap-1">
-        {links.find((link) => link.id === 'learning') && (
-          <LearningMenu link={links.find((link) => link.id === 'learning')!} />
-        )}
+        {learningLink && <LearningMenu link={learningLink} />}
         <Suspense fallback={<Skeleton className="h-9 w-9 rounded-lg" />}>
           <AccountSettings collapsed />
         </Suspense>
