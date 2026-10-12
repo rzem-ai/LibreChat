@@ -29,7 +29,7 @@ ingress:
 
 pods:
   librechat:
-    replicas: 1
+    replicas: 3
     securityContext:
       fsGroup: 1000
     initContainers:
@@ -59,6 +59,13 @@ pods:
             fi && exec npm run backend
         image:
           tag: 'develop@sha256:f54e719c2a5c808f8c852db0fbac8c91168111bff7683f1ae8871c09b5fbd595'
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "32Gi"
+            cpu: "6000m"
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -173,6 +180,13 @@ pods:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
           tag: 'develop@sha256:e312a3643ca0f37e950cc7bf44f528ce24834b01648595f2ee1d707e41d4d69d'
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "16Gi"
+            cpu: "3000m"
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
