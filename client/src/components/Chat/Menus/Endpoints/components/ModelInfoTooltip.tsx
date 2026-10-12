@@ -77,7 +77,7 @@ export default function ModelInfoTooltip({
   const { data: tokenConfig } = useTokenConfigQuery();
 
   const details = spec.details;
-  const pricing = getModelCost(spec.preset.model, modelPricing);
+  const pricing = getModelCost(spec.preset.model, spec.preset.endpoint, modelPricing);
   const lookupEndpoint = resolveModelCatalogKey(spec.preset.endpoint, tokenConfig);
   const contextTokens = tokenConfig?.[lookupEndpoint]?.[spec.preset.model ?? '']?.context;
   const supports = [

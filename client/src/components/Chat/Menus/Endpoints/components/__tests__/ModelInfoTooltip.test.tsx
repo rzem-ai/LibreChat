@@ -98,7 +98,7 @@ describe('ModelInfoTooltip', () => {
   });
 
   it('renders a cost meter with input/output price lines, top-aligned with its label', () => {
-    mockModelPricing = { 'gpt-5': { tier: 2, inputPer1M: 1, outputPer1M: 6 } };
+    mockModelPricing = { 'openAI:gpt-5': { tier: 2, inputPer1M: 1, outputPer1M: 6 } };
     render(
       <ModelInfoTooltip spec={baseSpec} endpointsConfig={{}}>
         <button>Row</button>
