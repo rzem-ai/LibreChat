@@ -277,16 +277,21 @@ router.get('/', async function (req, res) {
     // built-in token-value tables.
     const showModelPricingIndicator =
       appConfig?.interfaceConfig?.customDeloitteFeatureFlags?.showModelPricingIndicator === true;
-    const modelsConfig = showModelPricingIndicator
-      ? await getModelsConfig({ user: req.user, config: appConfig })
-      : undefined;
-    const modelPricing = await getModelPricing(
-      appConfig,
-      req.user.id ?? req.user._id?.toString(),
-      req.user.tenantId,
-      modelsConfig,
-      { getValueKey, getMultiplier, getCacheMultiplier },
-    );
+    let modelPricing = {};
+    if (showModelPricingIndicator) {
+      try {
+        const modelsConfig = await getModelsConfig({ user: req.user, config: appConfig });
+        modelPricing = await getModelPricing(
+          appConfig,
+          req.user.id ?? req.user._id?.toString(),
+          req.user.tenantId,
+          modelsConfig,
+          { getValueKey, getMultiplier, getCacheMultiplier },
+        );
+      } catch {
+        logger.warn('[config] Model pricing resolution failed');
+      }
+    }
 
     if (langfuseConnectionAvailable) {
       try {
