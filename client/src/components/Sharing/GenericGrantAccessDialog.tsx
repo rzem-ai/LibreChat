@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, CopyCheck } from 'lucide';
-import { Share2Icon, Users, UserCheck, AlertCircle, ExternalLink } from 'lucide-react';
 import { AccessRoleIds, ResourceType, SystemRoles } from 'librechat-data-provider';
+import { Share2Icon, Users, UserCheck, AlertCircle, ExternalLink } from 'lucide-react';
 import {
   Alert,
   Label,
@@ -405,7 +405,7 @@ export default function GenericGrantAccessDialog({
                         {/* Deloitte Custom Change: invite users to publish shared capabilities firm-wide. */}
                         {localize('com_ui_share_publish_capability_prompt')}{' '}
                         <a
-                          href="https://forms.cloud.microsoft/e/19c6RVYQvx"
+                          href="https://forms.cloud.microsoft/e/r5Q2gGYGQJ"
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-1 text-text-secondary underline underline-offset-2 hover:text-text-primary"

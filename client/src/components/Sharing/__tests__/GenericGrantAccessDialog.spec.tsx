@@ -156,7 +156,7 @@ describe('GenericGrantAccessDialog - permissions load failure', () => {
     expect(screen.getByText('com_ui_share_publish_capability_prompt')).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: 'com_ui_share_publish_capability_link' }),
-    ).toHaveAttribute('href', 'https://forms.cloud.microsoft/e/19c6RVYQvx');
+    ).toHaveAttribute('href', 'https://forms.cloud.microsoft/e/r5Q2gGYGQJ');
     expect(screen.getByTestId('public-toggle').parentElement).toHaveClass('border-t');
     expect(screen.getByTestId('admin-settings')).toBeInTheDocument();
     expect(dialog.firstElementChild).not.toHaveClass('border-b');
