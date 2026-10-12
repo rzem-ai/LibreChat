@@ -88,10 +88,10 @@ export default function useCourseTour(
       currentPopoverRoot?.unmount();
 
       // The step's own title/description, not driver.js's rendered copy of them —
-      // driver.js doesn't transform these, so reading them back via innerHTML
-      // would just be a pointless round-trip through DOM we're about to hide.
-      const titleHtml = step.popover?.title ?? '';
-      const descriptionHtml = step.popover?.description ?? '';
+      // driver.js doesn't transform these, so reading them back from the DOM we're
+      // about to hide would be a pointless round-trip.
+      const title = step.popover?.title ?? '';
+      const description = step.popover?.description ?? '';
       // Localized in place of driver.js's own un-translated "Next"/"Done" and
       // "{{current}} of {{total}}" defaults (popover.nextButton/progress).
       const progressText = localize('com_learning_tour_progress', {
@@ -118,8 +118,8 @@ export default function useCourseTour(
       flushSync(() => {
         currentPopoverRoot?.render(
           <TourPopover
-            titleHtml={titleHtml}
-            descriptionHtml={descriptionHtml}
+            title={title}
+            description={description}
             progressText={progressText}
             nextLabel={nextLabel}
             canGoPrevious={canGoPrevious}

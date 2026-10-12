@@ -3,8 +3,8 @@ import { Button } from '@librechat/client';
 import { useLocalize } from '~/hooks';
 
 interface TourPopoverProps {
-  titleHtml: string;
-  descriptionHtml: string;
+  title: string;
+  description: string;
   progressText: string;
   nextLabel: string;
   canGoPrevious: boolean;
@@ -14,8 +14,8 @@ interface TourPopoverProps {
 }
 
 export default function TourPopover({
-  titleHtml,
-  descriptionHtml,
+  title,
+  description,
   progressText,
   nextLabel,
   canGoPrevious,
@@ -27,10 +27,7 @@ export default function TourPopover({
   return (
     <div className="max-w-[320px] rounded-xl bg-surface-primary p-4 font-sans text-text-primary shadow-lg duration-150 animate-in fade-in-0">
       <div className="flex items-start justify-between gap-2">
-        <p
-          className="text-sm font-medium leading-tight text-text-primary"
-          dangerouslySetInnerHTML={{ __html: titleHtml }}
-        />
+        <p className="text-sm font-medium leading-tight text-text-primary">{title}</p>
         <button
           type="button"
           onClick={onClose}
@@ -40,10 +37,7 @@ export default function TourPopover({
           <X className="size-4" />
         </button>
       </div>
-      <p
-        className="mt-1.5 text-xs leading-relaxed text-text-secondary"
-        dangerouslySetInnerHTML={{ __html: descriptionHtml }}
-      />
+      <p className="mt-1.5 text-xs leading-relaxed text-text-secondary">{description}</p>
       <div className="mt-3.5 flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-text-tertiary">{progressText}</span>
         <div className="flex items-center gap-1.5">
