@@ -46,7 +46,6 @@ const {
   sanitizeFilename,
   fetchAllowedCodeFileStream,
   HOST_FILE_AUTHORING_ARTIFACT_KEY,
-  filterMCPConfigByEntraGroups,
   filterMCPConfigForUser,
   isAbortError,
   isDirectOpenIDBearerRecoveryEnabled,
@@ -438,7 +437,14 @@ async function getAppConfigForUser(userId, user) {
 
 /** Deloitte Custom Change: filters MCP server configuration by synchronized Entra memberships. */
 async function filterAppConfigMCPServers(appConfig, user) {
-  const mcpConfig = appConfig?.mcpConfig;
+  return {
+    ...appConfig,
+    mcpConfig: await filterMCPConfigForRequestUser(appConfig?.mcpConfig ?? {}, user),
+  };
+}
+
+/** Deloitte Custom Change: applies Entra access rules after each MCP registry resolution. */
+async function filterMCPConfigForRequestUser(mcpConfig, user) {
   const getEntraGroupIds = async (userId) => {
     let groups;
     try {
@@ -454,14 +460,7 @@ async function filterAppConfigMCPServers(appConfig, user) {
       .filter((group) => group.source === 'entra' && typeof group.idOnTheSource === 'string')
       .map((group) => group.idOnTheSource);
   };
-  try {
-    return {
-      ...appConfig,
-      mcpConfig: await filterMCPConfigForUser(mcpConfig ?? {}, user?.id, getEntraGroupIds),
-    };
-  } catch {
-    return { ...appConfig, mcpConfig: filterMCPConfigByEntraGroups(mcpConfig, []) };
-  }
+  return await filterMCPConfigForUser(mcpConfig, user?.id, getEntraGroupIds);
 }
 
 /**
@@ -816,11 +815,11 @@ async function resolveAllMcpConfigs(userId, user) {
   } catch {
     logger.warn('[resolveAllMcpConfigs] Config server resolution failed; continuing without');
   }
-  if (user?.role) {
-    return await registry.getAllServerConfigs(userId, configServers, user.role);
-  }
-
-  return await registry.getAllServerConfigs(userId, configServers);
+  const allServerConfigs = user?.role
+    ? await registry.getAllServerConfigs(userId, configServers, user.role)
+    : await registry.getAllServerConfigs(userId, configServers);
+  // Deloitte Custom Change: YAML base configs are merged after config overrides, so filter again.
+  return await filterMCPConfigForRequestUser(allServerConfigs, user ?? { id: userId });
 }
 
 /**
@@ -2037,9 +2036,14 @@ async function getMCPSetupData(userId, options = {}) {
   // Deloitte Custom Change: connection status must not disclose restricted MCP servers.
   const appConfig = await filterAppConfigMCPServers(rawAppConfig, options.user ?? { id: userId });
   const configServers = await registry.ensureConfigServers(appConfig?.mcpConfig || {});
-  const mcpConfig = role
+  const allServerConfigs = role
     ? await registry.getAllServerConfigs(userId, configServers, role)
     : await registry.getAllServerConfigs(userId, configServers);
+  // Deloitte Custom Change: the registry merge can reintroduce restricted YAML servers.
+  const mcpConfig = await filterMCPConfigForRequestUser(
+    allServerConfigs,
+    options.user ?? { id: userId },
+  );
   const mcpManager = getMCPManager(userId);
   /** @type {Map<string, import('@librechat/api').MCPConnection>} */
   let appConnections = new Map();

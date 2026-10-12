@@ -443,7 +443,11 @@ describe('resolveAllMcpConfigs', () => {
     });
     findGroupsByMemberId.mockResolvedValue([{ source: 'entra', idOnTheSource: 'different-group' }]);
     mockRegistry.ensureConfigServers.mockResolvedValue({});
-    mockRegistry.getAllServerConfigs.mockResolvedValue({});
+    // The registry re-merges YAML servers after config overrides. The final access filter must
+    // still remove SharePoint for a non-member.
+    mockRegistry.getAllServerConfigs.mockResolvedValue({
+      sharepoint: { allowedEntraGroupIds: ['00c0efc7-e8a7-448c-9480-834cbf1ebd60'] },
+    });
 
     await expect(resolveAllMcpConfigs('u1', { id: 'u1' })).resolves.toEqual({});
 
