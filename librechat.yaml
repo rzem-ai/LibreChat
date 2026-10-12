@@ -457,6 +457,9 @@ modelSpecs:
       details:
         speed: 3
         intelligence: 4
+        supports:
+          webSearch: true
+          imageGeneration: false
 
     - name: 'azure-global-gpt-56-sol'
       label: 'GPT 5.6 Sol'
@@ -471,6 +474,9 @@ modelSpecs:
       details:
         speed: 3
         intelligence: 5
+        supports:
+          webSearch: true
+          imageGeneration: false
 
     - name: 'vertexai-us-gemini-2-5-flash'
       label: 'Gemini 2.5 Flash'
@@ -487,6 +493,9 @@ modelSpecs:
       details:
         speed: 5
         intelligence: 1
+        supports:
+          webSearch: false
+          imageGeneration: false
 
     - name: 'vertexai-us-gemini-2-5-pro'
       label: 'Gemini 2.5 Pro'
@@ -501,6 +510,9 @@ modelSpecs:
       details:
         speed: 5
         intelligence: 1
+        supports:
+          webSearch: false
+          imageGeneration: false
 
     - name: 'anthropic-claude-haiku-4-5'
       label: 'Claude Haiku 4.5'
@@ -513,6 +525,9 @@ modelSpecs:
         endpoint: 'anthropic'
         model: 'claude-haiku-4-5'
         promptPrefix: *deloitteSystemPrompt
+        supports:
+          webSearch: true
+          imageGeneration: false
 
     - name: 'anthropic-claude-sonnet-5'
       label: 'Claude Sonnet 5'
@@ -527,6 +542,9 @@ modelSpecs:
       details:
         speed: 1
         intelligence: 4
+        supports:
+          webSearch: true
+          imageGeneration: false
 
     - name: 'anthropic-claude-sonnet-4-6'
       label: 'Claude Sonnet 4.6'
@@ -541,6 +559,9 @@ modelSpecs:
       details:
         speed: 5
         intelligence: 2
+        supports:
+          webSearch: true
+          imageGeneration: false
 
     - name: 'anthropic-claude-opus-4-6'
       label: 'Claude Opus 4.6'
@@ -555,6 +576,9 @@ modelSpecs:
       details:
         speed: 5
         intelligence: 3
+        supports:
+          webSearch: true
+          imageGeneration: false
 
     - name: 'anthropic-claude-opus-4-8'
       label: 'Claude Opus 4.8'
@@ -569,6 +593,9 @@ modelSpecs:
       details:
         speed: 4
         intelligence: 5
+        supports:
+          webSearch: true
+          imageGeneration: false
 
     - name: 'anthropic-au-claude-sonnet-4-6'
       label: 'Claude Sonnet 4.6'
@@ -584,6 +611,9 @@ modelSpecs:
       details:
         speed: 5
         intelligence: 2
+        supports:
+          webSearch: false
+          imageGeneration: false
 
     - name: 'anthropic-au-claude-haiku-4-5'
       label: 'Claude Haiku 4.5'
@@ -595,6 +625,9 @@ modelSpecs:
         endpoint: 'bedrock'
         model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
         promptPrefix: *deloitteSystemPrompt
+        supports:
+          webSearch: false
+          imageGeneration: false
 
 # MCP Servers configuration
 # Each entry filters the gateway to a single toolset via the `toolsets` query param.

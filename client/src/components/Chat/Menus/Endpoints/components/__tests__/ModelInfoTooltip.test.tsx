@@ -1,6 +1,6 @@
 /* eslint-disable i18next/no-literal-string */
 // Deloitte Custom Change: new file — render coverage for the rebuilt model info tooltip
-// (Figma node 855:37722): header stacking, rating meters, cost lines, and deferred supports.
+// (Figma node 855:37722): header stacking, rating meters, cost lines, context, and supports.
 import { render, screen } from '@testing-library/react';
 import type { TModelSpec } from 'librechat-data-provider';
 import type { ReactNode } from 'react';
@@ -76,7 +76,7 @@ describe('ModelInfoTooltip', () => {
     expect(screen.getByText('My Spec')).toBeInTheDocument();
   });
 
-  it('renders Speed and Intelligence as N-of-5 rating meters', () => {
+  it('renders Speed and Intelligence as N-of-5 rating meters, centered with their label', () => {
     render(
       <ModelInfoTooltip
         spec={{ ...baseSpec, details: { speed: 3, intelligence: 5 } }}
@@ -89,9 +89,15 @@ describe('ModelInfoTooltip', () => {
     expect(meters).toHaveLength(2);
     expect(meters[0]).toHaveAccessibleName('3 of 5');
     expect(meters[1]).toHaveAccessibleName('5 of 5');
+    expect(screen.getByText('com_ui_model_details_speed').parentElement).toHaveClass(
+      'items-center',
+    );
+    expect(screen.getByText('com_ui_model_details_intelligence').parentElement).toHaveClass(
+      'items-center',
+    );
   });
 
-  it('renders a cost meter with input/output price lines and no tier badge', () => {
+  it('renders a cost meter with input/output price lines, top-aligned with its label', () => {
     mockModelPricing = { 'gpt-5': { tier: 2, inputPer1M: 1, outputPer1M: 6 } };
     render(
       <ModelInfoTooltip spec={baseSpec} endpointsConfig={{}}>
@@ -101,12 +107,10 @@ describe('ModelInfoTooltip', () => {
     expect(screen.getByRole('img', { name: '2 of 5' })).toBeInTheDocument();
     expect(screen.getByText(/com_ui_model_details_cost_input/)).toBeInTheDocument();
     expect(screen.getByText(/com_ui_model_details_cost_output/)).toBeInTheDocument();
-    expect(
-      screen.queryByText(/com_ui_model_details_cost_low|_medium|_high/),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText('com_ui_model_details_cost').parentElement).toHaveClass('items-start');
   });
 
-  it('renders context as plain text with no meter', () => {
+  it('renders context as plain text with no meter, top-aligned with its label', () => {
     mockTokenConfig = { openAI: { 'gpt-5': { context: 128000 } } };
     render(
       <ModelInfoTooltip spec={baseSpec} endpointsConfig={{}}>
@@ -114,18 +118,36 @@ describe('ModelInfoTooltip', () => {
       </ModelInfoTooltip>,
     );
     expect(screen.getByText('128K')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_model_details_context').parentElement).toHaveClass(
+      'items-start',
+    );
   });
 
-  it('does not render a supports section', () => {
+  it('renders a supports section listing only the enabled capabilities', () => {
     render(
       <ModelInfoTooltip
         spec={{
           ...baseSpec,
           details: {
             speed: 3,
-            supports: { webSearch: true, imageGeneration: true, fileIngestion: true },
+            supports: { webSearch: true, imageGeneration: true, fileIngestion: false },
           },
         }}
+        endpointsConfig={{}}
+      >
+        <button>Row</button>
+      </ModelInfoTooltip>,
+    );
+    expect(screen.getByText('com_ui_model_details_supports')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_web_search')).toBeInTheDocument();
+    expect(screen.getByText('com_ui_model_details_image_generation')).toBeInTheDocument();
+    expect(screen.queryByText('com_ui_model_details_file_ingestion')).not.toBeInTheDocument();
+  });
+
+  it('omits the supports section entirely when no capabilities are enabled', () => {
+    render(
+      <ModelInfoTooltip
+        spec={{ ...baseSpec, details: { speed: 3, supports: {} } }}
         endpointsConfig={{}}
       >
         <button>Row</button>
