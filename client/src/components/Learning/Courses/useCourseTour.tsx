@@ -70,6 +70,20 @@ export default function useCourseTour(
     let currentPopoverRoot: Root | null = null;
     const steps = getSteps().map(toEngineStep);
 
+    // Shared by both exit paths: our own close button (fireComplete: false — closing
+    // early isn't finishing the tour) and driver.js's own onDestroyStarted, which fires
+    // for every other way the tour ends, including reaching "Done" on the last step.
+    const endTour = (driverInstance: Driver, fireComplete: boolean) => {
+      currentPopoverRoot?.unmount();
+      currentPopoverRoot = null;
+      driverInstance.destroy();
+      tourRef.current = null;
+      if (fireComplete && completedFromLastStepNext) {
+        onComplete?.();
+      }
+      optionsRef.current.onEnd?.();
+    };
+
     const renderPopover = (popover: PopoverDOM, driverInstance: Driver, step: EngineStep) => {
       currentPopoverRoot?.unmount();
 
@@ -116,13 +130,7 @@ export default function useCourseTour(
               }
               driverInstance.moveNext();
             }}
-            onClose={() => {
-              currentPopoverRoot?.unmount();
-              currentPopoverRoot = null;
-              driverInstance.destroy();
-              tourRef.current = null;
-              optionsRef.current.onEnd?.();
-            }}
+            onClose={() => endTour(driverInstance, false)}
           />,
         );
       });
@@ -146,16 +154,7 @@ export default function useCourseTour(
           optionsRef.current.setSidebarExpanded?.(true);
         }
       },
-      onDestroyStarted: () => {
-        currentPopoverRoot?.unmount();
-        currentPopoverRoot = null;
-        tourDriver.destroy();
-        tourRef.current = null;
-        if (completedFromLastStepNext) {
-          onComplete?.();
-        }
-        optionsRef.current.onEnd?.();
-      },
+      onDestroyStarted: () => endTour(tourDriver, true),
       steps,
     });
 
