@@ -336,8 +336,17 @@ export function resolveUploadLLMDeliveryPath({
  */
 /** Deloitte Custom Change: CSV is tabular, not prose — vector search chunks rows
  *  semantically, which is both slow on large files and a poor fit for the exact
- *  lookups/aggregations tabular data needs. Code Interpreter handles it natively. */
-const isCsvMimeType = (mimeType: string): boolean => /^(text|application)\/csv$/.test(mimeType);
+ *  lookups/aggregations tabular data needs. Code Interpreter handles it natively.
+ *  Mirrors CSV_MIME_PATTERN in packages/api/src/files/documents/html.ts (data-provider
+ *  can't import from packages/api, so this is duplicated rather than shared): covers the
+ *  legacy text/comma-separated-values alias and is case-insensitive. MIME parameters
+ *  (e.g. "; charset=utf-8") are stripped first so a decorated Content-Type still matches. */
+const CSV_MIME_PATTERN = /^(text\/csv|application\/csv|text\/comma-separated-values)$/i;
+const isCsvMimeType = (mimeType: string): boolean => {
+  const semi = mimeType.indexOf(';');
+  const base = (semi < 0 ? mimeType : mimeType.slice(0, semi)).trim();
+  return CSV_MIME_PATTERN.test(base);
+};
 
 export function canToolResourceConsume(toolResource: string, mimeType: string): boolean {
   if (toolResource === EToolResources.file_search) {
@@ -407,6 +416,36 @@ export function hasTurnFileConsumer(
       canToolResourceConsume(EToolResources.file_search, mimeType) &&
       searchHolds)
   );
+}
+
+/**
+ * Deloitte Custom Change: whether File Search or Code Interpreter is active this turn
+ * and capable of this mime type. Deliberately does not require hasTurnFileConsumer's
+ * "already embedded" proof: that check exists for the text-fallback decision (don't
+ * leave the model with nothing before the first embed), not for "will anything ever be
+ * able to read this." A file File Search hasn't embedded YET on its first turn is not
+ * orphaned — it's working as designed.
+ */
+function canAnyActiveToolConsume(mimeType: string, consumers: TurnFileConsumers): boolean {
+  return (
+    (consumers.executeCode && canToolResourceConsume(EToolResources.execute_code, mimeType)) ||
+    (consumers.fileSearch && canToolResourceConsume(EToolResources.file_search, mimeType))
+  );
+}
+
+/**
+ * Deloitte Custom Change: a file this turn resolved to leave for a tool ('none'), but no
+ * tool actually running this turn can read it. Reuses the same mime-type derivation as
+ * resolveTurnLLMDeliveryPath (routingMimeType falls back to type). Not gated on
+ * hasInferredLLMDeliveryPath: an explicitly user-chosen 'none' route is just as
+ * silently-droppable as an inferred one.
+ */
+export function isOrphanedTurnFile(file: TurnDeliveryFile, consumers: TurnFileConsumers): boolean {
+  if (file.llmDeliveryPath !== 'none') {
+    return false;
+  }
+  const mimeType = file.metadata?.routingMimeType ?? file.type ?? '';
+  return !canAnyActiveToolConsume(mimeType, consumers);
 }
 
 /**

@@ -8,6 +8,7 @@ import type { EndpointFileConfig } from './types/files';
 import type { TEndpoint } from './config';
 import {
   hasTurnFileConsumer,
+  isOrphanedTurnFile,
   isNativelyReadableText,
   hasToolResourceProvisioning,
   canToolResourceConsume,
@@ -743,6 +744,19 @@ describe('canToolResourceConsume', () => {
     expect(canToolResourceConsume('execute_code', 'text/csv')).toBe(true);
   });
 
+  it('rejects every csv mime variant for file search, case-insensitively and with params', () => {
+    expect(canToolResourceConsume('file_search', 'TEXT/CSV')).toBe(false);
+    expect(canToolResourceConsume('file_search', 'Text/Csv')).toBe(false);
+    expect(canToolResourceConsume('file_search', 'text/csv; charset=utf-8')).toBe(false);
+    expect(canToolResourceConsume('file_search', 'APPLICATION/CSV')).toBe(false);
+    expect(canToolResourceConsume('file_search', 'text/comma-separated-values')).toBe(false);
+    expect(canToolResourceConsume('file_search', 'TEXT/COMMA-SEPARATED-VALUES')).toBe(false);
+    /* execute_code's own matcher (codeInterpreterMimeTypes) does not strip MIME params or
+     * aliases the way isCsvMimeType does — a pre-existing, broader gap affecting every mime
+     * type, not just csv. Covering only what this helper controls. */
+    expect(canToolResourceConsume('execute_code', 'text/csv')).toBe(true);
+  });
+
   it('judges each tool by the list the client offers it from', () => {
     /* An archive is readable by the code interpreter and not by the vector store, so
      * treating everything non-image as searchable sent it to RAG to be rejected. */
@@ -820,6 +834,81 @@ describe('hasTurnFileConsumer', () => {
     const both = { executeCode: true, fileSearch: true };
     expect(hasTurnFileConsumer(eml, both, held)).toBe(false);
     expect(hasTurnFileConsumer('text/csv', both, held)).toBe(true);
+  });
+});
+
+describe('isOrphanedTurnFile', () => {
+  it('is never orphaned on a route that reaches the model or a tool consumer', () => {
+    expect(
+      isOrphanedTurnFile(
+        { type: 'text/csv', llmDeliveryPath: 'text' },
+        { executeCode: false, fileSearch: false },
+      ),
+    ).toBe(false);
+    expect(
+      isOrphanedTurnFile(
+        { type: 'text/csv', llmDeliveryPath: 'provider' },
+        { executeCode: false, fileSearch: false },
+      ),
+    ).toBe(false);
+    expect(
+      isOrphanedTurnFile({ type: 'text/csv' }, { executeCode: false, fileSearch: false }),
+    ).toBe(false);
+  });
+
+  it('is not orphaned when Code Interpreter can read it (the working CSV case)', () => {
+    expect(
+      isOrphanedTurnFile(
+        { type: 'text/csv', llmDeliveryPath: 'none' },
+        { executeCode: true, fileSearch: false },
+      ),
+    ).toBe(false);
+  });
+
+  it('is orphaned when nothing this turn can read it (the reported bug)', () => {
+    expect(
+      isOrphanedTurnFile(
+        { type: 'text/csv', llmDeliveryPath: 'none' },
+        { executeCode: false, fileSearch: false },
+      ),
+    ).toBe(true);
+  });
+
+  it('is orphaned for csv even with File Search active, since csv is excluded from it', () => {
+    expect(
+      isOrphanedTurnFile(
+        { type: 'text/csv', llmDeliveryPath: 'none' },
+        { executeCode: false, fileSearch: true },
+      ),
+    ).toBe(true);
+  });
+
+  it('is not orphaned on its first turn, before File Search has embedded it yet (regression)', () => {
+    /* hasTurnFileConsumer requires embedded/embeddedEntities proof before counting File
+     * Search as a reader — correct for the text-fallback decision, but wrong here: a fresh
+     * PDF with File Search active is not "orphaned" just because nothing has embedded it
+     * yet. isOrphanedTurnFile must not inherit that stricter check. */
+    expect(
+      isOrphanedTurnFile(
+        { type: 'application/pdf', llmDeliveryPath: 'none' },
+        { executeCode: false, fileSearch: true },
+      ),
+    ).toBe(false);
+    expect(
+      isOrphanedTurnFile(
+        { type: 'application/pdf', llmDeliveryPath: 'none', embedded: false },
+        { executeCode: false, fileSearch: true },
+      ),
+    ).toBe(false);
+  });
+
+  it('still flags an explicitly user-chosen none route', () => {
+    expect(
+      isOrphanedTurnFile(
+        { type: 'text/csv', llmDeliveryPath: 'none', metadata: { destinationChosen: true } },
+        { executeCode: false, fileSearch: false },
+      ),
+    ).toBe(true);
   });
 });
 
