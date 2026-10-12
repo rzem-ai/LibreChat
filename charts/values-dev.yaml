@@ -38,7 +38,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'develop@sha256:e9ce6a34b7e7294c08ddd0d2ef18342ab3719873afc3a7f448a830c871d12e80'
+          tag: 'develop@sha256:309da553281b5d57d9bc07eab902fad6c85db87bf1c6a6b52e201eb8fdc2d9d3'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://foundry-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -58,7 +58,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:07150bcd773aae3555bfb044843f37ed2d563123b772d1415cbe20ab1ab93005'
+          tag: 'develop@sha256:f54e719c2a5c808f8c852db0fbac8c91168111bff7683f1ae8871c09b5fbd595'
         resources:
           requests:
             memory: "2Gi"
@@ -179,7 +179,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:68202516a98b7b23d6e9d96197e65b09f002d04b53165d8aa013d331fc3be19f'
+          tag: 'develop@sha256:e312a3643ca0f37e950cc7bf44f528ce24834b01648595f2ee1d707e41d4d69d'
         resources:
           requests:
             memory: "1Gi"
@@ -243,7 +243,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:4297db296c4e701a66dcc473e80f7ea56303be6459993a7a3eda0a1ba14654b0'
+          tag: 'develop@sha256:d7d427180eaf2dffe8e1d1f55acfb74d675f713e054cb12e2777f7fafc913712'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
