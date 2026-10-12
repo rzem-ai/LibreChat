@@ -275,7 +275,11 @@ router.get('/', async function (req, res) {
     // the same way as billing — custom endpoints use their configured `tokenConfig`,
     // everything else (built-in OpenAI/Anthropic/Google/Bedrock) falls back to the
     // built-in token-value tables.
-    const modelsConfig = await getModelsConfig(req);
+    const showModelPricingIndicator =
+      appConfig?.interfaceConfig?.customDeloitteFeatureFlags?.showModelPricingIndicator === true;
+    const modelsConfig = showModelPricingIndicator
+      ? await getModelsConfig({ user: req.user, config: appConfig })
+      : undefined;
     const modelPricing = await getModelPricing(
       appConfig,
       req.user.id ?? req.user._id?.toString(),
