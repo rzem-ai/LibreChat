@@ -111,37 +111,6 @@ describe('resolveTokenConfigMap', () => {
     }
   });
 
-  // Deloitte Custom Change: tokenConfig is now schema-legal on every endpoint, not just
-  // `custom` — covers collectTokenConfigOverrides' generalized scan of named endpoints.
-  it('uses a static tokenConfig override on a named, non-custom endpoint', async () => {
-    const appConfig = {
-      interfaceConfig: { contextCost: true },
-      endpoints: {
-        [EModelEndpoint.anthropic]: {
-          tokenConfig: {
-            'claude-sonnet-4-6': { prompt: 3, completion: 15, context: 200000 },
-          },
-        },
-      },
-    } as unknown as AppConfig;
-
-    const map = await resolveTokenConfigMap(
-      {
-        appConfig,
-        modelsConfig: { [EModelEndpoint.anthropic]: ['claude-sonnet-4-6'] },
-        userId: 'user-1',
-      },
-      deps,
-    );
-
-    expect(map[EModelEndpoint.anthropic]['claude-sonnet-4-6']).toEqual({
-      context: 200000,
-      prompt: 3,
-      completion: 15,
-    });
-    expect(mockCacheGet).not.toHaveBeenCalled();
-  });
-
   it('omits pricing when contextCost is disabled', async () => {
     const appConfig = appConfigWith(
       [

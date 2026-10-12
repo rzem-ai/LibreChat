@@ -22,9 +22,11 @@ const {
 const { EModelEndpoint, defaultSocialLogins } = require('librechat-data-provider');
 const { logger, getTenantId, SystemCapabilities } = require('@librechat/data-schemas');
 const { hasCapability, hasConfigCapability } = require('~/server/middleware/roles/capabilities');
+const { getModelsConfig } = require('~/server/controllers/ModelController');
 const { getLdapConfig } = require('~/server/services/Config/ldap');
 const { getRumConfig } = require('~/server/services/Config/rum');
 const { getAppConfig } = require('~/server/services/Config/app');
+const { getValueKey, getMultiplier, getCacheMultiplier } = require('~/models');
 
 const router = express.Router();
 const emailLoginEnabled =
@@ -270,8 +272,17 @@ router.get('/', async function (req, res) {
     let langfuseConnectionAccess = false;
 
     // Deloitte Custom Change: model pricing (incl. the 1-5 price tier) is derived
-    // from each endpoint's `tokenConfig`.
-    const modelPricing = getModelPricing(appConfig);
+    // the same way as billing — custom endpoints use their configured `tokenConfig`,
+    // everything else (built-in OpenAI/Anthropic/Google/Bedrock) falls back to the
+    // built-in token-value tables.
+    const modelsConfig = await getModelsConfig(req);
+    const modelPricing = await getModelPricing(
+      appConfig,
+      req.user.id ?? req.user._id?.toString(),
+      req.user.tenantId,
+      modelsConfig,
+      { getValueKey, getMultiplier, getCacheMultiplier },
+    );
 
     if (langfuseConnectionAvailable) {
       try {

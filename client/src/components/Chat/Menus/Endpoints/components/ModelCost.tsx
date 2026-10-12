@@ -9,21 +9,36 @@ export function formatPrice(value: number) {
   })}`;
 }
 
-export function getModelCost(modelId: string | null | undefined, modelPricing: TModelPricing = {}) {
+export function getModelCost(
+  modelId: string | null | undefined,
+  endpoint: string | null | undefined,
+  modelPricing: TModelPricing = {},
+) {
   if (!modelId) {
     return undefined;
   }
 
   const modelName = modelId.replace(/^au\.anthropic\./, '').replace(/-\d{8}-v1:\d+$/, '');
+  const endpointPricing = endpoint
+    ? (model: string) => modelPricing[`${endpoint}:${model}`]
+    : () => undefined;
 
   return (
-    modelPricing[modelId] ?? modelPricing[modelName] ?? modelPricing[modelId.split('/').pop() ?? '']
+    endpointPricing(modelId) ??
+    endpointPricing(modelName) ??
+    endpointPricing(modelId.split('/').pop() ?? '')
   );
 }
 
-export default function ModelCost({ modelId }: { modelId: string | null | undefined }) {
+export default function ModelCost({
+  modelId,
+  endpoint,
+}: {
+  modelId: string | null | undefined;
+  endpoint: string | null | undefined;
+}) {
   const { modelPricing = {} } = useModelSelectorContext();
-  const pricing = getModelCost(modelId, modelPricing);
+  const pricing = getModelCost(modelId, endpoint, modelPricing);
 
   if (!pricing) {
     return null;

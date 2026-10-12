@@ -1,6 +1,19 @@
 import { EModelEndpoint } from 'librechat-data-provider';
 import type { AppConfig } from '@librechat/data-schemas';
+import type { TokenomicsDeps } from '~/endpoints/pricing';
+
+const mockCacheGet = jest.fn();
+jest.mock('~/cache', () => ({
+  tokenConfigCache: jest.fn(() => ({ get: (key: string) => mockCacheGet(key) })),
+}));
+
 import { getModelPricing } from './modelPricing';
+
+const deps: TokenomicsDeps = {
+  getValueKey: () => 'value-key',
+  getMultiplier: ({ tokenType }) => (tokenType === 'prompt' ? 5 : 15),
+  getCacheMultiplier: () => null,
+};
 
 function buildAppConfig(
   overrides: Partial<AppConfig> & {
@@ -21,28 +34,62 @@ function buildAppConfig(
 }
 
 describe('getModelPricing', () => {
-  it('returns an empty map when the showModelPricingIndicator flag is not enabled', () => {
-    expect(getModelPricing(undefined)).toEqual({});
-    expect(getModelPricing({ endpoints: {} } as unknown as AppConfig)).toEqual({});
+  beforeEach(() => mockCacheGet.mockReset().mockResolvedValue(null));
+
+  it('returns an empty map when the showModelPricingIndicator flag is not enabled', async () => {
+    expect(await getModelPricing(undefined, 'user-1', undefined, undefined, deps)).toEqual({});
     expect(
-      getModelPricing(
-        buildAppConfig({
-          showModelPricingIndicator: false,
-          endpoints: {
-            [EModelEndpoint.anthropic]: {
-              tokenConfig: { 'test-model': { prompt: 1, completion: 1, context: 1 } },
-            },
-          },
-        } as Partial<AppConfig>),
+      await getModelPricing(
+        { endpoints: {} } as unknown as AppConfig,
+        'user-1',
+        undefined,
+        { [EModelEndpoint.anthropic]: ['claude-sonnet-4-6'] },
+        deps,
+      ),
+    ).toEqual({});
+    expect(
+      await getModelPricing(
+        buildAppConfig({ showModelPricingIndicator: false, endpoints: {} } as Partial<AppConfig>),
+        'user-1',
+        undefined,
+        { [EModelEndpoint.anthropic]: ['claude-sonnet-4-6'] },
+        deps,
       ),
     ).toEqual({});
   });
 
-  it('returns an empty map when no endpoint has a static tokenConfig', () => {
-    expect(getModelPricing(buildAppConfig({ endpoints: {} } as Partial<AppConfig>))).toEqual({});
+  it('returns an empty map when no modelsConfig is provided', async () => {
+    expect(
+      await getModelPricing(
+        buildAppConfig({ endpoints: {} } as Partial<AppConfig>),
+        'user-1',
+        undefined,
+        undefined,
+        deps,
+      ),
+    ).toEqual({});
   });
 
-  it('flattens a custom endpoint tokenConfig, keyed by the endpoint name', () => {
+  it('prices a built-in endpoint model using the base billing multiplier, not a tokenConfig', async () => {
+    const appConfig = buildAppConfig({ endpoints: {} } as Partial<AppConfig>);
+
+    const pricing = await getModelPricing(
+      appConfig,
+      'user-1',
+      undefined,
+      { [EModelEndpoint.anthropic]: ['claude-sonnet-4-6'] },
+      deps,
+    );
+
+    expect(pricing[`${EModelEndpoint.anthropic}:claude-sonnet-4-6`]).toEqual({
+      inputPer1M: 5,
+      outputPer1M: 15,
+      provider: EModelEndpoint.anthropic,
+      tier: 4,
+    });
+  });
+
+  it('prices a custom endpoint model using its static tokenConfig override, not the base multiplier', async () => {
     const appConfig = buildAppConfig({
       endpoints: {
         [EModelEndpoint.custom]: [
@@ -56,33 +103,72 @@ describe('getModelPricing', () => {
       },
     } as Partial<AppConfig>);
 
-    expect(getModelPricing(appConfig)).toEqual({
-      'gpt-56-luna': { inputPer1M: 1, outputPer1M: 6, provider: 'Azure Global', tier: 2 },
+    const pricing = await getModelPricing(
+      appConfig,
+      'user-1',
+      undefined,
+      { 'Azure Global': ['gpt-56-luna'] },
+      deps,
+    );
+
+    expect(pricing['Azure Global:gpt-56-luna']).toEqual({
+      inputPer1M: 1,
+      outputPer1M: 6,
+      provider: 'Azure Global',
+      tier: 2,
     });
   });
 
-  it('flattens a named endpoint tokenConfig, keyed by the endpoint', () => {
+  it('falls back to the cached fetched config when a custom endpoint has no static tokenConfig', async () => {
+    mockCacheGet.mockResolvedValue({
+      'fetched-model': { prompt: 4, completion: 20, context: 32000 },
+    });
     const appConfig = buildAppConfig({
       endpoints: {
-        [EModelEndpoint.anthropic]: {
-          tokenConfig: {
-            'claude-sonnet-4-6': { prompt: 3, completion: 15, context: 200000 },
-          },
-        },
+        [EModelEndpoint.custom]: [{ name: 'MyProxy', models: { fetch: true } }],
       },
     } as Partial<AppConfig>);
 
-    expect(getModelPricing(appConfig)).toEqual({
-      'claude-sonnet-4-6': {
-        inputPer1M: 3,
-        outputPer1M: 15,
-        provider: EModelEndpoint.anthropic,
-        tier: 4,
-      },
+    const pricing = await getModelPricing(
+      appConfig,
+      'user-1',
+      undefined,
+      { MyProxy: ['fetched-model'] },
+      deps,
+    );
+
+    expect(pricing['MyProxy:fetched-model']).toEqual({
+      inputPer1M: 4,
+      outputPer1M: 20,
+      provider: 'MyProxy',
+      tier: 4,
     });
   });
 
-  it('merges tokenConfig across every endpoint into a single map', () => {
+  it('falls back to the base billing multiplier for a custom endpoint model with no static or cached tokenConfig', async () => {
+    const appConfig = buildAppConfig({
+      endpoints: {
+        [EModelEndpoint.custom]: [{ name: 'MyProxy', models: { fetch: true } }],
+      },
+    } as Partial<AppConfig>);
+
+    const pricing = await getModelPricing(
+      appConfig,
+      'user-1',
+      undefined,
+      { MyProxy: ['unknown-model'] },
+      deps,
+    );
+
+    expect(pricing['MyProxy:unknown-model']).toEqual({
+      inputPer1M: 5,
+      outputPer1M: 15,
+      provider: 'MyProxy',
+      tier: 4,
+    });
+  });
+
+  it('merges built-in and custom endpoint pricing into a single map', async () => {
     const appConfig = buildAppConfig({
       endpoints: {
         [EModelEndpoint.custom]: [
@@ -93,31 +179,63 @@ describe('getModelPricing', () => {
             },
           },
         ],
-        [EModelEndpoint.bedrock]: {
-          tokenConfig: {
-            'au.anthropic.claude-haiku-4-5-20251001-v1:0': {
-              prompt: 1,
-              completion: 5,
-              context: 200000,
-            },
-          },
-        },
       },
     } as Partial<AppConfig>);
 
-    expect(getModelPricing(appConfig)).toEqual({
-      'google/gemini-2.5-pro': {
+    const pricing = await getModelPricing(
+      appConfig,
+      'user-1',
+      undefined,
+      {
+        [EModelEndpoint.anthropic]: ['claude-sonnet-4-6'],
+        'VertexAI US': ['google/gemini-2.5-pro'],
+      },
+      deps,
+    );
+
+    expect(pricing).toEqual({
+      [`${EModelEndpoint.anthropic}:claude-sonnet-4-6`]: {
+        inputPer1M: 5,
+        outputPer1M: 15,
+        provider: EModelEndpoint.anthropic,
+        tier: 4,
+      },
+      'VertexAI US:google/gemini-2.5-pro': {
         inputPer1M: 1.25,
         outputPer1M: 10,
         provider: 'VertexAI US',
         tier: 3,
       },
-      'au.anthropic.claude-haiku-4-5-20251001-v1:0': {
-        inputPer1M: 1,
-        outputPer1M: 5,
-        provider: EModelEndpoint.bedrock,
-        tier: 2,
+    });
+  });
+
+  it('keeps pricing for the same model separate per custom endpoint', async () => {
+    const appConfig = buildAppConfig({
+      endpoints: {
+        [EModelEndpoint.custom]: [
+          {
+            name: 'Azure Global',
+            tokenConfig: { 'shared-model': { prompt: 1, completion: 1, context: 1 } },
+          },
+          {
+            name: 'VertexAI US',
+            tokenConfig: { 'shared-model': { prompt: 10, completion: 10, context: 1 } },
+          },
+        ],
       },
+    } as Partial<AppConfig>);
+
+    const pricing = await getModelPricing(
+      appConfig,
+      'user-1',
+      undefined,
+      { 'Azure Global': ['shared-model'], 'VertexAI US': ['shared-model'] },
+      deps,
+    );
+
+    expect(pricing).toMatchObject({
+      'Azure Global:shared-model': { inputPer1M: 1, outputPer1M: 1 },
+      'VertexAI US:shared-model': { inputPer1M: 10, outputPer1M: 10 },
     });
   });
 
@@ -132,46 +250,72 @@ describe('getModelPricing', () => {
     [14.99, 4],
     [15, 5],
     [100, 5],
-  ])('maps a blended cost of $%s/1M to tier %i', (blendedCost, expectedTier) => {
+  ])('maps a blended cost of $%s/1M to tier %i', async (blendedCost, expectedTier) => {
     const appConfig = buildAppConfig({
       endpoints: {
-        [EModelEndpoint.anthropic]: {
-          tokenConfig: {
-            'test-model': { prompt: blendedCost, completion: blendedCost, context: 1 },
+        [EModelEndpoint.custom]: [
+          {
+            name: 'Azure Global',
+            tokenConfig: {
+              'test-model': { prompt: blendedCost, completion: blendedCost, context: 1 },
+            },
           },
-        },
+        ],
       },
     } as Partial<AppConfig>);
 
-    expect(getModelPricing(appConfig)['test-model'].tier).toBe(expectedTier);
+    const pricing = await getModelPricing(
+      appConfig,
+      'user-1',
+      undefined,
+      { 'Azure Global': ['test-model'] },
+      deps,
+    );
+    expect(pricing['Azure Global:test-model'].tier).toBe(expectedTier);
   });
 
-  it('uses custom modelPricingTierBreakpoints from customDeloitteFeatureFlags when provided', () => {
+  it('uses custom modelPricingTierBreakpoints from customDeloitteFeatureFlags when provided', async () => {
     const appConfig = buildAppConfig({
       modelPricingTierBreakpoints: [1, 2, 3, 4],
       endpoints: {
-        [EModelEndpoint.anthropic]: {
-          tokenConfig: {
-            'test-model': { prompt: 3, completion: 3, context: 1 },
+        [EModelEndpoint.custom]: [
+          {
+            name: 'Azure Global',
+            tokenConfig: { 'test-model': { prompt: 3, completion: 3, context: 1 } },
           },
-        },
+        ],
       },
     } as Partial<AppConfig>);
 
-    expect(getModelPricing(appConfig)['test-model'].tier).toBe(4);
+    const pricing = await getModelPricing(
+      appConfig,
+      'user-1',
+      undefined,
+      { 'Azure Global': ['test-model'] },
+      deps,
+    );
+    expect(pricing['Azure Global:test-model'].tier).toBe(4);
   });
 
-  it('falls back to the default breakpoints when modelPricingTierBreakpoints is absent', () => {
+  it('falls back to the default breakpoints when modelPricingTierBreakpoints is absent', async () => {
     const appConfig = buildAppConfig({
       endpoints: {
-        [EModelEndpoint.anthropic]: {
-          tokenConfig: {
-            'test-model': { prompt: 3, completion: 3, context: 1 },
+        [EModelEndpoint.custom]: [
+          {
+            name: 'Azure Global',
+            tokenConfig: { 'test-model': { prompt: 3, completion: 3, context: 1 } },
           },
-        },
+        ],
       },
     } as Partial<AppConfig>);
 
-    expect(getModelPricing(appConfig)['test-model'].tier).toBe(2);
+    const pricing = await getModelPricing(
+      appConfig,
+      'user-1',
+      undefined,
+      { 'Azure Global': ['test-model'] },
+      deps,
+    );
+    expect(pricing['Azure Global:test-model'].tier).toBe(2);
   });
 });

@@ -2,7 +2,7 @@
 
 ## Model Pricing
 
-Model pricing factors display $ to $$$$$ based on the blended cost of input and output tokens. The number of $ signs is determined by the `tierBreakpoints` configuration in `librechat.yaml`, which defines the thresholds for each tier.
+Model pricing indicators display `$` to `$$$$$` based on the blended cost of input and output tokens. Enable them with `interface.customDeloitteFeatureFlags.showModelPricingIndicator: true` in `librechat.yaml`. Configure the four thresholds with `interface.customDeloitteFeatureFlags.modelPricingTierBreakpoints`; when unset, they default to `[2, 5, 8, 15]`.
 
 ## Detailed Model Information
 
