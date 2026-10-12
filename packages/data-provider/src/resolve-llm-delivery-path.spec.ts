@@ -733,9 +733,14 @@ describe('canToolResourceConsume', () => {
     ).toBe(true);
   });
 
-  it('still accepts csv for file search, which the retrieval set omits', () => {
-    expect(canToolResourceConsume('file_search', 'text/csv')).toBe(true);
+  it('still accepts spreadsheet formats for file search, which the retrieval set omits', () => {
     expect(canToolResourceConsume('file_search', 'application/vnd.ms-excel')).toBe(true);
+  });
+
+  it('rejects csv for file search (Deloitte Custom Change: code interpreter fits tabular data better)', () => {
+    expect(canToolResourceConsume('file_search', 'text/csv')).toBe(false);
+    expect(canToolResourceConsume('file_search', 'application/csv')).toBe(false);
+    expect(canToolResourceConsume('execute_code', 'text/csv')).toBe(true);
   });
 
   it('judges each tool by the list the client offers it from', () => {
@@ -746,9 +751,6 @@ describe('canToolResourceConsume', () => {
     expect(canToolResourceConsume('file_search', 'video/mp4')).toBe(false);
     expect(canToolResourceConsume('file_search', 'audio/mpeg')).toBe(false);
     expect(canToolResourceConsume('file_search', 'application/pdf')).toBe(true);
-    /* The vector store handles more than the historical retrieval list, and a data file
-     * is a normal thing to search. */
-    expect(canToolResourceConsume('file_search', 'text/csv')).toBe(true);
     expect(canToolResourceConsume('execute_code', 'application/zip')).toBe(true);
     expect(canToolResourceConsume('execute_code', 'image/png')).toBe(true);
   });
@@ -786,7 +788,9 @@ describe('hasTurnFileConsumer', () => {
   it('finds a reader only among the tools this turn runs', () => {
     expect(hasTurnFileConsumer('text/csv', { executeCode: false, fileSearch: false })).toBe(false);
     expect(hasTurnFileConsumer('text/csv', { executeCode: true, fileSearch: false })).toBe(true);
-    expect(hasTurnFileConsumer('text/csv', { executeCode: false, fileSearch: true })).toBe(true);
+    /* csv is excluded from file search (Deloitte Custom Change), so eml stands in for a
+     * type file search can read. */
+    expect(hasTurnFileConsumer(eml, { executeCode: false, fileSearch: true })).toBe(true);
   });
 
   it('does not count a tool that cannot read the type', () => {
@@ -795,9 +799,9 @@ describe('hasTurnFileConsumer', () => {
 
   it('counts File Search only where the record shows the vector store holds the file', () => {
     const consumers = { executeCode: false, fileSearch: true };
-    expect(hasTurnFileConsumer('text/csv', consumers, { embedded: true })).toBe(true);
-    expect(hasTurnFileConsumer('text/csv', consumers, { embedded: false })).toBe(false);
-    expect(hasTurnFileConsumer('text/csv', consumers, {})).toBe(false);
+    expect(hasTurnFileConsumer(eml, consumers, { embedded: true })).toBe(true);
+    expect(hasTurnFileConsumer(eml, consumers, { embedded: false })).toBe(false);
+    expect(hasTurnFileConsumer(eml, consumers, {})).toBe(false);
   });
 
   it('counts an enabled Run Code as a reader before the sandbox holds a copy', () => {
@@ -935,18 +939,28 @@ describe('resolveTurnLLMDeliveryPath', () => {
   });
 
   it('leaves the file to File Search once the vector store holds it', () => {
+    /* csv is excluded from file search (Deloitte Custom Change), so eml stands in for a
+     * type file search can read. */
+    const emlEndpointConfig = {
+      ...endpointConfig,
+      defaultLLMDeliveryPath: { overrides: { [eml]: 'none' as const } },
+    };
     expect(
       resolveTurnLLMDeliveryPath({
-        file: { ...routedCsv, embedded: true },
+        file: { ...routedCsv, type: eml, embedded: true },
         consumers: { executeCode: false, fileSearch: true },
-        endpointConfig,
+        endpointConfig: emlEndpointConfig,
       }),
     ).toBe('none');
     expect(
       resolveTurnLLMDeliveryPath({
-        file: { ...routedCsv, metadata: { ...routedCsv.metadata, embeddedEntities: ['agent_1'] } },
+        file: {
+          ...routedCsv,
+          type: eml,
+          metadata: { ...routedCsv.metadata, embeddedEntities: ['agent_1'] },
+        },
         consumers: { executeCode: false, fileSearch: true },
-        endpointConfig,
+        endpointConfig: emlEndpointConfig,
       }),
     ).toBe('none');
   });
@@ -1063,20 +1077,25 @@ describe('resolveTurnLLMDeliveryPath', () => {
   });
 
   it('judges readers against the type routing saw before conversion', () => {
-    /* File Search reads the original CSV but not the converted image type, so checking the
-     * stored type here would wrongly find no reader and paste the file into the prompt. */
+    /* File Search reads the original type but not the converted image type, so checking the
+     * stored type here would wrongly find no reader and paste the file into the prompt.
+     * csv is excluded from file search (Deloitte Custom Change), so eml stands in for a
+     * type file search can read. */
     const converted = {
       ...routedCsv,
       type: 'image/png',
       embedded: true,
-      metadata: { destinationChosen: false, routingMimeType: 'text/csv' },
+      metadata: { destinationChosen: false, routingMimeType: eml },
     };
 
     expect(
       resolveTurnLLMDeliveryPath({
         file: converted,
         consumers: { executeCode: false, fileSearch: true },
-        endpointConfig,
+        endpointConfig: {
+          ...endpointConfig,
+          defaultLLMDeliveryPath: { overrides: { [eml]: 'none' } },
+        },
       }),
     ).toBe('none');
   });

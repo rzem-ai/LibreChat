@@ -334,6 +334,11 @@ export function resolveUploadLLMDeliveryPath({
  * judged by the list the client offers it from. Shared by upload-time selection and
  * deferred provisioning so the two cannot queue a file the other would refuse.
  */
+/** Deloitte Custom Change: CSV is tabular, not prose — vector search chunks rows
+ *  semantically, which is both slow on large files and a poor fit for the exact
+ *  lookups/aggregations tabular data needs. Code Interpreter handles it natively. */
+const isCsvMimeType = (mimeType: string): boolean => /^(text|application)\/csv$/.test(mimeType);
+
 export function canToolResourceConsume(toolResource: string, mimeType: string): boolean {
   if (toolResource === EToolResources.file_search) {
     /* The union of both readers rather than either alone: the extraction set describes
@@ -343,6 +348,7 @@ export function canToolResourceConsume(toolResource: string, mimeType: string): 
       !mimeType.startsWith('image') &&
       !mimeType.startsWith('audio') &&
       !mimeType.startsWith('video') &&
+      !isCsvMimeType(mimeType) &&
       (hasTextExtractionPath(mimeType) || matchesMimeList(mimeType, retrievalMimeTypes))
     );
   }

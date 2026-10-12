@@ -152,12 +152,14 @@ fileConfig:
       fileLimit: 50
   # Off globally; set under endpoints.<name>.legacyFileUploadUX to enable per-route.
   # legacyFileUploadUX: true
-  # Deloitte Custom Change: Word/Excel/PDF default to 'none' (file_search/code only).
+  # Deloitte Custom Change: Word/Excel/PDF/CSV default to 'none' (file_search/code only).
   defaultLLMDeliveryPath:
     overrides:
       application/vnd.openxmlformats-officedocument.wordprocessingml.document: none
       application/vnd.openxmlformats-officedocument.spreadsheetml.sheet: none
       application/pdf: none
+      text/csv: none
+      application/csv: none
 
 memory:
   disabled: false # Set to true to completely disable memory
@@ -337,6 +339,7 @@ modelSpecs:
 
     Document retrieval (highest priority — this rule overrides the brevity, "start with the answer", and style rules below):
     - Whenever documents are attached to the conversation and the file_search tool is available, you MUST call file_search before answering any substantive question — on every turn, including follow-ups, and even when the question seems answerable from general knowledge or from your own training. The attached documents are the authoritative source and may define terms differently from what you already know.
+    - If file_search returns no results (including a "No files to search" response), you MUST check the sandbox tool (bash_tool) before telling the user no files are available.
     - Never answer a document-related question from prior knowledge alone, or from passages retrieved on an earlier turn. Re-run file_search for the current question so the answer is grounded in, and cited from, freshly retrieved sources.
     - The only exception is a purely conversational message such as a greeting or small talk. When in doubt, search.
     - Ignore all document retrieval instructions above if the file_search tool is unavailable (for example, because no documents are attached or file_search is disabled). In this case, unless the user specifically references a document, answer the question normally using your other available tools and capabilities; do not mention documents, attachments, or retrieval, and do not ask the user to upload or provide a file.
