@@ -150,8 +150,6 @@ fileConfig:
       fileLimit: 50
     agents:
       fileLimit: 50
-  # Off globally; set under endpoints.<name>.legacyFileUploadUX to enable per-route.
-  # legacyFileUploadUX: true
   # Deloitte Custom Change: Word/Excel/PDF/CSV default to 'none' (file_search/code only).
   defaultLLMDeliveryPath:
     overrides:
