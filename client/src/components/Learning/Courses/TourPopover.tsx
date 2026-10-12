@@ -1,6 +1,12 @@
 import { X } from 'lucide-react';
 import { Button } from '@librechat/client';
+import { createConfigHtmlSanitizer } from '~/utils/configHtml';
 import { useLocalize } from '~/hooks';
+
+// Several tour descriptions use <br>/<strong> for line breaks and emphasis
+// (see getting-started-guide.json) — sanitize rather than render as plain
+// text, so the markup renders instead of showing up as literal tag text.
+const sanitizeDescription = createConfigHtmlSanitizer();
 
 interface TourPopoverProps {
   title: string;
@@ -32,12 +38,15 @@ export default function TourPopover({
           type="button"
           onClick={onClose}
           aria-label={localize('com_ui_close')}
-          className="shrink-0 text-text-tertiary transition-colors hover:text-text-primary focus:text-text-primary"
+          className="flex size-6 shrink-0 items-center justify-center text-text-tertiary transition-colors hover:text-text-primary focus:text-text-primary"
         >
           <X className="size-4" />
         </button>
       </div>
-      <p className="mt-1.5 text-xs leading-relaxed text-text-secondary">{description}</p>
+      <p
+        className="mt-1.5 text-xs leading-relaxed text-text-secondary"
+        dangerouslySetInnerHTML={{ __html: sanitizeDescription(description) }}
+      />
       <div className="mt-3.5 flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-text-tertiary">{progressText}</span>
         <div className="flex items-center gap-1.5">
