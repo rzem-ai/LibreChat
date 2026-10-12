@@ -486,7 +486,7 @@ modelSpecs:
       groupIcon: 'anthropic'
       iconURL: 'anthropic'
       # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
-      artificialAnalysisBenchmarkModelName: 'claude-haiku-4-5'
+      artificialAnalysisBenchmarkModelName: 'claude-4-5-haiku'
       preset:
         endpoint: 'anthropic'
         model: 'claude-haiku-4-5'
@@ -494,6 +494,9 @@ modelSpecs:
         supports:
           webSearch: true
           imageGeneration: false
+      details:
+        speed: 5
+        intelligence: 1
 
     - name: 'anthropic-claude-sonnet-5'
       label: 'Claude Sonnet 5'
@@ -586,7 +589,7 @@ modelSpecs:
       group: 'Anthropic Australia'
       iconURL: 'anthropic'
       # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
-      artificialAnalysisBenchmarkModelName: 'claude-haiku-4-5'
+      artificialAnalysisBenchmarkModelName: 'claude-4-5-haiku'
       preset:
         endpoint: 'bedrock'
         model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
@@ -594,6 +597,9 @@ modelSpecs:
         supports:
           webSearch: false
           imageGeneration: false
+      details:
+        speed: 5
+        intelligence: 1
 
 # MCP Servers configuration
 # Each entry filters the gateway to a single toolset via the `toolsets` query param.
