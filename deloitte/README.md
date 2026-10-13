@@ -200,7 +200,7 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 41. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims,sharepoint`
 42. `MCP_GATEWAY_OBO_SCOPE=api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user`
 43. `USE_ENTRA_ID_FOR_PEOPLE_SEARCH=true` to synchronize Entra group memberships used by restricted MCP servers such as SharePoint.
-44. `OPENID_GRAPH_SCOPES=User.Read,People.Read,GroupMember.Read.All`. `GroupMember.Read.All` must have delegated tenant-admin consent on the LibreChat/MyAssist app registration.
+44. `OPENID_GRAPH_SCOPES=User.Read,GroupMember.Read.All`. `GroupMember.Read.All` must have delegated tenant-admin consent on the LibreChat/MyAssist app registration. Add `People.Read` only when Entra people search is needed and that permission has also been granted.
 
 After changing either Entra setting, rebuild/restart the API container and sign out and back in. Group-restricted MCP servers fail closed: SharePoint stays hidden until the signed-in user's memberships have synchronized successfully.
 
