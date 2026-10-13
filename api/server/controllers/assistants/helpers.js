@@ -4,6 +4,7 @@ const {
   defaultAssistantsVersion,
 } = require('librechat-data-provider');
 const { logger, SystemCapabilities } = require('@librechat/data-schemas');
+const { getAssistantVisibility } = require('@librechat/api');
 const {
   initializeClient: initAzureClient,
 } = require('~/server/services/Endpoints/azureAssistants');
@@ -271,15 +272,16 @@ const fetchAssistants = async ({ req, res, overrideEndpoint }) => {
  * @returns {Assistant[]} - The filtered list of assistants.
  */
 function filterAssistants({ assistants, userId, assistantsConfig }) {
-  const { supportedIds, excludedIds, privateAssistants } = assistantsConfig;
-  if (privateAssistants) {
-    return assistants.filter((assistant) => userId === assistant.metadata?.author);
-  } else if (supportedIds?.length) {
-    return assistants.filter((assistant) => supportedIds.includes(assistant.id));
-  } else if (excludedIds?.length) {
-    return assistants.filter((assistant) => !excludedIds.includes(assistant.id));
-  }
-  return assistants;
+  // Deloitte Custom Change: share the avatar proxy's assistant visibility policy with listings.
+  return assistants.filter(
+    (assistant) =>
+      getAssistantVisibility({
+        assistantId: assistant.id,
+        authorId: assistant.metadata?.author,
+        userId,
+        config: assistantsConfig,
+      }) === 'allowed',
+  );
 }
 
 module.exports = {
