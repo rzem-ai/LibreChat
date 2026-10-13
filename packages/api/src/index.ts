@@ -9,6 +9,8 @@ export * from './acl/search';
 export * from './credentials';
 /* Artifacts */
 export * from './artifacts';
+/* Deloitte Custom Change: shared assistant visibility policy for private Azure avatar access. */
+export * from './assistants';
 /* Admin */
 export * from './admin';
 export * from './cdn';

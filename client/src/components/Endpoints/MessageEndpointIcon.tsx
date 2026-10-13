@@ -1,7 +1,12 @@
 import { memo } from 'react';
 import { Feather } from 'lucide-react';
 import { EModelEndpoint, isAssistantsEndpoint } from 'librechat-data-provider';
-import { AssistantIcon, TooltipAnchor, ProviderAvatar } from '@librechat/client';
+import {
+  AssistantIcon,
+  TooltipAnchor,
+  ProviderAvatar,
+  useAuthenticatedImageSrc,
+} from '@librechat/client';
 import type { IconProps } from '~/common';
 import { useProviderIcon } from '~/hooks/Endpoint';
 import { cn } from '~/utils';
@@ -18,9 +23,16 @@ const MessageEndpointIcon: React.FC<IconProps> = (props) => {
     endpointsConfig,
   } = props;
   const { provider, imageURL } = useProviderIcon({ endpoint, iconURL, endpointsConfig });
+  // Deloitte Custom Change: private Azure avatar proxies need authenticated image retrieval.
+  const {
+    src: authenticatedImageSrc,
+    isLoading: isImageLoading,
+    isError: imageFetchError,
+  } = useAuthenticatedImageSrc(imageURL ?? '');
+  const canDisplayAuthenticatedImage = authenticatedImageSrc && !isImageLoading && !imageFetchError;
 
   const assistantsIcon = {
-    icon: iconURL ? (
+    icon: canDisplayAuthenticatedImage ? (
       <div className="relative flex h-6 w-6 items-center justify-center">
         <TooltipAnchor
           description={assistantName ?? ''}
@@ -32,7 +44,7 @@ const MessageEndpointIcon: React.FC<IconProps> = (props) => {
         >
           <img
             className="shadow-stroke h-full w-full object-cover"
-            src={iconURL}
+            src={authenticatedImageSrc}
             alt={assistantName}
             style={{ height: '80', width: '80' }}
           />
@@ -49,7 +61,7 @@ const MessageEndpointIcon: React.FC<IconProps> = (props) => {
   };
 
   const agentsIcon = {
-    icon: iconURL ? (
+    icon: canDisplayAuthenticatedImage ? (
       <div className="relative flex h-6 w-6 items-center justify-center">
         <TooltipAnchor
           description={agentName ?? ''}
@@ -61,7 +73,7 @@ const MessageEndpointIcon: React.FC<IconProps> = (props) => {
         >
           <img
             className="shadow-stroke h-full w-full object-cover"
-            src={iconURL}
+            src={authenticatedImageSrc}
             alt={agentName}
             style={{ height: '80', width: '80' }}
           />
@@ -91,7 +103,7 @@ const MessageEndpointIcon: React.FC<IconProps> = (props) => {
     return agentsIcon.icon;
   }
 
-  if (imageURL != null) {
+  if (imageURL != null && canDisplayAuthenticatedImage) {
     return (
       <div
         title={endpoint ?? ''}
@@ -106,7 +118,11 @@ const MessageEndpointIcon: React.FC<IconProps> = (props) => {
       >
         <div className="h-6 w-6">
           <div className="overflow-hidden rounded-full">
-            <img className="h-full w-full object-contain" src={imageURL} alt={`${endpoint} Icon`} />
+            <img
+              className="h-full w-full object-contain"
+              src={authenticatedImageSrc}
+              alt={`${endpoint} Icon`}
+            />
           </div>
         </div>
         {errorBadge}
