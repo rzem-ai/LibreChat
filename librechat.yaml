@@ -552,12 +552,12 @@ modelSpecs:
         endpoint: 'anthropic'
         model: 'claude-haiku-4-5'
         promptPrefix: *deloitteSystemPrompt
-        supports:
-          webSearch: true
-          imageGeneration: false
       details:
         speed: 5
         intelligence: 1
+        supports:
+          webSearch: true
+          imageGeneration: false
 
     - name: 'anthropic-claude-sonnet-5'
       label: 'Claude Sonnet 5'
