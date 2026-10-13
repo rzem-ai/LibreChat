@@ -62,13 +62,6 @@ const showShortcutsDialog = atom<boolean>({
   default: false,
 });
 
-// Deloitte Custom Change: lets the avatar menu re-open the Terms and Conditions
-// modal on demand, independent of the acceptance-gate flow in Root.tsx.
-const showTermsModal = atom<boolean>({
-  key: 'showTermsModal',
-  default: false,
-});
-
 export type KeyboardDeleteTarget = {
   conversationId: string;
   title: string;
@@ -106,7 +99,6 @@ export default {
   queriesEnabled,
   isEditingBadges,
   showShortcutsDialog,
-  showTermsModal,
   keyboardDeleteTarget,
   customShortcuts,
   shortcutsEnabled,

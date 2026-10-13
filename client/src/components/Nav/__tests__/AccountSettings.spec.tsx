@@ -4,13 +4,17 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import AccountSettings from '../AccountSettings';
 
 const mockSetShowShortcutsDialog = jest.fn();
-const mockSetShowTermsModal = jest.fn();
+const mockSetShowTermsViewer = jest.fn();
 const mockLogout = jest.fn();
 let mockStartupConfigData: Record<string, unknown> = {};
 
 jest.mock('recoil', () => ({
-  useSetRecoilState: (atomKey: string) =>
-    atomKey === 'showTermsModal' ? mockSetShowTermsModal : mockSetShowShortcutsDialog,
+  useSetRecoilState: () => mockSetShowShortcutsDialog,
+}));
+
+jest.mock('jotai', () => ({
+  atom: jest.fn(),
+  useAtom: () => [false, mockSetShowTermsViewer],
 }));
 
 jest.mock('@ariakit/react/menu', () => {
@@ -37,8 +41,10 @@ jest.mock('@ariakit/react/menu', () => {
 });
 
 jest.mock('@librechat/client', () => ({
+  // eslint-disable-next-line i18next/no-literal-string
   GearIcon: () => <span>gear</span>,
   DropdownMenuSeparator: () => <hr />,
+  // eslint-disable-next-line i18next/no-literal-string
   Avatar: () => <span>avatar</span>,
 }));
 
@@ -73,9 +79,11 @@ jest.mock('~/components/Chat/Input/Files/MyFilesModal', () => ({
   MyFilesModal: () => null,
 }));
 
+jest.mock('~/components/ui/TermsAndConditionsModal', () => () => null);
+
 jest.mock('~/store', () => ({
   __esModule: true,
-  default: { showShortcutsDialog: 'showShortcutsDialog', showTermsModal: 'showTermsModal' },
+  default: { showShortcutsDialog: 'showShortcutsDialog' },
 }));
 
 describe('AccountSettings', () => {
@@ -107,6 +115,6 @@ describe('AccountSettings', () => {
     fireEvent.click(screen.getByRole('button', { name: 'com_nav_account_settings' }));
     fireEvent.click(screen.getByText('com_ui_terms_and_conditions'));
 
-    expect(mockSetShowTermsModal).toHaveBeenCalledWith(true);
+    expect(mockSetShowTermsViewer).toHaveBeenCalledWith(true);
   });
 });

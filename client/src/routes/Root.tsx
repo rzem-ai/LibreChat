@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, startTransition } from 'react';
-import { useRecoilState, useRecoilValue } from 'recoil';
+import { useAtomValue } from 'jotai';
+import { useRecoilValue } from 'recoil';
 import { Outlet } from 'react-router-dom';
 import { useMediaQuery } from '@librechat/client';
 import { useGetModelsQuery } from 'librechat-data-provider/react-query';
@@ -51,6 +52,7 @@ import useSidebarToggle from '~/hooks/Nav/useSidebarToggle';
 import useSidebarState from '~/hooks/Nav/useSidebarState';
 import { TermsAndConditionsModal } from '~/components/ui';
 import useDrawerSwipe from '~/hooks/Nav/useDrawerSwipe';
+import { showTermsViewerAtom } from '~/store/terms';
 import { Banner } from '~/components/Banners';
 import store from '~/store';
 
@@ -67,9 +69,11 @@ function KeyboardShortcutsProvider() {
 
 export default function Root() {
   const [showTerms, setShowTerms] = useState(false);
-  // Deloitte Custom Change: separate Recoil-backed open state for the avatar menu's
-  // read-only "view terms" action, independent of the acceptance-gate flow above.
-  const [showTermsViewer, setShowTermsViewer] = useRecoilState(store.showTermsModal);
+  // Deloitte Custom Change: the avatar menu's read-only "view terms" dialog is owned
+  // and rendered by AccountSettings (it needs the avatar button ref for focus restore
+  // on close); this only reads whether it's open, to keep the tutorial bubble gated
+  // behind both terms dialogs.
+  const showTermsViewer = useAtomValue(showTermsViewerAtom);
   const [bannerHeight, setBannerHeight] = useState(0);
   /** Shared with the drawer so the two agree on the breakpoint-transition frame. */
   const {
@@ -274,20 +278,11 @@ export default function Root() {
                     modalContent={config.interface.termsOfService.modalContent}
                   />
                 )}
-                {/* Deloitte Custom Change: read-only terms viewer, opened from the avatar menu —
-                    no Accept/Decline, since the user has already made that choice to sign in. */}
-                {termsEnabled && config?.interface?.termsOfService != null && (
-                  <TermsAndConditionsModal
-                    open={showTermsViewer}
-                    onOpenChange={setShowTermsViewer}
-                    title={config.interface.termsOfService.modalTitle}
-                    eyebrow={config.appTitle}
-                    modalContent={config.interface.termsOfService.modalContent}
-                  />
-                )}
                 {/* Deloitte Custom Change: Learning Hub tutorial prompt bubble and course completion modal */}
                 <TutorialPromptModal
-                  termsVisible={showTerms || (termsEnabled && (termsLoading || !termsData))}
+                  termsVisible={
+                    showTerms || showTermsViewer || (termsEnabled && (termsLoading || !termsData))
+                  }
                   chatReady={chatReady}
                 />
                 <CourseCompletionModal />

@@ -8,6 +8,7 @@ import {
   OGDialogContent,
   OGDialogDescription,
 } from '../OriginalDialog';
+import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
 export const GelDialog: typeof OGDialog = OGDialog;
@@ -44,6 +45,8 @@ export function GelDialogHeader({
   className,
   ...props
 }: GelDialogHeaderProps): React.JSX.Element {
+  const localize = useLocalize();
+
   return (
     <div className={cn('flex items-start justify-between gap-3 px-6 py-4', className)} {...props}>
       <div className="flex flex-col gap-0.5">
@@ -63,7 +66,7 @@ export function GelDialogHeader({
           className="shrink-0 rounded-sm text-text-secondary opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
         >
           <X className="size-5" aria-hidden="true" />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">{localize('com_ui_close')}</span>
         </OGDialogClose>
       )}
     </div>

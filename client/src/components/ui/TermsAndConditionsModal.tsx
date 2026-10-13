@@ -1,20 +1,23 @@
 import { useMemo } from 'react';
 import {
   Button,
-  GelDialog,
-  GelDialogHeader,
-  GelDialogFooter,
-  GelDialogContent,
+  GelDialog as OGDialog,
+  GelDialogHeader as OGDialogHeader,
+  GelDialogFooter as OGDialogFooter,
+  GelDialogContent as OGDialogContent,
   useToastContext,
 } from '@librechat/client';
 import type { TTermsOfService } from 'librechat-data-provider';
 import type { GelDialogHeaderProps } from '@librechat/client';
+import type { RefObject } from 'react';
 import MarkdownLite from '~/components/Chat/Messages/Content/MarkdownLite';
 import { useAcceptTermsMutation } from '~/data-provider';
 import { useLocalize } from '~/hooks';
 
 // Deloitte Custom Change: restyled onto the GEL dialog + Button primitives (was the
 // legacy pre-GEL DialogTemplate) to bring this popup in line with GEL branding.
+// Imports above are aliased to the OG* names so the JSX below stays close to
+// upstream's shape, keeping future merges from develop low-diff.
 const TermsAndConditionsModal = ({
   open,
   onOpenChange,
@@ -23,6 +26,7 @@ const TermsAndConditionsModal = ({
   title,
   eyebrow,
   modalContent,
+  triggerRef,
 }: Pick<GelDialogHeaderProps, 'title' | 'eyebrow'> & {
   open: boolean;
   onOpenChange: (isOpen: boolean) => void;
@@ -30,6 +34,8 @@ const TermsAndConditionsModal = ({
   onDecline?: () => void;
   contentUrl?: string;
   modalContent?: TTermsOfService['modalContent'];
+  /** Deloitte Custom Change: focus target restored when the read-only viewer closes. */
+  triggerRef?: RefObject<HTMLButtonElement | null>;
 }) => {
   const localize = useLocalize();
   const { showToast } = useToastContext();
@@ -79,9 +85,21 @@ const TermsAndConditionsModal = ({
   }, [modalContent]);
 
   return (
-    <GelDialog open={open} onOpenChange={handleOpenChange}>
-      <GelDialogContent className="w-11/12 max-w-2xl">
-        <GelDialogHeader
+    <OGDialog open={open} onOpenChange={handleOpenChange} triggerRef={triggerRef}>
+      <OGDialogContent
+        className="w-11/12 max-w-2xl"
+        // Deloitte Custom Change: the footer Close button below calls onOpenChange
+        // on the parent's setter directly rather than through Radix's own dismiss
+        // path, so triggerRef alone won't restore focus for it — onCloseAutoFocus
+        // fires on every unmount regardless of what caused `open` to go false.
+        onCloseAutoFocus={(event) => {
+          if (triggerRef?.current) {
+            event.preventDefault();
+            triggerRef.current.focus();
+          }
+        }}
+      >
+        <OGDialogHeader
           eyebrow={eyebrow}
           title={title ?? localize('com_ui_terms_and_conditions')}
           onClose={readOnly ? handleClose : undefined}
@@ -100,7 +118,7 @@ const TermsAndConditionsModal = ({
             )}
           </div>
         </section>
-        <GelDialogFooter>
+        <OGDialogFooter>
           {readOnly ? (
             <Button onClick={handleClose}>{localize('com_ui_close')}</Button>
           ) : (
@@ -111,9 +129,9 @@ const TermsAndConditionsModal = ({
               <Button onClick={handleAccept}>{localize('com_ui_accept')}</Button>
             </>
           )}
-        </GelDialogFooter>
-      </GelDialogContent>
-    </GelDialog>
+        </OGDialogFooter>
+      </OGDialogContent>
+    </OGDialog>
   );
 };
 
