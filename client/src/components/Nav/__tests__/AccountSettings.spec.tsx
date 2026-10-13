@@ -7,6 +7,7 @@ const mockSetShowShortcutsDialog = jest.fn();
 const mockSetShowTermsViewer = jest.fn();
 const mockLogout = jest.fn();
 let mockStartupConfigData: Record<string, unknown> = {};
+let mockUserTermsData: Record<string, unknown> | undefined;
 
 jest.mock('recoil', () => ({
   useSetRecoilState: () => mockSetShowShortcutsDialog,
@@ -55,6 +56,11 @@ jest.mock('~/data-provider', () => ({
     },
   }),
   useGetUserBalance: () => ({ data: null }),
+  useUserTermsQuery: () => ({
+    get data() {
+      return mockUserTermsData;
+    },
+  }),
 }));
 
 jest.mock('~/hooks/AuthContext', () => ({
@@ -89,6 +95,7 @@ jest.mock('~/store', () => ({
 describe('AccountSettings', () => {
   beforeEach(() => {
     mockStartupConfigData = {};
+    mockUserTermsData = undefined;
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -109,8 +116,18 @@ describe('AccountSettings', () => {
     expect(screen.queryByText('com_ui_terms_and_conditions')).not.toBeInTheDocument();
   });
 
-  it('opens the Terms and Conditions viewer from the avatar menu when enabled', () => {
+  it('does not render the Terms and Conditions item when enabled but not yet accepted', () => {
     mockStartupConfigData = { interface: { termsOfService: { modalAcceptance: true } } };
+    mockUserTermsData = { termsAccepted: false };
+    render(<AccountSettings collapsed />);
+    fireEvent.click(screen.getByRole('button', { name: 'com_nav_account_settings' }));
+
+    expect(screen.queryByText('com_ui_terms_and_conditions')).not.toBeInTheDocument();
+  });
+
+  it('opens the Terms and Conditions viewer from the avatar menu when enabled and accepted', () => {
+    mockStartupConfigData = { interface: { termsOfService: { modalAcceptance: true } } };
+    mockUserTermsData = { termsAccepted: true };
     render(<AccountSettings collapsed />);
     fireEvent.click(screen.getByRole('button', { name: 'com_nav_account_settings' }));
     fireEvent.click(screen.getByText('com_ui_terms_and_conditions'));
