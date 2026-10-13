@@ -15,8 +15,8 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { ArchivedChatsModal } from '~/components/Nav/SettingsTabs/General/ArchivedChatsModal';
+import { useGetStartupConfig, useGetUserBalance, useUserTermsQuery } from '~/data-provider';
 import TermsAndConditionsModal from '~/components/ui/TermsAndConditionsModal';
-import { useGetStartupConfig, useGetUserBalance } from '~/data-provider';
 import { useAuthContext } from '~/hooks/AuthContext';
 import { showTermsViewerAtom } from '~/store/terms';
 import { openInNewTab } from '~/utils';
@@ -116,7 +116,15 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
   const setShowShortcutsDialog = useSetRecoilState(store.showShortcutsDialog);
   // Deloitte Custom Change: lets users reopen the Terms and Conditions modal (read-only) from the avatar menu.
   const [showTermsViewer, setShowTermsViewer] = useAtom(showTermsViewerAtom);
-  const termsModalEnabled = startupConfig?.interface?.termsOfService?.modalAcceptance === true;
+  const termsModalConfigured = startupConfig?.interface?.termsOfService?.modalAcceptance === true;
+  // Deloitte Custom Change: `modalAcceptance` only says the deployment uses the
+  // acceptance flow, not that this user has accepted. Gate the reopen entry on the
+  // same user-scoped query Root.tsx uses, so the menu item (and the viewer it opens)
+  // can't appear before acceptance is confirmed or while the query is loading/erroring.
+  const { data: termsData } = useUserTermsQuery({
+    enabled: !!isAuthenticated && termsModalConfigured,
+  });
+  const termsModalEnabled = termsModalConfigured && termsData?.termsAccepted === true;
   const [showArchived, setShowArchived] = useState(false);
   const accountSettingsButtonRef = useRef<HTMLButtonElement>(null);
 
