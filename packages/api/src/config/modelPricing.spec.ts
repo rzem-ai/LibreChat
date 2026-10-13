@@ -9,6 +9,18 @@ jest.mock('~/cache', () => ({
 
 import { getModelPricing } from './modelPricing';
 
+/**
+ * Synthetic model identifiers for these fixtures. `deps.getMultiplier` below is a fixed
+ * stub (not the real `tx.ts` table), so pricing never actually depends on a real model
+ * existing — using obviously-fake names keeps these tests passing even if a real model
+ * referenced here is later renamed or retired.
+ */
+const TEST_MODELS = {
+  builtIn: 'test-builtin-model',
+  customStatic: 'test-custom-model',
+  namespaced: 'test-provider/test-namespaced-model',
+};
+
 const deps: TokenomicsDeps = {
   getValueKey: () => 'value-key',
   getMultiplier: ({ tokenType }) => (tokenType === 'prompt' ? 5 : 15),
@@ -43,7 +55,7 @@ describe('getModelPricing', () => {
         { endpoints: {} } as unknown as AppConfig,
         'user-1',
         undefined,
-        { [EModelEndpoint.anthropic]: ['claude-sonnet-4-6'] },
+        { [EModelEndpoint.anthropic]: [TEST_MODELS.builtIn] },
         deps,
       ),
     ).toEqual({});
@@ -52,7 +64,7 @@ describe('getModelPricing', () => {
         buildAppConfig({ showModelPricingIndicator: false, endpoints: {} } as Partial<AppConfig>),
         'user-1',
         undefined,
-        { [EModelEndpoint.anthropic]: ['claude-sonnet-4-6'] },
+        { [EModelEndpoint.anthropic]: [TEST_MODELS.builtIn] },
         deps,
       ),
     ).toEqual({});
@@ -77,11 +89,11 @@ describe('getModelPricing', () => {
       appConfig,
       'user-1',
       undefined,
-      { [EModelEndpoint.anthropic]: ['claude-sonnet-4-6'] },
+      { [EModelEndpoint.anthropic]: [TEST_MODELS.builtIn] },
       deps,
     );
 
-    expect(pricing[`${EModelEndpoint.anthropic}:claude-sonnet-4-6`]).toEqual({
+    expect(pricing[`${EModelEndpoint.anthropic}:${TEST_MODELS.builtIn}`]).toEqual({
       inputPer1M: 5,
       outputPer1M: 15,
       provider: EModelEndpoint.anthropic,
@@ -96,7 +108,7 @@ describe('getModelPricing', () => {
           {
             name: 'Azure Global',
             tokenConfig: {
-              'gpt-56-luna': { prompt: 1, completion: 6, context: 128000 },
+              [TEST_MODELS.customStatic]: { prompt: 1, completion: 6, context: 128000 },
             },
           },
         ],
@@ -107,11 +119,11 @@ describe('getModelPricing', () => {
       appConfig,
       'user-1',
       undefined,
-      { 'Azure Global': ['gpt-56-luna'] },
+      { 'Azure Global': [TEST_MODELS.customStatic] },
       deps,
     );
 
-    expect(pricing['Azure Global:gpt-56-luna']).toEqual({
+    expect(pricing[`Azure Global:${TEST_MODELS.customStatic}`]).toEqual({
       inputPer1M: 1,
       outputPer1M: 6,
       provider: 'Azure Global',
@@ -175,7 +187,7 @@ describe('getModelPricing', () => {
           {
             name: 'VertexAI US',
             tokenConfig: {
-              'google/gemini-2.5-pro': { prompt: 1.25, completion: 10, context: 1000000 },
+              [TEST_MODELS.namespaced]: { prompt: 1.25, completion: 10, context: 1000000 },
             },
           },
         ],
@@ -187,20 +199,20 @@ describe('getModelPricing', () => {
       'user-1',
       undefined,
       {
-        [EModelEndpoint.anthropic]: ['claude-sonnet-4-6'],
-        'VertexAI US': ['google/gemini-2.5-pro'],
+        [EModelEndpoint.anthropic]: [TEST_MODELS.builtIn],
+        'VertexAI US': [TEST_MODELS.namespaced],
       },
       deps,
     );
 
     expect(pricing).toEqual({
-      [`${EModelEndpoint.anthropic}:claude-sonnet-4-6`]: {
+      [`${EModelEndpoint.anthropic}:${TEST_MODELS.builtIn}`]: {
         inputPer1M: 5,
         outputPer1M: 15,
         provider: EModelEndpoint.anthropic,
         tier: 4,
       },
-      'VertexAI US:google/gemini-2.5-pro': {
+      [`VertexAI US:${TEST_MODELS.namespaced}`]: {
         inputPer1M: 1.25,
         outputPer1M: 10,
         provider: 'VertexAI US',
