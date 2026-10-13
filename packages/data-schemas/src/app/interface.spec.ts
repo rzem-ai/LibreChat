@@ -216,6 +216,16 @@ describe('loadDefaultInterface', () => {
     expect(interfaceConfig?.autoSubmitFromUrl).toBe(true);
   });
 
+  it('passes the learning center config through to the client', async () => {
+    const learningCenter = { faqAgentId: 'agent_123', feedbackUrl: 'https://example.com/form' };
+    const interfaceConfig = await loadDefaultInterface({
+      config: { interface: { learningCenter } },
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.learningCenter).toEqual(learningCenter);
+  });
+
   // Deloitte Custom Change: tutorial flag migration tests (MyAssist Academy getting-started tour, PR #903)
   it('preserves disabled tutorial flag config', async () => {
     const config: Partial<TCustomConfig> = {

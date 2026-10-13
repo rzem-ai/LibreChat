@@ -100,6 +100,7 @@ export async function loadDefaultInterface({
     defaultPinnedTools: interfaceConfig?.defaultPinnedTools,
     peoplePicker: interfaceConfig?.peoplePicker,
     marketplace: interfaceConfig?.marketplace,
+    learningCenter: interfaceConfig?.learningCenter,
     remoteAgents: interfaceConfig?.remoteAgents,
     skills: interfaceConfig?.skills,
     sharedLinks: interfaceConfig?.sharedLinks,
