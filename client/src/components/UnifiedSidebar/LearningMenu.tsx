@@ -1,17 +1,20 @@
 import { useId, useState } from 'react';
 import * as Ariakit from '@ariakit/react';
-import { useNavigate } from 'react-router-dom';
-import { BookOpen, MessageCircleQuestion, MessageSquareHeart } from 'lucide-react';
 import { DropdownPopup } from '@librechat/client';
-import type * as t from '~/common';
+import { Constants, EModelEndpoint } from 'librechat-data-provider';
+import { BookOpen, MessageCircleQuestion, MessageSquareHeart } from 'lucide-react';
 import type { NavLink } from '~/common';
+import type * as t from '~/common';
 import { useLearningTour } from '~/components/Learning/LearningTourContext';
 import { useFaqAgent, useLearningCenterConfig } from '~/hooks/Learning';
-import { useLocalize } from '~/hooks';
+import useDefaultConvo from '~/hooks/Conversations/useDefaultConvo';
+import { useLocalize, useNewConvo } from '~/hooks';
+import { specDisplayFieldReset } from '~/utils';
 
 export default function LearningMenu({ link }: { link: NavLink }) {
   const localize = useLocalize();
-  const navigate = useNavigate();
+  const { newConversation } = useNewConvo();
+  const getDefaultConversation = useDefaultConvo();
   const menuId = useId();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { startGettingStartedTour } = useLearningTour();
@@ -31,9 +34,19 @@ export default function LearningMenu({ link }: { link: NavLink }) {
       icon: <MessageCircleQuestion className="icon-md" aria-hidden="true" />,
       show: !!faqAgent,
       onClick: () => {
-        if (faqAgent) {
-          navigate(`/c/new?agent_id=${encodeURIComponent(faqAgent.id)}`);
+        if (!faqAgent) {
+          return;
         }
+        const template = {
+          conversationId: Constants.NEW_CONVO as string,
+          endpoint: EModelEndpoint.agents,
+          agent_id: faqAgent.id,
+          ...specDisplayFieldReset,
+        };
+        newConversation({
+          template: getDefaultConversation({ conversation: template, preset: template }),
+          preset: template,
+        });
       },
     },
     {

@@ -3,8 +3,8 @@ import { RecoilRoot } from 'recoil';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import '@testing-library/jest-dom/extend-expect';
 import { MessagesSquare, NotebookPen } from 'lucide-react';
-import { render, fireEvent, screen, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, fireEvent, screen, waitFor, act } from '@testing-library/react';
 import type { MutableSnapshot } from 'recoil';
 import type { NavLink } from '~/common';
 import { ActivePanelProvider, DEFAULT_PANEL } from '~/Providers';
@@ -30,7 +30,9 @@ jest.mock('~/components/Learning/LearningTourContext', () => ({
 
 jest.mock('~/data-provider', () => ({
   useGetStartupConfig: () => ({
-    data: { interface: { learningCenter: { faqAgentId: FAQ_AGENT_ID, feedbackUrl: FEEDBACK_URL } } },
+    data: {
+      interface: { learningCenter: { faqAgentId: FAQ_AGENT_ID, feedbackUrl: FEEDBACK_URL } },
+    },
   }),
 }));
 
@@ -94,7 +96,13 @@ jest.mock('~/hooks/Chat/useNewChat', () => ({
   }),
 }));
 
+jest.mock('~/hooks/Conversations/useDefaultConvo', () => ({
+  __esModule: true,
+  default: () => (args: { conversation: object }) => args.conversation,
+}));
+
 jest.mock('~/utils', () => ({
+  specDisplayFieldReset: {},
   clearMessagesCache: (...args: unknown[]) => mockClearMessagesCache(...args),
   cn: (...classes: unknown[]) => classes.filter(Boolean).join(' '),
 }));
@@ -335,7 +343,12 @@ describe('ExpandedPanel', () => {
     fireEvent.click(screen.getByText('com_learning_ask_faq_agent'));
 
     await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent(`/c/new?agent_id=${FAQ_AGENT_ID}`),
+      expect(mockNewConversation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          template: expect.objectContaining({ endpoint: 'agents', agent_id: FAQ_AGENT_ID }),
+          preset: expect.objectContaining({ endpoint: 'agents', agent_id: FAQ_AGENT_ID }),
+        }),
+      ),
     );
   });
 
@@ -356,10 +369,6 @@ describe('ExpandedPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_learning_hub' }));
     fireEvent.click(screen.getByText('com_learning_give_feedback'));
 
-    expect(open).toHaveBeenCalledWith(
-      FEEDBACK_URL,
-      '_blank',
-      'noopener,noreferrer',
-    );
+    expect(open).toHaveBeenCalledWith(FEEDBACK_URL, '_blank', 'noopener,noreferrer');
   });
 });

@@ -1,4 +1,4 @@
-import { extractEnvVariable, removeNullishValues } from 'librechat-data-provider';
+import { envVarRegex, extractEnvVariable, removeNullishValues } from 'librechat-data-provider';
 import type { TCustomConfig, TConfigDefaults } from 'librechat-data-provider';
 import type { AppConfig } from '~/types/app';
 import { isMemoryEnabled } from './memory';
@@ -10,6 +10,12 @@ import { isMemoryEnabled } from './memory';
  * @param params.configDefaults - The custom configuration default values.
  * @returns default interface object.
  */
+/** Resolves a `${VAR}` value, or `undefined` when it is empty or the var is unset. */
+function resolveEnvValue(value?: string): string | undefined {
+  const resolved = value && extractEnvVariable(value);
+  return resolved && !envVarRegex.test(resolved) ? resolved : undefined;
+}
+
 export async function loadDefaultInterface({
   config,
   configDefaults,
@@ -34,6 +40,13 @@ export async function loadDefaultInterface({
     }
     deloitteHeader = { ...interfaceConfig.deloitteHeader, title };
   }
+
+  // Deloitte Custom Change: the FAQ agent id differs per environment, so librechat.yaml supplies
+  // it as `${LEARNING_CENTER_FAQ_AGENT_ID}`; an unset var is dropped, not sent as a placeholder.
+  const learningCenter = interfaceConfig?.learningCenter && {
+    ...interfaceConfig.learningCenter,
+    faqAgentId: resolveEnvValue(interfaceConfig.learningCenter.faqAgentId),
+  };
 
   const memoryConfig = config?.memory;
   const memoryEnabled = isMemoryEnabled(memoryConfig);
@@ -100,7 +113,7 @@ export async function loadDefaultInterface({
     defaultPinnedTools: interfaceConfig?.defaultPinnedTools,
     peoplePicker: interfaceConfig?.peoplePicker,
     marketplace: interfaceConfig?.marketplace,
-    learningCenter: interfaceConfig?.learningCenter,
+    learningCenter,
     remoteAgents: interfaceConfig?.remoteAgents,
     skills: interfaceConfig?.skills,
     sharedLinks: interfaceConfig?.sharedLinks,
