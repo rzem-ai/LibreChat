@@ -1,5 +1,5 @@
 const path = require('path');
-const { nanoid } = require('nanoid');
+const { randomBytes } = require('crypto');
 const { AccessRoleIds, ResourceType, PrincipalType } = require('librechat-data-provider');
 require('module-alias')({ base: path.resolve(__dirname, '..', '..', 'api') });
 const { grantPermission } = require('~/server/services/PermissionService');
@@ -12,7 +12,7 @@ const connect = require('../../config/connect');
  * "Ask <agent>" menu item can be tested locally. Prints the id to put in
  * `LEARNING_CENTER_FAQ_AGENT_ID` (read by `interface.learningCenter.faqAgentId`).
  */
-const usage = `Usage: npm run create-faq-agent -- <owner-email> [--name="MyAssist FAQ"] [--provider=openAI] [--model=gpt-4o] [--id=agent_xxx] [--private]
+const usage = `Usage: npm run create-faq-agent -- --email=<owner-email> [--name="MyAssist FAQ"] [--provider=openAI] [--model=gpt-4o] [--id=agent_xxx] [--private]
 Grants the owner full access and, unless --private is passed, public view access.`;
 
 function parseFlags(args) {
@@ -36,7 +36,7 @@ function parseFlags(args) {
   }
   await connect();
   const { flags, positional } = parseFlags(process.argv.slice(2));
-  const [email] = positional;
+  const email = typeof flags.email === 'string' ? flags.email : positional[0];
 
   if (!email) {
     console.orange(usage);
@@ -49,7 +49,7 @@ function parseFlags(args) {
     silentExit(1);
   }
 
-  const id = typeof flags.id === 'string' ? flags.id : `agent_${nanoid()}`;
+  const id = typeof flags.id === 'string' ? flags.id : `agent_${randomBytes(16).toString('base64url')}`;
   const agent = await createAgent({
     id,
     name: typeof flags.name === 'string' ? flags.name : 'MyAssist FAQ',
