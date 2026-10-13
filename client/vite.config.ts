@@ -43,7 +43,7 @@ const buildSourceMap = process.env.NODE_ENV === 'development';
  * Helm's APP_TITLE only reaches the container at runtime, too late for this build-time manifest.
  * For `npm run frontend:dev` (no Docker), read a local `.env` directly via `loadEnv`, since Vite
  * doesn't populate `process.env` from it until after this config factory has already returned. */
-const repoRoot = path.resolve(__dirname, '..');
+const repoRoot = path.resolve(import.meta.dirname, '..');
 const localEnv = loadEnv(process.env.NODE_ENV || 'production', repoRoot, '');
 const appTitle = process.env.APP_TITLE || localEnv.APP_TITLE || 'MyAssist';
 const QUERY_DEVTOOLS_CHUNK_MODULES = [
