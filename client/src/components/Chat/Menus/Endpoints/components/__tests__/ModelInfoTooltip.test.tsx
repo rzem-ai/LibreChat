@@ -1,9 +1,10 @@
 /* eslint-disable i18next/no-literal-string */
-// Deloitte Custom Change: new file — render coverage for the rebuilt model info tooltip
-// (Figma node 855:37722): header stacking, rating meters, cost lines, context, and supports.
+// Deloitte Custom Change: render coverage for the ModelInfoTooltip wrapper — this layer only
+// resolves spec/pricing/context data into props; the presentational rendering (HoverCard,
+// rating meters, alignment) lives in and is covered by @librechat/client's gel ModelInfoTooltip.
 import { render, screen } from '@testing-library/react';
+import type { ModelInfoTooltipProps } from '@librechat/client';
 import type { TModelSpec } from 'librechat-data-provider';
-import type { ReactNode } from 'react';
 import ModelInfoTooltip from '../ModelInfoTooltip';
 
 let mockModelPricing: Record<string, { tier: number; inputPer1M: number; outputPer1M: number }> =
@@ -28,15 +29,34 @@ jest.mock('../SpecIcon', () => ({
   default: () => <span data-testid="spec-icon" />,
 }));
 
-// Deloitte Custom Change: Radix HoverCard only mounts content on hover/focus; render it open
-// always so these tests can assert on ModelInfoTooltip's own markup.
+// Deloitte Custom Change: stub out the shared presentational component so these tests assert
+// on the props the wrapper computes, not on @librechat/client's own rendering (tested there).
 jest.mock('@librechat/client', () => ({
   ...jest.requireActual('@librechat/client'),
-  HoverCard: ({ children }: { children: ReactNode }) => <>{children}</>,
-  HoverCardTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
-  HoverCardPortal: ({ children }: { children: ReactNode }) => <>{children}</>,
-  HoverCardContent: ({ children, ...rest }: { children: ReactNode }) => (
-    <div {...rest}>{children}</div>
+  ModelInfoTooltip: ({ children, ...props }: ModelInfoTooltipProps) => (
+    <div data-testid="gel-tooltip">
+      <span data-testid="group">{props.group}</span>
+      <span data-testid="label">{props.label}</span>
+      {props.description}
+      {props.speed != null && (
+        <span data-testid="speed">{`${props.labels.speed}:${props.speed}`}</span>
+      )}
+      {props.intelligence != null && (
+        <span data-testid="intelligence">{`${props.labels.intelligence}:${props.intelligence}`}</span>
+      )}
+      {props.cost && (
+        <span data-testid="cost">
+          {`${props.labels.cost}:${props.cost.tier}:${props.cost.inputText}:${props.cost.outputText}`}
+        </span>
+      )}
+      {props.contextLabel && (
+        <span data-testid="context">{`${props.labels.context}:${props.contextLabel}`}</span>
+      )}
+      {props.supports && props.supports.length > 0 && (
+        <span data-testid="supports">{`${props.labels.supports}:${props.supports.join(',')}`}</span>
+      )}
+      {children}
+    </div>
   ),
 }));
 
@@ -63,20 +83,20 @@ describe('ModelInfoTooltip', () => {
       </ModelInfoTooltip>,
     );
     expect(screen.getByText('Row')).toBeInTheDocument();
-    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('gel-tooltip')).not.toBeInTheDocument();
   });
 
-  it('renders stacked group name and spec label in the header', () => {
+  it('passes the stacked group name and spec label through as props', () => {
     render(
       <ModelInfoTooltip spec={{ ...baseSpec, details: { speed: 3 } }} endpointsConfig={{}}>
         <button>Row</button>
       </ModelInfoTooltip>,
     );
-    expect(screen.getByText('OpenAI Global')).toBeInTheDocument();
-    expect(screen.getByText('My Spec')).toBeInTheDocument();
+    expect(screen.getByTestId('group')).toHaveTextContent('OpenAI Global');
+    expect(screen.getByTestId('label')).toHaveTextContent('My Spec');
   });
 
-  it('renders Speed and Intelligence as N-of-5 rating meters, centered with their label', () => {
+  it('passes speed and intelligence through as raw N-of-5 values', () => {
     render(
       <ModelInfoTooltip
         spec={{ ...baseSpec, details: { speed: 3, intelligence: 5 } }}
@@ -85,45 +105,35 @@ describe('ModelInfoTooltip', () => {
         <button>Row</button>
       </ModelInfoTooltip>,
     );
-    const meters = screen.getAllByRole('img');
-    expect(meters).toHaveLength(2);
-    expect(meters[0]).toHaveAccessibleName('3 of 5');
-    expect(meters[1]).toHaveAccessibleName('5 of 5');
-    expect(screen.getByText('com_ui_model_details_speed').parentElement).toHaveClass(
-      'items-center',
-    );
-    expect(screen.getByText('com_ui_model_details_intelligence').parentElement).toHaveClass(
-      'items-center',
+    expect(screen.getByTestId('speed')).toHaveTextContent('com_ui_model_details_speed:3');
+    expect(screen.getByTestId('intelligence')).toHaveTextContent(
+      'com_ui_model_details_intelligence:5',
     );
   });
 
-  it('renders a cost meter with input/output price lines, top-aligned with its label', () => {
+  it('resolves pricing into a cost prop with tier and localized price lines', () => {
     mockModelPricing = { 'openAI:gpt-5': { tier: 2, inputPer1M: 1, outputPer1M: 6 } };
     render(
       <ModelInfoTooltip spec={baseSpec} endpointsConfig={{}}>
         <button>Row</button>
       </ModelInfoTooltip>,
     );
-    expect(screen.getByRole('img', { name: '2 of 5' })).toBeInTheDocument();
-    expect(screen.getByText(/com_ui_model_details_cost_input/)).toBeInTheDocument();
-    expect(screen.getByText(/com_ui_model_details_cost_output/)).toBeInTheDocument();
-    expect(screen.getByText('com_ui_model_details_cost').parentElement).toHaveClass('items-start');
+    expect(screen.getByTestId('cost')).toHaveTextContent(
+      'com_ui_model_details_cost:2:com_ui_model_details_cost_input:$1.00:com_ui_model_details_cost_output:$6.00',
+    );
   });
 
-  it('renders context as plain text with no meter, top-aligned with its label', () => {
+  it('formats context tokens into a contextLabel prop', () => {
     mockTokenConfig = { openAI: { 'gpt-5': { context: 128000 } } };
     render(
       <ModelInfoTooltip spec={baseSpec} endpointsConfig={{}}>
         <button>Row</button>
       </ModelInfoTooltip>,
     );
-    expect(screen.getByText('128K')).toBeInTheDocument();
-    expect(screen.getByText('com_ui_model_details_context').parentElement).toHaveClass(
-      'items-start',
-    );
+    expect(screen.getByTestId('context')).toHaveTextContent('com_ui_model_details_context:128K');
   });
 
-  it('renders a supports section listing only the enabled capabilities', () => {
+  it('passes a supports list containing only the enabled capabilities', () => {
     render(
       <ModelInfoTooltip
         spec={{
@@ -138,13 +148,12 @@ describe('ModelInfoTooltip', () => {
         <button>Row</button>
       </ModelInfoTooltip>,
     );
-    expect(screen.getByText('com_ui_model_details_supports')).toBeInTheDocument();
-    expect(screen.getByText('com_ui_web_search')).toBeInTheDocument();
-    expect(screen.getByText('com_ui_model_details_image_generation')).toBeInTheDocument();
-    expect(screen.queryByText('com_ui_model_details_file_ingestion')).not.toBeInTheDocument();
+    expect(screen.getByTestId('supports')).toHaveTextContent(
+      'com_ui_model_details_supports:com_ui_web_search,com_ui_model_details_image_generation',
+    );
   });
 
-  it('omits the supports section entirely when no capabilities are enabled', () => {
+  it('omits the supports prop entirely when no capabilities are enabled', () => {
     render(
       <ModelInfoTooltip
         spec={{ ...baseSpec, details: { speed: 3, supports: {} } }}
@@ -153,6 +162,6 @@ describe('ModelInfoTooltip', () => {
         <button>Row</button>
       </ModelInfoTooltip>,
     );
-    expect(screen.queryByText('com_ui_model_details_supports')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('supports')).not.toBeInTheDocument();
   });
 });

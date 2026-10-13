@@ -455,7 +455,7 @@ modelSpecs:
         supports:
           webSearch: true
           imageGeneration: false
-      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'gpt-5-6-terra'
       preset:
         endpoint: 'Azure Global'
@@ -467,7 +467,7 @@ modelSpecs:
       group: 'OpenAI Global'
       iconURL: 'openAI'
       softDefault: true
-      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'gpt-5-6-luna'
       preset:
         endpoint: 'Azure Global'
@@ -484,7 +484,7 @@ modelSpecs:
       label: 'GPT 5.6 Sol'
       group: 'OpenAI Global'
       iconURL: 'openAI'
-      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'gpt-5-6-sol'
       preset:
         endpoint: 'Azure Global'
@@ -502,7 +502,7 @@ modelSpecs:
       group: 'Gemini Global'
       groupIcon: 'google'
       iconURL: 'google'
-      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata to
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata to
       # populate details.speed/intelligence above.
       artificialAnalysisBenchmarkModelName: 'gemini-2-5-flash'
       preset:
@@ -520,7 +520,7 @@ modelSpecs:
       label: 'Gemini 2.5 Pro'
       group: 'Gemini Global'
       iconURL: 'google'
-      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'gemini-2-5-pro'
       preset:
         endpoint: 'VertexAI US'
@@ -538,7 +538,7 @@ modelSpecs:
       group: 'Anthropic Global'
       groupIcon: 'anthropic'
       iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-4-5-haiku'
       preset:
         endpoint: 'anthropic'
@@ -555,7 +555,7 @@ modelSpecs:
       label: 'Claude Sonnet 5'
       group: 'Anthropic Global'
       iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-sonnet-5'
       preset:
         endpoint: 'anthropic'
@@ -572,7 +572,7 @@ modelSpecs:
       label: 'Claude Sonnet 4.6'
       group: 'Anthropic Global'
       iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-sonnet-4-6'
       preset:
         endpoint: 'anthropic'
@@ -589,7 +589,7 @@ modelSpecs:
       label: 'Claude Opus 4.6'
       group: 'Anthropic Global'
       iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-opus-4-6'
       preset:
         endpoint: 'anthropic'
@@ -606,7 +606,7 @@ modelSpecs:
       label: 'Claude Opus 4.8'
       group: 'Anthropic Global'
       iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-opus-4-8'
       preset:
         endpoint: 'anthropic'
@@ -624,7 +624,7 @@ modelSpecs:
       group: 'Anthropic Australia'
       groupIcon: 'anthropic'
       iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-sonnet-4-6'
       preset:
         endpoint: 'bedrock'
@@ -641,7 +641,7 @@ modelSpecs:
       label: 'Claude Haiku 4.5'
       group: 'Anthropic Australia'
       iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by sync-model-metadata.
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-4-5-haiku'
       preset:
         endpoint: 'bedrock'

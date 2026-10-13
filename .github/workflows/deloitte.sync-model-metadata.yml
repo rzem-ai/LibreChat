@@ -1,8 +1,8 @@
-name: Sync Model Metadata
+name: Deloitte Sync Model Metadata
 
 # Populates modelSpecs.list[].details.speed/intelligence in librechat.yaml from the
 # Artificial Analysis API and pushes the result back onto the PR branch. See
-# .github/scripts/sync-model-metadata.mjs for the matching/tiering logic — a spec
+# .github/scripts/deloitte.sync-model-metadata.mjs for the matching/tiering logic — a spec
 # opts in via `artificialAnalysisBenchmarkModelName`.
 on:
   pull_request:
@@ -39,7 +39,7 @@ jobs:
         run: npm install yaml@^2 --no-save --no-audit --no-fund
 
       - name: Fetch and populate model metadata
-        run: node .github/scripts/sync-model-metadata.mjs
+        run: node .github/scripts/deloitte.sync-model-metadata.mjs
         env:
           ARTIFICIAL_ANALYSIS_API_KEY: ${{ secrets.ARTIFICIAL_ANALYSIS_API_KEY }}
 

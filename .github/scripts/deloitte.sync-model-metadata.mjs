@@ -61,8 +61,23 @@ async function fetchCatalog(apiKey, fetchImpl) {
   return catalog;
 }
 
+/** Formats `date` as e.g. "13 October 2026" for the trailing sync comment. */
+function formatSyncDate(date) {
+  const day = date.getDate();
+  const month = date.toLocaleString('en-US', { month: 'long' });
+  const year = date.getFullYear();
+  return `${day} ${month} ${year}`;
+}
+
+/** Sets `doc` at `path` to `value`, tagging the line with a dated sync comment. */
+function setWithSyncComment(doc, path, value, comment) {
+  const node = doc.createNode(value);
+  node.comment = ` ${comment}`;
+  doc.setIn(path, node);
+}
+
 /** Mutates `doc` in place; returns which spec indexes were updated/warned for logging. */
-export function syncDocument(doc, catalog) {
+export function syncDocument(doc, catalog, now = new Date()) {
   const list = doc.getIn(['modelSpecs', 'list']);
   if (!list?.items) {
     return { updated: [], warnings: [] };
@@ -105,22 +120,28 @@ export function syncDocument(doc, catalog) {
   const speedMin = Math.min(...speedValues);
   const speedMax = Math.max(...speedValues);
 
+  const syncComment = `updated by deloitte.sync-model-metadata workflow on ${formatSyncDate(now)}`;
   const updated = matched.map(({ index, intelligenceIndex, medianResponseSeconds }) => {
     const speed = tierFromRange(medianResponseSeconds, speedMin, speedMax, true);
     const intelligence = tierFromRange(intelligenceIndex, intelligenceMin, intelligenceMax, false);
-    doc.setIn(['modelSpecs', 'list', index, 'details', 'speed'], speed);
-    doc.setIn(['modelSpecs', 'list', index, 'details', 'intelligence'], intelligence);
+    setWithSyncComment(doc, ['modelSpecs', 'list', index, 'details', 'speed'], speed, syncComment);
+    setWithSyncComment(
+      doc,
+      ['modelSpecs', 'list', index, 'details', 'intelligence'],
+      intelligence,
+      syncComment,
+    );
     return { index, speed, intelligence };
   });
 
   return { updated, warnings };
 }
 
-export async function run({ yamlPath, apiKey, fetchImpl = fetch }) {
+export async function run({ yamlPath, apiKey, fetchImpl = fetch, now = new Date() }) {
   const source = readFileSync(yamlPath, 'utf8');
   const doc = parseDocument(source);
   const catalog = await fetchCatalog(apiKey, fetchImpl);
-  const { updated, warnings } = syncDocument(doc, catalog);
+  const { updated, warnings } = syncDocument(doc, catalog, now);
 
   for (const warning of warnings) {
     console.log(warning);

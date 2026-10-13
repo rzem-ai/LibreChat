@@ -90,7 +90,7 @@ export type TModelSpec = {
   details?: ModelSpecDetails;
   /**
    * Deloitte Custom Change: Artificial Analysis API `slug` used by the
-   * `sync-model-metadata` CI workflow to populate `details.speed`/`intelligence`.
+   * `deloitte.sync-model-metadata` CI workflow to populate `details.speed`/`intelligence`.
    * Omit for specs with no Artificial Analysis catalog equivalent.
    */
   artificialAnalysisBenchmarkModelName?: string;

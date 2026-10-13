@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { tierFromRange, run } from './sync-model-metadata.mjs';
+import { tierFromRange, run } from './deloitte.sync-model-metadata.mjs';
 
 test('tierFromRange', async (t) => {
   await t.test('returns a neutral tier when min equals max', () => {
@@ -23,7 +23,7 @@ test('tierFromRange', async (t) => {
 });
 
 test('run()', async (t) => {
-  const scratch = mkdtempSync(join(tmpdir(), 'sync-model-metadata-'));
+  const scratch = mkdtempSync(join(tmpdir(), 'deloitte.sync-model-metadata-'));
   t.after(() => rmSync(scratch, { recursive: true, force: true }));
   const yamlPath = join(scratch, 'librechat.yaml');
 
@@ -82,7 +82,8 @@ modelSpecs:
   };
   const fetchImpl = async () => ({ ok: true, json: async () => catalog });
 
-  const { updated, warnings } = await run({ yamlPath, apiKey: 'test-key', fetchImpl });
+  const now = new Date(2026, 10, 31); // 31 October 2026
+  const { updated, warnings } = await run({ yamlPath, apiKey: 'test-key', fetchImpl, now });
 
   await t.test('updates only matched specs, with the expected relative tiers', () => {
     assert.deepEqual(
@@ -105,6 +106,16 @@ modelSpecs:
   await t.test('leaves unmatched and opted-out specs without a details block', () => {
     assert.doesNotMatch(specBlock('spec-b-unmatched'), /details:/);
     assert.doesNotMatch(specBlock('spec-c-no-benchmark'), /details:/);
+  });
+
+  await t.test('tags each updated speed/intelligence line with a dated sync comment', () => {
+    const comment = '# updated by deloitte.sync-model-metadata workflow on 31 October 2026';
+    const specA = specBlock('spec-a');
+    assert.match(specA, new RegExp(`speed: 1 ${comment}`));
+    assert.match(specA, new RegExp(`intelligence: 1 ${comment}`));
+    const specD = specBlock('spec-d');
+    assert.match(specD, new RegExp(`speed: 5 ${comment}`));
+    assert.match(specD, new RegExp(`intelligence: 5 ${comment}`));
   });
 
   await t.test('preserves comments and the anchor/alias pair', () => {
