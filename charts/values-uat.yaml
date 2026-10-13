@@ -83,9 +83,6 @@ pods:
           MCP_GATEWAY_OBO_SCOPE: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
           MCP_GATEWAY_TOOLSETS: 'teams,research,news,kx,desc,gims'
           MCP_GATEWAY_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
-          MODEL_PRICING_MIN_MULTIPLIER: '0.1'
-          MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT: '0.1'
-          MODEL_PRICING_REFERENCE_MODEL_ID: 'gpt-56-luna'
           MONGO_DB: 'mdb-librechat-database-uat'
           NODE_ENV: 'production' # Use production to mimic PROD environment behaviour
           NODE_TLS_REJECT_UNAUTHORIZED: '0' # TODO: Review Node TLS setup. See: https://github.com/Deloitte-Australia/tt-librechat/issues/159

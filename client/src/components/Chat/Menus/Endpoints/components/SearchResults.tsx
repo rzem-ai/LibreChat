@@ -251,7 +251,7 @@ export function SearchResults({ results, localize, searchValue }: SearchResultsP
                   <SpecDescription description={spec.description} />
                 </div>
               </div>
-              <ModelCost modelId={spec.preset.model} />
+              <ModelCost modelId={spec.preset.model} endpoint={spec.preset.endpoint} />
               {selectedSpec === spec.name && (
                 <>
                   <CheckCircle2

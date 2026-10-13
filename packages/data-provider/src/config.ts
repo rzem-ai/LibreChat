@@ -2368,6 +2368,25 @@ export const interfaceSchema = z
         externalVoiceProvider: z.boolean().optional(),
         artifactsShadcnOnly: z.boolean().optional(),
         showConversationTitleInHeader: z.boolean().optional(),
+        /** Set to true to show the 1-5 `$` price-tier badge in the model selector. */
+        showModelPricingIndicator: z.boolean().optional(),
+        /**
+         * 4 strictly ascending $/1M blended-cost breakpoints that split models into the
+         * 5 price tiers (`$` to `$$$$$`) shown in the model selector. A model's blended
+         * cost is `(prompt + completion) / 2`; it enters a tier once its blended cost
+         * reaches that tier's breakpoint. Defaults to `[2, 5, 8, 15]` when unset.
+         */
+        modelPricingTierBreakpoints: z
+          .array(z.number().positive())
+          .length(4)
+          .refine(
+            (breakpoints) =>
+              breakpoints.every((value, index) => index === 0 || value > breakpoints[index - 1]),
+            {
+              message: 'modelPricingTierBreakpoints must be strictly ascending',
+            },
+          )
+          .optional(),
       })
       .optional(),
     prompts: z
@@ -2627,14 +2646,10 @@ export type TModelPricing = Record<
     inputPer1M: number;
     outputPer1M: number;
     provider?: string;
+    /** 1-5 relative price tier, shown as `$` to `$$$$$` in the model selector. */
+    tier: number;
   }
 >;
-
-export type TEndpointCostConfig = {
-  REFERENCE_MODEL_ID: string;
-  MULTIPLIER_ROUNDING_INCREMENT: number;
-  MIN_MULTIPLIER: number;
-};
 
 export type StartupConfigContext = 'share';
 
@@ -2702,7 +2717,6 @@ export type TStartupConfig = {
   customFooter?: string;
   modelSpecs?: TSpecsConfig;
   modelPricing?: TModelPricing;
-  endpointCostConfig?: TEndpointCostConfig;
   modelDescriptions?: Record<string, Record<string, string>>;
   sharedLinksEnabled: boolean;
   publicSharedLinksEnabled: boolean;
@@ -3359,11 +3373,6 @@ export const configSchema = z.object({
     .default({ socialLogins: defaultSocialLogins }),
   balance: balanceSchema.optional(),
   transactions: transactionsSchema.optional(),
-  modelPricing: z
-    .object({
-      referenceModelId: z.string().min(1),
-    })
-    .optional(),
   speech: z
     .object({
       tts: ttsSchema.optional(),
