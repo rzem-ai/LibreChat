@@ -151,7 +151,7 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
         popover: {
           title: 'Skills',
           description:
-            'Skills are instruction files which give the AI access to repeatable patterns. If a skill is enabled, the AI will auto-select it when you send a relevant query.<br/><br/>For example, if you ask the AI to summarise a meeting, you may see the meeting-summariser skill get called.',
+            'Skills are specialised instruction files that provide the AI with expertise for specific tasks and actions. If a skill is enabled, MyAssist will automatically use it when it can help with your request or the action you want to complete.<br/><br/>For example, if you ask the AI to summarise a meeting, you may see the meeting-summariser skill appear while your response or action is being generated.',
           side: 'top',
         },
       },
@@ -311,7 +311,10 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
       },
     ] as const;
     // Cast to mutable array for driver() which expects DriveStep[]
-    const stepsArray = steps as unknown as Array<{ element: string; popover: { title: string; description: string; side: 'top' | 'right' | 'bottom' | 'left' } }>;
+    const stepsArray = steps as unknown as Array<{
+      element: string;
+      popover: { title: string; description: string; side: 'top' | 'right' | 'bottom' | 'left' };
+    }>;
     // Do NOT eagerly filter steps here. Driver.js's own skipMissingElement +
     // waitForElement handles two cases correctly at runtime as each step is
     // reached: (a) genuinely absent elements (e.g. feature-flagged buttons not
@@ -361,7 +364,7 @@ export default function useGettingStartedTour(onComplete?: () => void, options: 
     // Store the instance so the useEffect cleanup can destroy it on unmount.
     tourRef.current = tourDriver;
     tourDriver.drive();
-  }, [onComplete, showMarketplace]);
+  }, [onComplete, onEnd, setSidebarExpanded, showMarketplace]);
 
   return { startTour };
 }
