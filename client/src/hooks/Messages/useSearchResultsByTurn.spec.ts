@@ -4,6 +4,35 @@ import type { TAttachment } from 'librechat-data-provider';
 import { useSearchResultsByTurn } from '~/hooks/Messages/useSearchResultsByTurn';
 
 describe('useSearchResultsByTurn', () => {
+  it('merges a web_search and a file_search attachment that both resolve to turn 0', () => {
+    // web_search keys by its own explicit `turn`; file_search keys by an independent counter
+    // starting at 0 for the first attachment — the same numeric turnKey can legitimately hold
+    // both. A plain overwrite at either merge site would silently drop whichever was processed
+    // first instead of combining them.
+    const attachments = [
+      {
+        type: Tools.web_search,
+        [Tools.web_search]: {
+          turn: 0,
+          organic: [
+            { title: 'Desk Booking', link: 'https://example.com', snippet: 'Book a desk.' },
+          ],
+        },
+      },
+      {
+        type: Tools.file_search,
+        [Tools.file_search]: {
+          sources: [{ fileId: 'fileA', fileName: 'policy.pdf', pages: [1], relevance: 0.9 }],
+        },
+      },
+    ] as unknown as TAttachment[];
+
+    const { result } = renderHook(() => useSearchResultsByTurn(attachments));
+
+    expect(result.current['0']?.organic?.[0]).toMatchObject({ title: 'Desk Booking' });
+    expect(result.current['0']?.references?.[0]).toMatchObject({ fileName: 'policy.pdf' });
+  });
+
   it('assigns turn 0 to a lone successful MCP attachment', () => {
     const attachments = [
       {
