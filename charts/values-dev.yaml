@@ -29,7 +29,7 @@ ingress:
 
 pods:
   librechat:
-    replicas: 1
+    replicas: 3
     securityContext:
       fsGroup: 1000
     initContainers:
@@ -38,7 +38,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'develop@sha256:e9ce6a34b7e7294c08ddd0d2ef18342ab3719873afc3a7f448a830c871d12e80'
+          tag: 'develop@sha256:309da553281b5d57d9bc07eab902fad6c85db87bf1c6a6b52e201eb8fdc2d9d3'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://foundry-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -58,7 +58,14 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:07150bcd773aae3555bfb044843f37ed2d563123b772d1415cbe20ab1ab93005'
+          tag: 'develop@sha256:446e85128d20b71b07681855b122ff22e30aa36ccc38231e54b324376a39a88e'
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "32Gi"
+            cpu: "6000m"
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -169,7 +176,14 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:68202516a98b7b23d6e9d96197e65b09f002d04b53165d8aa013d331fc3be19f'
+          tag: 'develop@sha256:2edee5f63cefc01bb1755c14aa6d79c34694c3ed385b2924b7c3235db67a2730'
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "16Gi"
+            cpu: "3000m"
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -226,7 +240,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:4297db296c4e701a66dcc473e80f7ea56303be6459993a7a3eda0a1ba14654b0'
+          tag: 'develop@sha256:77cdd85576e4039b938a51bb743b214c87d651e3df1c6358ffc37ef3c8a3aa56'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'

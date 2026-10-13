@@ -14,6 +14,7 @@ import {
   hasActivePiiPatterns,
   replaceSpecialVars,
   providerEndpointMap,
+  isOrphanedTurnFile,
 } from 'librechat-data-provider';
 import type {
   AgentToolResources,
@@ -267,6 +268,17 @@ function appendAdditionalInstructions(agent: Agent, text?: string | null): void 
   agent.additional_instructions = [agent.additional_instructions ?? '', text]
     .filter(Boolean)
     .join('\n\n');
+}
+
+/** Deloitte Custom Change: tells the model which uploaded files no tool active this
+ *  turn can actually read, so it reports the gap instead of claiming no files exist. */
+function buildFileAccessGuardrailText(filenames: string[]): string {
+  const list = filenames.map((name) => `"${name}"`).join(', ');
+  return (
+    `- Note: The uploaded file(s) ${list} could not be read by any tool active this turn. ` +
+    'Tell the user these file(s) are uploaded but not accessible right now, and suggest ' +
+    'turning on file search or code interpreter if either was turned off.'
+  );
 }
 
 /**
@@ -582,6 +594,9 @@ function resolveProviderToolConflicts({
     }
     if (provider === Providers.GOOGLE || provider === Providers.VERTEXAI) {
       return hasGoogleSearchTool(tool);
+    }
+    if (provider === Providers.OPENAI || provider === Providers.AZURE) {
+      return isProviderWebSearchTool(tool);
     }
     return false;
   };
@@ -2439,6 +2454,24 @@ export async function initializeAgent(
     : primedRequestAttachments;
   const requestAttachments = toMongoFiles(finalRequestAttachments);
   const agentContextAttachments = finalizeAttachments(primedAgentContextAttachments);
+  /* Deloitte Custom Change: runs unconditionally (not just when consumersChanged) — a
+   * turn can be orphaned even when consumers never changed from what priming assumed,
+   * e.g. no skill ever grants execute_code/file_search for this file's type at all. */
+  const orphanedFilenames = new Map<string, string>();
+  for (const file of [...finalAttachments, ...requestAttachments, ...agentContextAttachments]) {
+    if (
+      file.file_id != null &&
+      !orphanedFilenames.has(file.file_id) &&
+      isOrphanedTurnFile(file, fileConsumers)
+    ) {
+      orphanedFilenames.set(file.file_id, file.filename || file.file_id);
+    }
+  }
+  if (orphanedFilenames.size > 0 && dynamicToolContextMap != null) {
+    dynamicToolContextMap.file_access_guardrail = buildFileAccessGuardrailText([
+      ...orphanedFilenames.values(),
+    ]);
+  }
   if (consumersChanged) {
     /* A loader may drop a reader, including a skill extra on retry. Newly model-bound text
      * must pass admission before it can escape initialization, just like initial fallback. */

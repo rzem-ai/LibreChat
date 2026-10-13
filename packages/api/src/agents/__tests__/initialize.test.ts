@@ -961,6 +961,7 @@ describe('initializeAgent — provider web_search precedence', () => {
     type: 'web_search_20250305',
     name: Tools.web_search,
   };
+  const openAINativeWebSearchTool = { type: 'web_search' };
   const nativeGoogleSearchTool = { googleSearch: {} };
   const libreChatWebSearchDefinition = {
     name: Tools.web_search,
@@ -1249,9 +1250,65 @@ describe('initializeAgent — provider web_search precedence', () => {
   });
 
   it('leaves providers without a native web search conflict unchanged', async () => {
+    // Bedrock has no native-web-search branch in resolveProviderToolConflicts (unlike
+    // Anthropic/Google/OpenAI/Azure), so a provider tool that happens to look like a web
+    // search tool must still pass through untouched for it.
+    const { agent, req, res, loadTools, db } = createMocks({
+      provider: Providers.BEDROCK,
+      providerTools: [nativeWebSearchTool],
+      loadedToolDefinitions: [libreChatWebSearchDefinition],
+    });
+    agent.tools = [Tools.web_search];
+
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.BEDROCK]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    expect(result.tools).toEqual([nativeWebSearchTool]);
+    expect(countNamedWebSearchTools(result.tools)).toBe(1);
+    expect(countWebSearchDefinitions(result.toolDefinitions)).toBe(1);
+  });
+
+  it('keeps OpenAI native web_search when LibreChat search is not selected', async () => {
     const { agent, req, res, loadTools, db } = createMocks({
       provider: Providers.OPENAI,
-      providerTools: [nativeWebSearchTool],
+      providerTools: [openAINativeWebSearchTool],
+    });
+
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.OPENAI]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    expect(result.tools).toEqual([openAINativeWebSearchTool]);
+  });
+
+  it('prefers LibreChat web_search when OpenAI native search is also enabled', async () => {
+    // Regression test: OpenAI's native web_search tool ({ type: 'web_search' }, no `name`
+    // field) previously fell through resolveProviderToolConflicts's shouldRemoveTool with no
+    // matching branch, so both the native tool and the LibreChat tool stayed bound at once —
+    // the model could pick its own native search instead of the LibreChat one, whose results
+    // never reach citations.ts (its answer gets no citation chips).
+    const { agent, req, res, loadTools, db } = createMocks({
+      provider: Providers.OPENAI,
+      providerTools: [openAINativeWebSearchTool],
       loadedToolDefinitions: [libreChatWebSearchDefinition],
     });
     agent.tools = [Tools.web_search];
@@ -1269,8 +1326,33 @@ describe('initializeAgent — provider web_search precedence', () => {
       db,
     );
 
-    expect(result.tools).toEqual([nativeWebSearchTool]);
-    expect(countNamedWebSearchTools(result.tools)).toBe(1);
+    expect(result.tools).toEqual([]);
+    expect(countNamedWebSearchTools(result.tools)).toBe(0);
+    expect(countWebSearchDefinitions(result.toolDefinitions)).toBe(1);
+  });
+
+  it('prefers LibreChat web_search when Azure native search is also enabled', async () => {
+    const { agent, req, res, loadTools, db } = createMocks({
+      provider: Providers.AZURE,
+      providerTools: [openAINativeWebSearchTool],
+      loadedToolDefinitions: [libreChatWebSearchDefinition],
+    });
+    agent.tools = [Tools.web_search];
+
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.AZURE]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    expect(result.tools).toEqual([]);
     expect(countWebSearchDefinitions(result.toolDefinitions)).toBe(1);
   });
 
@@ -5105,5 +5187,126 @@ describe('initializeAgent turn delivery routing', () => {
     const [toolsOrder] = loadTools.mock.invocationCallOrder;
     expect(optionsOrder).toBeLessThan(filesOrder);
     expect(filesOrder).toBeLessThan(toolsOrder);
+  });
+});
+
+describe('initializeAgent — file access guardrail (Deloitte Custom Change)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('flags a file routed to none that no tool this turn can read', async () => {
+    const { primeResources } = jest.requireMock('../resources') as { primeResources: jest.Mock };
+    const csvFile = {
+      file_id: 'csv-1',
+      filename: 'data.csv',
+      type: 'text/csv',
+      bytes: 10,
+      llmDeliveryPath: 'none',
+    } as IMongoFile;
+    primeResources.mockResolvedValueOnce({
+      attachments: [csvFile],
+      requestAttachments: [csvFile],
+      agentContextAttachments: [],
+      tool_resources: undefined,
+    });
+    const { agent, req, res, loadTools, db } = createMocks();
+
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.OPENAI]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    expect(result.dynamicToolContextMap?.file_access_guardrail).toEqual(
+      expect.stringContaining('"data.csv"'),
+    );
+  });
+
+  it('does not flag a file routed to none that Code Interpreter can read', async () => {
+    const { primeResources } = jest.requireMock('../resources') as { primeResources: jest.Mock };
+    const csvFile = {
+      file_id: 'csv-1',
+      filename: 'data.csv',
+      type: 'text/csv',
+      bytes: 10,
+      llmDeliveryPath: 'none',
+    } as IMongoFile;
+    primeResources.mockResolvedValueOnce({
+      attachments: [csvFile],
+      requestAttachments: [csvFile],
+      agentContextAttachments: [],
+      tool_resources: undefined,
+    });
+    const { agent, req, res, loadTools, db } = createMocks({
+      structuredTools: [{ name: Tools.execute_code }],
+      loadedToolDefinitions: [{ name: Tools.execute_code }],
+    });
+    agent.tools = [Tools.execute_code];
+
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        codeEnvAvailable: true,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.OPENAI]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    expect(result.dynamicToolContextMap?.file_access_guardrail).toBeUndefined();
+  });
+
+  it('names every orphaned file when more than one is unreadable this turn', async () => {
+    const { primeResources } = jest.requireMock('../resources') as { primeResources: jest.Mock };
+    const csvFile = {
+      file_id: 'csv-1',
+      filename: 'data.csv',
+      type: 'text/csv',
+      bytes: 10,
+      llmDeliveryPath: 'none',
+    } as IMongoFile;
+    const parquetFile = {
+      file_id: 'parquet-1',
+      filename: 'rows.parquet',
+      type: 'application/x-parquet',
+      bytes: 10,
+      llmDeliveryPath: 'none',
+    } as IMongoFile;
+    primeResources.mockResolvedValueOnce({
+      attachments: [csvFile, parquetFile],
+      requestAttachments: [csvFile, parquetFile],
+      agentContextAttachments: [],
+      tool_resources: undefined,
+    });
+    const { agent, req, res, loadTools, db } = createMocks();
+
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.OPENAI]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    const guardrail = result.dynamicToolContextMap?.file_access_guardrail;
+    expect(guardrail).toEqual(expect.stringContaining('"data.csv"'));
+    expect(guardrail).toEqual(expect.stringContaining('"rows.parquet"'));
   });
 });
