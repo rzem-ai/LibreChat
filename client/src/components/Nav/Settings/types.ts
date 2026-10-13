@@ -57,6 +57,8 @@ export interface SettingsContextValue {
   dataDangerZoneEnabled: boolean;
   /** Deloitte Custom Change: limits service account key-management UI to administrators. */
   isAdmin: boolean;
+  /** Deloitte Custom Change: hides "Display username" when bubble layout omits name headers. */
+  usernameDisplaySettingEnabled: boolean;
   engineTTS: string;
   langfuseConnectionAccess: boolean;
   adminPanelURL: string;
