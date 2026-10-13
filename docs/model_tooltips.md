@@ -2,7 +2,9 @@
 
 ## Model Pricing
 
-Model pricing indicators display `$` to `$$$$$` based on the blended cost of input and output tokens. Enable them with `interface.customDeloitteFeatureFlags.showModelPricingIndicator: true` in `librechat.yaml`. Configure the four thresholds with `interface.customDeloitteFeatureFlags.modelPricingTierBreakpoints`; when unset, they default to `[2, 5, 8, 15]`.
+Model pricing indicators display `$` to `$$$$$` based on the blended cost of input and output tokens. `interface.customDeloitteFeatureFlags.showModelPricingIndicator: true` in `librechat.yaml` only controls the in-menu `$` chip shown next to each model in the selector list — the model info tooltip's cost row always shows pricing when it's available, regardless of this flag. Configure the four thresholds with `interface.customDeloitteFeatureFlags.modelPricingTierBreakpoints`; when unset, they default to `[2, 5, 8, 15]`.
+
+Tiers that should additionally show the tooltip's "High Cost" callout are configured with `interface.customDeloitteFeatureFlags.highCostAlertTiers`, an array of 1-5 tier numbers (e.g. `[4, 5]`); when unset, it defaults to `[5]` (top tier only).
 
 ## Detailed Model Information
 

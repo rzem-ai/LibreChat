@@ -2,6 +2,7 @@ import { Check } from 'lucide-react';
 import type { ReactElement, ReactNode } from 'react';
 import { HoverCard, HoverCardPortal, HoverCardContent, HoverCardTrigger } from '../HoverCard';
 import { RatingMeter } from './RatingMeter';
+import { Tag } from '../Tag';
 import { cn } from '~/utils';
 
 // Deloitte Custom Change: fixed-width label + flexible content row, matching the Figma
@@ -46,6 +47,8 @@ function SupportRow({ label }: { label: string }) {
 
 export interface ModelInfoTooltipCost {
   tier: number;
+  /** Whether this model's tier is configured to show the "High Cost" callout (see `customDeloitteFeatureFlags.highCostAlertTiers`). */
+  isHighCost?: boolean;
   inputText: string;
   outputText: string;
 }
@@ -55,6 +58,7 @@ export interface ModelInfoTooltipLabels {
   speed: string;
   intelligence: string;
   cost: string;
+  highCost: string;
   context: string;
   supports: string;
 }
@@ -139,6 +143,13 @@ export function ModelInfoTooltip({
                 <div className="flex h-5 items-center">
                   <RatingMeter value={cost.tier} />
                 </div>
+                {cost.isHighCost === true && (
+                  <Tag
+                    label={labels.highCost}
+                    className="w-fit self-start border border-amber-600/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                    labelClassName="!ml-0 px-1.5 py-0.5 text-[12px] font-medium tracking-wide whitespace-nowrap"
+                  />
+                )}
                 {/* Deloitte Custom Change: -mt-1 pulls the price line up slightly closer to the
                     rating bar above it; text-secondary-alt + leading-5 match the Figma spec's
                     muted-foreground color and text-sm line height exactly. */}

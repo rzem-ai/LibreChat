@@ -143,10 +143,9 @@ interface:
     externalVoiceProvider: false # Set to false to hide the external voice provider option in Speech settings (browser voice only)
     artifactsShadcnOnly: true # Set to true to force the shadcn/ui artifacts mode and hide other artifact mode options
     showConversationTitleInHeader: false # Set to true to show the conversation title in the chat header
-    showModelPricingIndicator: true # Set to false to hide the 1-5 $ price-tier badge in the model selector
-    # The 4 ascending $/1M blended-cost breakpoints splitting models into the 5 price tiers
-    # ($ to $$$$$) shown in the model selector. Optional — defaults to [2, 5, 8, 15] when omitted.
-    modelPricingTierBreakpoints: [ 2, 5, 8, 15 ]
+    showModelPricingIndicator: false # False: hide the $$$ badges on the model menuitems.
+    modelPricingTierBreakpoints: [ 2, 5, 8, 15 ] # Breakpoints for the cost rating bar shown in the model tooltips.
+    highCostAlertTiers: [ 5 ] # Which of the 5 price tiers will show the High Cost alert chip.
 
 fileConfig:
   endpoints:

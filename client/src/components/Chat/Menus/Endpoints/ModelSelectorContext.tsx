@@ -34,6 +34,8 @@ type ModelSelectorContextType = {
   assistantsMap: t.TAssistantsMap | undefined;
   endpointsConfig: t.TEndpointsConfig;
   modelPricing: t.TModelPricing;
+  /** Gates the in-menu `$` pricing chip only — the model info tooltip's cost row is unaffected. */
+  showPricingIndicator: boolean;
 
   // Functions
   endpointRequiresUserKey: (endpoint: string) => boolean;
@@ -89,6 +91,8 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
     });
   }, [startupConfig, agentsMap]);
   const modelPricing = startupConfig?.modelPricing ?? emptyModelPricing;
+  const showPricingIndicator =
+    startupConfig?.interface?.customDeloitteFeatureFlags?.showModelPricingIndicator === true;
 
   const permissionLevel = useAgentDefaultPermissionLevel();
   /**
@@ -279,6 +283,7 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
       mappedEndpoints,
       endpointsConfig,
       modelPricing,
+      showPricingIndicator,
       handleSelectSpec,
       handleSelectModel,
       setSelectedValues,
@@ -299,6 +304,7 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
       mappedEndpoints,
       endpointsConfig,
       modelPricing,
+      showPricingIndicator,
       handleSelectSpec,
       handleSelectModel,
       setSelectedValues,

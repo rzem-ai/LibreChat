@@ -21,6 +21,7 @@ const labels: ModelInfoTooltipLabels = {
   speed: 'Speed',
   intelligence: 'Intelligence',
   cost: 'Cost',
+  highCost: 'High Cost',
   context: 'Context',
   supports: 'Supports',
 };
@@ -84,6 +85,44 @@ describe('ModelInfoTooltip', () => {
     expect(screen.getByText('$1.00 / 1M input')).toBeInTheDocument();
     expect(screen.getByText('$6.00 / 1M output')).toBeInTheDocument();
     expect(screen.getByText('Cost').parentElement).toHaveClass('items-start');
+  });
+
+  it('shows the "High Cost" chip below the rating bar when the cost is flagged high-cost', () => {
+    render(
+      <ModelInfoTooltip
+        icon={<span />}
+        label="My Spec"
+        cost={{
+          tier: 5,
+          isHighCost: true,
+          inputText: '$10.00 / 1M input',
+          outputText: '$30.00 / 1M output',
+        }}
+        labels={labels}
+      >
+        <button>Row</button>
+      </ModelInfoTooltip>,
+    );
+    expect(screen.getByText('High Cost')).toBeInTheDocument();
+  });
+
+  it('omits the "High Cost" chip when the cost is not flagged high-cost', () => {
+    render(
+      <ModelInfoTooltip
+        icon={<span />}
+        label="My Spec"
+        cost={{
+          tier: 4,
+          isHighCost: false,
+          inputText: '$5.00 / 1M input',
+          outputText: '$15.00 / 1M output',
+        }}
+        labels={labels}
+      >
+        <button>Row</button>
+      </ModelInfoTooltip>,
+    );
+    expect(screen.queryByText('High Cost')).not.toBeInTheDocument();
   });
 
   it('renders context as plain text with no meter, top-aligned with its label', () => {

@@ -1170,6 +1170,44 @@ describe('customDeloitteFeatureFlags.modelPricingTierBreakpoints', () => {
   });
 });
 
+describe('customDeloitteFeatureFlags.highCostAlertTiers', () => {
+  it('accepts a valid tiers array alongside the indicator flag', () => {
+    const result = configSchema.safeParse({
+      version: '1.0',
+      interface: {
+        customDeloitteFeatureFlags: {
+          showModelPricingIndicator: true,
+          highCostAlertTiers: [4, 5],
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const flags = result.data.interface?.customDeloitteFeatureFlags;
+      expect(flags?.highCostAlertTiers).toEqual([4, 5]);
+    }
+  });
+
+  it('is optional', () => {
+    expect(
+      configSchema.safeParse({
+        version: '1.0',
+        interface: { customDeloitteFeatureFlags: {} },
+      }).success,
+    ).toBe(true);
+  });
+
+  it.each([[0], [6], [-1]])('rejects an out-of-range tier value: %i', (tier) => {
+    expect(
+      configSchema.safeParse({
+        version: '1.0',
+        interface: { customDeloitteFeatureFlags: { highCostAlertTiers: [tier] } },
+      }).success,
+    ).toBe(false);
+  });
+});
+
 describe('speechTab schema', () => {
   it.each(['browser', 'external', 'openai', 'azureOpenAI'])(
     'accepts the speech-to-text engine "%s"',

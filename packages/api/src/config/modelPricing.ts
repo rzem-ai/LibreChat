@@ -11,18 +11,25 @@ import { collectCustomTokenConfigs } from '~/endpoints/tokenConfig';
  * That file has been removed — pricing now lives as native `tokenConfig` blocks on each
  * custom endpoint in `librechat.yaml` (or the fetched-and-cached config for custom
  * endpoints without a static override), and the badge is an absolute 1-5 `$` tier derived
- * from each model's own blended price, with no reference model needed. The badge is gated
- * by `interface.customDeloitteFeatureFlags.showModelPricingIndicator`, and the 4 breakpoints
+ * from each model's own blended price, with no reference model needed. `getModelPricing`
+ * below always computes pricing for every model (not gated by any feature flag) since the
+ * result feeds both the in-menu `$` chip and the model info tooltip's cost row; the chip's
+ * visibility is gated client-side by `interface.customDeloitteFeatureFlags.showModelPricingIndicator`,
+ * while the tooltip's cost row always shows when pricing data is present. The 4 breakpoints
  * separating the 5 tiers are configurable via `customDeloitteFeatureFlags.modelPricingTierBreakpoints`
  * in `librechat.yaml`, falling back to `DEFAULT_PRICE_TIER_BREAKPOINTS` when unset.
- * `getModelPricing` below resolves every model's rate through `buildTokenConfigMap` — the
+ * `getModelPricing` resolves every model's rate through `buildTokenConfigMap` — the
  * same override-or-multiplier resolution used for real billing: custom endpoints use their
  * static/cached `tokenConfig` override when present, and every other model (including
  * built-in OpenAI/Anthropic/Google/Bedrock endpoints, which never carry a `tokenConfig`)
- * falls back to the built-in `getMultiplier`/`getCacheMultiplier` tables — so the badge can
- * never advertise a rate the request isn't actually billed at.
+ * falls back to the built-in `getMultiplier`/`getCacheMultiplier` tables — so neither the
+ * chip nor the tooltip can ever advertise a rate the request isn't actually billed at. Which
+ * tiers additionally earn the tooltip's "High Cost" callout is configurable via
+ * `customDeloitteFeatureFlags.highCostAlertTiers`, falling back to `DEFAULT_HIGH_COST_TIERS`
+ * (top tier only) when unset.
  */
 const DEFAULT_PRICE_TIER_BREAKPOINTS = [2, 5, 8, 15];
+const DEFAULT_HIGH_COST_TIERS = [5];
 
 /** Maps a blended $/1M-token cost to a 1-5 price tier, rendered as `$` to `$$$$$`. */
 function getPriceTier(blendedCost: number, breakpoints: number[]): number {
@@ -36,10 +43,10 @@ function getPriceTier(blendedCost: number, breakpoints: number[]): number {
 }
 
 /**
- * Flattens every configured model's resolved rate into the price-tier badge's
- * `{ inputPer1M, outputPer1M, provider, tier }` shape, keyed by endpoint and
- * model. Returns an empty map when `customDeloitteFeatureFlags.showModelPricingIndicator`
- * isn't enabled, so the badge stays hidden and no pricing data is sent to the client.
+ * Flattens every configured model's resolved rate into the `{ inputPer1M, outputPer1M,
+ * provider, tier, isHighCost }` shape, keyed by endpoint and model. Returns an empty map
+ * only when no `modelsConfig` is available — unlike the in-menu `$` chip, this is not
+ * gated by `showModelPricingIndicator`, since the model info tooltip needs this data too.
  */
 export async function getModelPricing(
   appConfig: AppConfig | undefined,
@@ -48,10 +55,10 @@ export async function getModelPricing(
   modelsConfig: TModelsConfig | undefined,
   deps: TokenomicsDeps,
 ): Promise<TModelPricing> {
-  const customDeloitteFeatureFlags = appConfig?.interfaceConfig?.customDeloitteFeatureFlags;
-  if (customDeloitteFeatureFlags?.showModelPricingIndicator !== true || !modelsConfig) {
+  if (!modelsConfig) {
     return {};
   }
+  const customDeloitteFeatureFlags = appConfig?.interfaceConfig?.customDeloitteFeatureFlags;
 
   const endpointTokenConfigs = await collectCustomTokenConfigs(appConfig, userId, tenantId);
   const tokenConfigMap = buildTokenConfigMap(
@@ -60,7 +67,10 @@ export async function getModelPricing(
   );
 
   const breakpoints =
-    customDeloitteFeatureFlags.modelPricingTierBreakpoints ?? DEFAULT_PRICE_TIER_BREAKPOINTS;
+    customDeloitteFeatureFlags?.modelPricingTierBreakpoints ?? DEFAULT_PRICE_TIER_BREAKPOINTS;
+  const highCostTiers = new Set(
+    customDeloitteFeatureFlags?.highCostAlertTiers ?? DEFAULT_HIGH_COST_TIERS,
+  );
   const pricing: TModelPricing = {};
 
   for (const [endpoint, models] of Object.entries(tokenConfigMap)) {
@@ -68,11 +78,13 @@ export async function getModelPricing(
       if (prompt == null || completion == null) {
         continue;
       }
+      const tier = getPriceTier((prompt + completion) / 2, breakpoints);
       pricing[`${endpoint}:${model}`] = {
         inputPer1M: prompt,
         outputPer1M: completion,
         provider: endpoint,
-        tier: getPriceTier((prompt + completion) / 2, breakpoints),
+        tier,
+        isHighCost: highCostTiers.has(tier),
       };
     }
   }

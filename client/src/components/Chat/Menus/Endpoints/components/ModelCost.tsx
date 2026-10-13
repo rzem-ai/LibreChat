@@ -37,10 +37,10 @@ export default function ModelCost({
   modelId: string | null | undefined;
   endpoint: string | null | undefined;
 }) {
-  const { modelPricing = {} } = useModelSelectorContext();
+  const { modelPricing = {}, showPricingIndicator } = useModelSelectorContext();
   const pricing = getModelCost(modelId, endpoint, modelPricing);
 
-  if (!pricing) {
+  if (!pricing || !showPricingIndicator) {
     return null;
   }
 

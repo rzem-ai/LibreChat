@@ -2387,6 +2387,11 @@ export const interfaceSchema = z
             },
           )
           .optional(),
+        /**
+         * Which 1-5 price tiers (see `modelPricingTierBreakpoints`) get the "High Cost"
+         * callout in the model selector tooltip. Defaults to `[5]` (top tier only) when unset.
+         */
+        highCostAlertTiers: z.array(z.number().int().min(1).max(5)).optional(),
       })
       .optional(),
     prompts: z
@@ -2648,6 +2653,8 @@ export type TModelPricing = Record<
     provider?: string;
     /** 1-5 relative price tier, shown as `$` to `$$$$$` in the model selector. */
     tier: number;
+    /** Whether this tier is configured (via `highCostAlertTiers`) to show the "High Cost" callout. */
+    isHighCost: boolean;
   }
 >;
 

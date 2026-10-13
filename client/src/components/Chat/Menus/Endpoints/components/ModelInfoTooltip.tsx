@@ -66,6 +66,7 @@ export default function ModelInfoTooltip({
         pricing
           ? {
               tier: pricing.tier,
+              isHighCost: pricing.isHighCost,
               inputText: localize('com_ui_model_details_cost_input', {
                 0: formatPrice(pricing.inputPer1M),
               }),
@@ -84,6 +85,7 @@ export default function ModelInfoTooltip({
         speed: localize('com_ui_model_details_speed'),
         intelligence: localize('com_ui_model_details_intelligence'),
         cost: localize('com_ui_model_details_cost'),
+        highCost: localize('com_ui_model_details_high_cost'),
         context: localize('com_ui_model_details_context'),
         supports: localize('com_ui_model_details_supports'),
       }}
