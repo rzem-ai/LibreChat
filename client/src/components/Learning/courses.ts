@@ -1,3 +1,5 @@
+import { GETTING_STARTED_COURSE_ID } from './Courses/content/registry';
+
 export interface LearningCourse {
   id: string;
   title: string;
@@ -9,7 +11,7 @@ export interface LearningCourse {
 /** Static MVP course catalog — no backend content system, just a plain list. */
 export const COURSES: LearningCourse[] = [
   {
-    id: 'getting-started-guide',
+    id: GETTING_STARTED_COURSE_ID,
     title: 'Getting Started Tour',
     description:
       'Learn how to get started with MyAssist in this quick introductory tour, highly recommended for new users',
