@@ -1,20 +1,34 @@
 /**
- * End-of-trace file citations.
+ * End-of-trace citations.
  *
  * After an agent run finishes, this module deterministically inserts citation
  * anchors into the assistant's answer by matching each answer sentence against
- * the passages the `file_search` tool retrieved. It replaces the previous
- * approach of instructing the model to echo anchor markers itself, which was
- * unreliable and risked degrading answer quality.
+ * the passages the `file_search`, `web_search` (organic/news only), and MCP
+ * tools retrieved. It replaces the previous approach of instructing the model
+ * to echo anchor markers itself, which was unreliable and risked degrading
+ * answer quality.
  *
  * Matching is lexical: a sentence is anchored to a passage when enough of its
- * content words (>= `SIMILARITY_THRESHOLD`) also appear in that passage. Each
- * anchor encodes the coordinates the frontend resolves — `turn{N}file{M}`,
- * where N is the file_search attachment index and M is the first-seen fileId
- * index within it (mirrors `useSearchResultsByTurn` on the client).
+ * content words also appear in that passage. file_search uses the strict,
+ * unstemmed `SIMILARITY_THRESHOLD`; MCP and web_search (organic/news) sources
+ * are short, loosely-paraphrased excerpts, so they use the looser, stemmed
+ * `MCP_SIMILARITY_THRESHOLD`/`WEB_SEARCH_SIMILARITY_THRESHOLD`. A profile too
+ * strict for its source tends to only match a sentence that echoes a source's
+ * title near-verbatim (e.g. a heading) while starving every paraphrased body
+ * claim of a citation. Each anchor encodes the coordinates
+ * the frontend resolves — `turn{N}file{M}` for file_search (N is the
+ * attachment index, M the first-seen fileId index within it),
+ * `turn{N}search{M}`/`turn{N}news{M}` for web_search (N is the attachment's
+ * own `turn` value, M the organic/topStories index), and `turn{N}mcp{M}` for
+ * MCP results (mirrors `useSearchResultsByTurn` on the client in every case).
  */
 import { Tools, ContentTypes } from 'librechat-data-provider';
-import type { TMessageContentParts, TAttachment, MCPResultSource } from 'librechat-data-provider';
+import type {
+  TMessageContentParts,
+  TAttachment,
+  MCPResultSource,
+  SearchResultData,
+} from 'librechat-data-provider';
 import type { Logger } from 'winston';
 
 /**
@@ -25,12 +39,19 @@ const MIN_SENTENCE_CONTENT_WORDS = 4;
 /** Fraction of a sentence's content tokens that must appear in a passage. */
 const SIMILARITY_THRESHOLD = 0.6;
 /**
- * Lower similarity bar used for MCP citations. File_search sentences tend to
- * closely paraphrase a retrieved chunk; MCP answers summarize a news article
- * much more freely (different wording, added context), so the same 0.6 bar
- * used for file citations misses most true matches.
+ * Similarity bar used for MCP citations. File_search sentences tend to closely
+ * paraphrase a retrieved chunk; MCP answers summarize a result much more
+ * freely (different wording, added context), so the same 0.6 bar used for
+ * file citations misses most true matches.
  */
 const MCP_SIMILARITY_THRESHOLD = 0.35;
+/**
+ * Lower similarity bar used for web_search organic/news citations. Those
+ * sources are short, loosely-paraphrased article excerpts — summarized much
+ * more freely than a file_search chunk — so the stricter 0.6 bar misses most
+ * true matches.
+ */
+const WEB_SEARCH_SIMILARITY_THRESHOLD = 0.35;
 /**
  * Upper bound on citation anchors appended to a single sentence. When more than
  * three distinct sources clear the `SIMILARITY_THRESHOLD`, the highest-similarity
@@ -162,6 +183,12 @@ interface Passage {
   fileIndex: number;
   /** Normalised content-word tokens of the passage, used for similarity matching. */
   tokens: Set<string>;
+  /**
+   * Stemmed, stopword-filtered title tokens — set only for identity-bound MCP sources
+   * (KX/DPN, Entities) with a title. Unset for everything else, where `filterPassagesForLine`
+   * leaves the passage list untouched.
+   */
+  titleTokens?: Set<string>;
 }
 
 function tokenize(text: string): string[] {
@@ -623,6 +650,52 @@ function withAnchors(sentence: string, anchors: string[]): string {
   return `${trimmed} ${anchors.join(' ')}${trailing}`;
 }
 
+/** True when every one of `passage.titleTokens` appears in `lineTokens` — a partial-name match (e.g. a shared surname) does not count. */
+function fullyNamesPassage(lineTokens: Set<string>, passage: Passage): boolean {
+  if (!passage.titleTokens || passage.titleTokens.size === 0) {
+    return false;
+  }
+  for (const token of passage.titleTokens) {
+    if (!lineTokens.has(token)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * If this line fully names one or more identity-bound passages (KX/DPN, Entities), restricts
+ * `passages` to just those — every other identity-bound passage is excluded from this line even
+ * if it would otherwise clear the containment threshold (prevents e.g. a "Jane Doe" line from
+ * also citing an unrelated "John Doe" profile via shared boilerplate, or a shared surname). If
+ * the line names no one specifically, every passage stays eligible — a catch-all "here are other
+ * relevant testers" line must still freely cite multiple unnamed candidates via normal threshold
+ * ranking, not be gated into citing none of them. Passages without `titleTokens` (file_search,
+ * web_search, and every non-identity-bound MCP connector) are never affected either way.
+ */
+function filterPassagesForLine(
+  line: string,
+  passages: Passage[],
+  tokenizeFn: (text: string) => string[],
+): Passage[] {
+  const identityBound = passages.filter((passage) => passage.titleTokens);
+  if (identityBound.length === 0) {
+    return passages;
+  }
+  const lineTokens = new Set(tokenizeFn(line));
+  const namedKeys = new Set(
+    identityBound
+      .filter((passage) => fullyNamesPassage(lineTokens, passage))
+      .map((passage) => `${passage.turn}:${passage.fileIndex}`),
+  );
+  if (namedKeys.size === 0) {
+    return passages;
+  }
+  return passages.filter(
+    (passage) => !passage.titleTokens || namedKeys.has(`${passage.turn}:${passage.fileIndex}`),
+  );
+}
+
 /**
  * Anchors a single text blob against `passages`, line by line. A line that parses as a markdown
  * table row (via `splitTableRowCells`) is scored as one unit and its anchors are inserted into the
@@ -660,11 +733,12 @@ function anchorTextPart(
     }
 
     const lineCoords = new Set<string>();
+    const eligiblePassages = filterPassagesForLine(line, passages, options.tokenizeFn ?? tokenize);
     const tableRow =
       !excluded && tableLineIndices.has(index) ? splitTableRowCells(line) : undefined;
 
     if (tableRow) {
-      const { anchors, coords } = anchorsForSentence(line, passages, {
+      const { anchors, coords } = anchorsForSentence(line, eligiblePassages, {
         ...anchorOptions,
         excludeCoords: lineCoords,
       });
@@ -682,7 +756,7 @@ function anchorTextPart(
 
     return splitIntoSentences(line)
       .map((sentence) => {
-        const { anchors, coords } = anchorsForSentence(sentence, passages, {
+        const { anchors, coords } = anchorsForSentence(sentence, eligiblePassages, {
           ...anchorOptions,
           excludeCoords: lineCoords,
         });
@@ -736,6 +810,42 @@ function writeText(part: TMessageContentParts, value: string): void {
 }
 
 /**
+ * Shared loop every `insert<Name>Citations` function uses once it has built its
+ * source-specific `passages`: read each content part's text, anchor it against
+ * `passages`, and write the result back if it changed. Returns the `"turn:fileIndex"`
+ * coordinates that matched across all parts, so callers that need them (e.g.
+ * `insertMCPCitations`, for `appendGuaranteedMCPCitations`) can use the return value,
+ * and callers that don't (file/web search) can simply ignore it.
+ */
+function applyPassageAnchors(
+  contentParts: TMessageContentParts[],
+  passages: Passage[],
+  options: {
+    threshold?: number;
+    tokenizeFn?: (text: string) => string[];
+    anchorTag?: string;
+    scoreExcludedRanges?: boolean;
+  } = {},
+): Set<string> {
+  const usedCoords = new Set<string>();
+  if (passages.length === 0) {
+    return usedCoords;
+  }
+  for (const part of contentParts) {
+    const text = readText(part);
+    if (text == null || text.length === 0) {
+      continue;
+    }
+    const { text: rebuilt, usedCoords: partCoords } = anchorTextPart(text, passages, options);
+    partCoords.forEach((coord) => usedCoords.add(coord));
+    if (rebuilt !== text) {
+      writeText(part, rebuilt);
+    }
+  }
+  return usedCoords;
+}
+
+/**
  * Deterministically inserts file citation anchors into the assistant's text
  * content parts by matching each sentence against the retrieved file_search
  * passages. Mutates the content parts in place. Pure and synchronous.
@@ -750,20 +860,91 @@ export function insertFileCitations(
   fileSearchAttachments: TAttachment[],
 ): void {
   const passages = buildPassages(fileSearchAttachments);
-  if (passages.length === 0) {
-    return;
-  }
+  applyPassageAnchors(contentParts, passages, {});
+}
 
-  for (const part of contentParts) {
-    const text = readText(part);
-    if (text == null || text.length === 0) {
+function extractWebSearchData(attachment: TAttachment): SearchResultData | undefined {
+  return attachment[Tools.web_search];
+}
+
+/**
+ * Builds passage lists for web_search organic and news results, keyed by each attachment's own
+ * `turn` value. That value is NOT the raw, agent-assigned turn from the producing tool call —
+ * `applyEndOfTraceCitations` recounts it positionally across the whole message first (mirroring
+ * `buildMCPPassages`'s `turnOffset` + array-order approach), since a multi-agent/handoff response
+ * can have two different agents' web_search calls both independently labeled turn 0. By the time
+ * this function runs, `turn` is already message-unique, and `useSearchResultsByTurn` on the
+ * client keys its turnMap by that same, already-deduplicated value.
+ *
+ * Tokenized with `tokenizeStemmed`, the same as `buildMCPPassages` — organic/news results are
+ * short, loosely-paraphrased article excerpts, not long chunks the model quotes closely like
+ * file_search, so they need the looser MCP-style matching profile, not the strict one.
+ */
+function buildWebSearchPassages(webSearchAttachments: TAttachment[]): {
+  organic: Passage[];
+  news: Passage[];
+} {
+  const organic: Passage[] = [];
+  const news: Passage[] = [];
+
+  for (const attachment of webSearchAttachments) {
+    const data = extractWebSearchData(attachment);
+    if (!data || typeof data.turn !== 'number') {
       continue;
     }
+    const turn = data.turn;
 
-    const { text: rebuilt } = anchorTextPart(text, passages, {});
-    if (rebuilt !== text) {
-      writeText(part, rebuilt);
-    }
+    data.organic?.forEach((result, fileIndex) => {
+      // A processed organic result can carry both a scraped `content` and the provider's
+      // own `snippet` — the snippet can state facts the scrape doesn't repeat, so both
+      // must contribute tokens or sentences grounded only in the snippet never match.
+      const tokens = new Set(
+        tokenizeStemmed(`${result.title ?? ''} ${result.content ?? ''} ${result.snippet ?? ''}`),
+      );
+      if (tokens.size > 0) {
+        organic.push({ turn, fileIndex, tokens });
+      }
+    });
+
+    data.topStories?.forEach((result, fileIndex) => {
+      const tokens = new Set(tokenizeStemmed(`${result.title ?? ''} ${result.content ?? ''}`));
+      if (tokens.size > 0) {
+        news.push({ turn, fileIndex, tokens });
+      }
+    });
+  }
+
+  return { organic, news };
+}
+
+/**
+ * Deterministically inserts web search citation anchors (`turn{N}search{M}`/`turn{N}news{M}`)
+ * into the assistant's text content parts by matching each sentence against the organic/news
+ * results, using stemmed tokens and the looser `WEB_SEARCH_SIMILARITY_THRESHOLD` rather than
+ * `insertFileCitations`'s strict profile — a heading that echoes a source's title verbatim will
+ * always clear a strict threshold, while paraphrased body claims further down the response
+ * won't, silently starving them of citations. Mutates in place.
+ *
+ * Scoped to organic and news results only — both carry real paraphrasable body text (title +
+ * snippet/scraped content), so lexical matching works the same way it does for MCP article
+ * sources. Images/videos have no body text to match against and remain model-cited (see the
+ * image/video escape-sequence instructions retained in `buildWebSearchContext`).
+ */
+export function insertWebSearchCitations(
+  contentParts: TMessageContentParts[],
+  webSearchAttachments: TAttachment[],
+): void {
+  const { organic, news } = buildWebSearchPassages(webSearchAttachments);
+
+  for (const [passages, anchorTag] of [
+    [organic, 'search'],
+    [news, 'news'],
+  ] as const) {
+    applyPassageAnchors(contentParts, passages, {
+      anchorTag,
+      threshold: WEB_SEARCH_SIMILARITY_THRESHOLD,
+      tokenizeFn: tokenizeStemmed,
+    });
   }
 }
 
@@ -781,9 +962,19 @@ function buildMCPPassages(mcpAttachments: TAttachment[], turnOffset: number): Pa
     }
     payload.sources.forEach((source, fileIndex) => {
       const tokens = new Set(tokenizeStemmed(source.content ?? ''));
-      if (tokens.size > 0) {
-        passages.push({ turn, fileIndex, tokens });
+      if (tokens.size === 0) {
+        return;
       }
+      const titleTokens =
+        source.title && isIdentityBoundSource(source)
+          ? new Set(tokenizeStemmed(source.title))
+          : undefined;
+      passages.push({
+        turn,
+        fileIndex,
+        tokens,
+        ...(titleTokens && titleTokens.size > 0 ? { titleTokens } : {}),
+      });
     });
     turn += 1;
   }
@@ -792,8 +983,8 @@ function buildMCPPassages(mcpAttachments: TAttachment[], turnOffset: number): Pa
 
 /**
  * Inserts MCP citation anchors (`turn{N}mcp0`) into assistant text parts by
- * matching each sentence against the MCP tool result content, using the more
- * lenient `MCP_SIMILARITY_THRESHOLD`. Mutates in place. Returns the
+ * matching each sentence against the MCP tool result content, using stemmed
+ * tokens and `MCP_SIMILARITY_THRESHOLD`. Mutates in place. Returns the
  * `"turn:fileIndex"` coordinates that matched, so callers can detect sources
  * the lexical pass missed entirely (see `appendGuaranteedMCPCitations`) — a
  * sentence inside an excluded (fenced-code) range still contributes its
@@ -812,35 +1003,16 @@ export function insertMCPCitations(
   mcpAttachments: TAttachment[],
   turnOffset: number,
 ): Set<string> {
-  const usedCoords = new Set<string>();
   const passages = buildMCPPassages(mcpAttachments, turnOffset);
-  if (passages.length === 0) {
-    return usedCoords;
-  }
-
-  for (const part of contentParts) {
-    const text = readText(part);
-    if (text == null || text.length === 0) {
-      continue;
-    }
-
-    // Score sentences inside an excluded (fenced) range too, so a source matched only there is
-    // marked used and doesn't get force-appended later by appendGuaranteedMCPCitations — but
-    // never insert the anchor markup, since it would render as literal text inside the fence.
-    const { text: rebuilt, usedCoords: partCoords } = anchorTextPart(text, passages, {
-      threshold: MCP_SIMILARITY_THRESHOLD,
-      tokenizeFn: tokenizeStemmed,
-      anchorTag: 'mcp',
-      scoreExcludedRanges: true,
-    });
-    partCoords.forEach((coord) => usedCoords.add(coord));
-
-    if (rebuilt !== text) {
-      writeText(part, rebuilt);
-    }
-  }
-
-  return usedCoords;
+  // Score sentences inside an excluded (fenced) range too, so a source matched only there is
+  // marked used and doesn't get force-appended later by appendGuaranteedMCPCitations — but
+  // never insert the anchor markup, since it would render as literal text inside the fence.
+  return applyPassageAnchors(contentParts, passages, {
+    threshold: MCP_SIMILARITY_THRESHOLD,
+    tokenizeFn: tokenizeStemmed,
+    anchorTag: 'mcp',
+    scoreExcludedRanges: true,
+  });
 }
 
 /**
@@ -920,6 +1092,20 @@ function isSharePointSource(source: MCPResultSource): boolean {
  */
 function isSharePointListingSource(source: MCPResultSource): boolean {
   return isSharePointSource(source) && source.toolName !== SHAREPOINT_CONTENT_TOOL;
+}
+
+/**
+ * Tool-name prefixes for MCP connectors whose `title` identifies a specific person or entity
+ * that a correct answer reliably names — KX/DPN profiles and DESC/GIMS business entities. An
+ * allowlist, not a denylist: AFR news (headlines are rarely restated verbatim), IBISWorld
+ * research (report/section titles are rarely restated), SharePoint (already has its own
+ * separate line/filename matching), and any generic third-party MCP connector (never sets
+ * `title` at all) are excluded by default, with no extra exclusion logic needed for them.
+ */
+const IDENTITY_BOUND_TOOL_PREFIXES = ['kx_', 'desc_', 'gims_'];
+
+function isIdentityBoundSource(source: MCPResultSource): boolean {
+  return IDENTITY_BOUND_TOOL_PREFIXES.some((prefix) => source.toolName?.startsWith(prefix));
 }
 
 /**
@@ -1384,9 +1570,6 @@ export async function applyEndOfTraceCitations({
   mcpUsageGuidelinesUrl?: string;
   logger?: Logger;
 }): Promise<void> {
-  if (fileCitations === false) {
-    return;
-  }
   if (!Array.isArray(contentParts) || contentParts.length === 0) {
     return;
   }
@@ -1404,9 +1587,31 @@ export async function applyEndOfTraceCitations({
       (attachment): attachment is TAttachment =>
         attachment != null && attachment.type === Tools.mcp_results,
     );
+    const webSearchAttachments = resolved.filter(
+      (attachment): attachment is TAttachment =>
+        attachment != null && attachment.type === Tools.web_search,
+    );
+    // Each attachment's `turn` is assigned by whichever agent produced it, using that
+    // agent's own independently-scoped tool-call counter — in a multi-agent/handoff
+    // response, two different agents' web_search calls can both be turn 0. Recount
+    // positionally across the whole message instead of trusting the upstream value,
+    // the same way buildMCPPassages already does for MCP attachments (turnOffset +
+    // array order) rather than trusting any agent-local turn.
+    webSearchAttachments.forEach((attachment, index) => {
+      const data = attachment[Tools.web_search];
+      if (data) {
+        data.turn = index;
+      }
+    });
 
-    if (fileSearchAttachments.length > 0) {
+    // `fileCitations` is the file-search-specific citations permission — it must not also
+    // gate web_search/MCP citations, which have no model-generated fallback to fall back on
+    // and would otherwise go silently uncited whenever an admin disables file citations alone.
+    if (fileCitations !== false && fileSearchAttachments.length > 0) {
       insertFileCitations(contentParts, fileSearchAttachments);
+    }
+    if (webSearchAttachments.length > 0) {
+      insertWebSearchCitations(contentParts, webSearchAttachments);
     }
     if (mcpAttachments.length > 0) {
       const turnOffset = fileSearchAttachments.length;

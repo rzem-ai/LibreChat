@@ -10,6 +10,7 @@ const ctx: SettingsContextValue = {
   balanceEnabled: false,
   hasAnyPersonalizationFeature: false,
   hasMemoryOptOut: false,
+  hasStatefulCodeSessions: false,
   hasRemoteAgents: false,
   hasUserProvidedEndpoints: false,
   hasMultiConvo: false,
@@ -23,8 +24,10 @@ const ctx: SettingsContextValue = {
   adminAgentApiKeysEnabled: false,
   dataDangerZoneEnabled: true,
   isAdmin: false,
+  usernameDisplaySettingEnabled: true,
   engineTTS: 'browser',
   langfuseConnectionAccess: false,
+  adminPanelURL: '',
 };
 
 function setup(extra: Partial<SettingsContextValue> = {}, query = '') {

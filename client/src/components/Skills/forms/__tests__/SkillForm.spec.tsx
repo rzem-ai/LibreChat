@@ -34,6 +34,9 @@ jest.mock(
       ),
       Button: ({ children, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) =>
         React.createElement('button', props, children),
+      // Deloitte Custom Change: Mock `Label` for the description field's upstream-adopted markup.
+      Label: ({ children, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) =>
+        React.createElement('label', props, children),
       Spinner: () => React.createElement('div', { 'data-testid': 'spinner' }),
       Skeleton: (props: React.HTMLAttributes<HTMLDivElement>) => React.createElement('div', props),
       TextareaAutosize: React.forwardRef<

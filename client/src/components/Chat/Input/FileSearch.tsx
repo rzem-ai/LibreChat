@@ -21,11 +21,12 @@ function FileSearch() {
     <>
       {(fileSearchEnabled || isPinned) && (
         <CheckboxButton
-          className="max-w-fit"
           checked={fileSearchEnabled}
           setValue={debouncedChange}
           id="toolbar-toggle-file-search"
           label={localize('com_assistants_file_search')}
+          // Deloitte Custom Change (PR #138, GEL design system): branded checked-state color
+          // instead of upstream's generic badgeAccents.green token.
           isCheckedClassName="border-green-600/40 bg-surface-submit/10 hover:bg-surface-submit-hover/10"
           icon={<VectorIcon className="icon-md" />}
         />

@@ -12,6 +12,7 @@ const settingsContext: SettingsContextValue = {
   balanceEnabled: false,
   hasAnyPersonalizationFeature: false,
   hasMemoryOptOut: false,
+  hasStatefulCodeSessions: false,
   hasRemoteAgents: false,
   hasUserProvidedEndpoints: false,
   hasMultiConvo: false,
@@ -25,8 +26,10 @@ const settingsContext: SettingsContextValue = {
   adminAgentApiKeysEnabled: false,
   dataDangerZoneEnabled: true,
   isAdmin: false,
+  usernameDisplaySettingEnabled: true,
   engineTTS: 'browser',
   langfuseConnectionAccess: false,
+  adminPanelURL: '',
 };
 
 describe('settings registry', () => {
@@ -90,6 +93,39 @@ describe('settings registry', () => {
           langfuseConnectionAccess: true,
         }),
       ).toBe(true);
+    });
+  });
+
+  describe('stateful workspace default visibility', () => {
+    const entry = registry.find((setting) => setting.id === 'defaultStatefulWorkspace');
+
+    it('shows the setting when stateful code sessions are available', () => {
+      expect(entry?.show?.({ ...settingsContext, hasStatefulCodeSessions: true })).toBe(true);
+    });
+
+    it('hides the setting when stateful code sessions are unavailable', () => {
+      expect(entry?.show?.({ ...settingsContext, hasStatefulCodeSessions: false })).toBe(false);
+    });
+  });
+
+  // Deloitte Custom Change: verifies the username-display toggle is hidden when the bubble
+  // message layout (`interface.userMessageAlignment: 'right'`) never renders a name header.
+  describe('username display setting visibility', () => {
+    const usernameDisplayEntry = registry.find((entry) => entry.id === 'usernameDisplay');
+
+    it('shows the setting when the username setting is enabled', () => {
+      expect(
+        usernameDisplayEntry?.show?.({ ...settingsContext, usernameDisplaySettingEnabled: true }),
+      ).toBe(true);
+    });
+
+    it('hides the setting when the bubble layout disables it', () => {
+      expect(
+        usernameDisplayEntry?.show?.({
+          ...settingsContext,
+          usernameDisplaySettingEnabled: false,
+        }),
+      ).toBe(false);
     });
   });
 

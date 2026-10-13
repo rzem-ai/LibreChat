@@ -11,14 +11,22 @@ const {
   sanitizeModelSpecs,
   excludeHiddenModelSpecs,
   isFileSnapshotEnabled,
+  getEndpointsDropParamsMap,
+  resolveCodeEnvironmentDecisionVersion,
+  resolveCodeEnvironmentMoveCapabilities,
+  resolveCodeEnvironmentTransitionVersion,
+  // Deloitte Custom Change: imported directly from @librechat/api now that the
+  // `~/server/services/Config/modelPricing` re-export shim has been removed.
+  getModelPricing,
 } = require('@librechat/api');
 const { EModelEndpoint, defaultSocialLogins } = require('librechat-data-provider');
 const { logger, getTenantId, SystemCapabilities } = require('@librechat/data-schemas');
 const { hasCapability, hasConfigCapability } = require('~/server/middleware/roles/capabilities');
+const { getModelsConfig } = require('~/server/controllers/ModelController');
 const { getLdapConfig } = require('~/server/services/Config/ldap');
 const { getRumConfig } = require('~/server/services/Config/rum');
 const { getAppConfig } = require('~/server/services/Config/app');
-const { getEndpointCostConfig, getModelPricing } = require('~/server/services/Config/modelPricing');
+const { getValueKey, getMultiplier, getCacheMultiplier } = require('~/models');
 
 const router = express.Router();
 const emailLoginEnabled =
@@ -249,6 +257,13 @@ router.get('/', async function (req, res) {
     }
 
     const appConfig = await getAppConfig(getAppConfigOptionsFromUser(req.user));
+    const codeEnvironmentDecisionVersion = resolveCodeEnvironmentDecisionVersion(
+      process.env.CODE_ENVIRONMENT_DECISION_VERSION,
+    );
+    const codeEnvironmentMoveCapabilities = resolveCodeEnvironmentMoveCapabilities(appConfig);
+    const codeEnvironmentTransitionVersion = resolveCodeEnvironmentTransitionVersion(appConfig);
+
+    const endpointsDropParamsMap = getEndpointsDropParamsMap(appConfig?.endpoints);
 
     const balanceConfig = getBalanceConfig(appConfig);
     const cloudFront = buildCloudFrontStartupConfig();
@@ -256,9 +271,27 @@ router.get('/', async function (req, res) {
     const langfuseConnectionAvailable = isLangfuseConnectionAvailable();
     let langfuseConnectionAccess = false;
 
-    // Deloitte Custom Change: model pricing uses the YAML reference model unless explicitly overridden.
-    const modelPricing = getModelPricing();
-    const endpointCostConfig = getEndpointCostConfig(appConfig.modelPricing?.referenceModelId);
+    // Deloitte Custom Change: model pricing (incl. the 1-5 price tier) is derived
+    // the same way as billing — custom endpoints use their configured `tokenConfig`,
+    // everything else (built-in OpenAI/Anthropic/Google/Bedrock) falls back to the
+    // built-in token-value tables.
+    const showModelPricingIndicator =
+      appConfig?.interfaceConfig?.customDeloitteFeatureFlags?.showModelPricingIndicator === true;
+    let modelPricing = {};
+    if (showModelPricingIndicator) {
+      try {
+        const modelsConfig = await getModelsConfig({ user: req.user, config: appConfig });
+        modelPricing = await getModelPricing(
+          appConfig,
+          req.user.id ?? req.user._id?.toString(),
+          req.user.tenantId,
+          modelsConfig,
+          { getValueKey, getMultiplier, getCacheMultiplier },
+        );
+      } catch {
+        logger.warn('[config] Model pricing resolution failed');
+      }
+    }
 
     if (langfuseConnectionAvailable) {
       try {
@@ -298,7 +331,6 @@ router.get('/', async function (req, res) {
       turnstile: appConfig?.turnstileConfig,
       modelSpecs: sanitizeModelSpecs(excludeHiddenModelSpecs(appConfig?.modelSpecs)),
       ...(Object.keys(modelPricing).length ? { modelPricing } : {}),
-      endpointCostConfig,
       balance: balanceConfig,
       bundlerURL: process.env.SANDPACK_BUNDLER_URL,
       staticBundlerURL: process.env.SANDPACK_STATIC_BUNDLER_URL,
@@ -311,9 +343,15 @@ router.get('/', async function (req, res) {
         : 0,
       langfuseFanoutEnabled,
       langfuseConnectionAccess,
+      insightsEnabled: isEnabled(process.env.ENABLE_INSIGHTS),
+      compactionEnabled: appConfig?.summarization?.enabled !== false,
+      ...(codeEnvironmentDecisionVersion != null ? { codeEnvironmentDecisionVersion } : {}),
+      ...codeEnvironmentMoveCapabilities,
+      ...(codeEnvironmentTransitionVersion != null ? { codeEnvironmentTransitionVersion } : {}),
       ...(cloudFront ? { cloudFront } : {}),
       ...(rum ? { rum } : {}),
       fileUploadSseEnabled: isEnabled(process.env.FILE_UPLOAD_SSE_ENABLED),
+      endpointsDropParamsMap: endpointsDropParamsMap,
     };
 
     const webSearch = buildWebSearchConfig(appConfig);
@@ -326,15 +364,19 @@ router.get('/', async function (req, res) {
       payload.buildInfo = buildInfo;
     }
 
-    if (!payload.allowAccountDeletion) {
+    const adminPanelURL = process.env.ADMIN_PANEL_URL;
+    if (adminPanelURL || !payload.allowAccountDeletion) {
       try {
         const userId = req.user.id ?? req.user._id?.toString();
         if (userId) {
-          const canDelete = await hasCapability(
+          const hasAdminAccess = await hasCapability(
             { id: userId, role: req.user.role ?? '', tenantId: req.user.tenantId },
             SystemCapabilities.ACCESS_ADMIN,
           );
-          if (canDelete) {
+          if (hasAdminAccess && adminPanelURL) {
+            payload.adminPanelURL = adminPanelURL;
+          }
+          if (hasAdminAccess && !payload.allowAccountDeletion) {
             payload.allowAccountDeletion = true;
           }
         }

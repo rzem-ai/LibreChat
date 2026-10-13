@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
 import debounce from 'lodash/debounce';
-import { EModelEndpoint, isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider';
+import {
+  EModelEndpoint,
+  PermissionBits,
+  isAgentsEndpoint,
+  isAssistantsEndpoint,
+} from 'librechat-data-provider';
 import type * as t from 'librechat-data-provider';
 import type { Endpoint, SelectedValues } from '~/common';
 import {
@@ -29,7 +34,6 @@ type ModelSelectorContextType = {
   assistantsMap: t.TAssistantsMap | undefined;
   endpointsConfig: t.TEndpointsConfig;
   modelPricing: t.TModelPricing;
-  endpointCostConfig: t.TEndpointCostConfig | undefined;
 
   // Functions
   endpointRequiresUserKey: (endpoint: string) => boolean;
@@ -66,6 +70,7 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
   const localize = useLocalize();
   const { announcePolite } = useLiveAnnouncer();
   const modelSpecs = useMemo(() => {
+    /** Labels are normalized at the startup-config query boundary. */
     const specs = startupConfig?.modelSpecs?.list ?? [];
     if (!agentsMap) {
       return specs;
@@ -84,14 +89,29 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
     });
   }, [startupConfig, agentsMap]);
   const modelPricing = startupConfig?.modelPricing ?? emptyModelPricing;
-  const endpointCostConfig = startupConfig?.endpointCostConfig;
 
   const permissionLevel = useAgentDefaultPermissionLevel();
-  const { data: agents = null } = useListAgentsQuery(
-    { requiredPermission: permissionLevel },
-    {
-      select: (data) => data?.data,
+  /**
+   * Always query the VIEW scope so this shares one cache entry (and one paginated walk)
+   * with `useAgentsMap` and `useMentions`. Asking for EDIT here spawned a second full
+   * fetch under its own key, holding a duplicate copy of the whole agent list. The
+   * marketplace's "my agents" framing is preserved by filtering on `isEditable`, which
+   * the list endpoint resolves from the same ACL read it already performs.
+   */
+  const wantsEditableOnly = permissionLevel === PermissionBits.EDIT;
+  const selectAgents = useCallback(
+    (data: t.AgentListResponse) => {
+      const list = data?.data;
+      if (!wantsEditableOnly) {
+        return list;
+      }
+      return list?.filter((agent) => agent.isEditable !== false);
     },
+    [wantsEditableOnly],
+  );
+  const { data: agents = null } = useListAgentsQuery(
+    { requiredPermission: PermissionBits.VIEW },
+    { select: selectAgents },
   );
 
   const { mappedEndpoints, endpointRequiresUserKey } = useEndpoints({
@@ -187,13 +207,15 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
     (spec: t.TModelSpec) => {
       let model = spec.preset.model ?? null;
       onSelectSpec?.(spec);
-      if (isAgentsEndpoint(spec.preset.endpoint)) {
+      /** Specs arrive with `preset.endpoint` materialized at config load. */
+      const endpoint = spec.preset.endpoint ?? null;
+      if (isAgentsEndpoint(endpoint)) {
         model = spec.preset.agent_id ?? '';
-      } else if (isAssistantsEndpoint(spec.preset.endpoint)) {
+      } else if (isAssistantsEndpoint(endpoint)) {
         model = spec.preset.assistant_id ?? '';
       }
       setSelectedValues({
-        endpoint: spec.preset.endpoint,
+        endpoint,
         model,
         modelSpec: spec.name,
       });
@@ -257,7 +279,6 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
       mappedEndpoints,
       endpointsConfig,
       modelPricing,
-      endpointCostConfig,
       handleSelectSpec,
       handleSelectModel,
       setSelectedValues,
@@ -278,7 +299,6 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
       mappedEndpoints,
       endpointsConfig,
       modelPricing,
-      endpointCostConfig,
       handleSelectSpec,
       handleSelectModel,
       setSelectedValues,

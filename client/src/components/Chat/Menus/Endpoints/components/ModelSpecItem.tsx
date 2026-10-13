@@ -1,25 +1,31 @@
 import React from 'react';
+import { Pin, PinOff } from 'lucide';
+import { CheckCircle2 } from 'lucide-react';
+import { MorphIcon } from '@librechat/client';
 import { VisuallyHidden } from '@ariakit/react';
-import { CheckCircle2, Pin, PinOff } from 'lucide-react';
 import type { TModelSpec } from 'librechat-data-provider';
 import { useFavorites, useLocalize, useIsActiveItem } from '~/hooks';
 import { useModelSelectorContext } from '../ModelSelectorContext';
 import { CustomMenuItem as MenuItem } from '../CustomMenu';
+import { cn, getSpecAgentAvatarURL } from '~/utils';
 import SpecDescription from './SpecDescription';
 import ModelCost from './ModelCost';
 import SpecIcon from './SpecIcon';
-import { cn } from '~/utils';
 
 interface ModelSpecItemProps {
   spec: TModelSpec;
   isSelected: boolean;
+  /** Set when the sibling model list is virtualized; see `VirtualizedModelList`. */
+  posInSet?: number;
+  setSize?: number;
 }
 
-export function ModelSpecItem({ spec, isSelected }: ModelSpecItemProps) {
+export function ModelSpecItem({ spec, isSelected, posInSet, setSize }: ModelSpecItemProps) {
   const localize = useLocalize();
-  const { handleSelectSpec, endpointsConfig } = useModelSelectorContext();
+  const { handleSelectSpec, endpointsConfig, agentsMap } = useModelSelectorContext();
   const { isFavoriteSpec, toggleFavoriteSpec } = useFavorites();
   const { showIconInMenu = true } = spec;
+  const agentAvatarURL = getSpecAgentAvatarURL(spec, agentsMap);
 
   const { ref: itemRef, isActive } = useIsActiveItem<HTMLDivElement>();
 
@@ -35,6 +41,8 @@ export function ModelSpecItem({ spec, isSelected }: ModelSpecItemProps) {
       ref={itemRef}
       onClick={() => handleSelectSpec(spec)}
       aria-selected={isSelected || undefined}
+      aria-posinset={posInSet}
+      aria-setsize={setSize}
       className="group flex w-full cursor-pointer items-center justify-between rounded-lg px-2 text-sm"
     >
       <div
@@ -45,7 +53,11 @@ export function ModelSpecItem({ spec, isSelected }: ModelSpecItemProps) {
       >
         {showIconInMenu && (
           <div className="flex-shrink-0">
-            <SpecIcon currentSpec={spec} endpointsConfig={endpointsConfig} />
+            <SpecIcon
+              currentSpec={spec}
+              endpointsConfig={endpointsConfig}
+              agentAvatarURL={agentAvatarURL}
+            />
           </div>
         )}
         <div className="flex min-w-0 flex-col gap-1">
@@ -53,7 +65,7 @@ export function ModelSpecItem({ spec, isSelected }: ModelSpecItemProps) {
           <SpecDescription description={spec.description} />
         </div>
       </div>
-      <ModelCost modelId={spec.preset.model} />
+      <ModelCost modelId={spec.preset.model} endpoint={spec.preset.endpoint} />
       <button
         type="button"
         tabIndex={isActive ? 0 : -1}
@@ -71,11 +83,7 @@ export function ModelSpecItem({ spec, isSelected }: ModelSpecItemProps) {
               'group-focus-within:visible group-hover:visible group-data-[active-item]:visible [@media(hover:hover)]:invisible',
         )}
       >
-        {isFavorite ? (
-          <PinOff className="h-4 w-4 text-text-secondary" aria-hidden="true" />
-        ) : (
-          <Pin className="h-4 w-4 text-text-secondary" aria-hidden="true" />
-        )}
+        <MorphIcon icon={isFavorite ? PinOff : Pin} className="h-4 w-4 text-text-secondary" />
       </button>
       {isSelected && (
         <>

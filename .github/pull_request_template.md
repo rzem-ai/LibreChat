@@ -34,5 +34,4 @@ Describe the steps required to test your changes, including any setup or configu
 
 ## Documentation
 - [ ] I added any new .env variables to the end of the `.env.example` file, and explained them in the `deloitte/README.md` file
-- [ ] I wrote documentation on major changes in Confluence, and linked it in my code as comments where relevant
-- [ ] I listed ALL changes to/additional files outside the `deloitte` directory in the `deloitte/DeloitteCustomChanges.md` file
+- [ ] I wrote documentation on major changes in the `docs` folder

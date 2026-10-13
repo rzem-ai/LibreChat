@@ -3,6 +3,8 @@ import { RefreshCw, Trash2 } from 'lucide-react';
 import { Button, Spinner } from '@librechat/client';
 import { isSilentlyConnectableOboServer } from './mcpServerUtils';
 import { useLocalize, useMCPServerManager } from '~/hooks';
+import { useMCPRefresh } from '~/hooks/MCP/useMCPRefresh';
+import { openInNewTab } from '~/utils';
 
 interface ServerInitializationSectionProps {
   sidePanel?: boolean;
@@ -30,8 +32,19 @@ export default function ServerInitializationSection({
     cancelOAuthFlow,
     initializeServer,
     revokeOAuthForServer,
+    // Deloitte Custom Change: use the OBO-failure-aware status accessor (see
+    // getEffectiveServerStatus in useMCPServerManager) instead of reading connectionStatus
+    // directly, so a failed silent auto-connect isn't permanently misclassified as OBO-silent.
     getEffectiveServerStatus,
-  } = useMCPServerManager({ conversationId, storageContextKey });
+    availableMCPServers,
+    availableMCPServersMap,
+  } = useMCPServerManager({
+    conversationId,
+    storageContextKey,
+    observeToolAuthorization: true,
+  });
+
+  useMCPRefresh({ enabled: availableMCPServers.length > 0 });
 
   const serverStatus = getEffectiveServerStatus(serverName);
   const isConnected = serverStatus?.connectionState === 'connected';
@@ -43,12 +56,28 @@ export default function ServerInitializationSection({
   const isServerInitializing = isInitializing(serverName);
   const serverOAuthUrl = getOAuthUrl(serverName);
 
-  const shouldShowReinit = isConnected && (requiresOAuth || hasCustomUserVars);
+  const requestScoped =
+    serverStatus?.requestScoped === true ||
+    availableMCPServersMap?.[serverName]?.requestScoped === true;
+  const shouldShowReinit = isConnected && !requestScoped && (requiresOAuth || hasCustomUserVars);
+  /** Saving custom variables makes an on-demand server ready, but it still
+   * needs one explicit initialization attempt so callers waiting to attach the
+   * runtime wildcard observe `connectionDeferred`. */
+  const canDeferRequestScopedConnection =
+    requestScoped && hasCustomUserVars && serverStatus?.configurationState === 'configured';
+  // Deloitte Custom Change: OBO servers connect silently, so no init button is needed
+  // unless custom vars still need to be entered (mirrors isSilentlyConnectableOboServer
+  // usage in MCPServerStatusIcon/mcpServerUtils).
   const isSilentlyConnectable = isSilentlyConnectableOboServer(serverStatus, hasCustomUserVars);
   const shouldShowInit =
-    !isConnected && !serverOAuthUrl && !hasPendingOAuth && !isSilentlyConnectable;
+    !isConnected &&
+    (!requestScoped || canDeferRequestScopedConnection) &&
+    !serverOAuthUrl &&
+    !hasPendingOAuth &&
+    !isSilentlyConnectable;
+  const shouldShowRevoke = requiresOAuth && revokeOAuthForServer != null;
 
-  if (!shouldShowReinit && !shouldShowInit && !serverOAuthUrl) {
+  if (!shouldShowReinit && !shouldShowInit && !shouldShowRevoke && !serverOAuthUrl) {
     if (!hasPendingOAuth) {
       return null;
     }
@@ -78,11 +107,7 @@ export default function ServerInitializationSection({
           >
             {localize('com_ui_cancel')}
           </Button>
-          <Button
-            variant="submit"
-            onClick={() => window.open(serverOAuthUrl, '_blank', 'noopener,noreferrer')}
-            className="flex-1"
-          >
+          <Button variant="submit" onClick={() => openInNewTab(serverOAuthUrl)} className="flex-1">
             {localize('com_ui_continue_oauth')}
           </Button>
         </div>
@@ -113,27 +138,29 @@ export default function ServerInitializationSection({
 
   return (
     <div className="flex items-center gap-2">
-      {requiresOAuth && revokeOAuthForServer && (
+      {shouldShowRevoke && (
         <Button
           size="sm"
           variant="destructive"
-          onClick={() => revokeOAuthForServer(serverName)}
+          onClick={() => revokeOAuthForServer?.(serverName)}
           aria-label={localize('com_ui_revoke')}
         >
           <Trash2 className="h-4 w-4" />
           {localize('com_ui_revoke')}
         </Button>
       )}
-      <Button
-        variant={buttonVariant}
-        onClick={() => initializeServer(serverName, false)}
-        disabled={isServerInitializing}
-        size={sidePanel ? 'sm' : 'default'}
-        className="flex-1"
-      >
-        {icon}
-        {buttonText}
-      </Button>
+      {(shouldShowReinit || shouldShowInit) && (
+        <Button
+          variant={buttonVariant}
+          onClick={() => initializeServer(serverName, false)}
+          disabled={isServerInitializing}
+          size={sidePanel ? 'sm' : 'default'}
+          className="flex-1"
+        >
+          {icon}
+          {buttonText}
+        </Button>
+      )}
     </div>
   );
 }
