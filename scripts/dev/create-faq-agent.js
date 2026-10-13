@@ -2,8 +2,9 @@ const path = require('path');
 const { randomBytes } = require('crypto');
 const { AccessRoleIds, ResourceType, PrincipalType } = require('librechat-data-provider');
 require('module-alias')({ base: path.resolve(__dirname, '..', '..', 'api') });
+require('~/db/models');
 const { grantPermission } = require('~/server/services/PermissionService');
-const { findUser, createAgent } = require('~/models');
+const { findUser, createAgent, seedDefaultRoles } = require('~/models');
 const { silentExit } = require('../../config/helpers');
 const connect = require('../../config/connect');
 
@@ -49,7 +50,11 @@ function parseFlags(args) {
     silentExit(1);
   }
 
-  const id = typeof flags.id === 'string' ? flags.id : `agent_${randomBytes(16).toString('base64url')}`;
+  /** A fresh database has no access roles yet; the server seeds them on startup. */
+  await seedDefaultRoles();
+
+  const id =
+    typeof flags.id === 'string' ? flags.id : `agent_${randomBytes(16).toString('base64url')}`;
   const agent = await createAgent({
     id,
     name: typeof flags.name === 'string' ? flags.name : 'MyAssist FAQ',
