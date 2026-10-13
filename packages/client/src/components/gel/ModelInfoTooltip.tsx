@@ -99,7 +99,7 @@ export function ModelInfoTooltip({
   children,
 }: ModelInfoTooltipProps): ReactElement {
   return (
-    <HoverCard>
+    <HoverCard openDelay={100} closeDelay={50}>
       <HoverCardTrigger asChild>{children}</HoverCardTrigger>
       <HoverCardPortal>
         <HoverCardContent

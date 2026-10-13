@@ -1903,7 +1903,7 @@
   "com_ui_model_details_cost_input": "{{0}} / 1M input tokens",
   "com_ui_model_details_cost_output": "{{0}} / 1M output tokens",
   "com_ui_model_details_file_ingestion": "Can ingest all file types",
-  "com_ui_model_details_high_cost": "High Cost",
+  "com_ui_model_details_high_cost": "High cost - for complex use cases",
   "com_ui_model_details_image_generation": "Image generation",
   "com_ui_model_details_intelligence": "Intelligence",
   "com_ui_model_details_speed": "Speed",
