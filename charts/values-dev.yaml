@@ -58,7 +58,7 @@ pods:
               cp -a /app/deloitte-assets/. /app/client/dist/assets/;
             fi && exec npm run backend
         image:
-          tag: 'develop@sha256:446e85128d20b71b07681855b122ff22e30aa36ccc38231e54b324376a39a88e'
+          tag: 'develop@sha256:082ce9859a45cc54baeaba8806fc4c3db027387ba6957c8b6fd9a7e5e06340d5'
         resources:
           requests:
             memory: "2Gi"
@@ -176,7 +176,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:2edee5f63cefc01bb1755c14aa6d79c34694c3ed385b2924b7c3235db67a2730'
+          tag: 'develop@sha256:355b4012e9f65196bbbb6ea39f76e0483d6a99c54bb0f4a83fca809e311b4cce'
         resources:
           requests:
             memory: "1Gi"
@@ -240,7 +240,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:77cdd85576e4039b938a51bb743b214c87d651e3df1c6358ffc37ef3c8a3aa56'
+          tag: 'develop@sha256:b61add2fd4f1ea341cba423510e52a307d49ed3077e6791e06b31fe0ed6a356a'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
