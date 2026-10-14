@@ -1,5 +1,5 @@
 const { logger } = require('@librechat/data-schemas');
-const { createGetModelsConfig } = require('@librechat/api');
+const { createGetModelsConfig, invalidateModelsConfig } = require('@librechat/api');
 const { loadDefaultModels, loadConfigModels } = require('~/server/services/Config');
 
 async function loadModels(req) {
@@ -25,4 +25,4 @@ async function modelController(req, res) {
   }
 }
 
-module.exports = { modelController, loadModels, getModelsConfig };
+module.exports = { modelController, loadModels, getModelsConfig, invalidateModelsConfig };

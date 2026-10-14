@@ -14,6 +14,11 @@ function modelsConfigCacheKey(req: ServerRequest): string {
   return `${tenantId}:${userId}`;
 }
 
+export async function invalidateModelsConfig(req: ServerRequest): Promise<void> {
+  const cache = standardCache(CacheKeys.MODELS_CONFIG);
+  await cache.delete(modelsConfigCacheKey(req));
+}
+
 /**
  * Wraps `loadDefaultModels`/`loadConfigModels` behind a short-TTL cache keyed by
  * tenant/user, so the startup-config, `/api/models`, and `/endpoints/token-config`

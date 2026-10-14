@@ -1,4 +1,5 @@
 const express = require('express');
+const { invalidateModelsConfig } = require('~/server/controllers/ModelController');
 const { updateUserKey, deleteUserKey, getUserKeyExpiry } = require('~/models');
 const { requireJwtAuth } = require('~/server/middleware');
 
@@ -10,12 +11,14 @@ router.put('/', requireJwtAuth, async (req, res) => {
   }
   const { name, value, expiresAt } = req.body;
   await updateUserKey({ userId: req.user.id, name, value, expiresAt });
+  await invalidateModelsConfig(req);
   res.status(201).send();
 });
 
 router.delete('/:name', requireJwtAuth, async (req, res) => {
   const { name } = req.params;
   await deleteUserKey({ userId: req.user.id, name });
+  await invalidateModelsConfig(req);
   res.status(204).send();
 });
 
@@ -27,6 +30,7 @@ router.delete('/', requireJwtAuth, async (req, res) => {
   }
 
   await deleteUserKey({ userId: req.user.id, all: true });
+  await invalidateModelsConfig(req);
 
   res.status(204).send();
 });
