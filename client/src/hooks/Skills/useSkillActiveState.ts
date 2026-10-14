@@ -212,6 +212,47 @@ export default function useSkillActiveState() {
     [queryClient, userId, defaultActiveOnShare, canToggle, flush],
   );
 
+  /**
+   * Sets `nextActive` for every skill in one atomic queue write. Building the
+   * merged override map in a single pass — rather than calling `toggle` once
+   * per skill — avoids a re-entrancy race: `toggle`'s first call in a loop
+   * synchronously invokes `flush`, which nulls `queue.pending` before its own
+   * `await` lands, so every subsequent call in that same loop would rebuild
+   * its baseline from the stale cached query data and silently drop earlier
+   * skills from the batch (observed as "Enable all" only enabling some skills,
+   * with the rest requiring a second click).
+   *
+   * TODO: Enable all fails when more than 200 skills are disabled. The server
+   * enforces a 200-entry cap on persisted skillStates overrides. A user with
+   * more than 200 inactive shared skills will have this request rejected.
+   * A server-side bulk/default mechanism is needed to fix this properly.
+   */
+  const toggleMany = useCallback(
+    (skills: SkillActiveTarget[], nextActive: boolean) => {
+      if (!canToggle || !userId || skills.length === 0) {
+        return;
+      }
+      const queue = getWriteQueue(userId);
+      const cached =
+        queryClient.getQueryData<TSkillStatesResponse>([QueryKeys.skillStates]) ?? EMPTY_STATES;
+      const baseline = queue.pending ?? cached;
+      const next = { ...baseline };
+      for (const skill of skills) {
+        const defaultValue = resolveSkillDefaultActive(skill, userId, defaultActiveOnShare);
+        if (nextActive === defaultValue) {
+          delete next[skill._id];
+        } else {
+          next[skill._id] = nextActive;
+        }
+      }
+      queue.pending = next;
+      if (!queue.inFlight) {
+        flush();
+      }
+    },
+    [queryClient, userId, defaultActiveOnShare, canToggle, flush],
+  );
+
   /** Both dependencies feed `isActive`: the override map and the interface
    *  config behind `defaultActiveOnShare`. Until each resolves the map reads
    *  empty and the default reads `false`, so they are reported as one signal.
@@ -230,6 +271,7 @@ export default function useSkillActiveState() {
     defaultActiveOnShare,
     isActive,
     toggle,
+    toggleMany,
     isLoading,
     isError,
     /** Lets a consumer that gates its own UI on resolved states retry both. */
