@@ -23,8 +23,8 @@ export function SearchInput({
   value,
   ...props
 }: SearchInputProps): JSX.Element {
-  const SearchIcon = Icon.search;
-  const ClearIcon = Icon.clear;
+  const SearchIcon = Icon.Search;
+  const ClearIcon = Icon.Clear;
   const hasValue = typeof value === 'string' && value.length > 0;
 
   return (

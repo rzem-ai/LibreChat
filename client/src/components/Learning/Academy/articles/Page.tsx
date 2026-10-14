@@ -38,7 +38,7 @@ export default function Article(): JSX.Element {
       className="w-fit text-text-secondary"
       onClick={() => navigate('/learning/resources')}
     >
-      <GEL.Icon.back className="size-4" aria-hidden="true" />
+      <GEL.Icon.Back className="size-4" aria-hidden="true" />
       {localize('com_learning_back_to_resources')}
     </Button>
   );

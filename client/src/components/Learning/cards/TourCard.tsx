@@ -34,7 +34,7 @@ export function TourCard({
   hero = false,
   disabled = false,
 }: TourCardProps): JSX.Element {
-  const StatusIcon = status === 'complete' ? GEL.Icon.complete : GEL.Icon.incomplete;
+  const StatusIcon = status === 'complete' ? GEL.Icon.Complete : GEL.Icon.Incomplete;
   const statusIconClass = status === 'in-progress' ? 'text-primary' : 'text-text-secondary';
   const cta = (
     <Button

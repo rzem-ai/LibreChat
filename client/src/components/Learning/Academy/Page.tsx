@@ -58,7 +58,7 @@ export default function Page(): JSX.Element {
             className="shrink-0"
             onClick={askFaqAgent}
           >
-            <GEL.Icon.agent className="size-4" aria-hidden="true" />
+            <GEL.Icon.Agent className="size-4" aria-hidden="true" />
             {localize('com_learning_ask_faq_agent', { 0: faqAgent.name ?? '' })}
           </Button>
         )}

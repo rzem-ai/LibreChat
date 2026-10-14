@@ -1,3 +1,4 @@
+import type { GEL } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
 import type { Resource } from '../../content/schema';
 import { useLearningTour } from '../../LearningTourContext';
@@ -15,6 +16,12 @@ const getFields = (resource: Resource): string[] => [
   resource.description,
   ...resource.tags,
 ];
+
+const resourceIcons: Record<Resource['icon'], GEL.IconName> = {
+  tour: 'Tour',
+  article: 'Article',
+  external: 'External',
+};
 
 export default function Resources({ onOpenArticle }: ResourcesProps): JSX.Element {
   const localize = useLocalize();
@@ -45,7 +52,7 @@ export default function Resources({ onOpenArticle }: ResourcesProps): JSX.Elemen
         key={resource.id}
         title={resource.title}
         description={resource.description}
-        icon={resource.icon}
+        icon={resourceIcons[resource.icon]}
         metaLabel={metaLabel}
         actionLabel={actionLabel}
         externalHref={resource.externalHref}

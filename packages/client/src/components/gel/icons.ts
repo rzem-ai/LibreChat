@@ -20,40 +20,40 @@ import type { LucideIcon } from 'lucide-react';
 
 /** Semantic icon names, so the underlying icon set can be swapped in one place. */
 export type IconName =
-  | 'tour'
-  | 'article'
-  | 'external'
-  | 'complete'
-  | 'incomplete'
-  | 'search'
-  | 'clear'
-  | 'help'
-  | 'back'
-  | 'agent'
-  | 'academy'
-  | 'guide'
-  | 'feedback'
-  | 'star'
-  | 'clock'
-  | 'tip'
-  | 'close';
+  | 'Tour'
+  | 'Article'
+  | 'External'
+  | 'Complete'
+  | 'Incomplete'
+  | 'Search'
+  | 'Clear'
+  | 'Help'
+  | 'Back'
+  | 'Agent'
+  | 'Academy'
+  | 'Guide'
+  | 'Feedback'
+  | 'Star'
+  | 'Clock'
+  | 'Tip'
+  | 'Close';
 
 export const Icon: Record<IconName, LucideIcon> = {
-  tour: Signpost,
-  article: FileText,
-  external: ExternalLink,
-  complete: CircleCheck,
-  incomplete: Circle,
-  search: Search,
-  clear: X,
-  help: CircleHelp,
-  back: ArrowLeft,
-  agent: Bot,
-  academy: GraduationCap,
-  guide: BookOpen,
-  feedback: MessageSquareHeart,
-  star: Star,
-  clock: Clock,
-  tip: Lightbulb,
-  close: X,
+  Tour: Signpost,
+  Article: FileText,
+  External: ExternalLink,
+  Complete: CircleCheck,
+  Incomplete: Circle,
+  Search: Search,
+  Clear: X,
+  Help: CircleHelp,
+  Back: ArrowLeft,
+  Agent: Bot,
+  Academy: GraduationCap,
+  Guide: BookOpen,
+  Feedback: MessageSquareHeart,
+  Star: Star,
+  Clock: Clock,
+  Tip: Lightbulb,
+  Close: X,
 };

@@ -33,7 +33,7 @@ describe('TourCard', () => {
 });
 
 describe('ResourceCard', () => {
-  const base = { title: 'T', description: 'D', icon: 'article' as const, metaLabel: 'Article' };
+  const base = { title: 'T', description: 'D', icon: 'Article' as const, metaLabel: 'Article' };
 
   it('calls onSelect for in-app resources', () => {
     const onSelect = jest.fn();
