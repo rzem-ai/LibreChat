@@ -68,14 +68,19 @@ export interface FilesExpiringSoonDeps {
     withinMs: number,
     options?: { now?: Date; limit?: number },
   ) => Promise<IMongoFile[]>;
-  /** Warning window; always resolved by `getFileRetentionWarningHours` upstream. */
+  /** Warning window; always resolved by `getFileRetentionWarningHours` upstream, but
+   * only meaningful once `fileRetentionHours` below is configured. */
   fileRetentionWarningHours: number;
+  /** Configured independent file-retention window; unset means nothing to expire. */
+  fileRetentionHours?: number;
 }
 
 /**
  * Lists the authenticated user's own files expiring within the configured
  * warning window, so the client can render a renewal prompt before the sweep
- * deletes them.
+ * deletes them. Returns an empty list when independent file retention isn't
+ * configured, since `fileRetentionWarningHours` always resolves to a default
+ * regardless of whether `fileRetentionHours` itself is set.
  */
 export async function handleFilesExpiringSoonRequest(
   user: FileRenewalUser,
@@ -83,6 +88,9 @@ export async function handleFilesExpiringSoonRequest(
 ): Promise<FileRenewalResult> {
   if (!user.id) {
     return { status: 401, body: { code: 'UNAUTHORIZED' } };
+  }
+  if (deps.fileRetentionHours == null) {
+    return { status: 200, body: { files: [] } };
   }
   const withinMs = deps.fileRetentionWarningHours * 60 * 60 * 1000;
   const files = await deps.getFilesExpiringSoon(

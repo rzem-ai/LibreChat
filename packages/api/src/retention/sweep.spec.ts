@@ -30,6 +30,7 @@ describe('conversation purge sweep helpers', () => {
 
   let claimExpiredConversations: jest.Mock;
   let releaseConversationPurgeClaim: jest.Mock;
+  let confirmConversationPurgeEligible: jest.Mock;
   let cascadeDeps: PurgeCascadeDeps<DeleteConvosResult>;
 
   const claim = (overrides: Partial<ClaimedPurgeConversation> = {}): ClaimedPurgeConversation => ({
@@ -49,6 +50,9 @@ describe('conversation purge sweep helpers', () => {
     delete process.env.CONVERSATION_PURGE_CLAIM_LEASE_MS;
     claimExpiredConversations = jest.fn().mockResolvedValue([]);
     releaseConversationPurgeClaim = jest.fn().mockResolvedValue(undefined);
+    confirmConversationPurgeEligible = jest
+      .fn()
+      .mockImplementation((conversationId: string) => Promise.resolve({ conversationId }));
     cascadeDeps = {} as PurgeCascadeDeps<DeleteConvosResult>;
     mockedPurgeConversationCascade.mockResolvedValue({
       deletedConversationIds: ['convo-1'],
@@ -70,7 +74,13 @@ describe('conversation purge sweep helpers', () => {
 
       const result = await purgeExpiredConversations(
         { limit: 50 },
-        { claimExpiredConversations, releaseConversationPurgeClaim, cascadeDeps, logger },
+        {
+          claimExpiredConversations,
+          releaseConversationPurgeClaim,
+          confirmConversationPurgeEligible,
+          cascadeDeps,
+          logger,
+        },
       );
 
       expect(claimExpiredConversations).toHaveBeenCalledWith(50, {
@@ -83,14 +93,23 @@ describe('conversation purge sweep helpers', () => {
         ['convo-1'],
         cascadeDeps,
       );
-      expect(releaseConversationPurgeClaim).toHaveBeenCalledWith('convo-1', { success: true });
+      expect(releaseConversationPurgeClaim).toHaveBeenCalledWith('convo-1', {
+        success: true,
+        purgeClaimId: 'claim-1',
+      });
       expect(result).toEqual({ scanned: 1, purged: 1, failed: 0 });
     });
 
     it('defaults the limit to the configured batch size', async () => {
       await purgeExpiredConversations(
         {},
-        { claimExpiredConversations, releaseConversationPurgeClaim, cascadeDeps, logger },
+        {
+          claimExpiredConversations,
+          releaseConversationPurgeClaim,
+          confirmConversationPurgeEligible,
+          cascadeDeps,
+          logger,
+        },
       );
 
       expect(claimExpiredConversations).toHaveBeenCalledWith(
@@ -113,7 +132,13 @@ describe('conversation purge sweep helpers', () => {
 
       const result = await purgeExpiredConversations(
         {},
-        { claimExpiredConversations, releaseConversationPurgeClaim, cascadeDeps, logger },
+        {
+          claimExpiredConversations,
+          releaseConversationPurgeClaim,
+          confirmConversationPurgeEligible,
+          cascadeDeps,
+          logger,
+        },
       );
 
       expect(logger.error).toHaveBeenCalledWith(
@@ -123,11 +148,43 @@ describe('conversation purge sweep helpers', () => {
       expect(releaseConversationPurgeClaim).toHaveBeenCalledWith('convo-fails', {
         success: false,
         retryDelayMs: getConversationPurgeRetryDelay(1, getConversationPurgeMaxAttempts()),
+        purgeClaimId: 'claim-1',
       });
       expect(releaseConversationPurgeClaim).toHaveBeenCalledWith('convo-succeeds', {
         success: true,
+        purgeClaimId: 'claim-1',
       });
       expect(result).toEqual({ scanned: 2, purged: 1, failed: 1 });
+    });
+
+    it('releases the claim with backoff instead of cascading when the fence re-check finds it no longer eligible', async () => {
+      claimExpiredConversations.mockResolvedValue([claim()]);
+      confirmConversationPurgeEligible.mockResolvedValue(null);
+
+      const result = await purgeExpiredConversations(
+        {},
+        {
+          claimExpiredConversations,
+          releaseConversationPurgeClaim,
+          confirmConversationPurgeEligible,
+          cascadeDeps,
+          logger,
+        },
+      );
+
+      expect(confirmConversationPurgeEligible).toHaveBeenCalledWith(
+        'convo-1',
+        'user-1',
+        'claim-1',
+        expect.any(Date),
+      );
+      expect(mockedPurgeConversationCascade).not.toHaveBeenCalled();
+      expect(releaseConversationPurgeClaim).toHaveBeenCalledWith('convo-1', {
+        success: false,
+        retryDelayMs: getConversationPurgeRetryDelay(1, getConversationPurgeMaxAttempts()),
+        purgeClaimId: 'claim-1',
+      });
+      expect(result).toEqual({ scanned: 1, purged: 0, failed: 0 });
     });
 
     it('logs but does not throw when releasing a failed claim itself fails', async () => {
@@ -137,7 +194,13 @@ describe('conversation purge sweep helpers', () => {
 
       const result = await purgeExpiredConversations(
         {},
-        { claimExpiredConversations, releaseConversationPurgeClaim, cascadeDeps, logger },
+        {
+          claimExpiredConversations,
+          releaseConversationPurgeClaim,
+          confirmConversationPurgeEligible,
+          cascadeDeps,
+          logger,
+        },
       );
 
       expect(logger.error).toHaveBeenCalledWith(
@@ -150,7 +213,13 @@ describe('conversation purge sweep helpers', () => {
     it('does not log a summary when nothing was claimed', async () => {
       const result = await purgeExpiredConversations(
         {},
-        { claimExpiredConversations, releaseConversationPurgeClaim, cascadeDeps, logger },
+        {
+          claimExpiredConversations,
+          releaseConversationPurgeClaim,
+          confirmConversationPurgeEligible,
+          cascadeDeps,
+          logger,
+        },
       );
 
       expect(logger.info).not.toHaveBeenCalled();
@@ -162,7 +231,13 @@ describe('conversation purge sweep helpers', () => {
 
       await purgeExpiredConversations(
         {},
-        { claimExpiredConversations, releaseConversationPurgeClaim, cascadeDeps, logger },
+        {
+          claimExpiredConversations,
+          releaseConversationPurgeClaim,
+          confirmConversationPurgeEligible,
+          cascadeDeps,
+          logger,
+        },
       );
 
       expect(logger.info).toHaveBeenCalledWith(

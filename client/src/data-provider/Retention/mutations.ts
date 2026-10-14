@@ -1,8 +1,16 @@
+import { useToastContext } from '@librechat/client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { QueryKeys, MutationKeys, dataService } from 'librechat-data-provider';
 import type { TAgentRenewResponse, TSkillRenewResponse } from 'librechat-data-provider';
 import type { UseMutationResult } from '@tanstack/react-query';
 import type { RetentionResourceType } from './queries';
+import type { TranslationKeys } from '~/hooks';
+import { useLocalize } from '~/hooks';
+
+const RENEW_FAILED_KEYS: Record<RetentionResourceType, TranslationKeys> = {
+  agent: 'com_agents_expiring_soon_renew_failed',
+  skill: 'com_skills_expiring_soon_renew_failed',
+};
 
 export type RenewResourceMutationOptions = {
   onSuccess?: (
@@ -19,7 +27,9 @@ export function useResourceRenewMutation(
   _options?: RenewResourceMutationOptions,
 ): UseMutationResult<TAgentRenewResponse | TSkillRenewResponse, unknown, string, unknown> {
   const queryClient = useQueryClient();
-  const { onSuccess, ...options } = _options || {};
+  const { showToast } = useToastContext();
+  const localize = useLocalize();
+  const { onSuccess, onError, ...options } = _options || {};
   const mutationKey = resourceType === 'agent' ? MutationKeys.agentRenew : MutationKeys.skillRenew;
   const expiringSoonKey =
     resourceType === 'agent' ? QueryKeys.agentsExpiringSoon : QueryKeys.skillsExpiringSoon;
@@ -32,6 +42,10 @@ export function useResourceRenewMutation(
       onSuccess: (data, id, context) => {
         queryClient.invalidateQueries([expiringSoonKey]);
         onSuccess?.(data, id, context);
+      },
+      onError: (error, id, context) => {
+        showToast({ message: localize(RENEW_FAILED_KEYS[resourceType]), status: 'error' });
+        onError?.(error, id, context);
       },
     },
   );

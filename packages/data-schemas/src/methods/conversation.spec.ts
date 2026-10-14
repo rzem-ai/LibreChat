@@ -7912,7 +7912,10 @@ describe('Conversation Operations', () => {
       const convo = await createExpired();
       const [claim] = await methods.claimExpiredConversations(10, { leaseMs });
 
-      await methods.releaseConversationPurgeClaim(convo.conversationId, { success: true });
+      await methods.releaseConversationPurgeClaim(convo.conversationId, {
+        success: true,
+        purgeClaimId: claim.purgeClaimId,
+      });
 
       const stored = await Conversation.findOne({ conversationId: convo.conversationId }).lean();
       expect(stored?.purgeClaimId).toBeUndefined();
@@ -7923,13 +7926,14 @@ describe('Conversation Operations', () => {
 
     it('releases a claim on failure, parking the row behind purgeNotBefore', async () => {
       const convo = await createExpired();
-      await methods.claimExpiredConversations(10, { leaseMs });
+      const [claim] = await methods.claimExpiredConversations(10, { leaseMs });
 
       const retryDelayMs = 5 * 60 * 1000;
       const beforeRelease = Date.now();
       await methods.releaseConversationPurgeClaim(convo.conversationId, {
         success: false,
         retryDelayMs,
+        purgeClaimId: claim.purgeClaimId,
       });
 
       const stored = await Conversation.findOne({ conversationId: convo.conversationId }).lean();

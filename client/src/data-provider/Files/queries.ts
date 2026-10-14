@@ -55,6 +55,8 @@ export const useGetAgentFiles = <TData = t.TFile[]>(
   );
 };
 
+const EXPIRING_SOON_REFETCH_INTERVAL_MS = 5 * 60 * 1000;
+
 export const useGetFilesExpiringSoonQuery = <TData = t.TFile[]>(
   config?: UseQueryOptions<t.TFile[], unknown, TData>,
 ): QueryObserverResult<TData, unknown> => {
@@ -65,6 +67,7 @@ export const useGetFilesExpiringSoonQuery = <TData = t.TFile[]>(
     {
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
+      refetchInterval: EXPIRING_SOON_REFETCH_INTERVAL_MS,
       ...config,
       enabled: (config?.enabled ?? true) === true && queriesEnabled,
     },

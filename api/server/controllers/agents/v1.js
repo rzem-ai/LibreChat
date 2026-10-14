@@ -1705,24 +1705,28 @@ const duplicateAgentHandler = async (req, res) => {
 const deleteAgentHandler = async (req, res) => {
   try {
     const id = req.params.id;
-    const deleted = await cascadeDeleteAgent(id, {
-      getAgent: db.getAgent,
-      getFiles: db.getFiles,
-      getFileIdsAttachedToLiveConversations: db.getFileIdsAttachedToLiveConversations,
-      getSharedResourceFileIds: db.getSharedResourceFileIds,
-      removeAgentResourceFiles: db.removeAgentResourceFiles,
-      deleteFiles: (files) => processDeleteRequest({ req, files }),
-      deleteAvatarBlob: (avatar) => {
-        const { deleteFile } = getStrategyFunctions(avatar.source);
-        return deleteFile(req, {
-          filepath: avatar.filepath,
-          user: req.user.id,
-          tenantId: req.user.tenantId,
-        });
+    const deleted = await cascadeDeleteAgent(
+      id,
+      { tenantId: req.user.tenantId },
+      {
+        getAgent: db.getAgent,
+        getFiles: db.getFiles,
+        getFileIdsAttachedToLiveConversations: db.getFileIdsAttachedToLiveConversations,
+        getSharedResourceFileIds: db.getSharedResourceFileIds,
+        removeAgentResourceFiles: db.removeAgentResourceFiles,
+        deleteFiles: (files) => processDeleteRequest({ req, files }),
+        deleteAvatarBlob: (avatar) => {
+          const { deleteFile } = getStrategyFunctions(avatar.source);
+          return deleteFile(req, {
+            filepath: avatar.filepath,
+            user: req.user.id,
+            tenantId: req.user.tenantId,
+          });
+        },
+        deleteFileByFilter: db.deleteFileByFilter,
+        deleteAgent: db.deleteAgent,
       },
-      deleteFileByFilter: db.deleteFileByFilter,
-      deleteAgent: db.deleteAgent,
-    });
+    );
     if (!deleted) {
       return res.status(404).json({ error: 'Agent not found' });
     }

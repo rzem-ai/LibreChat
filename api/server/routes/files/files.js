@@ -265,6 +265,7 @@ router.get('/expiring', async (req, res) => {
     const { status, body } = await handleFilesExpiringSoonRequest(req.user ?? {}, {
       getFilesExpiringSoon: db.getFilesExpiringSoon,
       fileRetentionWarningHours: getFileRetentionWarningHours(req.config?.interfaceConfig),
+      fileRetentionHours: getFileRetentionHours(req.config?.interfaceConfig),
     });
     return res.status(status).json(body);
   } catch (error) {

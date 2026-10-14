@@ -39,10 +39,10 @@ export interface AgentManagementDeleteDeps
     requiredPermission: PermissionBits;
   }) => Promise<boolean>;
   hasCapability: (user: IUser, capability: SystemCapability) => Promise<boolean>;
-  getAgent: (search: { id: string; tenantId: string }) => Promise<IAgent | null>;
+  getAgent: (search: FilterQuery<IAgent>) => Promise<IAgent | null>;
   deleteFiles: (req: Request, files: IMongoFile[]) => Promise<FileDeletionOutcome>;
   deleteAvatarBlob: (req: Request, avatar: { filepath: string; source: string }) => Promise<void>;
-  deleteAgent: (search: { id: string; tenantId: string }) => Promise<IAgent | null>;
+  deleteAgent: (search: FilterQuery<IAgent>) => Promise<IAgent | null>;
 }
 
 function sendError(res: Response, code: Parameters<typeof mapAgentManagementError>[0]) {
@@ -106,18 +106,21 @@ export function createAgentManagementDeleteHandler(
         return sendError(res, 'permission_denied');
       }
 
-      const tenantId = user.tenantId;
-      const deleted = await cascadeDeleteAgent(req.params.id, {
-        getAgent: () => deps.getAgent({ id: req.params.id, tenantId }),
-        getFiles: deps.getFiles,
-        getFileIdsAttachedToLiveConversations: deps.getFileIdsAttachedToLiveConversations,
-        getSharedResourceFileIds: deps.getSharedResourceFileIds,
-        removeAgentResourceFiles: deps.removeAgentResourceFiles,
-        deleteFiles: (files) => deps.deleteFiles(req, files),
-        deleteAvatarBlob: (avatar) => deps.deleteAvatarBlob(req, avatar),
-        deleteFileByFilter: deps.deleteFileByFilter,
-        deleteAgent: () => deps.deleteAgent({ id: req.params.id, tenantId }),
-      });
+      const deleted = await cascadeDeleteAgent(
+        req.params.id,
+        { tenantId: user.tenantId },
+        {
+          getAgent: deps.getAgent,
+          getFiles: deps.getFiles,
+          getFileIdsAttachedToLiveConversations: deps.getFileIdsAttachedToLiveConversations,
+          getSharedResourceFileIds: deps.getSharedResourceFileIds,
+          removeAgentResourceFiles: deps.removeAgentResourceFiles,
+          deleteFiles: (files) => deps.deleteFiles(req, files),
+          deleteAvatarBlob: (avatar) => deps.deleteAvatarBlob(req, avatar),
+          deleteFileByFilter: deps.deleteFileByFilter,
+          deleteAgent: deps.deleteAgent,
+        },
+      );
       if (!deleted) {
         return sendError(res, 'not_found');
       }
@@ -151,19 +154,40 @@ export interface CascadeDeleteAgentDeps {
  * Removes an agent's resource files (except any still attached to a live
  * conversation, or still shared with another agent), its avatar blob, and
  * then the agent document itself via the existing `deleteAgent` cleanup
- * (ACL, handoff edges, favorites). Each cleanup step is isolated: a failure
- * in one tool resource or the avatar does not prevent the others from
- * running or the agent document from being removed.
+ * (ACL, handoff edges, favorites).
+ *
+ * `scope.tenantId` is required because `agent.id` is only unique per tenant.
+ * `scope.claimToken`, when set (purge-sweep callers), scopes both the initial
+ * read and the final delete to the still-held claim and a still-expired,
+ * non-exempt agent — so a renewal or exemption granted after the sweep
+ * claimed the agent aborts the cascade instead of deleting it anyway.
+ *
+ * Cleanup failures (tool-resource files, avatar blob) are collected rather
+ * than swallowed: if any step fails, the agent document is left in place so
+ * the purge claim can be released for retry instead of silently orphaning
+ * blobs.
  */
 export async function cascadeDeleteAgent(
   agentId: string,
+  scope: { tenantId: string; claimToken?: string },
   deps: CascadeDeleteAgentDeps,
 ): Promise<IAgent | null> {
-  const agent = await deps.getAgent({ id: agentId });
+  const scopedFilter: FilterQuery<IAgent> = {
+    id: agentId,
+    tenantId: scope.tenantId,
+    ...(scope.claimToken && {
+      purgeClaimId: scope.claimToken,
+      expiredAt: { $lte: new Date() },
+      'retentionException.exempt': { $ne: true },
+    }),
+  };
+
+  const agent = await deps.getAgent(scopedFilter);
   if (!agent) {
     return null;
   }
 
+  const failures: unknown[] = [];
   const allFileIds = collectToolResourceFileIds(agent.tool_resources);
   if (allFileIds.length > 0) {
     const [liveFileIds, dbFiles] = await Promise.all([
@@ -203,6 +227,7 @@ export async function cascadeDeleteAgent(
           `[cascadeDeleteAgent] Error deleting "${toolResource}" files for agent ${agentId}`,
           error,
         );
+        failures.push(error);
       }
     }
   }
@@ -216,8 +241,15 @@ export async function cascadeDeleteAgent(
       });
     } catch (error) {
       logger.error(`[cascadeDeleteAgent] Error deleting avatar for agent ${agentId}`, error);
+      failures.push(error);
     }
   }
 
-  return deps.deleteAgent({ id: agentId });
+  if (failures.length > 0) {
+    throw new Error(
+      `[cascadeDeleteAgent] Aborting deletion of agent ${agentId} after ${failures.length} cleanup failure(s)`,
+    );
+  }
+
+  return deps.deleteAgent(scopedFilter);
 }

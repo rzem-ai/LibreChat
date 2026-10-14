@@ -18,7 +18,7 @@ export interface AgentRenewalResult {
 export interface AgentRenewalDeps {
   /** Owner-scoped activity re-stamp (`db.renewAgentActivity`-shaped). */
   renewAgentActivity: (
-    searchParameter: { id: string; author: string },
+    searchParameter: { id: string; author: string; tenantId?: string },
     retentionHours: number,
   ) => Promise<IAgent | null>;
   /** Configured agent-retention window, shared with skills. */
@@ -43,7 +43,7 @@ export async function handleAgentRenewRequest(
     return { status: 400, body: { code: 'INVALID_AGENT_ID' } };
   }
   const agent = await deps.renewAgentActivity(
-    { id: agent_id, author: user.id },
+    { id: agent_id, author: user.id, tenantId: user.tenantId },
     deps.agentRetentionHours,
   );
   if (!agent) {

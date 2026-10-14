@@ -568,6 +568,13 @@ export interface ClaimedPurgeAgent {
   purgeAttempts: number;
 }
 
+export interface ReleaseAgentPurgeClaimOptions {
+  success: boolean;
+  retryDelayMs?: number;
+  /** The claim token the release must still own; a stale release no longer stomps a newer claim. */
+  purgeClaimId: string;
+}
+
 export function createAgentMethods(
   mongoose: typeof import('mongoose'),
   deps: AgentDeps,
@@ -690,7 +697,7 @@ export function createAgentMethods(
   ) => Promise<ClaimedPurgeAgent[]>;
   releaseAgentPurgeClaim: (
     resourceId: Types.ObjectId | string,
-    options: { success: boolean; retryDelayMs?: number },
+    options: ReleaseAgentPurgeClaimOptions,
   ) => Promise<void>;
   touchAgentLastActivity: (
     agentObjectId: Types.ObjectId | string,
@@ -1864,7 +1871,7 @@ export function createAgentMethods(
     for (const candidate of candidates) {
       const purgeClaimId = crypto.randomUUID();
       const result = await Agent.findOneAndUpdate(
-        { _id: candidate._id, ...unclaimedOrExpiredLease },
+        { _id: candidate._id, ...eligibilityFilter },
         { $set: { purgeClaimId, purgeClaimedAt: now }, $inc: { purgeAttempts: 1 } },
         { new: true },
       ).lean<Pick<
@@ -1896,7 +1903,7 @@ export function createAgentMethods(
    */
   async function releaseAgentPurgeClaim(
     resourceId: Types.ObjectId | string,
-    { success, retryDelayMs }: { success: boolean; retryDelayMs?: number },
+    { success, retryDelayMs, purgeClaimId }: ReleaseAgentPurgeClaimOptions,
   ): Promise<void> {
     const Agent = mongoose.models.Agent as Model<IAgent>;
     const update: FilterQuery<IAgent> = {
@@ -1905,7 +1912,7 @@ export function createAgentMethods(
     if (!success) {
       update.$set = { purgeNotBefore: new Date(Date.now() + (retryDelayMs ?? 0)) };
     }
-    await Agent.updateOne({ _id: resourceId }, update);
+    await Agent.updateOne({ _id: resourceId, purgeClaimId }, update);
   }
 
   /**

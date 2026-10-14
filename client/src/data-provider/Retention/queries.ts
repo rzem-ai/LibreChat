@@ -7,6 +7,8 @@ import store from '~/store';
 
 export type RetentionResourceType = 'agent' | 'skill';
 
+const EXPIRING_SOON_REFETCH_INTERVAL_MS = 5 * 60 * 1000;
+
 export function useGetResourcesExpiringSoonQuery(
   resourceType: RetentionResourceType,
   config?: UseQueryOptions<Agent[] | TSkill[], unknown>,
@@ -25,6 +27,7 @@ export function useGetResourcesExpiringSoonQuery(
     {
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
+      refetchInterval: EXPIRING_SOON_REFETCH_INTERVAL_MS,
       ...config,
       enabled: (config?.enabled ?? true) === true && queriesEnabled,
     },

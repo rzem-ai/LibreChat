@@ -38,24 +38,28 @@ function createAgentPurgeSweepRequest(candidate, appConfig) {
 
 async function cascadeDeleteClaimedAgent(candidate, appConfig) {
   const req = createAgentPurgeSweepRequest(candidate, appConfig);
-  await cascadeDeleteAgent(candidate.id, {
-    getAgent: db.getAgent,
-    getFiles: db.getFiles,
-    getFileIdsAttachedToLiveConversations: db.getFileIdsAttachedToLiveConversations,
-    getSharedResourceFileIds: db.getSharedResourceFileIds,
-    removeAgentResourceFiles: db.removeAgentResourceFiles,
-    deleteFiles: (files) => processDeleteRequest({ req, files }),
-    deleteAvatarBlob: (avatar) => {
-      const { deleteFile } = getStrategyFunctions(avatar.source);
-      return deleteFile(req, {
-        filepath: avatar.filepath,
-        user: candidate.author,
-        tenantId: candidate.tenantId,
-      });
+  await cascadeDeleteAgent(
+    candidate.id,
+    { tenantId: candidate.tenantId, claimToken: candidate.purgeClaimId },
+    {
+      getAgent: db.getAgent,
+      getFiles: db.getFiles,
+      getFileIdsAttachedToLiveConversations: db.getFileIdsAttachedToLiveConversations,
+      getSharedResourceFileIds: db.getSharedResourceFileIds,
+      removeAgentResourceFiles: db.removeAgentResourceFiles,
+      deleteFiles: (files) => processDeleteRequest({ req, files }),
+      deleteAvatarBlob: (avatar) => {
+        const { deleteFile } = getStrategyFunctions(avatar.source);
+        return deleteFile(req, {
+          filepath: avatar.filepath,
+          user: candidate.author,
+          tenantId: candidate.tenantId,
+        });
+      },
+      deleteFileByFilter: db.deleteFileByFilter,
+      deleteAgent: db.deleteAgent,
     },
-    deleteFileByFilter: db.deleteFileByFilter,
-    deleteAgent: db.deleteAgent,
-  });
+  );
 }
 
 /**

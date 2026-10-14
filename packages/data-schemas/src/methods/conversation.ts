@@ -546,8 +546,14 @@ export interface ConversationMethods {
   ): Promise<ClaimedPurgeConversation[]>;
   releaseConversationPurgeClaim(
     conversationId: string,
-    options: { success: boolean; retryDelayMs?: number },
+    options: ReleaseConversationPurgeClaimOptions,
   ): Promise<void>;
+  confirmConversationPurgeEligible(
+    conversationId: string,
+    user: string,
+    purgeClaimId: string,
+    now?: Date,
+  ): Promise<Pick<IConversation, 'conversationId'> | null>;
 }
 
 /** A conversation whose expiry made it eligible for the purge sweep and which this
@@ -559,6 +565,13 @@ export interface ClaimedPurgeConversation {
   tenantId?: string;
   purgeClaimId: string;
   purgeAttempts: number;
+}
+
+export interface ReleaseConversationPurgeClaimOptions {
+  success: boolean;
+  retryDelayMs?: number;
+  /** The claim token the release must still own; a stale release no longer stomps a newer claim. */
+  purgeClaimId: string;
 }
 
 export interface ConversationMethodDeps
@@ -3718,7 +3731,7 @@ export function createConversationMethods(
         {
           conversationId: candidate.conversationId,
           user: candidate.user,
-          ...unclaimedOrExpiredLease,
+          ...eligibilityFilter,
         },
         { $set: { purgeClaimId, purgeClaimedAt: now }, $inc: { purgeAttempts: 1 } },
         { new: true },
@@ -3750,7 +3763,7 @@ export function createConversationMethods(
    */
   async function releaseConversationPurgeClaim(
     conversationId: string,
-    { success, retryDelayMs }: { success: boolean; retryDelayMs?: number },
+    { success, retryDelayMs, purgeClaimId }: ReleaseConversationPurgeClaimOptions,
   ): Promise<void> {
     const Conversation = mongoose.models.Conversation as Model<IConversation>;
     const update: FilterQuery<IConversation> = {
@@ -3759,7 +3772,33 @@ export function createConversationMethods(
     if (!success) {
       update.$set = { purgeNotBefore: new Date(Date.now() + (retryDelayMs ?? 0)) };
     }
-    await Conversation.updateOne({ conversationId }, update);
+    await Conversation.updateOne({ conversationId, purgeClaimId }, update);
+  }
+
+  /**
+   * Re-checks the time-sensitive purge eligibility (expiry, exemption) and
+   * claim ownership immediately before `purgeConversationCascade`, closing
+   * the gap between `claimExpiredConversations` and the destructive cascade.
+   * A renewal or exemption granted after the claim was taken makes this
+   * resolve to `null`, aborting the cascade instead of deleting a
+   * conversation that's no longer eligible.
+   */
+  async function confirmConversationPurgeEligible(
+    conversationId: string,
+    user: string,
+    purgeClaimId: string,
+    now: Date = new Date(),
+  ): Promise<Pick<IConversation, 'conversationId'> | null> {
+    const Conversation = mongoose.models.Conversation as Model<IConversation>;
+    return await Conversation.findOne({
+      conversationId,
+      user,
+      purgeClaimId,
+      expiredAt: { $lte: now },
+      'retentionException.exempt': { $ne: true },
+    })
+      .select({ conversationId: 1 })
+      .lean<Pick<IConversation, 'conversationId'> | null>();
   }
 
   return {
@@ -3779,6 +3818,7 @@ export function createConversationMethods(
     getSubagentThreadForParent,
     claimExpiredConversations,
     releaseConversationPurgeClaim,
+    confirmConversationPurgeEligible,
     listSubagentThreadsForParent,
     getAgentEventBinding,
     getAgentEventActorSnapshot,

@@ -34,6 +34,7 @@ async function purgeExpiredConversations(options = {}) {
   return purgeExpiredConversationsWithDeps(sweepOptions, {
     claimExpiredConversations: db.claimExpiredConversations,
     releaseConversationPurgeClaim: db.releaseConversationPurgeClaim,
+    confirmConversationPurgeEligible: db.confirmConversationPurgeEligible,
     cascadeDeps: {
       checkpointer,
       openCheckpointDeletion,

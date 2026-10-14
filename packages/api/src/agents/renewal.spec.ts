@@ -30,7 +30,10 @@ describe('handleAgentRenewRequest', () => {
   it('renews as an owner-scoped activity re-stamp', async () => {
     const deps = createDeps({ id: 'agent-1', expiredAt: new Date() });
     const result = await handleAgentRenewRequest(user, { agent_id: 'agent-1' }, deps);
-    expect(deps.renewAgentActivity).toHaveBeenCalledWith({ id: 'agent-1', author: 'user-1' }, 2160);
+    expect(deps.renewAgentActivity).toHaveBeenCalledWith(
+      { id: 'agent-1', author: 'user-1', tenantId: 'tenant-1' },
+      2160,
+    );
     expect(result.status).toBe(200);
     expect(result.body).toEqual({ agent: { id: 'agent-1', expiredAt: expect.any(Date) } });
   });

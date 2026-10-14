@@ -43,8 +43,15 @@ type PurgeSweepDependencies<TDeleteConvosResult extends { conversationIds: strin
   ) => Promise<ClaimedPurgeConversation[]>;
   releaseConversationPurgeClaim: (
     conversationId: string,
-    options: { success: boolean; retryDelayMs?: number },
+    options: { success: boolean; retryDelayMs?: number; purgeClaimId: string },
   ) => Promise<void>;
+  /** Re-checks expiry/exemption/claim ownership immediately before the cascade. */
+  confirmConversationPurgeEligible: (
+    conversationId: string,
+    user: string,
+    purgeClaimId: string,
+    now?: Date,
+  ) => Promise<{ conversationId: string } | null>;
   cascadeDeps: PurgeCascadeDeps<TDeleteConvosResult>;
   logger: SweepLogger;
 };
@@ -252,13 +259,35 @@ export async function purgeExpiredConversations<
 
   for (const conversation of claimed) {
     try {
+      const stillEligible = await deps.confirmConversationPurgeEligible(
+        conversation.conversationId,
+        conversation.user,
+        conversation.purgeClaimId,
+        now,
+      );
+      if (!stillEligible) {
+        const retryDelayMs = getConversationPurgeRetryDelay(
+          conversation.purgeAttempts,
+          maxAttempts,
+        );
+        await deps.releaseConversationPurgeClaim(conversation.conversationId, {
+          success: false,
+          retryDelayMs,
+          purgeClaimId: conversation.purgeClaimId,
+        });
+        continue;
+      }
+
       await purgeConversationCascade(
         conversation.user,
         conversation.tenantId,
         [conversation.conversationId],
         deps.cascadeDeps,
       );
-      await deps.releaseConversationPurgeClaim(conversation.conversationId, { success: true });
+      await deps.releaseConversationPurgeClaim(conversation.conversationId, {
+        success: true,
+        purgeClaimId: conversation.purgeClaimId,
+      });
       purged++;
     } catch (error) {
       failed++;
@@ -271,6 +300,7 @@ export async function purgeExpiredConversations<
         await deps.releaseConversationPurgeClaim(conversation.conversationId, {
           success: false,
           retryDelayMs,
+          purgeClaimId: conversation.purgeClaimId,
         });
       } catch (releaseError) {
         deps.logger.error(
@@ -338,7 +368,7 @@ export type GenericPurgeSweepDeps<TCandidate extends ClaimedRetentionResource> =
   claim: (limit: number, options: { leaseMs: number; now?: Date }) => Promise<TCandidate[]>;
   release: (
     resourceId: string,
-    options: { success: boolean; retryDelayMs?: number },
+    options: { success: boolean; retryDelayMs?: number; purgeClaimId: string },
   ) => Promise<void>;
   /** Returns the subset of the claimed batch's `resourceId`s still private-and-eligible. */
   classify: (candidates: TCandidate[]) => Promise<Set<string>>;
@@ -384,7 +414,11 @@ export async function sweepGenericRetention<TCandidate extends ClaimedRetentionR
         config.intervalMs,
       );
       try {
-        await deps.release(candidate.resourceId, { success: false, retryDelayMs });
+        await deps.release(candidate.resourceId, {
+          success: false,
+          retryDelayMs,
+          purgeClaimId: candidate.purgeClaimId,
+        });
       } catch (releaseError) {
         deps.logger.error(
           `[${config.label}] Failed to release no-longer-eligible claim for ${candidate.resourceId}:`,
@@ -396,7 +430,10 @@ export async function sweepGenericRetention<TCandidate extends ClaimedRetentionR
 
     try {
       await deps.cascade(candidate);
-      await deps.release(candidate.resourceId, { success: true });
+      await deps.release(candidate.resourceId, {
+        success: true,
+        purgeClaimId: candidate.purgeClaimId,
+      });
       purged++;
     } catch (error) {
       failed++;
@@ -407,7 +444,11 @@ export async function sweepGenericRetention<TCandidate extends ClaimedRetentionR
         config.intervalMs,
       );
       try {
-        await deps.release(candidate.resourceId, { success: false, retryDelayMs });
+        await deps.release(candidate.resourceId, {
+          success: false,
+          retryDelayMs,
+          purgeClaimId: candidate.purgeClaimId,
+        });
       } catch (releaseError) {
         deps.logger.error(
           `[${config.label}] Failed to release purge claim for ${candidate.resourceId}:`,

@@ -55,6 +55,13 @@ export interface ClaimedPurgeSkill {
   purgeAttempts: number;
 }
 
+export interface ReleaseSkillPurgeClaimOptions {
+  success: boolean;
+  retryDelayMs?: number;
+  /** The claim token the release must still own; a stale release no longer stomps a newer claim. */
+  purgeClaimId: string;
+}
+
 export type DeleteSkillCleanupStep = 'agent_allowlists' | 'skill_files' | 'permissions';
 
 export type DeleteSkillResult = {
@@ -1131,8 +1138,13 @@ export function createSkillMethods(
   ) => Promise<ClaimedPurgeSkill[]>;
   releaseSkillPurgeClaim: (
     resourceId: Types.ObjectId | string,
-    options: { success: boolean; retryDelayMs?: number },
+    options: ReleaseSkillPurgeClaimOptions,
   ) => Promise<void>;
+  confirmSkillPurgeEligible: (
+    skillId: Types.ObjectId | string,
+    purgeClaimId: string,
+    now?: Date,
+  ) => Promise<Pick<ISkillDocument, '_id' | 'author'> | null>;
   touchSkillsLastActivity: (
     skillIds: Array<Types.ObjectId | string>,
     retentionHours: number,
@@ -2111,7 +2123,7 @@ export function createSkillMethods(
     for (const candidate of candidates) {
       const purgeClaimId = crypto.randomUUID();
       const result = await Skill.findOneAndUpdate(
-        { _id: candidate._id, ...unclaimedOrExpiredLease },
+        { _id: candidate._id, ...eligibilityFilter },
         { $set: { purgeClaimId, purgeClaimedAt: now }, $inc: { purgeAttempts: 1 } },
         { new: true },
       ).lean<Pick<
@@ -2142,7 +2154,7 @@ export function createSkillMethods(
    */
   async function releaseSkillPurgeClaim(
     resourceId: Types.ObjectId | string,
-    { success, retryDelayMs }: { success: boolean; retryDelayMs?: number },
+    { success, retryDelayMs, purgeClaimId }: ReleaseSkillPurgeClaimOptions,
   ): Promise<void> {
     const Skill = mongoose.models.Skill as Model<ISkillDocument>;
     const update: FilterQuery<ISkillDocument> = {
@@ -2151,7 +2163,31 @@ export function createSkillMethods(
     if (!success) {
       update.$set = { purgeNotBefore: new Date(Date.now() + (retryDelayMs ?? 0)) };
     }
-    await Skill.updateOne({ _id: resourceId }, update);
+    await Skill.updateOne({ _id: resourceId, purgeClaimId }, update);
+  }
+
+  /**
+   * Re-checks the time-sensitive purge eligibility (expiry, exemption) and
+   * claim ownership immediately before the destructive cascade, closing the
+   * gap between `claimExpiredSkills` and `deleteSkill`. A renewal or
+   * exemption granted after the claim was taken makes this resolve to
+   * `null`, aborting the cascade instead of deleting a skill that's no
+   * longer eligible.
+   */
+  async function confirmSkillPurgeEligible(
+    skillId: Types.ObjectId | string,
+    purgeClaimId: string,
+    now: Date = new Date(),
+  ): Promise<Pick<ISkillDocument, '_id' | 'author'> | null> {
+    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
+    return await Skill.findOne({
+      _id: skillId,
+      purgeClaimId,
+      expiredAt: { $lte: now },
+      'retentionException.exempt': { $ne: true },
+    })
+      .select({ _id: 1, author: 1 })
+      .lean<Pick<ISkillDocument, '_id' | 'author'> | null>();
   }
 
   /**
@@ -2289,6 +2325,7 @@ export function createSkillMethods(
     updateSkillFileCodeEnvIds,
     claimExpiredSkills,
     releaseSkillPurgeClaim,
+    confirmSkillPurgeEligible,
     touchSkillsLastActivity,
     renewSkillActivity,
     setSkillRetentionException,

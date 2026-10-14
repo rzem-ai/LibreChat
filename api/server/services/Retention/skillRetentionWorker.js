@@ -35,21 +35,26 @@ function createSkillPurgeSweepRequest(candidate, appConfig) {
 
 async function cascadeDeleteClaimedSkill(candidate, appConfig) {
   const req = createSkillPurgeSweepRequest(candidate, appConfig);
-  await cascadeDeleteSkill(candidate.resourceId, candidate.author, {
-    getSkillById: db.getSkillById,
-    listSkillFiles: db.listSkillFiles,
-    deleteSkillFileBlob: (file) => {
-      const { deleteFile } = getStrategyFunctions(file.source);
-      return deleteFile(req, {
-        filepath: file.filepath,
-        storageKey: file.storageKey,
-        storageRegion: file.storageRegion,
-        user: file.author?.toString?.(),
-        tenantId: file.tenantId?.toString?.(),
-      });
+  await cascadeDeleteSkill(
+    candidate.resourceId,
+    { authorId: candidate.author, claimToken: candidate.purgeClaimId },
+    {
+      getSkillById: db.getSkillById,
+      confirmSkillPurgeEligible: db.confirmSkillPurgeEligible,
+      listSkillFiles: db.listSkillFiles,
+      deleteSkillFileBlob: (file) => {
+        const { deleteFile } = getStrategyFunctions(file.source);
+        return deleteFile(req, {
+          filepath: file.filepath,
+          storageKey: file.storageKey,
+          storageRegion: file.storageRegion,
+          user: file.author?.toString?.(),
+          tenantId: file.tenantId?.toString?.(),
+        });
+      },
+      deleteSkill: db.deleteSkill,
     },
-    deleteSkill: db.deleteSkill,
-  });
+  );
 }
 
 /**

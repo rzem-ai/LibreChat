@@ -68,12 +68,24 @@ describe('handleFilesExpiringSoonRequest', () => {
     expect(getFilesExpiringSoon).not.toHaveBeenCalled();
   });
 
+  it('returns an empty list without querying when independent file retention is not configured', async () => {
+    const getFilesExpiringSoon = jest.fn();
+    const result = await handleFilesExpiringSoonRequest(user, {
+      getFilesExpiringSoon,
+      fileRetentionWarningHours: 168,
+      fileRetentionHours: undefined,
+    });
+    expect(result).toEqual({ status: 200, body: { files: [] } });
+    expect(getFilesExpiringSoon).not.toHaveBeenCalled();
+  });
+
   it('lists the owner-scoped files within the configured warning window', async () => {
     const files = [{ file_id: 'f1' }];
     const getFilesExpiringSoon = jest.fn().mockResolvedValue(files);
     const result = await handleFilesExpiringSoonRequest(user, {
       getFilesExpiringSoon,
       fileRetentionWarningHours: 168,
+      fileRetentionHours: 1440,
     });
     expect(getFilesExpiringSoon).toHaveBeenCalledWith(
       { userId: 'user-1', tenantId: 'tenant-1' },

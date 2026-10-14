@@ -63,7 +63,7 @@ router.post('/', checkAgentCreate, configMiddleware, v1.createAgent);
  * swallowed by the param route.
  * @route GET /agents/expiring
  */
-router.get('/expiring', async (req, res) => {
+router.get('/expiring', configMiddleware, async (req, res) => {
   try {
     const { status, body } = await handleAgentsExpiringSoonRequest(req.user ?? {}, {
       getAgentsExpiringSoon: db.getAgentsExpiringSoon,
@@ -205,7 +205,7 @@ router.post(
  * @route POST /agents/:id/renew
  * @param {string} req.params.id - Agent identifier.
  */
-router.post('/:id/renew', async (req, res) => {
+router.post('/:id/renew', configMiddleware, async (req, res) => {
   try {
     const { status, body } = await handleAgentRenewRequest(
       req.user ?? {},
