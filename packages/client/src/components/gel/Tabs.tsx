@@ -2,8 +2,8 @@ import * as React from 'react';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 import { cn } from '~/utils';
 
-/** Underline-style tab list; pair with `Tabs` and `TabsContent` from the base Tabs. */
-const UnderlineTabsList: React.ForwardRefExoticComponent<
+/** Underline-style tab list (Deloitte GEL look); pair with `Tabs` and `TabsContent` from the base Tabs. */
+const GelTabsList: React.ForwardRefExoticComponent<
   Omit<TabsPrimitive.TabsListProps & React.RefAttributes<HTMLDivElement>, 'ref'> &
     React.RefAttributes<HTMLDivElement>
 > = React.forwardRef<
@@ -16,9 +16,9 @@ const UnderlineTabsList: React.ForwardRefExoticComponent<
     {...props}
   />
 ));
-UnderlineTabsList.displayName = 'UnderlineTabsList';
+GelTabsList.displayName = 'GelTabsList';
 
-const UnderlineTabsTrigger: React.ForwardRefExoticComponent<
+const GelTabsTrigger: React.ForwardRefExoticComponent<
   Omit<TabsPrimitive.TabsTriggerProps & React.RefAttributes<HTMLButtonElement>, 'ref'> &
     React.RefAttributes<HTMLButtonElement>
 > = React.forwardRef<
@@ -34,6 +34,6 @@ const UnderlineTabsTrigger: React.ForwardRefExoticComponent<
     {...props}
   />
 ));
-UnderlineTabsTrigger.displayName = 'UnderlineTabsTrigger';
+GelTabsTrigger.displayName = 'GelTabsTrigger';
 
-export { UnderlineTabsList, UnderlineTabsTrigger };
+export { GelTabsList, GelTabsTrigger };

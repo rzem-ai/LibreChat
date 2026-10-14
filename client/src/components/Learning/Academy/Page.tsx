@@ -4,8 +4,8 @@ import {
   Button,
   gelIcons,
   TabsContent,
-  UnderlineTabsList,
-  UnderlineTabsTrigger,
+  GelTabsList,
+  GelTabsTrigger,
 } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
 import { useGetStartupConfig } from '~/data-provider';
@@ -76,13 +76,13 @@ export default function Page(): JSX.Element {
         onValueChange={(next) => navigate(`/learning/${next}`)}
         className="flex flex-col gap-6"
       >
-        <UnderlineTabsList>
+        <GelTabsList>
           {enabledTabs.map((candidate) => (
-            <UnderlineTabsTrigger key={candidate.id} value={candidate.id}>
+            <GelTabsTrigger key={candidate.id} value={candidate.id}>
               {candidate.label}
-            </UnderlineTabsTrigger>
+            </GelTabsTrigger>
           ))}
-        </UnderlineTabsList>
+        </GelTabsList>
         <TabsContent value="tours" className={contentClass}>
           <Tours />
         </TabsContent>

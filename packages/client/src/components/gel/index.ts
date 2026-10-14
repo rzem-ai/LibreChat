@@ -7,4 +7,4 @@ export * from './icons';
 export * from './Typeset';
 export * from './SearchInput';
 export * from './HighlightedText';
-export * from './UnderlineTabs';
+export * from './Tabs';
