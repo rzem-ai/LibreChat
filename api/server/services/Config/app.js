@@ -4,6 +4,7 @@ const { AppService, logger } = require('@librechat/data-schemas');
 const {
   createAppConfigService,
   clearMcpConfigCache,
+  clearModelsConfigCache,
   createCodeEnvironmentRegistry,
   mergeAccessibleCodeEnvironments,
   cacheConfig,
@@ -71,7 +72,9 @@ const { getAppConfig, clearAppConfigCache, clearOverrideCache } = createAppConfi
 /**
  * Invalidate all config-related caches after an admin config mutation.
  * Clears the base config, per-principal override caches, tool caches,
- * and the MCP config-source server cache.
+ * the MCP config-source server cache, and the cached models/token config
+ * catalog — a role or permission change can shrink a user's allowed model
+ * catalog, and `validateModel` trusts the cached catalog to accept requests.
  * @param {string} [tenantId] - Optional tenant ID to scope override cache clearing.
  */
 async function invalidateConfigCaches(tenantId) {
@@ -80,12 +83,14 @@ async function invalidateConfigCaches(tenantId) {
     clearOverrideCache(tenantId),
     invalidateCachedTools({ invalidateGlobal: true }),
     clearMcpConfigCache(),
+    clearModelsConfigCache(),
   ]);
   const labels = [
     'clearAppConfigCache',
     'clearOverrideCache',
     'invalidateCachedTools',
     'clearMcpConfigCache',
+    'clearModelsConfigCache',
   ];
   for (let i = 0; i < results.length; i++) {
     if (results[i].status === 'rejected') {

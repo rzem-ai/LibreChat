@@ -20,6 +20,26 @@ export async function invalidateModelsConfig(req: ServerRequest): Promise<void> 
 }
 
 /**
+ * Clears the entire MODELS_CONFIG cache namespace. Intended for admin config
+ * mutations (e.g. role-based model permission changes), which affect the
+ * catalog for potentially many tenants/users at once and are rare enough that
+ * rebuilding the whole cache is cheap relative to leaving stale entries around.
+ */
+export async function clearModelsConfigCache(): Promise<void> {
+  await standardCache(CacheKeys.MODELS_CONFIG).clear();
+}
+
+/**
+ * In-flight loads keyed the same way as the cache, so concurrent callers that
+ * all miss an empty/expired cache entry (e.g. the startup-config, `/api/models`,
+ * and `/endpoints/token-config` routes firing together on a cold page load)
+ * share one discovery pass instead of each re-running `loadDefaultModels`/
+ * `loadConfigModels`. Cleared once the load settles, success or failure, so a
+ * rejected load never permanently blocks later callers.
+ */
+const inFlightLoads = new Map<string, Promise<TModelsConfig>>();
+
+/**
  * Wraps `loadDefaultModels`/`loadConfigModels` behind a short-TTL cache keyed by
  * tenant/user, so the startup-config, `/api/models`, and `/endpoints/token-config`
  * routes — all hit on the same page load — share one resolved result instead of
@@ -36,12 +56,26 @@ export function createGetModelsConfig(deps: GetModelsConfigDeps) {
       return cached;
     }
 
-    const [defaultModelsConfig, customModelsConfig] = await Promise.all([
-      loadDefaultModels(req),
-      loadConfigModels(req),
-    ]);
-    const modelsConfig = { ...defaultModelsConfig, ...customModelsConfig };
-    await cache.set(cacheKey, modelsConfig, Time.TWO_MINUTES);
-    return modelsConfig;
+    const pending = inFlightLoads.get(cacheKey);
+    if (pending) {
+      return pending;
+    }
+
+    const load = (async () => {
+      const [defaultModelsConfig, customModelsConfig] = await Promise.all([
+        loadDefaultModels(req),
+        loadConfigModels(req),
+      ]);
+      const modelsConfig = { ...defaultModelsConfig, ...customModelsConfig };
+      await cache.set(cacheKey, modelsConfig, Time.TWO_MINUTES);
+      return modelsConfig;
+    })();
+    inFlightLoads.set(cacheKey, load);
+
+    try {
+      return await load;
+    } finally {
+      inFlightLoads.delete(cacheKey);
+    }
   };
 }

@@ -32,6 +32,7 @@ jest.mock('../getCachedTools', () => ({
 }));
 
 const mockClearMcpConfigCache = jest.fn().mockResolvedValue(undefined);
+const mockClearModelsConfigCache = jest.fn().mockResolvedValue(undefined);
 jest.mock('@librechat/api', () => ({
   createAppConfigService: jest.fn(() => ({
     getAppConfig: jest.fn().mockResolvedValue({ availableTools: {} }),
@@ -39,6 +40,7 @@ jest.mock('@librechat/api', () => ({
     clearOverrideCache: mockClearOverrideCache,
   })),
   clearMcpConfigCache: mockClearMcpConfigCache,
+  clearModelsConfigCache: mockClearModelsConfigCache,
   createCodeEnvironmentRegistry: jest.fn(() => ({})),
   mergeAccessibleCodeEnvironments: jest.fn(({ appConfig }) => appConfig),
 }));
@@ -59,6 +61,7 @@ describe('invalidateConfigCaches', () => {
     expect(mockClearOverrideCache).toHaveBeenCalledTimes(1);
     expect(mockInvalidateCachedTools).toHaveBeenCalledWith({ invalidateGlobal: true });
     expect(mockClearMcpConfigCache).toHaveBeenCalledTimes(1);
+    expect(mockClearModelsConfigCache).toHaveBeenCalledTimes(1);
   });
 
   it('passes tenantId through to clearOverrideCache', async () => {
@@ -67,6 +70,7 @@ describe('invalidateConfigCaches', () => {
     expect(mockClearOverrideCache).toHaveBeenCalledWith('tenant-a');
     expect(mockClearAppConfigCache).toHaveBeenCalledTimes(1);
     expect(mockInvalidateCachedTools).toHaveBeenCalledWith({ invalidateGlobal: true });
+    expect(mockClearModelsConfigCache).toHaveBeenCalledTimes(1);
   });
 
   it('all operations run in parallel (not sequentially)', async () => {
@@ -108,11 +112,20 @@ describe('invalidateConfigCaches', () => {
           }, 10),
         ),
     );
+    mockClearModelsConfigCache.mockImplementation(
+      () =>
+        new Promise((r) =>
+          setTimeout(() => {
+            order.push('models');
+            r();
+          }, 10),
+        ),
+    );
 
     await invalidateConfigCaches();
 
-    expect(order).toHaveLength(4);
-    expect(new Set(order)).toEqual(new Set(['base', 'override', 'tools', 'mcp']));
+    expect(order).toHaveLength(5);
+    expect(new Set(order)).toEqual(new Set(['base', 'override', 'tools', 'mcp', 'models']));
   });
 
   it('resolves even when clearAppConfigCache throws (partial failure)', async () => {

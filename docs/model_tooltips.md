@@ -39,6 +39,8 @@ modelSpecs:
 
 Specs without an `artificialAnalysisBenchmarkModelName` are left untouched (a deliberate opt-out, no warning). Specs whose benchmark name has no catalog match are also left untouched, but logged as a workflow warning so the mismatch doesn't go unnoticed. `details.supports` is never touched by the sync — it's editorial and must be set by hand.
 
+The sync script and its test are only ever executed from the PR's *base* revision (never from an unreviewed head), so on a PR that introduces or changes these scripts themselves, the base branch won't have them yet — the workflow detects this and no-ops cleanly (logged as a notice) rather than falling back to running unreviewed code. Synchronization resumes automatically once the scripts land on `develop`.
+
 Every `speed`/`intelligence` line the workflow writes gets a trailing comment recording when it was last synced:
 
 ```yaml
