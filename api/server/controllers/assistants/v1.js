@@ -1,5 +1,6 @@
 const fs = require('fs').promises;
 const { logger } = require('@librechat/data-schemas');
+const { getAssistantVisibility } = require('@librechat/api');
 const {
   inspectContent,
   extractFileContent,
@@ -27,6 +28,9 @@ const {
   toProviderToolDefinition,
 } = require('~/server/services/MCP');
 const { manifestToolMap, isAgentsOnlyTool } = require('~/app/clients/tools');
+
+// Deloitte Custom Change: private Azure assistant avatars must use the authenticated image proxy.
+const { AZURE_STORAGE_PUBLIC_ACCESS = 'true' } = process.env;
 
 /**
  * Create an assistant.
@@ -324,20 +328,23 @@ const listAssistants = async (req, res) => {
  * @returns {AssistantDocument[]} - The filtered list of assistants.
  */
 function filterAssistantDocs({ documents, userId, assistantsConfig = {} }) {
-  const { supportedIds, excludedIds, privateAssistants } = assistantsConfig;
   const removeUserId = (doc) => {
     const { user: _u, ...document } = doc;
     return document;
   };
 
-  if (privateAssistants) {
-    return documents.filter((doc) => userId === doc.user.toString()).map(removeUserId);
-  } else if (supportedIds?.length) {
-    return documents.filter((doc) => supportedIds.includes(doc.assistant_id)).map(removeUserId);
-  } else if (excludedIds?.length) {
-    return documents.filter((doc) => !excludedIds.includes(doc.assistant_id)).map(removeUserId);
-  }
-  return documents.map(removeUserId);
+  // Deloitte Custom Change: keep document listings aligned with private Azure avatar authorization.
+  return documents
+    .filter(
+      (doc) =>
+        getAssistantVisibility({
+          assistantId: doc.assistant_id,
+          authorId: doc.user.toString(),
+          userId,
+          config: assistantsConfig,
+        }) === 'allowed',
+    )
+    .map(removeUserId);
 }
 
 /**
@@ -386,7 +393,6 @@ const getAssistantDocuments = async (req, res) => {
  */
 const uploadAssistantAvatar = async (req, res) => {
   try {
-    const appConfig = req.config;
     filterFile({ req, file: req.file, image: true, isAvatar: true });
     if (hasActiveFileFieldPolicy(req.config?.filters, ['name', 'content'])) {
       const finding = inspectContent(extractFileContent({ name: req.file.originalname }), {
@@ -415,6 +421,9 @@ const uploadAssistantAvatar = async (req, res) => {
       req,
       context: FileContext.avatar,
       metadata: { buffer },
+      returnProxyPath: AZURE_STORAGE_PUBLIC_ACCESS.toLowerCase() !== 'true',
+      assistantId: assistant_id,
+      assistantEndpoint: endpoint,
     });
 
     let _metadata;
@@ -446,7 +455,7 @@ const uploadAssistantAvatar = async (req, res) => {
     const metadata = {
       ..._metadata,
       avatar: image.filepath,
-      avatar_source: appConfig.fileStrategy,
+      avatar_source: image.source,
     };
 
     const promises = [];
@@ -456,7 +465,7 @@ const uploadAssistantAvatar = async (req, res) => {
         {
           avatar: {
             filepath: image.filepath,
-            source: appConfig.fileStrategy,
+            source: image.source,
           },
           user: req.user.id,
           endpoint,

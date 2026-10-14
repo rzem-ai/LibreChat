@@ -34,7 +34,6 @@ type ModelSelectorContextType = {
   assistantsMap: t.TAssistantsMap | undefined;
   endpointsConfig: t.TEndpointsConfig;
   modelPricing: t.TModelPricing;
-  endpointCostConfig: t.TEndpointCostConfig | undefined;
 
   // Functions
   endpointRequiresUserKey: (endpoint: string) => boolean;
@@ -90,7 +89,6 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
     });
   }, [startupConfig, agentsMap]);
   const modelPricing = startupConfig?.modelPricing ?? emptyModelPricing;
-  const endpointCostConfig = startupConfig?.endpointCostConfig;
 
   const permissionLevel = useAgentDefaultPermissionLevel();
   /**
@@ -281,7 +279,6 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
       mappedEndpoints,
       endpointsConfig,
       modelPricing,
-      endpointCostConfig,
       handleSelectSpec,
       handleSelectModel,
       setSelectedValues,
@@ -302,7 +299,6 @@ export function ModelSelectorProvider({ children, startupConfig }: ModelSelector
       mappedEndpoints,
       endpointsConfig,
       modelPricing,
-      endpointCostConfig,
       handleSelectSpec,
       handleSelectModel,
       setSelectedValues,

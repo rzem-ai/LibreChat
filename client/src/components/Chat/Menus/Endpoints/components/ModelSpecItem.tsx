@@ -65,7 +65,7 @@ export function ModelSpecItem({ spec, isSelected, posInSet, setSize }: ModelSpec
           <SpecDescription description={spec.description} />
         </div>
       </div>
-      <ModelCost modelId={spec.preset.model} />
+      <ModelCost modelId={spec.preset.model} endpoint={spec.preset.endpoint} />
       <button
         type="button"
         tabIndex={isActive ? 0 : -1}

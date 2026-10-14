@@ -49,7 +49,7 @@ pods:
     containers:
       librechat:
         image:
-          tag: 'develop@sha256:f54e719c2a5c808f8c852db0fbac8c91168111bff7683f1ae8871c09b5fbd595'
+          tag: 'develop@sha256:2ed9e69836b1873f40da56d1ad84b3a2c798429835a1922ee6c981591131bfc5'
         resources:
           requests:
             memory: "2Gi"
@@ -78,12 +78,10 @@ pods:
           EMBEDDINGS_PROVIDER: 'openai'
           ENDPOINTS: 'agents,anthropic,bedrock,custom'
           KEY_VAULT_NAME: 'kv-int-librechat-dev'
+          LEARNING_CENTER_FAQ_AGENT_ID: 'agent_arr_Uz20-PrgY9uY8eXAL'
           MCP_GATEWAY_OBO_SCOPE: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
           MCP_GATEWAY_TOOLSETS: 'teams,research,news,kx,desc,gims'
           MCP_GATEWAY_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
-          MODEL_PRICING_MIN_MULTIPLIER: '0.1'
-          MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT: '0.1'
-          MODEL_PRICING_REFERENCE_MODEL_ID: 'gpt-56-luna'
           MONGO_DB: 'mdb-librechat-database-dev'
           NODE_ENV: 'development'
           NODE_TLS_REJECT_UNAUTHORIZED: '0'
@@ -170,7 +168,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:e312a3643ca0f37e950cc7bf44f528ce24834b01648595f2ee1d707e41d4d69d'
+          tag: 'develop@sha256:32b798da70a9b53c2384f9e368e7691295858df84271d6bbdd56f54d1916a700'
         resources:
           requests:
             memory: "1Gi"
@@ -234,7 +232,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:d7d427180eaf2dffe8e1d1f55acfb74d675f713e054cb12e2777f7fafc913712'
+          tag: 'develop@sha256:a62e3941cdbd05dcb2cbd09442940d8d4a9e11fbf5cfa3715c7c8b98ddca8e06'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'

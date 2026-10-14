@@ -595,6 +595,9 @@ function resolveProviderToolConflicts({
     if (provider === Providers.GOOGLE || provider === Providers.VERTEXAI) {
       return hasGoogleSearchTool(tool);
     }
+    if (provider === Providers.OPENAI || provider === Providers.AZURE) {
+      return isProviderWebSearchTool(tool);
+    }
     return false;
   };
 
