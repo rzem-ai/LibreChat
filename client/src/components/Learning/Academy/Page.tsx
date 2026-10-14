@@ -69,9 +69,9 @@ export default function Page(): JSX.Element {
         onValueChange={(next) => navigate(`/learning/${next}`)}
         className="flex flex-col gap-6"
       >
-        <GELTabs.TabsList>
+        <GELTabs.TabsList variant="underline">
           {enabledTabs.map((candidate) => (
-            <GELTabs.TabsTrigger key={candidate.id} value={candidate.id}>
+            <GELTabs.TabsTrigger key={candidate.id} value={candidate.id} variant="underline">
               {candidate.label}
             </GELTabs.TabsTrigger>
           ))}
