@@ -11,8 +11,6 @@ import Faq from './faq/Page';
 
 type AcademyTab = 'tours' | 'resources' | 'faq' | 'releases';
 
-const { Tabs, TabsList, TabsTrigger, TabsContent } = GEL;
-
 const contentClass = 'mt-0 p-0';
 
 export default function Page(): JSX.Element {
@@ -65,31 +63,31 @@ export default function Page(): JSX.Element {
           </Button>
         )}
       </header>
-      <Tabs
+      <GEL.Tabs
         value={tab}
         onValueChange={(next) => navigate(`/learning/${next}`)}
         className="flex flex-col gap-6"
       >
-        <TabsList variant="underline">
+        <GEL.TabsList variant="underline">
           {enabledTabs.map((candidate) => (
-            <TabsTrigger key={candidate.id} value={candidate.id} variant="underline">
+            <GEL.TabsTrigger key={candidate.id} value={candidate.id} variant="underline">
               {candidate.label}
-            </TabsTrigger>
+            </GEL.TabsTrigger>
           ))}
-        </TabsList>
-        <TabsContent value="tours" className={contentClass}>
+        </GEL.TabsList>
+        <GEL.TabsContent value="tours" className={contentClass}>
           <Tours />
-        </TabsContent>
-        <TabsContent value="resources" className={contentClass}>
+        </GEL.TabsContent>
+        <GEL.TabsContent value="resources" className={contentClass}>
           <Resources onOpenArticle={(slug) => navigate(`/learning/articles/${slug}`)} />
-        </TabsContent>
-        <TabsContent value="faq" className={contentClass}>
+        </GEL.TabsContent>
+        <GEL.TabsContent value="faq" className={contentClass}>
           <Faq />
-        </TabsContent>
-        <TabsContent value="releases" className={contentClass}>
+        </GEL.TabsContent>
+        <GEL.TabsContent value="releases" className={contentClass}>
           <Releases />
-        </TabsContent>
-      </Tabs>
+        </GEL.TabsContent>
+      </GEL.Tabs>
     </>
   );
 }
