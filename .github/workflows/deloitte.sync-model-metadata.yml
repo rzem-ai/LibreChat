@@ -72,6 +72,7 @@ jobs:
           token: ${{ steps.app.outputs.token }}
           sparse-checkout: |
             librechat.yaml
+          sparse-checkout-cone-mode: false
           path: head
 
       - name: Fetch and populate model metadata
@@ -82,6 +83,8 @@ jobs:
 
       - name: Commit and push if librechat.yaml changed
         working-directory: head
+        env:
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           if git diff --quiet -- librechat.yaml; then
             echo "No model metadata changes."
@@ -91,4 +94,4 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add librechat.yaml
           git commit -m "chore: sync model speed/intelligence ratings from Artificial Analysis"
-          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+          git push origin "HEAD:$PR_HEAD_REF"
