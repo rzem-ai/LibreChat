@@ -8,14 +8,21 @@ import Article from '../Academy/articles/Page';
 const mockArticle = {
   id: 'sample',
   frontmatter: { title: 'Sample article', updated: '2026-01-01' },
-  Content: () => (
-    <>
-      <h2>Getting started</h2>
-      <p>Opening paragraph.</p>
-      <h2>Advanced setup</h2>
-      <p>Closing paragraph.</p>
-    </>
-  ),
+  headings: [
+    { id: 'getting-started', text: 'Getting started' },
+    { id: 'advanced-setup', text: 'Advanced setup' },
+  ],
+  Content: ({ components }: { components?: { h2?: React.ElementType } }) => {
+    const Heading = components?.h2 ?? 'h2';
+    return (
+      <>
+        <Heading>Getting started</Heading>
+        <p>Opening paragraph.</p>
+        <Heading>Advanced setup</Heading>
+        <p>Closing paragraph.</p>
+      </>
+    );
+  },
 };
 
 jest.mock('~/hooks', () => ({

@@ -1,7 +1,9 @@
 import type { ComponentType } from 'react';
 import type { MDXProps } from 'mdx/types';
 import type { ArticleFrontmatter, ReleaseFrontmatter } from './schema';
+import type { ArticleHeading } from './headings';
 import { ArticleFrontmatterSchema, ReleaseFrontmatterSchema } from './schema';
+import { extractHeadings } from './headings';
 
 interface MdxModule {
   default: ComponentType<MDXProps>;
@@ -12,6 +14,10 @@ interface MdxEntry<T> {
   id: string;
   frontmatter: T;
   Content: ComponentType<MDXProps>;
+}
+
+export interface ArticleEntry extends MdxEntry<ArticleFrontmatter> {
+  headings: ArticleHeading[];
 }
 
 const idFromPath = (path: string): string =>
@@ -31,10 +37,19 @@ function parseModules<T>(
   }));
 }
 
-const articles = parseModules<ArticleFrontmatter>(
+const articleSources = new Map(
+  Object.entries(
+    import.meta.glob<string>('./articles/*.mdx', { eager: true, query: '?raw', import: 'default' }),
+  ).map(([path, source]) => [idFromPath(path), source]),
+);
+
+const articles: ArticleEntry[] = parseModules<ArticleFrontmatter>(
   import.meta.glob<MdxModule>('./articles/*.mdx', { eager: true }),
   (frontmatter) => ArticleFrontmatterSchema.parse(frontmatter),
-);
+).map((article) => ({
+  ...article,
+  headings: extractHeadings(articleSources.get(article.id) ?? ''),
+}));
 
 /** Newest first. */
 export const RELEASES: MdxEntry<ReleaseFrontmatter>[] = parseModules<ReleaseFrontmatter>(
@@ -42,6 +57,6 @@ export const RELEASES: MdxEntry<ReleaseFrontmatter>[] = parseModules<ReleaseFron
   (frontmatter) => ReleaseFrontmatterSchema.parse(frontmatter),
 ).sort((a, b) => b.frontmatter.date.localeCompare(a.frontmatter.date));
 
-export function getArticle(slug: string): MdxEntry<ArticleFrontmatter> | undefined {
+export function getArticle(slug: string): ArticleEntry | undefined {
   return articles.find((article) => article.id === slug);
 }
