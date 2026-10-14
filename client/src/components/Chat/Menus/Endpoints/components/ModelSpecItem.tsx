@@ -1,8 +1,8 @@
 import React from 'react';
 import { Pin, PinOff } from 'lucide';
 import { CheckCircle2 } from 'lucide-react';
-import { MorphIcon } from '@librechat/client';
 import { VisuallyHidden } from '@ariakit/react';
+import { ModelInfoHoverGroup, MorphIcon } from '@librechat/client';
 import type { TModelSpec } from 'librechat-data-provider';
 import { useFavorites, useLocalize, useIsActiveItem } from '~/hooks';
 import { useModelSelectorContext } from '../ModelSelectorContext';
@@ -38,19 +38,18 @@ export function ModelSpecItem({ spec, isSelected, posInSet, setSize }: ModelSpec
   };
 
   return (
-    <MenuItem
-      ref={itemRef}
-      onClick={() => handleSelectSpec(spec)}
-      aria-selected={isSelected || undefined}
-      aria-posinset={posInSet}
-      aria-setsize={setSize}
-      className="group flex w-full cursor-pointer rounded-lg px-2 text-sm"
-    >
-      {/* Deloitte Custom Change: hover tooltip covers the whole menu item row, not just the icon/label. */}
-      <ModelInfoTooltip
-        spec={spec}
-        endpointsConfig={endpointsConfig}
-        agentAvatarURL={agentAvatarURL}
+    // Deloitte Custom Change: wraps MenuItem itself (not an inner div) so the hover card's
+    // show/hide handlers land on the actual focusable, roving-tabindex element Ariakit
+    // manages — a wrapper further in would never see keyboard focus, since focus doesn't
+    // bubble from an ancestor to a descendant.
+    <ModelInfoTooltip spec={spec} endpointsConfig={endpointsConfig} agentAvatarURL={agentAvatarURL}>
+      <MenuItem
+        ref={itemRef}
+        onClick={() => handleSelectSpec(spec)}
+        aria-selected={isSelected || undefined}
+        aria-posinset={posInSet}
+        aria-setsize={setSize}
+        className="group flex w-full cursor-pointer rounded-lg px-2 text-sm"
       >
         <div className="flex w-full items-center justify-between gap-2">
           <div
@@ -103,8 +102,8 @@ export function ModelSpecItem({ spec, isSelected, posInSet, setSize }: ModelSpec
             </>
           )}
         </div>
-      </ModelInfoTooltip>
-    </MenuItem>
+      </MenuItem>
+    </ModelInfoTooltip>
   );
 }
 
@@ -113,7 +112,13 @@ export function renderModelSpecs(specs: TModelSpec[], selectedSpec: string) {
     return null;
   }
 
-  return specs.map((spec) => (
-    <ModelSpecItem key={spec.name} spec={spec} isSelected={selectedSpec === spec.name} />
-  ));
+  // Deloitte Custom Change: one hover card shared by every row here, anchored to the whole
+  // list so its position doesn't jump between rows — see ModelInfoTooltip.tsx.
+  return (
+    <ModelInfoHoverGroup>
+      {specs.map((spec) => (
+        <ModelSpecItem key={spec.name} spec={spec} isSelected={selectedSpec === spec.name} />
+      ))}
+    </ModelInfoHoverGroup>
+  );
 }

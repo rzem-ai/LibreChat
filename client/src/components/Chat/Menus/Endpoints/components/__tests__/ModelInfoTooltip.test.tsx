@@ -1,10 +1,12 @@
 /* eslint-disable i18next/no-literal-string */
 // Deloitte Custom Change: render coverage for the ModelInfoTooltip wrapper — this layer only
-// resolves spec/pricing/context data into props; the presentational rendering (HoverCard,
-// rating meters, alignment) lives in and is covered by @librechat/client's gel ModelInfoTooltip.
+// resolves spec/pricing/context data into a content object; the hover/position behavior
+// (ModelInfoHoverGroup) and card rendering (ModelInfoTooltipCard) live in and are covered by
+// @librechat/client's gel ModelInfoTooltip module.
 import { render, screen } from '@testing-library/react';
-import type { ModelInfoTooltipProps } from '@librechat/client';
+import type { ModelInfoTooltipContent } from '@librechat/client';
 import type { TModelSpec } from 'librechat-data-provider';
+import type { ReactNode } from 'react';
 import ModelInfoTooltip from '../ModelInfoTooltip';
 
 let mockModelPricing: Record<string, { tier: number; inputPer1M: number; outputPer1M: number }> =
@@ -29,35 +31,47 @@ jest.mock('../SpecIcon', () => ({
   default: () => <span data-testid="spec-icon" />,
 }));
 
-// Deloitte Custom Change: stub out the shared presentational component so these tests assert
-// on the props the wrapper computes, not on @librechat/client's own rendering (tested there).
+// Deloitte Custom Change: stub out the shared hover-group target so these tests assert on the
+// content object the wrapper computes, not on @librechat/client's own hover/position behavior
+// (tested there, in packages/client's ModelInfoHoverGroup.test.tsx).
 jest.mock('@librechat/client', () => ({
   ...jest.requireActual('@librechat/client'),
-  ModelInfoTooltip: ({ children, ...props }: ModelInfoTooltipProps) => (
-    <div data-testid="gel-tooltip">
-      <span data-testid="group">{props.group}</span>
-      <span data-testid="label">{props.label}</span>
-      {props.description}
-      {props.speed != null && (
-        <span data-testid="speed">{`${props.labels.speed}:${props.speed}`}</span>
-      )}
-      {props.intelligence != null && (
-        <span data-testid="intelligence">{`${props.labels.intelligence}:${props.intelligence}`}</span>
-      )}
-      {props.cost && (
-        <span data-testid="cost">
-          {`${props.labels.cost}:${props.cost.tier}:${props.cost.inputText}:${props.cost.outputText}`}
-        </span>
-      )}
-      {props.contextLabel && (
-        <span data-testid="context">{`${props.labels.context}:${props.contextLabel}`}</span>
-      )}
-      {props.supports && props.supports.length > 0 && (
-        <span data-testid="supports">{`${props.labels.supports}:${props.supports.join(',')}`}</span>
-      )}
-      {children}
-    </div>
-  ),
+  ModelInfoHoverTarget: ({
+    content,
+    children,
+  }: {
+    content: ModelInfoTooltipContent | null;
+    children: ReactNode;
+  }) => {
+    if (!content) {
+      return children;
+    }
+    return (
+      <div data-testid="gel-tooltip">
+        <span data-testid="group">{content.group}</span>
+        <span data-testid="label">{content.label}</span>
+        {content.description}
+        {content.speed != null && (
+          <span data-testid="speed">{`${content.labels.speed}:${content.speed}`}</span>
+        )}
+        {content.intelligence != null && (
+          <span data-testid="intelligence">{`${content.labels.intelligence}:${content.intelligence}`}</span>
+        )}
+        {content.cost && (
+          <span data-testid="cost">
+            {`${content.labels.cost}:${content.cost.tier}:${content.cost.inputText}:${content.cost.outputText}`}
+          </span>
+        )}
+        {content.contextLabel && (
+          <span data-testid="context">{`${content.labels.context}:${content.contextLabel}`}</span>
+        )}
+        {content.supports && content.supports.length > 0 && (
+          <span data-testid="supports">{`${content.labels.supports}:${content.supports.join(',')}`}</span>
+        )}
+        {children}
+      </div>
+    );
+  },
 }));
 
 const baseSpec: TModelSpec = {

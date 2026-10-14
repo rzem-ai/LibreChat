@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { VisuallyHidden } from '@ariakit/react';
-import { Spinner, TooltipAnchor } from '@librechat/client';
 import { CheckCircle2, MousePointerClick, SettingsIcon } from 'lucide-react';
+import { ModelInfoHoverGroup, Spinner, TooltipAnchor } from '@librechat/client';
 import { EModelEndpoint, isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider';
 import type { TModelSpec } from 'librechat-data-provider';
 import type { Endpoint } from '~/common';
@@ -154,15 +154,22 @@ function EndpointMenuContent({
         />
       )}
       {showMarketplace && hasSelectableRows && <CustomMenuSeparator />}
-      {endpointSpecs.map((spec: TModelSpec, specIndex: number) => (
-        <ModelSpecItem
-          key={spec.name}
-          spec={spec}
-          isSelected={selectedSpec === spec.name}
-          posInSet={isVirtualized ? (showMarketplace ? 1 : 0) + specIndex + 1 : undefined}
-          setSize={listboxSetSize}
-        />
-      ))}
+      {/* Deloitte Custom Change: one hover card shared by every spec row here, anchored to the
+          whole block so its position doesn't jump between rows — see ModelInfoTooltip.tsx.
+          Scoped to just the specs (not EndpointModels below), which don't show this tooltip. */}
+      {endpointSpecs.length > 0 && (
+        <ModelInfoHoverGroup>
+          {endpointSpecs.map((spec: TModelSpec, specIndex: number) => (
+            <ModelSpecItem
+              key={spec.name}
+              spec={spec}
+              isSelected={selectedSpec === spec.name}
+              posInSet={isVirtualized ? (showMarketplace ? 1 : 0) + specIndex + 1 : undefined}
+              setSize={listboxSetSize}
+            />
+          ))}
+        </ModelInfoHoverGroup>
+      )}
       <EndpointModels
         endpoint={endpoint}
         renderedModels={renderedModels}

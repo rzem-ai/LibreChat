@@ -1,11 +1,14 @@
 // Deloitte Custom Change: thin wrapper around @librechat/client's gel ModelInfoTooltip —
 // resolves spec/pricing/context data, the icon, the sanitized description, and localized
-// strings, then hands the result to the shared presentational component (which has no
-// app hooks of its own, so it can live in the shared package alongside RatingMeter).
+// strings into a content object, then hands it to the shared ModelInfoHoverTarget (which has
+// no app hooks of its own, so it can live in the shared package alongside RatingMeter).
+// Rendering/positioning the actual card is owned by the ModelInfoHoverGroup that wraps the
+// whole spec list — see CustomGroup.tsx / EndpointItem.tsx.
+import { ModelInfoHoverTarget } from '@librechat/client';
 import { resolveModelCatalogKey } from 'librechat-data-provider';
-import { ModelInfoTooltip as GelModelInfoTooltip } from '@librechat/client';
 import type { TModelSpec, TEndpointsConfig } from 'librechat-data-provider';
-import type { ReactNode } from 'react';
+import type { ModelInfoTooltipContent } from '@librechat/client';
+import type { ReactElement } from 'react';
 import { useModelSelectorContext } from '../ModelSelectorContext';
 import { getModelCost, formatPrice } from './ModelCost';
 import { useTokenConfigQuery } from '~/data-provider';
@@ -18,7 +21,7 @@ interface ModelInfoTooltipProps {
   spec: TModelSpec;
   endpointsConfig: TEndpointsConfig;
   agentAvatarURL?: string;
-  children: ReactNode;
+  children: ReactElement;
 }
 
 export default function ModelInfoTooltip({
@@ -26,7 +29,7 @@ export default function ModelInfoTooltip({
   endpointsConfig,
   agentAvatarURL,
   children,
-}: ModelInfoTooltipProps) {
+}: ModelInfoTooltipProps): ReactElement {
   const localize = useLocalize();
   const { modelPricing = {} } = useModelSelectorContext();
   const { data: tokenConfig } = useTokenConfigQuery();
@@ -43,27 +46,23 @@ export default function ModelInfoTooltip({
 
   const hasDetails =
     details != null || pricing != null || (contextTokens != null && contextTokens > 0);
-  if (!hasDetails) {
-    return <>{children}</>;
-  }
 
-  return (
-    <GelModelInfoTooltip
-      icon={
-        <SpecIcon
-          currentSpec={spec}
-          endpointsConfig={endpointsConfig}
-          agentAvatarURL={agentAvatarURL}
-          size={32}
-        />
-      }
-      group={spec.group}
-      label={spec.label}
-      description={<SpecDescription description={spec.description} />}
-      speed={details?.speed}
-      intelligence={details?.intelligence}
-      cost={
-        pricing
+  const content: ModelInfoTooltipContent | null = hasDetails
+    ? {
+        icon: (
+          <SpecIcon
+            currentSpec={spec}
+            endpointsConfig={endpointsConfig}
+            agentAvatarURL={agentAvatarURL}
+            size={32}
+          />
+        ),
+        group: spec.group,
+        label: spec.label,
+        description: <SpecDescription description={spec.description} />,
+        speed: details?.speed,
+        intelligence: details?.intelligence,
+        cost: pricing
           ? {
               tier: pricing.tier,
               isHighCost: pricing.isHighCost,
@@ -74,23 +73,21 @@ export default function ModelInfoTooltip({
                 0: formatPrice(pricing.outputPer1M),
               }),
             }
-          : undefined
+          : undefined,
+        contextLabel:
+          contextTokens != null && contextTokens > 0 ? formatTokens(contextTokens) : undefined,
+        supports,
+        labels: {
+          ariaLabel: localize('com_ui_model_details'),
+          speed: localize('com_ui_model_details_speed'),
+          intelligence: localize('com_ui_model_details_intelligence'),
+          cost: localize('com_ui_model_details_cost'),
+          highCost: localize('com_ui_model_details_high_cost'),
+          context: localize('com_ui_model_details_context'),
+          supports: localize('com_ui_model_details_supports'),
+        },
       }
-      contextLabel={
-        contextTokens != null && contextTokens > 0 ? formatTokens(contextTokens) : undefined
-      }
-      supports={supports}
-      labels={{
-        ariaLabel: localize('com_ui_model_details'),
-        speed: localize('com_ui_model_details_speed'),
-        intelligence: localize('com_ui_model_details_intelligence'),
-        cost: localize('com_ui_model_details_cost'),
-        highCost: localize('com_ui_model_details_high_cost'),
-        context: localize('com_ui_model_details_context'),
-        supports: localize('com_ui_model_details_supports'),
-      }}
-    >
-      {children}
-    </GelModelInfoTooltip>
-  );
+    : null;
+
+  return <ModelInfoHoverTarget content={content}>{children}</ModelInfoHoverTarget>;
 }

@@ -1,20 +1,10 @@
-// Deloitte Custom Change: new file — presentational render coverage for the shared gel
-// ModelInfoTooltip (Figma node 855:37722): header, rating meters, cost/context/supports rows.
+// Deloitte Custom Change: presentational render coverage for the shared gel
+// ModelInfoTooltipCard (Figma node 855:37722): header, rating meters, cost/context/supports
+// rows. No HoverCard involved — positioning and open/close behavior live in
+// ModelInfoHoverGroup, covered separately in ModelInfoHoverGroup.test.tsx.
 import { render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import type { ModelInfoTooltipLabels } from '../ModelInfoTooltip';
-import { ModelInfoTooltip } from '../ModelInfoTooltip';
-
-// Deloitte Custom Change: Radix HoverCard only mounts content on hover/focus; render it open
-// always so these tests can assert on ModelInfoTooltip's own markup.
-jest.mock('../../HoverCard', () => ({
-  HoverCard: ({ children }: { children: ReactNode }) => <>{children}</>,
-  HoverCardTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
-  HoverCardPortal: ({ children }: { children: ReactNode }) => <>{children}</>,
-  HoverCardContent: ({ children, ...rest }: { children: ReactNode }) => (
-    <div {...rest}>{children}</div>
-  ),
-}));
+import { ModelInfoTooltipCard } from '../ModelInfoTooltip';
 
 const labels: ModelInfoTooltipLabels = {
   ariaLabel: 'Model details',
@@ -26,18 +16,16 @@ const labels: ModelInfoTooltipLabels = {
   supports: 'Supports',
 };
 
-describe('ModelInfoTooltip', () => {
+describe('ModelInfoTooltipCard', () => {
   it('renders the icon, stacked group name, label, and description in the header', () => {
     render(
-      <ModelInfoTooltip
+      <ModelInfoTooltipCard
         icon={<span data-testid="icon" />}
         group="OpenAI Global"
         label="My Spec"
         description="A helpful model"
         labels={labels}
-      >
-        <button>Row</button>
-      </ModelInfoTooltip>,
+      />,
     );
     expect(screen.getByTestId('icon')).toBeInTheDocument();
     expect(screen.getByText('OpenAI Global')).toBeInTheDocument();
@@ -47,20 +35,20 @@ describe('ModelInfoTooltip', () => {
   });
 
   it('omits the group line when no group is given', () => {
-    render(
-      <ModelInfoTooltip icon={<span />} label="My Spec" labels={labels}>
-        <button>Row</button>
-      </ModelInfoTooltip>,
-    );
+    render(<ModelInfoTooltipCard icon={<span />} label="My Spec" labels={labels} />);
     expect(screen.queryByText('OpenAI Global')).not.toBeInTheDocument();
     expect(screen.getByText('My Spec')).toBeInTheDocument();
   });
 
   it('renders Speed and Intelligence as N-of-5 rating meters, centered with their label', () => {
     render(
-      <ModelInfoTooltip icon={<span />} label="My Spec" speed={3} intelligence={5} labels={labels}>
-        <button>Row</button>
-      </ModelInfoTooltip>,
+      <ModelInfoTooltipCard
+        icon={<span />}
+        label="My Spec"
+        speed={3}
+        intelligence={5}
+        labels={labels}
+      />,
     );
     const meters = screen.getAllByRole('img');
     expect(meters).toHaveLength(2);
@@ -72,14 +60,12 @@ describe('ModelInfoTooltip', () => {
 
   it('renders a cost row with a tier meter and input/output price lines, top-aligned', () => {
     render(
-      <ModelInfoTooltip
+      <ModelInfoTooltipCard
         icon={<span />}
         label="My Spec"
         cost={{ tier: 2, inputText: '$1.00 / 1M input', outputText: '$6.00 / 1M output' }}
         labels={labels}
-      >
-        <button>Row</button>
-      </ModelInfoTooltip>,
+      />,
     );
     expect(screen.getByRole('img', { name: '2 of 5' })).toBeInTheDocument();
     expect(screen.getByText('$1.00 / 1M input')).toBeInTheDocument();
@@ -89,7 +75,7 @@ describe('ModelInfoTooltip', () => {
 
   it('shows the "High Cost" chip below the rating bar when the cost is flagged high-cost', () => {
     render(
-      <ModelInfoTooltip
+      <ModelInfoTooltipCard
         icon={<span />}
         label="My Spec"
         cost={{
@@ -99,16 +85,14 @@ describe('ModelInfoTooltip', () => {
           outputText: '$30.00 / 1M output',
         }}
         labels={labels}
-      >
-        <button>Row</button>
-      </ModelInfoTooltip>,
+      />,
     );
     expect(screen.getByText('High Cost')).toBeInTheDocument();
   });
 
   it('omits the "High Cost" chip when the cost is not flagged high-cost', () => {
     render(
-      <ModelInfoTooltip
+      <ModelInfoTooltipCard
         icon={<span />}
         label="My Spec"
         cost={{
@@ -118,18 +102,14 @@ describe('ModelInfoTooltip', () => {
           outputText: '$15.00 / 1M output',
         }}
         labels={labels}
-      >
-        <button>Row</button>
-      </ModelInfoTooltip>,
+      />,
     );
     expect(screen.queryByText('High Cost')).not.toBeInTheDocument();
   });
 
   it('renders context as plain text with no meter, top-aligned with its label', () => {
     render(
-      <ModelInfoTooltip icon={<span />} label="My Spec" contextLabel="128K" labels={labels}>
-        <button>Row</button>
-      </ModelInfoTooltip>,
+      <ModelInfoTooltipCard icon={<span />} label="My Spec" contextLabel="128K" labels={labels} />,
     );
     expect(screen.getByText('128K')).toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
@@ -138,14 +118,12 @@ describe('ModelInfoTooltip', () => {
 
   it('renders a supports row listing every given capability', () => {
     render(
-      <ModelInfoTooltip
+      <ModelInfoTooltipCard
         icon={<span />}
         label="My Spec"
         supports={['Web search', 'Image generation']}
         labels={labels}
-      >
-        <button>Row</button>
-      </ModelInfoTooltip>,
+      />,
     );
     expect(screen.getByText('Supports')).toBeInTheDocument();
     expect(screen.getByText('Web search')).toBeInTheDocument();
@@ -153,11 +131,7 @@ describe('ModelInfoTooltip', () => {
   });
 
   it('omits the supports row entirely when supports is empty', () => {
-    render(
-      <ModelInfoTooltip icon={<span />} label="My Spec" supports={[]} labels={labels}>
-        <button>Row</button>
-      </ModelInfoTooltip>,
-    );
+    render(<ModelInfoTooltipCard icon={<span />} label="My Spec" supports={[]} labels={labels} />);
     expect(screen.queryByText('Supports')).not.toBeInTheDocument();
   });
 });
