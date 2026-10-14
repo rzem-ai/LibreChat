@@ -104,7 +104,7 @@ export function ModelInfoTooltip({
       <HoverCardPortal>
         <HoverCardContent
           // Deloitte Custom Change: Figma calls for a white card, not the default grey secondary surface.
-          className="w-[26rem] bg-white p-0 dark:bg-surface-secondary"
+          className="w-[26rem] bg-surface-primary p-0 dark:bg-surface-secondary"
           role="region"
           aria-label={labels.ariaLabel}
           // Deloitte Custom Change: dock to the right of the model list, top-aligned with the row.
