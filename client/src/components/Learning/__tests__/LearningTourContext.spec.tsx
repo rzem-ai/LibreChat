@@ -1,8 +1,8 @@
 import React from 'react';
 import '@testing-library/jest-dom';
 import { renderHook, act } from '@testing-library/react';
-import { LearningTourProvider, useLearningTour } from '../LearningTourContext';
 import type { TourStep } from '../Courses/content/schema';
+import { LearningTourProvider, useLearningTour } from '../LearningTourContext';
 
 const mockNavigate = jest.fn();
 const mockSetActive = jest.fn();

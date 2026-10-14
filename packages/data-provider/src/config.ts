@@ -2457,6 +2457,16 @@ export const interfaceSchema = z
           .optional(),
       })
       .optional(),
+    // Deloitte Custom Change: let `librechat.yaml` configure the Learning Center
+    // menu bar's FAQ agent and feedback link per environment (dev/uat/prd) — the
+    // FAQ agent's id differs per environment, so there is no safe shared default;
+    // the menu item is hidden entirely when faqAgentId is unset or unresolvable.
+    learningCenter: z
+      .object({
+        faqAgentId: z.string().optional(),
+        feedbackUrl: z.string().optional(),
+      })
+      .optional(),
     fileSearch: z.boolean().optional(),
     // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
     providerUpload: z.boolean().optional(),

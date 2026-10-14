@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
-import { createRoot, type Root } from 'react-dom/client';
 import { flushSync } from 'react-dom';
+import { createRoot, type Root } from 'react-dom/client';
 import type { Driver, DriveStep, PopoverDOM } from 'driver.js';
 import type { TourStep } from './content/schema';
 import { TRANSITION_MS } from '~/components/UnifiedSidebar/constants';
@@ -109,11 +109,15 @@ export default function useCourseTour(
 
       // driver.js sets `display` on these via inline style on every render, so only
       // another inline-style write (not a Tailwind class) can override it.
-      [popover.title, popover.description, popover.footer, popover.closeButton, popover.arrow].forEach(
-        (element) => {
-          element.style.display = 'none';
-        },
-      );
+      [
+        popover.title,
+        popover.description,
+        popover.footer,
+        popover.closeButton,
+        popover.arrow,
+      ].forEach((element) => {
+        element.style.display = 'none';
+      });
 
       Object.assign(popover.wrapper.style, WRAPPER_RESET_STYLE);
 

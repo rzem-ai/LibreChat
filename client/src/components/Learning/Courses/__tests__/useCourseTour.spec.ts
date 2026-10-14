@@ -1,7 +1,7 @@
 import { act, fireEvent, renderHook, within } from '@testing-library/react';
-import useCourseTour from '../useCourseTour';
 import type { TourStep } from '../content/schema';
 import { TRANSITION_MS } from '~/components/UnifiedSidebar/constants';
+import useCourseTour from '../useCourseTour';
 
 type FakeStep = {
   element: string;

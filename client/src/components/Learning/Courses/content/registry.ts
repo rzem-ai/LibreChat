@@ -1,6 +1,6 @@
+import type { TourStep } from './schema';
 import gettingStartedGuide from './getting-started-guide.json';
 import { CourseContentSchema } from './schema';
-import type { TourStep } from './schema';
 
 const courses = [gettingStartedGuide].map((raw) => CourseContentSchema.parse(raw));
 const stepsByCourseId = new Map(courses.map((course) => [course.id, course.steps]));
