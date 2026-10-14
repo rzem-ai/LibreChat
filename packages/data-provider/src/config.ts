@@ -2361,6 +2361,10 @@ export const interfaceSchema = z
         conversationIcon: z.boolean().optional(),
         /** Enable/disable the in-app Learning Hub tutorials (first-run prompt, guided tours). */
         isTutorialEnabled: z.boolean().optional(),
+        /** Show the Learning Center "Common Questions" page (opt-in). */
+        learningCommonQuestions: z.boolean().optional(),
+        /** Show the Learning Center "Release Notes" page (opt-in). */
+        learningReleaseNotes: z.boolean().optional(),
         accountsTab: z.boolean().optional(),
         dataApiKeys: z.boolean().optional(),
         adminAgentApiKeys: z.boolean().optional(), // Deloitte Custom Change: admin-only service account API key management.
