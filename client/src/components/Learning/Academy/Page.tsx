@@ -1,5 +1,12 @@
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Button, gelIcons, Tabs, TabsList, TabsTrigger, TabsContent } from '@librechat/client';
+import {
+  Tabs,
+  Button,
+  gelIcons,
+  TabsContent,
+  UnderlineTabsList,
+  UnderlineTabsTrigger,
+} from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
 import { useGetStartupConfig } from '~/data-provider';
 import { useAskFaqAgent } from '~/hooks/Learning';
@@ -69,13 +76,13 @@ export default function Page(): JSX.Element {
         onValueChange={(next) => navigate(`/learning/${next}`)}
         className="flex flex-col gap-6"
       >
-        <TabsList variant="underline">
+        <UnderlineTabsList>
           {enabledTabs.map((candidate) => (
-            <TabsTrigger key={candidate.id} value={candidate.id} variant="underline">
+            <UnderlineTabsTrigger key={candidate.id} value={candidate.id}>
               {candidate.label}
-            </TabsTrigger>
+            </UnderlineTabsTrigger>
           ))}
-        </TabsList>
+        </UnderlineTabsList>
         <TabsContent value="tours" className={contentClass}>
           <Tours />
         </TabsContent>
