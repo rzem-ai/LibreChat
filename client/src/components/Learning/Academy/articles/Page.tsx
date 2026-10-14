@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
+import { Button, Typeset, GEL } from '@librechat/client';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Typeset, gelIcons } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
 import type { ComponentProps } from 'react';
 import { loadArticle } from '../../content/loader';
@@ -38,7 +38,7 @@ export default function Article(): JSX.Element {
       className="w-fit text-text-secondary"
       onClick={() => navigate('/learning/resources')}
     >
-      <gelIcons.back className="size-4" aria-hidden="true" />
+      <GEL.Icon.back className="size-4" aria-hidden="true" />
       {localize('com_learning_back_to_resources')}
     </Button>
   );

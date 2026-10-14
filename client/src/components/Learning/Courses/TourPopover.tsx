@@ -1,4 +1,4 @@
-import { Button, gelIcons } from '@librechat/client';
+import { Button, GEL } from '@librechat/client';
 import { createConfigHtmlSanitizer } from '~/utils/configHtml';
 import { useLocalize } from '~/hooks';
 
@@ -39,7 +39,7 @@ export default function TourPopover({
           aria-label={localize('com_ui_close')}
           className="flex size-6 shrink-0 items-center justify-center text-text-tertiary transition-colors hover:text-text-primary focus:text-text-primary"
         >
-          <gelIcons.close className="size-4" />
+          <GEL.Icon.close className="size-4" />
         </button>
       </div>
       <p

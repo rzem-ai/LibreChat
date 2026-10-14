@@ -1,4 +1,4 @@
-import { Button, GEL, gelIcons } from '@librechat/client';
+import { Button, GEL } from '@librechat/client';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import type { JSX } from 'react/jsx-runtime';
 import { useGetStartupConfig } from '~/data-provider';
@@ -58,7 +58,7 @@ export default function Page(): JSX.Element {
             className="shrink-0"
             onClick={askFaqAgent}
           >
-            <gelIcons.agent className="size-4" aria-hidden="true" />
+            <GEL.Icon.agent className="size-4" aria-hidden="true" />
             {localize('com_learning_ask_faq_agent', { 0: faqAgent.name ?? '' })}
           </Button>
         )}

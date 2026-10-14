@@ -1,12 +1,11 @@
-import { Card, CardContent, CardHeader, CardTitle, gelIcons } from '@librechat/client';
-import type { GelIconName } from '@librechat/client';
+import { Card, CardContent, CardHeader, CardTitle, GEL } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
 import { cn } from '~/utils';
 
 interface ResourceCardProps {
   title: string;
   description: string;
-  icon: GelIconName;
+  icon: GEL.IconName;
   /** Already-localized meta text, e.g. "Article · 6 min read". */
   metaLabel: string;
   /** Accessible name for the stretched click target. */
@@ -28,7 +27,7 @@ export function ResourceCard({
   externalHref,
   onSelect,
 }: ResourceCardProps): JSX.Element {
-  const Icon = gelIcons[icon];
+  const Icon = GEL.Icon[icon];
 
   return (
     <Card className={cn('relative gap-2 transition-shadow hover:shadow-md')}>

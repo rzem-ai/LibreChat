@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { gelIcons } from '@librechat/client';
+import { GEL } from '@librechat/client';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -42,7 +42,7 @@ export default function RatingStars({ selected, onSelect }: RatingStarsProps) {
               data-testid={`course-rating-star-${value}`}
               className="p-0.5 transition-transform hover:scale-110"
             >
-              <gelIcons.star
+              <GEL.Icon.star
                 className={cn(
                   'size-5',
                   isFilled ? 'fill-current text-surface-submit' : 'text-text-tertiary',

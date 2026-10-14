@@ -5,7 +5,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-  gelIcons,
+  GEL,
 } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
 import type { TourStatus } from '../content/schema';
@@ -34,7 +34,7 @@ export function TourCard({
   hero = false,
   disabled = false,
 }: TourCardProps): JSX.Element {
-  const StatusIcon = status === 'complete' ? gelIcons.complete : gelIcons.incomplete;
+  const StatusIcon = status === 'complete' ? GEL.Icon.complete : GEL.Icon.incomplete;
   const statusIconClass = status === 'in-progress' ? 'text-primary' : 'text-text-secondary';
   const cta = (
     <Button

@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import * as Ariakit from '@ariakit/react';
 import { useNavigate } from 'react-router-dom';
-import { DropdownPopup, gelIcons } from '@librechat/client';
+import { DropdownPopup, GEL } from '@librechat/client';
 import type { NavLink } from '~/common';
 import type * as t from '~/common';
 import { useAskFaqAgent, useLearningCenterConfig } from '~/hooks/Learning';
@@ -21,26 +21,26 @@ export default function Menu({ link }: { link: NavLink }) {
     {
       id: 'learning-guided-tutorial',
       label: localize('com_learning_take_guided_tutorial'),
-      icon: <gelIcons.guide className="icon-md" aria-hidden="true" />,
+      icon: <GEL.Icon.guide className="icon-md" aria-hidden="true" />,
       onClick: startGettingStartedTour,
     },
     {
       id: 'learning-ask-faq-agent',
       label: localize('com_learning_ask_faq_agent', { 0: faqAgent?.name ?? '' }),
-      icon: <gelIcons.agent className="icon-md" aria-hidden="true" />,
+      icon: <GEL.Icon.agent className="icon-md" aria-hidden="true" />,
       show: Boolean(faqAgent),
       onClick: askFaqAgent,
     },
     {
       id: 'learning-explore-academy',
       label: localize('com_learning_explore_academy'),
-      icon: <gelIcons.academy className="icon-md" aria-hidden="true" />,
+      icon: <GEL.Icon.academy className="icon-md" aria-hidden="true" />,
       onClick: () => navigate('/learning'),
     },
     {
       id: 'learning-give-feedback',
       label: localize('com_learning_give_feedback'),
-      icon: <gelIcons.feedback className="icon-md" aria-hidden="true" />,
+      icon: <GEL.Icon.feedback className="icon-md" aria-hidden="true" />,
       show: Boolean(feedbackUrl),
       onClick: () => window.open(feedbackUrl, '_blank', 'noopener,noreferrer'),
     },

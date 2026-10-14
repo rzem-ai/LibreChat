@@ -19,7 +19,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 
 /** Semantic icon names, so the underlying icon set can be swapped in one place. */
-export type GelIconName =
+export type IconName =
   | 'tour'
   | 'article'
   | 'external'
@@ -38,7 +38,7 @@ export type GelIconName =
   | 'tip'
   | 'close';
 
-export const gelIcons: Record<GelIconName, LucideIcon> = {
+export const Icon: Record<IconName, LucideIcon> = {
   tour: Signpost,
   article: FileText,
   external: ExternalLink,
