@@ -1,12 +1,5 @@
+import { Button, GELTabs, gelIcons } from '@librechat/client';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import {
-  Tabs,
-  Button,
-  gelIcons,
-  TabsContent,
-  GelTabsList,
-  GelTabsTrigger,
-} from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
 import { useGetStartupConfig } from '~/data-provider';
 import { useAskFaqAgent } from '~/hooks/Learning';
@@ -71,31 +64,31 @@ export default function Page(): JSX.Element {
           </Button>
         )}
       </header>
-      <Tabs
+      <GELTabs.Tabs
         value={tab}
         onValueChange={(next) => navigate(`/learning/${next}`)}
         className="flex flex-col gap-6"
       >
-        <GelTabsList>
+        <GELTabs.TabsList>
           {enabledTabs.map((candidate) => (
-            <GelTabsTrigger key={candidate.id} value={candidate.id}>
+            <GELTabs.TabsTrigger key={candidate.id} value={candidate.id}>
               {candidate.label}
-            </GelTabsTrigger>
+            </GELTabs.TabsTrigger>
           ))}
-        </GelTabsList>
-        <TabsContent value="tours" className={contentClass}>
+        </GELTabs.TabsList>
+        <GELTabs.TabsContent value="tours" className={contentClass}>
           <Tours />
-        </TabsContent>
-        <TabsContent value="resources" className={contentClass}>
+        </GELTabs.TabsContent>
+        <GELTabs.TabsContent value="resources" className={contentClass}>
           <Resources onOpenArticle={(slug) => navigate(`/learning/articles/${slug}`)} />
-        </TabsContent>
-        <TabsContent value="faq" className={contentClass}>
+        </GELTabs.TabsContent>
+        <GELTabs.TabsContent value="faq" className={contentClass}>
           <Faq />
-        </TabsContent>
-        <TabsContent value="releases" className={contentClass}>
+        </GELTabs.TabsContent>
+        <GELTabs.TabsContent value="releases" className={contentClass}>
           <Releases />
-        </TabsContent>
-      </Tabs>
+        </GELTabs.TabsContent>
+      </GELTabs.Tabs>
     </>
   );
 }
