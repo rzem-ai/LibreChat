@@ -132,15 +132,6 @@ export default function PopupCard({
           </span>
           <Button
             size="sm"
-            variant="destructive"
-            onClick={onRemoveForever}
-            className="shrink-0"
-            aria-label={localize('com_ui_expiring_item_remove')}
-          >
-            {localize('com_ui_expiring_item_remove')}
-          </Button>
-          <Button
-            size="sm"
             variant="outline"
             onClick={handleRenew}
             disabled={isLoading}
@@ -148,6 +139,15 @@ export default function PopupCard({
             className="shrink-0"
           >
             {localize(locale.renew)}
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={onRemoveForever}
+            className="shrink-0"
+            aria-label={localize('com_ui_expiring_item_remove')}
+          >
+            {localize('com_ui_expiring_item_remove')}
           </Button>
         </div>
       </div>
