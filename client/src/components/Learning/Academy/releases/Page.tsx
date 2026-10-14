@@ -1,6 +1,6 @@
 import { Typeset } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
-import { RELEASES } from '../content/loader';
+import { RELEASES } from '../../content/loader';
 
 export default function Releases(): JSX.Element {
   return (

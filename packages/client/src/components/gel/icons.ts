@@ -1,13 +1,20 @@
 import {
   Bot,
   Circle,
+  Clock,
   Search,
   Signpost,
   FileText,
   ArrowLeft,
+  BookOpen,
   CircleHelp,
   CircleCheck,
   ExternalLink,
+  GraduationCap,
+  Lightbulb,
+  MessageSquareHeart,
+  Star,
+  X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -19,9 +26,17 @@ export type GelIconName =
   | 'complete'
   | 'incomplete'
   | 'search'
+  | 'clear'
   | 'help'
   | 'back'
-  | 'agent';
+  | 'agent'
+  | 'academy'
+  | 'guide'
+  | 'feedback'
+  | 'star'
+  | 'clock'
+  | 'tip'
+  | 'close';
 
 export const gelIcons: Record<GelIconName, LucideIcon> = {
   tour: Signpost,
@@ -30,7 +45,15 @@ export const gelIcons: Record<GelIconName, LucideIcon> = {
   complete: CircleCheck,
   incomplete: Circle,
   search: Search,
+  clear: X,
   help: CircleHelp,
   back: ArrowLeft,
   agent: Bot,
+  academy: GraduationCap,
+  guide: BookOpen,
+  feedback: MessageSquareHeart,
+  star: Star,
+  clock: Clock,
+  tip: Lightbulb,
+  close: X,
 };

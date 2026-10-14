@@ -1,6 +1,6 @@
+import { Chip } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
-import type { TourStatus } from './types';
-import { Chip } from '../Chip';
+import type { TourStatus } from '../content/schema';
 
 interface StatusChipProps {
   status: TourStatus;

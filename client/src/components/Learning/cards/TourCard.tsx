@@ -1,9 +1,15 @@
+import {
+  Button,
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  gelIcons,
+} from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
-import type { TourStatus } from './types';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './Card';
+import type { TourStatus } from '../content/schema';
 import { StatusChip } from './StatusChip';
-import { Button } from '../Button';
-import { gelIcons } from './icons';
 import { cn } from '~/utils';
 
 interface TourCardProps {
@@ -29,6 +35,7 @@ export function TourCard({
   disabled = false,
 }: TourCardProps): JSX.Element {
   const StatusIcon = status === 'complete' ? gelIcons.complete : gelIcons.incomplete;
+  const statusIconClass = status === 'in-progress' ? 'text-primary' : 'text-text-secondary';
   const cta = (
     <Button
       type="button"
@@ -46,7 +53,7 @@ export function TourCard({
     return (
       <Card className="flex-row items-center justify-between gap-6 px-6 py-6">
         <div className="flex items-center gap-3">
-          <StatusIcon className="size-5 shrink-0 text-text-secondary" aria-hidden="true" />
+          <StatusIcon className={cn('size-5 shrink-0', statusIconClass)} aria-hidden="true" />
           <div className="flex flex-col gap-1">
             <h3 className="text-sm font-medium">{title}</h3>
             <p className="text-sm text-text-secondary">{description}</p>
@@ -64,7 +71,7 @@ export function TourCard({
     <Card className={cn(disabled && 'opacity-60')}>
       <CardHeader>
         <CardTitle>
-          <StatusIcon className="size-4 shrink-0 text-text-secondary" aria-hidden="true" />
+          <StatusIcon className={cn('size-4 shrink-0', statusIconClass)} aria-hidden="true" />
           {title}
         </CardTitle>
         {chip}

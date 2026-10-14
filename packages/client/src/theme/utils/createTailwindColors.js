@@ -168,6 +168,7 @@ function createTailwindColors() {
     'status-warning': cssVar('--status-warning'),
     'status-warning-subtle': cssVar('--status-warning-subtle'),
     'status-warning-border': cssVar('--status-warning-border'),
+    highlight: cssVar('--highlight'),
     'status-warning-strong': cssVar('--status-warning-strong'),
     'status-error': cssVar('--status-error'),
     'status-error-subtle': cssVar('--status-error-subtle'),

@@ -1,8 +1,8 @@
 import type { CourseContent, TourStep } from './schema';
 import gettingStarted from './tours/getting-started.json';
-import connectors from './tours/connectors.json';
+import connectors from './tours/_mock-connectors.json';
 import { CourseContentSchema } from './schema';
-import agents from './tours/agents.json';
+import agents from './tours/_mock-agents.json';
 
 export const TOURS: CourseContent[] = [gettingStarted, connectors, agents].map((raw) =>
   CourseContentSchema.parse(raw),

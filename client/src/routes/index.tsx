@@ -46,9 +46,19 @@ const loadInsightsView = () =>
     Component: m.default,
   }));
 
-const loadAcademyView = () =>
+const loadAcademyLayout = () =>
   import('~/components/Learning/Academy').then((m) => ({
-    Component: m.default,
+    Component: m.AcademyLayout,
+  }));
+
+const loadAcademyPage = () =>
+  import('~/components/Learning/Academy').then((m) => ({
+    Component: m.AcademyPage,
+  }));
+
+const loadAcademyArticle = () =>
+  import('~/components/Learning/Academy').then((m) => ({
+    Component: m.AcademyArticle,
   }));
 
 const loadProjectsView = () =>
@@ -166,8 +176,22 @@ export const router = createBrowserRouter(
               lazy: loadInsightsView,
             },
             {
-              path: 'learning/*',
-              lazy: loadAcademyView,
+              path: 'learning',
+              lazy: loadAcademyLayout,
+              children: [
+                {
+                  index: true,
+                  element: <Navigate to="tours" replace={true} />,
+                },
+                {
+                  path: 'articles/:slug',
+                  lazy: loadAcademyArticle,
+                },
+                {
+                  path: ':tab',
+                  lazy: loadAcademyPage,
+                },
+              ],
             },
             {
               path: 'skills/new',

@@ -23,6 +23,7 @@ jest.mock('@librechat/client', () => {
   const DialogContext = React.createContext({ onOpenChange: (_open: boolean) => {} });
 
   return {
+    gelIcons: { star: () => null },
     Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
       <button {...props}>{children}</button>
     ),
@@ -58,9 +59,7 @@ jest.mock('@librechat/client', () => {
         <div>
           <h1>{title}</h1>
           {showCloseButton ? (
-            <button aria-label="Close" onClick={() => onOpenChange(false)}>
-              Close
-            </button>
+            <button aria-label="Close" onClick={() => onOpenChange(false)} />
           ) : null}
           {main}
           {selection}

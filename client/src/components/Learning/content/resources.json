@@ -19,7 +19,7 @@
     "articleSlug": "agentic-ecosystem"
   },
   {
-    "id": "getting-started-with-myassist",
+    "id": "_mock-getting-started-with-myassist",
     "title": "Getting started with MyAssist",
     "description": "The three habits that make every chat after this one better.",
     "type": "article",
@@ -27,10 +27,10 @@
     "icon": "article",
     "durationLabel": "4 min read",
     "updated": "2 September 2026",
-    "articleSlug": "getting-started-with-myassist"
+    "articleSlug": "_mock-getting-started-with-myassist"
   },
   {
-    "id": "lumo-ms-teams",
+    "id": "_mock-lumo-ms-teams",
     "title": "Lumo Agent — MS Teams",
     "description": "Use the Lumo agent from inside Microsoft Teams.",
     "type": "external",
@@ -39,7 +39,7 @@
     "externalHref": "https://teams.microsoft.com"
   },
   {
-    "id": "book-training",
+    "id": "_mock-book-training",
     "title": "Book training sessions with the MyAssist team",
     "description": "Pick a time for a live walkthrough with the team.",
     "type": "external",

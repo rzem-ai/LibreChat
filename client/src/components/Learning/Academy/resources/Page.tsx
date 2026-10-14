@@ -1,28 +1,24 @@
-import { useMemo, useState } from 'react';
-import { FilterInput, ResourceCard } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
-import type { Resource } from '../content/schema';
-import { useLearningTour } from '../LearningTourContext';
-import { RESOURCES } from '../content/data';
-import { matchesQuery } from './search';
+import type { Resource } from '../../content/schema';
+import { useLearningTour } from '../../LearningTourContext';
+import { RESOURCES } from '../../content/data';
+import { ResourceCard } from '../../cards';
+import Searchable from '../Searchable';
 import { useLocalize } from '~/hooks';
 
 interface ResourcesProps {
   onOpenArticle: (slug: string) => void;
 }
 
+const getFields = (resource: Resource): string[] => [
+  resource.title,
+  resource.description,
+  ...resource.tags,
+];
+
 export default function Resources({ onOpenArticle }: ResourcesProps): JSX.Element {
   const localize = useLocalize();
   const { startGettingStartedTour } = useLearningTour();
-  const [query, setQuery] = useState('');
-  const visible = useMemo(
-    () =>
-      RESOURCES.filter((resource) =>
-        matchesQuery(query, [resource.title, resource.description, ...resource.tags]),
-      ),
-    [query],
-  );
-
   const typeLabels = {
     tour: localize('com_learning_type_tour'),
     article: localize('com_learning_type_article'),
@@ -38,9 +34,10 @@ export default function Resources({ onOpenArticle }: ResourcesProps): JSX.Elemen
       article: localize('com_learning_action_read', { 0: resource.title }),
       external: localize('com_learning_action_external', { 0: resource.title }),
     }[resource.type];
+    const { articleSlug } = resource;
     const onSelect =
-      resource.type === 'article' && resource.articleSlug
-        ? () => onOpenArticle(resource.articleSlug as string)
+      resource.type === 'article' && articleSlug
+        ? () => onOpenArticle(articleSlug)
         : startGettingStartedTour;
 
     return (
@@ -58,23 +55,17 @@ export default function Resources({ onOpenArticle }: ResourcesProps): JSX.Elemen
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <FilterInput
-        inputId="learning-resources-search"
-        label={localize('com_learning_search_resources')}
-        containerClassName="max-w-sm"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-      />
-      {visible.length === 0 ? (
-        <p className="text-sm text-text-secondary">
-          {localize('com_learning_no_resources', { 0: query })}
-        </p>
-      ) : (
+    <Searchable
+      items={RESOURCES}
+      getFields={getFields}
+      searchLabel={localize('com_learning_search_resources')}
+      renderEmpty={(query) => localize('com_learning_no_resources', { 0: query })}
+    >
+      {(visible) => (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map(renderResource)}
         </div>
       )}
-    </div>
+    </Searchable>
   );
 }

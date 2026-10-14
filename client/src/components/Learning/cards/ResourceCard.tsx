@@ -1,7 +1,6 @@
+import { Card, CardContent, CardHeader, CardTitle, gelIcons } from '@librechat/client';
+import type { GelIconName } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
-import type { GelIconName } from './icons';
-import { Card, CardContent, CardHeader, CardTitle } from './Card';
-import { gelIcons } from './icons';
 import { cn } from '~/utils';
 
 interface ResourceCardProps {
@@ -44,7 +43,7 @@ export function ResourceCard({
       ) : (
         <button
           type="button"
-          className={cn(overlayClass, 'text-left')}
+          className={overlayClass}
           aria-label={actionLabel}
           onClick={onSelect}
         />

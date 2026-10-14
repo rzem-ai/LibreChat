@@ -1,8 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { useRecoilState } from 'recoil';
-import { GraduationCap } from 'lucide-react';
 import * as Popover from '@radix-ui/react-popover';
-import { Button, useMediaQuery } from '@librechat/client';
+import { Button, useMediaQuery, gelIcons } from '@librechat/client';
 import { TRANSITION_MS } from '~/components/UnifiedSidebar/constants';
 import useTutorialPrompt from '~/hooks/Learning/useTutorialPrompt';
 import { useLearningTour } from './LearningTourContext';
@@ -249,7 +248,7 @@ export default function TutorialPromptModal({
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
                 <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-surface-tertiary">
-                  <GraduationCap className="size-4 text-text-secondary" aria-hidden="true" />
+                  <gelIcons.academy className="size-4 text-text-secondary" aria-hidden="true" />
                 </div>
                 <div className="flex flex-col gap-1">
                   <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">

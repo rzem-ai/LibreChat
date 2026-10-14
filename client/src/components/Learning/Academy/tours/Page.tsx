@@ -1,9 +1,9 @@
-import { TourCard } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
-import type { CourseContent } from '../content/schema';
-import useTourProgress, { getTourStatus } from '../progress';
-import { useLearningTour } from '../LearningTourContext';
-import { TOURS } from '../content/registry';
+import type { CourseContent } from '../../content/schema';
+import useTourProgress, { getTourStatus } from '../../progress';
+import { useLearningTour } from '../../LearningTourContext';
+import { TOURS } from '../../content/registry';
+import { TourCard } from '../../cards';
 import { useLocalize } from '~/hooks';
 
 export default function Tours(): JSX.Element {

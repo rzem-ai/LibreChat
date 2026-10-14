@@ -1,18 +1,18 @@
 [
   {
-    "question": "Which AI model should I use?",
+    "question": "[_mock] Which AI model should I use?",
     "answer": "Start with the default model. Switch to a more capable one from the model picker for long documents or multi-step reasoning."
   },
   {
-    "question": "How do I connect my files and calendar?",
+    "question": "[_mock] How do I connect my files and calendar?",
     "answer": "Open Connectors from the sidebar and sign in to each source. Once connected, chats can reference them automatically."
   },
   {
-    "question": "Can I share a chat with a teammate?",
+    "question": "[_mock] Can I share a chat with a teammate?",
     "answer": "Yes — use the share icon in any chat to send a read-only link or invite someone to continue the conversation with you."
   },
   {
-    "question": "How do I reset or delete a conversation?",
+    "question": "[_mock] How do I reset or delete a conversation?",
     "answer": "Open the chat's menu and choose Delete. This can't be undone, so export anything you want to keep first."
   }
 ]

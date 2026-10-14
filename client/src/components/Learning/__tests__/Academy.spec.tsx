@@ -2,9 +2,9 @@ import React from 'react';
 import '@testing-library/jest-dom';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
-import Resources from '../Academy/Resources';
-import Academy from '../Academy';
-import Faq from '../Academy/Faq';
+import Resources from '../Academy/resources/Page';
+import Faq from '../Academy/faq/Page';
+import Page from '../Academy/Page';
 
 const mockStartTour = jest.fn();
 let mockFlags: Record<string, boolean> = {};
@@ -18,6 +18,10 @@ jest.mock('~/data-provider', () => ({
   useGetStartupConfig: () => ({
     data: { interface: { customDeloitteFeatureFlags: mockFlags } },
   }),
+}));
+
+jest.mock('~/hooks/Learning', () => ({
+  useAskFaqAgent: () => ({ faqAgent: undefined, askFaqAgent: jest.fn() }),
 }));
 
 jest.mock('../LearningTourContext', () => ({
@@ -78,7 +82,7 @@ describe('Academy', () => {
     render(
       <MemoryRouter initialEntries={[path]}>
         <Routes>
-          <Route path="/learning/*" element={<Academy />} />
+          <Route path="/learning/:tab" element={<Page />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -88,7 +92,7 @@ describe('Academy', () => {
   });
 
   it('shows the Getting Started hero first and hides flagged tabs by default', () => {
-    renderAt('/learning');
+    renderAt('/learning/tours');
     expect(screen.getByText('com_learning_start_here:Getting Started Tour')).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'com_learning_tab_faq' })).not.toBeInTheDocument();
     expect(
@@ -97,13 +101,13 @@ describe('Academy', () => {
   });
 
   it('redirects a flagged-off tab back to tours', () => {
-    renderAt('/learning/questions');
+    renderAt('/learning/faq');
     expect(screen.getByText('com_learning_start_here:Getting Started Tour')).toBeInTheDocument();
   });
 
   it('shows the flagged tabs when their flags are on', () => {
     mockFlags = { learningCommonQuestions: true, learningReleaseNotes: true };
-    renderAt('/learning/questions');
+    renderAt('/learning/faq');
     expect(screen.getByRole('tab', { name: 'com_learning_tab_faq' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'com_learning_tab_releases' })).toBeInTheDocument();
     expect(screen.getByLabelText('com_learning_search_faq')).toBeInTheDocument();

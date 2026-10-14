@@ -5,7 +5,7 @@ import { cn } from '~/utils';
 const Card = ({ className, ...props }: HTMLAttributes<HTMLDivElement>): JSX.Element => (
   <div
     className={cn(
-      'flex flex-col gap-3 rounded-xl border border-border-light bg-surface-primary p-5 text-text-primary',
+      'flex flex-col gap-3 rounded-xl border border-border-light bg-surface-chat p-5',
       className,
     )}
     {...props}
