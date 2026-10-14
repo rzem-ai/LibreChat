@@ -18,6 +18,7 @@ services:
       dockerfile: Dockerfile
       args:
         NODE_MAX_OLD_SPACE_SIZE: ${NODE_MAX_OLD_SPACE_SIZE:-6144}
+    user: "node"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -35,6 +36,10 @@ services:
       - type: bind
         source: ./librechat.yaml
         target: /app/librechat.yaml
+      - type: bind
+        source: ./charts/config/endpoint-costs.yaml
+        target: /app/endpoint-costs.yaml
+        read_only: true
       # Deloitte GEL assets — auto-injected at container start via command above
       - type: bind
         source: ./deloitte/assets
@@ -51,9 +56,7 @@ services:
     env_file:
       - .env
     environment:
-      - BEDROCK_REVERSE_PROXY=${BEDROCK_REVERSE_PROXY:-au-bedrock-exp.ctk.au.deloitte.com}
       - AZURE_OPENAI_HOST=${AZURE_OPENAI_HOST:-au-openai-exp.ctk.au.deloitte.com}
-      - AZURE_OPENAI_GLOBAL_HOST=${AZURE_OPENAI_GLOBAL_HOST:?Set AZURE_OPENAI_GLOBAL_HOST to the global Azure OpenAI gateway hostname}
     volumes:
       - ./nginx-gateway-proxy.conf.template:/etc/nginx/templates/default.conf.template:ro
   rag_api:
@@ -69,7 +72,6 @@ services:
       args:
         VITE_BASE_PATH: /admin
     environment:
-      - VITE_BASE_PATH=/admin
       - PORT=3000
       - SESSION_SECRET=${ADMIN_PANEL_SESSION_SECRET}
       - API_SERVER_URL=http://api:3080
