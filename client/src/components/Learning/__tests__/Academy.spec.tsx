@@ -2,6 +2,7 @@ import React from 'react';
 import '@testing-library/jest-dom';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { GETTING_STARTED_COURSE_ID } from '../content/registry';
 import Resources from '../Academy/resources/Page';
 import Faq from '../Academy/faq/Page';
 import Page from '../Academy/Page';
@@ -133,5 +134,15 @@ describe('Academy', () => {
     rerender(academyTree('/learning/faq'));
     expect(screen.getByRole('tab', { name: 'com_learning_tab_faq' })).toBeInTheDocument();
     expect(screen.getByLabelText('com_learning_search_faq')).toBeInTheDocument();
+  });
+
+  it('resumes an in-progress tour from its saved step', () => {
+    window.localStorage.setItem(
+      'learningTourProgress',
+      JSON.stringify({ [GETTING_STARTED_COURSE_ID]: { step: 3, total: 9, completed: false } }),
+    );
+    renderAt('/learning/tours');
+    fireEvent.click(screen.getByRole('button', { name: 'com_learning_tour_continue' }));
+    expect(mockResumeTour).toHaveBeenCalledWith(3);
   });
 });

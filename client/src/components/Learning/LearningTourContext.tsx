@@ -23,6 +23,8 @@ import store from '~/store';
 
 interface LearningTourContextType {
   startGettingStartedTour: () => void;
+  /** Starts the Getting Started tour at a saved zero-based step. */
+  resumeGettingStartedTour: (stepIndex: number) => void;
   /** Set once the active tour reports completion; cleared by `dismissCompletion`. */
   completedCourseId: string | null;
   dismissCompletion: () => void;
@@ -96,43 +98,56 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const startGettingStartedTour = useCallback(() => {
-    markPromptSeen();
-    // Capture the user's current sidebar state so it can be restored when the
-    // tour finishes or is cancelled — preTourSidebarExpanded is read by
-    // useCourseTour's onDestroyStarted callback via the ref.
-    preTourSidebarExpandedRef.current = sidebarExpanded;
+  const resumeGettingStartedTour = useCallback(
+    (stepIndex: number) => {
+      markPromptSeen();
+      // Capture the user's current sidebar state so it can be restored when the
+      // tour finishes or is cancelled — preTourSidebarExpanded is read by
+      // useCourseTour's onDestroyStarted callback via the ref.
+      preTourSidebarExpandedRef.current = sidebarExpanded;
 
-    // The tour highlights elements that only exist on the main chat route
-    // (textarea, send button, header buttons) and inside the "conversations"
-    // sidebar panel (search, projects) — switch to both before driving.
-    navigate('/c/new');
-    setActive('conversations');
+      // The tour highlights elements that only exist on the main chat route
+      // (textarea, send button, header buttons) and inside the "conversations"
+      // sidebar panel (search, projects) — switch to both before driving.
+      navigate('/c/new');
+      setActive('conversations');
 
-    const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
-    if (isSmallScreen) {
-      // On mobile, collapse the sidebar so the early chat-area steps are
-      // unobstructed by the sidebar overlay. The tour will re-expand it once
-      // it reaches a step flagged `expandSidebarBefore` (see content/tours/getting-started.json).
-      setSidebarExpanded(false);
-    }
-    // On desktop, leave the sidebar in whatever state the user had it — the
-    // tour's onHighlightStarted will still expand it before the flagged step.
+      const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
+      if (isSmallScreen) {
+        // On mobile, collapse the sidebar so the early chat-area steps are
+        // unobstructed by the sidebar overlay. The tour will re-expand it once
+        // it reaches a step flagged `expandSidebarBefore` (see content/tours/getting-started.json).
+        setSidebarExpanded(false);
+      }
+      // On desktop, leave the sidebar in whatever state the user had it — the
+      // tour's onHighlightStarted will still expand it before the flagged step.
 
-    startTimeoutRef.current = window.setTimeout(
-      () => {
-        startTimeoutRef.current = null;
-        startTour();
-      },
-      isSmallScreen ? TRANSITION_MS : DESKTOP_START_DELAY_MS,
-    );
-  }, [markPromptSeen, navigate, setActive, setSidebarExpanded, sidebarExpanded, startTour]);
+      startTimeoutRef.current = window.setTimeout(
+        () => {
+          startTimeoutRef.current = null;
+          startTour(stepIndex);
+        },
+        isSmallScreen ? TRANSITION_MS : DESKTOP_START_DELAY_MS,
+      );
+    },
+    [markPromptSeen, navigate, setActive, setSidebarExpanded, sidebarExpanded, startTour],
+  );
+
+  const startGettingStartedTour = useCallback(
+    () => resumeGettingStartedTour(0),
+    [resumeGettingStartedTour],
+  );
 
   const dismissCompletion = useCallback(() => setCompletedCourseId(null), []);
 
   const value = useMemo(
-    () => ({ startGettingStartedTour, completedCourseId, dismissCompletion }),
-    [startGettingStartedTour, completedCourseId, dismissCompletion],
+    () => ({
+      startGettingStartedTour,
+      resumeGettingStartedTour,
+      completedCourseId,
+      dismissCompletion,
+    }),
+    [startGettingStartedTour, resumeGettingStartedTour, completedCourseId, dismissCompletion],
   );
 
   return <LearningTourContext.Provider value={value}>{children}</LearningTourContext.Provider>;

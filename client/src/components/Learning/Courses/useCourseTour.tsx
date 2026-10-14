@@ -68,122 +68,125 @@ export default function useCourseTour(
     };
   }, []);
 
-  const startTour = useCallback(() => {
-    let completedFromLastStepNext = false;
-    let currentPopoverRoot: Root | null = null;
-    let sidebarSyncTimeout: number | null = null;
-    const steps = getSteps().map(toEngineStep);
+  const startTour = useCallback(
+    (startIndex?: number) => {
+      let completedFromLastStepNext = false;
+      let currentPopoverRoot: Root | null = null;
+      let sidebarSyncTimeout: number | null = null;
+      const steps = getSteps().map(toEngineStep);
 
-    // Shared by both exit paths: our own close button (fireComplete: false — closing
-    // early isn't finishing the tour) and driver.js's own onDestroyStarted, which fires
-    // for every other way the tour ends, including reaching "Done" on the last step.
-    const endTour = (driverInstance: Driver, fireComplete: boolean) => {
-      if (sidebarSyncTimeout !== null) {
-        window.clearTimeout(sidebarSyncTimeout);
-        sidebarSyncTimeout = null;
-      }
-      currentPopoverRoot?.unmount();
-      currentPopoverRoot = null;
-      driverInstance.destroy();
-      tourRef.current = null;
-      if (fireComplete && completedFromLastStepNext) {
-        onComplete?.();
-      }
-      optionsRef.current.onEnd?.();
-    };
-
-    const renderPopover = (popover: PopoverDOM, driverInstance: Driver, step: EngineStep) => {
-      currentPopoverRoot?.unmount();
-
-      // The step's own title/description, not driver.js's rendered copy of them —
-      // driver.js doesn't transform these, so reading them back from the DOM we're
-      // about to hide would be a pointless round-trip.
-      const title = step.popover?.title ?? '';
-      const description = step.popover?.description ?? '';
-      // Localized in place of driver.js's own un-translated "Next"/"Done" and
-      // "{{current}} of {{total}}" defaults (popover.nextButton/progress).
-      const progressText = localize('com_learning_tour_progress', {
-        0: (driverInstance.getActiveIndex() ?? 0) + 1,
-        1: steps.length,
-      });
-      const nextLabel = localize(driverInstance.isLastStep() ? 'com_ui_done' : 'com_ui_next');
-      const canGoPrevious = !popover.previousButton.disabled;
-
-      // driver.js sets `display` on these via inline style on every render, so only
-      // another inline-style write (not a Tailwind class) can override it.
-      [
-        popover.title,
-        popover.description,
-        popover.footer,
-        popover.closeButton,
-        popover.arrow,
-      ].forEach((element) => {
-        element.style.display = 'none';
-      });
-
-      Object.assign(popover.wrapper.style, WRAPPER_RESET_STYLE);
-
-      const container = document.createElement('div');
-      popover.wrapper.appendChild(container);
-      currentPopoverRoot = createRoot(container);
-      // flushSync: driver.js measures the wrapper right after this returns.
-      flushSync(() => {
-        currentPopoverRoot?.render(
-          <TourPopover
-            title={title}
-            description={description}
-            progressText={progressText}
-            nextLabel={nextLabel}
-            canGoPrevious={canGoPrevious}
-            onPrevious={() => driverInstance.movePrevious()}
-            onNext={() => {
-              if (driverInstance.isLastStep()) {
-                completedFromLastStepNext = true;
-              }
-              driverInstance.moveNext();
-            }}
-            onClose={() => endTour(driverInstance, false)}
-          />,
-        );
-      });
-
-      attachCardChevron(container, popover.arrow);
-    };
-
-    const tourDriver = driver({
-      showProgress: true,
-      allowClose: true,
-      skipMissingElement: true,
-      waitForElement: 600,
-      stagePadding: 6,
-      stageRadius: 8,
-      overlayOpacity: 0.5,
-      animate: false,
-      onPopoverRender: (popover, opts) =>
-        renderPopover(popover, opts.driver, steps[opts.state.activeIndex ?? 0]),
-      onHighlightStarted: (_element, step) => {
-        optionsRef.current.onStep?.(tourDriver.getActiveIndex() ?? 0, steps.length);
-        if ((step as EngineStep).expandSidebarBefore) {
-          optionsRef.current.setSidebarExpanded?.(true);
-          // driver.js (animate: false) measures and positions immediately, but the
-          // sidebar's own CSS transition takes TRANSITION_MS to actually finish
-          // expanding, and that transition emits no resize/scroll event driver.js
-          // would otherwise react to — so the spotlight/popover land at the
-          // collapsed/pre-transition coordinates and stay there. Re-measure once
-          // the transition has had time to finish.
-          sidebarSyncTimeout = window.setTimeout(() => {
-            sidebarSyncTimeout = null;
-            tourDriver.refresh();
-          }, TRANSITION_MS);
+      // Shared by both exit paths: our own close button (fireComplete: false — closing
+      // early isn't finishing the tour) and driver.js's own onDestroyStarted, which fires
+      // for every other way the tour ends, including reaching "Done" on the last step.
+      const endTour = (driverInstance: Driver, fireComplete: boolean) => {
+        if (sidebarSyncTimeout !== null) {
+          window.clearTimeout(sidebarSyncTimeout);
+          sidebarSyncTimeout = null;
         }
-      },
-      onDestroyStarted: () => endTour(tourDriver, true),
-      steps,
-    });
+        currentPopoverRoot?.unmount();
+        currentPopoverRoot = null;
+        driverInstance.destroy();
+        tourRef.current = null;
+        if (fireComplete && completedFromLastStepNext) {
+          onComplete?.();
+        }
+        optionsRef.current.onEnd?.();
+      };
 
-    tourRef.current = tourDriver;
-    tourDriver.drive();
-  }, [onComplete, getSteps, localize]);
+      const renderPopover = (popover: PopoverDOM, driverInstance: Driver, step: EngineStep) => {
+        currentPopoverRoot?.unmount();
+
+        // The step's own title/description, not driver.js's rendered copy of them —
+        // driver.js doesn't transform these, so reading them back from the DOM we're
+        // about to hide would be a pointless round-trip.
+        const title = step.popover?.title ?? '';
+        const description = step.popover?.description ?? '';
+        // Localized in place of driver.js's own un-translated "Next"/"Done" and
+        // "{{current}} of {{total}}" defaults (popover.nextButton/progress).
+        const progressText = localize('com_learning_tour_progress', {
+          0: (driverInstance.getActiveIndex() ?? 0) + 1,
+          1: steps.length,
+        });
+        const nextLabel = localize(driverInstance.isLastStep() ? 'com_ui_done' : 'com_ui_next');
+        const canGoPrevious = !popover.previousButton.disabled;
+
+        // driver.js sets `display` on these via inline style on every render, so only
+        // another inline-style write (not a Tailwind class) can override it.
+        [
+          popover.title,
+          popover.description,
+          popover.footer,
+          popover.closeButton,
+          popover.arrow,
+        ].forEach((element) => {
+          element.style.display = 'none';
+        });
+
+        Object.assign(popover.wrapper.style, WRAPPER_RESET_STYLE);
+
+        const container = document.createElement('div');
+        popover.wrapper.appendChild(container);
+        currentPopoverRoot = createRoot(container);
+        // flushSync: driver.js measures the wrapper right after this returns.
+        flushSync(() => {
+          currentPopoverRoot?.render(
+            <TourPopover
+              title={title}
+              description={description}
+              progressText={progressText}
+              nextLabel={nextLabel}
+              canGoPrevious={canGoPrevious}
+              onPrevious={() => driverInstance.movePrevious()}
+              onNext={() => {
+                if (driverInstance.isLastStep()) {
+                  completedFromLastStepNext = true;
+                }
+                driverInstance.moveNext();
+              }}
+              onClose={() => endTour(driverInstance, false)}
+            />,
+          );
+        });
+
+        attachCardChevron(container, popover.arrow);
+      };
+
+      const tourDriver = driver({
+        showProgress: true,
+        allowClose: true,
+        skipMissingElement: true,
+        waitForElement: 600,
+        stagePadding: 6,
+        stageRadius: 8,
+        overlayOpacity: 0.5,
+        animate: false,
+        onPopoverRender: (popover, opts) =>
+          renderPopover(popover, opts.driver, steps[opts.state.activeIndex ?? 0]),
+        onHighlightStarted: (_element, step) => {
+          optionsRef.current.onStep?.(tourDriver.getActiveIndex() ?? 0, steps.length);
+          if ((step as EngineStep).expandSidebarBefore) {
+            optionsRef.current.setSidebarExpanded?.(true);
+            // driver.js (animate: false) measures and positions immediately, but the
+            // sidebar's own CSS transition takes TRANSITION_MS to actually finish
+            // expanding, and that transition emits no resize/scroll event driver.js
+            // would otherwise react to — so the spotlight/popover land at the
+            // collapsed/pre-transition coordinates and stay there. Re-measure once
+            // the transition has had time to finish.
+            sidebarSyncTimeout = window.setTimeout(() => {
+              sidebarSyncTimeout = null;
+              tourDriver.refresh();
+            }, TRANSITION_MS);
+          }
+        },
+        onDestroyStarted: () => endTour(tourDriver, true),
+        steps,
+      });
+
+      tourRef.current = tourDriver;
+      tourDriver.drive(startIndex);
+    },
+    [onComplete, getSteps, localize],
+  );
 
   return { startTour };
 }
