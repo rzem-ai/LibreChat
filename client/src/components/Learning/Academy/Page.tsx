@@ -37,7 +37,8 @@ export default function Page(): JSX.Element {
   ];
   const enabledTabs = tabs.filter((candidate) => candidate.enabled);
 
-  if (!enabledTabs.some((candidate) => candidate.id === tab)) {
+  const isConfigSettled = startupConfig !== undefined;
+  if (isConfigSettled && !enabledTabs.some((candidate) => candidate.id === tab)) {
     return <Navigate to="/learning/tours" replace />;
   }
 

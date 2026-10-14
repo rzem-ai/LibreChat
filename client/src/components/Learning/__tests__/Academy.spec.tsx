@@ -7,7 +7,8 @@ import Faq from '../Academy/faq/Page';
 import Page from '../Academy/Page';
 
 const mockStartTour = jest.fn();
-let mockFlags: Record<string, boolean> = {};
+const mockResumeTour = jest.fn();
+let mockFlags: Record<string, boolean> | undefined = {};
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string, values?: Record<number, string | number>) =>
@@ -16,7 +17,10 @@ jest.mock('~/hooks', () => ({
 
 jest.mock('~/data-provider', () => ({
   useGetStartupConfig: () => ({
-    data: { interface: { customDeloitteFeatureFlags: mockFlags } },
+    data:
+      mockFlags === undefined
+        ? undefined
+        : { interface: { customDeloitteFeatureFlags: mockFlags } },
   }),
 }));
 
@@ -25,7 +29,10 @@ jest.mock('~/hooks/Learning', () => ({
 }));
 
 jest.mock('../LearningTourContext', () => ({
-  useLearningTour: () => ({ startGettingStartedTour: mockStartTour }),
+  useLearningTour: () => ({
+    startGettingStartedTour: mockStartTour,
+    resumeGettingStartedTour: mockResumeTour,
+  }),
 }));
 
 jest.mock('../content/loader', () => ({ RELEASES: [], getArticle: () => undefined }));
@@ -78,17 +85,18 @@ describe('Faq', () => {
 });
 
 describe('Academy', () => {
-  const renderAt = (path: string) =>
-    render(
-      <MemoryRouter initialEntries={[path]}>
-        <Routes>
-          <Route path="/learning/:tab" element={<Page />} />
-        </Routes>
-      </MemoryRouter>,
-    );
+  const academyTree = (path: string) => (
+    <MemoryRouter initialEntries={[path]}>
+      <Routes>
+        <Route path="/learning/:tab" element={<Page />} />
+      </Routes>
+    </MemoryRouter>
+  );
+  const renderAt = (path: string) => render(academyTree(path));
 
   afterEach(() => {
     mockFlags = {};
+    window.localStorage.clear();
   });
 
   it('shows the Getting Started hero first and hides flagged tabs by default', () => {
@@ -110,6 +118,20 @@ describe('Academy', () => {
     renderAt('/learning/faq');
     expect(screen.getByRole('tab', { name: 'com_learning_tab_faq' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'com_learning_tab_releases' })).toBeInTheDocument();
+    expect(screen.getByLabelText('com_learning_search_faq')).toBeInTheDocument();
+  });
+
+  it('keeps a flagged tab URL while the startup config is still loading', () => {
+    mockFlags = undefined;
+    const { rerender } = renderAt('/learning/faq');
+    expect(
+      screen.queryByText('com_learning_start_here:Getting Started Tour'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText('com_learning_search_faq')).toBeInTheDocument();
+
+    mockFlags = { learningCommonQuestions: true, learningReleaseNotes: true };
+    rerender(academyTree('/learning/faq'));
+    expect(screen.getByRole('tab', { name: 'com_learning_tab_faq' })).toBeInTheDocument();
     expect(screen.getByLabelText('com_learning_search_faq')).toBeInTheDocument();
   });
 });
