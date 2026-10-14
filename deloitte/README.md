@@ -279,6 +279,23 @@ LibreChat configuration includes:
 - ClearTrack MCP integration
 - And more!
 
+### Claude model availability
+
+The local development gateway configuration and curated model selector enable the following models. Claude 5.5 models are currently provisioned only in CTNP/development.
+
+| Model | Global gateway | Australian regional Bedrock |
+| --- | --- | --- |
+| Claude Haiku 4.5 | Yes | Yes |
+| Claude Haiku 5.5 | CTNP/development only | CTNP/development only |
+| Claude Sonnet 4.6 | Yes | Yes |
+| Claude Sonnet 5 | Yes | No |
+| Claude Sonnet 5.5 | CTNP/development only | CTNP/development only |
+| Claude Opus 4.6 | Yes | No |
+| Claude Opus 4.8 | Yes | No |
+| Claude Opus 5.5 | CTNP/development only | CTNP/development only |
+
+Australian regional models are accessed through the Bedrock endpoint. Use an Australian regional model when the workload must remain in Australia. UAT and production retain their existing allowlists until the Claude 5.5 models are provisioned in those environments.
+
 There is now **one source of truth** for LibreChat config:
 
 1. `librechat.yaml` (repo root)
