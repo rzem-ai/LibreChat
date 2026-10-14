@@ -321,22 +321,6 @@ describe('excludedKeys', () => {
     expect(excludedKeys.has('tenantId')).toBe(false);
   });
 });
-// Deloitte Custom Change model pricing configuration
-describe('modelPricing config', () => {
-  it('accepts a pricing reference model', () => {
-    const result = configSchema.safeParse({
-      version: '1.0',
-      modelPricing: { referenceModelId: 'gpt-56-luna' },
-    });
-
-    expect(result.success).toBe(true);
-    if (!result.success) {
-      return;
-    }
-    expect(result.data.modelPricing?.referenceModelId).toBe('gpt-56-luna');
-  });
-});
-
 describe('bedrockEndpointSchema', () => {
   it('preserves guardrailConfig from configSchema parsing', () => {
     const guardrailConfig = {
@@ -1116,6 +1100,71 @@ describe('agent background task config', () => {
       configSchema.safeParse({
         version: '1.0',
         endpoints: { agents: { backgroundTasks: { completionResultMaxChars: limit } } },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('customDeloitteFeatureFlags.modelPricingTierBreakpoints', () => {
+  it('accepts a valid ascending tierBreakpoints array alongside the indicator flag', () => {
+    const result = configSchema.safeParse({
+      version: '1.0',
+      interface: {
+        customDeloitteFeatureFlags: {
+          showModelPricingIndicator: true,
+          modelPricingTierBreakpoints: [2, 5, 8, 15],
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const flags = result.data.interface?.customDeloitteFeatureFlags;
+      expect(flags?.showModelPricingIndicator).toBe(true);
+      expect(flags?.modelPricingTierBreakpoints).toEqual([2, 5, 8, 15]);
+    }
+  });
+
+  it('is optional', () => {
+    expect(configSchema.safeParse({ version: '1.0' }).success).toBe(true);
+    expect(
+      configSchema.safeParse({
+        version: '1.0',
+        interface: { customDeloitteFeatureFlags: {} },
+      }).success,
+    ).toBe(true);
+  });
+
+  it.each([[[1, 2, 3]], [[1, 2, 3, 4, 5]]])(
+    'rejects a tierBreakpoints array that is not exactly 4 entries: %j',
+    (breakpoints) => {
+      expect(
+        configSchema.safeParse({
+          version: '1.0',
+          interface: { customDeloitteFeatureFlags: { modelPricingTierBreakpoints: breakpoints } },
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it('rejects a non-ascending tierBreakpoints array', () => {
+    expect(
+      configSchema.safeParse({
+        version: '1.0',
+        interface: {
+          customDeloitteFeatureFlags: { modelPricingTierBreakpoints: [2, 5, 5, 15] },
+        },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects non-positive breakpoint values', () => {
+    expect(
+      configSchema.safeParse({
+        version: '1.0',
+        interface: {
+          customDeloitteFeatureFlags: { modelPricingTierBreakpoints: [-1, 2, 5, 8] },
+        },
       }).success,
     ).toBe(false);
   });

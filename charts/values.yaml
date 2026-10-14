@@ -84,9 +84,6 @@ pods:
           OPENID_USE_END_SESSION_ENDPOINT: 'true'
           OPENID_BUTTON_LABEL: 'Continue with SSO'
           OPENID_IMAGE_URL: '/assets/favicon.svg'
-          MODEL_PRICING_MIN_MULTIPLIER: '0.1'
-          MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT: '0.1'
-          MODEL_PRICING_REFERENCE_MODEL_ID: 'gpt-56-luna'
           RAG_API_URL: 'http://127.0.0.1:8000'
           RAG_USE_FULL_CONTEXT: 'false'
           # Deloitte Custom Change: bounds memory use for the trusted-tool attachment

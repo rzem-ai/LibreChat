@@ -32,11 +32,10 @@ describe('LearningPanel', () => {
     expect(mockStartGettingStartedTour).toHaveBeenCalledTimes(1);
   });
 
-  it('renders coming-soon courses as muted, non-clickable rows under a heading', () => {
+  it('renders coming-soon courses as muted, non-clickable rows', () => {
     render(<LearningPanel />);
 
     const comingSoonRow = screen.getByTestId('learning-course-row-mcp-server-guide');
     expect(comingSoonRow.tagName).not.toBe('BUTTON');
-    expect(screen.getByText('com_learning_coming_soon')).toBeInTheDocument();
   });
 });

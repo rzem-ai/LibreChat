@@ -24,6 +24,7 @@ const ctx: SettingsContextValue = {
   adminAgentApiKeysEnabled: false,
   dataDangerZoneEnabled: true,
   isAdmin: false,
+  usernameDisplaySettingEnabled: true,
   engineTTS: 'browser',
   langfuseConnectionAccess: false,
   adminPanelURL: '',

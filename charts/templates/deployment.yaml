@@ -55,9 +55,6 @@ spec:
       {{- end }}
 
       volumes:
-        - name: librechat-config-costs
-          configMap:
-            name: {{ include "helm.fullname" . }}-config
         {{- range $container, $config := $podConfig.containers }}
         {{- if and $config.persistence (hasKey $config.persistence "enabled") $config.persistence.enabled }}
         - name: {{ $container }}-data
@@ -151,10 +148,6 @@ spec:
             - name: {{ $container }}-data
               mountPath: {{ $config.persistence.mountPath | default "/data" }}
             {{- end }}
-            - name: librechat-config-costs
-              mountPath: /app/endpoint-costs.yaml
-              subPath: endpoint-costs.yaml
-              readOnly: true
             {{- with $config.volumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

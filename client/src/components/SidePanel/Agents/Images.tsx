@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, type ReactElement } from 'react';
 import * as Ariakit from '@ariakit/react';
-import { DropdownPopup, Skeleton } from '@librechat/client';
+import { DropdownPopup, Skeleton, useAuthenticatedImageSrc } from '@librechat/client';
 import type { MenuItemProps } from '~/common/menus';
 import { useLocalize } from '~/hooks';
 
@@ -28,29 +28,43 @@ export function NoImage() {
 
 export const AgentAvatarRender = ({ url }: { url?: string }) => {
   const [isLoaded, setIsLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  // Deloitte Custom Change: private Azure avatar proxies need authenticated image retrieval.
+  const {
+    src: authenticatedImageSrc,
+    isLoading: isImageLoading,
+    isError: imageFetchError,
+  } = useAuthenticatedImageSrc(url ?? '');
   useEffect(() => {
     setIsLoaded(false);
+    setImageError(false);
   }, [url]);
 
   if (!url) {
     return <div className="h-full w-full rounded-full" aria-hidden="true" />;
   }
 
+  if (imageFetchError || imageError) {
+    return <NoImage />;
+  }
+
   return (
     <div className="relative h-full w-full overflow-hidden rounded-full">
-      <img
-        src={url}
-        className="bg-token-surface-secondary h-full w-full rounded-full object-cover dark:bg-surface-tertiary"
-        alt="Agent avatar"
-        loading="lazy"
-        key={url}
-        onLoad={() => setIsLoaded(true)}
-        onError={() => setIsLoaded(false)}
-        style={{
-          opacity: isLoaded ? 1 : 0,
-          transition: 'opacity 0.2s ease-in-out',
-        }}
-      />
+      {!isImageLoading && (
+        <img
+          src={authenticatedImageSrc}
+          className="bg-token-surface-secondary h-full w-full rounded-full object-cover dark:bg-surface-tertiary"
+          alt="Agent avatar"
+          loading="lazy"
+          key={url}
+          onLoad={() => setIsLoaded(true)}
+          onError={() => setImageError(true)}
+          style={{
+            opacity: isLoaded ? 1 : 0,
+            transition: 'opacity 0.2s ease-in-out',
+          }}
+        />
+      )}
       {!isLoaded && <Skeleton className="absolute inset-0 rounded-full" aria-hidden="true" />}
     </div>
   );
