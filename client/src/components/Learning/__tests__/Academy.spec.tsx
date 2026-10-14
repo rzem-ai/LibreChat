@@ -36,7 +36,10 @@ jest.mock('../LearningTourContext', () => ({
   }),
 }));
 
-jest.mock('../content/loader', () => ({ RELEASES: [], getArticle: () => undefined }));
+jest.mock('../content/loader', () => ({
+  loadReleases: () => Promise.resolve([]),
+  loadArticle: () => Promise.resolve(undefined),
+}));
 
 describe('Resources', () => {
   afterEach(() => jest.clearAllMocks());

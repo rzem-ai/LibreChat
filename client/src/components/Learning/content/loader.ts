@@ -26,37 +26,41 @@ const idFromPath = (path: string): string =>
     .pop()
     ?.replace(/\.mdx$/, '') ?? path;
 
-function parseModules<T>(
-  modules: Record<string, MdxModule>,
-  parse: (frontmatter: unknown) => T,
-): MdxEntry<T>[] {
-  return Object.entries(modules).map(([path, mod]) => ({
-    id: idFromPath(path),
-    frontmatter: parse(mod.frontmatter),
+const articleModules = import.meta.glob<MdxModule>('./articles/*.mdx');
+const articleSources = import.meta.glob<string>('./articles/*.mdx', {
+  query: '?raw',
+  import: 'default',
+});
+const releaseModules = import.meta.glob<MdxModule>('./releases/*.mdx');
+
+/** Loads one article (compiled body plus raw source for its headings) on demand. */
+export async function loadArticle(slug: string): Promise<ArticleEntry | undefined> {
+  const path = `./articles/${slug}.mdx`;
+  const loadModule = articleModules[path];
+  const loadSource = articleSources[path];
+  if (!loadModule || !loadSource) {
+    return undefined;
+  }
+  const [mod, source] = await Promise.all([loadModule(), loadSource()]);
+  return {
+    id: slug,
+    frontmatter: ArticleFrontmatterSchema.parse(mod.frontmatter),
     Content: mod.default,
-  }));
+    headings: extractHeadings(source),
+  };
 }
 
-const articleSources = new Map(
-  Object.entries(
-    import.meta.glob<string>('./articles/*.mdx', { eager: true, query: '?raw', import: 'default' }),
-  ).map(([path, source]) => [idFromPath(path), source]),
-);
-
-const articles: ArticleEntry[] = parseModules<ArticleFrontmatter>(
-  import.meta.glob<MdxModule>('./articles/*.mdx', { eager: true }),
-  (frontmatter) => ArticleFrontmatterSchema.parse(frontmatter),
-).map((article) => ({
-  ...article,
-  headings: extractHeadings(articleSources.get(article.id) ?? ''),
-}));
-
-/** Newest first. */
-export const RELEASES: MdxEntry<ReleaseFrontmatter>[] = parseModules<ReleaseFrontmatter>(
-  import.meta.glob<MdxModule>('./releases/*.mdx', { eager: true }),
-  (frontmatter) => ReleaseFrontmatterSchema.parse(frontmatter),
-).sort((a, b) => b.frontmatter.date.localeCompare(a.frontmatter.date));
-
-export function getArticle(slug: string): ArticleEntry | undefined {
-  return articles.find((article) => article.id === slug);
+/** Loads every release on demand, newest first. */
+export async function loadReleases(): Promise<MdxEntry<ReleaseFrontmatter>[]> {
+  const releases = await Promise.all(
+    Object.entries(releaseModules).map(async ([path, load]) => {
+      const mod = await load();
+      return {
+        id: idFromPath(path),
+        frontmatter: ReleaseFrontmatterSchema.parse(mod.frontmatter),
+        Content: mod.default,
+      };
+    }),
+  );
+  return releases.sort((a, b) => b.frontmatter.date.localeCompare(a.frontmatter.date));
 }

@@ -1,8 +1,9 @@
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Typeset, gelIcons } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
 import type { ComponentProps } from 'react';
-import { getArticle } from '../../content/loader';
+import { loadArticle } from '../../content/loader';
 import { slugify } from '../../content/headings';
 import { useLocalize } from '~/hooks';
 
@@ -21,7 +22,13 @@ export default function Article(): JSX.Element {
   const localize = useLocalize();
   const navigate = useNavigate();
   const { slug = '' } = useParams<{ slug: string }>();
-  const article = getArticle(slug);
+  const { data: article, isLoading } = useQuery(
+    ['learningArticle', slug],
+    () => loadArticle(slug),
+    {
+      staleTime: Infinity,
+    },
+  );
 
   const backButton = (
     <Button
@@ -35,6 +42,10 @@ export default function Article(): JSX.Element {
       {localize('com_learning_back_to_resources')}
     </Button>
   );
+
+  if (isLoading) {
+    return backButton;
+  }
 
   if (!article) {
     return (

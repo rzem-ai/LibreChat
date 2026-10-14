@@ -1,11 +1,16 @@
 import { Typeset } from '@librechat/client';
+import { useQuery } from '@tanstack/react-query';
 import type { JSX } from 'react/jsx-runtime';
-import { RELEASES } from '../../content/loader';
+import { loadReleases } from '../../content/loader';
 
 export default function Releases(): JSX.Element {
+  const { data: releases = [] } = useQuery(['learningReleases'], loadReleases, {
+    staleTime: Infinity,
+  });
+
   return (
     <div className="flex max-w-xl flex-col gap-12">
-      {RELEASES.map(({ id, frontmatter, Content }) => (
+      {releases.map(({ id, frontmatter, Content }) => (
         <article key={id}>
           <p className="text-sm text-text-secondary">
             {frontmatter.date} · {frontmatter.version}

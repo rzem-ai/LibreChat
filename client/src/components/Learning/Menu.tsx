@@ -28,7 +28,7 @@ export default function Menu({ link }: { link: NavLink }) {
       id: 'learning-ask-faq-agent',
       label: localize('com_learning_ask_faq_agent', { 0: faqAgent?.name ?? '' }),
       icon: <gelIcons.agent className="icon-md" aria-hidden="true" />,
-      show: !!faqAgent,
+      show: Boolean(faqAgent),
       onClick: askFaqAgent,
     },
     {
@@ -41,7 +41,7 @@ export default function Menu({ link }: { link: NavLink }) {
       id: 'learning-give-feedback',
       label: localize('com_learning_give_feedback'),
       icon: <gelIcons.feedback className="icon-md" aria-hidden="true" />,
-      show: !!feedbackUrl,
+      show: Boolean(feedbackUrl),
       onClick: () => window.open(feedbackUrl, '_blank', 'noopener,noreferrer'),
     },
   ];

@@ -3,6 +3,7 @@ import React from 'react';
 import '@testing-library/jest-dom';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Article from '../Academy/articles/Page';
 
 const mockArticle = {
@@ -30,7 +31,7 @@ jest.mock('~/hooks', () => ({
 }));
 
 jest.mock('../content/loader', () => ({
-  getArticle: (slug: string) => (slug === 'sample' ? mockArticle : undefined),
+  loadArticle: (slug: string) => Promise.resolve(slug === 'sample' ? mockArticle : undefined),
 }));
 
 describe('Academy article', () => {
@@ -53,18 +54,22 @@ describe('Academy article', () => {
 
   const renderAt = (path: string) =>
     render(
-      <MemoryRouter initialEntries={[path]}>
-        <Routes>
-          <Route path="/learning/articles/:slug" element={<Article />} />
-          <Route path="/learning/resources" element={<p>resources list</p>} />
-        </Routes>
-      </MemoryRouter>,
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route path="/learning/articles/:slug" element={<Article />} />
+            <Route path="/learning/resources" element={<p>resources list</p>} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
 
-  it('renders the article and an on-this-page link for each section heading', () => {
+  it('renders the article and an on-this-page link for each section heading', async () => {
     renderAt('/learning/articles/sample');
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Sample article' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Sample article' }),
+    ).toBeInTheDocument();
     const nav = screen.getByRole('navigation', { name: 'com_learning_on_this_page' });
     expect(nav).toContainElement(screen.getByRole('link', { name: 'Getting started' }));
     expect(screen.getByRole('link', { name: 'Advanced setup' })).toHaveAttribute(
@@ -74,10 +79,10 @@ describe('Academy article', () => {
     expect(document.getElementById('advanced-setup')).toHaveTextContent('Advanced setup');
   });
 
-  it('scrolls the matching section into view when its link is clicked', () => {
+  it('scrolls the matching section into view when its link is clicked', async () => {
     renderAt('/learning/articles/sample');
 
-    fireEvent.click(screen.getByRole('link', { name: 'Advanced setup' }));
+    fireEvent.click(await screen.findByRole('link', { name: 'Advanced setup' }));
     expect(scrolledIds).toEqual(['advanced-setup']);
   });
 
@@ -88,10 +93,10 @@ describe('Academy article', () => {
     expect(screen.getByText('resources list')).toBeInTheDocument();
   });
 
-  it('shows the missing message for an unknown slug while keeping the back action', () => {
+  it('shows the missing message for an unknown slug while keeping the back action', async () => {
     renderAt('/learning/articles/missing');
 
-    expect(screen.getByText('com_learning_article_missing')).toBeInTheDocument();
+    expect(await screen.findByText('com_learning_article_missing')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /com_learning_back_to_resources/ }),
