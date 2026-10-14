@@ -41,7 +41,9 @@ const SpecIcon: React.FC<SpecIconProps> = ({
   }
 
   if (isEntityEndpoint(iconURL || endpoint)) {
-    return <EntityEndpointMark endpoint={iconURL || endpoint} className={sizeClassName} />;
+    return (
+      <EntityEndpointMark endpoint={iconURL || endpoint} className={sizeClassName} size={size} />
+    );
   }
 
   return (

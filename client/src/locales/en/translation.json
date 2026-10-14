@@ -1906,6 +1906,7 @@
   "com_ui_model_details_high_cost": "High cost - use for complex tasks only",
   "com_ui_model_details_image_generation": "Image generation",
   "com_ui_model_details_intelligence": "Intelligence",
+  "com_ui_model_details_rating_value": "{{0}} of {{1}}",
   "com_ui_model_details_speed": "Speed",
   "com_ui_model_details_supports": "Supports",
   "com_ui_model_parameters": "Model Parameters",

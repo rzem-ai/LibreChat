@@ -14,6 +14,7 @@ const labels: ModelInfoTooltipLabels = {
   highCost: 'High Cost',
   context: 'Context',
   supports: 'Supports',
+  ratingValue: (value, max) => `${value} of ${max}`,
 };
 
 describe('ModelInfoTooltipCard', () => {

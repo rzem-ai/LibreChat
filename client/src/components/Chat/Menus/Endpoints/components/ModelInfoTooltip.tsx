@@ -85,6 +85,8 @@ export default function ModelInfoTooltip({
           highCost: localize('com_ui_model_details_high_cost'),
           context: localize('com_ui_model_details_context'),
           supports: localize('com_ui_model_details_supports'),
+          ratingValue: (value, max) =>
+            localize('com_ui_model_details_rating_value', { 0: value, 1: max }),
         },
       }
     : null;

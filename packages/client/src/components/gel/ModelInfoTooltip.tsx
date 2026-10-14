@@ -70,6 +70,8 @@ export interface ModelInfoTooltipLabels {
   highCost: string;
   context: string;
   supports: string;
+  /** Builds a rating meter's localized accessible name, e.g. "3 of 5". */
+  ratingValue: (value: number, max: number) => string;
 }
 
 export interface ModelInfoTooltipContent {
@@ -123,12 +125,12 @@ export function ModelInfoTooltipCard({
       <div className="flex flex-col gap-4 p-6">
         {speed != null && (
           <DetailRow label={labels.speed}>
-            <RatingMeter value={speed} />
+            <RatingMeter value={speed} ariaLabel={labels.ratingValue(speed, 5)} />
           </DetailRow>
         )}
         {intelligence != null && (
           <DetailRow label={labels.intelligence}>
-            <RatingMeter value={intelligence} />
+            <RatingMeter value={intelligence} ariaLabel={labels.ratingValue(intelligence, 5)} />
           </DetailRow>
         )}
         {cost && (
@@ -137,7 +139,7 @@ export function ModelInfoTooltipCard({
                 rating bar's own row centers vertically against the label instead of sitting
                 at the top of it; the price lines below are unaffected. */}
             <div className="flex h-5 items-center">
-              <RatingMeter value={cost.tier} />
+              <RatingMeter value={cost.tier} ariaLabel={labels.ratingValue(cost.tier, 5)} />
             </div>
             {cost.isHighCost === true && (
               <Tag

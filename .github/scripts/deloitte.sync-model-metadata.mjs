@@ -137,9 +137,31 @@ export function syncDocument(doc, catalog, now = new Date()) {
   return { updated, warnings };
 }
 
+/**
+ * Confines the rewrite to the `modelSpecs.list` span: everything before and after it is kept
+ * byte-identical to `source`. `doc.toString()` re-serializes the whole document and can
+ * otherwise introduce unrelated formatting changes (flow-array spacing, trailing commas,
+ * comment normalization) outside the nodes this script actually edits. Falls back to the full
+ * rewrite if the untouched boundaries don't round-trip exactly, rather than risk corrupting
+ * content it can't safely splice.
+ */
+export function patchListRegion(source, rewritten, listRange) {
+  if (!listRange) {
+    return rewritten;
+  }
+  const prefix = source.slice(0, listRange[0]);
+  const suffix = source.slice(listRange[2] ?? listRange[1]);
+  if (!rewritten.startsWith(prefix) || !rewritten.endsWith(suffix)) {
+    return rewritten;
+  }
+  const middle = rewritten.slice(prefix.length, rewritten.length - suffix.length);
+  return prefix + middle + suffix;
+}
+
 export async function run({ yamlPath, apiKey, fetchImpl = fetch, now = new Date() }) {
   const source = readFileSync(yamlPath, 'utf8');
   const doc = parseDocument(source);
+  const listRange = doc.getIn(['modelSpecs', 'list'])?.range;
   const catalog = await fetchCatalog(apiKey, fetchImpl);
   const { updated, warnings } = syncDocument(doc, catalog, now);
 
@@ -147,7 +169,7 @@ export async function run({ yamlPath, apiKey, fetchImpl = fetch, now = new Date(
     console.log(warning);
   }
   if (updated.length) {
-    writeFileSync(yamlPath, doc.toString());
+    writeFileSync(yamlPath, patchListRegion(source, doc.toString(), listRange));
   }
   console.log(`Updated ${updated.length} model spec(s), ${warnings.length} unmatched.`);
   return { updated, warnings };

@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { tierFromRange, run } from './deloitte.sync-model-metadata.mjs';
+import { tierFromRange, run, patchListRegion } from './deloitte.sync-model-metadata.mjs';
 
 test('tierFromRange', async (t) => {
   await t.test('returns a neutral tier when min equals max', () => {
@@ -28,6 +28,11 @@ test('run()', async (t) => {
   const yamlPath = join(scratch, 'librechat.yaml');
 
   const fixture = `# top-level comment preserved across the round trip
+version: 1.2.0
+fileConfig:
+  endpoints:
+    default:
+      supportedMimeTypes: [ "image/*", "application/pdf" ]
 modelSpecs:
   promptPrefix: &sharedPrompt |
     shared system prompt
@@ -63,6 +68,10 @@ modelSpecs:
         endpoint: 'anthropic'
         model: 'model-d'
         promptPrefix: *sharedPrompt
+endpoints:
+  custom:
+    - name: 'other-endpoint'
+      models: [ 'model-x', 'model-y' ]
 `;
   writeFileSync(yamlPath, fixture);
 
@@ -123,5 +132,37 @@ modelSpecs:
     assert.match(output, /# per-spec comment preserved/);
     assert.match(output, /&sharedPrompt/);
     assert.match(output, /\*sharedPrompt/);
+  });
+
+  await t.test('leaves content outside modelSpecs.list byte-identical', () => {
+    const [before] = fixture.split('modelSpecs:');
+    const [, after] = fixture.split("models: [ 'model-x', 'model-y' ]");
+    assert.ok(output.startsWith(before));
+    assert.ok(output.endsWith(after));
+  });
+});
+
+test('patchListRegion', async (t) => {
+  await t.test('splices the rewritten middle between an unchanged prefix and suffix', () => {
+    const source = 'before\nlist:\n  - a\n  - b\nafter\n';
+    const listStart = source.indexOf('- a');
+    const listEnd = source.indexOf('after');
+    const rewritten = 'before\nlist:\n  - a\n  - b (changed)\nafter\n';
+    assert.equal(
+      patchListRegion(source, rewritten, [listStart, listEnd, listEnd]),
+      rewritten,
+    );
+  });
+
+  await t.test('falls back to the full rewrite when the boundaries do not round-trip', () => {
+    const source = 'before\nlist:\n  - a\nafter\n';
+    const rewritten = 'before (reformatted)\nlist:\n  - a\nafter\n';
+    const listStart = source.indexOf('- a');
+    const listEnd = source.indexOf('after');
+    assert.equal(patchListRegion(source, rewritten, [listStart, listEnd, listEnd]), rewritten);
+  });
+
+  await t.test('returns the rewritten text unchanged when there is no list range', () => {
+    assert.equal(patchListRegion('x', 'y', undefined), 'y');
   });
 });
