@@ -14,7 +14,7 @@ const tabsListVariants: (props?: TabsVariantProps & ClassProp) => string = cva(
     variants: {
       variant: {
         default: 'rounded-md bg-surface-primary',
-        underline: 'w-full justify-start gap-4 border-b border-border-light',
+        underline: 'w-full justify-start gap-4 overflow-x-auto',
       },
     },
     defaultVariants: { variant: 'default' },
