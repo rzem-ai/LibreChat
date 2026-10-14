@@ -111,6 +111,7 @@ export const darkTheme: IThemeRGB = {
    *  under a white check at once — the check would have to stop being white. */
   'rgb-status-verified': '26 127 216', // #1a7fd8
   'rgb-text-on-status': '255 255 255', // #fff (white)
+  'rgb-highlight': '251 191 36', // #fbbf24 (amber-400)
 
   // Brand colors
   'rgb-brand-purple': '171 104 255', // #ab68ff
