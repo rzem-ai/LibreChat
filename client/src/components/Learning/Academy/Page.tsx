@@ -11,13 +11,15 @@ import Faq from './faq/Page';
 
 type AcademyTab = 'tours' | 'resources' | 'faq' | 'releases';
 
+const { Tabs, TabsList, TabsTrigger, TabsContent } = GEL;
+
 const contentClass = 'mt-0 p-0';
 
 export default function Page(): JSX.Element {
   const localize = useLocalize();
   const navigate = useNavigate();
   const { tab = 'tours' } = useParams<{ tab: AcademyTab }>();
-  const { data: startupConfig } = useGetStartupConfig();
+  const { data: startupConfig, isLoading: isConfigLoading } = useGetStartupConfig();
   const { faqAgent, askFaqAgent } = useAskFaqAgent();
   const flags = startupConfig?.interface?.customDeloitteFeatureFlags;
 
@@ -37,8 +39,7 @@ export default function Page(): JSX.Element {
   ];
   const enabledTabs = tabs.filter((candidate) => candidate.enabled);
 
-  const isConfigSettled = startupConfig !== undefined;
-  if (isConfigSettled && !enabledTabs.some((candidate) => candidate.id === tab)) {
+  if (!isConfigLoading && !enabledTabs.some((candidate) => candidate.id === tab)) {
     return <Navigate to="/learning/tours" replace />;
   }
 
@@ -64,31 +65,31 @@ export default function Page(): JSX.Element {
           </Button>
         )}
       </header>
-      <GEL.Tabs
+      <Tabs
         value={tab}
         onValueChange={(next) => navigate(`/learning/${next}`)}
         className="flex flex-col gap-6"
       >
-        <GEL.TabsList variant="underline">
+        <TabsList variant="underline">
           {enabledTabs.map((candidate) => (
-            <GEL.TabsTrigger key={candidate.id} value={candidate.id} variant="underline">
+            <TabsTrigger key={candidate.id} value={candidate.id} variant="underline">
               {candidate.label}
-            </GEL.TabsTrigger>
+            </TabsTrigger>
           ))}
-        </GEL.TabsList>
-        <GEL.TabsContent value="tours" className={contentClass}>
+        </TabsList>
+        <TabsContent value="tours" className={contentClass}>
           <Tours />
-        </GEL.TabsContent>
-        <GEL.TabsContent value="resources" className={contentClass}>
+        </TabsContent>
+        <TabsContent value="resources" className={contentClass}>
           <Resources onOpenArticle={(slug) => navigate(`/learning/articles/${slug}`)} />
-        </GEL.TabsContent>
-        <GEL.TabsContent value="faq" className={contentClass}>
+        </TabsContent>
+        <TabsContent value="faq" className={contentClass}>
           <Faq />
-        </GEL.TabsContent>
-        <GEL.TabsContent value="releases" className={contentClass}>
+        </TabsContent>
+        <TabsContent value="releases" className={contentClass}>
           <Releases />
-        </GEL.TabsContent>
-      </GEL.Tabs>
+        </TabsContent>
+      </Tabs>
     </>
   );
 }

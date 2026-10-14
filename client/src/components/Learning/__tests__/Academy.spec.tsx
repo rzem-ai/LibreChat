@@ -9,7 +9,8 @@ import Page from '../Academy/Page';
 
 const mockStartTour = jest.fn();
 const mockResumeTour = jest.fn();
-let mockFlags: Record<string, boolean> | undefined = {};
+let mockFlags: Record<string, boolean> = {};
+let mockConfigStatus: 'loading' | 'error' | 'success' = 'success';
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string, values?: Record<number, string | number>) =>
@@ -19,9 +20,10 @@ jest.mock('~/hooks', () => ({
 jest.mock('~/data-provider', () => ({
   useGetStartupConfig: () => ({
     data:
-      mockFlags === undefined
+      mockConfigStatus !== 'success'
         ? undefined
         : { interface: { customDeloitteFeatureFlags: mockFlags } },
+    isLoading: mockConfigStatus === 'loading',
   }),
 }));
 
@@ -100,6 +102,7 @@ describe('Academy', () => {
 
   afterEach(() => {
     mockFlags = {};
+    mockConfigStatus = 'success';
     window.localStorage.clear();
   });
 
@@ -125,14 +128,22 @@ describe('Academy', () => {
     expect(screen.getByLabelText('com_learning_search_faq')).toBeInTheDocument();
   });
 
+  it('falls back to tours when the startup config failed to load', () => {
+    mockConfigStatus = 'error';
+    renderAt('/learning/faq');
+    expect(screen.getByText('com_learning_start_here:Getting Started Tour')).toBeInTheDocument();
+    expect(screen.queryByLabelText('com_learning_search_faq')).not.toBeInTheDocument();
+  });
+
   it('keeps a flagged tab URL while the startup config is still loading', () => {
-    mockFlags = undefined;
+    mockConfigStatus = 'loading';
     const { rerender } = renderAt('/learning/faq');
     expect(
       screen.queryByText('com_learning_start_here:Getting Started Tour'),
     ).not.toBeInTheDocument();
     expect(screen.getByLabelText('com_learning_search_faq')).toBeInTheDocument();
 
+    mockConfigStatus = 'success';
     mockFlags = { learningCommonQuestions: true, learningReleaseNotes: true };
     rerender(academyTree('/learning/faq'));
     expect(screen.getByRole('tab', { name: 'com_learning_tab_faq' })).toBeInTheDocument();
