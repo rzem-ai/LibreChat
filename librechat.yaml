@@ -655,12 +655,12 @@ modelSpecs:
         endpoint: 'bedrock'
         model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
         promptPrefix: *deloitteSystemPrompt
-        supports:
-          webSearch: false
-          imageGeneration: false
       details:
         speed: 5
         intelligence: 1
+        supports:
+          webSearch: false
+          imageGeneration: false
 
 # MCP Servers configuration
 # Each entry filters the gateway to a single toolset via the `toolsets` query param.

@@ -82,7 +82,7 @@ modelSpecs:
   };
   const fetchImpl = async () => ({ ok: true, json: async () => catalog });
 
-  const now = new Date(2026, 10, 31); // 31 October 2026
+  const now = new Date(2026, 9, 31); // 31 October 2026
   const { updated, warnings } = await run({ yamlPath, apiKey: 'test-key', fetchImpl, now });
 
   await t.test('updates only matched specs, with the expected relative tiers', () => {
