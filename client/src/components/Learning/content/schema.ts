@@ -11,6 +11,11 @@ export const TourStepSchema = z.object({
 
 export const CourseContentSchema = z.object({
   id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  estimatedMinutes: z.number().optional(),
+  isGettingStartedTour: z.boolean().optional(),
+  comingSoon: z.boolean().default(false),
   steps: z.array(TourStepSchema),
 });
 

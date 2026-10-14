@@ -1,7 +1,7 @@
 import React from 'react';
 import '@testing-library/jest-dom';
 import { renderHook, act } from '@testing-library/react';
-import type { TourStep } from '../Courses/content/schema';
+import type { TourStep } from '../content/schema';
 import { LearningTourProvider, useLearningTour } from '../LearningTourContext';
 
 const mockNavigate = jest.fn();
@@ -59,7 +59,7 @@ jest.mock('~/utils/elements', () => ({
   hasAvailableTarget: (selector: string) => mockAvailableTargets.has(selector),
 }));
 
-jest.mock('../Courses/content/registry', () => ({
+jest.mock('../content/registry', () => ({
   GETTING_STARTED_COURSE_ID: 'getting-started-guide',
   getCourseSteps: () => FIXTURE_STEPS,
 }));

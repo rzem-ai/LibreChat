@@ -1,5 +1,5 @@
 import { act, fireEvent, renderHook, within } from '@testing-library/react';
-import type { TourStep } from '../content/schema';
+import type { TourStep } from '../../content/schema';
 import { TRANSITION_MS } from '~/components/UnifiedSidebar/constants';
 import useCourseTour from '../useCourseTour';
 

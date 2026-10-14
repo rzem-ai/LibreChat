@@ -10,7 +10,7 @@ import {
 import { useRecoilState } from 'recoil';
 import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { GETTING_STARTED_COURSE_ID, getCourseSteps } from './Courses/content/registry';
+import { GETTING_STARTED_COURSE_ID, getCourseSteps } from './content/registry';
 import { TRANSITION_MS } from '~/components/UnifiedSidebar/constants';
 import useTutorialPrompt from '~/hooks/Learning/useTutorialPrompt';
 import { hasAvailableTarget } from '~/utils/elements';

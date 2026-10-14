@@ -4,7 +4,7 @@ import 'driver.js/dist/driver.css';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import type { Driver, DriveStep, PopoverDOM } from 'driver.js';
-import type { TourStep } from './content/schema';
+import type { TourStep } from '../content/schema';
 import { TRANSITION_MS } from '~/components/UnifiedSidebar/constants';
 import { attachCardChevron } from './tourChevron';
 import TourPopover from './TourPopover';

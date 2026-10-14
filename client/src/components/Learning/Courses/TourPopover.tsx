@@ -4,7 +4,7 @@ import { createConfigHtmlSanitizer } from '~/utils/configHtml';
 import { useLocalize } from '~/hooks';
 
 // Several tour descriptions use <br>/<strong> for line breaks and emphasis
-// (see getting-started-guide.json) — sanitize rather than render as plain
+// (see content/tours/getting-started.json) — sanitize rather than render as plain
 // text, so the markup renders instead of showing up as literal tag text.
 const sanitizeDescription = createConfigHtmlSanitizer();
 
