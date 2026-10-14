@@ -39,17 +39,16 @@ import {
   useUserTermsQuery,
 } from '~/data-provider';
 import { DeloitteHeader } from '~/components/DeloitteComponents/DeloitteTopHeader';
-import ExpiringResourceBanner from '~/components/Retention/ExpiringResourceBanner';
 import { LearningTourProvider } from '~/components/Learning/LearningTourContext';
 import CourseCompletionModal from '~/components/Learning/CourseCompletionModal';
 import KeyboardShortcutsDialog from '~/components/Nav/KeyboardShortcutsDialog';
 import TutorialPromptModal from '~/components/Learning/TutorialPromptModal';
 import KeyboardDeleteDialog from '~/components/Nav/KeyboardDeleteDialog';
-import ExpiringFilesBanner from '~/components/Files/ExpiringFilesBanner';
 import { MobileDrawerScrim } from '~/components/UnifiedSidebar/mobile';
 import useKeyboardShortcuts from '~/hooks/useKeyboardShortcuts';
 import useDrawerDismiss from '~/hooks/Nav/useDrawerDismiss';
 import useSidebarToggle from '~/hooks/Nav/useSidebarToggle';
+import PopupStack from '~/components/Retention/PopupStack';
 import useSidebarState from '~/hooks/Nav/useSidebarState';
 import { TermsAndConditionsModal } from '~/components/ui';
 import useDrawerSwipe from '~/hooks/Nav/useDrawerSwipe';
@@ -189,9 +188,7 @@ export default function Root() {
                 <AgentsMapContext.Provider value={agentsMap}>
                   <PromptGroupsProvider>
                     <Banner onHeightChange={setBannerHeight} />
-                    <ExpiringFilesBanner />
-                    <ExpiringResourceBanner resourceType="agent" />
-                    <ExpiringResourceBanner resourceType="skill" />
+                    <PopupStack />
                     {/* Deloitte Custom Change: Add Deloitte Header to top of view */}
                     <div
                       style={
