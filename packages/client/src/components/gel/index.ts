@@ -7,4 +7,4 @@ export * from './icons';
 export * from './Typeset';
 export * from './SearchInput';
 export * from './HighlightedText';
-export * as GELTabs from './Tabs';
+export * as GEL from './Tabs';
