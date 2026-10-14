@@ -104,7 +104,6 @@ export interface IThemeRGB {
    */
   'rgb-status-verified'?: string;
   'rgb-text-on-status'?: string;
-  'rgb-highlight'?: string;
 
   // Brand colors
   'rgb-brand-purple'?: string;
@@ -230,7 +229,6 @@ export interface IThemeVariables {
   '--status-neutral-border': string;
   '--status-verified': string;
   '--text-on-status': string;
-  '--highlight': string;
   '--brand-purple': string;
 
   '--syntax-text': string;
@@ -331,7 +329,6 @@ export interface IThemeColors {
   'status-neutral-border'?: string;
   'status-verified'?: string;
   'text-on-status'?: string;
-  highlight?: string;
   'brand-purple'?: string;
 
   'series-1'?: string;

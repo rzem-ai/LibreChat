@@ -16,7 +16,7 @@ export function HighlightedText({ text, query }: { text: string; query: string }
         const key = offset;
         offset += part.length;
         return part.toLowerCase() === needle.toLowerCase() ? (
-          <mark key={key} className="bg-highlight text-text-fixed">
+          <mark key={key} className="bg-amber-300 text-black dark:bg-amber-400">
             {part}
           </mark>
         ) : (

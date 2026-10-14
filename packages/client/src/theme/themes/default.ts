@@ -97,7 +97,6 @@ export const defaultTheme: IThemeRGB = {
    *  white label and 4.83:1 against the panel. */
   'rgb-status-verified': '37 99 235', // #2563eb (blue-600)
   'rgb-text-on-status': '255 255 255', // #fff (white)
-  'rgb-highlight': '252 211 77', // #fcd34d (amber-300)
 
   // Brand colors
   'rgb-brand-purple': '126 34 206', // #7e22ce (purple-700)

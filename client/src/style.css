@@ -308,7 +308,6 @@ html {
   --status-warning: var(--amber-700);
   --status-warning-subtle: var(--amber-50);
   --status-warning-border: var(--amber-300);
-  --highlight: var(--amber-300);
   --status-warning-strong: 199 82 9;
   --status-error: var(--red-700);
   --status-error-subtle: var(--red-50);
@@ -498,7 +497,6 @@ html {
   --status-warning: var(--amber-300);
   --status-warning-subtle: var(--amber-950);
   --status-warning-border: var(--amber-800);
-  --highlight: var(--amber-400);
   --status-warning-strong: var(--amber-800);
   --status-error: var(--red-300);
   --status-error-subtle: var(--red-950);

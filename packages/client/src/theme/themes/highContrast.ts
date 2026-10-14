@@ -129,7 +129,6 @@ export const highContrastLightTheme: IThemeRGB = {
    *  same against the canvas. */
   'rgb-status-verified': '0 65 122', // #00417a
   'rgb-text-on-status': '255 255 255', // #ffffff
-  'rgb-highlight': '255 214 0', // #ffd600
 
   // Brand colors
   'rgb-brand-purple': '107 0 179', // #6b00b3
@@ -270,7 +269,6 @@ export const highContrastDarkTheme: IThemeRGB = {
    *  same against the canvas. */
   'rgb-status-verified': '140 200 255', // #8cc8ff
   'rgb-text-on-status': '0 0 0', // #000000
-  'rgb-highlight': '255 214 0', // #ffd600
 
   // Brand colors
   'rgb-brand-purple': '224 179 255', // #e0b3ff
