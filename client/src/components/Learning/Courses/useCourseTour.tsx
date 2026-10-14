@@ -26,6 +26,8 @@ const WRAPPER_RESET_STYLE: Partial<CSSStyleDeclaration> = {
 
 interface TourOptions {
   onEnd?: () => void;
+  /** Called as each step is highlighted, with the zero-based index and total step count. */
+  onStep?: (index: number, total: number) => void;
   setSidebarExpanded?: (expanded: boolean) => void;
 }
 
@@ -160,6 +162,7 @@ export default function useCourseTour(
       onPopoverRender: (popover, opts) =>
         renderPopover(popover, opts.driver, steps[opts.state.activeIndex ?? 0]),
       onHighlightStarted: (_element, step) => {
+        optionsRef.current.onStep?.(tourDriver.getActiveIndex() ?? 0, steps.length);
         if ((step as EngineStep).expandSidebarBefore) {
           optionsRef.current.setSidebarExpanded?.(true);
           // driver.js (animate: false) measures and positions immediately, but the

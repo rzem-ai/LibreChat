@@ -21,3 +21,7 @@ export const CourseContentSchema = z.object({
 
 export type TourStep = z.infer<typeof TourStepSchema>;
 export type CourseContent = z.infer<typeof CourseContentSchema>;
+
+export type TourStatus = 'complete' | 'in-progress' | 'not-started';
+
+export type TourProgress = { step: number; total: number; completed: boolean };

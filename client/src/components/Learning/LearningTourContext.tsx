@@ -18,6 +18,7 @@ import useCourseTour from './Courses/useCourseTour';
 import { DESKTOP_START_DELAY_MS } from './timing';
 import { useActivePanel } from '~/Providers';
 import { useShowMarketplace } from '~/hooks';
+import useTourProgress from './progress';
 import store from '~/store';
 
 interface LearningTourContextType {
@@ -47,6 +48,7 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
   const [completedCourseId, setCompletedCourseId] = useState<string | null>(null);
   const { markPromptSeen } = useTutorialPrompt();
   const showMarketplace = useShowMarketplace();
+  const { recordStep, recordComplete } = useTourProgress();
 
   // Capture the user's sidebar state before the tour starts so we can restore
   // it when the tour ends or is cancelled.
@@ -68,8 +70,12 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
 
   const { startTour } = useCourseTour(
     getSteps,
-    () => setCompletedCourseId(GETTING_STARTED_COURSE_ID),
+    () => {
+      recordComplete(GETTING_STARTED_COURSE_ID, getSteps().length);
+      setCompletedCourseId(GETTING_STARTED_COURSE_ID);
+    },
     {
+      onStep: (index, total) => recordStep(GETTING_STARTED_COURSE_ID, index, total),
       // Restore sidebar to its pre-tour state when the tour ends/is cancelled.
       onEnd: () => setSidebarExpanded(preTourSidebarExpandedRef.current),
       setSidebarExpanded,
@@ -107,7 +113,7 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
     if (isSmallScreen) {
       // On mobile, collapse the sidebar so the early chat-area steps are
       // unobstructed by the sidebar overlay. The tour will re-expand it once
-      // it reaches a step flagged `expandSidebarBefore` (see getting-started-guide.json).
+      // it reaches a step flagged `expandSidebarBefore` (see content/tours/getting-started.json).
       setSidebarExpanded(false);
     }
     // On desktop, leave the sidebar in whatever state the user had it — the
