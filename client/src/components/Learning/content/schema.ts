@@ -25,3 +25,35 @@ export type CourseContent = z.infer<typeof CourseContentSchema>;
 export type TourStatus = 'complete' | 'in-progress' | 'not-started';
 
 export type TourProgress = { step: number; total: number; completed: boolean };
+
+export const ResourceSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  type: z.enum(['tour', 'article', 'external']),
+  tags: z.array(z.string()),
+  icon: z.enum(['tour', 'article', 'external']),
+  durationLabel: z.string().optional(),
+  updated: z.string().optional(),
+  articleSlug: z.string().optional(),
+  externalHref: z.string().url().optional(),
+});
+
+export const FaqSchema = z.object({ question: z.string(), answer: z.string() });
+
+export const ArticleFrontmatterSchema = z.object({
+  title: z.string(),
+  updated: z.string(),
+  durationLabel: z.string().optional(),
+});
+
+export const ReleaseFrontmatterSchema = z.object({
+  title: z.string(),
+  version: z.string(),
+  date: z.string(),
+});
+
+export type Resource = z.infer<typeof ResourceSchema>;
+export type Faq = z.infer<typeof FaqSchema>;
+export type ArticleFrontmatter = z.infer<typeof ArticleFrontmatterSchema>;
+export type ReleaseFrontmatter = z.infer<typeof ReleaseFrontmatterSchema>;

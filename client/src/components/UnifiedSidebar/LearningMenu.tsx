@@ -1,8 +1,9 @@
 import { useId, useState } from 'react';
 import * as Ariakit from '@ariakit/react';
+import { useNavigate } from 'react-router-dom';
 import { DropdownPopup } from '@librechat/client';
 import { Constants, EModelEndpoint } from 'librechat-data-provider';
-import { BookOpen, MessageCircleQuestion, MessageSquareHeart } from 'lucide-react';
+import { BookOpen, GraduationCap, MessageCircleQuestion, MessageSquareHeart } from 'lucide-react';
 import type { NavLink } from '~/common';
 import type * as t from '~/common';
 import { useLearningTour } from '~/components/Learning/LearningTourContext';
@@ -13,6 +14,7 @@ import { specDisplayFieldReset } from '~/utils';
 
 export default function LearningMenu({ link }: { link: NavLink }) {
   const localize = useLocalize();
+  const navigate = useNavigate();
   const { newConversation } = useNewConvo();
   const getDefaultConversation = useDefaultConvo();
   const menuId = useId();
@@ -48,6 +50,12 @@ export default function LearningMenu({ link }: { link: NavLink }) {
           preset: template,
         });
       },
+    },
+    {
+      id: 'learning-explore-academy',
+      label: localize('com_learning_explore_academy'),
+      icon: <GraduationCap className="icon-md" aria-hidden="true" />,
+      onClick: () => navigate('/learning'),
     },
     {
       id: 'learning-give-feedback',

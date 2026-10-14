@@ -1,4 +1,7 @@
+import mdx from '@mdx-js/rollup';
 import react from '@vitejs/plugin-react';
+import remarkFrontmatter from 'remark-frontmatter';
+import remarkMdxFrontmatter from 'remark-mdx-frontmatter';
 import fs from 'fs';
 import path from 'path';
 import { constants } from 'zlib';
@@ -77,7 +80,8 @@ export default defineConfig(({ command }) => ({
   envDir: '../',
   envPrefix: ['VITE_', 'SCRIPT_', 'DOMAIN_', 'ALLOW_', 'REACT_APP_THEME_'],
   plugins: [
-    react(),
+    { enforce: 'pre', ...mdx({ remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter] }) },
+    react({ include: /\.(jsx|js|mdx|md|tsx|ts)$/ }),
     {
       name: 'node-polyfills-shims-resolver',
       resolveId(id) {
