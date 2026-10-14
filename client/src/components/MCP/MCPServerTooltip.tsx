@@ -1,3 +1,6 @@
+// Deloitte Custom Change: connector tooltip backed by real MCP Gateway toolset data
+// (use cases, access, limitations), with a minimal fallback when a server's toolset
+// isn't present in the gateway response.
 import { Check, Lock, X } from 'lucide-react';
 import {
   Tag,
@@ -9,28 +12,11 @@ import {
 } from '@librechat/client';
 import type { ReactNode } from 'react';
 import type { MCPServerDefinition } from '~/hooks/MCP/useMCPServerManager';
-import { hasConfiguredIcon, hasLimitedAccess } from './mcpServerUtils';
+import { hasConfiguredIcon, hasLimitedAccess, getConfiguredToolsetName } from './mcpServerUtils';
+import { useMCPToolsetsQuery } from '~/data-provider';
 import MCPServerIcon from './MCPServerIcon';
 import { useLocalize } from '~/hooks';
 import { ESide } from '~/common';
-
-// TODO(mcp-gateway): the fields below are placeholders until the MCP Gateway
-// exposes a connector-metadata endpoint. Replace with real per-server data once
-// that endpoint exists; keep the shape (description + three labeled lists).
-const PLACEHOLDER_DESCRIPTION =
-  'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin justo ut magna tincidunt molestie. Lorem ipsum dolor sit amet, consectetur adipiscing elit...';
-const PLACEHOLDER_USE_CASES = [
-  'Find files by keyword',
-  'Summarise a document',
-  'Look up list items',
-];
-const PLACEHOLDER_ACCESS = ['All Deloitte Sharepoint', 'All Deloitte Onedrive'];
-const PLACEHOLDER_LIMITATIONS = [
-  'Private Sharepoint folders',
-  'Private Sharepoint files',
-  'Private Onedrive folders',
-  'Private Onedrive files',
-];
 
 function TooltipListItem({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
@@ -61,6 +47,12 @@ export default function MCPServerTooltip({ trigger, server }: MCPServerTooltipPr
   const localize = useLocalize();
   const displayName = server.config?.title || server.serverName;
   const limitedAccess = hasLimitedAccess(server);
+  // Deloitte Custom Change: resolve this connector's real toolset metadata from the
+  // MCP Gateway, falling back to the server's own config description when absent.
+  const { data } = useMCPToolsetsQuery();
+  const toolsetName = getConfiguredToolsetName(server);
+  const details = data?.toolsets.find((toolset) => toolset.name === toolsetName);
+  const description = details?.userFriendlyDescription ?? server.config?.description;
 
   return (
     <HoverCard openDelay={150}>
@@ -100,53 +92,60 @@ export default function MCPServerTooltip({ trigger, server }: MCPServerTooltipPr
                 labelClassName="!ml-0 flex items-center gap-1.5 px-1.5 py-0.5 text-xs font-normal uppercase tracking-wide"
               />
             )}
-            <p className="text-sm leading-5 text-muted-foreground">
-              {/* TODO(mcp-gateway): fetch real description from the MCP Gateway. */}
-              {PLACEHOLDER_DESCRIPTION}{' '}
-              <button type="button" className="font-semibold text-primary hover:text-primary-hover">
-                {localize('com_ui_learn_more')}
-              </button>
-            </p>
+            {description && (
+              <p className="text-sm leading-5 text-muted-foreground">
+                {description}{' '}
+                {/* Commented out per product decision: no destination page exists yet for
+                    this control, but keep the markup in place for when one does.
+                <button type="button" className="font-semibold text-primary hover:text-primary-hover">
+                  {localize('com_ui_learn_more')}
+                </button>
+                */}
+              </p>
+            )}
           </div>
-          <div className="flex flex-col gap-6 p-6 pt-4">
-            <TooltipRow label={localize('com_nav_mcp_tooltip_use_cases')}>
-              {/* TODO(mcp-gateway): fetch real use cases from the MCP Gateway. */}
-              {PLACEHOLDER_USE_CASES.map((useCase) => (
-                <TooltipListItem
-                  key={useCase}
-                  icon={
-                    <Check className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                  }
-                >
-                  {useCase}
-                </TooltipListItem>
-              ))}
-            </TooltipRow>
-            <TooltipRow label={localize('com_nav_mcp_tooltip_access')}>
-              {/* TODO(mcp-gateway): fetch real access scope from the MCP Gateway. */}
-              {PLACEHOLDER_ACCESS.map((access) => (
-                <TooltipListItem
-                  key={access}
-                  icon={
-                    <Check className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                  }
-                >
-                  {access}
-                </TooltipListItem>
-              ))}
-            </TooltipRow>
-            <TooltipRow label={localize('com_nav_mcp_tooltip_limitation')}>
-              {/* TODO(mcp-gateway): fetch real limitations from the MCP Gateway. */}
-              {PLACEHOLDER_LIMITATIONS.map((limitation) => (
-                <TooltipListItem
-                  key={limitation}
-                  icon={<X className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
-                >
-                  {limitation}
-                </TooltipListItem>
-              ))}
-            </TooltipRow>
-          </div>
+          {/* Deloitte Custom Change: use-cases/access/limitations are only shown when
+              the gateway returned details for this connector's toolset. */}
+          {details && (
+            <div className="flex flex-col gap-6 p-6 pt-4">
+              <TooltipRow label={localize('com_nav_mcp_tooltip_use_cases')}>
+                {details.useCases.map((useCase) => (
+                  <TooltipListItem
+                    key={useCase}
+                    icon={
+                      <Check className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    }
+                  >
+                    {useCase}
+                  </TooltipListItem>
+                ))}
+              </TooltipRow>
+              <TooltipRow label={localize('com_nav_mcp_tooltip_access')}>
+                {details.access.map((access) => (
+                  <TooltipListItem
+                    key={access}
+                    icon={
+                      <Check className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    }
+                  >
+                    {access}
+                  </TooltipListItem>
+                ))}
+              </TooltipRow>
+              <TooltipRow label={localize('com_nav_mcp_tooltip_limitation')}>
+                {details.limitations.map((limitation) => (
+                  <TooltipListItem
+                    key={limitation}
+                    icon={
+                      <X className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    }
+                  >
+                    {limitation}
+                  </TooltipListItem>
+                ))}
+              </TooltipRow>
+            </div>
+          )}
         </HoverCardContent>
       </HoverCardPortal>
     </HoverCard>

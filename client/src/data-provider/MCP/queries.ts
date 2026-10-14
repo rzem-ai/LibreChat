@@ -44,3 +44,21 @@ export const useMCPToolsQuery = <TData = t.MCPServersResponse>(
     },
   );
 };
+
+/**
+ * Deloitte Custom Change: MCP Gateway toolset metadata (user-friendly description,
+ * use cases, access, limitations) for the connector tooltip.
+ */
+export const useMCPToolsetsQuery = <TData = t.MCPToolsetsResponse>(
+  config?: UseQueryOptions<t.MCPToolsetsResponse, unknown, TData>,
+): QueryObserverResult<TData> => {
+  return useQuery<t.MCPToolsetsResponse, unknown, TData>(
+    [QueryKeys.mcpToolsets],
+    () => dataService.getMCPToolsets(),
+    {
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes, matches the backend cache TTL
+      ...config,
+    },
+  );
+};

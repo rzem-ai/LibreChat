@@ -81,6 +81,9 @@ jest.mock('@librechat/api', () => {
       clearCooldown: jest.fn(),
     },
     getUserMCPAuthMap: jest.fn(),
+    // Deloitte Custom Change: MCP Gateway toolset metadata for connector tooltips.
+    resolveOboToken: jest.fn(),
+    getToolsetsForUser: jest.fn(),
     generateCheckAccess: jest.fn(({ permissionType, permissions }) => (req, res, next) => {
       const { PermissionTypes, Permissions } = require('librechat-data-provider');
       const isMCPUseCheck =
@@ -328,6 +331,17 @@ describe('MCP Routes', () => {
     cacheService.getMCPToolsCacheGeneration.mockReset().mockResolvedValue('test-generation');
     cacheService.cacheMCPServerTools.mockReset().mockResolvedValue(undefined);
     cacheService.invalidateCachedTools.mockReset().mockResolvedValue(undefined);
+    // Deloitte Custom Change: MCP Gateway toolset metadata for connector tooltips.
+    const { resolveOboToken, getToolsetsForUser } = require('@librechat/api');
+    resolveOboToken.mockReset();
+    getToolsetsForUser.mockReset();
+    mockRegistryInstance.resolveAllowlists.mockReset().mockResolvedValue({
+      allowedDomains: null,
+      allowedAddresses: null,
+      useSSRFProtection: true,
+    });
+    delete process.env.MCP_GATEWAY_URL;
+    delete process.env.MCP_GATEWAY_OBO_SCOPE;
   });
 
   describe('GET /:serverName/oauth/initiate', () => {
@@ -3772,6 +3786,78 @@ describe('MCP Routes', () => {
 
       expect(response.status).toBe(503);
       expect(response.body).toEqual({ message: 'MCP catalog capacity is temporarily exhausted' });
+    });
+  });
+
+  // Deloitte Custom Change: MCP Gateway toolset metadata for connector tooltips.
+  describe('GET /toolsets', () => {
+    it('should deny MCP toolsets when user lacks MCP server use permission', async () => {
+      mockMCPUseAllowed = false;
+
+      const response = await request(app).get('/api/mcp/toolsets');
+
+      expect(response.status).toBe(403);
+      expect(response.body).toEqual({ message: 'Forbidden: Insufficient permissions' });
+      const { getToolsetsForUser } = require('@librechat/api');
+      expect(getToolsetsForUser).not.toHaveBeenCalled();
+    });
+
+    it('returns an empty list when the MCP Gateway is not configured', async () => {
+      const response = await request(app).get('/api/mcp/toolsets');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ toolsets: [] });
+      const { resolveOboToken, getToolsetsForUser } = require('@librechat/api');
+      expect(resolveOboToken).not.toHaveBeenCalled();
+      expect(getToolsetsForUser).not.toHaveBeenCalled();
+    });
+
+    it('resolves an OBO token and returns the gateway toolsets on the happy path', async () => {
+      process.env.MCP_GATEWAY_URL = 'https://gateway.example.com/mcp';
+      process.env.MCP_GATEWAY_OBO_SCOPE = 'gateway.read';
+      const { resolveOboToken, getToolsetsForUser } = require('@librechat/api');
+      resolveOboToken.mockResolvedValue({ access_token: 'obo-access-token' });
+      mockRegistryInstance.resolveAllowlists.mockResolvedValue({
+        allowedDomains: ['gateway.example.com'],
+        allowedAddresses: null,
+        useSSRFProtection: true,
+      });
+      const toolsets = [
+        {
+          name: 'sharepoint',
+          description: 'Internal sharepoint toolset',
+          userFriendlyDescription: 'Search and summarize Sharepoint documents.',
+          useCases: ['Find files by keyword'],
+          access: ['All Deloitte Sharepoint'],
+          limitations: ['Private Sharepoint folders'],
+        },
+      ];
+      getToolsetsForUser.mockResolvedValue(toolsets);
+
+      const response = await request(app).get('/api/mcp/toolsets');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ toolsets });
+      expect(getToolsetsForUser).toHaveBeenCalledWith({
+        userId: 'test-user-id',
+        gatewayUrl: 'https://gateway.example.com/mcp',
+        bearerToken: 'obo-access-token',
+        allowedDomains: ['gateway.example.com'],
+        allowedAddresses: null,
+      });
+    });
+
+    it('degrades to an empty list when the OBO token exchange fails', async () => {
+      process.env.MCP_GATEWAY_URL = 'https://gateway.example.com/mcp';
+      process.env.MCP_GATEWAY_OBO_SCOPE = 'gateway.read';
+      const { resolveOboToken, getToolsetsForUser } = require('@librechat/api');
+      resolveOboToken.mockRejectedValue(new Error('exchange failed'));
+
+      const response = await request(app).get('/api/mcp/toolsets');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ toolsets: [] });
+      expect(getToolsetsForUser).not.toHaveBeenCalled();
     });
   });
 
