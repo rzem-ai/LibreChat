@@ -1,3 +1,5 @@
+import * as Icon from './icons';
+
 export * from './Tabs';
-export { Icon } from './icons';
-export type { IconName } from './icons';
+export { Icon };
+export type IconName = keyof typeof Icon;
