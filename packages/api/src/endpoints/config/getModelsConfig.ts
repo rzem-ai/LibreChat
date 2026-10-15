@@ -60,9 +60,17 @@ export function createGetModelsConfig(deps: GetModelsConfigDeps) {
   const { loadDefaultModels, loadConfigModels } = deps;
 
   return async function getModelsConfig(req: ServerRequest): Promise<TModelsConfig> {
+    const startRevision = revision;
     const cache = standardCache(CacheKeys.MODELS_CONFIG);
     const cacheKey = modelsConfigCacheKey(req);
     const cached = await cache.get<TModelsConfig>(cacheKey);
+    if (startRevision !== revision) {
+      const [defaultModelsConfig, customModelsConfig] = await Promise.all([
+        loadDefaultModels(req),
+        loadConfigModels(req),
+      ]);
+      return { ...defaultModelsConfig, ...customModelsConfig };
+    }
     if (cached) {
       return cached;
     }
@@ -72,7 +80,6 @@ export function createGetModelsConfig(deps: GetModelsConfigDeps) {
       return pending;
     }
 
-    const startRevision = revision;
     const load = (async () => {
       const [defaultModelsConfig, customModelsConfig] = await Promise.all([
         loadDefaultModels(req),
