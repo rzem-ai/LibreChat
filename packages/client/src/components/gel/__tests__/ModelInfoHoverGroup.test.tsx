@@ -115,4 +115,40 @@ describe('ModelInfoHoverGroup interactions', () => {
     advance(1);
     expect(screen.queryByRole('region')).not.toBeInTheDocument();
   });
+
+  it('closes on Escape', () => {
+    const { rowA } = setup();
+    fireEvent.focus(rowA);
+    expect(screen.getByRole('region')).toBeInTheDocument();
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+  });
+
+  it('describes only the active row by the open card, preserving existing descriptions', () => {
+    render(
+      <ModelInfoHoverGroup>
+        <ModelInfoHoverTarget content={contentFor('Model A')}>
+          <div tabIndex={0} aria-describedby="existing">
+            Model A
+          </div>
+        </ModelInfoHoverTarget>
+        <Row label="Model B" />
+      </ModelInfoHoverGroup>,
+    );
+    const rowA = screen.getByText('Model A');
+    const rowB = screen.getByText('Model B');
+    expect(rowA).toHaveAttribute('aria-describedby', 'existing');
+    expect(rowB).not.toHaveAttribute('aria-describedby');
+
+    fireEvent.focus(rowA);
+    const cardId = screen.getByRole('region').id;
+    expect(cardId).not.toBe('');
+    expect(rowA.getAttribute('aria-describedby')).toBe(`existing ${cardId}`);
+    expect(rowB).not.toHaveAttribute('aria-describedby');
+
+    fireEvent.blur(rowA);
+    advance(50);
+    expect(rowA).toHaveAttribute('aria-describedby', 'existing');
+  });
 });

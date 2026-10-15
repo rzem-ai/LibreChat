@@ -14,20 +14,12 @@ function modelsConfigCacheKey(req: ServerRequest): string {
   return `${tenantId}:${userId}`;
 }
 
-export async function invalidateModelsConfig(req: ServerRequest): Promise<void> {
-  const cache = standardCache(CacheKeys.MODELS_CONFIG);
-  await cache.delete(modelsConfigCacheKey(req));
-}
-
 /**
- * Clears the entire MODELS_CONFIG cache namespace. Intended for admin config
- * mutations (e.g. role-based model permission changes), which affect the
- * catalog for potentially many tenants/users at once and are rare enough that
- * rebuilding the whole cache is cheap relative to leaving stale entries around.
+ * Bumped on every invalidation. A load only joins/writes the cache if no invalidation
+ * happened since it started, so pre-change discovery can never repopulate the cache or be
+ * joined by a request made after the change.
  */
-export async function clearModelsConfigCache(): Promise<void> {
-  await standardCache(CacheKeys.MODELS_CONFIG).clear();
-}
+let revision = 0;
 
 /**
  * In-flight loads keyed the same way as the cache, so concurrent callers that
@@ -38,6 +30,25 @@ export async function clearModelsConfigCache(): Promise<void> {
  * rejected load never permanently blocks later callers.
  */
 const inFlightLoads = new Map<string, Promise<TModelsConfig>>();
+
+export async function invalidateModelsConfig(req: ServerRequest): Promise<void> {
+  const cacheKey = modelsConfigCacheKey(req);
+  revision += 1;
+  inFlightLoads.delete(cacheKey);
+  await standardCache(CacheKeys.MODELS_CONFIG).delete(cacheKey);
+}
+
+/**
+ * Clears the entire MODELS_CONFIG cache namespace. Intended for admin config
+ * mutations (e.g. role-based model permission changes), which affect the
+ * catalog for potentially many tenants/users at once and are rare enough that
+ * rebuilding the whole cache is cheap relative to leaving stale entries around.
+ */
+export async function clearModelsConfigCache(): Promise<void> {
+  revision += 1;
+  inFlightLoads.clear();
+  await standardCache(CacheKeys.MODELS_CONFIG).clear();
+}
 
 /**
  * Wraps `loadDefaultModels`/`loadConfigModels` behind a short-TTL cache keyed by
@@ -61,13 +72,20 @@ export function createGetModelsConfig(deps: GetModelsConfigDeps) {
       return pending;
     }
 
+    const startRevision = revision;
     const load = (async () => {
       const [defaultModelsConfig, customModelsConfig] = await Promise.all([
         loadDefaultModels(req),
         loadConfigModels(req),
       ]);
       const modelsConfig = { ...defaultModelsConfig, ...customModelsConfig };
+      if (startRevision !== revision) {
+        return modelsConfig;
+      }
       await cache.set(cacheKey, modelsConfig, Time.TWO_MINUTES);
+      if (startRevision !== revision) {
+        await cache.delete(cacheKey);
+      }
       return modelsConfig;
     })();
     inFlightLoads.set(cacheKey, load);
@@ -75,7 +93,9 @@ export function createGetModelsConfig(deps: GetModelsConfigDeps) {
     try {
       return await load;
     } finally {
-      inFlightLoads.delete(cacheKey);
+      if (inFlightLoads.get(cacheKey) === load) {
+        inFlightLoads.delete(cacheKey);
+      }
     }
   };
 }

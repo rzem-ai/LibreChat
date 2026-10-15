@@ -3,6 +3,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -96,6 +97,7 @@ export interface ModelInfoTooltipContent {
 // animates it. Kept separately testable: no HoverCard, no hover state, just props in, markup
 // out (Figma node 855:37722).
 export function ModelInfoTooltipCard({
+  id,
   icon,
   group,
   label,
@@ -106,9 +108,9 @@ export function ModelInfoTooltipCard({
   contextLabel,
   supports = [],
   labels,
-}: ModelInfoTooltipContent): ReactElement {
+}: ModelInfoTooltipContent & { id?: string }): ReactElement {
   return (
-    <div role="region" aria-label={labels.ariaLabel}>
+    <div id={id} role="region" aria-label={labels.ariaLabel}>
       {/* Deloitte Custom Change: header matches Figma's stacked provider/model name, not a single line. */}
       <div className="flex flex-col gap-1 border-b border-border-light p-6">
         <div className="flex items-center gap-2">
@@ -173,8 +175,17 @@ export function ModelInfoTooltipCard({
 }
 
 interface ModelInfoHoverContextValue {
-  show: (content: ModelInfoTooltipContent) => void;
+  show: (content: ModelInfoTooltipContent, targetId: string) => void;
   hide: () => void;
+  /** Id of the card region while it is open, else undefined. */
+  cardId?: string;
+  /** Id of the target whose content the card currently shows. */
+  activeTargetId?: string;
+}
+
+interface ActiveContent {
+  content: ModelInfoTooltipContent;
+  targetId: string;
 }
 
 const ModelInfoHoverContext = createContext<ModelInfoHoverContextValue | null>(null);
@@ -199,12 +210,13 @@ export function ModelInfoHoverGroup({ children }: { children: ReactNode }): Reac
   const [open, setOpen] = useState(false);
   // Deliberately not cleared on hide(): the close animation should fade out whatever was last
   // shown, not go blank the instant the close timer fires.
-  const [content, setContent] = useState<ModelInfoTooltipContent | null>(null);
+  const [active, setActive] = useState<ActiveContent | null>(null);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const cardId = useId();
 
-  const show = useCallback((next: ModelInfoTooltipContent) => {
+  const show = useCallback((content: ModelInfoTooltipContent, targetId: string) => {
     clearTimeout(closeTimeoutRef.current);
-    setContent(next);
+    setActive({ content, targetId });
     setOpen(true);
   }, []);
 
@@ -213,14 +225,36 @@ export function ModelInfoHoverGroup({ children }: { children: ReactNode }): Reac
     closeTimeoutRef.current = setTimeout(() => setOpen(false), HOVER_CLOSE_DELAY_MS);
   }, []);
 
-  const contextValue = useMemo(() => ({ show, hide }), [show, hide]);
+  const dismiss = useCallback(() => {
+    clearTimeout(closeTimeoutRef.current);
+    setOpen(false);
+  }, []);
+
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next) {
+        dismiss();
+      }
+    },
+    [dismiss],
+  );
+
+  const contextValue = useMemo(
+    () => ({
+      show,
+      hide,
+      cardId: open ? cardId : undefined,
+      activeTargetId: open ? active?.targetId : undefined,
+    }),
+    [show, hide, open, cardId, active?.targetId],
+  );
 
   return (
     <ModelInfoHoverContext.Provider value={contextValue}>
       {/* Deloitte Custom Change: openDelay 0 so the card shows the moment a row is hovered;
-          open/close are otherwise fully controlled by `show`/`hide` above — openDelay only
-          covers Radix's own (unused) hover handling on the trigger wrapper below. */}
-      <HoverCard open={open} openDelay={0}>
+          only rows open the card via `show`; Radix's own close requests (Escape, outside
+          dismissal) are honored, its open requests ignored. */}
+      <HoverCard open={open} onOpenChange={handleOpenChange} openDelay={0}>
         <HoverCardTrigger asChild>
           {/* Deloitte Custom Change: this div — not any individual row — is the Popper anchor,
               so the card's position never depends on which row triggered it. */}
@@ -235,10 +269,10 @@ export function ModelInfoHoverGroup({ children }: { children: ReactNode }): Reac
             align="start"
             // Deloitte Custom Change: re-entering the card itself (e.g. to read a long
             // description) keeps it open the same way re-entering a row does.
-            onPointerEnter={() => content && show(content)}
+            onPointerEnter={() => active && show(active.content, active.targetId)}
             onPointerLeave={hide}
           >
-            {content && <ModelInfoTooltipCard {...content} />}
+            {active && <ModelInfoTooltipCard id={cardId} {...active.content} />}
           </HoverCardContent>
         </HoverCardPortal>
       </HoverCard>
@@ -266,6 +300,7 @@ interface HoverableElementProps {
   onPointerLeave?: (event: PointerEvent) => void;
   onFocus?: (event: FocusEvent) => void;
   onBlur?: (event: FocusEvent) => void;
+  'aria-describedby'?: string;
 }
 
 // Deloitte Custom Change: row-level counterpart to ModelInfoHoverGroup — wires a single child
@@ -279,15 +314,23 @@ export function ModelInfoHoverTarget({
   content: ModelInfoTooltipContent | null;
   children: ReactElement<HoverableElementProps>;
 }): ReactElement {
-  const { show, hide } = useModelInfoHover();
+  const { show, hide, cardId, activeTargetId } = useModelInfoHover();
+  const targetId = useId();
   if (!content) {
     return children;
   }
   const existing = children.props;
+  const describedBy = [
+    existing['aria-describedby'],
+    cardId && activeTargetId === targetId && cardId,
+  ]
+    .filter(Boolean)
+    .join(' ');
   return cloneElement(children, {
-    onPointerEnter: composeHandler(() => show(content), existing.onPointerEnter),
+    onPointerEnter: composeHandler(() => show(content, targetId), existing.onPointerEnter),
     onPointerLeave: composeHandler(hide, existing.onPointerLeave),
-    onFocus: composeHandler(() => show(content), existing.onFocus),
+    onFocus: composeHandler(() => show(content, targetId), existing.onFocus),
     onBlur: composeHandler(hide, existing.onBlur),
+    'aria-describedby': describedBy || undefined,
   });
 }

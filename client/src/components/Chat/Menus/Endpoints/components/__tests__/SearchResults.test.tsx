@@ -33,6 +33,17 @@ jest.mock('~/components/Chat/Menus/Endpoints/CustomMenu', () => {
   };
 });
 
+// Deloitte Custom Change: stub the tooltip (needs a QueryClientProvider this suite lacks) but
+// mark the wrapped row so tests can assert spec rows are tooltip-enabled.
+jest.mock('../ModelInfoTooltip', () => ({
+  __esModule: true,
+  default: ({ children, spec }: { children: React.ReactNode; spec: { name: string } }) => (
+    <div data-testid="model-info-target" data-spec={spec.name}>
+      {children}
+    </div>
+  ),
+}));
+
 jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
@@ -269,6 +280,21 @@ describe('SearchResults', () => {
       'aria-posinset',
       '104',
     );
+  });
+
+  it('wraps spec rows in the model info tooltip target', () => {
+    mockSelectedValues = { endpoint: '', model: '', modelSpec: '' };
+    const spec = {
+      name: 'preset',
+      label: 'Preset',
+      preset: { endpoint: 'anthropic', model: 'claude-opus-4-6' },
+    } as TModelSpec;
+
+    render(<SearchResults results={[spec]} localize={localize} searchValue="pre" />);
+
+    const target = screen.getByTestId('model-info-target');
+    expect(target).toHaveAttribute('data-spec', 'preset');
+    expect(within(target).getByRole('menuitem', { name: /Preset/ })).toBeInTheDocument();
   });
 
   it('renders every matching row directly at or below the virtualization threshold', () => {

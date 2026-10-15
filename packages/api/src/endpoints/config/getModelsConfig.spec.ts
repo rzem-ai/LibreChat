@@ -121,4 +121,65 @@ describe('clearModelsConfigCache', () => {
 
     expect(mockCacheClear).toHaveBeenCalledTimes(1);
   });
+
+  describe('invalidation fencing', () => {
+    const deferred = () => {
+      let resolve: (value: TModelsConfig) => void = () => {};
+      const promise = new Promise<TModelsConfig>((res) => {
+        resolve = res;
+      });
+      return { promise, resolve };
+    };
+
+    const waitForLoad = (loader: jest.Mock): Promise<void> =>
+      new Promise((resolve) => {
+        const poll = (): void => (loader.mock.calls.length ? resolve() : setImmediate(poll));
+        poll();
+      });
+
+    it('does not cache or share a load that started before a per-user invalidation', async () => {
+      const stale = deferred();
+      const loadDefaultModels = jest
+        .fn()
+        .mockReturnValueOnce(stale.promise)
+        .mockResolvedValueOnce({ openAI: ['new'] });
+      const loadConfigModels = jest.fn().mockResolvedValue({});
+      const getModelsConfig = createGetModelsConfig({ loadDefaultModels, loadConfigModels });
+      const req = { user: { tenantId: 't1', id: 'u1' } } as unknown as ServerRequest;
+
+      const before = getModelsConfig(req);
+      await waitForLoad(loadDefaultModels);
+      await invalidateModelsConfig(req);
+      const after = await getModelsConfig(req);
+      expect(after).toEqual({ openAI: ['new'] });
+
+      mockCacheSet.mockClear();
+      stale.resolve({ openAI: ['old'] } as unknown as TModelsConfig);
+      await expect(before).resolves.toEqual({ openAI: ['old'] });
+      expect(loadDefaultModels).toHaveBeenCalledTimes(2);
+      expect(mockCacheSet).not.toHaveBeenCalled();
+    });
+
+    it('does not cache or share a load that started before the namespace was cleared', async () => {
+      const stale = deferred();
+      const loadDefaultModels = jest
+        .fn()
+        .mockReturnValueOnce(stale.promise)
+        .mockResolvedValueOnce({ openAI: ['new'] });
+      const loadConfigModels = jest.fn().mockResolvedValue({});
+      const getModelsConfig = createGetModelsConfig({ loadDefaultModels, loadConfigModels });
+      const req = { user: { tenantId: 't1', id: 'u1' } } as unknown as ServerRequest;
+
+      const before = getModelsConfig(req);
+      await waitForLoad(loadDefaultModels);
+      await clearModelsConfigCache();
+      await expect(getModelsConfig(req)).resolves.toEqual({ openAI: ['new'] });
+
+      mockCacheSet.mockClear();
+      stale.resolve({ openAI: ['old'] } as unknown as TModelsConfig);
+      await before;
+      expect(loadDefaultModels).toHaveBeenCalledTimes(2);
+      expect(mockCacheSet).not.toHaveBeenCalled();
+    });
+  });
 });
