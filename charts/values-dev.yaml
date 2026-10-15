@@ -49,7 +49,7 @@ pods:
     containers:
       librechat:
         image:
-          tag: 'develop@sha256:0b1c4326ec19f5d0154e520e36e83bebd4bfbfde72efeadbae63100a43290302'
+          tag: 'develop@sha256:ee6ee3aa0f6754712c5b443333d9858616407cd8dccb3efc51135158d573a948'
         resources:
           requests:
             memory: "2Gi"
@@ -168,7 +168,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:ea9d0e1da64cf75c64c22682307bc8eb576f62ec5cf98656a9c37e84c5c785c6'
+          tag: 'develop@sha256:443032c9be9495238e26958d3661543e0d981c17cce4aa1420d8a31ad7cdcae9'
         resources:
           requests:
             memory: "1Gi"
@@ -232,7 +232,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:d079f9eab6949681854a7f53e43b329a66ce2bb3910198c8dca6e183adcc1ee9'
+          tag: 'develop@sha256:cf83a8a61a5d9faea63db5037fb652384b1f0a7ffb83d5adef1acd3fa29fe50b'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
