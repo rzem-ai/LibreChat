@@ -109,6 +109,15 @@ pods:
           SEARCH: 'false'
           # MEILI_NO_ANALYTICS: 'true'
           # MEILI_HOST: 'http://127.0.0.1:7700'
+          # Deloitte Custom Change: Valkey reconnect behaviour.
+          # The default is 10 attempts before giving up, which causes LibreChat
+          # pods to permanently lose their Redis connection when Valkey restarts
+          # slowly (e.g. after an AKS node update). Setting REDIS_RETRY_MAX_ATTEMPTS
+          # to 0 disables the attempt cap — ioredis retries forever. The delay
+          # between attempts ramps exponentially and is capped at REDIS_RETRY_MAX_DELAY
+          # (20 s) so a permanently-down Valkey doesn't spam connections.
+          REDIS_RETRY_MAX_ATTEMPTS: '0'
+          REDIS_RETRY_MAX_DELAY: '20000'
         service:
           enabled: true
           type: ClusterIP
