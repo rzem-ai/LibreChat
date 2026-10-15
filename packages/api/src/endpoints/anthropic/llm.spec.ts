@@ -148,6 +148,24 @@ describe('getLLMConfig', () => {
     expect(result.llmConfig).toHaveProperty('topP', 0.9);
   });
 
+  it.each(['claude-haiku-4-5', 'claude-haiku-4.5', 'anthropic/claude-haiku-4-5'])(
+    'should omit topP for %s while retaining temperature',
+    (model) => {
+      const result = getLLMConfig('test-api-key', {
+        modelOptions: {
+          model,
+          temperature: 0.7,
+          topP: 0.9,
+        },
+        defaultParams: { topP: 0.8 },
+        addParams: { topP: 0.95 },
+      });
+
+      expect(result.llmConfig).toHaveProperty('temperature', 0.7);
+      expect(result.llmConfig).not.toHaveProperty('topP');
+    },
+  );
+
   it('should NOT include topK and topP for Claude-3-7 models with thinking enabled (hyphen notation)', () => {
     const result = getLLMConfig('test-api-key', {
       modelOptions: {

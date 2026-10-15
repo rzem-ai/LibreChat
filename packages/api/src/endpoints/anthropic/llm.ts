@@ -40,6 +40,7 @@ import { getProxyDispatcher } from '~/utils/proxy';
 import { mergeHeaders } from '~/utils/headers';
 
 const WEB_SEARCH_BETA = 'web-search-2025-03-05';
+const HAIKU_4_5_MODEL_PATTERN = /claude-haiku-4[-.]5/;
 
 type FetchOptions = { dispatcher?: Dispatcher; redirect?: RequestRedirect };
 
@@ -404,6 +405,10 @@ function getLLMConfig(
     delete requestOptions.temperature;
     delete requestOptions.topP;
     delete requestOptions.topK;
+  } else if (HAIKU_4_5_MODEL_PATTERN.test(resolvedModel)) {
+    // Haiku 4.5 rejects requests that include both temperature and top_p.
+    // Keep temperature because Agent Builder supplies it as the primary sampling control.
+    delete requestOptions.topP;
   }
 
   const tools = [];
