@@ -53,7 +53,7 @@ pods:
         env:
           ADMIN_PANEL_URL: 'https://myassist-uat.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
-          ANTHROPIC_MODELS: 'claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-sonnet-5,claude-opus-4-8'
+          ANTHROPIC_MODELS: 'claude-haiku-4-5,claude-haiku-5-5,claude-sonnet-4-6,claude-sonnet-5,claude-sonnet-5-5,claude-opus-4-6,claude-opus-4-8,claude-opus-5-5'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
           APP_TITLE: 'MyAssist (UAT)'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
@@ -62,7 +62,7 @@ pods:
           BEDROCK_AWS_ACCESS_KEY_ID: 'unused'
           BEDROCK_AWS_DEFAULT_REGION: 'ap-southeast-2'
           BEDROCK_AWS_SECRET_ACCESS_KEY: 'unused'
-          BEDROCK_AWS_MODELS: 'au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0'
+          BEDROCK_AWS_MODELS: 'au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0,au.anthropic.claude-haiku-5-5,au.anthropic.claude-sonnet-5-5,au.anthropic.claude-opus-5-5'
           BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081/bedrock'
           CUSTOM_FOOTER: '⚠️ WARNING: This is a User Acceptance Testing environment. Do not upload client or confidential data.'
           DOMAIN_CLIENT: 'https://myassist-uat.ctk.au.deloitte.com'
