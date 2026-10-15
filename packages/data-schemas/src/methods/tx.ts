@@ -189,7 +189,6 @@ export const tokenValues: Record<string, { prompt: number; completion: number }>
     'claude-opus-4-7': { prompt: 5, completion: 25 },
     'claude-opus-4-8': { prompt: 5, completion: 25 },
     'claude-opus-5': { prompt: 5, completion: 25 },
-    // Deloitte Custom Change: Claude Opus 5.5 gateway pricing.
     'claude-opus-5-5': { prompt: 4, completion: 20 },
     'claude-opus-5.5': { prompt: 4, completion: 20 },
     'claude-fable-5': { prompt: 10, completion: 50 },
@@ -201,7 +200,6 @@ export const tokenValues: Record<string, { prompt: number; completion: number }>
     'claude-sonnet-4-6': { prompt: 3, completion: 15 },
     // Sonnet 5 introductory pricing through 2026-08-31; revert to { prompt: 3, completion: 15 } after.
     'claude-sonnet-5': { prompt: 2, completion: 10 },
-    // Deloitte Custom Change: Claude Sonnet 5.5 gateway pricing.
     'claude-sonnet-5-5': { prompt: 2, completion: 10 },
     'claude-sonnet-5.5': { prompt: 2, completion: 10 },
     'command-r': { prompt: 0.5, completion: 1.5 },
@@ -375,9 +373,7 @@ export const cacheTokenValues: Record<string, { write: number; read: number }> =
   'claude-sonnet-4': { write: 3.75, read: 0.3 },
   'claude-sonnet-4-5': { write: 3.75, read: 0.3 },
   'claude-sonnet-4-6': { write: 3.75, read: 0.3 },
-  // Sonnet 5 introductory pricing through 2026-08-31; revert to { write: 3.75, read: 0.3 } after.
   'claude-sonnet-5': { write: 2.5, read: 0.2 },
-  // Deloitte Custom Change: Claude Sonnet 5.5 gateway cache pricing.
   'claude-sonnet-5-5': { write: 2.5, read: 0.2 },
   'claude-sonnet-5.5': { write: 2.5, read: 0.2 },
   'claude-opus-4': { write: 18.75, read: 1.5 },
@@ -386,7 +382,6 @@ export const cacheTokenValues: Record<string, { write: number; read: number }> =
   'claude-opus-4-7': { write: 6.25, read: 0.5 },
   'claude-opus-4-8': { write: 6.25, read: 0.5 },
   'claude-opus-5': { write: 6.25, read: 0.5 },
-  // Deloitte Custom Change: Claude Opus 5.5 gateway cache pricing.
   'claude-opus-5-5': { write: 5, read: 0.2 },
   'claude-opus-5.5': { write: 5, read: 0.2 },
   'claude-fable-5': { write: 12.5, read: 1 },
