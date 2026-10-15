@@ -39,6 +39,7 @@ import {
 } from '~/data-provider';
 import { resetChatFilterSessionAtom } from '~/components/Conversations/chatFilters';
 import { TAuthConfig, TUserContext, TAuthContext, TResError } from '~/common';
+import { showTermsViewerAtom } from '~/store/terms';
 import useTimeout from './useTimeout';
 import store from '~/store';
 
@@ -56,6 +57,7 @@ if (import.meta.hot) {
  * path the other was wired into. */
 const endSessionClientState = (): void => {
   getDefaultStore().set(resetChatFilterSessionAtom);
+  getDefaultStore().set(showTermsViewerAtom, false);
   clearRetainedFileDeletions();
   clearComposerDraftStorage();
 };

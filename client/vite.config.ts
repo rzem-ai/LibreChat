@@ -2,7 +2,7 @@ import react from '@vitejs/plugin-react';
 import fs from 'fs';
 import path from 'path';
 import { constants } from 'zlib';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import { createRequire } from 'module';
 import { VitePWA } from 'vite-plugin-pwa';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
@@ -39,6 +39,13 @@ const backendURL = backendHost
   ? `http://${backendHost}:${backendPort}`
   : `http://localhost:${backendPort}`;
 const buildSourceMap = process.env.NODE_ENV === 'development';
+/** `process.env.APP_TITLE` is set by the Dockerfile's `ARG`/`ENV APP_TITLE` for Docker builds —
+ * Helm's APP_TITLE only reaches the container at runtime, too late for this build-time manifest.
+ * For `npm run frontend:dev` (no Docker), read a local `.env` directly via `loadEnv`, since Vite
+ * doesn't populate `process.env` from it until after this config factory has already returned. */
+const repoRoot = path.resolve(import.meta.dirname, '..');
+const localEnv = loadEnv(process.env.NODE_ENV || 'production', repoRoot, '');
+const appTitle = process.env.APP_TITLE || localEnv.APP_TITLE || 'MyAssist';
 const QUERY_DEVTOOLS_CHUNK_MODULES = [
   '@tanstack/react-query-devtools',
   '@tanstack/match-sorter-utils',
@@ -101,13 +108,9 @@ export default defineConfig(({ command }) => ({
       workbox: {
         globPatterns: [
           '**/*.{js,css,html}',
-          'assets/favicon*.png',
-          'assets/fav-*.svg',
+          'assets/mark-foreground*.svg',
           'assets/icon-*.png',
           'assets/apple-touch-icon*.png',
-          /** `manifest.webmanifest` is not listed: vite-plugin-pwa always appends it as an
-           * additional manifest entry, so globbing it too duplicates the precache entry. */
-          'assets/maskable-icon.png',
         ],
         globIgnores: [
           'images/**/*',
@@ -152,37 +155,21 @@ export default defineConfig(({ command }) => ({
       },
       includeAssets: [],
       manifest: {
-        name: 'LibreChat',
-        short_name: 'LibreChat',
+        name: appTitle,
+        short_name: appTitle,
         display: 'standalone',
         background_color: '#000000',
         theme_color: '#009688',
         icons: [
-          {
-            src: 'assets/favicon-32x32.png',
-            sizes: '32x32',
-            type: 'image/png',
-          },
-          {
-            src: 'assets/favicon-16x16.png',
-            sizes: '16x16',
-            type: 'image/png',
-          },
-          {
-            src: 'assets/apple-touch-icon-180x180.png',
-            sizes: '180x180',
-            type: 'image/png',
-          },
           {
             src: 'assets/icon-192x192.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: 'assets/maskable-icon.png',
+            src: 'assets/icon-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'maskable',
           },
         ],
       },

@@ -41,7 +41,7 @@ jest.mock('~/hooks/Learning/useTutorialPrompt', () => ({
 
 describe('TutorialPromptModal', () => {
   beforeEach(() => {
-    // Use fake timers so the 800ms readyToShow delay can be controlled in tests.
+    // Use fake timers so the 400ms readyToShow delay can be controlled in tests.
     jest.useFakeTimers();
     mockUseMediaQuery.mockReturnValue(false);
     mockSidebarExpanded = false;
@@ -60,7 +60,7 @@ describe('TutorialPromptModal', () => {
     render(<TutorialPromptModal />);
     // Advance past the delay — even so, shouldShowPrompt=false means nothing renders.
     act(() => {
-      jest.advanceTimersByTime(800);
+      jest.advanceTimersByTime(400);
     });
     expect(screen.queryByText('com_learning_prompt_body')).not.toBeInTheDocument();
   });
@@ -71,9 +71,9 @@ describe('TutorialPromptModal', () => {
       markPromptSeen: mockMarkPromptSeen,
     });
     render(<TutorialPromptModal chatReady />);
-    // Advance past the 800ms readyToShow delay so isVisible becomes true.
+    // Advance past the 400ms readyToShow delay so isVisible becomes true.
     act(() => {
-      jest.advanceTimersByTime(800);
+      jest.advanceTimersByTime(400);
     });
 
     expect(screen.getByText('com_learning_prompt_body')).toBeInTheDocument();
@@ -89,9 +89,9 @@ describe('TutorialPromptModal', () => {
       markPromptSeen: mockMarkPromptSeen,
     });
     render(<TutorialPromptModal chatReady />);
-    // Advance past the 800ms readyToShow delay so isVisible becomes true.
+    // Advance past the 400ms readyToShow delay so isVisible becomes true.
     act(() => {
-      jest.advanceTimersByTime(800);
+      jest.advanceTimersByTime(400);
     });
 
     fireEvent.click(screen.getByText('com_learning_prompt_decline'));
@@ -109,7 +109,7 @@ describe('TutorialPromptModal', () => {
     render(<TutorialPromptModal chatReady />);
 
     act(() => {
-      jest.advanceTimersByTime(800);
+      jest.advanceTimersByTime(400);
     });
 
     expect(mockSetSidebarExpanded).toHaveBeenCalledWith(true);
@@ -129,7 +129,7 @@ describe('TutorialPromptModal', () => {
       });
       render(<TutorialPromptModal chatReady />);
       act(() => {
-        jest.advanceTimersByTime(800);
+        jest.advanceTimersByTime(400);
       });
     }
 
