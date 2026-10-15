@@ -102,7 +102,7 @@ router.get('/', async (req, res) => {
       }
       return file;
     });
-    res.status(200).send(rewritten);
+    res.status(200).json(rewritten);
   } catch (error) {
     logger.error('[/files] Error getting files:', error);
     res.status(400).json({ message: 'Error in request', error: error.message });

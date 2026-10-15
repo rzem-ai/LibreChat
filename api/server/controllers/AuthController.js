@@ -386,7 +386,7 @@ const refreshController = async (req, res) => {
                   has_access_token: Boolean(reuseSessionTokens?.accessToken),
                   cloudfront_cookies_set: cloudFrontCookiesSet,
                 });
-                return res.status(200).send({
+                return res.status(200).json({
                   token: reusableSessionToken.token,
                   user: sanitizeUserForAuthResponse(user),
                 });

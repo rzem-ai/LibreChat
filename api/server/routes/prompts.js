@@ -104,7 +104,7 @@ router.get(
         return;
       }
 
-      res.status(200).send(projectStoredPromptGroup(group, req.config?.filters));
+      res.status(200).json(projectStoredPromptGroup(group, req.config?.filters));
     } catch (error) {
       logger.error('Error getting prompt group', error);
       res.status(500).send({ message: 'Error getting prompt group' });
@@ -142,12 +142,12 @@ router.get('/all', configMiddleware, async (req, res) => {
     });
 
     if (!result) {
-      return res.status(200).send([]);
+      return res.status(200).json([]);
     }
 
     const { data: promptGroups = [] } = result;
     if (!promptGroups.length) {
-      return res.status(200).send([]);
+      return res.status(200).json([]);
     }
 
     const readablePromptGroups = projectStoredPromptGroups(promptGroups, req.config?.filters, {
@@ -157,7 +157,7 @@ router.get('/all', configMiddleware, async (req, res) => {
       readablePromptGroups,
       publiclyAccessibleIds,
     );
-    res.status(200).send(groupsWithPublicFlag);
+    res.status(200).json(groupsWithPublicFlag);
   } catch (error) {
     logger.error(error);
     res.status(500).send({ error: 'Error getting prompt groups' });
@@ -217,7 +217,7 @@ router.get('/groups', configMiddleware, async (req, res) => {
         pageSize: actualLimit,
         actualLimit,
       });
-      return res.status(200).send(emptyResponse);
+      return res.status(200).json(emptyResponse);
     }
 
     const { data: promptGroups = [], has_more = false, after = null } = result;
@@ -235,7 +235,7 @@ router.get('/groups', configMiddleware, async (req, res) => {
       after,
     });
 
-    res.status(200).send(response);
+    res.status(200).json(response);
   } catch (error) {
     logger.error(error);
     res.status(500).send({ error: 'Error getting prompt groups' });
@@ -502,7 +502,7 @@ router.get('/', configMiddleware, async (req, res) => {
       const readablePrompts = Array.isArray(prompts)
         ? projectStoredPrompts(prompts, req.config?.filters)
         : prompts;
-      return res.status(200).send(readablePrompts);
+      return res.status(200).json(readablePrompts);
     }
 
     // If no groupId, return user's own prompts
@@ -521,7 +521,7 @@ router.get('/', configMiddleware, async (req, res) => {
     const readablePrompts = Array.isArray(prompts)
       ? projectStoredPrompts(prompts, req.config?.filters)
       : prompts;
-    res.status(200).send(readablePrompts);
+    res.status(200).json(readablePrompts);
   } catch (error) {
     logger.error(error);
     res.status(500).send({ error: 'Error getting prompts' });

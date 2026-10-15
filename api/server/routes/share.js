@@ -590,7 +590,7 @@ router.get('/', requireJwtAuth, async (req, res) => {
       params.search,
     );
 
-    res.status(200).send({
+    res.status(200).json({
       links: result.links,
       nextCursor: result.nextCursor,
       hasNextPage: result.hasNextPage,

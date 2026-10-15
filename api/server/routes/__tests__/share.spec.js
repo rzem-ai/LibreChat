@@ -494,6 +494,7 @@ describe('share routes', () => {
     );
 
     expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toContain('application/json');
     expect(getSharedLinks).toHaveBeenCalledWith(
       'user-123',
       cursor,
