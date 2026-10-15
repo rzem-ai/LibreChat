@@ -13,9 +13,14 @@ jest.mock('~/server/middleware', () => ({
   requireJwtAuth: (req, res, next) => next(),
 }));
 
+jest.mock('~/server/controllers/ModelController', () => ({
+  invalidateModelsConfig: jest.fn().mockResolvedValue(undefined),
+}));
+
 describe('Keys Routes', () => {
   let app;
   const { updateUserKey, deleteUserKey, getUserKeyExpiry } = require('~/models');
+  const { invalidateModelsConfig } = require('~/server/controllers/ModelController');
 
   beforeAll(() => {
     const keysRouter = require('../keys');
@@ -51,6 +56,9 @@ describe('Keys Routes', () => {
         expiresAt: '2026-12-31',
       });
       expect(updateUserKey).toHaveBeenCalledTimes(1);
+      expect(invalidateModelsConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ user: { id: 'test-user-123' } }),
+      );
     });
 
     it('should not allow userId override via request body (IDOR prevention)', async () => {
@@ -131,6 +139,9 @@ describe('Keys Routes', () => {
         name: 'openAI',
       });
       expect(deleteUserKey).toHaveBeenCalledTimes(1);
+      expect(invalidateModelsConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ user: { id: 'test-user-123' } }),
+      );
     });
   });
 
@@ -145,6 +156,9 @@ describe('Keys Routes', () => {
         userId: 'test-user-123',
         all: true,
       });
+      expect(invalidateModelsConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ user: { id: 'test-user-123' } }),
+      );
     });
 
     it('should return 400 when all query param is not true', async () => {

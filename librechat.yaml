@@ -1,7 +1,7 @@
 version: 1.3.17 # Copy from librechat.example.yaml
 cache: true
 
-# 'includedTools' restricts the list of tools available in the Agent Builder.
+# 'includedTools' restricts the tools available in the Agent Builder to only those listed here.
 includedTools:
   - 'file_search'
   - 'execute_code'
@@ -58,6 +58,12 @@ interface:
       - Will always act in accordance with your [Global Principles of Business Conduct](https://ausdeloitte.sharepoint.com/:b:/r/sites/DAISPolicies/QR%20Policies/Deloitte%20Global%20Principles%20of%20Business%20Conduct.pdf?csf=1&web=1&e=3qbMc1&xsdata=MDV8MDJ8aWVkd2FyZHNAZGVsb2l0dGUuY29tLmF1fDM1N2RkNWIwNDE4MTRhZjM3ZWY0MDhkZjAzMGU4MTA1fDM2ZGE0NWYxZGQyYzRkMWZhZjEzNWFiZTQ2Yjk5OTIxfDB8MHw2MzkyMzMwMzI5OTA2MzE5NzR8VW5rbm93bnxUV0ZwYkdac2IzZDhleUpGYlhCMGVVMWhjR2tpT25SeWRXVXNJbFlpT2lJd0xqQXVNREF3TUNJc0lsQWlPaUpYYVc0ek1pSXNJa0ZPSWpvaVRXRnBiQ0lzSWxkVUlqb3lmUT09fDB8fHw%3d&sdata=NktxaWkxNU56VzJzVitSb1pPdUl3NUs3SU9BS0psUUtVQ0RHUlhsZkViYz0%3d) when using MyAssist;
       - Acknowledge that your use of MyAssist is monitored and that your prompts and usage data may be collected and analysed to understand how MyAssist is being used and to identify opportunities for improving the platform.
       - You have read, understood, and will always comply with the Third Party Content Guidelines and, when using web search, web crawling, or external content retrieval capabilities, you must also comply with applicable website terms of use, licensing conditions, copyright obligations, and any restrictions on the intended use of the content. [Third Party Content Guidelines](https://ausdeloitte.sharepoint.com/sites/DOL-c-DTTL-ResearchAUS/SitePages/Usage-guidelines.aspx?xsdata=MDV8MDJ8aWVkd2FyZHNAZGVsb2l0dGUuY29tLmF1fDM1N2RkNWIwNDE4MTRhZjM3ZWY0MDhkZjAzMGU4MTA1fDM2ZGE0NWYxZGQyYzRkMWZhZjEzNWFiZTQ2Yjk5OTIxfDB8MHw2MzkyMzMwMzI5OTA2NTQ0MTN8VW5rbm93bnxUV0ZwYkdac2IzZDhleUpGYlhCMGVVMWhjR2tpT25SeWRXVXNJbFlpT2lJd0xqQXVNREF3TUNJc0lsQWlPaUpYYVc0ek1pSXNJa0ZPSWpvaVRXRnBiQ0lzSWxkVUlqb3lmUT09fDB8fHw%3d&sdata=UmlOQjNaREpSeFVzTm9NQ0laait6VXBRSlJVR3FyclpHcVNWVmtFdHpMRT0%3d&SafelinksUrl=https%3a%2f%2fausdeloitte.sharepoint.com%2fsites%2fDOL-c-DTTL-ResearchAUS%2fSitePages%2fUsage-guidelines.aspx).
+
+  # Deloitte Custom Change: Learning Center menu bar — the FAQ agent id differs per
+  # environment (dev/uat/prd), so it's injected via env var rather than hardcoded here.
+  learningCenter:
+    faqAgentId: '${LEARNING_CENTER_FAQ_AGENT_ID}'
+    feedbackUrl: 'https://forms.cloud.microsoft/e/E9AyvN4Ayx'
 
   marketplace:
     use: true
@@ -143,6 +149,9 @@ interface:
     externalVoiceProvider: false # Set to false to hide the external voice provider option in Speech settings (browser voice only)
     artifactsShadcnOnly: true # Set to true to force the shadcn/ui artifacts mode and hide other artifact mode options
     showConversationTitleInHeader: false # Set to true to show the conversation title in the chat header
+    showModelPricingIndicator: false # False: hide the $$$ badges on the model menuitems.
+    modelPricingTierBreakpoints: [ 2, 5, 8, 15 ] # Breakpoints for the cost rating bar shown in the model tooltips.
+    highCostAlertTiers: [ 5 ] # Which of the 5 price tiers will show the High Cost alert chip.
 
 fileConfig:
   endpoints:
@@ -200,9 +209,9 @@ endpoints:
         'execute_code',
         'file_search',
         'skills',
-        'tools',
+        'tools'
       ]
-    minRelevanceScore: 0.3
+    minRelevanceScore: 0.6
     # Restrict Agent Builder to the providers supported by the curated model catalog.
     allowedProviders:
       - 'Azure Global'
@@ -229,6 +238,43 @@ endpoints:
         - 'claude-sonnet-4-6'
         - 'claude-opus-4-6'
         - 'claude-opus-4-8'
+    # Deloitte Custom Change: reference pricing only, left commented out — `anthropicEndpointSchema`
+    # doesn't define `tokenConfig` (it's only wired up for `endpoints.custom[]`), so built-in
+    # endpoints fall back to the hardcoded getMultiplier/getCacheMultiplier tables in
+    # packages/data-schemas/src/methods/tx.ts (see the note in packages/api/src/config/modelPricing.ts).
+    # Values below are copied from that table. Prices are USD per 1M tokens; context is
+    # Anthropic's published 200K-token window for all current Claude models.
+    # tokenConfig:
+    #   claude-haiku-4-5:
+    #     prompt: 1
+    #     completion: 5
+    #     context: 200000
+    #     cacheWrite: 1.25
+    #     cacheRead: 0.1
+    #   claude-sonnet-5:
+    #     prompt: 2
+    #     completion: 10
+    #     context: 200000
+    #     cacheWrite: 2.5
+    #     cacheRead: 0.2
+    #   claude-sonnet-4-6:
+    #     prompt: 3
+    #     completion: 15
+    #     context: 200000
+    #     cacheWrite: 3.75
+    #     cacheRead: 0.3
+    #   claude-opus-4-6:
+    #     prompt: 5
+    #     completion: 25
+    #     context: 200000
+    #     cacheWrite: 6.25
+    #     cacheRead: 0.5
+    #   claude-opus-4-8:
+    #     prompt: 5
+    #     completion: 25
+    #     context: 200000
+    #     cacheWrite: 6.25
+    #     cacheRead: 0.5
 
   # ========================================
   # Custom endpoints (OpenAI-compatible format)
@@ -250,7 +296,7 @@ endpoints:
       titleConvo: true
       titleModel: 'gpt-4o-mini'
       modelDisplayLabel: 'Azure Australia'
-      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
+      dropParams: [ 'stop', 'user', 'frequency_penalty', 'presence_penalty' ]
       headers:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
@@ -276,7 +322,7 @@ endpoints:
       titleConvo: true
       titleModel: 'gpt-56-terra'
       modelDisplayLabel: 'OpenAI'
-      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
+      dropParams: [ 'stop', 'user', 'frequency_penalty', 'presence_penalty' ]
       headers:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
@@ -285,6 +331,22 @@ endpoints:
           - 'gpt-56-luna'
           - 'gpt-56-terra'
           - 'gpt-56-sol'
+      # Deloitte Custom Change: pricing used for real token billing and the relative-cost
+      # badge in the model selector. Prices are USD per 1M tokens; context is in tokens.
+      # GPT-5.6 Sol/Luna/Terra publish a 1,050,000-token context window (128,000 max output).
+      tokenConfig:
+        gpt-56-luna:
+          prompt: 1
+          completion: 6
+          context: 1050000
+        gpt-56-terra:
+          prompt: 2.5
+          completion: 15
+          context: 1050000
+        gpt-56-sol:
+          prompt: 5
+          completion: 30
+          context: 1050000
 
     # --- VertexAI / Google (us-central1) ---
     # OpenAI-compatible endpoint, model names use google/ prefix
@@ -299,7 +361,7 @@ endpoints:
       titleConvo: true
       titleModel: 'google/gemini-2.5-flash'
       modelDisplayLabel: 'Gemini'
-      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
+      dropParams: [ 'stop', 'user', 'frequency_penalty', 'presence_penalty' ]
       headers:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
@@ -307,6 +369,17 @@ endpoints:
       # is load-bearing — deleting this key would show a Web Search pill that errors.
       nativeWebSearch:
         supportedModels: []
+      # Deloitte Custom Change: pricing used for real token billing and the relative-cost
+      # badge in the model selector. Prices are USD per 1M tokens; context is in tokens.
+      tokenConfig:
+        google/gemini-2.5-flash:
+          prompt: 0.3
+          completion: 2.5
+          context: 1000000
+        google/gemini-2.5-pro:
+          prompt: 1.25
+          completion: 10
+          context: 1000000
 
   # Anthropic Regional models use Bedrock's native API and inference-profile IDs.
   bedrock:
@@ -315,11 +388,22 @@ endpoints:
     models:
       - 'au.anthropic.claude-sonnet-4-6'
       - 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
-
-# Deloitte Custom Change: model pricing uses this baseline when no environment override is set.
-# Keep it aligned with the soft-default model and endpoint-costs.yaml.
-modelPricing:
-  referenceModelId: 'gpt-56-luna'
+    # Deloitte Custom Change: reference pricing only, left commented out — see the note on
+    # `endpoints.anthropic` above; `bedrockEndpointSchema` doesn't define `tokenConfig` either.
+    # Same underlying Claude models/prices as the direct Anthropic endpoint.
+    # tokenConfig:
+    #   au.anthropic.claude-sonnet-4-6:
+    #     prompt: 3
+    #     completion: 15
+    #     context: 200000
+    #     cacheWrite: 3.75
+    #     cacheRead: 0.3
+    #   au.anthropic.claude-haiku-4-5-20251001-v1:0:
+    #     prompt: 1
+    #     completion: 5
+    #     context: 200000
+    #     cacheWrite: 1.25
+    #     cacheRead: 0.1
 
 modelSpecs:
   # enforce: true would block requests without a spec name — this breaks the Agents endpoint
@@ -377,6 +461,16 @@ modelSpecs:
       group: 'OpenAI Global'
       groupIcon: 'openAI'
       iconURL: 'openAI'
+      # Deloitte Custom Change: editorial metadata for the model info tooltip — 1-5 ratings
+      # and capability flags shown to users, separate from the tool-enablement flags below.
+      details:
+        speed: 2
+        intelligence: 5
+        supports:
+          webSearch: true
+          imageGeneration: false
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'gpt-5-6-terra'
       preset:
         endpoint: 'Azure Global'
         model: 'gpt-56-terra'
@@ -387,103 +481,192 @@ modelSpecs:
       group: 'OpenAI Global'
       iconURL: 'openAI'
       softDefault: true
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'gpt-5-6-luna'
       preset:
         endpoint: 'Azure Global'
         model: 'gpt-56-luna'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 3
+        intelligence: 4
+        supports:
+          webSearch: true
+          imageGeneration: false
 
     - name: 'azure-global-gpt-56-sol'
       label: 'GPT 5.6 Sol'
       group: 'OpenAI Global'
       iconURL: 'openAI'
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'gpt-5-6-sol'
       preset:
         endpoint: 'Azure Global'
         model: 'gpt-56-sol'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 3
+        intelligence: 5
+        supports:
+          webSearch: true
+          imageGeneration: false
 
     - name: 'vertexai-us-gemini-2-5-flash'
       label: 'Gemini 2.5 Flash'
       group: 'Gemini Global'
       groupIcon: 'google'
       iconURL: 'google'
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata to
+      # populate details.speed/intelligence above.
+      artificialAnalysisBenchmarkModelName: 'gemini-2-5-flash'
       preset:
         endpoint: 'VertexAI US'
         model: 'google/gemini-2.5-flash'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 5
+        intelligence: 1
+        supports:
+          webSearch: false
+          imageGeneration: false
 
     - name: 'vertexai-us-gemini-2-5-pro'
       label: 'Gemini 2.5 Pro'
       group: 'Gemini Global'
       iconURL: 'google'
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'gemini-2-5-pro'
       preset:
         endpoint: 'VertexAI US'
         model: 'google/gemini-2.5-pro'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 5
+        intelligence: 1
+        supports:
+          webSearch: false
+          imageGeneration: false
 
     - name: 'anthropic-claude-haiku-4-5'
       label: 'Claude Haiku 4.5'
       group: 'Anthropic Global'
       groupIcon: 'anthropic'
       iconURL: 'anthropic'
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-4-5-haiku'
       preset:
         endpoint: 'anthropic'
         model: 'claude-haiku-4-5'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 5
+        intelligence: 1
+        supports:
+          webSearch: true
+          imageGeneration: false
 
     - name: 'anthropic-claude-sonnet-5'
       label: 'Claude Sonnet 5'
       group: 'Anthropic Global'
       iconURL: 'anthropic'
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-sonnet-5'
       preset:
         endpoint: 'anthropic'
         model: 'claude-sonnet-5'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 1
+        intelligence: 4
+        supports:
+          webSearch: true
+          imageGeneration: false
 
     - name: 'anthropic-claude-sonnet-4-6'
       label: 'Claude Sonnet 4.6'
       group: 'Anthropic Global'
       iconURL: 'anthropic'
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-sonnet-4-6'
       preset:
         endpoint: 'anthropic'
         model: 'claude-sonnet-4-6'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 5
+        intelligence: 2
+        supports:
+          webSearch: true
+          imageGeneration: false
 
     - name: 'anthropic-claude-opus-4-6'
       label: 'Claude Opus 4.6'
       group: 'Anthropic Global'
       iconURL: 'anthropic'
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-opus-4-6'
       preset:
         endpoint: 'anthropic'
         model: 'claude-opus-4-6'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 5
+        intelligence: 3
+        supports:
+          webSearch: true
+          imageGeneration: false
 
     - name: 'anthropic-claude-opus-4-8'
       label: 'Claude Opus 4.8'
       group: 'Anthropic Global'
       iconURL: 'anthropic'
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-opus-4-8'
       preset:
         endpoint: 'anthropic'
         model: 'claude-opus-4-8'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 4
+        intelligence: 5
+        supports:
+          webSearch: true
+          imageGeneration: false
 
     - name: 'anthropic-au-claude-sonnet-4-6'
       label: 'Claude Sonnet 4.6'
       group: 'Anthropic Australia'
       groupIcon: 'anthropic'
       iconURL: 'anthropic'
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-sonnet-4-6'
       preset:
         endpoint: 'bedrock'
         model: 'au.anthropic.claude-sonnet-4-6'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 5
+        intelligence: 2
+        supports:
+          webSearch: false
+          imageGeneration: false
 
     - name: 'anthropic-au-claude-haiku-4-5'
       label: 'Claude Haiku 4.5'
       group: 'Anthropic Australia'
       iconURL: 'anthropic'
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-4-5-haiku'
       preset:
         endpoint: 'bedrock'
         model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
         promptPrefix: *deloitteSystemPrompt
+      details:
+        speed: 5
+        intelligence: 1
+        supports:
+          webSearch: false
+          imageGeneration: false
 
 # MCP Servers configuration
 # Each entry filters the gateway to a single toolset via the `toolsets` query param.
@@ -565,7 +748,8 @@ mcpSettings:
     - 'https://mcp-gw-dev.ctk.au.deloitte.com'
     - 'https://mcp-gateway.ctk.au.deloitte.com'
 
-speech: # https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/speech
+speech:
+  # https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/speech
   speechTab:
     conversationMode: true
     advancedMode: false

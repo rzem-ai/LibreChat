@@ -56,6 +56,8 @@ const refTypeMap: Record<string | SearchRefType, string> = {
   news: 'topStories',
   file: 'references',
   mcp: 'mcp_results',
+  image: 'images',
+  video: 'videos',
 };
 
 /** Deloitte Custom Change: maps a citation's `refType` to its `SearchResultData` array key. */

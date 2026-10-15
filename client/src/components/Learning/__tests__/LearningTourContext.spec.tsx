@@ -1,6 +1,7 @@
 import React from 'react';
 import '@testing-library/jest-dom';
 import { renderHook, act } from '@testing-library/react';
+import type { TourStep } from '../Courses/content/schema';
 import { LearningTourProvider, useLearningTour } from '../LearningTourContext';
 
 const mockNavigate = jest.fn();
@@ -9,6 +10,28 @@ const mockSetSidebarExpanded = jest.fn();
 const mockStartTour = jest.fn();
 const mockMarkPromptSeen = jest.fn();
 let capturedOnComplete: (() => void) | undefined;
+let capturedGetSteps: (() => TourStep[]) | undefined;
+let mockShowMarketplace = true;
+let mockAvailableTargets = new Set<string>();
+
+// Fixture standing in for getting-started-guide.json's real content — only
+// the two agent-selection steps and their ids matter for this file's tests.
+const FIXTURE_STEPS: TourStep[] = [
+  { element: '#new-chat-button', title: 'Welcome', description: 'welcome' },
+  {
+    id: 'agent-marketplace',
+    element: '#nav-agents-marketplace-button',
+    title: 'Agent Marketplace',
+    description: 'am',
+  },
+  {
+    id: 'switch-back-to-model',
+    element: '#model-selector-button',
+    title: 'Switch Back to a Model',
+    description: 'sbtm',
+  },
+  { element: '#nav-user', title: 'Account Menu', description: 'account' },
+];
 
 jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
@@ -28,9 +51,23 @@ jest.mock('~/store', () => ({
   default: { sidebarExpanded: 'sidebarExpanded' },
 }));
 
-jest.mock('../Courses/useGettingStartedTour', () => ({
+jest.mock('~/hooks', () => ({
+  useShowMarketplace: () => mockShowMarketplace,
+}));
+
+jest.mock('~/utils/elements', () => ({
+  hasAvailableTarget: (selector: string) => mockAvailableTargets.has(selector),
+}));
+
+jest.mock('../Courses/content/registry', () => ({
+  GETTING_STARTED_COURSE_ID: 'getting-started-guide',
+  getCourseSteps: () => FIXTURE_STEPS,
+}));
+
+jest.mock('../Courses/useCourseTour', () => ({
   __esModule: true,
-  default: (onComplete?: () => void) => {
+  default: (getSteps: () => TourStep[], onComplete?: () => void) => {
+    capturedGetSteps = getSteps;
     capturedOnComplete = onComplete;
     return { startTour: mockStartTour };
   },
@@ -48,6 +85,8 @@ function wrapper({ children }: { children: React.ReactNode }) {
 describe('LearningTourContext', () => {
   beforeEach(() => {
     jest.useFakeTimers();
+    mockShowMarketplace = true;
+    mockAvailableTargets = new Set(['#nav-panel-conversations', '#nav-agents-marketplace-button']);
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
       value: jest.fn().mockReturnValue({ matches: false }),
@@ -116,5 +155,39 @@ describe('LearningTourContext', () => {
       result.current.dismissCompletion();
     });
     expect(result.current.completedCourseId).toBeNull();
+  });
+
+  describe('agent-selection step filtering', () => {
+    it('includes the agent-selection steps when the marketplace and its targets are available', () => {
+      renderHook(() => useLearningTour(), { wrapper });
+
+      expect(capturedGetSteps?.().map((step) => step.title)).toEqual([
+        'Welcome',
+        'Agent Marketplace',
+        'Switch Back to a Model',
+        'Account Menu',
+      ]);
+    });
+
+    it('omits the agent-selection steps when the marketplace is hidden', () => {
+      mockShowMarketplace = false;
+      renderHook(() => useLearningTour(), { wrapper });
+
+      expect(capturedGetSteps?.().map((step) => step.title)).toEqual(['Welcome', 'Account Menu']);
+    });
+
+    it('omits the agent-selection steps when the conversations panel target is unavailable', () => {
+      mockAvailableTargets.delete('#nav-panel-conversations');
+      renderHook(() => useLearningTour(), { wrapper });
+
+      expect(capturedGetSteps?.().map((step) => step.title)).toEqual(['Welcome', 'Account Menu']);
+    });
+
+    it('omits the agent-selection steps when the marketplace trigger is unavailable', () => {
+      mockAvailableTargets.delete('#nav-agents-marketplace-button');
+      renderHook(() => useLearningTour(), { wrapper });
+
+      expect(capturedGetSteps?.().map((step) => step.title)).toEqual(['Welcome', 'Account Menu']);
+    });
   });
 });

@@ -1,4 +1,5 @@
-import { Clock, Lightbulb, ArrowRight } from 'lucide-react';
+import { Button } from '@librechat/client';
+import { Clock, Lightbulb } from 'lucide-react';
 import { COURSES, type LearningCourse } from './courses';
 import { useLearningTour } from './LearningTourContext';
 import { useLocalize } from '~/hooks';
@@ -27,15 +28,16 @@ function CourseHeroCard({ course, onSelect }: { course: LearningCourse; onSelect
             )}
           </span>
         )}
-        <button
+        <Button
           type="button"
+          variant="submit"
+          size="sm"
           onClick={onSelect}
           data-testid={`learning-course-row-${course.id}`}
-          className="flex items-center gap-1.5 rounded-md bg-surface-submit px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-surface-submit-hover"
+          className="text-xs"
         >
           {localize('com_learning_start_tour')}
-          <ArrowRight className="size-3.5" />
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -63,7 +65,7 @@ export default function LearningPanel() {
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-3">
         {activeCourses.length > 0 && (
           <div className="flex flex-col gap-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+            <p className="text-xs font-semibold tracking-wide text-text-tertiary">
               {localize('com_learning_courses_title')}
             </p>
             {activeCourses.map((course) => (
@@ -78,12 +80,6 @@ export default function LearningPanel() {
               <ComingSoonRow key={course.id} course={course} isFirst={index === 0} />
             ))}
           </div>
-        )}
-
-        {comingSoonCourses.length > 0 && (
-          <p className="mt-2 text-center text-xs text-text-tertiary">
-            {localize('com_learning_coming_soon')}
-          </p>
         )}
       </div>
     </div>

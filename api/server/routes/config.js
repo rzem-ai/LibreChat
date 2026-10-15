@@ -15,14 +15,18 @@ const {
   resolveCodeEnvironmentDecisionVersion,
   resolveCodeEnvironmentMoveCapabilities,
   resolveCodeEnvironmentTransitionVersion,
+  // Deloitte Custom Change: imported directly from @librechat/api now that the
+  // `~/server/services/Config/modelPricing` re-export shim has been removed.
+  getModelPricing,
 } = require('@librechat/api');
 const { EModelEndpoint, defaultSocialLogins } = require('librechat-data-provider');
 const { logger, getTenantId, SystemCapabilities } = require('@librechat/data-schemas');
 const { hasCapability, hasConfigCapability } = require('~/server/middleware/roles/capabilities');
+const { getModelsConfig } = require('~/server/controllers/ModelController');
 const { getLdapConfig } = require('~/server/services/Config/ldap');
 const { getRumConfig } = require('~/server/services/Config/rum');
 const { getAppConfig } = require('~/server/services/Config/app');
-const { getEndpointCostConfig, getModelPricing } = require('~/server/services/Config/modelPricing');
+const { getValueKey, getMultiplier, getCacheMultiplier } = require('~/models');
 
 const router = express.Router();
 const emailLoginEnabled =
@@ -267,9 +271,26 @@ router.get('/', async function (req, res) {
     const langfuseConnectionAvailable = isLangfuseConnectionAvailable();
     let langfuseConnectionAccess = false;
 
-    // Deloitte Custom Change: model pricing uses the YAML reference model unless explicitly overridden.
-    const modelPricing = getModelPricing();
-    const endpointCostConfig = getEndpointCostConfig(appConfig.modelPricing?.referenceModelId);
+    // Deloitte Custom Change: model pricing (incl. the 1-5 price tier) is derived
+    // the same way as billing — custom endpoints use their configured `tokenConfig`,
+    // everything else (built-in OpenAI/Anthropic/Google/Bedrock) falls back to the
+    // built-in token-value tables. Always computed (not gated by
+    // `showModelPricingIndicator`) since the model info tooltip's cost row needs this
+    // data regardless of whether the in-menu `$` chip is enabled; the chip's own
+    // visibility is gated client-side off `interface.customDeloitteFeatureFlags.showModelPricingIndicator`.
+    let modelPricing = {};
+    try {
+      const modelsConfig = await getModelsConfig({ user: req.user, config: appConfig });
+      modelPricing = await getModelPricing(
+        appConfig,
+        req.user.id ?? req.user._id?.toString(),
+        req.user.tenantId,
+        modelsConfig,
+        { getValueKey, getMultiplier, getCacheMultiplier },
+      );
+    } catch {
+      logger.warn('[config] Model pricing resolution failed');
+    }
 
     if (langfuseConnectionAvailable) {
       try {
@@ -309,7 +330,6 @@ router.get('/', async function (req, res) {
       turnstile: appConfig?.turnstileConfig,
       modelSpecs: sanitizeModelSpecs(excludeHiddenModelSpecs(appConfig?.modelSpecs)),
       ...(Object.keys(modelPricing).length ? { modelPricing } : {}),
-      endpointCostConfig,
       balance: balanceConfig,
       bundlerURL: process.env.SANDPACK_BUNDLER_URL,
       staticBundlerURL: process.env.SANDPACK_STATIC_BUNDLER_URL,

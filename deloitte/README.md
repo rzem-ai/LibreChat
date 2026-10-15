@@ -10,7 +10,7 @@ This repository contains the local development setup for **LibreChat**, configur
 - **Local source code builds** — changes to your code reflected after rebuild (not pulling pre-built images)
 - Support for **Azure OpenAI (AU & US)**, **VertexAI (US)**, and **Anthropic via gateway proxy**
 - Integration with **ClearTrack MCP Gateway**
-- Local theming via **Deloitte GEL assets**
+- Local theming via **Deloitte GEL assets** (`client/public/assets`)
 - Full control over dependencies and build process
 - A structure that can later be deployed to **ClearTrack** (dev / stage / prod)
 
@@ -173,7 +173,7 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 16. `OPENID_REQUIRED_ROLE=`
 17. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
 18. `OPENID_BUTTON_LABEL="Continue with SSO"`
-19. `OPENID_IMAGE_URL=/assets/favicon.svg`
+19. `OPENID_IMAGE_URL=/assets/icon-192x192.png`
 20. `ALLOW_EMAIL_LOGIN=false`
 21. `ALLOW_REGISTRATION=false`
 22. `ALLOW_SOCIAL_REGISTRATION=false`
@@ -197,9 +197,6 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 40. `MCP_GATEWAY_URL=https://mcp-gw-dev.ctk.au.deloitte.com/mcp`
 41. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims,sharepoint`
 42. `MCP_GATEWAY_OBO_SCOPE=api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user`
-43. `MODEL_PRICING_REFERENCE_MODEL_ID=gpt-56-luna`
-44. `MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT=0.1`
-45. `MODEL_PRICING_MIN_MULTIPLIER=0.1`
 > The **ClearTrack MCP Gateway** connection (`mcpServers` block in `librechat.yaml` at repo root and `charts/config/librechat.yaml` for Helm) uses On-Behalf-Of (OBO) auth, not a dedicated OAuth client — it reuses `OPENID_CLIENT_ID`/`OPENID_CLIENT_SECRET` from item 8–9 to exchange the user's login token for one scoped to the gateway. There are no gateway-specific client credentials to set; the only requirement is that `OPENID_SCOPE` (item 12) includes the gateway's audience scope.
 
 ### Code API / Code Interpreter .env vars
@@ -221,7 +218,7 @@ CODEAPI_JWT_PRIVATE_JWK_JSON=<request from a team member; ask Kiel for the curre
 
 `CODEAPI_JWT_PRIVATE_JWK_JSON` is private key material. Do not commit it, paste it into tickets, or share it in chat. Request the current value from a team member; Kiel can direct you to the appropriate owner.
 
-### Skill Scanner .env vars 
+### Skill Scanner .env vars
 
 Add the following values to `.env` to enable the Security Scanning for saving/uploading skills.
 
@@ -309,7 +306,6 @@ This local setup uses Docker Compose with two configuration files:
 - **Automatically merged** with the base file when running `docker compose` commands
 - Overrides the base configuration to build LibreChat and RAG API from **local source code**
 - Adds local-specific services: Caddy (reverse proxy), gateway-proxy (nginx)
-- Injects Deloitte GEL assets via custom startup command
 
 ### Local Builds from Source
 
@@ -396,7 +392,6 @@ You need to rebuild images when you change:
 You do NOT need to rebuild for:
 
 - **Configuration file changes** (`.env`, `librechat.yaml`, `Caddyfile`) — just restart containers
-- **Asset changes** (`deloitte/assets/`) — mounted as volume, changes reflect immediately on container restart
 
 To apply config changes without rebuilding:
 

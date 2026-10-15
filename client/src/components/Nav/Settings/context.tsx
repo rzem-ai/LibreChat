@@ -47,6 +47,8 @@ export function useSettingsContext(): SettingsContextValue {
   // Deloitte Custom Change: opt in to the restricted service account key-management UI.
   const adminAgentApiKeysEnabled = customDeloitteFeatureFlags?.adminAgentApiKeys === true;
   const dataDangerZoneEnabled = customDeloitteFeatureFlags?.dataDangerZone !== false;
+  // Deloitte Custom Change: hides the username-display toggle in bubble layout (no name header).
+  const usernameDisplaySettingEnabled = startupConfig?.interface?.userMessageAlignment !== 'right';
   const hasRemoteAgentsBool = hasRemoteAgents === true;
   const hasMultiConvoBool = hasMultiConvo === true;
   const hasPromptsBool = hasPrompts === true;
@@ -76,6 +78,7 @@ export function useSettingsContext(): SettingsContextValue {
       adminAgentApiKeysEnabled,
       isAdmin,
       dataDangerZoneEnabled,
+      usernameDisplaySettingEnabled,
       engineTTS,
       langfuseConnectionAccess,
       adminPanelURL,
@@ -98,6 +101,7 @@ export function useSettingsContext(): SettingsContextValue {
       adminAgentApiKeysEnabled,
       isAdmin,
       dataDangerZoneEnabled,
+      usernameDisplaySettingEnabled,
       engineTTS,
       langfuseConnectionAccess,
       adminPanelURL,
