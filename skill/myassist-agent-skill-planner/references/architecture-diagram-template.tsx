@@ -56,12 +56,16 @@
 
 import {
   Bot, // Agent (robot icon for the Agent Builder concept)
-  ScrollText, // Skill
-  Wrench, // Tools (generic)
-  FileText, // Document / generic file
+  Brain, // Memory
   FileSearch, // File Search tool
+  FileSpreadsheet, // Spreadsheet
+  FileText, // Document / generic file
   Globe, // Web Search
+  ScrollText, // Skill
+  Terminal, // Run Code
   User, // User
+  WandSparkles, // Artifacts
+  Wrench, // Tools (generic)
 } from 'lucide-react';
 
 // ══════════════════════════════════════════════════════════════════
