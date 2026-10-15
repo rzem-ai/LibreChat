@@ -24,6 +24,9 @@ export function tierFromRange(value, min, max, invert) {
   return Math.min(Math.max(Math.ceil(normalized * 5), 1), 5);
 }
 
+const toFiniteNumber = (value) =>
+  typeof value === 'number' && Number.isFinite(value) ? value : null;
+
 function fetchPage(baseUrl, page, apiKey, fetchImpl) {
   return fetchImpl(`${baseUrl}?page=${page}`, { headers: { 'x-api-key': apiKey } });
 }
@@ -48,9 +51,14 @@ async function fetchCatalog(apiKey, fetchImpl) {
     }
     const body = await response.json();
     for (const model of body.data ?? []) {
+      if (typeof model.slug !== 'string' || !model.slug) {
+        continue;
+      }
       catalog.set(model.slug, {
-        intelligenceIndex: model.evaluations?.artificial_analysis_intelligence_index ?? null,
-        medianResponseSeconds: model.performance?.median_end_to_end_response_time_seconds ?? null,
+        intelligenceIndex: toFiniteNumber(model.evaluations?.artificial_analysis_intelligence_index),
+        medianResponseSeconds: toFiniteNumber(
+          model.performance?.median_end_to_end_response_time_seconds,
+        ),
       });
     }
     if (!body.pagination?.has_more) {
