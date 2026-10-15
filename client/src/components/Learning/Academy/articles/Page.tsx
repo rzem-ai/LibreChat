@@ -1,5 +1,5 @@
+import { Button, GEL } from '@librechat/client';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Typeset, GEL } from '@librechat/client';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { JSX } from 'react/jsx-runtime';
 import type { ComponentProps } from 'react';
@@ -79,9 +79,9 @@ export default function Article(): JSX.Element {
       </div>
       <div className="flex items-start gap-16">
         <div className="max-w-2xl flex-1">
-          <Typeset className="[&>:first-child]:mt-0">
+          <GEL.Typeset className="[&>:first-child]:mt-0">
             <article.Content components={mdxComponents} />
-          </Typeset>
+          </GEL.Typeset>
         </div>
         {article.headings.length > 0 && (
           <nav

@@ -32,10 +32,8 @@ export const ResourceSchema = z.object({
   description: z.string(),
   type: z.enum(['tour', 'article', 'external']),
   tags: z.array(z.string()),
-  icon: z.enum(['tour', 'article', 'external']),
   durationLabel: z.string().optional(),
   updated: z.string().optional(),
-  articleSlug: z.string().optional(),
   externalHref: z.string().url().optional(),
 });
 

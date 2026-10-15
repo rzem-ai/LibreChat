@@ -17,7 +17,7 @@ const getFields = (resource: Resource): string[] => [
   ...resource.tags,
 ];
 
-const resourceIcons: Record<Resource['icon'], GEL.IconName> = {
+const resourceIcons: Record<Resource['type'], GEL.IconName> = {
   tour: 'Tour',
   article: 'Article',
   external: 'External',
@@ -41,18 +41,15 @@ export default function Resources({ onOpenArticle }: ResourcesProps): JSX.Elemen
       article: localize('com_learning_action_read', { 0: resource.title }),
       external: localize('com_learning_action_external', { 0: resource.title }),
     }[resource.type];
-    const { articleSlug } = resource;
     const onSelect =
-      resource.type === 'article' && articleSlug
-        ? () => onOpenArticle(articleSlug)
-        : startGettingStartedTour;
+      resource.type === 'article' ? () => onOpenArticle(resource.id) : startGettingStartedTour;
 
     return (
       <ResourceCard
         key={resource.id}
         title={resource.title}
         description={resource.description}
-        icon={resourceIcons[resource.icon]}
+        icon={resourceIcons[resource.type]}
         metaLabel={metaLabel}
         actionLabel={actionLabel}
         externalHref={resource.externalHref}

@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle, GEL } from '@librechat/client';
+import { GEL } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
 import { cn } from '~/utils';
 
@@ -30,7 +30,7 @@ export function ResourceCard({
   const Icon = GEL.Icon[icon];
 
   return (
-    <Card className={cn('relative gap-2 transition-shadow hover:shadow-md')}>
+    <GEL.Card className={cn('relative gap-2 transition-shadow hover:shadow-md')}>
       {externalHref ? (
         <a
           href={externalHref}
@@ -51,10 +51,10 @@ export function ResourceCard({
         <Icon className="size-4" aria-hidden="true" />
         {metaLabel}
       </div>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent>{description}</CardContent>
-    </Card>
+      <GEL.CardHeader>
+        <GEL.CardTitle>{title}</GEL.CardTitle>
+      </GEL.CardHeader>
+      <GEL.CardContent>{description}</GEL.CardContent>
+    </GEL.Card>
   );
 }

@@ -94,4 +94,4 @@ export type {
   DataTableSearchProps,
   DataTableProps as VirtualizedDataTableProps,
 } from './DataTable/DataTable.types';
-export * from './gel';
+export * as GEL from './gel';

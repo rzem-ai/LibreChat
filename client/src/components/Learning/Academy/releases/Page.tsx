@@ -1,4 +1,4 @@
-import { Typeset } from '@librechat/client';
+import { GEL } from '@librechat/client';
 import { useQuery } from '@tanstack/react-query';
 import type { JSX } from 'react/jsx-runtime';
 import { loadReleases } from '../../content/loader';
@@ -34,9 +34,9 @@ export default function Releases(): JSX.Element | null {
             {frontmatter.date} · {frontmatter.version}
           </p>
           <h2 className="mt-1 text-xl font-medium">{frontmatter.title}</h2>
-          <Typeset>
+          <GEL.Typeset>
             <Content />
-          </Typeset>
+          </GEL.Typeset>
         </article>
       ))}
     </div>

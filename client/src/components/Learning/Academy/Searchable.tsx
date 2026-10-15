@@ -1,4 +1,4 @@
-import { SearchInput } from '@librechat/client';
+import { GEL } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
 import type { ReactNode } from 'react';
 import { useLocalize } from '~/hooks';
@@ -26,7 +26,7 @@ export default function Searchable<T>({
 
   return (
     <div className={`flex flex-col gap-6 ${className}`}>
-      <SearchInput
+      <GEL.SearchInput
         label={searchLabel}
         clearLabel={localize('com_ui_clear')}
         onClear={() => setQuery('')}

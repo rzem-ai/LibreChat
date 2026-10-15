@@ -4,8 +4,7 @@
     "title": "Getting Started Tour",
     "description": "A short tour of chats, projects and the context panel.",
     "type": "tour",
-    "tags": ["Getting started"],
-    "icon": "tour"
+    "tags": ["Getting started"]
   },
   {
     "id": "agentic-ecosystem",
@@ -13,10 +12,8 @@
     "description": "How chats, skills and agents fit together, and when to reach for each.",
     "type": "article",
     "tags": ["Getting started", "Skills"],
-    "icon": "article",
     "durationLabel": "6 min read",
-    "updated": "2 September 2026",
-    "articleSlug": "agentic-ecosystem"
+    "updated": "2 September 2026"
   },
   {
     "id": "_mock-getting-started-with-myassist",
@@ -24,10 +21,8 @@
     "description": "The three habits that make every chat after this one better.",
     "type": "article",
     "tags": ["Getting started", "Skills"],
-    "icon": "article",
     "durationLabel": "4 min read",
-    "updated": "2 September 2026",
-    "articleSlug": "_mock-getting-started-with-myassist"
+    "updated": "2 September 2026"
   },
   {
     "id": "_mock-lumo-ms-teams",
@@ -35,7 +30,6 @@
     "description": "Use the Lumo agent from inside Microsoft Teams.",
     "type": "external",
     "tags": ["Getting started", "Skills"],
-    "icon": "external",
     "externalHref": "https://teams.microsoft.com"
   },
   {
@@ -44,7 +38,6 @@
     "description": "Pick a time for a live walkthrough with the team.",
     "type": "external",
     "tags": ["Getting started", "Skills"],
-    "icon": "external",
     "externalHref": "https://outlook.office.com"
   }
 ]

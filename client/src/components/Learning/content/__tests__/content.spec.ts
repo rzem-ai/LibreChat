@@ -13,10 +13,10 @@ describe('learning content', () => {
     expect(new Set(TOURS.map((tour) => tour.id)).size).toBe(TOURS.length);
   });
 
-  it('points every article resource at an existing MDX file', () => {
+  it('gives every article resource an id that matches an MDX file', () => {
     const slugs = mdxFiles('articles').map((file) => file.replace(/\.mdx$/, ''));
     RESOURCES.filter((resource) => resource.type === 'article').forEach((resource) =>
-      expect(slugs).toContain(resource.articleSlug),
+      expect(slugs).toContain(resource.id),
     );
   });
 

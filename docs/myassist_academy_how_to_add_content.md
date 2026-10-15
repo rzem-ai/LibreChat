@@ -38,14 +38,12 @@ Files starting with `_mock-` are placeholders. Delete or replace them before lau
      "description": "One line shown on the card.",
      "type": "article",
      "tags": ["Getting started"],
-     "icon": "article",
      "durationLabel": "6 min read",
-     "updated": "2 September 2026",
-     "articleSlug": "agentic-ecosystem"
+     "updated": "2 September 2026"
    }
    ```
 
-   `articleSlug` must match the `.mdx` file name. `tags` are searchable but not displayed.
+   For articles, `id` must match the `.mdx` file name (it is also the URL slug). `tags` are searchable but not displayed.
 
 ## Release note
 
@@ -71,7 +69,7 @@ Append `{ "question": "...", "answer": "..." }` to `faqs.json`. The tab is only 
 
 Add an object to `resources.json`. `type` decides what a click does:
 
-- `article`: opens the article. Needs `articleSlug`.
+- `article`: opens the article. `id` must match the `.mdx` file name.
 - `external`: opens `externalHref` in a new tab. Needs `externalHref`.
 - `tour`: starts the tour. `id` must match a tour `id`.
 
@@ -104,7 +102,7 @@ Add an object to `resources.json`. `type` decides what a click does:
 
 ## Checks
 
-The content tests validate the files above (valid frontmatter, every `articleSlug` has an MDX file, one Getting Started tour, unique tour ids):
+The content tests validate the files above (valid frontmatter, every article `id` has an MDX file, one Getting Started tour, unique tour ids):
 
 ```
 cd client && npx jest src/components/Learning/content

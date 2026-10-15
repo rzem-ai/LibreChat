@@ -1,12 +1,4 @@
-import {
-  Button,
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-  GEL,
-} from '@librechat/client';
+import { Button, GEL } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
 import type { TourStatus } from '../content/schema';
 import { StatusChip } from './StatusChip';
@@ -51,7 +43,7 @@ export function TourCard({
 
   if (hero) {
     return (
-      <Card className="flex-col items-start gap-4 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+      <GEL.Card className="flex-col items-start gap-4 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         <div className="flex items-center gap-3">
           <StatusIcon className={cn('size-5 shrink-0', statusIconClass)} aria-hidden="true" />
           <div className="flex flex-col gap-1">
@@ -63,21 +55,21 @@ export function TourCard({
           {chip}
           {cta}
         </div>
-      </Card>
+      </GEL.Card>
     );
   }
 
   return (
-    <Card className={cn(disabled && 'opacity-60')}>
-      <CardHeader>
-        <CardTitle>
+    <GEL.Card className={cn(disabled && 'opacity-60')}>
+      <GEL.CardHeader>
+        <GEL.CardTitle>
           <StatusIcon className={cn('size-4 shrink-0', statusIconClass)} aria-hidden="true" />
           {title}
-        </CardTitle>
+        </GEL.CardTitle>
         {chip}
-      </CardHeader>
-      <CardContent>{description}</CardContent>
-      <CardFooter>{cta}</CardFooter>
-    </Card>
+      </GEL.CardHeader>
+      <GEL.CardContent>{description}</GEL.CardContent>
+      <GEL.CardFooter>{cta}</GEL.CardFooter>
+    </GEL.Card>
   );
 }

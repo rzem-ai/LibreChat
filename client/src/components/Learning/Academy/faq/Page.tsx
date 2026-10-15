@@ -1,4 +1,4 @@
-import { HighlightedText } from '@librechat/client';
+import { GEL } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
 import type { Faq } from '../../content/schema';
 import { FAQS } from '../../content/data';
@@ -23,10 +23,10 @@ export default function Faq(): JSX.Element {
           {visible.map((faq) => (
             <li key={faq.question}>
               <p className="text-base font-semibold">
-                <HighlightedText text={faq.question} query={query} />
+                <GEL.HighlightedText text={faq.question} query={query} />
               </p>
               <p className="mt-1 text-text-secondary">
-                <HighlightedText text={faq.answer} query={query} />
+                <GEL.HighlightedText text={faq.answer} query={query} />
               </p>
             </li>
           ))}
