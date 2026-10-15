@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useState, useSyncExternalStore } from 'react';
 import { useRecoilState } from 'recoil';
 import * as Popover from '@radix-ui/react-popover';
 import { Button, useMediaQuery, GEL } from '@librechat/client';
@@ -9,10 +9,33 @@ import { TUTORIAL_PROMPT_DELAY_MS } from './timing';
 import { useLocalize } from '~/hooks';
 import store from '~/store';
 
-/** Measure the sidebar's current pixel width from the DOM. */
-function getSidebarWidth(): number {
-  const el = document.querySelector<HTMLElement>('[data-sidebar-container]');
-  return el ? el.getBoundingClientRect().width : 52;
+const EMPTY_RECT = new DOMRect();
+
+function getLearningIcon(): HTMLElement | null {
+  return document.getElementById('nav-panel-learning');
+}
+
+/** Lets Radix Popover anchor the bubble to the learning nav icon without touching ExpandedPanel. */
+const learningIconAnchor = {
+  getBoundingClientRect: (): DOMRect => getLearningIcon()?.getBoundingClientRect() ?? EMPTY_RECT,
+};
+
+function subscribeToResize(onChange: () => void): () => void {
+  window.addEventListener('resize', onChange);
+  return () => window.removeEventListener('resize', onChange);
+}
+
+/** Sidebar width and learning icon rect, serialised so the snapshot compares by value. */
+function getOverlayLayout(): string {
+  const sidebar = document.querySelector<HTMLElement>('[data-sidebar-container]');
+  const icon = getLearningIcon()?.getBoundingClientRect();
+  return [
+    sidebar ? sidebar.getBoundingClientRect().width : 52,
+    icon?.left ?? 0,
+    icon?.top ?? 0,
+    icon?.width ?? 0,
+    icon?.height ?? 0,
+  ].join(',');
 }
 
 /**
@@ -61,7 +84,6 @@ export default function TutorialPromptModal({
   // after termsVisible goes from true→false (or immediately if terms never showed).
   const [readyToShow, setReadyToShow] = useState(false);
   const [mobilePromptReady, setMobilePromptReady] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(52);
   const titleId = useId();
 
   useEffect(() => {
@@ -97,45 +119,18 @@ export default function TutorialPromptModal({
     return () => window.clearTimeout(timer);
   }, [isVisible, isSmallScreen, sidebarExpanded, setSidebarExpanded]);
 
-  // iconRect holds the Learning Hub icon's bounding rect so we can carve a
-  // clip-path hole in the sidebar overlay directly over it (Decision D1 fix:
-  // the single full-sidebar overlay previously intercepted every click on the
-  // icon before it reached the icon's own button/listener).
-  const [iconRect, setIconRect] = useState<DOMRect | null>(null);
-
-  // Consolidated measurement: sidebar width + icon rect, re-run on visibility/
-  // sidebar-expand changes AND on window resize, so the clip-path hole can't
-  // drift after a resize or zoom while the prompt is visible.
-  useEffect(() => {
-    if (!canRenderPrompt) {
-      return;
-    }
-    const measure = () => {
-      setSidebarWidth(getSidebarWidth());
-      const el = document.getElementById('nav-panel-learning');
-      setIconRect(el ? el.getBoundingClientRect() : null);
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, [canRenderPrompt, sidebarExpanded]);
-
-  // virtualRef lets Radix Popover position the bubble relative to the learning
-  // nav icon without wrapping or modifying ExpandedPanel at all.
-  const virtualRef = useRef<{ getBoundingClientRect: () => DOMRect } | null>(null);
-
-  // useLayoutEffect (not useEffect) so the ref is populated synchronously
-  // before Radix's own anchor-measurement layout effect runs on this same
-  // mount pass — otherwise the first position calculation sees a null anchor.
-  useLayoutEffect(() => {
-    if (!canRenderPrompt) {
-      return;
-    }
-    const el = document.getElementById('nav-panel-learning');
-    if (el) {
-      virtualRef.current = el;
-    }
-  }, [canRenderPrompt]);
+  // Measured during render (and re-read on resize) so the overlays paint at the
+  // real sidebar width instead of shifting from a default after mount. The icon
+  // rect carves a clip-path hole in the sidebar overlay so clicks reach the icon
+  // (Decision D1).
+  const overlayLayout = useSyncExternalStore(subscribeToResize, getOverlayLayout);
+  const [sidebarWidth, iconLeft, iconTop, iconWidth, iconHeight] = overlayLayout
+    .split(',')
+    .map(Number);
+  const iconRect =
+    iconWidth > 0 && iconHeight > 0
+      ? { left: iconLeft, top: iconTop, width: iconWidth, height: iconHeight }
+      : null;
 
   // Decision D1: clicking the Learning Hub icon while the bubble is showing
   // counts as accepting — mark seen so the bubble doesn't reappear.
@@ -143,7 +138,7 @@ export default function TutorialPromptModal({
     if (!canRenderPrompt) {
       return;
     }
-    const el = document.getElementById('nav-panel-learning');
+    const el = getLearningIcon();
     if (!el) {
       return;
     }
@@ -173,7 +168,7 @@ export default function TutorialPromptModal({
       }}
     >
       {/* virtualRef positions the bubble without touching ExpandedPanel */}
-      <Popover.Anchor virtualRef={virtualRef} />
+      <Popover.Anchor virtualRef={{ current: learningIconAnchor }} />
 
       <Popover.Portal>
         <>
@@ -198,7 +193,7 @@ export default function TutorialPromptModal({
               zIndex: 200,
               width: sidebarWidth,
               clipPath:
-                iconRect != null && iconRect.width > 0 && iconRect.height > 0
+                iconRect != null
                   ? [
                       'polygon(',
                       // Outer rect (clockwise) — covers the whole sidebar
