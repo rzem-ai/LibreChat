@@ -223,7 +223,7 @@ When the user changes a material part of the design:
 1. Update only the affected components.
 2. Recheck only the relevant capability or connector constraints.
 3. Present the revised recommendation.
-4. Regenerate the diagram automatically if the change affects workflow, tools, connectors, inputs, outputs, or Skills.
+4. If the change affects workflow, tools, connectors, inputs, outputs, or Skills, ask whether the user wants the diagram regenerated and regenerate it only after explicit agreement.
 5. Do not restart the full discovery process.
 
 When the user confirms the design is correct, proceed to State 3.
