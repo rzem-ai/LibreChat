@@ -481,6 +481,7 @@ modelSpecs:
       label: 'GPT 5.6 Luna'
       group: 'OpenAI Global'
       iconURL: 'openAI'
+      softDefault: true
       preset:
         endpoint: 'Azure Global'
         model: 'gpt-56-luna'
@@ -547,8 +548,6 @@ modelSpecs:
       label: 'Claude Sonnet 5.5'
       group: 'Anthropic Global'
       iconURL: 'anthropic'
-      # Deloitte Custom Change: use Sonnet 5.5 only until a user makes their own selection.
-      softDefault: true
       preset:
         endpoint: 'anthropic'
         model: 'claude-sonnet-5-5'
