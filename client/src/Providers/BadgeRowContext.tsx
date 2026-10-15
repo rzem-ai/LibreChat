@@ -23,6 +23,8 @@ import {
 import useNativeWebSearchToggle from '~/hooks/Plugins/useNativeWebSearchToggle';
 import useArtifactsShadcnOnly from '~/hooks/Artifacts/useArtifactsShadcnOnly';
 import { getTimestampedValue } from '~/utils/timestamps';
+// Deloitte Custom Change: helper for `defaultEnabledTools` seeding.
+import { getDefaultEnabledToolValues } from '~/utils/endpoints';
 import { useGetStartupConfig } from '~/data-provider';
 import { ephemeralAgentByConvoId } from '~/store';
 
@@ -100,7 +102,8 @@ export default function BadgeRowProvider({
    *  Skipped when a spec is active — applyModelSpecEphemeralAgent handles both new conversations
    *  (pure spec values) and existing conversations (spec values + localStorage overrides). */
   useEffect(() => {
-    if (isSubmitting) {
+    // Deloitte Custom Change: wait for startupConfig so `defaultEnabledTools` can seed the initial toggles.
+    if (isSubmitting || startupConfig == null) {
       return;
     }
     if (specName) {
@@ -179,6 +182,14 @@ export default function BadgeRowProvider({
         }
       }
 
+      // Deloitte Custom Change: admin-enabled tools start on unless the user has a stored toggle
+      const defaultEnabledValues = getDefaultEnabledToolValues(
+        startupConfig.interface?.customDeloitteFeatureFlags,
+      );
+      for (const [toolKey, value] of Object.entries(defaultEnabledValues)) {
+        initialValues[toolKey] ??= value;
+      }
+
       const hasOverrides = Object.keys(initialValues).length > 0;
 
       /** Read persisted MCP values from localStorage */
@@ -225,7 +236,7 @@ export default function BadgeRowProvider({
         return changed ? result : prev;
       });
     }
-  }, [storageSuffix, specName, isSubmitting, setEphemeralAgent]);
+  }, [storageSuffix, specName, isSubmitting, setEphemeralAgent, startupConfig]);
 
   /** CodeInterpreter hook — sandbox auth is handled server-side by the
    *  agents library, so the toggle no longer has an auth dialog gate. */

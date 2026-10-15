@@ -32,21 +32,21 @@
       "side": "top"
     },
     {
-      "element": "#toolbar-toggle-code-interpreter",
+      "element": "#toolbar-toggle-code-interpreter, #tools-dropdown-button",
       "title": "Run Code",
-      "description": "Gives MyAssist a secure working area to analyse data, work through calculations, transform files, and produce charts or tables for you behind the scenes.",
+      "description": "Gives MyAssist a secure working area to analyse data, work through calculations, transform files, and produce charts or tables for you behind the scenes.<br/><br/>Switch it on or off from the <strong>Tools</strong> menu (the sliders icon beside the message box).",
       "side": "top"
     },
     {
-      "element": "#toolbar-toggle-skills",
+      "element": "#toolbar-toggle-skills, #tools-dropdown-button",
       "title": "Skills",
-      "description": "Skills are instruction files which give the AI access to repeatable patterns. If a skill is enabled, the AI will auto-select it when you send a relevant query.<br/><br/>For example, if you ask the AI to summarise a meeting, you may see the meeting-summariser skill get called.",
+      "description": "Skills are instruction files which give the AI access to repeatable patterns. If a skill is enabled, the AI will auto-select it when you send a relevant query.<br/><br/>For example, if you ask the AI to summarise a meeting, you may see the meeting-summariser skill get called.<br/><br/>Switch it on or off from the <strong>Tools</strong> menu (the sliders icon beside the message box).",
       "side": "top"
     },
     {
-      "element": "#toolbar-toggle-artifacts",
+      "element": "#toolbar-toggle-artifacts, #tools-dropdown-button",
       "title": "Artifacts",
-      "description": "Produces rich outputs like formatted documents, diagrams, and interactive previews in a separate panel alongside your chat — ideal for iterating on deliverables such as reports, data visualisations, or presentation content.",
+      "description": "Produces rich outputs like formatted documents, diagrams, and interactive previews in a separate panel alongside your chat — ideal for iterating on deliverables such as reports, data visualisations, or presentation content.<br/><br/>Switch it on or off from the <strong>Tools</strong> menu (the sliders icon beside the message box).",
       "side": "top"
     },
     {

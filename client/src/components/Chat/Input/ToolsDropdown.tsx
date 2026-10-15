@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import * as Ariakit from '@ariakit/react';
-import { TooltipAnchor, DropdownPopup, PinIcon, VectorIcon } from '@librechat/client';
+import { TooltipAnchor, DropdownPopup, VectorIcon } from '@librechat/client';
 import { Brain, Globe, ScrollText, Settings, Settings2, TerminalSquareIcon } from 'lucide-react';
 import {
   AuthType,
@@ -17,8 +17,10 @@ import {
   useHasMemoryAccess,
   useAgentCapabilities,
 } from '~/hooks';
+import { useToolsDropdownConfig } from '~/hooks/Plugins/useToolsDropdownConfig';
 import useArtifactsShadcnOnly from '~/hooks/Artifacts/useArtifactsShadcnOnly';
 import ArtifactsSubMenu from '~/components/Chat/Input/ArtifactsSubMenu';
+import ToolStateControl from '~/components/Chat/Input/ToolStateControl';
 import MCPSubMenu from '~/components/Chat/Input/MCPSubMenu';
 import { useGetStartupConfig } from '~/data-provider';
 import { useBadgeRowContext } from '~/Providers';
@@ -36,6 +38,8 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
   const localize = useLocalize();
   const { user } = useAuthContext();
   const context = useBadgeRowContext();
+  // Deloitte Custom Change: admin-configured rows (`toolsDropdown.items`).
+  const { isItemVisible } = useToolsDropdownConfig();
   const { data: startupConfig } = useGetStartupConfig();
 
   const {
@@ -167,8 +171,9 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
   const mcpPlaceholder = startupConfig?.interface?.mcpServers?.placeholder;
 
   const dropdownItems: MenuItemProps[] = [];
+  // Deloitte Custom Change: each row below renders only if listed in `toolsDropdown.items`.
 
-  if (fileSearchEnabled && canUseFileSearch) {
+  if (fileSearchEnabled && canUseFileSearch && isItemVisible('file_search')) {
     dropdownItems.push({
       onClick: handleFileSearchToggle,
       hideOnClick: false,
@@ -178,29 +183,18 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
             <VectorIcon className="icon-md" />
             <span>{localize('com_assistants_file_search')}</span>
           </div>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsFileSearchPinned?.(!isFileSearchPinned);
-            }}
-            className={cn(
-              'rounded p-1 transition-all duration-200',
-              'hover:bg-surface-secondary hover:shadow-sm',
-              !isFileSearchPinned && 'text-text-secondary hover:text-text-primary',
-            )}
-            aria-label={isFileSearchPinned ? 'Unpin' : 'Pin'}
-          >
-            <div className="h-4 w-4">
-              <PinIcon unpin={isFileSearchPinned} />
-            </div>
-          </button>
+          <ToolStateControl
+            label={localize('com_assistants_file_search')}
+            isPinned={isFileSearchPinned}
+            setIsPinned={setIsFileSearchPinned}
+            checked={Boolean(fileSearch?.toggleState)}
+          />
         </div>
       ),
     });
   }
 
-  if (canUseWebSearch && webSearchEnabled) {
+  if (canUseWebSearch && webSearchEnabled && isItemVisible('web_search')) {
     dropdownItems.push({
       onClick: handleWebSearchToggle,
       hideOnClick: false,
@@ -231,30 +225,19 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
                 </div>
               </button>
             )}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsSearchPinned?.(!isSearchPinned);
-              }}
-              className={cn(
-                'rounded p-1 transition-all duration-200',
-                'hover:bg-surface-secondary hover:shadow-sm',
-                !isSearchPinned && 'text-text-secondary hover:text-text-primary',
-              )}
-              aria-label={isSearchPinned ? 'Unpin' : 'Pin'}
-            >
-              <div className="h-4 w-4">
-                <PinIcon unpin={isSearchPinned} />
-              </div>
-            </button>
+            <ToolStateControl
+              label={localize('com_ui_web_search')}
+              isPinned={isSearchPinned}
+              setIsPinned={setIsSearchPinned}
+              checked={Boolean(webSearch?.toggleState)}
+            />
           </div>
         </div>
       ),
     });
   }
 
-  if (canUseSkills && skillsEnabled) {
+  if (canUseSkills && skillsEnabled && isItemVisible('skills')) {
     dropdownItems.push({
       onClick: handleSkillsToggle,
       hideOnClick: false,
@@ -264,29 +247,18 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
             <ScrollText className="icon-md" aria-hidden="true" />
             <span>{localize('com_ui_skills')}</span>
           </div>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsSkillsPinned?.(!isSkillsPinned);
-            }}
-            className={cn(
-              'rounded p-1 transition-all duration-200',
-              'hover:bg-surface-secondary hover:shadow-sm',
-              !isSkillsPinned && 'text-text-secondary hover:text-text-primary',
-            )}
-            aria-label={isSkillsPinned ? localize('com_ui_unpin') : localize('com_ui_pin')}
-          >
-            <div className="h-4 w-4">
-              <PinIcon unpin={isSkillsPinned} />
-            </div>
-          </button>
+          <ToolStateControl
+            label={localize('com_ui_skills')}
+            isPinned={isSkillsPinned}
+            setIsPinned={setIsSkillsPinned}
+            checked={Boolean(skills?.toggleState)}
+          />
         </div>
       ),
     });
   }
 
-  if (showMemory) {
+  if (showMemory && isItemVisible('memory')) {
     dropdownItems.push({
       onClick: handleMemoryToggle,
       hideOnClick: false,
@@ -296,29 +268,18 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
             <Brain className="icon-md" aria-hidden="true" />
             <span>{localize('com_ui_memory')}</span>
           </div>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsMemoryPinned?.(!isMemoryPinned);
-            }}
-            className={cn(
-              'rounded p-1 transition-all duration-200',
-              'hover:bg-surface-secondary hover:shadow-sm',
-              !isMemoryPinned && 'text-text-secondary hover:text-text-primary',
-            )}
-            aria-label={isMemoryPinned ? localize('com_ui_unpin') : localize('com_ui_pin')}
-          >
-            <div className="h-4 w-4">
-              <PinIcon unpin={isMemoryPinned} />
-            </div>
-          </button>
+          <ToolStateControl
+            label={localize('com_ui_memory')}
+            isPinned={isMemoryPinned}
+            setIsPinned={setIsMemoryPinned}
+            checked={Boolean(memory?.toggleState)}
+          />
         </div>
       ),
     });
   }
 
-  if (canRunCode && codeEnabled) {
+  if (canRunCode && codeEnabled && isItemVisible('execute_code')) {
     dropdownItems.push({
       onClick: handleCodeInterpreterToggle,
       hideOnClick: false,
@@ -329,30 +290,19 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
             <span>{localize('com_ui_run_code')}</span>
           </div>
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsCodePinned?.(!isCodePinned);
-              }}
-              className={cn(
-                'rounded p-1 transition-all duration-200',
-                'hover:bg-surface-secondary hover:shadow-sm',
-                !isCodePinned && 'text-text-primary hover:text-text-primary',
-              )}
-              aria-label={isCodePinned ? 'Unpin' : 'Pin'}
-            >
-              <div className="h-4 w-4">
-                <PinIcon unpin={isCodePinned} />
-              </div>
-            </button>
+            <ToolStateControl
+              label={localize('com_ui_run_code')}
+              isPinned={isCodePinned}
+              setIsPinned={setIsCodePinned}
+              checked={Boolean(codeInterpreter?.toggleState)}
+            />
           </div>
         </div>
       ),
     });
   }
 
-  if (artifactsEnabled && setIsArtifactsPinned != null) {
+  if (artifactsEnabled && setIsArtifactsPinned != null && isItemVisible('artifacts')) {
     dropdownItems.push({
       hideOnClick: false,
       render: (props) => (
@@ -371,7 +321,7 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
   }
 
   const { availableMCPServers } = mcpServerManager ?? {};
-  if (canUseMcp && availableMCPServers && availableMCPServers.length > 0) {
+  if (canUseMcp && availableMCPServers && availableMCPServers.length > 0 && isItemVisible('mcp')) {
     dropdownItems.push({
       hideOnClick: false,
       render: (props) => <MCPSubMenu {...props} placeholder={mcpPlaceholder} />,

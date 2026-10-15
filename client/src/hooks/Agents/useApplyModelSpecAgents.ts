@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
 import { Constants } from 'librechat-data-provider';
 import type { TStartupConfig, TSubmission } from 'librechat-data-provider';
+import { getModelSpec, applyModelSpecEphemeralAgent, getDefaultEnabledToolValues } from '~/utils';
 import { useUpdateEphemeralAgent, useApplyNewAgentTemplate } from '~/store/agents';
-import { getModelSpec, applyModelSpecEphemeralAgent } from '~/utils';
 
 /**
  * Hook that applies a model spec from a preset to an ephemeral agent.
@@ -54,6 +54,10 @@ export function useApplyModelSpecEffects() {
         convoId,
         modelSpec,
         updateEphemeralAgent,
+        // Deloitte Custom Change: admin `defaultEnabledTools` fill tools the spec leaves unset.
+        defaultEnabledValues: getDefaultEnabledToolValues(
+          startupConfig?.interface?.customDeloitteFeatureFlags,
+        ),
       });
     },
     [updateEphemeralAgent],
