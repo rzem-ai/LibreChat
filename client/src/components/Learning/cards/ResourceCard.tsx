@@ -30,7 +30,12 @@ export function ResourceCard({
   const Icon = GEL.Icon[icon];
 
   return (
-    <GEL.Card className={cn('relative gap-2 transition-shadow hover:shadow-md')}>
+    <GEL.Card
+      className={cn(
+        '[--border-accent:oklch(0.33 0 0)] dark:[--border-accent:oklch(0.33 0 0)]',
+        'relative gap-2 transition-all hover:border-[color:var(--border-accent)] hover:shadow-sm',
+      )}
+    >
       {externalHref ? (
         <a
           href={externalHref}

@@ -43,7 +43,7 @@ export default function Page(): JSX.Element {
 
   return (
     <>
-      <header className="flex items-start justify-between gap-4">
+      <header className="flex flex-col items-start justify-between gap-4 sm:flex-row">
         <div>
           <h1 className="text-3xl font-light tracking-tight">
             {localize('com_learning_academy_title')}
