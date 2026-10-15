@@ -32,7 +32,7 @@ export function ResourceCard({
   return (
     <GEL.Card
       className={cn(
-        '[--border-accent:oklch(0.33_0_0)] dark:[--border-accent:oklch(0.33_0_0)]',
+        '[--border-accent:oklch(0.75_0_0)] dark:[--border-accent:oklch(0.55_0_0)]',
         'relative gap-2 transition-all hover:border-[color:var(--border-accent)] hover:shadow-sm',
       )}
     >
