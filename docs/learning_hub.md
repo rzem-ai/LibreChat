@@ -8,10 +8,10 @@ The Learning Hub is currently a **static frontend implementation**. It does not 
 
 The main files are:
 
-- `client/src/components/Learning/courses.ts` — course catalog
-- `client/src/components/Learning/LearningPanel.tsx` — renders the course list in the sidebar
-- `client/src/components/Learning/Courses/useGettingStartedTour.ts` — step-by-step content and ordering for the current guided tour
-- `client/src/components/Learning/LearningTourContext.tsx` — starts the tour and tracks in-session completion UI state
+- `client/src/components/Learn/courses.ts` — course catalog
+- `client/src/components/Learn/LearningPanel.tsx` — renders the course list in the sidebar
+- `client/src/components/Learn/Courses/useGettingStartedTour.ts` — step-by-step content and ordering for the current guided tour
+- `client/src/components/Learn/LearningTourContext.tsx` — starts the tour and tracks in-session completion UI state
 - `client/src/locales/en/translation.json` — user-facing English strings used by the Learning Hub UI and tour
 - `librechat.yaml` → `interface.customDeloitteFeatureFlags.isTutorialEnabled` — deployment kill switch for the Learning Hub
 
@@ -19,7 +19,7 @@ The main files are:
 
 Add a new entry to the `COURSES` array in:
 
-- `client/src/components/Learning/courses.ts`
+- `client/src/components/Learn/courses.ts`
 
 Each course currently has:
 
@@ -76,7 +76,7 @@ The card shown in the Learning Hub sidebar comes from:
 
 The actual tour steps live in:
 
-- `client/src/components/Learning/Courses/useGettingStartedTour.ts`
+- `client/src/components/Learn/Courses/useGettingStartedTour.ts`
 
 That file defines:
 

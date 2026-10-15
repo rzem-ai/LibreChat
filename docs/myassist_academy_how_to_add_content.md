@@ -1,6 +1,6 @@
 # MyAssist Academy: how to add content
 
-All Academy content lives in `client/src/components/Learning/content/`. It is bundled at build time, so there is no backend or CMS. Add the file, then rebuild (or let `npm run frontend:dev` hot-reload).
+All Academy content lives in `client/src/components/Learn/content/`. It is bundled at build time, so there is no backend or CMS. Add the file, then rebuild (or let `npm run frontend:dev` hot-reload).
 
 | To add a... | Put it in | Then |
 |---|---|---|
@@ -105,7 +105,7 @@ Add an object to `resources.json`. `type` decides what a click does:
 The content tests validate the files above (valid frontmatter, every article `id` has an MDX file, one Getting Started tour, unique tour ids):
 
 ```
-cd client && npx jest src/components/Learning/content
+cd client && npx jest src/components/Learn/content
 ```
 
 Bad frontmatter or a malformed JSON entry also throws when the Academy loads, because every file is parsed with zod (`content/schema.ts`).

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Button, OGDialog, OGDialogTemplate, Textarea, useToastContext } from '@librechat/client';
 import { MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH } from 'librechat-data-provider';
+import { Button, OGDialog, OGDialogTemplate, Textarea, useToastContext } from '@librechat/client';
+import { useUpdateTutorialStateMutation } from '~/data-provider';
 import { useLearningTour } from './LearningTourContext';
 import RatingStars from './RatingStars';
-import { useUpdateTutorialStateMutation } from '~/data-provider';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 

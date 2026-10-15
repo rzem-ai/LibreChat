@@ -47,17 +47,17 @@ const loadInsightsView = () =>
   }));
 
 const loadAcademyLayout = () =>
-  import('~/components/Learning/Academy').then((m) => ({
+  import('~/components/Learn/Academy').then((m) => ({
     Component: m.AcademyLayout,
   }));
 
 const loadAcademyPage = () =>
-  import('~/components/Learning/Academy').then((m) => ({
+  import('~/components/Learn/Academy').then((m) => ({
     Component: m.AcademyPage,
   }));
 
 const loadAcademyArticle = () =>
-  import('~/components/Learning/Academy').then((m) => ({
+  import('~/components/Learn/Academy').then((m) => ({
     Component: m.AcademyArticle,
   }));
 
