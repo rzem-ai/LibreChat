@@ -20,6 +20,10 @@ const learningIconAnchor = {
   getBoundingClientRect: (): DOMRect => getLearningIcon()?.getBoundingClientRect() ?? EMPTY_RECT,
 };
 
+function getHiddenLayout(): string {
+  return '';
+}
+
 function subscribeToResize(onChange: () => void): () => void {
   window.addEventListener('resize', onChange);
   return () => window.removeEventListener('resize', onChange);
@@ -119,11 +123,14 @@ export default function TutorialPromptModal({
     return () => window.clearTimeout(timer);
   }, [isVisible, isSmallScreen, sidebarExpanded, setSidebarExpanded]);
 
-  // Measured during render (and re-read on resize) so the overlays paint at the
+  // Measured during render only while the prompt shows (and re-read on resize) so the overlays paint at the
   // real sidebar width instead of shifting from a default after mount. The icon
   // rect carves a clip-path hole in the sidebar overlay so clicks reach the icon
   // (Decision D1).
-  const overlayLayout = useSyncExternalStore(subscribeToResize, getOverlayLayout);
+  const overlayLayout = useSyncExternalStore(
+    subscribeToResize,
+    canRenderPrompt ? getOverlayLayout : getHiddenLayout,
+  );
   const [sidebarWidth, iconLeft, iconTop, iconWidth, iconHeight] = overlayLayout
     .split(',')
     .map(Number);
