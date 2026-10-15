@@ -49,7 +49,7 @@ function MCPServerTooltipCard({ server }: { server: MCPServerDefinition }) {
   return (
     <div>
       <div className="flex flex-col gap-4 border-b border-border p-6">
-        <div className="flex h-8 items-center gap-2">
+        <div className="flex items-start gap-2">
           {hasConfiguredIcon(server.config ?? {}) ? (
             <MCPServerIcon
               iconPath={server.config?.iconPath}
@@ -63,9 +63,13 @@ function MCPServerTooltipCard({ server }: { server: MCPServerDefinition }) {
               <MCPIcon className="size-5 text-text-secondary" aria-hidden="true" />
             </div>
           )}
-          <div className="flex flex-col justify-center gap-1">
-            <p className="text-xs text-muted-foreground">{localize('com_ui_connector')}</p>
-            <p className="text-base font-semibold text-card-foreground">{displayName}</p>
+          <div className="flex h-8 min-w-0 flex-col justify-between">
+            <p className="text-xs leading-none text-muted-foreground">
+              {localize('com_ui_connector')}
+            </p>
+            <p className="text-base font-semibold leading-none text-card-foreground">
+              {displayName}
+            </p>
           </div>
         </div>
         {limitedAccess && (
