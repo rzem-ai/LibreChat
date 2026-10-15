@@ -202,3 +202,90 @@ export function getAgentRetentionWarningHours(
 
   return configValue;
 }
+
+/**
+ * Default independent memory-retention period in hours (90 days), used when
+ * `memoryRetentionHours` is unset. Like agents/skills, memories have no "inherit from
+ * conversation" fallback state, so this always resolves to a concrete number.
+ */
+export const DEFAULT_MEMORY_RETENTION_HOURS: number = 24 * 90; // 90 days
+
+/**
+ * Resolves the independent memory-retention period from config. Always returns a
+ * usable number, defaulting to {@link DEFAULT_MEMORY_RETENTION_HOURS}.
+ */
+export function getMemoryRetentionHours(
+  interfaceConfig?: AppConfig['interfaceConfig'] | null,
+): number {
+  const configValue = interfaceConfig?.memoryRetentionHours;
+  if (configValue === undefined) {
+    return DEFAULT_MEMORY_RETENTION_HOURS;
+  }
+
+  if (typeof configValue !== 'number' || isNaN(configValue)) {
+    logger.warn(
+      `Invalid memoryRetentionHours in config: ${configValue}. Using default: ${DEFAULT_MEMORY_RETENTION_HOURS} hours.`,
+    );
+    return DEFAULT_MEMORY_RETENTION_HOURS;
+  }
+
+  if (configValue < MIN_RETENTION_HOURS) {
+    logger.warn(
+      `Memory retention period ${configValue} is below minimum ${MIN_RETENTION_HOURS} hours. Using minimum value.`,
+    );
+    return MIN_RETENTION_HOURS;
+  }
+
+  if (configValue > MAX_RETENTION_HOURS) {
+    logger.warn(
+      `Memory retention period ${configValue} exceeds maximum ${MAX_RETENTION_HOURS} hours. Using maximum value.`,
+    );
+    return MAX_RETENTION_HOURS;
+  }
+
+  return configValue;
+}
+
+/**
+ * Default independent agent-file-retention period in hours (90 days), used when
+ * `agentFileRetentionHours` is unset. Kept as its own constant/lever (separate from
+ * {@link DEFAULT_AGENT_RETENTION_HOURS}) so the agent-attached-file clock and the owning
+ * agent document's clock can be tuned independently.
+ */
+export const DEFAULT_AGENT_FILE_RETENTION_HOURS: number = 24 * 90; // 90 days
+
+/**
+ * Resolves the independent agent-file-retention period from config. Always returns a
+ * usable number, defaulting to {@link DEFAULT_AGENT_FILE_RETENTION_HOURS}.
+ */
+export function getAgentFileRetentionHours(
+  interfaceConfig?: AppConfig['interfaceConfig'] | null,
+): number {
+  const configValue = interfaceConfig?.agentFileRetentionHours;
+  if (configValue === undefined) {
+    return DEFAULT_AGENT_FILE_RETENTION_HOURS;
+  }
+
+  if (typeof configValue !== 'number' || isNaN(configValue)) {
+    logger.warn(
+      `Invalid agentFileRetentionHours in config: ${configValue}. Using default: ${DEFAULT_AGENT_FILE_RETENTION_HOURS} hours.`,
+    );
+    return DEFAULT_AGENT_FILE_RETENTION_HOURS;
+  }
+
+  if (configValue < MIN_RETENTION_HOURS) {
+    logger.warn(
+      `Agent file retention period ${configValue} is below minimum ${MIN_RETENTION_HOURS} hours. Using minimum value.`,
+    );
+    return MIN_RETENTION_HOURS;
+  }
+
+  if (configValue > MAX_RETENTION_HOURS) {
+    logger.warn(
+      `Agent file retention period ${configValue} exceeds maximum ${MAX_RETENTION_HOURS} hours. Using maximum value.`,
+    );
+    return MAX_RETENTION_HOURS;
+  }
+
+  return configValue;
+}

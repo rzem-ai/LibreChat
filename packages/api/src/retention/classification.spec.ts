@@ -2,8 +2,10 @@ import type { IAclEntry } from '@librechat/data-schemas';
 import {
   classifyAgentPurgeEligibility,
   classifySkillPurgeEligibility,
+  classifyMemoryPurgeEligibility,
   type AgentRetentionCandidate,
   type SkillRetentionCandidate,
+  type MemoryRetentionCandidate,
 } from './classification';
 
 function fakeEntry(resourceId: string): IAclEntry {
@@ -89,5 +91,18 @@ describe('classifySkillPurgeEligibility', () => {
   it('regression: an inline skill is purge-eligible regardless of ACL/sharing state, since no ACL lookup is performed', async () => {
     const eligible = await classifySkillPurgeEligibility([skillCandidate()]);
     expect(eligible.has('skill-1')).toBe(true);
+  });
+});
+
+describe('classifyMemoryPurgeEligibility', () => {
+  it('is the identity map: every claimed candidate is eligible, since Memory has no promotion, sync, sharing, or exemption to exclude on', async () => {
+    const candidates: MemoryRetentionCandidate[] = [
+      { resourceId: 'memory-1' },
+      { resourceId: 'memory-2' },
+    ];
+    const eligible = await classifyMemoryPurgeEligibility(candidates);
+    expect(eligible.has('memory-1')).toBe(true);
+    expect(eligible.has('memory-2')).toBe(true);
+    expect(eligible.size).toBe(2);
   });
 });

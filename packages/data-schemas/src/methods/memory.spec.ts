@@ -278,6 +278,7 @@ describe('memory partitions', () => {
       withoutKeys: '',
       totalTokens: 0,
       tokenCountsByKey: new Map(),
+      memoryIds: [],
     });
   });
 
@@ -292,5 +293,191 @@ describe('memory partitions', () => {
     const deleted = await methods.deleteAllUserMemories(userId);
     expect(deleted).toBe(2);
     expect(await MemoryEntry.countDocuments({ userId: otherUserId })).toBe(1);
+  });
+});
+
+describe('memory retention stamping', () => {
+  it('stamps lastActivityAt/expiredAt on createMemory, setMemory, and setMemoryById when retentionHours is provided', async () => {
+    const before = Date.now();
+
+    await methods.createMemory({ userId, key: 'key_one', value: 'v1' }, { retentionHours: 24 });
+    const created = await MemoryEntry.findOne({ userId, key: 'key_one' }).lean();
+    expect(created?.lastActivityAt).toBeInstanceOf(Date);
+    expect(created?.expiredAt?.getTime()).toBeGreaterThan(before + 23 * 60 * 60 * 1000);
+
+    await methods.setMemory({ userId, key: 'key_two', value: 'v2' }, { retentionHours: 48 });
+    const set = await MemoryEntry.findOne({ userId, key: 'key_two' }).lean();
+    expect(set?.expiredAt?.getTime()).toBeGreaterThan(before + 47 * 60 * 60 * 1000);
+
+    await methods.setMemoryById(
+      { userId, id: set!._id.toString(), value: 'v2-updated' },
+      { retentionHours: 72 },
+    );
+    const updated = await MemoryEntry.findById(set!._id).lean();
+    expect(updated?.expiredAt?.getTime()).toBeGreaterThan(before + 71 * 60 * 60 * 1000);
+  });
+
+  it('leaves lastActivityAt/expiredAt unset when retentionHours is omitted', async () => {
+    await methods.createMemory({ userId, key: 'no_retention', value: 'v1' });
+    const doc = await MemoryEntry.findOne({ userId, key: 'no_retention' }).lean();
+    expect(doc?.lastActivityAt).toBeUndefined();
+    expect(doc?.expiredAt).toBeUndefined();
+  });
+});
+
+describe('memory purge-sweep claim/release/confirm/touch', () => {
+  it('claims only expired, unclaimed memories and stamps a claim lease', async () => {
+    const now = new Date();
+    const expired = await MemoryEntry.create({
+      userId,
+      key: 'expired',
+      value: 'v',
+      expiredAt: new Date(now.getTime() - 1000),
+    });
+    await MemoryEntry.create({
+      userId,
+      key: 'not_expired',
+      value: 'v',
+      expiredAt: new Date(now.getTime() + 60 * 60 * 1000),
+    });
+
+    const claimed = await methods.claimExpiredMemories(10, { leaseMs: 10 * 60 * 1000, now });
+    expect(claimed).toHaveLength(1);
+    expect(claimed[0].resourceId).toBe(expired._id.toString());
+    expect(claimed[0].purgeAttempts).toBe(1);
+
+    const reclaimAttempt = await methods.claimExpiredMemories(10, { leaseMs: 10 * 60 * 1000, now });
+    expect(reclaimAttempt).toHaveLength(0);
+  });
+
+  it('reclaims a memory once its lease has expired', async () => {
+    const now = new Date();
+    const expired = await MemoryEntry.create({
+      userId,
+      key: 'expired_lease',
+      value: 'v',
+      expiredAt: new Date(now.getTime() - 1000),
+      purgeClaimId: 'stale_claim',
+      purgeClaimedAt: new Date(now.getTime() - 20 * 60 * 1000),
+      purgeAttempts: 1,
+    });
+
+    const claimed = await methods.claimExpiredMemories(10, { leaseMs: 10 * 60 * 1000, now });
+    expect(claimed).toHaveLength(1);
+    expect(claimed[0].resourceId).toBe(expired._id.toString());
+    expect(claimed[0].purgeAttempts).toBe(2);
+    expect(claimed[0].purgeClaimId).not.toBe('stale_claim');
+  });
+
+  it('releases a claim on success by clearing claim fields', async () => {
+    const doc = await MemoryEntry.create({
+      userId,
+      key: 'release_success',
+      value: 'v',
+      expiredAt: new Date(Date.now() - 1000),
+      purgeClaimId: 'claim-1',
+      purgeClaimedAt: new Date(),
+    });
+
+    await methods.releaseMemoryPurgeClaim(doc._id, { success: true, purgeClaimId: 'claim-1' });
+
+    const after = await MemoryEntry.findById(doc._id).lean();
+    expect(after?.purgeClaimId).toBeUndefined();
+    expect(after?.purgeClaimedAt).toBeUndefined();
+  });
+
+  it('on failure, parks the row behind purgeNotBefore, and a release with a stale claim token is a no-op', async () => {
+    const doc = await MemoryEntry.create({
+      userId,
+      key: 'release_failure',
+      value: 'v',
+      expiredAt: new Date(Date.now() - 1000),
+      purgeClaimId: 'claim-1',
+      purgeClaimedAt: new Date(),
+    });
+
+    await methods.releaseMemoryPurgeClaim(doc._id, {
+      success: false,
+      retryDelayMs: 60_000,
+      purgeClaimId: 'wrong_claim',
+    });
+    let after = await MemoryEntry.findById(doc._id).lean();
+    expect(after?.purgeClaimId).toBe('claim-1');
+    expect(after?.purgeNotBefore).toBeUndefined();
+
+    await methods.releaseMemoryPurgeClaim(doc._id, {
+      success: false,
+      retryDelayMs: 60_000,
+      purgeClaimId: 'claim-1',
+    });
+    after = await MemoryEntry.findById(doc._id).lean();
+    expect(after?.purgeClaimId).toBeUndefined();
+    expect(after?.purgeNotBefore).toBeInstanceOf(Date);
+  });
+
+  it('confirms eligibility only for the matching claim token', async () => {
+    const now = new Date();
+    const doc = await MemoryEntry.create({
+      userId,
+      key: 'confirm_eligible',
+      value: 'v',
+      expiredAt: new Date(now.getTime() - 1000),
+      purgeClaimId: 'claim-1',
+    });
+
+    await expect(
+      methods.confirmMemoryPurgeEligible(doc._id.toString(), 'wrong_claim', now),
+    ).resolves.toBeNull();
+
+    const confirmed = await methods.confirmMemoryPurgeEligible(doc._id.toString(), 'claim-1', now);
+    expect(confirmed?._id.toString()).toBe(doc._id.toString());
+  });
+
+  it('aborts confirmation once expiredAt has been pushed into the future (e.g. renewed use after the claim)', async () => {
+    const now = new Date();
+    const doc = await MemoryEntry.create({
+      userId,
+      key: 'confirm_renewed',
+      value: 'v',
+      expiredAt: new Date(now.getTime() + 60 * 60 * 1000),
+      purgeClaimId: 'claim-1',
+    });
+
+    await expect(
+      methods.confirmMemoryPurgeEligible(doc._id.toString(), 'claim-1', now),
+    ).resolves.toBeNull();
+  });
+
+  it('touches lastActivityAt/expiredAt for memories outside the throttle window, and skips those inside it', async () => {
+    const now = Date.now();
+    const stale = await MemoryEntry.create({
+      userId,
+      key: 'touch_stale',
+      value: 'v',
+      lastActivityAt: new Date(now - 2 * 60 * 60 * 1000),
+    });
+    const recent = await MemoryEntry.create({
+      userId,
+      key: 'touch_recent',
+      value: 'v',
+      lastActivityAt: new Date(now - 60 * 1000),
+    });
+    const neverTouched = await MemoryEntry.create({ userId, key: 'touch_never', value: 'v' });
+
+    await methods.touchMemoriesLastActivity(
+      [stale._id, recent._id, neverTouched._id],
+      24,
+      60 * 60 * 1000,
+    );
+
+    const [staleAfter, recentAfter, neverTouchedAfter] = await Promise.all([
+      MemoryEntry.findById(stale._id).lean(),
+      MemoryEntry.findById(recent._id).lean(),
+      MemoryEntry.findById(neverTouched._id).lean(),
+    ]);
+
+    expect(staleAfter?.expiredAt).toBeInstanceOf(Date);
+    expect(recentAfter?.expiredAt).toBeUndefined();
+    expect(neverTouchedAfter?.expiredAt).toBeInstanceOf(Date);
   });
 });

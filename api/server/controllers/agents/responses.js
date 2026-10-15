@@ -1074,6 +1074,7 @@ const executeResponse = async (envelope, { req, res }) => {
             userId: principal.userId,
             memoryAvailable,
             getFormattedMemories: db.getFormattedMemories,
+            touchMemoriesLastActivity: db.touchMemoriesLastActivity,
           });
           return applyContextToAgent({
             agent: runAgent,

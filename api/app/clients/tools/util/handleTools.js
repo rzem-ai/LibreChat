@@ -70,7 +70,13 @@ const { getUserPluginAuthValue } = require('~/server/services/PluginService');
 const { loadAuthValues } = require('~/server/services/Tools/credentials');
 const { getMCPServerTools, checkCapability } = require('~/server/services/Config');
 const { getMCPServersRegistry } = require('~/config');
-const { getRoleByName, setMemory, deleteMemory, getFormattedMemories } = require('~/models');
+const {
+  getRoleByName,
+  setMemory,
+  deleteMemory,
+  getFormattedMemories,
+  touchMemoriesLastActivity,
+} = require('~/models');
 
 /**
  * Validates the availability and authentication of tools for a user based on environment variables or user-specific plugin authentication values.
@@ -490,7 +496,12 @@ const loadTools = async ({
           req: options.req,
           agent,
           userId: user,
-          memoryMethods: { setMemory, deleteMemory, getFormattedMemories },
+          memoryMethods: {
+            setMemory,
+            deleteMemory,
+            getFormattedMemories,
+            touchMemoriesLastActivity,
+          },
           getRoleByName,
         });
       continue;

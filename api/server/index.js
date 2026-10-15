@@ -81,6 +81,7 @@ const { startExpiredFileSweep } = require('./services/Files/process');
 const { startConversationPurgeSweep } = require('./services/Retention/purgeWorker');
 const { startAgentRetentionSweep } = require('./services/Retention/agentRetentionWorker');
 const { startSkillRetentionSweep } = require('./services/Retention/skillRetentionWorker');
+const { startMemoryRetentionSweep } = require('./services/Retention/memoryRetentionWorker');
 const { checkMigrations } = require('./services/start/migration');
 const optionalJwtAuth = require('./middleware/optionalJwtAuth');
 const initializeMCPs = require('./services/initializeMCPs');
@@ -264,6 +265,7 @@ const startServer = async () => {
   startConversationPurgeSweep({ appConfig, loadAppConfig: getAppConfig });
   startAgentRetentionSweep({ appConfig, loadAppConfig: getAppConfig });
   startSkillRetentionSweep({ appConfig, loadAppConfig: getAppConfig });
+  startMemoryRetentionSweep();
   // Register any programmatic tool-approval policy hooks declared in
   // `endpoints.agents.toolApproval.hooks`. Honor the `enabled` kill switch: when tool
   // approval is off we pass no hooks, so a disabled endpoint imports/runs nothing (and any

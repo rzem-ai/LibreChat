@@ -16,6 +16,11 @@ const DEFAULT_SKILL_PURGE_BATCH_SIZE = 200;
 const DEFAULT_SKILL_PURGE_MAX_ATTEMPTS = 10;
 const DEFAULT_SKILL_PURGE_CLAIM_LEASE_MS = 10 * 60 * 1000;
 
+const DEFAULT_MEMORY_PURGE_SWEEP_INTERVAL_MS = 60 * 60 * 1000;
+const DEFAULT_MEMORY_PURGE_BATCH_SIZE = 200;
+const DEFAULT_MEMORY_PURGE_MAX_ATTEMPTS = 10;
+const DEFAULT_MEMORY_PURGE_CLAIM_LEASE_MS = 10 * 60 * 1000;
+
 /** Shared backoff bounds — identical ladder shape for every purge-sweep resource type. */
 const MIN_PURGE_RETRY_BASE_MS = 60 * 1000;
 const PURGE_RETRY_MAX_MS = 24 * 60 * 60 * 1000;
@@ -236,6 +241,30 @@ export function getSkillPurgeClaimLeaseMs(
   leaseMs: string | undefined = process.env.SKILL_PURGE_CLAIM_LEASE_MS,
 ): number {
   return resolveSweepIntervalMs(leaseMs, DEFAULT_SKILL_PURGE_CLAIM_LEASE_MS);
+}
+
+export function getMemoryPurgeSweepInterval(
+  interval: string | undefined = process.env.MEMORY_PURGE_SWEEP_INTERVAL_MS,
+): number {
+  return resolveSweepIntervalMs(interval, DEFAULT_MEMORY_PURGE_SWEEP_INTERVAL_MS);
+}
+
+export function getMemoryPurgeBatchSize(
+  batchSize: string | undefined = process.env.MEMORY_PURGE_BATCH_SIZE,
+): number {
+  return resolvePositiveInt(batchSize, DEFAULT_MEMORY_PURGE_BATCH_SIZE);
+}
+
+export function getMemoryPurgeMaxAttempts(
+  maxAttempts: string | undefined = process.env.MEMORY_PURGE_SWEEP_MAX_ATTEMPTS,
+): number {
+  return resolvePositiveInt(maxAttempts, DEFAULT_MEMORY_PURGE_MAX_ATTEMPTS);
+}
+
+export function getMemoryPurgeClaimLeaseMs(
+  leaseMs: string | undefined = process.env.MEMORY_PURGE_CLAIM_LEASE_MS,
+): number {
+  return resolveSweepIntervalMs(leaseMs, DEFAULT_MEMORY_PURGE_CLAIM_LEASE_MS);
 }
 
 /**

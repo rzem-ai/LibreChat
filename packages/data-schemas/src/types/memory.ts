@@ -10,6 +10,12 @@ export interface IMemoryEntry extends Document {
   tokenCount?: number;
   updated_at?: Date;
   tenantId?: string;
+  lastActivityAt?: Date;
+  expiredAt?: Date;
+  purgeClaimId?: string;
+  purgeClaimedAt?: Date;
+  purgeAttempts?: number;
+  purgeNotBefore?: Date;
 }
 
 export interface IMemoryEntryLean {
@@ -80,6 +86,7 @@ export type FormattedMemoriesResult =
       withoutKeys: string;
       totalTokens?: number;
       tokenCountsByKey?: Map<string, number>;
+      memoryIds?: Types.ObjectId[];
       readFailed?: false;
     }
   | {
@@ -87,5 +94,6 @@ export type FormattedMemoriesResult =
       withoutKeys: undefined;
       totalTokens?: number;
       tokenCountsByKey?: Map<string, number>;
+      memoryIds?: Types.ObjectId[];
       readFailed: true;
     };

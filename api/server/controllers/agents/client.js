@@ -3382,6 +3382,7 @@ class AgentClient extends BaseClient {
         deleteMemory: db.deleteMemory,
         getUserMemories: db.getUserMemories,
         getFormattedMemories: db.getFormattedMemories,
+        touchMemoriesLastActivity: db.touchMemoriesLastActivity,
       },
       req: this.options.req,
       res: this.options.res,

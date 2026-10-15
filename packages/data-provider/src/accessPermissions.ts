@@ -50,6 +50,7 @@ export enum ResourceType {
   REMOTE_AGENT = 'remoteAgent',
   SKILL = 'skill',
   SHARED_LINK = 'sharedLink',
+  MEMORY = 'memory',
 }
 
 /**

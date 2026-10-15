@@ -158,6 +158,7 @@ describe('Memory attachment generation fencing', () => {
           withoutKeys: '',
           totalTokens: 0,
         }),
+        touchMemoriesLastActivity: jest.fn(),
       },
     });
 
@@ -796,6 +797,7 @@ describe('memory token limit guidance', () => {
           totalTokens: 150,
           tokenCountsByKey: new Map([['preferences', 150]]),
         }),
+        touchMemoriesLastActivity: jest.fn(),
       },
     });
 
@@ -854,6 +856,7 @@ describe('buildInlineMemoryTool content filtering', () => {
         setMemory,
         deleteMemory: jest.fn(),
         getFormattedMemories: jest.fn(),
+        touchMemoriesLastActivity: jest.fn(),
       },
       getRoleByName: jest.fn(),
     });
@@ -867,6 +870,7 @@ describe('buildInlineMemoryTool content filtering', () => {
         key: 'preferences',
         value: 'Keep ORG-SECRET',
       }),
+      expect.objectContaining({ retentionHours: expect.any(Number) }),
     );
   });
 });
@@ -893,7 +897,12 @@ describe('buildInlineMemoryTool read failure', () => {
       req,
       agent: { tools: [AgentCapabilities.memory] },
       userId: 'user-1',
-      memoryMethods: { setMemory, deleteMemory: jest.fn(), getFormattedMemories },
+      memoryMethods: {
+        setMemory,
+        deleteMemory: jest.fn(),
+        getFormattedMemories,
+        touchMemoriesLastActivity: jest.fn(),
+      },
       getRoleByName: jest.fn(),
     });
 
@@ -1073,6 +1082,7 @@ describe('createMemoryProcessor read failure', () => {
         deleteMemory: jest.fn(),
         getUserMemories: jest.fn(),
         getFormattedMemories,
+        touchMemoriesLastActivity: jest.fn(),
       },
     });
     expect(result).toEqual([undefined, undefined]);
@@ -1285,6 +1295,7 @@ describe('memory model-bound content preflight', () => {
             withoutKeys: 'memory',
             totalTokens: 1,
           }),
+          touchMemoriesLastActivity: jest.fn(),
         },
       }),
     ).rejects.toThrow('database unavailable');

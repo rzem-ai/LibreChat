@@ -1,5 +1,5 @@
 const express = require('express');
-const { isValidMemoryKey } = require('@librechat/data-schemas');
+const { isValidMemoryKey, getMemoryRetentionHours } = require('@librechat/data-schemas');
 const {
   Tokenizer,
   generateCheckAccess,
@@ -237,13 +237,16 @@ router.post('/', createMemoryMiddleware, async (req, res) => {
       }
     }
 
-    const result = await createMemory({
-      userId: req.user.id,
-      key: key.trim(),
-      value: value.trim(),
-      tokenCount,
-      agentId,
-    });
+    const result = await createMemory(
+      {
+        userId: req.user.id,
+        key: key.trim(),
+        value: value.trim(),
+        tokenCount,
+        agentId,
+      },
+      { retentionHours: getMemoryRetentionHours(req.config?.interfaceConfig) },
+    );
 
     if (!result.ok) {
       return res.status(500).json({ error: 'Failed to create memory.' });
@@ -370,13 +373,16 @@ router.patch('/:key', updateMemoryMiddleware, async (req, res) => {
         return res.status(409).json({ error: 'Memory with this key already exists.' });
       }
 
-      const createResult = await createMemory({
-        userId: req.user.id,
-        key: newKey,
-        value,
-        tokenCount,
-        agentId,
-      });
+      const createResult = await createMemory(
+        {
+          userId: req.user.id,
+          key: newKey,
+          value,
+          tokenCount,
+          agentId,
+        },
+        { retentionHours: getMemoryRetentionHours(req.config?.interfaceConfig) },
+      );
 
       if (!createResult.ok) {
         return res.status(500).json({ error: 'Failed to create new memory.' });
@@ -387,13 +393,16 @@ router.patch('/:key', updateMemoryMiddleware, async (req, res) => {
         return res.status(500).json({ error: 'Failed to delete old memory.' });
       }
     } else {
-      const result = await setMemory({
-        userId: req.user.id,
-        key: newKey,
-        value,
-        tokenCount,
-        agentId,
-      });
+      const result = await setMemory(
+        {
+          userId: req.user.id,
+          key: newKey,
+          value,
+          tokenCount,
+          agentId,
+        },
+        { retentionHours: getMemoryRetentionHours(req.config?.interfaceConfig) },
+      );
 
       if (!result.ok) {
         return res.status(500).json({ error: 'Failed to update memory.' });

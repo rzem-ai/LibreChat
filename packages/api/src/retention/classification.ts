@@ -97,3 +97,23 @@ export async function classifySkillPurgeEligibility(
   }
   return eligibleIds;
 }
+
+export interface MemoryRetentionCandidate {
+  resourceId: Types.ObjectId | string;
+}
+
+/**
+ * Determines which claimed memories are still eligible for retention purge.
+ * Memory has no promotion, no sync source, no sharing, and (unlike agents/skills)
+ * no admin-controlled exemption lever — every claimed candidate is eligible by
+ * construction, since `claimExpiredMemories`'s eligibility filter and
+ * `confirmMemoryPurgeEligible`'s fence re-check already enforce expiry and claim
+ * ownership. Kept as a real function — not inlined away — so Memory satisfies the
+ * same `GenericPurgeSweepDeps.classify` contract every other resource type does, and
+ * so a future exclusion rule has an obvious home.
+ */
+export async function classifyMemoryPurgeEligibility(
+  candidates: MemoryRetentionCandidate[],
+): Promise<Set<string>> {
+  return new Set(candidates.map((candidate) => String(candidate.resourceId)));
+}
