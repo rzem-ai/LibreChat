@@ -9,6 +9,9 @@ let mockIsSmallScreen = false;
 
 jest.mock('@librechat/client', () => ({
   useMediaQuery: () => mockIsSmallScreen,
+  GEL: {
+    Header: ({ children }: { children: React.ReactNode }) => <header>{children}</header>,
+  },
 }));
 
 jest.mock('~/components/Chat/Menus/OpenSidebar', () => ({
