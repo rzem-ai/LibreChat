@@ -1774,7 +1774,7 @@ describe('refreshController – OpenID path', () => {
         openidIssuer: baseClaims.iss,
       }),
     );
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ token: 'shared-app-token' }));
+    expect(res.send).toHaveBeenCalledWith(expect.objectContaining({ token: 'shared-app-token' }));
     expect(res.status).toHaveBeenCalledWith(200);
   });
 
@@ -1803,7 +1803,7 @@ describe('refreshController – OpenID path', () => {
       ownerId: 'bridge-owner',
       deliveryId: 'delivery-1',
     });
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ token: 'new-app-token' }));
+    expect(res.send).toHaveBeenCalledWith(expect.objectContaining({ token: 'new-app-token' }));
     expect(releaseOpenIDRefreshFlightDelivery).toHaveBeenCalled();
   });
 
@@ -1827,7 +1827,7 @@ describe('refreshController – OpenID path', () => {
 
     expect(releaseOpenIDRefreshFlightDelivery).toHaveBeenCalled();
     expect(clearOpenIDAuthTokens).toHaveBeenCalled();
-    expect(res.json).not.toHaveBeenCalledWith(expect.objectContaining({ token: 'new-app-token' }));
+    expect(res.send).not.toHaveBeenCalledWith(expect.objectContaining({ token: 'new-app-token' }));
     expect(res.status).toHaveBeenCalledWith(403);
   });
 
@@ -1922,7 +1922,7 @@ describe('refreshController – OpenID path', () => {
       res,
       expect.any(Object),
     );
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ token: 'advanced-app-token' }));
+    expect(res.send).toHaveBeenCalledWith(expect.objectContaining({ token: 'advanced-app-token' }));
     expect(req.session.openidTokens).toEqual(
       expect.objectContaining({
         publicationFlightKey: 'advanced-publication-key',
