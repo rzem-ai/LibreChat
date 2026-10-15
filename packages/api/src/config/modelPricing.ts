@@ -12,10 +12,10 @@ import { collectCustomTokenConfigs } from '~/endpoints/tokenConfig';
  * custom endpoint in `librechat.yaml` (or the fetched-and-cached config for custom
  * endpoints without a static override), and the badge is an absolute 1-5 `$` tier derived
  * from each model's own blended price, with no reference model needed. `getModelPricing`
- * below always computes pricing for every model (not gated by any feature flag) since the
- * result feeds both the in-menu `$` chip and the model info tooltip's cost row; the chip's
- * visibility is gated client-side by `interface.customDeloitteFeatureFlags.showModelPricingIndicator`,
- * while the tooltip's cost row always shows when pricing data is present. The 4 breakpoints
+ * below computes pricing for every model; the result feeds both the in-menu `$` chip and the
+ * model info tooltip's cost row. The startup config route only calls it when
+ * `interface.customDeloitteFeatureFlags.showModelPricingIndicator` is enabled, so the model
+ * discovery behind it stays off the startup path otherwise. The 4 breakpoints
  * separating the 5 tiers are configurable via `customDeloitteFeatureFlags.modelPricingTierBreakpoints`
  * in `librechat.yaml`, falling back to `DEFAULT_PRICE_TIER_BREAKPOINTS` when unset.
  * `getModelPricing` resolves every model's rate through `buildTokenConfigMap` — the
@@ -45,8 +45,7 @@ function getPriceTier(blendedCost: number, breakpoints: number[]): number {
 /**
  * Flattens every configured model's resolved rate into the `{ inputPer1M, outputPer1M,
  * provider, tier, isHighCost }` shape, keyed by endpoint and model. Returns an empty map
- * only when no `modelsConfig` is available — unlike the in-menu `$` chip, this is not
- * gated by `showModelPricingIndicator`, since the model info tooltip needs this data too.
+ * only when no `modelsConfig` is available.
  */
 export async function getModelPricing(
   appConfig: AppConfig | undefined,

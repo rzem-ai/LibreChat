@@ -274,22 +274,25 @@ router.get('/', async function (req, res) {
     // Deloitte Custom Change: model pricing (incl. the 1-5 price tier) is derived
     // the same way as billing — custom endpoints use their configured `tokenConfig`,
     // everything else (built-in OpenAI/Anthropic/Google/Bedrock) falls back to the
-    // built-in token-value tables. Always computed (not gated by
-    // `showModelPricingIndicator`) since the model info tooltip's cost row needs this
-    // data regardless of whether the in-menu `$` chip is enabled; the chip's own
-    // visibility is gated client-side off `interface.customDeloitteFeatureFlags.showModelPricingIndicator`.
+    // built-in token-value tables. Gated by `showModelPricingIndicator` so the
+    // model discovery behind it stays off the startup path unless pricing is shown
+    // (the chip and the model info tooltip's cost row both read this data).
+    const showModelPricingIndicator =
+      appConfig?.interfaceConfig?.customDeloitteFeatureFlags?.showModelPricingIndicator === true;
     let modelPricing = {};
-    try {
-      const modelsConfig = await getModelsConfig({ user: req.user, config: appConfig });
-      modelPricing = await getModelPricing(
-        appConfig,
-        req.user.id ?? req.user._id?.toString(),
-        req.user.tenantId,
-        modelsConfig,
-        { getValueKey, getMultiplier, getCacheMultiplier },
-      );
-    } catch {
-      logger.warn('[config] Model pricing resolution failed');
+    if (showModelPricingIndicator) {
+      try {
+        const modelsConfig = await getModelsConfig({ user: req.user, config: appConfig });
+        modelPricing = await getModelPricing(
+          appConfig,
+          req.user.id ?? req.user._id?.toString(),
+          req.user.tenantId,
+          modelsConfig,
+          { getValueKey, getMultiplier, getCacheMultiplier },
+        );
+      } catch {
+        logger.warn('[config] Model pricing resolution failed');
+      }
     }
 
     if (langfuseConnectionAvailable) {

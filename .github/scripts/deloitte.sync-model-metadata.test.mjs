@@ -3,7 +3,12 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { tierFromRange, run, patchListRegion } from './deloitte.sync-model-metadata.mjs';
+import {
+  tierFromRange,
+  resolveCatalogEntry,
+  run,
+  patchListRegion,
+} from './deloitte.sync-model-metadata.mjs';
 
 test('tierFromRange', async (t) => {
   await t.test('returns a neutral tier when min equals max', () => {
@@ -19,6 +24,31 @@ test('tierFromRange', async (t) => {
   await t.test('inverts for lower-is-better metrics', () => {
     assert.equal(tierFromRange(0, 0, 100, true), 5);
     assert.equal(tierFromRange(100, 0, 100, true), 1);
+  });
+});
+
+test('resolveCatalogEntry', async (t) => {
+  const full = { intelligenceIndex: 40, medianResponseSeconds: 10 };
+  const medium = { intelligenceIndex: 30, medianResponseSeconds: 5 };
+
+  await t.test('prefers the medium-effort variant when present', () => {
+    const catalog = new Map([
+      ['model-x', full],
+      ['model-x-medium', medium],
+    ]);
+    assert.deepEqual(resolveCatalogEntry(catalog, 'model-x'), {
+      slug: 'model-x-medium',
+      entry: medium,
+    });
+  });
+
+  await t.test('falls back to the configured slug without a usable medium variant', () => {
+    const catalog = new Map([
+      ['model-x', full],
+      ['model-x-medium', { intelligenceIndex: 30, medianResponseSeconds: null }],
+    ]);
+    assert.deepEqual(resolveCatalogEntry(catalog, 'model-x'), { slug: 'model-x', entry: full });
+    assert.equal(resolveCatalogEntry(new Map(), 'missing').entry, undefined);
   });
 });
 
@@ -96,7 +126,9 @@ endpoints:
 
   await t.test('updates only matched specs, with the expected relative tiers', () => {
     assert.deepEqual(
-      updated.sort((a, b) => a.index - b.index),
+      updated
+        .sort((a, b) => a.index - b.index)
+        .map(({ index, speed, intelligence }) => ({ index, speed, intelligence })),
       [
         { index: 0, speed: 1, intelligence: 1 },
         { index: 3, speed: 5, intelligence: 5 },

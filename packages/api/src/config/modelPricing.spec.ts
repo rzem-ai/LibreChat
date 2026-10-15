@@ -55,7 +55,7 @@ function buildAppConfig(
 describe('getModelPricing', () => {
   beforeEach(() => mockCacheGet.mockReset().mockResolvedValue(null));
 
-  it('computes pricing regardless of the showModelPricingIndicator flag, since it only gates the in-menu chip', async () => {
+  it('does not read the showModelPricingIndicator flag itself; the config route decides whether to call it', async () => {
     expect(
       await getModelPricing(
         { endpoints: {} } as unknown as AppConfig,

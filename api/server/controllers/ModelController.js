@@ -1,6 +1,7 @@
 const { logger } = require('@librechat/data-schemas');
-const { createGetModelsConfig, invalidateModelsConfig } = require('@librechat/api');
 const { loadDefaultModels, loadConfigModels } = require('~/server/services/Config');
+
+const getModelsConfig = (req) => loadModels(req);
 
 async function loadModels(req) {
   const [defaultModelsConfig, customModelsConfig] = await Promise.all([
@@ -10,14 +11,9 @@ async function loadModels(req) {
   return { ...defaultModelsConfig, ...customModelsConfig };
 }
 
-// Deloitte Custom Change: cached (2-min TTL, per tenant/user) so the startup-config,
-// `/api/models`, and `/endpoints/token-config` routes hit on the same page load share one
-// resolved result instead of each re-running provider discovery and user-key lookups.
-const getModelsConfig = createGetModelsConfig({ loadDefaultModels, loadConfigModels });
-
 async function modelController(req, res) {
   try {
-    const modelConfig = await getModelsConfig(req);
+    const modelConfig = await loadModels(req);
     res.send(modelConfig);
   } catch (error) {
     logger.error('Error fetching models:', error);
@@ -25,4 +21,4 @@ async function modelController(req, res) {
   }
 }
 
-module.exports = { modelController, loadModels, getModelsConfig, invalidateModelsConfig };
+module.exports = { modelController, loadModels, getModelsConfig };
