@@ -3584,6 +3584,8 @@ const sharedOpenAIModels = [
 const sharedAnthropicModels = [
   'claude-fable-5-1',
   'claude-fable-5',
+  // Deloitte Custom Change: Claude Haiku 5.5 gateway model.
+  'claude-haiku-5-5',
   'claude-opus-5-5',
   'claude-opus-5',
   'claude-sonnet-5-5',
@@ -3622,6 +3624,8 @@ const sharedAnthropicModels = [
 export const bedrockModels = [
   'global.anthropic.claude-fable-5-1',
   'global.anthropic.claude-fable-5',
+  // Deloitte Custom Change: Claude Haiku 5.5 gateway model (Bedrock global profile).
+  'global.anthropic.claude-haiku-5-5',
   'global.anthropic.claude-opus-5-5',
   'global.anthropic.claude-opus-5',
   'global.anthropic.claude-sonnet-5-5',
