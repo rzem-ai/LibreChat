@@ -207,7 +207,7 @@ Once scope is clear and feasibility is validated, immediately present:
      - Parallel skills that converge: `ParallelLayout`
      - Standalone agent with no discrete skills: `AgentOnlyLayout`
      - One Agent hands a defined result to another Agent: `HandoffLayout`
-   - Adapt only the selected layout's labels, sublabels, node positions, edge paths, output `formatLabel` values, title, and container labels.
+   - Adapt the selected layout's node count and presence, labels, sublabels, mapped icons, node positions, edge paths, output `formatLabel` values, title, and container labels. Preserve the shared Node implementation, palette, typography, marker definitions, and canvas dimensions.
    - Update the default export so the selected layout is what the artifact renders.
    - If the React artifact cannot be generated, explicitly say that the diagram could not be rendered.
 
