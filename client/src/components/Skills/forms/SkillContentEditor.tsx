@@ -64,7 +64,7 @@ const SkillContentEditor: React.FC<SkillContentEditorProps> = ({
           !readOnly && !isEditing && 'cursor-pointer hover:bg-surface-tertiary',
         )}
       >
-        {/* Deloitte Custom Change: These guards only hide editing controls for viewers; editor behavior is unchanged. */}
+        {/* Deloitte Custom Change: In viewer mode, hide all body-editor entry controls and edit affordances. */}
         {!readOnly && (
           <div className="absolute right-2 top-2 z-10">
             <TooltipAnchor

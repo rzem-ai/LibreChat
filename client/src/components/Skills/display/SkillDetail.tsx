@@ -61,6 +61,7 @@ export default function SkillDetail({ skill, onEdit, onDelete }: SkillDetailProp
                 }
               />
             )}
+            {/* Deloitte Custom Change: Show the always-apply indicator in the active SkillDetail header. */}
             {skill.alwaysApply === true && (
               <TooltipAnchor
                 description={localize('com_ui_skills_always_apply_pin_title')}
