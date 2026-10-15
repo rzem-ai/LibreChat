@@ -287,25 +287,25 @@ LibreChat configuration includes:
 
 ### Claude model availability
 
-The local development gateway configuration and curated model selector enable the following models. Claude 5.5 models are currently provisioned only in CTNP/development.
+The gateway configuration and curated model selector enable the following models. Claude 5.5 models are provisioned in all environments (development, UAT and production).
 
 ```dotenv
 ANTHROPIC_MODELS=claude-haiku-4-5,claude-haiku-5-5,claude-sonnet-4-6,claude-sonnet-5,claude-sonnet-5-5,claude-opus-4-6,claude-opus-4-8,claude-opus-5-5
 BEDROCK_AWS_MODELS=au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0,au.anthropic.claude-haiku-5-5,au.anthropic.claude-sonnet-5-5,au.anthropic.claude-opus-5-5
 ```
 
-| Model             | Global gateway        | Australian regional Bedrock |
-| ----------------- | --------------------- | --------------------------- |
-| Claude Haiku 4.5  | Yes                   | Yes                         |
-| Claude Haiku 5.5  | CTNP/development only | CTNP/development only       |
-| Claude Sonnet 4.6 | Yes                   | Yes                         |
-| Claude Sonnet 5   | Yes                   | No                          |
-| Claude Sonnet 5.5 | CTNP/development only | CTNP/development only       |
-| Claude Opus 4.6   | Yes                   | No                          |
-| Claude Opus 4.8   | Yes                   | No                          |
-| Claude Opus 5.5   | CTNP/development only | CTNP/development only       |
+| Model             | Global gateway | Australian regional Bedrock |
+| ----------------- | -------------- | --------------------------- |
+| Claude Haiku 4.5  | Yes            | Yes                         |
+| Claude Haiku 5.5  | Yes            | Yes                         |
+| Claude Sonnet 4.6 | Yes            | Yes                         |
+| Claude Sonnet 5   | Yes            | No                          |
+| Claude Sonnet 5.5 | Yes            | Yes                         |
+| Claude Opus 4.6   | Yes            | No                          |
+| Claude Opus 4.8   | Yes            | No                          |
+| Claude Opus 5.5   | Yes            | Yes                         |
 
-Australian regional models are accessed through the Bedrock endpoint. Use an Australian regional model when the workload must remain in Australia. UAT and production retain their existing allowlists until the Claude 5.5 models are provisioned in those environments.
+Australian regional models are accessed through the Bedrock endpoint. Use an Australian regional model when the workload must remain in Australia.
 
 There is now **one source of truth** for LibreChat config:
 

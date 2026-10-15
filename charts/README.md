@@ -12,7 +12,7 @@ The Helm chart uses three values files:
 
 ### Model availability
 
-`ANTHROPIC_MODELS` and `BEDROCK_AWS_MODELS` define the models provisioned for each deployment environment. Claude Haiku 5.5, Claude Sonnet 5.5, and Claude Opus 5.5 are currently enabled only in CTNP/development; do not add them to UAT or production until the LLM Gateway provisions them there.
+`ANTHROPIC_MODELS` and `BEDROCK_AWS_MODELS` define the models provisioned for each deployment environment. Claude Haiku 5.5, Claude Sonnet 5.5, and Claude Opus 5.5 are enabled in all environments (development, UAT and production).
 
 ### 📋 Example Usage
 
