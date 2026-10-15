@@ -3,6 +3,7 @@
  * supports the Deloitte Skill scanner (see `packages/api/src/skills/scanner.ts`).
  */
 import { SKILL_SEVERITY_LEVELS } from 'librechat-data-provider';
+import type { TSkillSummary } from 'librechat-data-provider';
 
 export interface SkillScanIssue {
   code?: string;
@@ -84,4 +85,44 @@ export function formatSkillScanError(error: unknown, fallback: string): string {
   }
 
   return errData?.message ?? errData?.error ?? fallback;
+}
+
+/** A missing value preserves manual invocation for skills created before the field existed. */
+export function isUserInvocable(skill: TSkillSummary): boolean {
+  return skill.userInvocable !== false;
+}
+
+/**
+ * Narrows skills to the current chat scope and excludes model-only skills.
+ * A non-empty agent scope is an explicit builder allowlist; an empty scope
+ * explicitly opts the agent out of skills.
+ */
+export function filterSkillsByScope(
+  skills: TSkillSummary[],
+  agentSkillIds: string[] | null | undefined,
+): TSkillSummary[] {
+  if (agentSkillIds != null && agentSkillIds.length === 0) {
+    return [];
+  }
+
+  const agentSet =
+    agentSkillIds != null && agentSkillIds.length > 0 ? new Set(agentSkillIds) : null;
+  return skills.filter((skill) => (!agentSet || agentSet.has(skill._id)) && isUserInvocable(skill));
+}
+
+/**
+ * Applies a user's active-state preference only to unscoped catalogs. A skill
+ * deliberately attached to a SELECT agent remains available in that agent,
+ * regardless of whether the user has disabled it in general chat.
+ */
+export function filterSkillsForPopover(
+  skills: TSkillSummary[],
+  ctx: {
+    agentSkillIds: string[] | null | undefined;
+    isActive: (skill: Pick<TSkillSummary, '_id' | 'author' | 'source'>) => boolean;
+  },
+): TSkillSummary[] {
+  const scoped = filterSkillsByScope(skills, ctx.agentSkillIds);
+  const isAgentScoped = ctx.agentSkillIds != null && ctx.agentSkillIds.length > 0;
+  return isAgentScoped ? scoped : scoped.filter(ctx.isActive);
 }

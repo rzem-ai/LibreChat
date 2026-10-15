@@ -8,6 +8,7 @@ import { SkillsScope, resolveAgentSkillsScope } from 'librechat-data-provider';
 import type { TSkillSummary } from 'librechat-data-provider';
 import type { MentionOption } from '~/common';
 import { useLocalize, useNewConvo, useSkillActiveState } from '~/hooks';
+import { filterSkillsByScope, filterSkillsForPopover } from '~/utils';
 import useInitPopoverInput from '~/hooks/Input/useInitPopoverInput';
 import { useSkillsInfiniteQuery } from '~/data-provider';
 import { showSkillsPopoverFamily } from './skillsState';
@@ -21,62 +22,6 @@ import store from '~/store';
 const commandChar = '$';
 const ROW_HEIGHT = 44;
 const skillIcon = <ScrollText className="icon-md text-status-info" />;
-
-/**
- * Determines whether a skill should appear in the `$` command popover.
- * Reads the persisted `userInvocable` field (mirrors the `user-invocable`
- * frontmatter). Defaults to visible when the field is absent so older
- * skills authored before Phase 6 stay user-invocable without a migration;
- * only an explicit `false` hides them.
- */
-export function isUserInvocable(skill: TSkillSummary): boolean {
-  return skill.userInvocable !== false;
-}
-
-/**
- * Filters the skills list down to what should appear in the `$` popover.
- * Composes three rules, short-circuiting on the cheapest check first:
- *
- * 1. Agent scope — mirrors backend `scopeSkillIds` semantics:
- *    - `null` / `undefined` → no scope filter (ephemeral convo, or agent
- *      without a `skills` field configured).
- *    - `[]` → explicit opt-out, nothing passes.
- *    - non-empty → intersection with the agent's configured skill ids.
- * 2. Active state — per-user ownership-aware toggle.
- * 3. Invocation mode — `manual` / `both` / undefined are visible; `auto`
- *    is model-only and hidden.
- *
- * Pure function; exported so tests can exercise the filter in isolation
- * without rendering the component.
- */
-export function filterSkillsForPopover(
-  skills: TSkillSummary[],
-  ctx: {
-    agentSkillIds: string[] | null | undefined;
-    isActive: (skill: Pick<TSkillSummary, '_id' | 'author' | 'source'>) => boolean;
-  },
-): TSkillSummary[] {
-  const { agentSkillIds, isActive } = ctx;
-  if (agentSkillIds != null && agentSkillIds.length === 0) {
-    return [];
-  }
-  const agentSet =
-    agentSkillIds != null && agentSkillIds.length > 0 ? new Set(agentSkillIds) : null;
-  const result: TSkillSummary[] = [];
-  for (const skill of skills) {
-    if (agentSet && !agentSet.has(skill._id)) {
-      continue;
-    }
-    if (!isActive(skill)) {
-      continue;
-    }
-    if (!isUserInvocable(skill)) {
-      continue;
-    }
-    result.push(skill);
-  }
-  return result;
-}
 
 // ---------------------------------------------------------------------------
 // Empty-state discrimination
@@ -106,10 +51,9 @@ export type SkillsEmptyState =
   | { kind: 'unscoped-empty'; disabledSkills: TSkillSummary[] };
 
 /**
- * Decides which empty-state the `$` popover should show. Agent-disabled
- * is checked before catalog-empty so a user in a disabled-agent chat always
- * gets the New General Chat CTA rather than a Manage Skills CTA that cannot
- * help them in the current context.
+ * Decides which empty-state the `$` popover should show. Catalog absence
+ * takes precedence: when no accessible skills exist, a general chat cannot
+ * help the user and Manage Skills is the useful next action.
  */
 export function resolveSkillsEmptyState(ctx: {
   allSkills: TSkillSummary[];
@@ -119,13 +63,13 @@ export function resolveSkillsEmptyState(ctx: {
 }): SkillsEmptyState {
   const { allSkills, agentSkillIds, isAgentDisabled, disabledSkills } = ctx;
 
-  // Agent with skills explicitly disabled — always wins over catalog state.
-  if (isAgentDisabled) {
-    return { kind: 'agent-disabled' };
-  }
   // No accessible skills at all.
   if (allSkills.length === 0) {
     return { kind: 'catalog-empty' };
+  }
+  // Agent with skills explicitly disabled.
+  if (isAgentDisabled) {
+    return { kind: 'agent-disabled' };
   }
   // Agent has a non-empty allowlist but the search matched nothing in it.
   if (agentSkillIds != null && agentSkillIds.length > 0) {
@@ -247,8 +191,13 @@ function SkillsCommandContent({
   );
 
   const agentsMap = useAgentsMapContext();
-  const { isActive, toggleMany } = useSkillActiveState();
-  const { newConversation } = useNewConvo(index);
+  const {
+    isActive,
+    toggleMany,
+    isLoading: statesLoading,
+    isError: statesError,
+  } = useSkillActiveState();
+  const { newGeneralConversation } = useNewConvo(index);
   const { setActive } = useActivePanel();
   const setSidebarExpanded = useSetRecoilState(store.sidebarExpanded);
 
@@ -340,7 +289,7 @@ function SkillsCommandContent({
     if (agentSkillIds != null && agentSkillIds.length > 0) {
       return [];
     }
-    return allSkills.filter((skill) => isUserInvocable(skill) && !isActive(skill));
+    return filterSkillsByScope(allSkills, agentSkillIds).filter((skill) => !isActive(skill));
   }, [allSkills, isActive, agentSkillIds]);
 
   const [activeIndex, setActiveIndex] = useState(0);
@@ -413,14 +362,17 @@ function SkillsCommandContent({
     [toggleMany, setSearchValue],
   );
 
-  /* "New General Chat" — starts a new conversation in the current composer
-     slot and explicitly clears `agent_id` so the new chat is always
-     general chat, not the same agent. */
+  /* "New General Chat" — delegates to `newGeneralConversation`, which
+     resolves the first non-agents endpoint from the already-loaded
+     `endpointsConfig` inside `useNewConvo` and passes it explicitly in the
+     template. This prevents `buildDefaultConvo` from reading
+     `lastConversationSetup` out of localStorage and restoring the previous
+     agent via `isExistingAgentConvo`. */
   const handleStartNewChat = useCallback(() => {
     setOpen(false);
     setShowSkillsPopover(false);
-    newConversation({ template: { agent_id: undefined } });
-  }, [setOpen, setShowSkillsPopover, newConversation]);
+    newGeneralConversation();
+  }, [setOpen, setShowSkillsPopover, newGeneralConversation]);
 
   /* "Manage Skills" — expands the persistent app sidebar and switches to the
      Skills section without navigating away from the current chat. */
@@ -485,7 +437,14 @@ function SkillsCommandContent({
     );
   };
 
-  const catalogLoading = isLoading || isFetchingNextPage || hasNextPage;
+  /* Both catalog pagination and skill-state resolution must complete before
+     any empty-state or CTA is shown. Folding `statesLoading` here (following
+     the pattern in SkillsSection.tsx) ensures the spinner is visible while
+     `isActive` / `disabledSkills` may still return incorrect defaults, so
+     Enable all never appears in an unactionable state. */
+  const catalogLoading = isLoading || isFetchingNextPage || hasNextPage || statesLoading;
+  /* Error from either the catalog fetch or the active-state fetch. */
+  const catalogError = isError || statesError;
 
   return (
     <div className="absolute bottom-28 z-10 w-full space-y-2">
@@ -540,17 +499,17 @@ function SkillsCommandContent({
             }, 150);
           }}
         />
-        {open && !isError && catalogLoading && matches.length === 0 && (
+        {open && !catalogError && catalogLoading && matches.length === 0 && (
           <div className="flex h-32 items-center justify-center text-text-primary">
             <Spinner />
           </div>
         )}
-        {open && isError && (
+        {open && catalogError && (
           <div className="p-4 text-center text-sm text-text-secondary">
             {localize('com_ui_skills_load_error')}
           </div>
         )}
-        {open && !catalogLoading && !isError && matches.length === 0 && (
+        {open && !catalogLoading && !catalogError && matches.length === 0 && (
           <SkillsEmptyStateView
             state={resolveSkillsEmptyState({
               allSkills,

@@ -2499,7 +2499,7 @@
   "com_ui_skills_filter": "Filter skills",
   "com_ui_skills_load_error": "Failed to load skills",
   "com_ui_skills_manage_cta": "Manage skills",
-  "com_ui_skills_none_for_chat": "This agent doesn't support skills, Switch to general chat to access all your skills.",
+  "com_ui_skills_none_for_chat": "This agent doesn't support skills. Switch to general chat to use all your skills.",
   "com_ui_skills_start_new_chat": "New General Chat",
   "com_ui_skills_manual_invoked": "Manually invoked skills",
   "com_ui_skills_mode_all": "All",
