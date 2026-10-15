@@ -1,73 +1,114 @@
 import type { TModelsConfig } from 'librechat-data-provider';
+import type { Keyv } from 'keyv';
 import type { ServerRequest } from '~/types';
 
-const mockCacheGet = jest.fn();
-const mockCacheSet = jest.fn().mockResolvedValue(true);
-const mockCacheDelete = jest.fn().mockResolvedValue(true);
-const mockCacheClear = jest.fn().mockResolvedValue(undefined);
+type ModelsConfigModule = typeof import('./getModelsConfig');
+
+/** One store per namespace, shared by every module instance — stands in for Redis. */
+const mockStores = new Map<string, Keyv>();
 jest.mock('~/cache', () => ({
-  standardCache: jest.fn().mockImplementation(() => ({
-    get: mockCacheGet,
-    set: mockCacheSet,
-    delete: mockCacheDelete,
-    clear: mockCacheClear,
-  })),
+  standardCache: (namespace: string): Keyv => {
+    const existing = mockStores.get(namespace);
+    if (existing) {
+      return existing;
+    }
+    const { Keyv: ActualKeyv } = jest.requireActual<typeof import('keyv')>('keyv');
+    const store = new ActualKeyv();
+    mockStores.set(namespace, store);
+    return store;
+  },
 }));
 
-import {
-  createGetModelsConfig,
-  invalidateModelsConfig,
-  clearModelsConfigCache,
-} from './getModelsConfig';
+/** Loads an independent copy of the module (own in-flight map), like a separate worker process. */
+function loadWorker(): ModelsConfigModule {
+  let worker: ModelsConfigModule | undefined;
+  jest.isolateModules(() => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    worker = require('./getModelsConfig') as ModelsConfigModule;
+  });
+  if (!worker) {
+    throw new Error('failed to load worker module');
+  }
+  return worker;
+}
 
-describe('createGetModelsConfig', () => {
-  const buildReq = (tenantId: string, userId: string): ServerRequest =>
-    ({ user: { tenantId, id: userId } }) as unknown as ServerRequest;
+const buildReq = (tenantId: string, userId: string): ServerRequest =>
+  ({ user: { tenantId, id: userId } }) as unknown as ServerRequest;
 
+const config = (...models: string[]): TModelsConfig => ({ openAI: models }) as TModelsConfig;
+
+const deferred = () => {
+  let resolve: (value: TModelsConfig) => void = () => {};
+  const promise = new Promise<TModelsConfig>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+};
+
+const waitForCalls = (loader: jest.Mock, count = 1): Promise<void> =>
+  new Promise((resolve) => {
+    const poll = (): void => {
+      if (loader.mock.calls.length >= count) {
+        resolve();
+        return;
+      }
+      setImmediate(poll);
+    };
+    poll();
+  });
+
+const modelsStore = (): Keyv => {
+  const store = [...mockStores.entries()].find(([name]) => !name.endsWith('_GENERATION'));
+  if (!store) {
+    throw new Error('models store not created');
+  }
+  return store[1];
+};
+
+describe('getModelsConfig', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    mockCacheGet.mockResolvedValue(undefined);
+    mockStores.clear();
   });
 
   it('returns the cached value without invoking the loaders on a cache hit', async () => {
-    const cached: TModelsConfig = { openAI: ['gpt'] } as unknown as TModelsConfig;
-    mockCacheGet.mockResolvedValue(cached);
-    const loadDefaultModels = jest.fn();
-    const loadConfigModels = jest.fn();
+    const loadDefaultModels = jest.fn().mockResolvedValue(config('gpt'));
+    const loadConfigModels = jest.fn().mockResolvedValue({});
+    const { createGetModelsConfig } = loadWorker();
     const getModelsConfig = createGetModelsConfig({ loadDefaultModels, loadConfigModels });
+    const req = buildReq('t1', 'u1');
 
-    const result = await getModelsConfig(buildReq('t1', 'u1'));
+    await getModelsConfig(req);
+    const result = await getModelsConfig(req);
 
-    expect(result).toBe(cached);
-    expect(loadDefaultModels).not.toHaveBeenCalled();
-    expect(loadConfigModels).not.toHaveBeenCalled();
+    expect(result).toEqual(config('gpt'));
+    expect(loadDefaultModels).toHaveBeenCalledTimes(1);
+    expect(loadConfigModels).toHaveBeenCalledTimes(1);
   });
 
   it('collapses concurrent cache misses for the same key into a single discovery pass', async () => {
-    let resolveDefault: (value: TModelsConfig) => void = () => {};
-    const defaultPromise = new Promise<TModelsConfig>((resolve) => {
-      resolveDefault = resolve;
-    });
-    const loadDefaultModels = jest.fn().mockReturnValue(defaultPromise);
+    const pending = deferred();
+    const loadDefaultModels = jest.fn().mockReturnValue(pending.promise);
     const loadConfigModels = jest.fn().mockResolvedValue({});
+    const { createGetModelsConfig } = loadWorker();
     const getModelsConfig = createGetModelsConfig({ loadDefaultModels, loadConfigModels });
-
     const req = buildReq('t1', 'u1');
+
     const first = getModelsConfig(req);
     const second = getModelsConfig(req);
-
-    resolveDefault({ openAI: ['gpt'] } as unknown as TModelsConfig);
+    await waitForCalls(loadDefaultModels);
+    pending.resolve(config('gpt'));
     const [firstResult, secondResult] = await Promise.all([first, second]);
 
     expect(loadDefaultModels).toHaveBeenCalledTimes(1);
     expect(loadConfigModels).toHaveBeenCalledTimes(1);
-    expect(firstResult).toEqual({ openAI: ['gpt'] });
-    expect(secondResult).toEqual({ openAI: ['gpt'] });
+    expect(firstResult).toEqual(config('gpt'));
+    expect(secondResult).toEqual(config('gpt'));
   });
 
   it('loads independently for different cache keys', async () => {
     const loadDefaultModels = jest.fn().mockResolvedValue({});
     const loadConfigModels = jest.fn().mockResolvedValue({});
+    const { createGetModelsConfig } = loadWorker();
     const getModelsConfig = createGetModelsConfig({ loadDefaultModels, loadConfigModels });
 
     await Promise.all([
@@ -83,103 +124,143 @@ describe('createGetModelsConfig', () => {
     const loadDefaultModels = jest
       .fn()
       .mockRejectedValueOnce(new Error('discovery failed'))
-      .mockResolvedValueOnce({ openAI: ['gpt'] });
+      .mockResolvedValueOnce(config('gpt'));
     const loadConfigModels = jest.fn().mockResolvedValue({});
+    const { createGetModelsConfig } = loadWorker();
     const getModelsConfig = createGetModelsConfig({ loadDefaultModels, loadConfigModels });
-
     const req = buildReq('t1', 'u1');
+
     await expect(getModelsConfig(req)).rejects.toThrow('discovery failed');
 
-    const result = await getModelsConfig(req);
-
-    expect(result).toEqual({ openAI: ['gpt'] });
+    await expect(getModelsConfig(req)).resolves.toEqual(config('gpt'));
     expect(loadDefaultModels).toHaveBeenCalledTimes(2);
   });
 });
 
 describe('invalidateModelsConfig', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    mockStores.clear();
   });
 
-  it('deletes only the requesting tenant/user cache entry', async () => {
-    await invalidateModelsConfig({
-      user: { tenantId: 't1', id: 'u1' },
-    } as unknown as ServerRequest);
+  it('removes only the requesting tenant/user cache entry', async () => {
+    const loadDefaultModels = jest.fn().mockResolvedValue(config('gpt'));
+    const loadConfigModels = jest.fn().mockResolvedValue({});
+    const { createGetModelsConfig, invalidateModelsConfig } = loadWorker();
+    const getModelsConfig = createGetModelsConfig({ loadDefaultModels, loadConfigModels });
+    await getModelsConfig(buildReq('t1', 'u1'));
+    await getModelsConfig(buildReq('t1', 'u2'));
 
-    expect(mockCacheDelete).toHaveBeenCalledWith('t1:u1');
+    await invalidateModelsConfig(buildReq('t1', 'u1'));
+
+    expect(await modelsStore().get('t1:u1')).toBeUndefined();
+    expect(await modelsStore().get('t1:u2')).toEqual(config('gpt'));
   });
 });
 
 describe('clearModelsConfigCache', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    mockStores.clear();
   });
 
   it('clears the entire MODELS_CONFIG namespace', async () => {
+    const loadDefaultModels = jest.fn().mockResolvedValue(config('gpt'));
+    const loadConfigModels = jest.fn().mockResolvedValue({});
+    const { createGetModelsConfig, clearModelsConfigCache } = loadWorker();
+    const getModelsConfig = createGetModelsConfig({ loadDefaultModels, loadConfigModels });
+    await getModelsConfig(buildReq('t1', 'u1'));
+    await getModelsConfig(buildReq('t2', 'u2'));
+
     await clearModelsConfigCache();
 
-    expect(mockCacheClear).toHaveBeenCalledTimes(1);
+    expect(await modelsStore().get('t1:u1')).toBeUndefined();
+    expect(await modelsStore().get('t2:u2')).toBeUndefined();
+  });
+});
+
+describe('invalidation fencing across workers', () => {
+  beforeEach(() => {
+    mockStores.clear();
   });
 
-  describe('invalidation fencing', () => {
-    const deferred = () => {
-      let resolve: (value: TModelsConfig) => void = () => {};
-      const promise = new Promise<TModelsConfig>((res) => {
-        resolve = res;
-      });
-      return { promise, resolve };
-    };
+  type Invalidate = (workerB: ModelsConfigModule, req: ServerRequest) => Promise<void>;
 
-    const waitForLoad = (loader: jest.Mock): Promise<void> =>
-      new Promise((resolve) => {
-        const poll = (): void => (loader.mock.calls.length ? resolve() : setImmediate(poll));
-        poll();
-      });
+  const scenarios: Array<[string, Invalidate]> = [
+    ['a per-user invalidation', (worker, req) => worker.invalidateModelsConfig(req)],
+    ['a namespace clear', (worker) => worker.clearModelsConfigCache()],
+  ];
 
-    it('does not cache or share a load that started before a per-user invalidation', async () => {
+  it.each(scenarios)(
+    'worker A cannot publish or share a load started before worker B ran %s',
+    async (_name, invalidate) => {
       const stale = deferred();
-      const loadDefaultModels = jest
+      const loadA = jest
         .fn()
         .mockReturnValueOnce(stale.promise)
-        .mockResolvedValueOnce({ openAI: ['new'] });
-      const loadConfigModels = jest.fn().mockResolvedValue({});
-      const getModelsConfig = createGetModelsConfig({ loadDefaultModels, loadConfigModels });
-      const req = { user: { tenantId: 't1', id: 'u1' } } as unknown as ServerRequest;
+        .mockResolvedValueOnce(config('new'));
+      const loadB = jest.fn().mockResolvedValue(config('new'));
+      const noConfig = jest.fn().mockResolvedValue({});
+      const workerA = loadWorker();
+      const workerB = loadWorker();
+      const getA = workerA.createGetModelsConfig({
+        loadDefaultModels: loadA,
+        loadConfigModels: noConfig,
+      });
+      const getB = workerB.createGetModelsConfig({
+        loadDefaultModels: loadB,
+        loadConfigModels: noConfig,
+      });
+      const req = buildReq('t1', 'u1');
 
-      const before = getModelsConfig(req);
-      await waitForLoad(loadDefaultModels);
-      await invalidateModelsConfig(req);
-      const after = await getModelsConfig(req);
-      expect(after).toEqual({ openAI: ['new'] });
+      const before = getA(req);
+      await waitForCalls(loadA);
+      await invalidate(workerB, req);
 
-      mockCacheSet.mockClear();
-      stale.resolve({ openAI: ['old'] } as unknown as TModelsConfig);
-      await expect(before).resolves.toEqual({ openAI: ['old'] });
-      expect(loadDefaultModels).toHaveBeenCalledTimes(2);
-      expect(mockCacheSet).not.toHaveBeenCalled();
+      stale.resolve(config('old'));
+      await expect(before).resolves.toEqual(config('old'));
+      expect(await modelsStore().get('t1:u1')).toBeUndefined();
+
+      await expect(getB(req)).resolves.toEqual(config('new'));
+      await expect(getA(req)).resolves.toEqual(config('new'));
+    },
+  );
+
+  it('does not let a later request on the same worker join a pre-invalidation load', async () => {
+    const stale = deferred();
+    const loadA = jest.fn().mockReturnValueOnce(stale.promise).mockResolvedValueOnce(config('new'));
+    const noConfig = jest.fn().mockResolvedValue({});
+    const workerA = loadWorker();
+    const workerB = loadWorker();
+    const getA = workerA.createGetModelsConfig({
+      loadDefaultModels: loadA,
+      loadConfigModels: noConfig,
+    });
+    const req = buildReq('t1', 'u1');
+
+    const before = getA(req);
+    await waitForCalls(loadA);
+    await workerB.invalidateModelsConfig(req);
+
+    await expect(getA(req)).resolves.toEqual(config('new'));
+    expect(loadA).toHaveBeenCalledTimes(2);
+
+    stale.resolve(config('old'));
+    await before;
+    expect(await modelsStore().get('t1:u1')).toEqual(config('new'));
+  });
+
+  it('keeps unrelated users cacheable after another user is invalidated', async () => {
+    const loadDefaultModels = jest.fn().mockResolvedValue(config('gpt'));
+    const noConfig = jest.fn().mockResolvedValue({});
+    const worker = loadWorker();
+    const getModelsConfig = worker.createGetModelsConfig({
+      loadDefaultModels,
+      loadConfigModels: noConfig,
     });
 
-    it('does not cache or share a load that started before the namespace was cleared', async () => {
-      const stale = deferred();
-      const loadDefaultModels = jest
-        .fn()
-        .mockReturnValueOnce(stale.promise)
-        .mockResolvedValueOnce({ openAI: ['new'] });
-      const loadConfigModels = jest.fn().mockResolvedValue({});
-      const getModelsConfig = createGetModelsConfig({ loadDefaultModels, loadConfigModels });
-      const req = { user: { tenantId: 't1', id: 'u1' } } as unknown as ServerRequest;
+    await getModelsConfig(buildReq('t1', 'u2'));
+    await worker.invalidateModelsConfig(buildReq('t1', 'u1'));
+    await getModelsConfig(buildReq('t1', 'u2'));
 
-      const before = getModelsConfig(req);
-      await waitForLoad(loadDefaultModels);
-      await clearModelsConfigCache();
-      await expect(getModelsConfig(req)).resolves.toEqual({ openAI: ['new'] });
-
-      mockCacheSet.mockClear();
-      stale.resolve({ openAI: ['old'] } as unknown as TModelsConfig);
-      await before;
-      expect(loadDefaultModels).toHaveBeenCalledTimes(2);
-      expect(mockCacheSet).not.toHaveBeenCalled();
-    });
+    expect(loadDefaultModels).toHaveBeenCalledTimes(1);
   });
 });

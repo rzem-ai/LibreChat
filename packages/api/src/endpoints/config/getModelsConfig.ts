@@ -1,5 +1,7 @@
+import { randomUUID } from 'node:crypto';
 import { Time, CacheKeys } from 'librechat-data-provider';
 import type { TModelsConfig } from 'librechat-data-provider';
+import type { Keyv } from 'keyv';
 import type { ServerRequest } from '~/types';
 import { standardCache } from '~/cache';
 
@@ -14,27 +16,47 @@ function modelsConfigCacheKey(req: ServerRequest): string {
   return `${tenantId}:${userId}`;
 }
 
-/**
- * Bumped on every invalidation. A load only joins/writes the cache if no invalidation
- * happened since it started, so pre-change discovery can never repopulate the cache or be
- * joined by a request made after the change.
- */
-let revision = 0;
+const GENERATION_NAMESPACE = `${CacheKeys.MODELS_CONFIG}_GENERATION`;
+const GLOBAL_GENERATION_KEY = '*';
 
 /**
- * In-flight loads keyed the same way as the cache, so concurrent callers that
- * all miss an empty/expired cache entry (e.g. the startup-config, `/api/models`,
- * and `/endpoints/token-config` routes firing together on a cold page load)
- * share one discovery pass instead of each re-running `loadDefaultModels`/
- * `loadConfigModels`. Cleared once the load settles, success or failure, so a
- * rejected load never permanently blocks later callers.
+ * Invalidation fence shared through the cache store (Redis when enabled), so it holds across
+ * workers: each invalidation stores a fresh random token, and a load only publishes its result
+ * if the tokens it saw when it started are unchanged when it finishes. Kept in a separate
+ * namespace so clearing the catalog namespace never resets it. A token that expires or goes
+ * missing also reads as "changed", which fails safe (the load just isn't cached).
+ */
+function generationCache(): Keyv {
+  return standardCache(GENERATION_NAMESPACE, Time.ONE_DAY);
+}
+
+async function readGeneration(cacheKey: string): Promise<string> {
+  const cache = generationCache();
+  const [global, user] = await Promise.all([
+    cache.get<string>(GLOBAL_GENERATION_KEY),
+    cache.get<string>(cacheKey),
+  ]);
+  return `${global ?? ''}|${user ?? ''}`;
+}
+
+function bumpGeneration(key: string): Promise<boolean> {
+  return generationCache().set(key, randomUUID());
+}
+
+/**
+ * In-flight loads keyed by cache key and generation, so concurrent callers that all miss an
+ * empty/expired cache entry (e.g. the startup-config, `/api/models`, and
+ * `/endpoints/token-config` routes firing together on a cold page load) share one discovery
+ * pass instead of each re-running `loadDefaultModels`/`loadConfigModels`. Including the
+ * generation means a request made after an invalidation never joins a pre-invalidation load.
+ * Cleared once the load settles, success or failure, so a rejected load never permanently
+ * blocks later callers.
  */
 const inFlightLoads = new Map<string, Promise<TModelsConfig>>();
 
 export async function invalidateModelsConfig(req: ServerRequest): Promise<void> {
   const cacheKey = modelsConfigCacheKey(req);
-  revision += 1;
-  inFlightLoads.delete(cacheKey);
+  await bumpGeneration(cacheKey);
   await standardCache(CacheKeys.MODELS_CONFIG).delete(cacheKey);
 }
 
@@ -45,8 +67,7 @@ export async function invalidateModelsConfig(req: ServerRequest): Promise<void> 
  * rebuilding the whole cache is cheap relative to leaving stale entries around.
  */
 export async function clearModelsConfigCache(): Promise<void> {
-  revision += 1;
-  inFlightLoads.clear();
+  await bumpGeneration(GLOBAL_GENERATION_KEY);
   await standardCache(CacheKeys.MODELS_CONFIG).clear();
 }
 
@@ -59,49 +80,57 @@ export async function clearModelsConfigCache(): Promise<void> {
 export function createGetModelsConfig(deps: GetModelsConfigDeps) {
   const { loadDefaultModels, loadConfigModels } = deps;
 
-  return async function getModelsConfig(req: ServerRequest): Promise<TModelsConfig> {
-    const startRevision = revision;
+  async function discover(req: ServerRequest): Promise<TModelsConfig> {
+    const [defaultModelsConfig, customModelsConfig] = await Promise.all([
+      loadDefaultModels(req),
+      loadConfigModels(req),
+    ]);
+    return { ...defaultModelsConfig, ...customModelsConfig };
+  }
+
+  async function publish(
+    cacheKey: string,
+    generation: string,
+    modelsConfig: TModelsConfig,
+  ): Promise<void> {
     const cache = standardCache(CacheKeys.MODELS_CONFIG);
-    const cacheKey = modelsConfigCacheKey(req);
-    const cached = await cache.get<TModelsConfig>(cacheKey);
-    if (startRevision !== revision) {
-      const [defaultModelsConfig, customModelsConfig] = await Promise.all([
-        loadDefaultModels(req),
-        loadConfigModels(req),
-      ]);
-      return { ...defaultModelsConfig, ...customModelsConfig };
+    if ((await readGeneration(cacheKey)) !== generation) {
+      return;
     }
+    await cache.set(cacheKey, modelsConfig, Time.TWO_MINUTES);
+    if ((await readGeneration(cacheKey)) !== generation) {
+      await cache.delete(cacheKey);
+    }
+  }
+
+  return async function getModelsConfig(req: ServerRequest): Promise<TModelsConfig> {
+    const cacheKey = modelsConfigCacheKey(req);
+    const [cached, generation] = await Promise.all([
+      standardCache(CacheKeys.MODELS_CONFIG).get<TModelsConfig>(cacheKey),
+      readGeneration(cacheKey),
+    ]);
     if (cached) {
       return cached;
     }
 
-    const pending = inFlightLoads.get(cacheKey);
+    const loadKey = `${cacheKey}|${generation}`;
+    const pending = inFlightLoads.get(loadKey);
     if (pending) {
       return pending;
     }
 
     const load = (async () => {
-      const [defaultModelsConfig, customModelsConfig] = await Promise.all([
-        loadDefaultModels(req),
-        loadConfigModels(req),
-      ]);
-      const modelsConfig = { ...defaultModelsConfig, ...customModelsConfig };
-      if (startRevision !== revision) {
-        return modelsConfig;
-      }
-      await cache.set(cacheKey, modelsConfig, Time.TWO_MINUTES);
-      if (startRevision !== revision) {
-        await cache.delete(cacheKey);
-      }
+      const modelsConfig = await discover(req);
+      await publish(cacheKey, generation, modelsConfig);
       return modelsConfig;
     })();
-    inFlightLoads.set(cacheKey, load);
+    inFlightLoads.set(loadKey, load);
 
     try {
       return await load;
     } finally {
-      if (inFlightLoads.get(cacheKey) === load) {
-        inFlightLoads.delete(cacheKey);
+      if (inFlightLoads.get(loadKey) === load) {
+        inFlightLoads.delete(loadKey);
       }
     }
   };
