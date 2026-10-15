@@ -15,7 +15,7 @@ const tabsListVariants: (props?: TabsVariantProps & ClassProp) => string = cva(
       variant: {
         default: 'rounded-md bg-surface-primary',
         underline:
-          'w-full justify-start gap-4 overflow-x-auto overflow-y-hidden shadow-[inset_0_-1px_0_0_rgb(var(--border-light))]',
+          'w-fit max-w-full justify-start gap-1 overflow-x-auto overflow-y-hidden shadow-[inset_0_-1px_0_0] shadow-border-light',
       },
     },
     defaultVariants: { variant: 'default' },
@@ -30,7 +30,7 @@ const tabsTriggerVariants: (props?: TabsVariantProps & ClassProp) => string = cv
         default:
           'min-w-[100px] rounded-[0.185rem] px-3 py-1.5 data-[state=active]:bg-surface-primary data-[state=active]:text-text-primary data-[state=active]:shadow-sm',
         underline:
-          'shrink-0 whitespace-nowrap border-b-2 border-transparent px-1 pb-3 pt-1 data-[state=active]:border-text-primary data-[state=active]:text-text-primary',
+          'shrink-0 whitespace-nowrap border-b-2 border-transparent px-2 pb-3 pt-1 data-[state=active]:border-text-primary data-[state=active]:text-text-primary',
       },
     },
     defaultVariants: { variant: 'default' },
