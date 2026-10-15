@@ -584,7 +584,7 @@ const refreshController = async (req, res) => {
                     },
                     (sendAuthorized) =>
                       sendAuthorized(() =>
-                        res.status(200).send({
+                        res.status(200).json({
                           token: appAuthToken,
                           user: sanitizeUserForAuthResponse(bridgeUser),
                         }),

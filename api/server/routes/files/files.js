@@ -693,6 +693,9 @@ router.get('/download/:userId/:file_id', fileAccess, async (req, res) => {
         : `${file.filename || file_id}.txt`;
       res.setHeader('Content-Disposition', getContentDisposition(textFilename));
       res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      // Stored extraction text is untrusted, so never allow it to become an active document.
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Content-Security-Policy', 'sandbox');
       res.setHeader(
         'X-File-Metadata',
         encodeURIComponent(JSON.stringify(getDownloadFileMetadata(file))),

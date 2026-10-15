@@ -249,6 +249,8 @@ const streamSharedFile = async (req, res, file, requestedDisposition) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Content-Disposition', getContentDisposition(textFilename, disposition));
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    // Shared extraction text is untrusted, so never allow it to become an active document.
+    res.setHeader('Content-Security-Policy', 'sandbox');
     return res.send(req.liveFile.text);
   }
 
