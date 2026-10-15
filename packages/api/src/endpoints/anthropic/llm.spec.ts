@@ -166,6 +166,22 @@ describe('getLLMConfig', () => {
     },
   );
 
+  it.each(['claude-haiku-5-5', 'claude-haiku-5.5'])(
+    'should request adaptive thinking (not the legacy enabled type) for %s',
+    (model) => {
+      const result = getLLMConfig('test-api-key', {
+        modelOptions: {
+          model,
+          thinking: true,
+        },
+      });
+
+      expect(result.llmConfig).toHaveProperty('thinking');
+      expect(result.llmConfig.thinking).toHaveProperty('type', 'adaptive');
+      expect(result.llmConfig.thinking).not.toHaveProperty('budget_tokens');
+    },
+  );
+
   it('should NOT include topK and topP for Claude-3-7 models with thinking enabled (hyphen notation)', () => {
     const result = getLLMConfig('test-api-key', {
       modelOptions: {
