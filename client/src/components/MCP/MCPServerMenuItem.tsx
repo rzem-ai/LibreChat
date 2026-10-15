@@ -17,7 +17,7 @@ import MCPServerStatusIcon from './MCPServerStatusIcon';
 // Deloitte Custom Change: light/dark themed MCP server icons.
 import MCPServerIcon from './MCPServerIcon';
 // Deloitte Custom Change: Figma "MCP Tooltip hover" - connector identity, access tier, use cases.
-import MCPServerTooltip from './MCPServerTooltip';
+import { MCPServerTooltipTarget } from './MCPServerTooltip';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -54,7 +54,7 @@ export default function MCPServerMenuItem({
   return (
     // Deloitte Custom Change: Figma "MCP Tooltip hover" - connector identity, access tier, use
     // cases. Trigger wraps the whole row so hovering anywhere on the item opens the tooltip.
-    <MCPServerTooltip
+    <MCPServerTooltipTarget
       server={server}
       trigger={
         <Ariakit.MenuItemCheckbox

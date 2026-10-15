@@ -19,10 +19,19 @@ jest.mock('~/hooks', () => ({
 jest.mock('@librechat/client', () => ({
   Tag: ({ label }: { label: string }) => <span>{label}</span>,
   MCPIcon: () => <svg />,
-  HoverCard: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  HoverCardPortal: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  HoverCardContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  HoverCardTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  HoverCardGroup: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  HoverCardTarget: ({
+    render,
+    children,
+  }: {
+    render: (id: string) => React.ReactNode;
+    children: React.ReactNode;
+  }) => (
+    <>
+      {children}
+      <div>{render('card')}</div>
+    </>
+  ),
 }));
 
 const makeServer = (

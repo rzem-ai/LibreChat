@@ -2,6 +2,7 @@ import React from 'react';
 import * as Ariakit from '@ariakit/react';
 import { ChevronRight } from 'lucide-react';
 import { MCPIcon, PinIcon } from '@librechat/client';
+import { MCPServerHoverGroup } from '~/components/MCP/MCPServerTooltip';
 import MCPServerMenuItem from '~/components/MCP/MCPServerMenuItem';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
 import { useMCPRefresh } from '~/hooks/MCP/useMCPRefresh';
@@ -107,19 +108,21 @@ const MCPSubMenu = React.forwardRef<HTMLButtonElement, MCPSubMenuProps>(
               'border border-border-light bg-presentation p-1.5 shadow-lg',
             )}
           >
-            <div className="flex max-h-[320px] flex-col gap-1 overflow-y-auto">
-              {selectableServers.map((server) => (
-                <MCPServerMenuItem
-                  key={server.serverName}
-                  server={server}
-                  isSelected={mcpValues?.includes(server.serverName) ?? false}
-                  connectionStatus={connectionStatus}
-                  isInitializing={isInitializing}
-                  statusIconProps={getServerStatusIconProps(server.serverName)}
-                  onToggle={toggleServerSelection}
-                />
-              ))}
-            </div>
+            <MCPServerHoverGroup>
+              <div className="flex max-h-[320px] flex-col gap-1 overflow-y-auto">
+                {selectableServers.map((server) => (
+                  <MCPServerMenuItem
+                    key={server.serverName}
+                    server={server}
+                    isSelected={mcpValues?.includes(server.serverName) ?? false}
+                    connectionStatus={connectionStatus}
+                    isInitializing={isInitializing}
+                    statusIconProps={getServerStatusIconProps(server.serverName)}
+                    onToggle={toggleServerSelection}
+                  />
+                ))}
+              </div>
+            </MCPServerHoverGroup>
           </Ariakit.Menu>
         </Ariakit.MenuProvider>
         {configDialogProps && (

@@ -49,6 +49,10 @@ jest.mock('@librechat/client', () => {
     MCPIcon: ({ className }: { className?: string }) => R.createElement('span', { className }),
     PinIcon: ({ unpin }: { unpin?: boolean }) =>
       R.createElement('span', { 'data-testid': unpin ? 'unpin-icon' : 'pin-icon' }),
+    Tag: ({ label }: { label: string }) => R.createElement('span', null, label),
+    HoverCardGroup: ({ children }: { children: React.ReactNode }) =>
+      R.createElement(R.Fragment, null, children),
+    HoverCardTarget: ({ children }: { children: React.ReactNode }) => children,
     Spinner: ({ className }: { className?: string }) => R.createElement('span', { className }),
   };
 });
