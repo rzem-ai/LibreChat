@@ -85,7 +85,15 @@ const EC = '#555555'; // Edge colour
 const W = 1080,
   H = 520; // Canvas dimensions (DO NOT CHANGE)
 
-function MCPIcon({ size = 18, color = 'currentColor', strokeWidth = 1.5 }: any) {
+function MCPIcon({
+  size = 18,
+  color = 'currentColor',
+  strokeWidth = 1.5,
+}: {
+  size?: number;
+  color?: string;
+  strokeWidth?: number;
+}) {
   return (
     <svg
       width={size}
