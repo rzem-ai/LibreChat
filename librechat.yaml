@@ -489,20 +489,20 @@ modelSpecs:
 # Each entry filters the gateway to a single toolset via the `toolsets` query param.
 # See documentation: https://github.com/Deloitte-Australia/ea-mcp-gateway/blob/feature/prototype/docs/MCP_Gateway_Wiki.md
 mcpServers: # https://www.librechat.ai/docs/features/mcp
-  cleartrack-mcp-gateway-research:
+  cleartrack-mcp-gateway-ibis:
     title: 'IBISWorld'
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
-    url: '${MCP_GATEWAY_URL}?toolsets=research'
+    url: '${MCP_GATEWAY_URL}?toolsets=ibis'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     iconPath: '/assets/mcp/ibisworld.png' # same logo in both themes
 
-  cleartrack-mcp-gateway-news:
+  cleartrack-mcp-gateway-afr:
     title: 'AFR News'
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
-    url: '${MCP_GATEWAY_URL}?toolsets=news'
+    url: '${MCP_GATEWAY_URL}?toolsets=afr'
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     iconPath: '/assets/mcp/afr.png' # same logo in both themes
