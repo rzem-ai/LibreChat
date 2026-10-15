@@ -68,6 +68,20 @@ function MCPIcon({ size = 18, color = 'currentColor', strokeWidth = 1.5 }: any) 
   );
 }
 
+interface NodeProps {
+  cx: number;
+  cy: number;
+  w: number;
+  h: number;
+  label: string;
+  sublabel?: string;
+  formatLabel?: string;
+  typeLabel?: string;
+  Icon?: typeof Bot | typeof MCPIcon;
+  pal: { fill: string; stroke: string; icon: string };
+  large?: boolean;
+}
+
 function Node({
   cx,
   cy,
@@ -80,7 +94,7 @@ function Node({
   Icon,
   pal,
   large = false,
-}: any) {
+}: NodeProps) {
   const renderVisual = () => {
     if (formatLabel) {
       return (
