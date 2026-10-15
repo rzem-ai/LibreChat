@@ -1,7 +1,7 @@
 import type { InputHTMLAttributes } from 'react';
 import type { JSX } from 'react/jsx-runtime';
 import { IconButton } from '../IconButton';
-import * as Icon from './icons';
+import { Icon } from './icons';
 import { cn } from '~/utils';
 
 interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {

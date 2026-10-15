@@ -1,21 +1,44 @@
-import * as lucide from 'lucide-react';
+import {
+  Bot,
+  Circle,
+  Clock,
+  Search,
+  Signpost,
+  FileText,
+  ArrowLeft,
+  BookOpen,
+  CircleHelp,
+  CircleCheck,
+  ExternalLink,
+  GraduationCap,
+  Lightbulb,
+  MessageSquareHeart,
+  Star,
+  X,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 /** Semantic icons, so the underlying icon set can be swapped in this one file. */
-export const Tour: LucideIcon = lucide.Signpost;
-export const Article: LucideIcon = lucide.FileText;
-export const External: LucideIcon = lucide.ExternalLink;
-export const Complete: LucideIcon = lucide.CircleCheck;
-export const Incomplete: LucideIcon = lucide.Circle;
-export const Search: LucideIcon = lucide.Search;
-export const Clear: LucideIcon = lucide.X;
-export const Help: LucideIcon = lucide.CircleHelp;
-export const Back: LucideIcon = lucide.ArrowLeft;
-export const Agent: LucideIcon = lucide.Bot;
-export const Academy: LucideIcon = lucide.GraduationCap;
-export const Guide: LucideIcon = lucide.BookOpen;
-export const Feedback: LucideIcon = lucide.MessageSquareHeart;
-export const Star: LucideIcon = lucide.Star;
-export const Clock: LucideIcon = lucide.Clock;
-export const Tip: LucideIcon = lucide.Lightbulb;
-export const Close: LucideIcon = lucide.X;
+const icons = {
+  Tour: Signpost as LucideIcon,
+  Article: FileText as LucideIcon,
+  External: ExternalLink as LucideIcon,
+  Complete: CircleCheck as LucideIcon,
+  Incomplete: Circle as LucideIcon,
+  Search: Search as LucideIcon,
+  Clear: X as LucideIcon,
+  Help: CircleHelp as LucideIcon,
+  Back: ArrowLeft as LucideIcon,
+  Agent: Bot as LucideIcon,
+  Academy: GraduationCap as LucideIcon,
+  Guide: BookOpen as LucideIcon,
+  Feedback: MessageSquareHeart as LucideIcon,
+  Star: Star as LucideIcon,
+  Clock: Clock as LucideIcon,
+  Tip: Lightbulb as LucideIcon,
+  Close: X as LucideIcon,
+};
+
+export type IconName = keyof typeof icons;
+
+export const Icon: Record<IconName, LucideIcon> = icons;
