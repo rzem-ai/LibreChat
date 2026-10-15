@@ -1088,10 +1088,6 @@ export type Agent = {
 
 export type TAgentsMap = Record<string, Agent | undefined>;
 
-export type TAgentRenewResponse = { agent: Agent };
-
-export type TAgentsExpiringSoonResponse = { agents: Agent[] };
-
 export type AgentCreateParams = {
   git_identity?: AgentGitIdentity;
   name?: string | null;

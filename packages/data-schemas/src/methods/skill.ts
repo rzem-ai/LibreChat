@@ -1150,22 +1150,10 @@ export function createSkillMethods(
     retentionHours: number,
     minIntervalMs?: number,
   ) => Promise<void>;
-  renewSkillActivity: (
-    id: string,
-    author: Types.ObjectId | string,
-    retentionHours: number,
-  ) => Promise<(ISkill & { _id: Types.ObjectId }) | null>;
   setSkillRetentionException: (
     skillId: string,
     update: { exempt: boolean; reason?: string; setBy: string; setAt: Date },
   ) => Promise<Pick<ISkillDocument, 'retentionException'> | null>;
-  getSkillsExpiringSoon: (
-    owner: { userId: string; tenantId?: string | null },
-    withinMs: number,
-    options?: { now?: Date; limit?: number },
-  ) => Promise<
-    Array<Pick<ISkillDocument, '_id' | 'name' | 'author' | 'source' | 'tenantId' | 'expiredAt'>>
-  >;
 } {
   const { ObjectId } = mongoose.Types;
 
@@ -2222,36 +2210,6 @@ export function createSkillMethods(
   }
 
   /**
-   * Unconditionally re-stamps a skill's retention anchor, regardless of the
-   * throttle window `touchSkillsLastActivity` applies to the hot path. Used
-   * by the explicit renew-request handler, where a user action should always
-   * move the deadline forward. Scoped to `(id, author)` so a caller can't
-   * renew a skill it doesn't own even if the handler's own check is bypassed.
-   */
-  async function renewSkillActivity(
-    id: string,
-    author: Types.ObjectId | string,
-    retentionHours: number,
-  ): Promise<(ISkill & { _id: Types.ObjectId }) | null> {
-    if (!isValidObjectIdString(id)) {
-      return null;
-    }
-    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
-    const now = new Date();
-    const result = await Skill.findOneAndUpdate(
-      { _id: new ObjectId(id), author },
-      {
-        $set: {
-          lastActivityAt: now,
-          expiredAt: new Date(now.getTime() + retentionHours * 60 * 60 * 1000),
-        },
-      },
-      { new: true },
-    ).lean();
-    return result as unknown as (ISkill & { _id: Types.ObjectId }) | null;
-  }
-
-  /**
    * Admin-only, unconditional retention carve-out — the one lever that
    * permanently exempts a specific skill from the purge sweep, independent of
    * `source`/sync status and regardless of who it's shared with. Not
@@ -2271,38 +2229,6 @@ export function createSkillMethods(
       { new: true, projection: { retentionException: 1 } },
     ).lean<Pick<ISkillDocument, 'retentionException'>>();
     return result;
-  }
-
-  /**
-   * Owner-scoped list of skills expiring within the warning window, for the
-   * client's renewal banner. Excludes exempted and non-`inline` (synced)
-   * skills outright. Sharing a skill does not exempt it from expiry, so a
-   * shared skill still appears here if its owner should renew it.
-   */
-  async function getSkillsExpiringSoon(
-    owner: { userId: string; tenantId?: string | null },
-    withinMs: number,
-    { now = new Date(), limit = 100 }: { now?: Date; limit?: number } = {},
-  ): Promise<
-    Array<Pick<ISkillDocument, '_id' | 'name' | 'author' | 'source' | 'tenantId' | 'expiredAt'>>
-  > {
-    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
-    const filter: FilterQuery<ISkillDocument> = {
-      author: owner.userId,
-      expiredAt: { $ne: null, $gt: now, $lte: new Date(now.getTime() + withinMs) },
-      'retentionException.exempt': { $ne: true },
-      source: 'inline',
-    };
-    if (owner.tenantId) {
-      filter.tenantId = owner.tenantId;
-    }
-    return await Skill.find(filter)
-      .select({ _id: 1, name: 1, author: 1, source: 1, tenantId: 1, expiredAt: 1 })
-      .sort({ expiredAt: 1 })
-      .limit(limit)
-      .lean<
-        Array<Pick<ISkillDocument, '_id' | 'name' | 'author' | 'source' | 'tenantId' | 'expiredAt'>>
-      >();
   }
 
   return {
@@ -2327,9 +2253,7 @@ export function createSkillMethods(
     releaseSkillPurgeClaim,
     confirmSkillPurgeEligible,
     touchSkillsLastActivity,
-    renewSkillActivity,
     setSkillRetentionException,
-    getSkillsExpiringSoon,
   };
 }
 

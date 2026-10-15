@@ -48,7 +48,6 @@ import { MobileDrawerScrim } from '~/components/UnifiedSidebar/mobile';
 import useKeyboardShortcuts from '~/hooks/useKeyboardShortcuts';
 import useDrawerDismiss from '~/hooks/Nav/useDrawerDismiss';
 import useSidebarToggle from '~/hooks/Nav/useSidebarToggle';
-import PopupStack from '~/components/Retention/PopupStack';
 import useSidebarState from '~/hooks/Nav/useSidebarState';
 import { TermsAndConditionsModal } from '~/components/ui';
 import useDrawerSwipe from '~/hooks/Nav/useDrawerSwipe';
@@ -188,7 +187,6 @@ export default function Root() {
                 <AgentsMapContext.Provider value={agentsMap}>
                   <PromptGroupsProvider>
                     <Banner onHeightChange={setBannerHeight} />
-                    <PopupStack />
                     {/* Deloitte Custom Change: Add Deloitte Header to top of view */}
                     <div
                       style={

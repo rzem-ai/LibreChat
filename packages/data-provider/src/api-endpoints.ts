@@ -358,11 +358,6 @@ export const mcpServer = (serverName: string) => `${BASE_URL}/api/mcp/servers/${
 
 export const revertAgentVersion = (agent_id: string) => `${agents({ path: `${agent_id}/revert` })}`;
 
-/** Owner-scoped renewal of a private agent's independent retention deadline. */
-export const agentRenew = (agent_id: string) => `${agents({ path: `${agent_id}/renew` })}`;
-/** Owner-scoped list of the caller's private agents expiring within the warning window. */
-export const agentsExpiringSoon = () => `${agents({ path: 'expiring' })}`;
-
 export const files = () => `${BASE_URL}/api/files`;
 export const fileUpload = () => `${BASE_URL}/api/files`;
 export const fileDelete = () => `${BASE_URL}/api/files`;
@@ -376,11 +371,6 @@ export const filePreview = (fileId: string) =>
 export const fileConfig = () => `${BASE_URL}/api/files/config`;
 /** Owner-scoped usage touch so queued attachments outlive the upload-window TTL. */
 export const fileUsage = () => `${BASE_URL}/api/files/usage`;
-/** Owner-scoped renewal of a file's independent retention deadline. */
-export const fileRenew = (fileId: string) =>
-  `${BASE_URL}/api/files/${encodeURIComponent(fileId)}/renew`;
-/** Owner-scoped list of the caller's files expiring within the warning window. */
-export const filesExpiringSoon = () => `${BASE_URL}/api/files/expiring`;
 export const agentFiles = (agentId: string) => `${BASE_URL}/api/files/agent/${agentId}`;
 
 export const images = () => `${files()}/images`;
@@ -465,11 +455,6 @@ export const skills = () => `${BASE_URL}/api/skills`;
 export const importSkill = () => `${skills()}/import`;
 
 export const getSkill = (id: string) => `${skills()}/${encodeURIComponent(id)}`;
-
-/** Owner-scoped renewal of a private inline skill's independent retention deadline. */
-export const skillRenew = (skillId: string) => `${skills()}/${encodeURIComponent(skillId)}/renew`;
-/** Owner-scoped list of the caller's private inline skills expiring within the warning window. */
-export const skillsExpiringSoon = () => `${skills()}/expiring`;
 
 export const listSkillsWithFilters = (
   filter: Record<string, string | number | undefined | null>,

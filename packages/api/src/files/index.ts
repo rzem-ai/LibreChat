@@ -22,7 +22,6 @@ export * from './rag';
 export * from './rag/context';
 export * from './rag/search';
 export * from './regexEngine';
-export * from './renewal';
 export * from './retention';
 export * from './sse';
 export * from './sweep';

@@ -10,14 +10,8 @@ const {
   scanSkillFileUpload,
   resolveRequestTenantId,
   restoreTenantContextFromReq,
-  handleSkillRenewRequest,
-  handleSkillsExpiringSoonRequest,
 } = require('@librechat/api');
-const {
-  logger,
-  getAgentRetentionHours,
-  getAgentRetentionWarningHours,
-} = require('@librechat/data-schemas');
+const { logger } = require('@librechat/data-schemas');
 const {
   PermissionBits,
   PermissionTypes,
@@ -32,8 +26,6 @@ const {
   upsertSkillFile,
   getSkillFileByPath,
   getRoleByName,
-  renewSkillActivity,
-  getSkillsExpiringSoon,
 } = require('~/models');
 const { requireJwtAuth, canAccessSkillResource } = require('~/server/middleware');
 const { grantPermission } = require('~/server/services/PermissionService');
@@ -223,47 +215,6 @@ router.post(
 
 router.get('/', maybeStartRequestSkillSync, handlers.list);
 router.post('/', checkSkillCreate, handlers.create);
-
-/**
- * Owner-scoped list of the caller's own private inline skills expiring
- * within the configured warning window. Registered before `/:id` so the
- * literal segment isn't swallowed by the param route.
- * @route GET /skills/expiring
- */
-router.get('/expiring', async (req, res) => {
-  try {
-    const { status, body } = await handleSkillsExpiringSoonRequest(req.user ?? {}, {
-      getSkillsExpiringSoon,
-      retentionWarningHours: getAgentRetentionWarningHours(req.config?.interfaceConfig),
-    });
-    return res.status(status).json(body);
-  } catch (error) {
-    logger.error('[/skills/expiring] Failed to list expiring skills', error);
-    return res.status(500).json({ code: 'SKILLS_EXPIRING_FAILED' });
-  }
-});
-
-/**
- * Owner-scoped renewal of a private inline skill's independent retention
- * deadline.
- * @route POST /skills/:id/renew
- */
-router.post('/:id/renew', async (req, res) => {
-  try {
-    const { status, body } = await handleSkillRenewRequest(
-      req.user ?? {},
-      { skill_id: req.params.id },
-      {
-        renewSkillActivity,
-        retentionHours: getAgentRetentionHours(req.config?.interfaceConfig),
-      },
-    );
-    return res.status(status).json(body);
-  } catch (error) {
-    logger.error('[/skills/:id/renew] Failed to renew skill', error);
-    return res.status(500).json({ code: 'SKILL_RENEW_FAILED' });
-  }
-});
 
 router.get(
   '/:id',

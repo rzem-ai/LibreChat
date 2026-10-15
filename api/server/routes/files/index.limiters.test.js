@@ -49,7 +49,6 @@ jest.mock('./files', () => {
   const router = express.Router();
   router.post('/', (req, res) => res.status(200).json({ ok: true }));
   router.post('/usage', (req, res) => res.status(200).json({ ok: true }));
-  router.post('/:file_id/renew', (req, res) => res.status(200).json({ ok: true }));
   return router;
 });
 
@@ -105,29 +104,6 @@ describe('file route limiter wiring', () => {
     const response = await request(app)
       .post('/api/files/usage/')
       .send({ file_ids: ['f1'] });
-
-    expect(response.status).toBe(200);
-    expect(hits.usage).toBe(1);
-    expect(hits.uploadIp).toBe(0);
-    expect(hits.uploadUser).toBe(0);
-  });
-
-  it('meters POST /:file_id/renew with the usage limiter, never leaving it unlimited', async () => {
-    const response = await request(app).post('/api/files/f1/renew').send({});
-
-    expect(response.status).toBe(200);
-    expect(hits.usage).toBe(1);
-  });
-
-  it('keeps POST /:file_id/renew off the upload quota', async () => {
-    await request(app).post('/api/files/f1/renew').send({});
-
-    expect(hits.uploadIp).toBe(0);
-    expect(hits.uploadUser).toBe(0);
-  });
-
-  it('routes a trailing-slash /:file_id/renew/ through the usage limiter too', async () => {
-    const response = await request(app).post('/api/files/f1/renew/').send({});
 
     expect(response.status).toBe(200);
     expect(hits.usage).toBe(1);

@@ -1,14 +1,5 @@
 const express = require('express');
-const {
-  logger,
-  getAgentRetentionHours,
-  getAgentRetentionWarningHours,
-} = require('@librechat/data-schemas');
-const {
-  generateCheckAccess,
-  handleAgentRenewRequest,
-  handleAgentsExpiringSoonRequest,
-} = require('@librechat/api');
+const { generateCheckAccess } = require('@librechat/api');
 const { PermissionTypes, Permissions, PermissionBits } = require('librechat-data-provider');
 const { configMiddleware, canAccessAgentResource } = require('~/server/middleware');
 const v1 = require('~/server/controllers/agents/v1');
@@ -55,26 +46,6 @@ router.get('/categories', v1.getAgentCategories);
  * @returns {Agent} 201 - Success response - application/json
  */
 router.post('/', checkAgentCreate, configMiddleware, v1.createAgent);
-
-/**
- * Owner-scoped list of the caller's own private agents expiring within the
- * configured warning window, so the client can prompt for renewal before the
- * sweep deletes them. Registered before `/:id` so the literal segment isn't
- * swallowed by the param route.
- * @route GET /agents/expiring
- */
-router.get('/expiring', configMiddleware, async (req, res) => {
-  try {
-    const { status, body } = await handleAgentsExpiringSoonRequest(req.user ?? {}, {
-      getAgentsExpiringSoon: db.getAgentsExpiringSoon,
-      agentRetentionWarningHours: getAgentRetentionWarningHours(req.config?.interfaceConfig),
-    });
-    return res.status(status).json(body);
-  } catch (error) {
-    logger.error('[/agents/expiring] Failed to list expiring agents', error);
-    return res.status(500).json({ code: 'AGENTS_EXPIRING_FAILED' });
-  }
-});
 
 /**
  * Retrieves basic agent information (VIEW permission required).
@@ -197,31 +168,6 @@ router.post(
   configMiddleware,
   v1.revertAgentVersion,
 );
-
-/**
- * Owner-scoped renewal of a private agent's independent retention deadline.
- * Renewal is an explicit activity event, so it reuses the same stamping
- * recompute the hot-path touch uses.
- * @route POST /agents/:id/renew
- * @param {string} req.params.id - Agent identifier.
- */
-router.post('/:id/renew', configMiddleware, async (req, res) => {
-  try {
-    const { status, body } = await handleAgentRenewRequest(
-      req.user ?? {},
-      { agent_id: req.params.id },
-      {
-        renewAgentActivity: (searchParameter, retentionHours) =>
-          db.renewAgentActivity(searchParameter, retentionHours),
-        agentRetentionHours: getAgentRetentionHours(req.config?.interfaceConfig),
-      },
-    );
-    return res.status(status).json(body);
-  } catch (error) {
-    logger.error('[/agents/:id/renew] Failed to renew agent', error);
-    return res.status(500).json({ code: 'AGENT_RENEW_FAILED' });
-  }
-});
 
 /**
  * Returns a list of agents.

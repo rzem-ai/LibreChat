@@ -159,7 +159,7 @@ export interface CascadeDeleteAgentDeps {
  * `scope.tenantId` is required because `agent.id` is only unique per tenant.
  * `scope.claimToken`, when set (purge-sweep callers), scopes both the initial
  * read and the final delete to the still-held claim and a still-expired,
- * non-exempt agent — so a renewal or exemption granted after the sweep
+ * non-exempt agent — so an exemption granted after the sweep
  * claimed the agent aborts the cascade instead of deleting it anyway.
  *
  * Cleanup failures (tool-resource files, avatar blob) are collected rather

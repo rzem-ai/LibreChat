@@ -1,19 +1,12 @@
 const fs = require('fs').promises;
 const express = require('express');
-const {
-  logger,
-  SystemCapabilities,
-  getFileRetentionHours,
-  getFileRetentionWarningHours,
-} = require('@librechat/data-schemas');
+const { logger, SystemCapabilities } = require('@librechat/data-schemas');
 const {
   logAxiosError,
   getSafeErrorMetadata,
   getApprovalTtlMs,
   refreshS3FileUrls,
   handleFilesUsageRequest,
-  handleFileRenewRequest,
-  handleFilesExpiringSoonRequest,
   buildDeleteFilesResponse,
   deleteAgentResourceFiles,
   shouldUseUploadSse,
@@ -217,60 +210,6 @@ router.post('/usage', async (req, res) => {
   } catch (error) {
     logger.error('[/files/usage] Failed to mark files used', error);
     return res.status(500).json({ code: 'FILES_USAGE_FAILED' });
-  }
-});
-
-/**
- * POST /files/:file_id/renew
- *
- * Owner-scoped renewal of a file's independent retention deadline. Renewal is
- * an explicit use event, so it reuses the same `updateFileUsage` recompute
- * path the send flow already calls. Thin wrapper: validation and the
- * recompute live in `@librechat/api` (`handleFileRenewRequest`).
- */
-router.post('/:file_id/renew', async (req, res) => {
-  try {
-    const { status, body } = await handleFileRenewRequest(
-      req.user ?? {},
-      { file_id: req.params.file_id },
-      {
-        updateFileUsage: db.updateFileUsage,
-        fileRetentionHours: getFileRetentionHours(req.config?.interfaceConfig),
-      },
-    );
-    if (status >= 400) {
-      logger.warn('[/files/:file_id/renew] Renewal rejected', {
-        userId: req.user?.id,
-        file_id: req.params.file_id,
-        status,
-        code: body?.code,
-      });
-    }
-    return res.status(status).json(body);
-  } catch (error) {
-    logger.error('[/files/:file_id/renew] Failed to renew file', error);
-    return res.status(500).json({ code: 'FILE_RENEW_FAILED' });
-  }
-});
-
-/**
- * GET /files/expiring
- *
- * Owner-scoped list of the caller's own files whose retention deadline falls
- * within the configured warning window, so the client can prompt for renewal
- * before the sweep deletes them.
- */
-router.get('/expiring', async (req, res) => {
-  try {
-    const { status, body } = await handleFilesExpiringSoonRequest(req.user ?? {}, {
-      getFilesExpiringSoon: db.getFilesExpiringSoon,
-      fileRetentionWarningHours: getFileRetentionWarningHours(req.config?.interfaceConfig),
-      fileRetentionHours: getFileRetentionHours(req.config?.interfaceConfig),
-    });
-    return res.status(status).json(body);
-  } catch (error) {
-    logger.error('[/files/expiring] Failed to list expiring files', error);
-    return res.status(500).json({ code: 'FILES_EXPIRING_FAILED' });
   }
 });
 

@@ -704,21 +704,10 @@ export function createAgentMethods(
     retentionHours: number,
     minIntervalMs?: number,
   ) => Promise<void>;
-  renewAgentActivity: (
-    searchParameter: FilterQuery<IAgent>,
-    retentionHours: number,
-  ) => Promise<IAgent | null>;
   setAgentRetentionException: (
     agentId: string,
     update: { exempt: boolean; reason?: string; setBy: string; setAt: Date },
   ) => Promise<Pick<IAgent, 'id' | 'retentionException'> | null>;
-  getAgentsExpiringSoon: (
-    owner: { userId: string; tenantId?: string | null },
-    withinMs: number,
-    options?: { now?: Date; limit?: number },
-  ) => Promise<
-    Array<Pick<IAgent, '_id' | 'id' | 'name' | 'author' | 'is_promoted' | 'tenantId' | 'expiredAt'>>
-  >;
 } {
   const { removeAllPermissions, getActions, getSoleOwnedResourceIds, isExternalSkillId } = deps;
 
@@ -1944,30 +1933,6 @@ export function createAgentMethods(
   }
 
   /**
-   * Unconditionally re-stamps an agent's retention anchor, regardless of the
-   * throttle window `touchAgentLastActivity` applies to the hot path. Used by
-   * the explicit renew-request handler, where a user action should always
-   * move the deadline forward.
-   */
-  async function renewAgentActivity(
-    searchParameter: FilterQuery<IAgent>,
-    retentionHours: number,
-  ): Promise<IAgent | null> {
-    const Agent = mongoose.models.Agent as Model<IAgent>;
-    const now = new Date();
-    return await Agent.findOneAndUpdate(
-      searchParameter,
-      {
-        $set: {
-          lastActivityAt: now,
-          expiredAt: new Date(now.getTime() + retentionHours * 60 * 60 * 1000),
-        },
-      },
-      { new: true },
-    ).lean<IAgent>();
-  }
-
-  /**
    * Admin-only, unconditional retention carve-out — the one lever that
    * permanently exempts a specific agent from the purge sweep, independent of
    * promotion/catalog status and regardless of who it's shared with. Not
@@ -1983,40 +1948,6 @@ export function createAgentMethods(
       { $set: { retentionException: update } },
       { new: true, projection: { id: 1, retentionException: 1 } },
     ).lean<Pick<IAgent, 'id' | 'retentionException'>>();
-  }
-
-  /**
-   * Owner-scoped list of agents expiring within the warning window, for the
-   * client's renewal banner. Excludes promoted (catalog) agents and
-   * exempted agents outright. Sharing an agent does not exempt it from
-   * expiry, so a shared agent still appears here if its owner should renew it.
-   */
-  async function getAgentsExpiringSoon(
-    owner: { userId: string; tenantId?: string | null },
-    withinMs: number,
-    { now = new Date(), limit = 100 }: { now?: Date; limit?: number } = {},
-  ): Promise<
-    Array<Pick<IAgent, '_id' | 'id' | 'name' | 'author' | 'is_promoted' | 'tenantId' | 'expiredAt'>>
-  > {
-    const Agent = mongoose.models.Agent as Model<IAgent>;
-    const filter: FilterQuery<IAgent> = {
-      author: owner.userId,
-      expiredAt: { $ne: null, $gt: now, $lte: new Date(now.getTime() + withinMs) },
-      'retentionException.exempt': { $ne: true },
-      is_promoted: { $ne: true },
-    };
-    if (owner.tenantId) {
-      filter.tenantId = owner.tenantId;
-    }
-    return await Agent.find(filter)
-      .select({ _id: 1, id: 1, name: 1, author: 1, is_promoted: 1, tenantId: 1, expiredAt: 1 })
-      .sort({ expiredAt: 1 })
-      .limit(limit)
-      .lean<
-        Array<
-          Pick<IAgent, '_id' | 'id' | 'name' | 'author' | 'is_promoted' | 'tenantId' | 'expiredAt'>
-        >
-      >();
   }
 
   return {
@@ -2045,9 +1976,7 @@ export function createAgentMethods(
     claimExpiredAgents,
     releaseAgentPurgeClaim,
     touchAgentLastActivity,
-    renewAgentActivity,
     setAgentRetentionException,
-    getAgentsExpiringSoon,
   };
 }
 

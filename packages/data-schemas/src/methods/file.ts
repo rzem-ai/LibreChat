@@ -136,11 +136,6 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
     selectFields?: Record<string, 0 | 1> | string | null,
   ) => Promise<IMongoFile[] | null>;
   getExpiredFiles: (limit?: number, options?: ExpiredFileQueryOptions) => Promise<IMongoFile[]>;
-  getFilesExpiringSoon: (
-    owner: FileOwnerScope,
-    withinMs: number,
-    options?: ExpiredFileQueryOptions & { limit?: number },
-  ) => Promise<IMongoFile[]>;
   incrementFileDeletionAttempts: (file_id: string) => Promise<number>;
   deferExpiredFile: (file_id: string, deletionRetryAt: Date) => Promise<void>;
   getToolFilesByIds: (
@@ -417,31 +412,6 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
       expiredAt: { $ne: null, $lte: now },
       $or: [{ deletionRetryAt: null }, { deletionRetryAt: { $lte: now } }],
     })
-      .sort({ expiredAt: 1 })
-      .limit(limit)
-      .lean<IMongoFile[]>();
-  }
-
-  /**
-   * Finds a user's own files whose retention deadline falls within the given
-   * warning window, so the renewal prompt can surface them before the sweep
-   * deletes them. Excludes already-expired files (those are the sweep's job,
-   * not the renewal prompt's).
-   */
-  async function getFilesExpiringSoon(
-    owner: FileOwnerScope,
-    withinMs: number,
-    { now = new Date(), limit = 100 }: ExpiredFileQueryOptions & { limit?: number } = {},
-  ): Promise<IMongoFile[]> {
-    const File = mongoose.models.File as Model<IMongoFile>;
-    return await File.find(
-      withOwnerScope(
-        {
-          expiredAt: { $ne: null, $gt: now, $lte: new Date(now.getTime() + withinMs) },
-        },
-        owner,
-      ),
-    )
       .sort({ expiredAt: 1 })
       .limit(limit)
       .lean<IMongoFile[]>();
@@ -1248,7 +1218,6 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
     findFileById,
     getFiles,
     getExpiredFiles,
-    getFilesExpiringSoon,
     incrementFileDeletionAttempts,
     deferExpiredFile,
     getToolFilesByIds,

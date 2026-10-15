@@ -199,10 +199,6 @@ export type TSkill = {
   expiredAt?: string | null;
 };
 
-export type TSkillRenewResponse = { skill: TSkill };
-
-export type TSkillsExpiringSoonResponse = { skills: TSkill[] };
-
 /**
  * Summary shape used in list endpoints — omits `body` and `frontmatter` to keep
  * list payloads small. Callers that need the full body/frontmatter must fetch

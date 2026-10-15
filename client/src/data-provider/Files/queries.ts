@@ -18,7 +18,6 @@ import {
 } from '~/utils';
 // Deloitte Custom Change (PR #197): authenticated blob fetch for private Azure file rendering.
 import { useBlobUrl } from '~/hooks/Files/useBlobUrl';
-import { EXPIRING_SOON_REFETCH_INTERVAL_MS } from '~/data-provider/Retention/queries';
 import { isEphemeralAgent } from '~/common';
 import store from '~/store';
 
@@ -52,23 +51,6 @@ export const useGetAgentFiles = <TData = t.TFile[]>(
       refetchOnMount: false,
       ...config,
       enabled: (config?.enabled ?? true) === true && queriesEnabled && !isEphemeralAgent(agentId),
-    },
-  );
-};
-
-export const useGetFilesExpiringSoonQuery = <TData = t.TFile[]>(
-  config?: UseQueryOptions<t.TFile[], unknown, TData>,
-): QueryObserverResult<TData, unknown> => {
-  const queriesEnabled = useRecoilValue<boolean>(store.queriesEnabled);
-  return useQuery<t.TFile[], unknown, TData>(
-    [QueryKeys.filesExpiringSoon],
-    async () => (await dataService.getFilesExpiringSoon()).files,
-    {
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      refetchInterval: EXPIRING_SOON_REFETCH_INTERVAL_MS,
-      ...config,
-      enabled: (config?.enabled ?? true) === true && queriesEnabled,
     },
   );
 };
