@@ -23,7 +23,7 @@ jest.mock('@librechat/client', () => {
   const DialogContext = React.createContext({ onOpenChange: (_open: boolean) => {} });
 
   return {
-    GEL: { Icon: { Star: () => null } },
+    GEL: { Icon: () => null },
     Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
       <button {...props}>{children}</button>
     ),

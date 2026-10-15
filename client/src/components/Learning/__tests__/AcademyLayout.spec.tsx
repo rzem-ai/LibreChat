@@ -22,9 +22,9 @@ jest.mock('~/components/Chat/Menus/OpenSidebar', () => ({
 describe('Academy layout', () => {
   const renderLayout = () =>
     render(
-      <MemoryRouter initialEntries={['/learning/tours']}>
+      <MemoryRouter initialEntries={['/learn/tours']}>
         <Routes>
-          <Route path="/learning" element={<Layout />}>
+          <Route path="/learn" element={<Layout />}>
             <Route path="tours" element={<p>page content</p>} />
           </Route>
         </Routes>

@@ -38,7 +38,7 @@ export default function Page(): JSX.Element {
   const enabledTabs = tabs.filter((candidate) => candidate.enabled);
 
   if (!isConfigLoading && !enabledTabs.some((candidate) => candidate.id === tab)) {
-    return <Navigate to="/learning/tours" replace />;
+    return <Navigate to="/learn/tours" replace />;
   }
 
   return (
@@ -58,14 +58,14 @@ export default function Page(): JSX.Element {
             className="shrink-0"
             onClick={askFaqAgent}
           >
-            <GEL.Icon.Agent className="size-4" aria-hidden="true" />
+            <GEL.Icon name="agent" className="size-4" aria-hidden="true" />
             {localize('com_learning_ask_faq_agent', { 0: faqAgent.name ?? '' })}
           </Button>
         )}
       </header>
       <GEL.Tabs
         value={tab}
-        onValueChange={(next) => navigate(`/learning/${next}`)}
+        onValueChange={(next) => navigate(`/learn/${next}`)}
         className="flex flex-col gap-6"
       >
         <GEL.TabsList variant="underline" className="w-full">
@@ -79,7 +79,7 @@ export default function Page(): JSX.Element {
           <Tours />
         </GEL.TabsContent>
         <GEL.TabsContent value="resources" className={contentClass}>
-          <Resources onOpenArticle={(slug) => navigate(`/learning/articles/${slug}`)} />
+          <Resources onOpenArticle={(slug) => navigate(`/learn/articles/${slug}`)} />
         </GEL.TabsContent>
         <GEL.TabsContent value="faq" className={contentClass}>
           <Faq />

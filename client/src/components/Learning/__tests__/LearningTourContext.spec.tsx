@@ -176,7 +176,7 @@ describe('LearningTourContext', () => {
 
   it('keeps completion state even though starting the tour switches away from the Learning panel', () => {
     // This is the bug this context fixes: completion state used to live inside
-    // LearningPanel, which unmounts the moment the sidebar panel switches to
+    // the Learning panel, which unmounted the moment the sidebar panel switched to
     // "conversations" — so the completion popup never had anywhere to read from.
     const { result } = renderHook(() => useLearningTour(), { wrapper });
 

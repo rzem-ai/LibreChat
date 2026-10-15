@@ -8,5 +8,5 @@ export * from './Tabs';
 export * from './Typeset';
 export * from './SearchInput';
 export * from './HighlightedText';
-export { Icon } from './icons';
-export type { IconName } from './icons';
+export { Icon } from './icon';
+export type { IconName } from './icon/registry';

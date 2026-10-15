@@ -42,7 +42,8 @@ export default function RatingStars({ selected, onSelect }: RatingStarsProps) {
               data-testid={`course-rating-star-${value}`}
               className="p-0.5 transition-transform hover:scale-110"
             >
-              <GEL.Icon.Star
+              <GEL.Icon
+                name="star"
                 className={cn(
                   'size-5',
                   isFilled ? 'fill-current text-surface-submit' : 'text-text-tertiary',

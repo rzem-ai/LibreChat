@@ -1,11 +1,24 @@
 import '@testing-library/jest-dom';
-import { ResourceCard, StatusChip, TourCard } from '..';
+import { ModuleStatus, ResourceCard, TourCard } from '..';
 import { fireEvent, render, screen } from '@testing-library/react';
 
-describe('StatusChip', () => {
-  it('renders the provided label', () => {
-    render(<StatusChip status="in-progress" label="60% complete" />);
+describe('ModuleStatus', () => {
+  it('shows the label beside the status when showLabel is set', () => {
+    render(<ModuleStatus status="in-progress" percent={60} label="60% complete" showLabel />);
     expect(screen.getByText('60% complete')).toBeInTheDocument();
+  });
+
+  it('exposes the label as an image only when the text is hidden', () => {
+    render(<ModuleStatus status="complete" percent={0} label="Completed" showLabel={false} />);
+    expect(screen.getByRole('img', { name: 'Completed' })).toBeInTheDocument();
+    expect(screen.queryByText('Completed')).not.toBeInTheDocument();
+  });
+
+  it('renders nothing for not-started in the compact layout', () => {
+    const { container } = render(
+      <ModuleStatus status="not-started" percent={0} label="Not started" showLabel={false} />,
+    );
+    expect(container).toBeEmptyDOMElement();
   });
 });
 
@@ -18,9 +31,9 @@ describe('TourCard', () => {
     ctaLabel: 'Continue',
   };
 
-  it.each([false, true])('starts the tour from the CTA (hero=%s)', (hero) => {
+  it.each(['compact', 'wide'] as const)('starts the tour from the CTA (%s)', (variant) => {
     const onStart = jest.fn();
-    render(<TourCard {...props} hero={hero} onStart={onStart} />);
+    render(<TourCard {...props} variant={variant} onStart={onStart} />);
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
     expect(onStart).toHaveBeenCalledTimes(1);
     expect(screen.getByText('60% complete')).toBeInTheDocument();
@@ -33,7 +46,7 @@ describe('TourCard', () => {
 });
 
 describe('ResourceCard', () => {
-  const base = { title: 'T', description: 'D', icon: 'Article' as const, metaLabel: 'Article' };
+  const base = { title: 'T', description: 'D', icon: 'article' as const, metaLabel: 'Article' };
 
   it('calls onSelect for in-app resources', () => {
     const onSelect = jest.fn();

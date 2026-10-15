@@ -39,9 +39,9 @@ export default function Article(): JSX.Element {
       size="sm"
       variant="ghost"
       className="w-fit text-text-secondary"
-      onClick={() => navigate('/learning/resources')}
+      onClick={() => navigate('/learn/resources')}
     >
-      <GEL.Icon.Back className="size-4" aria-hidden="true" />
+      <GEL.Icon name="back" className="size-4" aria-hidden="true" />
       {localize('com_learning_back_to_resources')}
     </Button>
   );

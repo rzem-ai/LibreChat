@@ -1,18 +1,20 @@
 import { Button, GEL } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
 import type { TourStatus } from '../content/schema';
-import { StatusChip } from './StatusChip';
+import { ModuleStatus } from './ModuleStatus';
 import { cn } from '~/utils';
 
 interface TourCardProps {
   title: string;
   description: string;
   status: TourStatus;
+  /** Completion percentage, used by the progress ring while in progress. */
+  percent?: number;
   statusLabel: string;
   ctaLabel: string;
   onStart: () => void;
-  /** Full-width horizontal layout used for the Getting Started tour. */
-  hero?: boolean;
+  /** `wide` is the single-row Getting Started layout; `compact` is the grid card. */
+  variant?: 'compact' | 'wide';
   disabled?: boolean;
 }
 
@@ -20,18 +22,17 @@ export function TourCard({
   title,
   description,
   status,
+  percent = 0,
   statusLabel,
   ctaLabel,
   onStart,
-  hero = false,
+  variant = 'compact',
   disabled = false,
 }: TourCardProps): JSX.Element {
-  const StatusIcon = status === 'complete' ? GEL.Icon.Complete : GEL.Icon.Incomplete;
-  const statusIconClass = status === 'in-progress' ? 'text-primary' : 'text-text-secondary';
   const cta = (
     <Button
       type="button"
-      size={hero ? 'default' : 'sm'}
+      size="sm"
       variant={status === 'in-progress' ? 'submit' : 'outline'}
       disabled={disabled}
       onClick={onStart}
@@ -39,20 +40,16 @@ export function TourCard({
       {ctaLabel}
     </Button>
   );
-  const chip = <StatusChip status={status} label={statusLabel} />;
 
-  if (hero) {
+  if (variant === 'wide') {
     return (
       <GEL.Card className="flex-col items-start gap-4 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-        <div className="flex items-center gap-3">
-          <StatusIcon className={cn('size-5 shrink-0', statusIconClass)} aria-hidden="true" />
-          <div className="flex flex-col gap-1">
-            <h3 className="text-sm font-medium">{title}</h3>
-            <p className="text-sm text-text-secondary">{description}</p>
-          </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <GEL.CardTitle className="text-base font-[550] leading-none">{title}</GEL.CardTitle>
+          <p className="max-w-prose text-sm text-text-secondary">{description}</p>
         </div>
-        <div className="flex shrink-0 items-center gap-3">
-          {chip}
+        <div className="flex shrink-0 items-center gap-4">
+          <ModuleStatus status={status} percent={percent} label={statusLabel} showLabel />
           {cta}
         </div>
       </GEL.Card>
@@ -60,15 +57,20 @@ export function TourCard({
   }
 
   return (
-    <GEL.Card className={cn(disabled && 'opacity-60')}>
-      <GEL.CardHeader>
-        <GEL.CardTitle>
-          <StatusIcon className={cn('size-4 shrink-0', statusIconClass)} aria-hidden="true" />
+    <GEL.Card className={cn('@container', disabled && 'opacity-60')}>
+      <GEL.CardHeader className="items-start">
+        <GEL.CardTitle className="min-w-0 flex-1 text-base font-[550] leading-none">
           {title}
         </GEL.CardTitle>
-        {chip}
+        <ModuleStatus
+          status={status}
+          percent={percent}
+          label={statusLabel}
+          showLabel={false}
+          adaptive
+        />
       </GEL.CardHeader>
-      <GEL.CardContent>{description}</GEL.CardContent>
+      <GEL.CardContent className="max-w-prose">{description}</GEL.CardContent>
       <GEL.CardFooter>{cta}</GEL.CardFooter>
     </GEL.Card>
   );

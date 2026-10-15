@@ -30,10 +30,11 @@ export default function Tours(): JSX.Element {
     return (
       <TourCard
         key={tour.id}
-        hero={isHero}
+        variant={isHero ? 'wide' : 'compact'}
         title={tour.title}
         description={tour.description}
         status={status}
+        percent={percent}
         statusLabel={tour.comingSoon ? localize('com_learning_coming_soon') : statusLabel}
         ctaLabel={tour.comingSoon ? localize('com_learning_coming_soon') : ctaLabel}
         disabled={tour.comingSoon}

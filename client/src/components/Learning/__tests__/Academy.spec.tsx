@@ -94,7 +94,7 @@ describe('Academy', () => {
   const academyTree = (path: string) => (
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="/learning/:tab" element={<Page />} />
+        <Route path="/learn/:tab" element={<Page />} />
       </Routes>
     </MemoryRouter>
   );
@@ -107,7 +107,7 @@ describe('Academy', () => {
   });
 
   it('shows the Getting Started hero first and hides flagged tabs by default', () => {
-    renderAt('/learning/tours');
+    renderAt('/learn/tours');
     expect(screen.getByText('com_learning_start_here:Getting Started Tour')).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'com_learning_tab_faq' })).not.toBeInTheDocument();
     expect(
@@ -116,13 +116,13 @@ describe('Academy', () => {
   });
 
   it('redirects a flagged-off tab back to tours', () => {
-    renderAt('/learning/faq');
+    renderAt('/learn/faq');
     expect(screen.getByText('com_learning_start_here:Getting Started Tour')).toBeInTheDocument();
   });
 
   it('shows the flagged tabs when their flags are on', () => {
     mockFlags = { learningCommonQuestions: true, learningReleaseNotes: true };
-    renderAt('/learning/faq');
+    renderAt('/learn/faq');
     expect(screen.getByRole('tab', { name: 'com_learning_tab_faq' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'com_learning_tab_releases' })).toBeInTheDocument();
     expect(screen.getByLabelText('com_learning_search_faq')).toBeInTheDocument();
@@ -130,14 +130,14 @@ describe('Academy', () => {
 
   it('falls back to tours when the startup config failed to load', () => {
     mockConfigStatus = 'error';
-    renderAt('/learning/faq');
+    renderAt('/learn/faq');
     expect(screen.getByText('com_learning_start_here:Getting Started Tour')).toBeInTheDocument();
     expect(screen.queryByLabelText('com_learning_search_faq')).not.toBeInTheDocument();
   });
 
   it('keeps a flagged tab URL while the startup config is still loading', () => {
     mockConfigStatus = 'loading';
-    const { rerender } = renderAt('/learning/faq');
+    const { rerender } = renderAt('/learn/faq');
     expect(
       screen.queryByText('com_learning_start_here:Getting Started Tour'),
     ).not.toBeInTheDocument();
@@ -145,7 +145,7 @@ describe('Academy', () => {
 
     mockConfigStatus = 'success';
     mockFlags = { learningCommonQuestions: true, learningReleaseNotes: true };
-    rerender(academyTree('/learning/faq'));
+    rerender(academyTree('/learn/faq'));
     expect(screen.getByRole('tab', { name: 'com_learning_tab_faq' })).toBeInTheDocument();
     expect(screen.getByLabelText('com_learning_search_faq')).toBeInTheDocument();
   });
@@ -155,7 +155,7 @@ describe('Academy', () => {
       'learningTourProgress',
       JSON.stringify({ [GETTING_STARTED_COURSE_ID]: { step: 3, total: 9, completed: false } }),
     );
-    renderAt('/learning/tours');
+    renderAt('/learn/tours');
     fireEvent.click(screen.getByRole('button', { name: 'com_learning_tour_continue' }));
     expect(mockResumeTour).toHaveBeenCalledWith(3);
   });

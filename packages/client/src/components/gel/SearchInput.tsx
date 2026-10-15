@@ -1,7 +1,7 @@
 import type { InputHTMLAttributes } from 'react';
 import type { JSX } from 'react/jsx-runtime';
 import { IconButton } from '../IconButton';
-import { Icon } from './icons';
+import { Icon } from './icon';
 import { cn } from '~/utils';
 
 interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
@@ -23,8 +23,6 @@ export function SearchInput({
   value,
   ...props
 }: SearchInputProps): JSX.Element {
-  const SearchIcon = Icon.Search;
-  const ClearIcon = Icon.Clear;
   const hasValue = typeof value === 'string' && value.length > 0;
 
   return (
@@ -34,7 +32,7 @@ export function SearchInput({
         containerClassName,
       )}
     >
-      <SearchIcon className="size-4 shrink-0" aria-hidden="true" />
+      <Icon name="search" className="size-4 shrink-0" aria-hidden="true" />
       <input
         type="search"
         aria-label={label}
@@ -47,7 +45,7 @@ export function SearchInput({
       />
       {hasValue && (
         <IconButton label={clearLabel} size="xs" shape="round" onClick={onClear}>
-          <ClearIcon className="size-3.5" aria-hidden="true" />
+          <Icon name="clear" className="size-3.5" aria-hidden="true" />
         </IconButton>
       )}
     </div>

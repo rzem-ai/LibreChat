@@ -18,9 +18,9 @@ const getFields = (resource: Resource): string[] => [
 ];
 
 const resourceIcons: Record<Resource['type'], GEL.IconName> = {
-  tour: 'Tour',
-  article: 'Article',
-  external: 'External',
+  tour: 'tour',
+  article: 'article',
+  external: 'external',
 };
 
 export default function Resources({ onOpenArticle }: ResourcesProps): JSX.Element {

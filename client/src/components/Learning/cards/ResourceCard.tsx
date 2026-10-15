@@ -27,8 +27,6 @@ export function ResourceCard({
   externalHref,
   onSelect,
 }: ResourceCardProps): JSX.Element {
-  const Icon = GEL.Icon[icon];
-
   return (
     <GEL.Card
       className={cn(
@@ -53,7 +51,7 @@ export function ResourceCard({
         />
       )}
       <div className="flex items-center gap-1.5 text-xs text-text-secondary">
-        <Icon className="size-4" aria-hidden="true" />
+        <GEL.Icon name={icon} className="size-4" aria-hidden="true" />
         {metaLabel}
       </div>
       <GEL.CardHeader>

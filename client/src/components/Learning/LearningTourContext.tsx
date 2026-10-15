@@ -39,8 +39,8 @@ const CONDITIONAL_AGENT_STEP_IDS = new Set(['agent-marketplace', 'switch-back-to
 /**
  * Mounted once in `Root`, above both the sidebar and the completion popup.
  * Starting the Getting Started tour switches the sidebar away from the Learning
- * Hub panel itself (to "conversations", so search/projects are visible) —
- * which would unmount any tour-completion state kept inside `LearningPanel`.
+ * Hub entry point (to "conversations", so search/projects are visible) —
+ * which would unmount any tour-completion state kept inside the Learning menu.
  * Owning that state here instead means the completion popup still shows up
  * no matter which panel is active when the tour finishes.
  */

@@ -175,8 +175,9 @@ export const router = createBrowserRouter(
               path: 'insights',
               lazy: loadInsightsView,
             },
+            /** Deloitte custom change: Learning Center (Academy) routes under /learn. */
             {
-              path: 'learning',
+              path: 'learn',
               lazy: loadAcademyLayout,
               children: [
                 {

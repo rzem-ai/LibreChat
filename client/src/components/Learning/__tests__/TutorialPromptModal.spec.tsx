@@ -19,7 +19,7 @@ jest.mock('@librechat/client', () => ({
     <button {...props}>{children}</button>
   ),
   useMediaQuery: () => mockUseMediaQuery(),
-  GEL: { Icon: { Academy: () => null } },
+  GEL: { Icon: () => null },
 }));
 
 jest.mock('recoil', () => ({
