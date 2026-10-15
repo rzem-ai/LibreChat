@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, startTransition } from 'react';
+import { useAtomValue } from 'jotai';
 import { useRecoilValue } from 'recoil';
 import { Outlet } from 'react-router-dom';
 import { useMediaQuery } from '@librechat/client';
@@ -51,6 +52,7 @@ import useSidebarToggle from '~/hooks/Nav/useSidebarToggle';
 import useSidebarState from '~/hooks/Nav/useSidebarState';
 import { TermsAndConditionsModal } from '~/components/ui';
 import useDrawerSwipe from '~/hooks/Nav/useDrawerSwipe';
+import { showTermsViewerAtom } from '~/store/terms';
 import { Banner } from '~/components/Banners';
 import store from '~/store';
 
@@ -67,6 +69,11 @@ function KeyboardShortcutsProvider() {
 
 export default function Root() {
   const [showTerms, setShowTerms] = useState(false);
+  // Deloitte Custom Change: the avatar menu's read-only "view terms" dialog is owned
+  // and rendered by AccountSettings (it needs the avatar button ref for focus restore
+  // on close); this only reads whether it's open, to keep the tutorial bubble gated
+  // behind both terms dialogs.
+  const showTermsViewer = useAtomValue(showTermsViewerAtom);
   const [bannerHeight, setBannerHeight] = useState(0);
   /** Shared with the drawer so the two agree on the breakpoint-transition frame. */
   const {
@@ -259,19 +266,23 @@ export default function Root() {
                     </div>
                   </PromptGroupsProvider>
                 </AgentsMapContext.Provider>
-                {config?.interface?.termsOfService?.modalAcceptance === true && (
+                {termsEnabled && config?.interface?.termsOfService != null && (
                   <TermsAndConditionsModal
                     open={showTerms}
                     onOpenChange={setShowTerms}
                     onAccept={handleAcceptTerms}
                     onDecline={handleDeclineTerms}
                     title={config.interface.termsOfService.modalTitle}
+                    // Deloitte Custom Change: eyebrow shows the deployment's product name above the title
+                    eyebrow={config.appTitle}
                     modalContent={config.interface.termsOfService.modalContent}
                   />
                 )}
                 {/* Deloitte Custom Change: Learning Hub tutorial prompt bubble and course completion modal */}
                 <TutorialPromptModal
-                  termsVisible={showTerms || (termsEnabled && (termsLoading || !termsData))}
+                  termsVisible={
+                    showTerms || showTermsViewer || (termsEnabled && (termsLoading || !termsData))
+                  }
                   chatReady={chatReady}
                 />
                 <CourseCompletionModal />

@@ -9,6 +9,8 @@ export * from './Checkbox';
 export * from './DisclosureChevron';
 export * from './Dialog';
 export * from './DropdownMenu';
+// Deloitte Custom Change: GEL-branded dialog building blocks, reusable by any dialog needing GEL styling.
+export * from './gel';
 export * from './HoverCard';
 export * from './Field';
 export * from './Input';
