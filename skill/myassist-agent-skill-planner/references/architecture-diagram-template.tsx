@@ -127,7 +127,7 @@ interface NodeProps {
   sublabel?: string;
   formatLabel?: string; // For DOCX/XLSX/PPTX badges (replaces icon)
   typeLabel?: string; // For AGENT/SKILL type identification
-  Icon?: any;
+  Icon?: typeof Bot | typeof MCPIcon;
   pal: { fill: string; stroke: string; icon: string };
   large?: boolean;
 }
