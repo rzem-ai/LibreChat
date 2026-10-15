@@ -149,12 +149,15 @@ describe('createMemoryTool', () => {
       expect(artifacts[Tools.memory].key).toBe('test');
       expect(artifacts[Tools.memory].value).toBe('small memory');
 
-      expect(mockSetMemory).toHaveBeenCalledWith({
-        userId: 'test-user',
-        key: 'test',
-        value: 'small memory',
-        tokenCount: 12,
-      });
+      expect(mockSetMemory).toHaveBeenCalledWith(
+        {
+          userId: 'test-user',
+          key: 'test',
+          value: 'small memory',
+          tokenCount: 12,
+        },
+        { retentionHours: undefined },
+      );
     });
   });
 
@@ -287,6 +290,7 @@ describe('createMemoryTool', () => {
           key: 'ORG-KEY',
           value: 'Prefers concise answers',
         }),
+        expect.anything(),
       );
     });
 
@@ -329,6 +333,7 @@ describe('createMemoryTool', () => {
             key: 'policy_result',
             value: blocked[0],
           }),
+          expect.anything(),
         );
       },
     );
