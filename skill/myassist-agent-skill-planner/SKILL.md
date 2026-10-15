@@ -339,7 +339,7 @@ Skill Builder will use the pre-filled information and ask only about `[OPEN]`, i
 
 ## Diagram Generation Rules
 
-Use `references/architecture-diagram-template.tsx` as the sole visual and structural base. Do not create an SVG-only diagram, a new visual design, hand-drawn SVG icons, or substitute colours and icons.
+Use `references/architecture-diagram-handoff.tsx` as the visual and structural base for `HandoffLayout`. Use `references/architecture-diagram-template.tsx` as the sole visual and structural base for `SeriesLayout`, `ParallelLayout`, and `AgentOnlyLayout`. Do not create an SVG-only diagram, a new visual design, hand-drawn SVG icons, or substitute colours and icons.
 
 **Icon mapping:**
 
