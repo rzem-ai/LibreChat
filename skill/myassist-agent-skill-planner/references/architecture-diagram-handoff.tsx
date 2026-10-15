@@ -43,7 +43,15 @@ const HC = '#e67e22';
 const W = 1160;
 const H = 490;
 
-function MCPIcon({ size = 18, color = 'currentColor', strokeWidth = 1.5 }: any) {
+function MCPIcon({
+  size = 18,
+  color = 'currentColor',
+  strokeWidth = 1.5,
+}: {
+  size?: number;
+  color?: string;
+  strokeWidth?: number;
+}) {
   return (
     <svg
       width={size}
