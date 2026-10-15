@@ -369,6 +369,17 @@ describe('Code CRUD', () => {
       expect(mockAxios).toHaveBeenCalledTimes(1);
     });
 
+    it('treats an expired sandbox session (403) as already deleted', async () => {
+      mockAxios.mockRejectedValue(
+        Object.assign(new Error('Request failed with status code 403'), {
+          response: { status: 403 },
+        }),
+      );
+
+      await expect(deleteCodeEnvFile(req, file)).resolves.toBeUndefined();
+      expect(mockAxios).toHaveBeenCalledTimes(1);
+    });
+
     it('throws when code environment deletion fails', async () => {
       mockAxios.mockRejectedValue(
         Object.assign(new Error('unavailable'), { response: { status: 500 } }),
