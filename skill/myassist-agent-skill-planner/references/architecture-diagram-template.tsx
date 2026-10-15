@@ -575,17 +575,17 @@ export function ParallelLayout() {
 
           {/* Parallel group box */}
           <rect
-            x={493}
-            y={148}
-            width={133}
-            height={272}
+            x={486}
+            y={128}
+            width={147}
+            height={300}
             rx={6}
             fill="rgba(213,232,212,0.22)"
             stroke="#82b366"
             strokeWidth={1}
             strokeDasharray="5,3"
           />
-          <text x={559} y={163} textAnchor="middle" fontSize={9} fontStyle="italic" fill="#4a8c5c">
+          <text x={559} y={148} textAnchor="middle" fontSize={9} fontStyle="italic" fill="#4a8c5c">
             ① Parallel
           </text>
 
