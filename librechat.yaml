@@ -1,7 +1,7 @@
 version: 1.3.17 # Copy from librechat.example.yaml
 cache: true
 
-# 'includedTools' restricts the list of tools available in the Agent Builder.
+# 'includedTools' restricts the tools available in the Agent Builder to only those listed here.
 includedTools:
   - 'file_search'
   - 'execute_code'
