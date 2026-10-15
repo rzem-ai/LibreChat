@@ -48,15 +48,6 @@ pods:
           TOKEN_PROXY_MCP_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
     containers:
       librechat:
-        command:
-          - /bin/sh
-          - -c
-          - >-
-            mkdir -p /app/client/dist/assets && if [ -d /app/deloitte/assets ]; then
-              cp -a /app/deloitte/assets/. /app/client/dist/assets/;
-            elif [ -d /app/deloitte-assets ]; then
-              cp -a /app/deloitte-assets/. /app/client/dist/assets/;
-            fi && exec npm run backend
         image:
           tag: 'develop@sha256:2ed9e69836b1873f40da56d1ad84b3a2c798429835a1922ee6c981591131bfc5'
         resources:
