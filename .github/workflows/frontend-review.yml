@@ -1,6 +1,11 @@
 name: Frontend Unit Tests
 
 on:
+  # Deloitte Custom Change: no `paths:` filter here (moved into the `changes` job below) so every
+  # PR gets a workflow run and the required "All checks passed" check always reports a result — a
+  # path-filtered trigger left PRs that don't touch frontend paths stuck on "waiting for status to
+  # be reported" forever, since branch protection has no concept of "required only if these paths
+  # changed."
   pull_request:
   # Post-merge safety net and full-run baseline for gated selection (same rationale as
   # backend-review.yml stage 1): every dev merge touching frontend paths runs the full suite.
@@ -35,8 +40,45 @@ env:
   NODE_OPTIONS: '--max-old-space-size=${{ secrets.NODE_MAX_OLD_SPACE_SIZE || 6144 }}'
 
 jobs:
+  # Deloitte Custom Change: computes whether this PR touches frontend paths, so the rest of the
+  # workflow can skip on an unrelated PR while still letting `all-checks-passed` report a result.
+  # Push/workflow_dispatch always run full (push already path-filters at the trigger;
+  # workflow_dispatch is an explicit full-suite promotion run) — only pull_request consults the
+  # filter.
+  changes:
+    name: Detect frontend changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      frontend: ${{ steps.decide.outputs.frontend }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: github.event_name == 'pull_request'
+        with:
+          filters: |
+            frontend:
+              - 'e2e/client-build.test.mjs'
+              - 'client/**'
+              - 'packages/client/**'
+              - 'packages/data-provider/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/frontend-review.yml'
+              - '!**.md'
+      - name: Decide whether the frontend suite should run
+        id: decide
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ] || [ "${{ steps.filter.outputs.frontend }}" = "true" ]; then
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "frontend=false" >> "$GITHUB_OUTPUT"
+          fi
+
   client-build-regression:
     name: Client build recovery regression
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -61,12 +103,14 @@ jobs:
   # testPathIgnorePatterns, so --runTestsByPath needs no exclude mirroring here.
   codegraph_select:
     name: Codegraph select
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: >-
       github.event_name == 'pull_request' &&
       github.event.action == 'synchronize' &&
-      vars.CODEGRAPH_GATING != 'off'
+      vars.CODEGRAPH_GATING != 'off' &&
+      needs.changes.outputs.frontend == 'true'
     outputs:
       decided: ${{ steps.sel.outputs.decided }}
       client_run: ${{ steps.sel.outputs.client_run }}
@@ -153,6 +197,8 @@ jobs:
 
   build:
     name: Build packages
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -472,7 +518,10 @@ jobs:
     if: always()
     needs:
       # Deloitte Custom Change: job list updated for upstream's client-build-regression/codegraph_select
-      # gating structure, which replaced the old dorny/paths-filter `changes` job and dropped `test-windows`
+      # gating structure, which replaced the old dorny/paths-filter `changes` job (used for per-job test
+      # selection) and dropped `test-windows`. The `changes` job below is a different, newer addition:
+      # it only gates whether the suite runs at all, keeping this required check reporting on every PR.
+      - changes
       - client-build-regression
       - build
       - typecheck
