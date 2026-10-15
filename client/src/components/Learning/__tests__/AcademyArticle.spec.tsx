@@ -31,7 +31,12 @@ jest.mock('~/hooks', () => ({
 }));
 
 jest.mock('../content/loader', () => ({
-  loadArticle: (slug: string) => Promise.resolve(slug === 'sample' ? mockArticle : undefined),
+  loadArticle: (slug: string) => {
+    if (slug === 'broken') {
+      return Promise.reject(new Error('chunk failed'));
+    }
+    return Promise.resolve(slug === 'sample' ? mockArticle : null);
+  },
 }));
 
 describe('Academy article', () => {
@@ -54,7 +59,9 @@ describe('Academy article', () => {
 
   const renderAt = (path: string) =>
     render(
-      <QueryClientProvider client={new QueryClient()}>
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retryDelay: 1 } } })}
+      >
         <MemoryRouter initialEntries={[path]}>
           <Routes>
             <Route path="/learning/articles/:slug" element={<Article />} />
@@ -91,6 +98,16 @@ describe('Academy article', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /com_learning_back_to_resources/ }));
     expect(screen.getByText('resources list')).toBeInTheDocument();
+  });
+
+  it('shows a retryable failure, not "not found", when the article fails to load', async () => {
+    renderAt('/learning/articles/broken');
+
+    expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent(
+      'com_learning_load_error',
+    );
+    expect(screen.queryByText('com_learning_article_missing')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'com_ui_retry' })).toBeInTheDocument();
   });
 
   it('shows the missing message for an unknown slug while keeping the back action', async () => {

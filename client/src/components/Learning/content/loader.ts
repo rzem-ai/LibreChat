@@ -34,12 +34,13 @@ const articleSources = import.meta.glob<string>('./articles/*.mdx', {
 const releaseModules = import.meta.glob<MdxModule>('./releases/*.mdx');
 
 /** Loads one article (compiled body plus raw source for its headings) on demand. */
-export async function loadArticle(slug: string): Promise<ArticleEntry | undefined> {
+/** Resolves `null` for an unknown slug; load or validation failures reject. */
+export async function loadArticle(slug: string): Promise<ArticleEntry | null> {
   const path = `./articles/${slug}.mdx`;
   const loadModule = articleModules[path];
   const loadSource = articleSources[path];
   if (!loadModule || !loadSource) {
-    return undefined;
+    return null;
   }
   const [mod, source] = await Promise.all([loadModule(), loadSource()]);
   return {

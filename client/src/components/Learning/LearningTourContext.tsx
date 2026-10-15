@@ -10,21 +10,22 @@ import {
 import { useRecoilState } from 'recoil';
 import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import type { TourStep } from './content/schema';
 import { GETTING_STARTED_COURSE_ID, getCourseSteps } from './content/registry';
 import { TRANSITION_MS } from '~/components/UnifiedSidebar/constants';
 import useTutorialPrompt from '~/hooks/Learning/useTutorialPrompt';
+import useTourProgress, { resolveResumeIndex } from './progress';
 import { hasAvailableTarget } from '~/utils/elements';
 import useCourseTour from './Courses/useCourseTour';
 import { DESKTOP_START_DELAY_MS } from './timing';
 import { useActivePanel } from '~/Providers';
 import { useShowMarketplace } from '~/hooks';
-import useTourProgress from './progress';
 import store from '~/store';
 
 interface LearningTourContextType {
   startGettingStartedTour: () => void;
   /** Starts the Getting Started tour at a saved zero-based step. */
-  resumeGettingStartedTour: (stepIndex: number) => void;
+  resumeGettingStartedTour: (savedStep: number) => void;
   /** Set once the active tour reports completion; cleared by `dismissCompletion`. */
   completedCourseId: string | null;
   dismissCompletion: () => void;
@@ -60,24 +61,33 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
   // marketplace feature is on and its nav targets actually exist — evaluated
   // fresh each time the tour starts, not at render time, since DOM targets
   // may not exist yet on an earlier render.
+  const activeStepsRef = useRef<TourStep[]>([]);
   const getSteps = useCallback(() => {
     const canShowAgentSelectionSteps =
       showMarketplace &&
       hasAvailableTarget('#nav-panel-conversations') &&
       hasAvailableTarget('#nav-agents-marketplace-button');
-    return getCourseSteps(GETTING_STARTED_COURSE_ID).filter(
+    activeStepsRef.current = getCourseSteps(GETTING_STARTED_COURSE_ID).filter(
       (step) => !CONDITIONAL_AGENT_STEP_IDS.has(step.id ?? '') || canShowAgentSelectionSteps,
     );
+    return activeStepsRef.current;
   }, [showMarketplace]);
 
   const { startTour } = useCourseTour(
     getSteps,
     () => {
-      recordComplete(GETTING_STARTED_COURSE_ID, getSteps().length);
+      recordComplete(GETTING_STARTED_COURSE_ID, getCourseSteps(GETTING_STARTED_COURSE_ID).length);
       setCompletedCourseId(GETTING_STARTED_COURSE_ID);
     },
     {
-      onStep: (index, total) => recordStep(GETTING_STARTED_COURSE_ID, index, total),
+      onStep: (index) => {
+        const fullSteps = getCourseSteps(GETTING_STARTED_COURSE_ID);
+        recordStep(
+          GETTING_STARTED_COURSE_ID,
+          fullSteps.indexOf(activeStepsRef.current[index]),
+          fullSteps.length,
+        );
+      },
       // Restore sidebar to its pre-tour state when the tour ends/is cancelled.
       onEnd: () => setSidebarExpanded(preTourSidebarExpandedRef.current),
       setSidebarExpanded,
@@ -99,7 +109,7 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resumeGettingStartedTour = useCallback(
-    (stepIndex: number) => {
+    (savedStep: number) => {
       markPromptSeen();
       // Capture the user's current sidebar state so it can be restored when the
       // tour finishes or is cancelled — preTourSidebarExpanded is read by
@@ -124,13 +134,32 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
 
       startTimeoutRef.current = window.setTimeout(
         () => {
-          startTimeoutRef.current = null;
-          startTour(stepIndex);
+          const activeSteps = getSteps();
+          const resumeIndex = resolveResumeIndex(
+            getCourseSteps(GETTING_STARTED_COURSE_ID),
+            activeSteps,
+            savedStep,
+          );
+          const needsExpandedSidebar = activeSteps
+            .slice(0, resumeIndex)
+            .some((step) => step.expandSidebarBefore);
+          if (!needsExpandedSidebar) {
+            startTimeoutRef.current = null;
+            startTour(resumeIndex);
+            return;
+          }
+          // Resuming past a step that expands the sidebar skips that step's own expand
+          // callback, so open it first and let its transition finish before driving.
+          setSidebarExpanded(true);
+          startTimeoutRef.current = window.setTimeout(() => {
+            startTimeoutRef.current = null;
+            startTour(resumeIndex);
+          }, TRANSITION_MS);
         },
         isSmallScreen ? TRANSITION_MS : DESKTOP_START_DELAY_MS,
       );
     },
-    [markPromptSeen, navigate, setActive, setSidebarExpanded, sidebarExpanded, startTour],
+    [markPromptSeen, navigate, setActive, setSidebarExpanded, sidebarExpanded, startTour, getSteps],
   );
 
   const startGettingStartedTour = useCallback(

@@ -2,11 +2,29 @@ import { Typeset } from '@librechat/client';
 import { useQuery } from '@tanstack/react-query';
 import type { JSX } from 'react/jsx-runtime';
 import { loadReleases } from '../../content/loader';
+import { useLocalize } from '~/hooks';
+import Failure from '../Failure';
 
-export default function Releases(): JSX.Element {
-  const { data: releases = [] } = useQuery(['learningReleases'], loadReleases, {
-    staleTime: Infinity,
-  });
+export default function Releases(): JSX.Element | null {
+  const localize = useLocalize();
+  const {
+    data: releases,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery(['learningReleases'], loadReleases, { staleTime: Infinity, retry: 1 });
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (isError) {
+    return <Failure onRetry={() => refetch()} />;
+  }
+
+  if (!releases?.length) {
+    return <p className="text-sm text-text-secondary">{localize('com_learning_no_releases')}</p>;
+  }
 
   return (
     <div className="flex max-w-xl flex-col gap-12">

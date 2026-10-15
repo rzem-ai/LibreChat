@@ -40,7 +40,7 @@ jest.mock('../LearningTourContext', () => ({
 
 jest.mock('../content/loader', () => ({
   loadReleases: () => Promise.resolve([]),
-  loadArticle: () => Promise.resolve(undefined),
+  loadArticle: () => Promise.resolve(null),
 }));
 
 describe('Resources', () => {

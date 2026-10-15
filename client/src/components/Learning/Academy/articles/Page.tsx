@@ -6,6 +6,7 @@ import type { ComponentProps } from 'react';
 import { loadArticle } from '../../content/loader';
 import { slugify } from '../../content/headings';
 import { useLocalize } from '~/hooks';
+import Failure from '../Failure';
 
 const mdxComponents = {
   h2: function SectionHeading({ children, ...props }: ComponentProps<'h2'>): JSX.Element {
@@ -22,13 +23,15 @@ export default function Article(): JSX.Element {
   const localize = useLocalize();
   const navigate = useNavigate();
   const { slug = '' } = useParams<{ slug: string }>();
-  const { data: article, isLoading } = useQuery(
-    ['learningArticle', slug],
-    () => loadArticle(slug),
-    {
-      staleTime: Infinity,
-    },
-  );
+  const {
+    data: article,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery(['learningArticle', slug], () => loadArticle(slug), {
+    staleTime: Infinity,
+    retry: 1,
+  });
 
   const backButton = (
     <Button
@@ -45,6 +48,15 @@ export default function Article(): JSX.Element {
 
   if (isLoading) {
     return backButton;
+  }
+
+  if (isError) {
+    return (
+      <>
+        {backButton}
+        <Failure onRetry={() => refetch()} />
+      </>
+    );
   }
 
   if (!article) {

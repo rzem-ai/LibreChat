@@ -31,6 +31,13 @@ const FIXTURE_STEPS: TourStep[] = [
     description: 'sbtm',
   },
   { element: '#nav-user', title: 'Account Menu', description: 'account' },
+  {
+    element: '#nav-search',
+    title: 'Search',
+    description: 'search',
+    expandSidebarBefore: true,
+  },
+  { element: '#nav-projects', title: 'Projects', description: 'projects' },
 ];
 
 jest.mock('react-router-dom', () => ({
@@ -137,6 +144,36 @@ describe('LearningTourContext', () => {
     expect(mockStartTour).toHaveBeenCalledTimes(1);
   });
 
+  describe('resuming', () => {
+    const resumeAt = (savedStep: number) => {
+      const { result } = renderHook(() => useLearningTour(), { wrapper });
+      act(() => {
+        result.current.resumeGettingStartedTour(savedStep);
+      });
+      act(() => {
+        jest.runAllTimers();
+      });
+    };
+
+    it('starts at the mapped step index in the current step list', () => {
+      mockShowMarketplace = false;
+      resumeAt(3);
+      expect(mockStartTour).toHaveBeenCalledWith(1);
+    });
+
+    it('opens the sidebar first when resuming past a step that expands it', () => {
+      resumeAt(5);
+      expect(mockSetSidebarExpanded).toHaveBeenCalledWith(true);
+      expect(mockStartTour).toHaveBeenCalledWith(5);
+    });
+
+    it('leaves the sidebar alone when resuming before any expanding step', () => {
+      resumeAt(1);
+      expect(mockSetSidebarExpanded).not.toHaveBeenCalled();
+      expect(mockStartTour).toHaveBeenCalledWith(1);
+    });
+  });
+
   it('keeps completion state even though starting the tour switches away from the Learning panel', () => {
     // This is the bug this context fixes: completion state used to live inside
     // LearningPanel, which unmounts the moment the sidebar panel switches to
@@ -166,6 +203,8 @@ describe('LearningTourContext', () => {
         'Agent Marketplace',
         'Switch Back to a Model',
         'Account Menu',
+        'Search',
+        'Projects',
       ]);
     });
 
@@ -173,21 +212,36 @@ describe('LearningTourContext', () => {
       mockShowMarketplace = false;
       renderHook(() => useLearningTour(), { wrapper });
 
-      expect(capturedGetSteps?.().map((step) => step.title)).toEqual(['Welcome', 'Account Menu']);
+      expect(capturedGetSteps?.().map((step) => step.title)).toEqual([
+        'Welcome',
+        'Account Menu',
+        'Search',
+        'Projects',
+      ]);
     });
 
     it('omits the agent-selection steps when the conversations panel target is unavailable', () => {
       mockAvailableTargets.delete('#nav-panel-conversations');
       renderHook(() => useLearningTour(), { wrapper });
 
-      expect(capturedGetSteps?.().map((step) => step.title)).toEqual(['Welcome', 'Account Menu']);
+      expect(capturedGetSteps?.().map((step) => step.title)).toEqual([
+        'Welcome',
+        'Account Menu',
+        'Search',
+        'Projects',
+      ]);
     });
 
     it('omits the agent-selection steps when the marketplace trigger is unavailable', () => {
       mockAvailableTargets.delete('#nav-agents-marketplace-button');
       renderHook(() => useLearningTour(), { wrapper });
 
-      expect(capturedGetSteps?.().map((step) => step.title)).toEqual(['Welcome', 'Account Menu']);
+      expect(capturedGetSteps?.().map((step) => step.title)).toEqual([
+        'Welcome',
+        'Account Menu',
+        'Search',
+        'Projects',
+      ]);
     });
   });
 });
