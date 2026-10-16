@@ -339,17 +339,62 @@ describe('retention helpers', () => {
     await expect(getRetentionExpiry(undefined, dependencies)).resolves.toEqual({});
   });
 
-  it('skips persistent agent files in temporary retention mode when retainAgentFiles is disabled', async () => {
+  it('applies the 90-day agent-file default to a persistent agent upload with no config', async () => {
+    const now = Date.now();
+    const result = await getAgentFileRetentionExpiry(
+      {
+        req: request({ config: { interfaceConfig: {} } }),
+        messageAttachment: false,
+        toolResource: 'context',
+      },
+      dependencies,
+    );
+
+    const expectedMs = 24 * 90 * 60 * 60 * 1000;
+    expect(result.expiredAt?.getTime()).toBeGreaterThanOrEqual(now + expectedMs);
+    expect(result.expiredAt?.getTime()).toBeLessThan(now + expectedMs + 1000);
+    expect(dependencies.getConvo).not.toHaveBeenCalled();
+    expect(dependencies.createExpirationDate).not.toHaveBeenCalled();
+  });
+
+  it('applies the 90-day agent-file default regardless of retentionMode', async () => {
+    const now = Date.now();
     const result = await getAgentFileRetentionExpiry(
       {
         req: request({
-          config: {
-            interfaceConfig: {
-              retentionMode: RetentionMode.TEMPORARY,
-              retainAgentFiles: false,
-            },
-          },
+          config: { interfaceConfig: { retentionMode: RetentionMode.TEMPORARY } },
         }),
+        messageAttachment: false,
+        toolResource: 'context',
+      },
+      dependencies,
+    );
+
+    const expectedMs = 24 * 90 * 60 * 60 * 1000;
+    expect(result.expiredAt?.getTime()).toBeGreaterThanOrEqual(now + expectedMs);
+    expect(result.expiredAt?.getTime()).toBeLessThan(now + expectedMs + 1000);
+  });
+
+  it('honors a configured agentFileRetentionHours override', async () => {
+    const now = Date.now();
+    const result = await getAgentFileRetentionExpiry(
+      {
+        req: request({ config: { interfaceConfig: { agentFileRetentionHours: 48 } } }),
+        messageAttachment: false,
+        toolResource: 'context',
+      },
+      dependencies,
+    );
+
+    const expectedMs = 48 * 60 * 60 * 1000;
+    expect(result.expiredAt?.getTime()).toBeGreaterThanOrEqual(now + expectedMs);
+    expect(result.expiredAt?.getTime()).toBeLessThan(now + expectedMs + 1000);
+  });
+
+  it('keeps retainAgentFiles as the escape hatch that skips expiry entirely', async () => {
+    const result = await getAgentFileRetentionExpiry(
+      {
+        req: request({ config: { interfaceConfig: { retainAgentFiles: true } } }),
         messageAttachment: false,
         toolResource: 'context',
       },
@@ -361,87 +406,7 @@ describe('retention helpers', () => {
     expect(dependencies.createExpirationDate).not.toHaveBeenCalled();
   });
 
-  it('skips persistent agent files in temporary retention mode when retainAgentFiles is enabled', async () => {
-    const result = await getAgentFileRetentionExpiry(
-      {
-        req: request({
-          config: {
-            interfaceConfig: {
-              retentionMode: RetentionMode.TEMPORARY,
-              retainAgentFiles: true,
-            },
-          },
-        }),
-        messageAttachment: false,
-        toolResource: 'context',
-      },
-      dependencies,
-    );
-
-    expect(result).toEqual({});
-    expect(dependencies.getConvo).not.toHaveBeenCalled();
-    expect(dependencies.createExpirationDate).not.toHaveBeenCalled();
-  });
-
-  it('applies all-data retention to persistent agent files when retainAgentFiles is disabled', async () => {
-    const result = await getAgentFileRetentionExpiry(
-      {
-        req: request({
-          config: {
-            interfaceConfig: {
-              retentionMode: RetentionMode.ALL,
-              retainAgentFiles: false,
-            },
-          },
-        }),
-        messageAttachment: false,
-        toolResource: 'context',
-      },
-      dependencies,
-    );
-
-    expect(result).toEqual({ expiredAt: expirationDate });
-    expect(dependencies.getConvo).not.toHaveBeenCalled();
-    expect(dependencies.createExpirationDate).toHaveBeenCalledTimes(1);
-  });
-
-  it('keeps current all-data retention behavior when retainAgentFiles is unset', async () => {
-    const result = await getAgentFileRetentionExpiry(
-      {
-        req: request({ config: { interfaceConfig: { retentionMode: RetentionMode.ALL } } }),
-        messageAttachment: false,
-        toolResource: 'context',
-      },
-      dependencies,
-    );
-
-    expect(result).toEqual({ expiredAt: expirationDate });
-    expect(dependencies.createExpirationDate).toHaveBeenCalledTimes(1);
-  });
-
-  it('skips all-data retention for persistent agent files when retainAgentFiles is enabled', async () => {
-    const result = await getAgentFileRetentionExpiry(
-      {
-        req: request({
-          config: {
-            interfaceConfig: {
-              retentionMode: RetentionMode.ALL,
-              retainAgentFiles: true,
-            },
-          },
-        }),
-        messageAttachment: false,
-        toolResource: 'context',
-      },
-      dependencies,
-    );
-
-    expect(result).toEqual({});
-    expect(dependencies.getConvo).not.toHaveBeenCalled();
-    expect(dependencies.createExpirationDate).not.toHaveBeenCalled();
-  });
-
-  it('still applies all-data retention to agent message attachments when retainAgentFiles is enabled', async () => {
+  it('leaves agent message attachments on the existing conversation-inherited path', async () => {
     const result = await getAgentFileRetentionExpiry(
       {
         req: request({

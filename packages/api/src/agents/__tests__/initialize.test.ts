@@ -1781,6 +1781,64 @@ describe('initializeAgent — attachment scoping', () => {
     ]);
   });
 
+  it('stamps agent-resource files with the agent-file clock and message files with the general clock', async () => {
+    const { filterFilesByEndpointRuntimeConfig } = jest.requireMock('~/files') as {
+      filterFilesByEndpointRuntimeConfig: jest.Mock;
+    };
+    const requestFile = { file_id: 'request-file', filename: 'request.txt' } as IMongoFile;
+    const toolFile = {
+      file_id: 'tool-file',
+      filename: 'kb.txt',
+      context: FileContext.agents,
+    } as IMongoFile;
+    const { agent, req, res, loadTools, db } = createMocks();
+
+    req.config = {
+      interfaceConfig: { fileRetentionHours: 24, agentFileRetentionHours: 48 },
+    } as never;
+    agent.tools = [EToolResources.file_search];
+    mockExtractLibreChatParams.mockReturnValueOnce({
+      resendFiles: true,
+      maxContextTokens: undefined,
+      modelOptions: { model: agent.model },
+    });
+    (db.getFiles as jest.Mock).mockResolvedValueOnce([requestFile, toolFile]);
+    (db.getConvoFiles as jest.Mock).mockResolvedValueOnce([toolFile.file_id]);
+    (db.getToolFilesByIds as jest.Mock).mockResolvedValueOnce([toolFile]);
+    (db.updateFilesUsage as jest.Mock)
+      .mockResolvedValueOnce([requestFile])
+      .mockResolvedValueOnce([toolFile]);
+    filterFilesByEndpointRuntimeConfig.mockImplementationOnce(
+      (_req: ServerRequest, { files }: { files: IMongoFile[] }) => files,
+    );
+
+    await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        requestFiles: [requestFile],
+        conversationId: 'conversation-1',
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.OPENAI]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    expect(db.updateFilesUsage).toHaveBeenNthCalledWith(1, [requestFile], undefined, {
+      user: 'user-1',
+      tenantId: undefined,
+      fileRetentionHours: 24,
+    });
+    expect(db.updateFilesUsage).toHaveBeenNthCalledWith(2, [toolFile], undefined, {
+      user: 'user-1',
+      tenantId: undefined,
+      fileRetentionHours: 48,
+    });
+  });
+
   it('rejects blocked resent file content before usage mutation or resource priming', async () => {
     const { primeResources } = jest.requireMock('../resources') as {
       primeResources: jest.Mock;

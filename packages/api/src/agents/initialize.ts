@@ -1,9 +1,15 @@
 import { Providers } from '@librechat/agents';
-import { logger, getAgentRetentionHours } from '@librechat/data-schemas';
+import {
+  logger,
+  getFileRetentionHours,
+  getAgentRetentionHours,
+  getAgentFileRetentionHours,
+} from '@librechat/data-schemas';
 import {
   Tools,
   Constants,
   ErrorTypes,
+  FileContext,
   EModelEndpoint,
   EToolResources,
   paramEndpoints,
@@ -163,6 +169,22 @@ export function partitionCommittedFiles<T extends { file_id?: string }>(
     pending.push(file);
   }
   return { committed: alreadyCommitted, pending };
+}
+
+function partitionAgentResourceFiles(files: IMongoFile[]): {
+  agentResourceFiles: IMongoFile[];
+  messageFiles: IMongoFile[];
+} {
+  const agentResourceFiles: IMongoFile[] = [];
+  const messageFiles: IMongoFile[] = [];
+  for (const file of files) {
+    if (file.context === FileContext.agents) {
+      agentResourceFiles.push(file);
+      continue;
+    }
+    messageFiles.push(file);
+  }
+  return { agentResourceFiles, messageFiles };
 }
 
 function sumUniqueBytes(files: Array<{ file_id?: string; bytes?: number }>): number {
@@ -1772,18 +1794,42 @@ export async function initializeAgent(
    * observe a different post-inspection snapshot.
    */
   if (requestFileOwnerId && requestUsageFiles.length > 0) {
-    await db.updateFilesUsage(requestUsageFiles, undefined, {
-      user: requestFileOwnerId,
-      tenantId: user?.tenantId,
-      fileRetentionHours: appConfig?.interfaceConfig?.fileRetentionHours,
-    });
+    const { agentResourceFiles, messageFiles } = partitionAgentResourceFiles(requestUsageFiles);
+    await Promise.all([
+      agentResourceFiles.length > 0
+        ? db.updateFilesUsage(agentResourceFiles, undefined, {
+            user: requestFileOwnerId,
+            tenantId: user?.tenantId,
+            fileRetentionHours: getAgentFileRetentionHours(appConfig?.interfaceConfig),
+          })
+        : null,
+      messageFiles.length > 0
+        ? db.updateFilesUsage(messageFiles, undefined, {
+            user: requestFileOwnerId,
+            tenantId: user?.tenantId,
+            fileRetentionHours: getFileRetentionHours(appConfig?.interfaceConfig),
+          })
+        : null,
+    ]);
   }
   if (requestFileOwnerId && toolUsageFiles.length > 0) {
-    await db.updateFilesUsage(toolUsageFiles, undefined, {
-      user: requestFileOwnerId,
-      tenantId: user?.tenantId,
-      fileRetentionHours: appConfig?.interfaceConfig?.fileRetentionHours,
-    });
+    const { agentResourceFiles, messageFiles } = partitionAgentResourceFiles(toolUsageFiles);
+    await Promise.all([
+      agentResourceFiles.length > 0
+        ? db.updateFilesUsage(agentResourceFiles, undefined, {
+            user: requestFileOwnerId,
+            tenantId: user?.tenantId,
+            fileRetentionHours: getAgentFileRetentionHours(appConfig?.interfaceConfig),
+          })
+        : null,
+      messageFiles.length > 0
+        ? db.updateFilesUsage(messageFiles, undefined, {
+            user: requestFileOwnerId,
+            tenantId: user?.tenantId,
+            fileRetentionHours: getFileRetentionHours(appConfig?.interfaceConfig),
+          })
+        : null,
+    ]);
   }
 
   const {

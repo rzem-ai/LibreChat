@@ -1,5 +1,9 @@
 import { RetentionMode } from 'librechat-data-provider';
-import { createFallbackRetentionDate, getFileRetentionHours } from '@librechat/data-schemas';
+import {
+  createFallbackRetentionDate,
+  getFileRetentionHours,
+  getAgentFileRetentionHours,
+} from '@librechat/data-schemas';
 import type { AppConfig } from '@librechat/data-schemas';
 
 type InterfaceConfig = AppConfig['interfaceConfig'];
@@ -213,14 +217,9 @@ const shouldRetainPersistentAgentFile = ({
   req,
   messageAttachment,
   toolResource,
-}: AgentFileRetentionRequest): boolean => {
-  const interfaceConfig = req?.config?.interfaceConfig;
-  return (
-    isPersistentAgentResourceUpload({ messageAttachment, toolResource }) &&
-    (interfaceConfig?.retentionMode !== RetentionMode.ALL ||
-      interfaceConfig?.retainAgentFiles === true)
-  );
-};
+}: AgentFileRetentionRequest): boolean =>
+  isPersistentAgentResourceUpload({ messageAttachment, toolResource }) &&
+  req?.config?.interfaceConfig?.retainAgentFiles === true;
 
 export async function getAgentFileRetentionExpiry(
   params: AgentFileRetentionRequest,
@@ -228,6 +227,11 @@ export async function getAgentFileRetentionExpiry(
 ): Promise<RetentionExpiry> {
   if (shouldRetainPersistentAgentFile(params)) {
     return {};
+  }
+
+  if (isPersistentAgentResourceUpload(params)) {
+    const hours = getAgentFileRetentionHours(params.req?.config?.interfaceConfig);
+    return { expiredAt: new Date(Date.now() + hours * 60 * 60 * 1000) };
   }
 
   return await getRetentionExpiry(params.req, dependencies);
