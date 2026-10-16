@@ -2,6 +2,7 @@
 import React from 'react';
 import '@testing-library/jest-dom/extend-expect';
 import { render, screen } from '@testing-library/react';
+import type { MCPServerTooltipContent } from '@librechat/client';
 import type { MCPOptions } from 'librechat-data-provider';
 import type { MCPServerDefinition } from '~/hooks/MCP/useMCPServerManager';
 import MCPServerTooltip, { MCPServerHoverGroup } from './MCPServerTooltip';
@@ -17,19 +18,35 @@ jest.mock('~/hooks', () => ({
 }));
 
 jest.mock('@librechat/client', () => ({
-  Tag: ({ label }: { label: string }) => <span>{label}</span>,
   MCPIcon: () => <svg />,
-  HoverCardGroup: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  HoverCardTarget: ({
-    render,
+  MCPServerHoverGroup: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  MCPServerHoverTarget: ({
+    content,
     children,
   }: {
-    render: (id: string) => React.ReactNode;
+    content: MCPServerTooltipContent;
     children: React.ReactNode;
   }) => (
     <>
       {children}
-      <div>{render('card')}</div>
+      <div>
+        <span>{content.description}</span>
+        {content.limitedAccess && <span>{content.labels.limitedAccess}</span>}
+        {content.details && (
+          <>
+            <span>{content.labels.useCases}</span>
+            <span>{content.labels.access}</span>
+            <span>{content.labels.limitation}</span>
+            {[
+              ...content.details.useCases,
+              ...content.details.access,
+              ...content.details.limitations,
+            ].map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </>
+        )}
+      </div>
     </>
   ),
 }));

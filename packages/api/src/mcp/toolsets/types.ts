@@ -1,19 +1,11 @@
 // Deloitte Custom Change: MCP Gateway toolset metadata for connector tooltips.
 import { z } from 'zod';
+import type { MCPToolsetDetails } from 'librechat-data-provider';
 
 /** A single toolset's user-facing metadata, as served by the MCP Gateway's `/toolsets` endpoint. */
-export interface GatewayToolset {
-  name: string;
-  description: string;
-  userFriendlyDescription: string;
-  useCases: string[];
-  access: string[];
-  limitations: string[];
-}
+export type GatewayToolset = MCPToolsetDetails;
 
-export interface GatewayToolsetListResponse {
-  toolsets: GatewayToolset[];
-}
+export type GatewayToolsetListResponse = { toolsets: GatewayToolset[] };
 
 export const GatewayToolsetSchema: z.ZodType<GatewayToolset> = z.object({
   name: z.string(),

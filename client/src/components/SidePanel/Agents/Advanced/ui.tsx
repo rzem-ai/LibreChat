@@ -43,10 +43,8 @@ export function BetaPill() {
 
 // Deloitte Custom Change: SharePoint MCP is limited to a subset of users.
 /**
- * "Limited Access" warning icon. Raw amber ramp rather than the semantic
- * `status-warning` token: amber here means "restricted to a subset of users,"
- * not "needs action," so it must stay visually distinct from status badges
- * that reuse that token elsewhere in the MCP UI.
+ * "Limited Access" warning icon, using the semantic `status-warning` token so it follows
+ * custom and high-contrast themes.
  */
 export function LimitedAccessIcon() {
   const localize = useLocalize();
@@ -54,7 +52,7 @@ export function LimitedAccessIcon() {
     <Lock
       role="img"
       aria-label={localize('com_ui_limited_access')}
-      className="size-3.5 flex-shrink-0 text-amber-700 dark:text-amber-400"
+      className="size-3.5 flex-shrink-0 text-status-warning"
     />
   );
 }

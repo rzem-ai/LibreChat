@@ -88,28 +88,29 @@ describe('getToolsetsForUser', () => {
     }
   });
 
-  it('degrades to an empty list when the gateway is unreachable', async () => {
-    const result = await getToolsetsForUser({
+  it('rejects, and caches nothing, when the gateway is unreachable', async () => {
+    const options = {
       userId: 'user-3',
       gatewayUrl: 'http://localhost:1/mcp',
       bearerToken: 'test-token',
       allowedDomains: ['localhost'],
-    });
+    };
 
-    expect(result).toEqual([]);
+    await expect(getToolsetsForUser(options)).rejects.toThrow();
+    expect(await standardCache(CacheKeys.MCP_GATEWAY_TOOLSETS).get('user-3')).toBeUndefined();
   });
 
-  it('degrades to an empty list when the gateway URL is not allowed', async () => {
+  it('rejects when the gateway URL is not allowed, without contacting the gateway', async () => {
     const server = await createLocalServer([TOOLSET_A]);
     try {
-      const result = await getToolsetsForUser({
-        userId: 'user-4',
-        gatewayUrl: `http://localhost:${server.port}/mcp`,
-        bearerToken: 'test-token',
-        allowedDomains: ['trusted.example.com'],
-      });
-
-      expect(result).toEqual([]);
+      await expect(
+        getToolsetsForUser({
+          userId: 'user-4',
+          gatewayUrl: `http://localhost:${server.port}/mcp`,
+          bearerToken: 'test-token',
+          allowedDomains: ['trusted.example.com'],
+        }),
+      ).rejects.toThrow(/allowed domains/);
       expect(server.requestCount()).toBe(0);
     } finally {
       await server.close();

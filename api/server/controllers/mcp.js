@@ -28,8 +28,7 @@ const {
   prepareMCPServerOAuthDeletion,
   cleanupDeletedMCPServerOAuthUsers,
   // Deloitte Custom Change: MCP Gateway toolset metadata for connector tooltips.
-  resolveOboToken,
-  getToolsetsForUser,
+  createGetMCPToolsets,
 } = require('@librechat/api');
 const {
   Constants,
@@ -343,60 +342,22 @@ const getMCPTools = async (req, res) => {
 /**
  * Deloitte Custom Change: get MCP Gateway toolset metadata (user-friendly
  * descriptions, use cases, access, limitations) for the connector tooltip.
- * Never hard-fails: this is a non-critical UI enhancement, so any failure
- * (missing gateway config, OBO exchange failure, gateway unreachable)
- * degrades to an empty list rather than a 4xx/5xx.
+ * Logic lives in `@librechat/api`; this only wires request-scoped dependencies.
  * @route GET /api/mcp/toolsets
  */
-const getMCPToolsets = async (req, res) => {
-  const userId = req.user?.id;
-  if (!userId) {
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
-
-  const gatewayUrl = process.env.MCP_GATEWAY_URL;
-  const oboScope = process.env.MCP_GATEWAY_OBO_SCOPE;
-  if (!gatewayUrl || !oboScope) {
-    logger.warn('[getMCPToolsets] MCP_GATEWAY_URL or MCP_GATEWAY_OBO_SCOPE is not configured');
-    return res.status(200).json({ toolsets: [] });
-  }
-
-  try {
-    const oboIdentityContext = createAuthIdentityContext({
-      user: req.user,
-      tenantId: getTenantId(),
-    });
-    const upstreamTokenProvider = createOpenIDSessionTokenProvider({
+const getMCPToolsets = createGetMCPToolsets({
+  getTenantId,
+  exchangeOboToken,
+  createUpstreamTokenProvider: ({ req, res, identityContext }) =>
+    createOpenIDSessionTokenProvider({
       req,
       res,
       user: req.user,
-      identityContext: oboIdentityContext,
+      identityContext,
       tokenPreference: 'access_token',
-    });
-    const oboTokens = await resolveOboToken(
-      req.user,
-      { scopes: oboScope },
-      exchangeOboToken,
-      upstreamTokenProvider,
-      oboIdentityContext,
-    );
-    const { allowedDomains, allowedAddresses } = await getMCPServersRegistry().resolveAllowlists({
-      userId,
-      role: req.user?.role,
-    });
-    const toolsets = await getToolsetsForUser({
-      userId,
-      gatewayUrl,
-      bearerToken: oboTokens.access_token,
-      allowedDomains,
-      allowedAddresses,
-    });
-    res.status(200).json({ toolsets });
-  } catch (error) {
-    logger.warn('[getMCPToolsets] Failed to resolve MCP Gateway toolsets', error);
-    res.status(200).json({ toolsets: [] });
-  }
-};
+    }),
+  resolveAllowlists: (args) => getMCPServersRegistry().resolveAllowlists(args),
+});
 
 /**
  * Mirrors canAccessResource's capability bypass plus per-resource ACL EDIT check.

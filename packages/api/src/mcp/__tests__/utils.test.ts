@@ -476,6 +476,14 @@ describe('redactServerSecrets', () => {
     expect(redactServerSecrets(config).toolsetName).toBeNull();
   });
 
+  it('should resolve toolsetName to null for a comma-separated toolsets list', () => {
+    const config = {
+      type: 'streamable-http',
+      url: 'https://gateway.example.com/mcp?toolsets=sharepoint,kx',
+    } as ParsedServerConfig;
+    expect(redactServerSecrets(config).toolsetName).toBeNull();
+  });
+
   it('should resolve toolsetName to null when there is no url at all', () => {
     const config: ParsedServerConfig = { type: 'stdio', command: 'node' };
     expect(redactServerSecrets(config).toolsetName).toBeNull();

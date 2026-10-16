@@ -3,6 +3,7 @@ import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { GatewayToolset } from './types';
 import { resetHardenedOAuthFetchDispatchers } from '~/mcp/oauth/hardenedFetch';
+import { GatewayToolsetsError } from './errors';
 import { fetchGatewayToolsets } from './client';
 
 const VALID_TOOLSET: GatewayToolset = {
@@ -120,6 +121,23 @@ describe('fetchGatewayToolsets', () => {
           allowedDomains: ['localhost'],
         }),
       ).rejects.toThrow('MCP Gateway toolsets response failed validation');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('times out with a 504 error when the gateway never responds', async () => {
+    const server = await createLocalServer(() => undefined);
+    try {
+      const error = await fetchGatewayToolsets({
+        gatewayUrl: `http://localhost:${server.port}/mcp`,
+        bearerToken: 'test-token',
+        allowedDomains: ['localhost'],
+        timeoutMs: 100,
+      }).catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(GatewayToolsetsError);
+      expect((error as GatewayToolsetsError).status).toBe(504);
     } finally {
       await server.close();
     }

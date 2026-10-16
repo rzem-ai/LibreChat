@@ -721,12 +721,14 @@ export type RedactedServerConfig = Partial<ParsedServerConfig> & {
  * parsed from its `url`'s `toolsets` query param (e.g. `?toolsets=sharepoint`). The name alone
  * is not sensitive (it's the same identifier the gateway's public `/toolsets` list exposes), so
  * it is resolved here — server-side, where the real `url` is still available — and exposed
- * unconditionally, even when `url` itself is redacted below.
+ * unconditionally, even when `url` itself is redacted below. Each row maps to exactly one toolset
+ * and one tooltip, so a comma-separated `toolsets` list resolves to no name (minimal tooltip).
  */
 function parseToolsetNameFromUrl(url: string | undefined): string | null {
   if (!url) return null;
   try {
-    return new URL(url).searchParams.get('toolsets');
+    const toolsets = new URL(url).searchParams.get('toolsets');
+    return toolsets && !toolsets.includes(',') ? toolsets : null;
   } catch {
     return null;
   }

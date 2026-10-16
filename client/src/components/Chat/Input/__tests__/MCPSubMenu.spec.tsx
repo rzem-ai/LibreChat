@@ -42,6 +42,10 @@ jest.mock('~/hooks', () => ({
   useHasAccess: () => true,
 }));
 
+jest.mock('~/data-provider', () => ({
+  useMCPToolsetsQuery: () => ({ data: undefined }),
+}));
+
 jest.mock('@librechat/client', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const R = require('react');
@@ -50,9 +54,9 @@ jest.mock('@librechat/client', () => {
     PinIcon: ({ unpin }: { unpin?: boolean }) =>
       R.createElement('span', { 'data-testid': unpin ? 'unpin-icon' : 'pin-icon' }),
     Tag: ({ label }: { label: string }) => R.createElement('span', null, label),
-    HoverCardGroup: ({ children }: { children: React.ReactNode }) =>
+    MCPServerHoverGroup: ({ children }: { children: React.ReactNode }) =>
       R.createElement(R.Fragment, null, children),
-    HoverCardTarget: ({ children }: { children: React.ReactNode }) => children,
+    MCPServerHoverTarget: ({ children }: { children: React.ReactNode }) => children,
     Spinner: ({ className }: { className?: string }) => R.createElement('span', { className }),
   };
 });
