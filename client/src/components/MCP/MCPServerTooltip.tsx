@@ -153,6 +153,8 @@ const MCP_CARD_CLASS =
 
 /** Wrap a connector list in this so its rows share one card, docked beside the list. */
 export function MCPServerHoverGroup({ children }: { children: ReactNode }) {
+  // The card mounts lazily on first hover; warm the toolsets cache now so that first card is complete.
+  useMCPToolsetsQuery();
   return <HoverCardGroup contentClassName={MCP_CARD_CLASS}>{children}</HoverCardGroup>;
 }
 

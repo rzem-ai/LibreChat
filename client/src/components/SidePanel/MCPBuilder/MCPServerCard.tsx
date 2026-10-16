@@ -3,7 +3,7 @@ import { MCPIcon } from '@librechat/client';
 import { PermissionBits, hasPermissions } from 'librechat-data-provider';
 import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusIcon';
 import type { MCPServerDefinition } from '~/hooks';
-import MCPServerTooltip from '~/components/MCP/MCPServerTooltip';
+import { MCPServerTooltipTarget } from '~/components/MCP/MCPServerTooltip';
 import McpOAuthDialog from '~/components/MCP/McpOAuthDialog';
 import MCPServerIcon from '~/components/MCP/MCPServerIcon';
 import { useMCPServerManager, useLocalize } from '~/hooks';
@@ -124,7 +124,7 @@ export default function MCPServerCard({
     <>
       {/* Deloitte Custom Change: Figma "MCP Tooltip hover" - connector identity, access tier, use
           cases. Trigger wraps the whole row so hovering anywhere on the card opens the tooltip. */}
-      <MCPServerTooltip
+      <MCPServerTooltipTarget
         server={server}
         trigger={
           <div

@@ -166,9 +166,11 @@ export function ModelInfoTooltipCard({
   );
 }
 
+const MODEL_INFO_CARD_CLASS = 'rounded-xl border-border bg-card text-card-foreground shadow-md';
+
 // Deloitte Custom Change: model-specific bindings over the shared HoverCardGroup/HoverCardTarget.
 export function ModelInfoHoverGroup({ children }: { children: ReactNode }): ReactElement {
-  return <HoverCardGroup>{children}</HoverCardGroup>;
+  return <HoverCardGroup contentClassName={MODEL_INFO_CARD_CLASS}>{children}</HoverCardGroup>;
 }
 
 export function useModelInfoHover(): ReturnType<typeof useHoverCardGroup> {

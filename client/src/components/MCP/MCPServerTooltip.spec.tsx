@@ -4,7 +4,7 @@ import '@testing-library/jest-dom/extend-expect';
 import { render, screen } from '@testing-library/react';
 import type { MCPOptions } from 'librechat-data-provider';
 import type { MCPServerDefinition } from '~/hooks/MCP/useMCPServerManager';
-import MCPServerTooltip from './MCPServerTooltip';
+import MCPServerTooltip, { MCPServerHoverGroup } from './MCPServerTooltip';
 
 const mockUseMCPToolsetsQuery = jest.fn();
 
@@ -48,6 +48,18 @@ const makeServer = (
 describe('MCPServerTooltip', () => {
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  it('starts the toolsets query when the group mounts, before any card renders', () => {
+    mockUseMCPToolsetsQuery.mockReturnValue({ data: undefined });
+
+    render(
+      <MCPServerHoverGroup>
+        <div />
+      </MCPServerHoverGroup>,
+    );
+
+    expect(mockUseMCPToolsetsQuery).toHaveBeenCalledTimes(1);
   });
 
   it('renders the full tooltip when the gateway returns toolset details', () => {

@@ -119,6 +119,7 @@ export function HoverCardGroup({
             // Deloitte Custom Change: dock to the right of the list, top-aligned with it.
             side="right"
             align="start"
+            collisionPadding={4}
             // Deloitte Custom Change: re-entering the card itself (e.g. to read a long
             // description) keeps it open the same way re-entering a row does.
             onPointerEnter={() => active && show(active.render, active.targetId)}
