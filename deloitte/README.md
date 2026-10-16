@@ -201,6 +201,18 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 42. `MCP_GATEWAY_OBO_SCOPE=api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user`
     > The **ClearTrack MCP Gateway** connection (`mcpServers` block in `librechat.yaml` at repo root and `charts/config/librechat.yaml` for Helm) uses On-Behalf-Of (OBO) auth, not a dedicated OAuth client — it reuses `OPENID_CLIENT_ID`/`OPENID_CLIENT_SECRET` from item 8–9 to exchange the user's login token for one scoped to the gateway. There are no gateway-specific client credentials to set; the only requirement is that `OPENID_SCOPE` (item 12) includes the gateway's audience scope.
 
+### Balance .env vars
+
+The `balance` block in `librechat.yaml` enables token balance tracking with a daily auto-refill. It reads these values from `.env`:
+
+```env
+START_BALANCE=10000000
+BALANCE_REFILL_AMOUNT=10000000
+CHECK_BALANCE=true
+```
+
+`START_BALANCE` is the starting token balance for new users; `BALANCE_REFILL_AMOUNT` is the number of tokens added per refill cycle (1 day). The Helm charts set both in `values-uat.yaml` and `values-prd.yaml` (10 million tokens = $10 per day).
+
 ### Code API / Code Interpreter .env vars
 
 Add the following values to `.env` to enable the Run Code button for code execution:

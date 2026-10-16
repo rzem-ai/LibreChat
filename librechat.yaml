@@ -1,6 +1,18 @@
 version: 1.3.17 # Copy from librechat.example.yaml
 cache: true
 
+# ========================================
+# Balance Configuration
+# https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/balance
+# ========================================
+balance:
+  enabled: true # Enable token balance tracking for users
+  startBalance: '${START_BALANCE}' # Starting token balance for new users
+  autoRefillEnabled: true # Automatically refill balances on a schedule
+  refillIntervalValue: 1 # Number of interval units between each refill
+  refillIntervalUnit: "days" # Unit for the refill interval: "seconds", "minutes", "hours", "days"
+  refillAmount: '${BALANCE_REFILL_AMOUNT}'  # Tokens added per refill cycle
+
 # 'includedTools' restricts the list of tools available in the Agent Builder.
 includedTools:
   - 'file_search'
@@ -23,6 +35,9 @@ interface:
   bookmarks: false # Set to false to disable saving conversations as bookmarks
 
   buildInfo: false # Set to false to hide the About section in settings
+
+  contextUsage: true # Users see the context window and token usage gauge.
+  contextCost: true # users see cost values in the usage details (USD)
 
   # Pin tools to the prompt bar by default for all users
   defaultPinnedTools:
