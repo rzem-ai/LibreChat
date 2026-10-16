@@ -553,7 +553,7 @@ modelSpecs:
         model: 'google/gemini-2.5-pro'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 3 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        speed: 2 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
         intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
         supports:
           webSearch: false
