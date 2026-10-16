@@ -39,7 +39,7 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
   const { user } = useAuthContext();
   const context = useBadgeRowContext();
   // Deloitte Custom Change: admin-configured rows (`toolsDropdown.items`).
-  const { isItemVisible } = useToolsDropdownConfig();
+  const { isItemVisible, showPinButtons } = useToolsDropdownConfig();
   const { data: startupConfig } = useGetStartupConfig();
 
   const {
@@ -177,6 +177,8 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     dropdownItems.push({
       onClick: handleFileSearchToggle,
       hideOnClick: false,
+      // Deloitte Custom Change: expose the on/off state on the focusable row when pin buttons are hidden.
+      ariaChecked: showPinButtons ? undefined : Boolean(fileSearch?.toggleState),
       render: (props) => (
         <div {...props} data-testid="tools-menu-file-search">
           <div className="flex items-center gap-2">
@@ -184,7 +186,6 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
             <span>{localize('com_assistants_file_search')}</span>
           </div>
           <ToolStateControl
-            label={localize('com_assistants_file_search')}
             isPinned={isFileSearchPinned}
             setIsPinned={setIsFileSearchPinned}
             checked={Boolean(fileSearch?.toggleState)}
@@ -198,6 +199,8 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     dropdownItems.push({
       onClick: handleWebSearchToggle,
       hideOnClick: false,
+      // Deloitte Custom Change: expose the on/off state on the focusable row when pin buttons are hidden.
+      ariaChecked: showPinButtons ? undefined : Boolean(webSearch?.toggleState),
       render: (props) => (
         <div {...props}>
           <div className="flex items-center gap-2">
@@ -226,7 +229,6 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
               </button>
             )}
             <ToolStateControl
-              label={localize('com_ui_web_search')}
               isPinned={isSearchPinned}
               setIsPinned={setIsSearchPinned}
               checked={Boolean(webSearch?.toggleState)}
@@ -241,6 +243,8 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     dropdownItems.push({
       onClick: handleSkillsToggle,
       hideOnClick: false,
+      // Deloitte Custom Change: expose the on/off state on the focusable row when pin buttons are hidden.
+      ariaChecked: showPinButtons ? undefined : Boolean(skills?.toggleState),
       render: (props) => (
         <div {...props} data-testid="tools-menu-skills">
           <div className="flex items-center gap-2">
@@ -248,7 +252,6 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
             <span>{localize('com_ui_skills')}</span>
           </div>
           <ToolStateControl
-            label={localize('com_ui_skills')}
             isPinned={isSkillsPinned}
             setIsPinned={setIsSkillsPinned}
             checked={Boolean(skills?.toggleState)}
@@ -262,6 +265,8 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     dropdownItems.push({
       onClick: handleMemoryToggle,
       hideOnClick: false,
+      // Deloitte Custom Change: expose the on/off state on the focusable row when pin buttons are hidden.
+      ariaChecked: showPinButtons ? undefined : Boolean(memory?.toggleState),
       render: (props) => (
         <div {...props} data-testid="tools-menu-memory">
           <div className="flex items-center gap-2">
@@ -269,7 +274,6 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
             <span>{localize('com_ui_memory')}</span>
           </div>
           <ToolStateControl
-            label={localize('com_ui_memory')}
             isPinned={isMemoryPinned}
             setIsPinned={setIsMemoryPinned}
             checked={Boolean(memory?.toggleState)}
@@ -283,6 +287,8 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     dropdownItems.push({
       onClick: handleCodeInterpreterToggle,
       hideOnClick: false,
+      // Deloitte Custom Change: expose the on/off state on the focusable row when pin buttons are hidden.
+      ariaChecked: showPinButtons ? undefined : Boolean(codeInterpreter?.toggleState),
       render: (props) => (
         <div {...props} data-testid="tools-menu-run-code">
           <div className="flex items-center gap-2">
@@ -291,7 +297,6 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
           </div>
           <div className="flex items-center gap-1">
             <ToolStateControl
-              label={localize('com_ui_run_code')}
               isPinned={isCodePinned}
               setIsPinned={setIsCodePinned}
               checked={Boolean(codeInterpreter?.toggleState)}
@@ -308,6 +313,12 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
       render: (props) => (
         <ArtifactsSubMenu
           {...props}
+          // Deloitte Custom Change: expose the on/off state on the focusable trigger when pin buttons are hidden.
+          {...(!showPinButtons && {
+            role: 'menuitemcheckbox',
+            'aria-checked':
+              typeof artifacts?.toggleState === 'string' && artifacts.toggleState.length > 0,
+          })}
           isArtifactsPinned={isArtifactsPinned ?? false}
           setIsArtifactsPinned={setIsArtifactsPinned}
           artifactsMode={artifacts?.toggleState as string}
