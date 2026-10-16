@@ -1,6 +1,6 @@
 // Deloitte Custom Change: added new imports
 import React, { createContext, useContext, useEffect, useMemo, useRef } from 'react';
-import { useSetRecoilState } from 'recoil';
+import { useRecoilState } from 'recoil';
 import {
   Tools,
   Constants,
@@ -97,7 +97,7 @@ export default function BadgeRowProvider({
   const isNewConvo = key === Constants.NEW_CONVO;
   const storageSuffix = isNewConvo && storageContextKey ? storageContextKey : key;
 
-  const setEphemeralAgent = useSetRecoilState(ephemeralAgentByConvoId(key));
+  const [ephemeralAgent, setEphemeralAgent] = useRecoilState(ephemeralAgentByConvoId(key));
 
   /** Initialize ephemeralAgent from localStorage on mount and when conversation/spec changes.
    *  Skipped when a spec is active — applyModelSpecEphemeralAgent handles both new conversations
@@ -371,6 +371,12 @@ export default function BadgeRowProvider({
   const { skillsEnabled, codeEnabled, artifactsEnabled } = useAgentCapabilities(
     agentsConfig?.capabilities ?? defaultAgentCapabilities,
   );
+  // Deloitte Custom Change: watch the current values so the cleanup re-runs after a model-spec switch re-seeds them.
+  const {
+    skills: skillsValue,
+    execute_code: codeValue,
+    artifacts: artifactsValue,
+  } = ephemeralAgent ?? {};
   const userRole = authContext?.user?.role;
   const rolesLoaded = userRole != null && authContext?.roles?.[userRole] != null;
   const defaultEnabledTools =
@@ -400,6 +406,9 @@ export default function BadgeRowProvider({
     canRunCode,
     codeEnabled,
     artifactsEnabled,
+    skillsValue,
+    codeValue,
+    artifactsValue,
     setEphemeralAgent,
   ]);
 
