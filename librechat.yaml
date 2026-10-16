@@ -6,7 +6,7 @@ cache: true
 # https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/balance
 # ========================================
 balance:
-  enabled: true # Enable token balance tracking for users
+  enabled: '${CHECK_BALANCE}' # Enable token balance tracking for users (true/false)
   startBalance: '${START_BALANCE}' # Starting token balance for new users
   autoRefillEnabled: true # Automatically refill balances on a schedule
   refillIntervalValue: 1 # Number of interval units between each refill

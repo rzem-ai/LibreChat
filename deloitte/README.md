@@ -211,7 +211,7 @@ BALANCE_REFILL_AMOUNT=10000000
 CHECK_BALANCE=true
 ```
 
-`START_BALANCE` is the starting token balance for new users; `BALANCE_REFILL_AMOUNT` is the number of tokens added per refill cycle (1 day). The Helm charts set both in `values-uat.yaml` and `values-prd.yaml` (10 million tokens = $10 per day).
+`CHECK_BALANCE` (`true`/`false`) turns balance tracking on or off. `START_BALANCE` is the starting token balance for new users; `BALANCE_REFILL_AMOUNT` is the number of tokens added per refill cycle (1 day). The Helm charts set both in `values-uat.yaml` and `values-prd.yaml` (10 million tokens = $10 per day).
 
 ### Code API / Code Interpreter .env vars
 

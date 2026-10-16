@@ -137,6 +137,7 @@ pods:
           REDIS_PING_INTERVAL: '300'
           STREAM_DELTA_COALESCE_MS: '25'
           # Balance — token limit per 1-day refill cycle
+          CHECK_BALANCE: 'true'
           START_BALANCE: '10000000' # 10 million tokens per 1 day = $10
           BALANCE_REFILL_AMOUNT: '10000000' # 10 million tokens per 1 day = $10
         secrets:

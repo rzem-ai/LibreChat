@@ -43,6 +43,7 @@ import { specsConfigSchema, TSpecsConfig } from './models';
 import { fileConfigSchema } from './file-config';
 import { isActionTool } from './types/tools';
 import { apiBaseUrl } from './api-endpoints';
+import { extractEnvVariable } from './utils';
 import { FileSources } from './types/files';
 import { MCPServersSchema } from './mcp';
 export {
@@ -2989,13 +2990,34 @@ export const ocrSchema = z.object({
   strategy: z.nativeEnum(OCRStrategy).default(OCRStrategy.MISTRAL_OCR),
 });
 
+/** Resolves `${VAR}` strings from the environment into numbers; unresolved placeholders are left for validation to reject. */
+const envNumber = (value: unknown): unknown => {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const resolved = extractEnvVariable(value);
+  return resolved.trim() !== '' && !Number.isNaN(Number(resolved)) ? Number(resolved) : resolved;
+};
+
+/** Resolves `${VAR}` strings from the environment into booleans (`true`/`false`, case-insensitive). */
+const envBoolean = (value: unknown): unknown => {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const resolved = extractEnvVariable(value).trim().toLowerCase();
+  if (resolved === 'true' || resolved === 'false') {
+    return resolved === 'true';
+  }
+  return resolved;
+};
+
 export const balanceSchema = z.object({
-  enabled: z.boolean().optional().default(false),
-  startBalance: z.number().optional().default(20000),
+  enabled: z.preprocess(envBoolean, z.boolean().optional().default(false)),
+  startBalance: z.preprocess(envNumber, z.number().optional().default(20000)),
   autoRefillEnabled: z.boolean().optional().default(false),
   refillIntervalValue: z.number().optional().default(30),
   refillIntervalUnit: z.enum(REFILL_INTERVAL_UNITS).optional().default('days'),
-  refillAmount: z.number().optional().default(10000),
+  refillAmount: z.preprocess(envNumber, z.number().optional().default(10000)),
   reservationTtlMs: z
     .number()
     .int()
