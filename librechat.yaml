@@ -131,6 +131,8 @@ interface:
   # Deloitte Custom Change: Deloitte-specific UI feature flags.
   customDeloitteFeatureFlags:
     isTutorialEnabled: true # Set to false to disable the in-app Learning Hub tutorials and guided tour
+    learningCommonQuestions: true # Show the Learning Center "Common questions" tab
+    learningReleaseNotes: true # Show the Learning Center "Release notes" tab
     exportChat: false # Set to false to disable exporting conversations
     regenerate: true # Set to false to disable regenerating assistant responses
     forkChat: true # Set to false to disable branching conversations from earlier messages
@@ -551,7 +553,7 @@ modelSpecs:
         model: 'google/gemini-2.5-pro'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 3 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        speed: 2 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
         intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
         supports:
           webSearch: false

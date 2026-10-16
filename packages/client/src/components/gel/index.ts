@@ -2,3 +2,11 @@
 export * from './Dialog';
 export * from './ModelInfoTooltip';
 export * from './RatingMeter';
+export * from './Card';
+export * from './Header';
+export * from './Tabs';
+export * from './Typeset';
+export * from './SearchInput';
+export * from './HighlightedText';
+export { Icon } from './icon';
+export type { IconName } from './icon/registry';

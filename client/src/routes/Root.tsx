@@ -40,10 +40,10 @@ import {
   useUserTermsQuery,
 } from '~/data-provider';
 import { DeloitteHeader } from '~/components/DeloitteComponents/DeloitteTopHeader';
-import { LearningTourProvider } from '~/components/Learning/LearningTourContext';
-import CourseCompletionModal from '~/components/Learning/CourseCompletionModal';
 import KeyboardShortcutsDialog from '~/components/Nav/KeyboardShortcutsDialog';
-import TutorialPromptModal from '~/components/Learning/TutorialPromptModal';
+import { LearningTourProvider } from '~/components/Learn/LearningTourContext';
+import CourseCompletionModal from '~/components/Learn/CourseCompletionModal';
+import TutorialPromptModal from '~/components/Learn/TutorialPromptModal';
 import KeyboardDeleteDialog from '~/components/Nav/KeyboardDeleteDialog';
 import { MobileDrawerScrim } from '~/components/UnifiedSidebar/mobile';
 import useKeyboardShortcuts from '~/hooks/useKeyboardShortcuts';
