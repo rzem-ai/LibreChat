@@ -73,7 +73,7 @@ const ArtifactsSubMenu = React.forwardRef<HTMLButtonElement, ArtifactsSubMenuPro
               label={localize('com_ui_artifacts')}
               isPinned={isArtifactsPinned}
               setIsPinned={setIsArtifactsPinned}
-              checked={artifactsMode !== '' && artifactsMode != null}
+              checked={typeof artifactsMode === 'string' && artifactsMode.length > 0}
             />
           </Ariakit.MenuButton>
 

@@ -27,6 +27,6 @@ export function useToolsDropdownConfig() {
     isDropdownOnly: (key: string) =>
       flags?.showToolsDropdown !== false &&
       flags?.toolsDropdown?.showPinButtons === false &&
-      items?.has(key) === true,
+      (items == null || items.has(key)),
   };
 }

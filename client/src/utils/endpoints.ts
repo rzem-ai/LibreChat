@@ -372,11 +372,13 @@ export function applyModelSpecEphemeralAgent({
     mcp: modelSpec.mcpServers ?? [],
     web_search: modelSpec.webSearch ?? false,
     file_search: modelSpec.fileSearch ?? false,
-    execute_code: defaultEnabledValues.execute_code ?? modelSpec.executeCode ?? false,
+    execute_code: modelSpec.executeCode ?? defaultEnabledValues.execute_code ?? false,
     memory: modelSpec.memory ?? false,
     artifacts: modelSpec.artifacts == null ? (defaultEnabledValues.artifacts ?? '') : specArtifacts,
   };
-  if (defaultEnabledValues.skills != null) {
+  if (modelSpec.skills != null) {
+    agent.skills = Array.isArray(modelSpec.skills) ? modelSpec.skills.length > 0 : modelSpec.skills;
+  } else if (defaultEnabledValues.skills != null) {
     agent.skills = defaultEnabledValues.skills;
   }
 
