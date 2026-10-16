@@ -15,8 +15,6 @@ import { cn, getSpecAgentAvatarURL } from '~/utils';
 import ModelInfoTooltip from './ModelInfoTooltip';
 import SpecDescription from './SpecDescription';
 import { useFavorites } from '~/hooks';
-// Deloitte Custom Change: PR #156 - endpoint cost-multiplier badge in search results
-import ModelCost from './ModelCost';
 import SpecIcon from './SpecIcon';
 
 type SearchModel = { name: string; isGlobal?: boolean };
@@ -260,7 +258,6 @@ export function SearchResults({ results, localize, searchValue }: SearchResultsP
                       <SpecDescription description={spec.description} />
                     </div>
                   </div>
-                  <ModelCost modelId={spec.preset.model} endpoint={spec.preset.endpoint} />
                   {selectedSpec === spec.name && (
                     <>
                       <CheckCircle2

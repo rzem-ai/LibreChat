@@ -2368,8 +2368,6 @@ export const interfaceSchema = z
         externalVoiceProvider: z.boolean().optional(),
         artifactsShadcnOnly: z.boolean().optional(),
         showConversationTitleInHeader: z.boolean().optional(),
-        /** Set to true to show the 1-5 `$` price-tier badge in the model selector. */
-        showModelPricingIndicator: z.boolean().optional(),
         /**
          * 4 strictly ascending $/1M blended-cost breakpoints that split models into the
          * 5 price tiers (`$` to `$$$$$`) shown in the model selector. A model's blended

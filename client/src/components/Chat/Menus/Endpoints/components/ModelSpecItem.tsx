@@ -10,7 +10,6 @@ import { CustomMenuItem as MenuItem } from '../CustomMenu';
 import { cn, getSpecAgentAvatarURL } from '~/utils';
 import ModelInfoTooltip from './ModelInfoTooltip';
 import SpecDescription from './SpecDescription';
-import ModelCost from './ModelCost';
 import SpecIcon from './SpecIcon';
 
 interface ModelSpecItemProps {
@@ -72,7 +71,6 @@ export function ModelSpecItem({ spec, isSelected, posInSet, setSize }: ModelSpec
               <SpecDescription description={spec.description} />
             </div>
           </div>
-          <ModelCost modelId={spec.preset.model} endpoint={spec.preset.endpoint} />
           <button
             type="button"
             tabIndex={isActive ? 0 : -1}

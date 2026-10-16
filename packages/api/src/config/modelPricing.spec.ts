@@ -29,21 +29,14 @@ const deps: TokenomicsDeps = {
 
 function buildAppConfig(
   overrides: Partial<AppConfig> & {
-    showModelPricingIndicator?: boolean;
     modelPricingTierBreakpoints?: number[];
     highCostAlertTiers?: number[];
   },
 ): AppConfig {
-  const {
-    showModelPricingIndicator = true,
-    modelPricingTierBreakpoints,
-    highCostAlertTiers,
-    ...rest
-  } = overrides;
+  const { modelPricingTierBreakpoints, highCostAlertTiers, ...rest } = overrides;
   return {
     interfaceConfig: {
       customDeloitteFeatureFlags: {
-        showModelPricingIndicator,
         ...(modelPricingTierBreakpoints ? { modelPricingTierBreakpoints } : {}),
         ...(highCostAlertTiers ? { highCostAlertTiers } : {}),
       },
@@ -55,19 +48,10 @@ function buildAppConfig(
 describe('getModelPricing', () => {
   beforeEach(() => mockCacheGet.mockReset().mockResolvedValue(null));
 
-  it('does not read the showModelPricingIndicator flag itself; the config route decides whether to call it', async () => {
+  it('computes pricing without any customDeloitteFeatureFlags set', async () => {
     expect(
       await getModelPricing(
         { endpoints: {} } as unknown as AppConfig,
-        'user-1',
-        undefined,
-        { [EModelEndpoint.anthropic]: [TEST_MODELS.builtIn] },
-        deps,
-      ),
-    ).not.toEqual({});
-    expect(
-      await getModelPricing(
-        buildAppConfig({ showModelPricingIndicator: false, endpoints: {} } as Partial<AppConfig>),
         'user-1',
         undefined,
         { [EModelEndpoint.anthropic]: [TEST_MODELS.builtIn] },
