@@ -100,6 +100,17 @@ function canCreateSkill({ req }) {
   });
 }
 
+/** Deloitte Custom Change: the role-level SKILLS.USE gate for activating skills in a run. */
+function canUseSkills({ req }) {
+  return checkAccess({
+    req,
+    user: req.user,
+    permissionType: PermissionTypes.SKILLS,
+    permissions: [Permissions.USE],
+    getRoleByName: db.getRoleByName,
+  });
+}
+
 function canEditSkill({ req, skillId }) {
   return checkPermission({
     userId: req.user.id,
@@ -330,6 +341,7 @@ const skillToolDeps = {
   updateSkill: db.updateSkill,
   deleteSkill: db.deleteSkill,
   canCreateSkill,
+  canUseSkills,
   canEditSkill,
   grantSkillOwner,
   saveSkillFileContent,
