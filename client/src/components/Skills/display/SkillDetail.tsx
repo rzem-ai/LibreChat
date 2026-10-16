@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { format } from 'date-fns';
 import { Button, TooltipAnchor } from '@librechat/client';
+import { formatDisplayDate } from 'librechat-data-provider';
 import { User, Pencil, Calendar, EarthIcon } from 'lucide-react';
 import type { TSkill } from 'librechat-data-provider';
 import { useLocalize, useAuthContext, useSkillPermissions, useSkillActiveState } from '~/hooks';
@@ -29,9 +29,8 @@ export default function SkillDetail({ skill, onEdit, onDelete }: SkillDetailProp
   const isPublic = skill.isPublic === true;
   const isShared = skill.author !== user?.id && Boolean(skill.authorName);
   const addedBy = isShared ? skill.authorName : localize('com_ui_you');
-  const updatedDate = skill.updatedAt
-    ? format(new Date(skill.updatedAt), 'MMM d, yyyy')
-    : undefined;
+  // Deloitte Custom Change: use the shared date format for consistent skill metadata dates.
+  const updatedDate = formatDisplayDate(skill.updatedAt);
 
   const { fields: frontmatterFields, body: cleanBody } = useMemo(
     () => parseFrontmatter(skill.body ?? '', SKIP_KEYS),
