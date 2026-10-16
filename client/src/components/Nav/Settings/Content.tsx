@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
+import { SettingsTabValues } from 'librechat-data-provider';
 import type { SettingsContextValue, SettingsTab, SettingEntry } from './types';
 import { filterSettings } from './search';
+import SpeechNotice from './SpeechNotice';
 import { useLocalize } from '~/hooks';
 import { registry } from './registry';
 import Section from './Section';
@@ -56,6 +58,8 @@ export default function Content({ activeTab, query, ctx }: ContentProps) {
 
   return (
     <div>
+      {/* Deloitte Custom Change: show the speech capability notice on the Speech settings tab. */}
+      {activeTab === SettingsTabValues.SPEECH && <SpeechNotice />}
       {tab.sections.map((section) => {
         const entries = registry.filter(
           (e) => e.tab === activeTab && e.section === section.id && visible(e, ctx),

@@ -872,8 +872,9 @@ speech:
   speechTab:
     conversationMode: true
     advancedMode: false
-    speechToText: true
-    textToSpeech: true
+    # Deloitte Custom Change: disable STT and TTS by default in response to user feedback.
+    speechToText: false
+    textToSpeech: false
     # textToSpeech:
     #   engineTTS: "elevenlabs"
     #   voice: "Rachel"
