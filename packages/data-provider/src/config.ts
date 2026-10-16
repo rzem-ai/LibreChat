@@ -2368,8 +2368,6 @@ export const interfaceSchema = z
         externalVoiceProvider: z.boolean().optional(),
         artifactsShadcnOnly: z.boolean().optional(),
         showConversationTitleInHeader: z.boolean().optional(),
-        /** Set to true to show the 1-5 `$` price-tier badge in the model selector. */
-        showModelPricingIndicator: z.boolean().optional(),
         /**
          * 4 strictly ascending $/1M blended-cost breakpoints that split models into the
          * 5 price tiers (`$` to `$$$$$`) shown in the model selector. A model's blended
@@ -3584,6 +3582,8 @@ const sharedOpenAIModels = [
 const sharedAnthropicModels = [
   'claude-fable-5-1',
   'claude-fable-5',
+  // Deloitte Custom Change: Claude Haiku 5.5 gateway model.
+  'claude-haiku-5-5',
   'claude-opus-5-5',
   'claude-opus-5',
   'claude-sonnet-5-5',
@@ -3622,6 +3622,8 @@ const sharedAnthropicModels = [
 export const bedrockModels = [
   'global.anthropic.claude-fable-5-1',
   'global.anthropic.claude-fable-5',
+  // Deloitte Custom Change: Claude Haiku 5.5 gateway model (Bedrock global profile).
+  'global.anthropic.claude-haiku-5-5',
   'global.anthropic.claude-opus-5-5',
   'global.anthropic.claude-opus-5',
   'global.anthropic.claude-sonnet-5-5',

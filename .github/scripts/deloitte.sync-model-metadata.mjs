@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Populates modelSpecs.list[].details.speed/intelligence in librechat.yaml from the
-// Artificial Analysis API, keyed off each spec's artificialAnalysisBenchmarkModelName.
+// Artificial Analysis API, keyed off each spec's artificialAnalysisBenchmarkModelName (the
+// medium-effort variant of that slug is used when the catalog has one).
 // Edits via the `yaml` package's Document API (not js-yaml) so comments and the
 // &deloitteSystemPrompt anchor/alias survive the round trip.
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -9,6 +10,7 @@ import { parseDocument } from 'yaml';
 const AA_MODELS_URL = 'https://artificialanalysis.ai/api/v2/language/models';
 const AA_MODELS_FREE_URL = `${AA_MODELS_URL}/free`;
 const MAX_PAGES = 10;
+const PREFERRED_EFFORT = 'medium';
 
 /**
  * Maps `value` into a 1-5 tier by position within the observed [min, max] range,
@@ -69,6 +71,22 @@ async function fetchCatalog(apiKey, fetchImpl) {
   return catalog;
 }
 
+/**
+ * Artificial Analysis lists reasoning models once per effort level (`<slug>-low`, `-medium`,
+ * `-high`, ...) with the bare slug meaning max effort. Prefers the medium-effort entry when one
+ * exists with usable metrics, and otherwise falls back to the slug exactly as configured.
+ */
+export function resolveCatalogEntry(catalog, benchmarkName) {
+  const isUsable = (entry) =>
+    entry?.intelligenceIndex != null && entry?.medianResponseSeconds != null;
+  const preferredSlug = `${benchmarkName}-${PREFERRED_EFFORT}`;
+  const preferred = catalog.get(preferredSlug);
+  if (isUsable(preferred)) {
+    return { slug: preferredSlug, entry: preferred };
+  }
+  return { slug: benchmarkName, entry: catalog.get(benchmarkName) };
+}
+
 /** Formats `date` as e.g. "13 October 2026" for the trailing sync comment. */
 function formatSyncDate(date) {
   const day = date.getDate();
@@ -107,14 +125,14 @@ export function syncDocument(doc, catalog, now = new Date()) {
     if (benchmarkName == null) {
       continue; // Deliberate opt-out — no warning.
     }
-    const entry = catalog.get(benchmarkName);
+    const { slug, entry } = resolveCatalogEntry(catalog, benchmarkName);
     if (!entry || entry.intelligenceIndex == null || entry.medianResponseSeconds == null) {
       warnings.push(
         `::warning::No Artificial Analysis catalog match for "${benchmarkName}" (modelSpecs.list[${index}]) — details left unchanged.`,
       );
       continue;
     }
-    matched.push({ index, ...entry });
+    matched.push({ index, slug, ...entry });
   }
 
   if (!matched.length) {
@@ -129,7 +147,7 @@ export function syncDocument(doc, catalog, now = new Date()) {
   const speedMax = Math.max(...speedValues);
 
   const syncComment = `updated by deloitte.sync-model-metadata workflow on ${formatSyncDate(now)}`;
-  const updated = matched.map(({ index, intelligenceIndex, medianResponseSeconds }) => {
+  const updated = matched.map(({ index, slug, intelligenceIndex, medianResponseSeconds }) => {
     const speed = tierFromRange(medianResponseSeconds, speedMin, speedMax, true);
     const intelligence = tierFromRange(intelligenceIndex, intelligenceMin, intelligenceMax, false);
     setWithSyncComment(doc, ['modelSpecs', 'list', index, 'details', 'speed'], speed, syncComment);
@@ -139,7 +157,7 @@ export function syncDocument(doc, catalog, now = new Date()) {
       intelligence,
       syncComment,
     );
-    return { index, speed, intelligence };
+    return { index, slug, speed, intelligence, intelligenceIndex, medianResponseSeconds };
   });
 
   return { updated, warnings };

@@ -1,7 +1,7 @@
 version: 1.3.17 # Copy from librechat.example.yaml
 cache: true
 
-# 'includedTools' restricts the tools available in the Agent Builder to only those listed here.
+# 'includedTools' restricts the list of tools available in the Agent Builder.
 includedTools:
   - 'file_search'
   - 'execute_code'
@@ -149,8 +149,10 @@ interface:
     externalVoiceProvider: false # Set to false to hide the external voice provider option in Speech settings (browser voice only)
     artifactsShadcnOnly: true # Set to true to force the shadcn/ui artifacts mode and hide other artifact mode options
     showConversationTitleInHeader: false # Set to true to show the conversation title in the chat header
-    showModelPricingIndicator: false # False: hide the $$$ badges on the model menuitems.
-    modelPricingTierBreakpoints: [ 2, 5, 8, 15 ] # Breakpoints for the cost rating bar shown in the model tooltips.
+    # Deloitte Custom Change: the model tooltip calculates blended cost as
+    # (input USD/1M + output USD/1M) / 2. These ascending breakpoints split it into
+    # the five $-$$$$$ tiers: costs below 2 are $, then 2, 5, 8, and 15 start the next tiers.
+    modelPricingTierBreakpoints: [ 2, 5, 8, 15 ]
     highCostAlertTiers: [ 5 ] # Which of the 5 price tiers will show the High Cost alert chip.
 
 fileConfig:
@@ -232,12 +234,17 @@ endpoints:
     # endpoint; an empty `supportedModels` list disables it for every model.
     # Keep in sync with what the LLM Gateway actually permits.
     nativeWebSearch:
+      # Deloitte Custom Change: permit native web search for the Claude 5.5 models
+      # provisioned on the CTNP LLM Gateway.
       supportedModels:
         - 'claude-haiku-4-5'
+        - 'claude-haiku-5-5'
         - 'claude-sonnet-5'
+        - 'claude-sonnet-5-5'
         - 'claude-sonnet-4-6'
         - 'claude-opus-4-6'
         - 'claude-opus-4-8'
+        - 'claude-opus-5-5'
     # Deloitte Custom Change: reference pricing only, left commented out — `anthropicEndpointSchema`
     # doesn't define `tokenConfig` (it's only wired up for `endpoints.custom[]`), so built-in
     # endpoints fall back to the hardcoded getMultiplier/getCacheMultiplier tables in
@@ -276,9 +283,9 @@ endpoints:
     #     cacheWrite: 6.25
     #     cacheRead: 0.5
 
-  # ========================================
-  # Custom endpoints (OpenAI-compatible format)
-  # ========================================
+    # ========================================
+    # Custom endpoints (OpenAI-compatible format)
+    # ========================================
   custom:
     # --- Azure Australia (aus-east) ---
     - name: 'Azure AU'
@@ -332,7 +339,7 @@ endpoints:
           - 'gpt-56-terra'
           - 'gpt-56-sol'
       # Deloitte Custom Change: pricing used for real token billing and the relative-cost
-      # badge in the model selector. Prices are USD per 1M tokens; context is in tokens.
+      # tier in the model tooltip. Prices are USD per 1M tokens; context is in tokens.
       # GPT-5.6 Sol/Luna/Terra publish a 1,050,000-token context window (128,000 max output).
       tokenConfig:
         gpt-56-luna:
@@ -370,7 +377,7 @@ endpoints:
       nativeWebSearch:
         supportedModels: []
       # Deloitte Custom Change: pricing used for real token billing and the relative-cost
-      # badge in the model selector. Prices are USD per 1M tokens; context is in tokens.
+      # tier in the model tooltip. Prices are USD per 1M tokens; context is in tokens.
       tokenConfig:
         google/gemini-2.5-flash:
           prompt: 0.3
@@ -388,6 +395,10 @@ endpoints:
     models:
       - 'au.anthropic.claude-sonnet-4-6'
       - 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
+      # Deloitte Custom Change: Australian Bedrock inference profiles provisioned on CTNP.
+      - 'au.anthropic.claude-haiku-5-5'
+      - 'au.anthropic.claude-sonnet-5-5'
+      - 'au.anthropic.claude-opus-5-5'
     # Deloitte Custom Change: reference pricing only, left commented out — see the note on
     # `endpoints.anthropic` above; `bedrockEndpointSchema` doesn't define `tokenConfig` either.
     # Same underlying Claude models/prices as the direct Anthropic endpoint.
@@ -464,8 +475,8 @@ modelSpecs:
       # Deloitte Custom Change: editorial metadata for the model info tooltip — 1-5 ratings
       # and capability flags shown to users, separate from the tool-enablement flags below.
       details:
-        speed: 2
-        intelligence: 5
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -480,7 +491,6 @@ modelSpecs:
       label: 'GPT 5.6 Luna'
       group: 'OpenAI Global'
       iconURL: 'openAI'
-      softDefault: true
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'gpt-5-6-luna'
       preset:
@@ -488,8 +498,8 @@ modelSpecs:
         model: 'gpt-56-luna'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 3
-        intelligence: 4
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -505,8 +515,8 @@ modelSpecs:
         model: 'gpt-56-sol'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 3
-        intelligence: 5
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -524,8 +534,8 @@ modelSpecs:
         model: 'google/gemini-2.5-flash'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5
-        intelligence: 1
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
         supports:
           webSearch: false
           imageGeneration: false
@@ -541,8 +551,8 @@ modelSpecs:
         model: 'google/gemini-2.5-pro'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5
-        intelligence: 1
+        speed: 3 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
         supports:
           webSearch: false
           imageGeneration: false
@@ -559,8 +569,26 @@ modelSpecs:
         model: 'claude-haiku-4-5'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5
-        intelligence: 1
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        supports:
+          webSearch: true
+          imageGeneration: false
+
+    # Deloitte Custom Change: expose CTNP-provisioned Claude 5.5 models in the curated selector.
+    - name: 'anthropic-claude-haiku-5-5'
+      label: 'Claude Haiku 5.5'
+      group: 'Anthropic Global'
+      iconURL: 'anthropic'
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-haiku-5-5'
+        promptPrefix: *deloitteSystemPrompt
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-haiku-5-5'
+      details:
+        speed: 4 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -576,8 +604,27 @@ modelSpecs:
         model: 'claude-sonnet-5'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 1
-        intelligence: 4
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        supports:
+          webSearch: true
+          imageGeneration: false
+
+    - name: 'anthropic-claude-sonnet-5-5'
+      label: 'Claude Sonnet 5.5'
+      group: 'Anthropic Global'
+      iconURL: 'anthropic'
+      # Deloitte Custom Change: use Sonnet 5.5 only until a user makes their own selection.
+      softDefault: true
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-sonnet-5-5'
+        promptPrefix: *deloitteSystemPrompt
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-sonnet-5-5'
+      details:
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -593,8 +640,8 @@ modelSpecs:
         model: 'claude-sonnet-4-6'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5
-        intelligence: 2
+        speed: 4 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -610,8 +657,8 @@ modelSpecs:
         model: 'claude-opus-4-6'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5
-        intelligence: 3
+        speed: 4 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -627,8 +674,25 @@ modelSpecs:
         model: 'claude-opus-4-8'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 4
-        intelligence: 5
+        speed: 1 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        supports:
+          webSearch: true
+          imageGeneration: false
+
+    - name: 'anthropic-claude-opus-5-5'
+      label: 'Claude Opus 5.5'
+      group: 'Anthropic Global'
+      iconURL: 'anthropic'
+      preset:
+        endpoint: 'anthropic'
+        model: 'claude-opus-5-5'
+        promptPrefix: *deloitteSystemPrompt
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-opus-5-5'
+      details:
+        speed: 3 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -645,8 +709,8 @@ modelSpecs:
         model: 'au.anthropic.claude-sonnet-4-6'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5
-        intelligence: 2
+        speed: 4 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
         supports:
           webSearch: false
           imageGeneration: false
@@ -662,10 +726,62 @@ modelSpecs:
         model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5
-        intelligence: 1
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
         supports:
           webSearch: false
+          imageGeneration: false
+
+    # Deloitte Custom Change: expose the CTNP-provisioned Australian Bedrock variants.
+    - name: 'anthropic-au-claude-haiku-5-5'
+      label: 'Claude Haiku 5.5'
+      group: 'Anthropic Australia'
+      iconURL: 'anthropic'
+      preset:
+        endpoint: 'bedrock'
+        model: 'au.anthropic.claude-haiku-5-5'
+        promptPrefix: *deloitteSystemPrompt
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-haiku-5-5'
+      details:
+        speed: 4 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        supports:
+          webSearch: true
+          imageGeneration: false
+
+    - name: 'anthropic-au-claude-sonnet-5-5'
+      label: 'Claude Sonnet 5.5'
+      group: 'Anthropic Australia'
+      iconURL: 'anthropic'
+      preset:
+        endpoint: 'bedrock'
+        model: 'au.anthropic.claude-sonnet-5-5'
+        promptPrefix: *deloitteSystemPrompt
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-sonnet-5-5'
+      details:
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        supports:
+          webSearch: true
+          imageGeneration: false
+
+    - name: 'anthropic-au-claude-opus-5-5'
+      label: 'Claude Opus 5.5'
+      group: 'Anthropic Australia'
+      iconURL: 'anthropic'
+      preset:
+        endpoint: 'bedrock'
+        model: 'au.anthropic.claude-opus-5-5'
+        promptPrefix: *deloitteSystemPrompt
+      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
+      artificialAnalysisBenchmarkModelName: 'claude-opus-5-5'
+      details:
+        speed: 3 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 16 October 2026
+        supports:
+          webSearch: true
           imageGeneration: false
 
 # MCP Servers configuration

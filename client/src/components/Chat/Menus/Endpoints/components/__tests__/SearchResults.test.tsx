@@ -239,8 +239,7 @@ describe('SearchResults', () => {
 
   it('assigns search option positions across specs, marketplace, and endpoint rows', () => {
     mockSelectedValues = { endpoint: '', model: '', modelSpec: '' };
-    // Deloitte Custom Change: ModelCost (rendered for spec rows) reads spec.preset.model,
-    // so the mock spec needs a real preset instead of an empty object.
+    // Spec rows read spec.preset.model, so the mock spec needs a real preset instead of an empty object.
     const spec = {
       name: 'preset',
       label: 'Preset',

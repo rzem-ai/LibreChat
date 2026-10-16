@@ -1106,12 +1106,11 @@ describe('agent background task config', () => {
 });
 
 describe('customDeloitteFeatureFlags.modelPricingTierBreakpoints', () => {
-  it('accepts a valid ascending tierBreakpoints array alongside the indicator flag', () => {
+  it('accepts a valid ascending tierBreakpoints array on its own', () => {
     const result = configSchema.safeParse({
       version: '1.0',
       interface: {
         customDeloitteFeatureFlags: {
-          showModelPricingIndicator: true,
           modelPricingTierBreakpoints: [2, 5, 8, 15],
         },
       },
@@ -1120,7 +1119,6 @@ describe('customDeloitteFeatureFlags.modelPricingTierBreakpoints', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       const flags = result.data.interface?.customDeloitteFeatureFlags;
-      expect(flags?.showModelPricingIndicator).toBe(true);
       expect(flags?.modelPricingTierBreakpoints).toEqual([2, 5, 8, 15]);
     }
   });
@@ -1171,12 +1169,11 @@ describe('customDeloitteFeatureFlags.modelPricingTierBreakpoints', () => {
 });
 
 describe('customDeloitteFeatureFlags.highCostAlertTiers', () => {
-  it('accepts a valid tiers array alongside the indicator flag', () => {
+  it('accepts a valid tiers array on its own', () => {
     const result = configSchema.safeParse({
       version: '1.0',
       interface: {
         customDeloitteFeatureFlags: {
-          showModelPricingIndicator: true,
           highCostAlertTiers: [4, 5],
         },
       },

@@ -178,6 +178,25 @@ describe('supportsAdaptiveThinking', () => {
   test('should return false for claude-4-sonnet (alternate naming, below threshold)', () => {
     expect(supportsAdaptiveThinking('claude-4-sonnet')).toBe(false);
   });
+
+  test('should return true for claude-haiku-5-5 and later Haiku releases', () => {
+    expect(supportsAdaptiveThinking('claude-haiku-5-5')).toBe(true);
+    expect(supportsAdaptiveThinking('claude-haiku-5.5')).toBe(true);
+    expect(supportsAdaptiveThinking('claude-5-5-haiku')).toBe(true);
+    expect(supportsAdaptiveThinking('claude-haiku-6')).toBe(true);
+  });
+
+  test('should return true for Haiku 5.5 across Bedrock ID formats', () => {
+    expect(supportsAdaptiveThinking('anthropic.claude-haiku-5-5')).toBe(true);
+    expect(supportsAdaptiveThinking('global.anthropic.claude-haiku-5-5')).toBe(true);
+    expect(supportsAdaptiveThinking('au.anthropic.claude-haiku-5-5')).toBe(true);
+  });
+
+  test('should return false for claude-haiku-4-5 (adaptive starts at Haiku 5.5)', () => {
+    expect(supportsAdaptiveThinking('claude-haiku-4-5')).toBe(false);
+    expect(supportsAdaptiveThinking('claude-haiku-4.5')).toBe(false);
+    expect(supportsAdaptiveThinking('anthropic.claude-haiku-4-5-20251001-v1:0')).toBe(false);
+  });
 });
 
 describe('supportsContext1m', () => {
@@ -972,14 +991,14 @@ describe('bedrockInputParser', () => {
       expect(amrf?.anthropic_beta).toEqual(['context-1m-2025-08-07']);
     });
 
-    test('should match anthropic.claude-haiku-6 model without context beta header', () => {
+    test('should match anthropic.claude-haiku-6 with adaptive thinking and without context beta header', () => {
       const input = {
         model: 'anthropic.claude-haiku-6',
       };
       const result = bedrockInputParser.parse(input) as Record<string, unknown>;
       const additionalFields = result.additionalModelRequestFields as Record<string, unknown>;
-      expect(additionalFields.thinking).toBe(true);
-      expect(additionalFields.thinkingBudget).toBe(2000);
+      expect(additionalFields.thinking).toEqual({ type: 'adaptive' });
+      expect(additionalFields.thinkingBudget).toBeUndefined();
       expect(additionalFields.anthropic_beta).toEqual(BEDROCK_CLAUDE_4_BETAS);
     });
 
@@ -1019,6 +1038,17 @@ describe('bedrockInputParser', () => {
     test('should match us.anthropic.claude-sonnet-4-6 with adaptive thinking', () => {
       const input = {
         model: 'us.anthropic.claude-sonnet-4-6',
+      };
+      const result = bedrockInputParser.parse(input) as Record<string, unknown>;
+      const additionalFields = result.additionalModelRequestFields as Record<string, unknown>;
+      expect(additionalFields.thinking).toEqual({ type: 'adaptive' });
+      expect(additionalFields.thinkingBudget).toBeUndefined();
+      expect(additionalFields.anthropic_beta).toEqual(BEDROCK_CLAUDE_4_BETAS);
+    });
+
+    test('should match au.anthropic.claude-haiku-5-5 with adaptive thinking', () => {
+      const input = {
+        model: 'au.anthropic.claude-haiku-5-5',
       };
       const result = bedrockInputParser.parse(input) as Record<string, unknown>;
       const additionalFields = result.additionalModelRequestFields as Record<string, unknown>;

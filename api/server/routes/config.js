@@ -274,10 +274,7 @@ router.get('/', async function (req, res) {
     // Deloitte Custom Change: model pricing (incl. the 1-5 price tier) is derived
     // the same way as billing — custom endpoints use their configured `tokenConfig`,
     // everything else (built-in OpenAI/Anthropic/Google/Bedrock) falls back to the
-    // built-in token-value tables. Always computed (not gated by
-    // `showModelPricingIndicator`) since the model info tooltip's cost row needs this
-    // data regardless of whether the in-menu `$` chip is enabled; the chip's own
-    // visibility is gated client-side off `interface.customDeloitteFeatureFlags.showModelPricingIndicator`.
+    // built-in token-value tables. Feeds the model info tooltip's cost row.
     let modelPricing = {};
     try {
       const modelsConfig = await getModelsConfig({ user: req.user, config: appConfig });
