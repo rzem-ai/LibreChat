@@ -42,10 +42,15 @@ function mockUser(id: string, role: SystemRoles = SystemRoles.USER) {
   });
 }
 
-function mockPermissions(bits: number, isLoading = false) {
+function mockPermissions(
+  bits: number,
+  { isLoading = false, isError = false, isSuccess = true } = {},
+) {
   useResourcePermissionsMock.mockReturnValue({
     hasPermission: (required: number) => (bits & required) === required,
     isLoading,
+    isError,
+    isSuccess,
     permissionBits: bits,
   });
 }
@@ -109,12 +114,21 @@ describe('useSkillPermissions', () => {
 
   it('returns denied permissions while the ACL query is still loading', () => {
     mockUser('user-other');
-    mockPermissions(0, /* isLoading */ true);
+    mockPermissions(0, { isLoading: true, isSuccess: false });
     const { result } = renderHook(() => useSkillPermissions(makeSkill()));
     expect(result.current.isLoading).toBe(true);
     expect(result.current.canEdit).toBe(false);
     expect(result.current.canDelete).toBe(false);
     expect(result.current.canShare).toBe(false);
+  });
+
+  it('fails closed for ACL permissions when the query errors', () => {
+    mockUser('user-other');
+    mockPermissions(PermissionBits.EDIT, { isError: true, isSuccess: false });
+    const { result } = renderHook(() => useSkillPermissions(makeSkill()));
+    expect(result.current.isError).toBe(true);
+    expect(result.current.isSuccess).toBe(false);
+    expect(result.current.canEdit).toBe(false);
   });
 
   it('handles an undefined skill gracefully', () => {

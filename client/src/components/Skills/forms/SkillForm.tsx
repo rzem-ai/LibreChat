@@ -169,7 +169,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
   }
 
   // Deloitte Custom Change: After permissions load, redirect viewers from the edit route to the read-only skill detail page.
-  if (!permissions.canEdit) {
+  if (permissions.isSuccess && !permissions.canEdit) {
     return <Navigate to={`/skills/${skillId}`} replace />;
   }
 

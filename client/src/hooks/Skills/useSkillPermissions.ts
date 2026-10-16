@@ -7,6 +7,10 @@ import { useAuthContext } from '~/hooks/AuthContext';
 export interface SkillPermissions {
   /** Permission query is still resolving */
   isLoading: boolean;
+  /** Permission query failed */
+  isError: boolean;
+  /** Permission query resolved successfully */
+  isSuccess: boolean;
   /** Caller is the original author */
   isOwner: boolean;
   /** Caller has the ADMIN system role */
@@ -30,20 +34,26 @@ export default function useSkillPermissions(
   skill: TSkill | TSkillSummary | undefined,
 ): SkillPermissions {
   const { user } = useAuthContext();
-  const { hasPermission, isLoading } = useResourcePermissions(ResourceType.SKILL, skill?._id ?? '');
+  const { hasPermission, isLoading, isError, isSuccess } = useResourcePermissions(
+    ResourceType.SKILL,
+    skill?._id ?? '',
+  );
 
   return useMemo<SkillPermissions>(() => {
     const isOwner = skill != null && skill.author === user?.id;
     const isAdmin = user?.role === SystemRoles.ADMIN;
     const privileged = isOwner || isAdmin;
+    const canUseAclPermissions = isSuccess && !isError;
 
     return {
       isLoading,
+      isError,
+      isSuccess,
       isOwner,
       isAdmin,
-      canEdit: privileged || hasPermission(PermissionBits.EDIT),
-      canDelete: privileged || hasPermission(PermissionBits.DELETE),
-      canShare: privileged || hasPermission(PermissionBits.SHARE),
+      canEdit: privileged || (canUseAclPermissions && hasPermission(PermissionBits.EDIT)),
+      canDelete: privileged || (canUseAclPermissions && hasPermission(PermissionBits.DELETE)),
+      canShare: privileged || (canUseAclPermissions && hasPermission(PermissionBits.SHARE)),
     };
-  }, [skill, user?.id, user?.role, hasPermission, isLoading]);
+  }, [skill, user?.id, user?.role, hasPermission, isLoading, isError, isSuccess]);
 }

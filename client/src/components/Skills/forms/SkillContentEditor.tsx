@@ -55,20 +55,21 @@ const SkillContentEditor: React.FC<SkillContentEditorProps> = ({
     formState: { errors },
   } = useFormContext();
 
+  const effectiveIsEditing = isEditing && !readOnly;
   return (
     <div className="flex max-h-[85vh] flex-col sm:max-h-[85vh]">
       <h2 className="sr-only">{localize('com_ui_skill_content')}</h2>
       <div
         className={cn(
           'relative w-full flex-1 overflow-auto rounded-xl border border-border-medium p-3 text-left transition-all duration-200 sm:p-4',
-          !readOnly && !isEditing && 'cursor-pointer hover:bg-surface-tertiary',
+          !readOnly && !effectiveIsEditing && 'cursor-pointer hover:bg-surface-tertiary',
         )}
       >
         {/* Deloitte Custom Change: In viewer mode, hide all body-editor entry controls and edit affordances. */}
         {!readOnly && (
           <div className="absolute right-2 top-2 z-10">
             <TooltipAnchor
-              description={isEditing ? localize('com_ui_done') : localize('com_ui_edit')}
+              description={effectiveIsEditing ? localize('com_ui_done') : localize('com_ui_edit')}
               render={
                 <Button
                   type="button"
@@ -76,11 +77,13 @@ const SkillContentEditor: React.FC<SkillContentEditorProps> = ({
                   variant="ghost"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => setIsEditing((prev) => !prev)}
-                  aria-label={isEditing ? localize('com_ui_done') : localize('com_ui_edit')}
+                  aria-label={
+                    effectiveIsEditing ? localize('com_ui_done') : localize('com_ui_edit')
+                  }
                   className="size-8 p-0 hover:bg-surface-tertiary"
                 >
                   <MorphIcon
-                    icon={isEditing ? Check : SquarePen}
+                    icon={effectiveIsEditing ? Check : SquarePen}
                     className="size-4 text-text-secondary"
                   />
                 </Button>
@@ -88,7 +91,7 @@ const SkillContentEditor: React.FC<SkillContentEditorProps> = ({
             />
           </div>
         )}
-        {!readOnly && !isEditing && (
+        {!readOnly && !effectiveIsEditing && (
           <button
             type="button"
             aria-label={localize('com_ui_edit')}
@@ -101,7 +104,7 @@ const SkillContentEditor: React.FC<SkillContentEditorProps> = ({
           control={control}
           rules={rules}
           render={({ field }) =>
-            isEditing ? (
+            effectiveIsEditing ? (
               <TextareaAutosize
                 {...field}
                 // eslint-disable-next-line jsx-a11y/no-autofocus
