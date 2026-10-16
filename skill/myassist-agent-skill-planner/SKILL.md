@@ -245,10 +245,13 @@ After the user confirms the draft recommendation and diagram:
 **Check Skill Builder readiness:**
 
 A plan is ready for Skill Builder when:
+- `myassist-skill-builder` is available for invocation in the current Agent/session's skill catalogue.
 - The design includes at least one new Skill (not reused).
 - Skill purpose, inputs, outputs, and task flow are clear.
 - Material connector/tool requirements are known or marked `[OPEN]`.
 - Any unsupported capability has been resolved.
+
+Check Builder availability before every offer or attempt to invoke it. If it is unavailable, retain the plan and explain that the user must attach or enable `myassist-skill-builder` in the current Agent/session before continuing. Offer the full build plan or Agent instructions in the meantime.
 
 **If ready for Skill Builder and only one new Skill:**
 
