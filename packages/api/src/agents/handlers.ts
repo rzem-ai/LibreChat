@@ -11,6 +11,7 @@ import {
   hasActivePiiFields,
   hasActivePiiPatterns,
   hasToolCallErrorPrefix,
+  requiresToolApproval,
 } from 'librechat-data-provider';
 import type {
   LCTool,
@@ -52,6 +53,7 @@ import type {
 } from './backgroundCompletion';
 import type { SkillFileRecord, PrimeSkillFilesResult } from './skillFiles';
 import type { ArtifactDeliveryFailure } from '~/files/code';
+import type { ToolWithClass } from '~/tools/classification';
 import type { BackgroundToolResultState } from './harvest';
 import type { WorkspaceEditMatching } from '~/code/edits';
 import type { CodeExecutionContext } from './execution';
@@ -150,11 +152,6 @@ import { markSandboxReady } from './prewarm';
 import { normalizeEditArgs } from './edits';
 
 export interface ToolEndCallbackData {
-  /** The executed call's arguments. The stream-consumer tool-end path cannot
-   * reconstruct these, so the execution handler — which owns both halves —
-   * must supply them for consumers that fence on the input (the event-actor
-   * action recorder validates its declared argument subset against this). */
-  input?: unknown;
   /** True when this callback delivers the harvested completion of a
    * previously dispatched background task on a poll turn. `output.name` then
    * reports the ORIGINAL tool for artifact attribution while `input` carries
@@ -7629,8 +7626,13 @@ export function createToolExecuteHandler(options: ToolExecuteOptions): EventHand
                           const allowsCodeExecution = (
                             toolDef.allowed_callers ?? ['direct']
                           ).includes('code_execution');
+                          // [Deloitte: Keep classified tools out of non-pausable programmatic calls.]
+                          const requiresDirectApproval = requiresToolApproval(
+                            (toolDef as ToolWithClass).toolClass,
+                          );
                           if (
                             allowsCodeExecution &&
+                            !requiresDirectApproval &&
                             (activeCodeExecutionToolNames == null ||
                               activeCodeExecutionToolNames.has(toolDef.name))
                           ) {
@@ -7795,7 +7797,6 @@ export function createToolExecuteHandler(options: ToolExecuteOptions): EventHand
                     if (toolEndCallback) {
                       await toolEndCallback(
                         {
-                          input: tc.args,
                           output: {
                             name: tc.name,
                             tool_call_id: tc.id,

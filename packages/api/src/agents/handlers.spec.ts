@@ -1332,6 +1332,10 @@ describe('createToolExecuteHandler', () => {
       const legacyPtcTool = createMockTool(Constants.PROGRAMMATIC_TOOL_CALLING, capturedConfigs);
       const toolRegistry = new Map([
         ['custom_tool', { name: 'custom_tool', allowed_callers: ['code_execution'] }],
+        [
+          'classified_tool',
+          { name: 'classified_tool', allowed_callers: ['code_execution'], toolClass: 'W1' },
+        ],
         ['direct_tool', { name: 'direct_tool', allowed_callers: ['direct'] }],
         ['create_file', { name: 'create_file' }],
         [Constants.PROGRAMMATIC_TOOL_CALLING, { name: Constants.PROGRAMMATIC_TOOL_CALLING }],
@@ -1344,6 +1348,7 @@ describe('createToolExecuteHandler', () => {
       const customTool = createMockTool('custom_tool', []);
       const ptcToolMap = new Map([
         ['custom_tool', customTool],
+        ['classified_tool', createMockTool('classified_tool', [])],
         ['direct_tool', createMockTool('direct_tool', [])],
       ]);
       const loadTools: ToolExecuteOptions['loadTools'] = jest.fn(async () => ({
