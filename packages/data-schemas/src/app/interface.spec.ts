@@ -216,6 +216,43 @@ describe('loadDefaultInterface', () => {
     expect(interfaceConfig?.autoSubmitFromUrl).toBe(true);
   });
 
+  it('passes the learning center config through to the client', async () => {
+    const learningCenter = { faqAgentId: 'agent_123', feedbackUrl: 'https://example.com/form' };
+    const interfaceConfig = await loadDefaultInterface({
+      config: { interface: { learningCenter } },
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.learningCenter).toEqual(learningCenter);
+  });
+
+  describe('learningCenter faqAgentId env substitution', () => {
+    const load = (faqAgentId: string) =>
+      loadDefaultInterface({
+        config: { interface: { learningCenter: { faqAgentId, feedbackUrl: 'https://f.example' } } },
+        configDefaults: getConfigDefaults(),
+      });
+
+    afterEach(() => {
+      delete process.env.LEARNING_CENTER_FAQ_AGENT_ID;
+    });
+
+    it('resolves the env placeholder to the configured agent id', async () => {
+      process.env.LEARNING_CENTER_FAQ_AGENT_ID = 'agent_abc';
+      const result = await load('${LEARNING_CENTER_FAQ_AGENT_ID}');
+      expect(result?.learningCenter).toEqual({
+        faqAgentId: 'agent_abc',
+        feedbackUrl: 'https://f.example',
+      });
+    });
+
+    it('drops an unset placeholder instead of sending it to the client', async () => {
+      const result = await load('${LEARNING_CENTER_FAQ_AGENT_ID}');
+      expect(result?.learningCenter?.faqAgentId).toBeUndefined();
+      expect(result?.learningCenter?.feedbackUrl).toBe('https://f.example');
+    });
+  });
+
   // Deloitte Custom Change: tutorial flag migration tests (MyAssist Academy getting-started tour, PR #903)
   it('preserves disabled tutorial flag config', async () => {
     const config: Partial<TCustomConfig> = {

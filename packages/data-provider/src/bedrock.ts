@@ -181,17 +181,44 @@ function parseSonnetVersion(model: string): ClaudeVersion | null {
   return null;
 }
 
+/** Deloitte Custom Change: extracts haiku major/minor version from both naming formats.
+ *  Uses bounded minor capture to avoid matching date suffixes (e.g., -20251001). */
+function parseHaikuVersion(model: string): ClaudeVersion | null {
+  const nameFirst = model.match(/claude-haiku[-.]?(\d+)(?:[-.](\d{1,2})(?!\d))?/);
+  if (nameFirst) {
+    return {
+      major: parseInt(nameFirst[1], 10),
+      minor: nameFirst[2] != null ? parseInt(nameFirst[2], 10) : 0,
+    };
+  }
+  const numFirst = model.match(/claude-(\d+)(?:[-.](\d{1,2})(?!\d))?-haiku/);
+  if (numFirst) {
+    return {
+      major: parseInt(numFirst[1], 10),
+      minor: numFirst[2] != null ? parseInt(numFirst[2], 10) : 0,
+    };
+  }
+  return null;
+}
+
 /**
  * Mythos-class detection (Claude Fable / Mythos) lives in `schemas.ts` as
  * `isMythosClassModel` — the single source of truth for the family names.
  * The helpers below OR it in alongside the `opus`/`sonnet` version parsers.
  */
 
-/** Checks if a model supports adaptive thinking (Opus 4.6+, Sonnet 4.6+, Fable/Mythos) */
+/**
+ * Checks if a model supports adaptive thinking (Opus 4.6+, Sonnet 4.6+, Haiku
+ * 5.5+, Fable/Mythos). Haiku reached adaptive thinking one generation later than
+ * Opus/Sonnet: Haiku 4.5 still uses `thinking.type.enabled`, but 5.5 rejects it
+ * and requires `thinking.type.adaptive` with `output_config.effort`.
+ */
 export function supportsAdaptiveThinking(model: string): boolean {
   return (
     isAtLeast(parseOpusVersion(model), 4, 6) ||
     isAtLeast(parseSonnetVersion(model), 4, 6) ||
+    // Deloitte Custom Change: Haiku reached adaptive thinking at 5.5, one generation after Opus/Sonnet.
+    isAtLeast(parseHaikuVersion(model), 5, 5) ||
     s.isMythosClassModel(model)
   );
 }

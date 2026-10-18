@@ -106,10 +106,7 @@ const {
   getCachedTools,
 } = require('~/server/services/Config');
 const { processFileURL, uploadImageBuffer } = require('~/server/services/Files/process');
-const {
-  primeFiles: primeSearchFiles,
-  hasFileSearchAttachments,
-} = require('~/app/clients/tools/util/fileSearch');
+const { primeFiles: primeSearchFiles } = require('~/app/clients/tools/util/fileSearch');
 const { primeFiles: primeCodeFiles } = require('~/server/services/Files/Code/process');
 const { manifestToolMap, toolkits } = require('~/app/clients/tools/manifest');
 const repositoryInstructionLoader = createRepositoryInstructionLoader();
@@ -888,14 +885,7 @@ async function loadToolDefinitionsWrapper({
 
   const filteredTools = agent.tools?.filter((tool) => {
     if (tool === Tools.file_search) {
-      // Deloitte Custom Change: exclude file_search when no files are attached, since file search is enabled by default.
-      // Require an actual attachment in addition to the capability/permission checks, so the
-      // tool is only offered to the model when there is something for it to search.
-      return (
-        checkCapability(AgentCapabilities.file_search) &&
-        canUseTool(tool) &&
-        hasFileSearchAttachments(tool_resources)
-      );
+      return checkCapability(AgentCapabilities.file_search) && canUseTool(tool);
     }
     if (tool === Tools.execute_code) {
       return checkCapability(AgentCapabilities.execute_code) && canUseTool(tool);
@@ -1742,14 +1732,7 @@ async function loadAgentTools({
   let includesWebSearch = false;
   const _agentTools = agent.tools?.filter((tool) => {
     if (tool === Tools.file_search) {
-      // Deloitte Custom Change: exclude file_search when no files are attached, since file search is enabled by default.
-      // Mirrors the same attachment check applied when building the tool definitions above,
-      // so the constructed tool instance is only created when there is something to search.
-      return (
-        checkCapability(AgentCapabilities.file_search) &&
-        canUseTool(tool) &&
-        hasFileSearchAttachments(tool_resources)
-      );
+      return checkCapability(AgentCapabilities.file_search) && canUseTool(tool);
     } else if (tool === Tools.execute_code) {
       return checkCapability(AgentCapabilities.execute_code) && canUseTool(tool);
     } else if (tool === Tools.web_search) {

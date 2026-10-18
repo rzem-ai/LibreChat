@@ -542,13 +542,26 @@ const processImageFile = async ({ req, res, metadata, returnFile = false, sseStr
  * @param {ServerRequest} params.req - The Express request object.
  * @param {FileContext} params.context - The context of the file (e.g., 'avatar', 'image_generation', etc.)
  * @param {boolean} [params.resize=true] - Whether to resize and convert the image to target format. Default is `true`.
+ * @param {boolean} [params.returnProxyPath=false] - Whether Azure Blob avatars should use the authenticated image proxy.
+ * @param {string} [params.assistantId] - Assistant ID embedded in a proxied assistant avatar filename.
+ * @param {string} [params.assistantEndpoint] - Assistant endpoint embedded in a proxied assistant avatar filename.
  * @param {{ buffer: Buffer, width: number, height: number, bytes: number, filename: string, type: string, file_id: string }} [params.metadata] - Required metadata for the file if resize is false.
  * @returns {Promise<{ filepath: string, filename: string, source: string, type: string}>}
  */
-const uploadImageBuffer = async ({ req, context, metadata = {}, resize = true }) => {
+const uploadImageBuffer = async ({
+  req,
+  context,
+  metadata = {},
+  resize = true,
+  returnProxyPath = false,
+  assistantId,
+  assistantEndpoint,
+}) => {
   const retentionExpiryPromise = getRetentionExpiry(req);
   const appConfig = req.config;
-  const source = getFileStrategy(appConfig, { isImage: true });
+  const source = getFileStrategy(appConfig, { isImage: true, context });
+  // Deloitte Custom Change: private Azure assistant avatars need an authenticated proxy URL.
+  const useAvatarProxy = returnProxyPath && source === FileSources.azure_blob;
   const { saveBuffer } = getStrategyFunctions(source);
   let { buffer, width, height, bytes, filename, file_id, type } = metadata;
   if (resize) {
@@ -562,12 +575,19 @@ const uploadImageBuffer = async ({ req, context, metadata = {}, resize = true })
       appConfig.imageOutputType
     }`;
   }
-  const fileName = `${file_id}-${filename}`;
+  let fileName = `${file_id}-${filename}`;
+  if (useAvatarProxy) {
+    fileName =
+      assistantId && assistantEndpoint
+        ? `assistant-${assistantEndpoint}-${assistantId}-avatar-${file_id}.${appConfig.imageOutputType}`
+        : `avatar-${file_id}.${appConfig.imageOutputType}`;
+  }
   const filepath = await saveBuffer({
     userId: req.user.id,
     fileName,
     buffer,
     tenantId: req.user.tenantId,
+    returnProxyPath: useAvatarProxy,
   });
   const storageMetadata = getStorageMetadata({ filepath, source });
   return await db.createFile(

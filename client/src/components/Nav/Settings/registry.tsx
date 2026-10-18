@@ -339,6 +339,8 @@ export const registry: SettingEntry[] = [
     section: 'messages',
     labelKey: 'com_nav_user_name_display',
     keywords: ['username', 'name'],
+    // Deloitte Custom Change: hide when the bubble message layout never shows a name header.
+    show: (ctx) => ctx.usernameDisplaySettingEnabled,
     Component: DisplayUsernameMessages,
   },
   {

@@ -8,6 +8,7 @@ import { useShortcutAriaKey, useShortcutHint } from '~/hooks/useKeyboardShortcut
 import { useActivePanel, resolveActivePanel, DEFAULT_PANEL } from '~/Providers';
 import AgentMarketplaceButton from '~/components/Nav/AgentMarketplaceButton';
 import { CLOSE_SIDEBAR_ID } from '~/components/Chat/Menus/OpenSidebar';
+import LearningMenu from '~/components/Learn/Menu';
 import useNewChat from '~/hooks/Chat/useNewChat';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -143,6 +144,8 @@ function ExpandedPanel({
   const location = useLocation();
   const { active, setActive } = useActivePanel();
   const effectiveActive = resolveActivePanel(active, links);
+  const topLinks = links.filter((link) => link.id !== 'learning');
+  const learningLink = links.find((link) => link.id === 'learning');
   const isInsightsRoute = location.pathname.startsWith('/insights');
 
   const toggleLabel = expanded ? 'com_nav_close_sidebar' : 'com_nav_open_sidebar';
@@ -151,7 +154,8 @@ function ExpandedPanel({
   const toggleSidebarAriaKey = useShortcutAriaKey('toggleSidebar');
 
   return (
-    <div className="flex h-full flex-shrink-0 flex-col gap-2 border-r border-border-light bg-surface-primary-alt px-2 py-2">
+    // Deloitte Custom Change: border-border (not border-light) so the rail edge reads against the panel
+    <div className="flex h-full flex-shrink-0 flex-col gap-2 border-r border-border bg-surface-primary-alt px-2 py-2">
       <TooltipAnchor
         side="right"
         description={toggleSidebarHint}
@@ -177,38 +181,15 @@ function ExpandedPanel({
       {/* Deloitte Custom Change: Learning Hub is pinned to the bottom group
           (directly above the account settings icon) so exclude it here */}
       <div className="flex flex-col gap-1 overflow-y-auto">
-        {links
-          .filter((link) => link.id !== 'learning')
-          .map((link) => (
-            <NavIconButton
-              key={link.id}
-              link={link}
-              isActive={
-                link.id === 'insights'
-                  ? isInsightsRoute
-                  : !isInsightsRoute && link.id === effectiveActive
-              }
-              expanded={expanded ?? true}
-              setActive={setActive}
-              onExpand={onExpand}
-              onCollapse={onCollapse}
-              onNavigate={onNavigate}
-              onLeaveInsights={isInsightsRoute ? onLeaveInsights : undefined}
-            />
-          ))}
-      </div>
-
-      {/* Deloitte Custom Change: Learning Hub pinned directly above the account
-          settings icon rather than floating at the end of the scrollable list
-          with a large mt-auto gap between them */}
-      <div className="mt-auto flex flex-col gap-1">
-        {links.find((link) => link.id === 'learning') && (
+        {topLinks.map((link) => (
           <NavIconButton
-            key="learning"
-            link={links.find((link) => link.id === 'learning')!}
-            // Deloitte Custom Change: Learning Hub link, never the insights route, so the
-            // ternary reduces to the plain effectiveActive comparison
-            isActive={!isInsightsRoute && 'learning' === effectiveActive}
+            key={link.id}
+            link={link}
+            isActive={
+              link.id === 'insights'
+                ? isInsightsRoute
+                : !isInsightsRoute && link.id === effectiveActive
+            }
             expanded={expanded ?? true}
             setActive={setActive}
             onExpand={onExpand}
@@ -216,7 +197,14 @@ function ExpandedPanel({
             onNavigate={onNavigate}
             onLeaveInsights={isInsightsRoute ? onLeaveInsights : undefined}
           />
-        )}
+        ))}
+      </div>
+
+      {/* Deloitte Custom Change: Learning Hub pinned directly above the account
+          settings icon rather than floating at the end of the scrollable list
+          with a large mt-auto gap between them */}
+      <div className="mt-auto flex flex-col gap-1">
+        {learningLink && <LearningMenu link={learningLink} />}
         <Suspense fallback={<Skeleton className="h-9 w-9 rounded-lg" />}>
           <AccountSettings collapsed />
         </Suspense>

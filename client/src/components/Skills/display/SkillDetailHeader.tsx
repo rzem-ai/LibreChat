@@ -1,7 +1,6 @@
-import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { InvocationMode } from 'librechat-data-provider';
 import { Button, TooltipAnchor } from '@librechat/client';
+import { InvocationMode, formatDisplayDate } from 'librechat-data-provider';
 import { Pencil, Pin, User, Calendar, EarthIcon, Sparkles } from 'lucide-react';
 import type { TSkill } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks';
@@ -24,7 +23,8 @@ const SkillDetailHeader = ({ skill, showActions = true }: SkillDetailHeaderProps
   const localize = useLocalize();
   const navigate = useNavigate();
   const { user } = useAuthContext();
-  const formattedDate = skill.createdAt ? format(new Date(skill.createdAt), 'MMM d, yyyy') : null;
+  // Deloitte Custom Change: use the shared date format for consistent skill metadata dates.
+  const formattedDate = formatDisplayDate(skill.createdAt) ?? null;
   const isOwner = skill.author === user?.id;
   const isShared = !isOwner && Boolean(skill.authorName);
   const isPublic = skill.isPublic === true;

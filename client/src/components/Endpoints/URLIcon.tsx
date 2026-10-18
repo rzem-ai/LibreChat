@@ -1,6 +1,6 @@
 import React, { memo, useState } from 'react';
 import { AlertCircle } from 'lucide-react';
-import { ProviderIcon } from '@librechat/client';
+import { ProviderIcon, useAuthenticatedImageSrc } from '@librechat/client';
 import type { ProviderId } from 'librechat-data-provider';
 
 export const URLIcon = memo(
@@ -20,12 +20,18 @@ export const URLIcon = memo(
     provider?: ProviderId | null;
   }) => {
     const [imageError, setImageError] = useState(false);
+    // Deloitte Custom Change: private Azure avatar proxies need authenticated image retrieval.
+    const {
+      src: authenticatedImageSrc,
+      isLoading: isImageLoading,
+      isError: imageFetchError,
+    } = useAuthenticatedImageSrc(iconURL);
 
     const handleImageError = () => {
       setImageError(true);
     };
 
-    if (imageError || !iconURL) {
+    if (imageError || imageFetchError || !iconURL) {
       const numericSize =
         typeof containerStyle.width === 'number' ? containerStyle.width : undefined;
       return (
@@ -33,7 +39,7 @@ export const URLIcon = memo(
           <div className={className}>
             <ProviderIcon provider={provider} size={numericSize} className="h-full w-full" />
           </div>
-          {imageError && iconURL && (
+          {(imageError || imageFetchError) && iconURL && (
             <div
               className="absolute flex items-center justify-center rounded-full bg-status-error-strong"
               style={{ width: '14px', height: '14px', top: 0, right: 0 }}
@@ -45,10 +51,14 @@ export const URLIcon = memo(
       );
     }
 
+    if (isImageLoading) {
+      return <div className={className} style={containerStyle} aria-hidden="true" />;
+    }
+
     return (
       <div className={className} style={containerStyle}>
         <img
-          src={iconURL}
+          src={authenticatedImageSrc}
           alt={altName ?? 'Icon'}
           style={imageStyle}
           className="object-cover"

@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import * as Popover from '@radix-ui/react-popover';
+import { useAuthenticatedImageSrc } from '@librechat/client';
 import useLocalize from '~/hooks/useLocalize';
 
 export function NoImage() {
@@ -31,6 +32,10 @@ export const AssistantAvatar = ({
   url?: string;
   progress: number; // between 0 and 1
 }) => {
+  // Deloitte Custom Change: private Azure avatar proxies need authenticated image retrieval.
+  const { src: authenticatedImageSrc, isError: imageFetchError } = useAuthenticatedImageSrc(
+    url ?? '',
+  );
   const radius = 55; // Radius of the SVG circle
   const circumference = 2 * Math.PI * radius;
 
@@ -40,11 +45,15 @@ export const AssistantAvatar = ({
     transition: 'stroke-dashoffset 0.3s linear',
   };
 
+  if (imageFetchError) {
+    return <NoImage />;
+  }
+
   return (
     <div>
       <div className="relative h-20 w-20 overflow-hidden rounded-full">
         <img
-          src={url}
+          src={authenticatedImageSrc}
           className="bg-token-surface-secondary h-full w-full rounded-full object-cover dark:bg-surface-tertiary"
           alt="GPT"
           width="80"

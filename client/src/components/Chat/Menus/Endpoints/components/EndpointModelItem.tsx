@@ -9,8 +9,6 @@ import { useModelSelectorContext } from '../ModelSelectorContext';
 import { CustomMenuItem as MenuItem } from '../CustomMenu';
 import useActiveItem from '../useActiveItem';
 import { useLocalize } from '~/hooks';
-// Deloitte Custom Change: PR #156 - endpoint cost-multiplier badge in model dropdown
-import ModelCost from './ModelCost';
 import { cn } from '~/utils';
 
 interface EndpointModelItemProps {
@@ -115,7 +113,6 @@ function EndpointModelItemComponent({
         <span className="truncate">{modelName}</span>
         {isGlobal && <EarthIcon className="ml-1 size-4 text-surface-submit" />}
       </div>
-      <ModelCost modelId={modelId} />
       <button
         type="button"
         tabIndex={isActive ? 0 : -1}

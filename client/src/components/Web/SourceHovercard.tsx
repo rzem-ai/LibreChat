@@ -81,8 +81,9 @@ export function TooltipContent({
   children?: ReactNode;
 }) {
   const localize = useLocalize();
+  // Deloitte Custom Change: wrap unbroken citation titles within the hovercard width.
   const titleClassName =
-    'inline-block break-words text-sm font-medium leading-[1.5] text-text-primary';
+    'block max-w-full text-sm font-medium leading-[1.5] text-text-primary [overflow-wrap:anywhere]';
   let titleElement: ReactNode;
   if (href) {
     titleElement = (
@@ -238,12 +239,14 @@ export function SourceHovercard({
                   target="_blank"
                   rel="noopener noreferrer"
                   // Deloitte Custom Change: wider chip (max-w-44) + rounded-md to match Connector
-                  // logos
-                  className="ml-1 inline-block h-5 max-w-44 cursor-pointer items-center overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-border-heavy bg-surface-secondary px-2 text-xs font-medium no-underline transition-colors hover:bg-surface-hover"
+                  // logos; flex layout + split padding to fit the favicon icon (dark-mode handled
+                  // by the design-system tokens upstream now relies on, so no dark: overrides needed)
+                  className="ml-1 inline-flex h-5 max-w-44 cursor-pointer items-center gap-1 overflow-hidden text-ellipsis whitespace-nowrap rounded-md border border-border-heavy bg-surface-secondary pl-1 pr-2 text-xs font-medium no-underline transition-colors hover:bg-surface-hover"
                   onMouseEnter={onMouseEnter}
                   onMouseLeave={onMouseLeave}
                   title={label}
                 >
+                  {chipIcon ?? <FaviconImage domain={domain} className="size-3.5" />}
                   {label}
                 </a>
               )

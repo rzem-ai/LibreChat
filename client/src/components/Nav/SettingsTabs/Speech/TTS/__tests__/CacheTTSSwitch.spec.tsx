@@ -1,8 +1,9 @@
 import React from 'react';
 import '@testing-library/jest-dom/extend-expect';
+import { RecoilRoot } from 'recoil';
 import { render, fireEvent } from 'test/layout-test-utils';
 import CacheTTSSwitch from '../CacheTTSSwitch';
-import { RecoilRoot } from 'recoil';
+import store from '~/store';
 
 describe('CacheTTSSwitch', () => {
   /**
@@ -24,9 +25,10 @@ describe('CacheTTSSwitch', () => {
     expect(getByTestId('CacheTTS')).toBeInTheDocument();
   });
 
+  // Deloitte Custom Change: enable text-to-speech before testing its dependent control.
   it('calls onCheckedChange when the switch is toggled', () => {
     const { getByTestId } = render(
-      <RecoilRoot>
+      <RecoilRoot initializeState={({ set }) => set(store.textToSpeech, true)}>
         <CacheTTSSwitch onCheckedChange={mockSetCacheTTS} />
       </RecoilRoot>,
     );

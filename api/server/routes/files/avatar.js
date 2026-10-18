@@ -9,11 +9,14 @@ const {
   contentFilterBlockResponse,
   contentFilterUninspectableResponse,
   getBlockedUninspectableFileField,
+  getAssistantVisibility,
 } = require('@librechat/api');
 const { PermissionTypes, Permissions, PermissionBits } = require('librechat-data-provider');
-const { getRoleByName } = require('~/models');
+const { getAssistant, getRoleByName } = require('~/models');
 // Deloitte Custom Change: agent avatar access control (PR #1204, serve private Azure agent avatars).
 const { canAccessAgentResource } = require('~/server/middleware');
+const validateAuthor = require('~/server/middleware/assistants/validateAuthor');
+const { getOpenAIClient } = require('~/server/controllers/assistants/helpers');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { resizeAvatar } = require('~/server/services/Files/images/avatar');
 const { getFileStrategy } = require('~/server/utils/getFileStrategy');
@@ -33,7 +36,53 @@ const authorizeAgentAvatar = canAccessAgentResource({
 });
 
 const avatarPathPattern =
-  /^images\/([a-f\d]{24})\/(?:avatar-\d+|agent-([^/]+)-avatar-\d+)\.(png|gif)$/i;
+  /^images\/([a-f\d]{24})\/(?:avatar-(?:\d+|[a-f\d-]{36})|agent-([^/]+)-avatar-\d+|assistant-([^-]+)-([^/]+)-avatar-[a-f\d-]{36})\.(png|gif|jpe?g|webp)$/i;
+
+// Deloitte Custom Change: authorize private Azure assistant avatars before streaming their blobs.
+const authorizeAssistantAvatar = async (req, res, next) => {
+  const { endpoint, assistant_id } = req.params;
+  const assistant = await getAssistant({
+    assistantId: assistant_id,
+    avatarFilepath: `/api/files/images/avatar?file=${req.query.file}`,
+  });
+  if (!assistant || assistant.tenantId !== req.user.tenantId || assistant.endpoint !== endpoint) {
+    return res.status(403).json({ message: 'Access denied' });
+  }
+
+  const assistantsConfig = req.config.endpoints?.[endpoint];
+  if (!assistantsConfig) {
+    return next();
+  }
+
+  const visibility = getAssistantVisibility({
+    assistantId: assistant_id,
+    authorId: String(assistant.user),
+    userId: req.user.id,
+    config: assistantsConfig,
+  });
+  if (visibility === 'author') {
+    try {
+      await validateAuthor({
+        req,
+        assistantDoc: assistant,
+        overrideEndpoint: endpoint,
+        overrideAssistantId: assistant_id,
+        getOpenAI: async () => {
+          const { openai } = await getOpenAIClient({ req, res, overrideEndpoint: endpoint });
+          return openai;
+        },
+      });
+      return next();
+    } catch {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+  }
+  if (visibility === 'denied') {
+    return res.status(403).json({ message: 'Assistant not supported' });
+  }
+
+  return next();
+};
 
 const validateAvatarPath = (req, res, next) => {
   const encodedPath = req.query.file;
@@ -47,11 +96,17 @@ const validateAvatarPath = (req, res, next) => {
     return res.status(400).json({ message: 'Invalid avatar file' });
   }
 
-  const [, ownerId, agentId] = match;
+  const [, ownerId, agentId, endpoint, assistantId] = match;
   req.avatarBlobPath = blobPath;
   if (agentId) {
     req.params.agent_id = agentId;
     return checkAgentAccess(req, res, () => authorizeAgentAvatar(req, res, next));
+  }
+
+  if (assistantId) {
+    req.params.endpoint = endpoint;
+    req.params.assistant_id = assistantId;
+    return authorizeAssistantAvatar(req, res, next);
   }
 
   if (ownerId !== req.user.id) {
@@ -68,7 +123,7 @@ router.get('/', validateAvatarPath, async (req, res) => {
       req,
       `/${process.env.AZURE_CONTAINER_NAME ?? 'files'}/${blobPath}`,
     );
-    res.type(blobPath.endsWith('.gif') ? 'gif' : 'png');
+    res.type(blobPath.slice(blobPath.lastIndexOf('.') + 1));
     stream.on('error', (error) => {
       logger.error('[/files/images/avatar] Error streaming profile picture', error);
       if (!res.headersSent) {

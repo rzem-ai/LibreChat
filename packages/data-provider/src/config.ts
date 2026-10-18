@@ -2361,6 +2361,10 @@ export const interfaceSchema = z
         conversationIcon: z.boolean().optional(),
         /** Enable/disable the in-app Learning Hub tutorials (first-run prompt, guided tours). */
         isTutorialEnabled: z.boolean().optional(),
+        /** Show the Learning Center "Common Questions" page (opt-in). */
+        learningCommonQuestions: z.boolean().optional(),
+        /** Show the Learning Center "Release Notes" page (opt-in). */
+        learningReleaseNotes: z.boolean().optional(),
         accountsTab: z.boolean().optional(),
         dataApiKeys: z.boolean().optional(),
         adminAgentApiKeys: z.boolean().optional(), // Deloitte Custom Change: admin-only service account API key management.
@@ -2368,6 +2372,28 @@ export const interfaceSchema = z
         externalVoiceProvider: z.boolean().optional(),
         artifactsShadcnOnly: z.boolean().optional(),
         showConversationTitleInHeader: z.boolean().optional(),
+        /**
+         * 4 strictly ascending $/1M blended-cost breakpoints that split models into the
+         * 5 price tiers (`$` to `$$$$$`) shown in the model selector. A model's blended
+         * cost is `(prompt + completion) / 2`; it enters a tier once its blended cost
+         * reaches that tier's breakpoint. Defaults to `[2, 5, 8, 15]` when unset.
+         */
+        modelPricingTierBreakpoints: z
+          .array(z.number().positive())
+          .length(4)
+          .refine(
+            (breakpoints) =>
+              breakpoints.every((value, index) => index === 0 || value > breakpoints[index - 1]),
+            {
+              message: 'modelPricingTierBreakpoints must be strictly ascending',
+            },
+          )
+          .optional(),
+        /**
+         * Which 1-5 price tiers (see `modelPricingTierBreakpoints`) get the "High Cost"
+         * callout in the model selector tooltip. Defaults to `[5]` (top tier only) when unset.
+         */
+        highCostAlertTiers: z.array(z.number().int().min(1).max(5)).optional(),
       })
       .optional(),
     prompts: z
@@ -2442,6 +2468,16 @@ export const interfaceSchema = z
               .optional(),
           })
           .optional(),
+      })
+      .optional(),
+    // Deloitte Custom Change: let `librechat.yaml` configure the Learning Center
+    // menu bar's FAQ agent and feedback link per environment (dev/uat/prd) — the
+    // FAQ agent's id differs per environment, so there is no safe shared default;
+    // the menu item is hidden entirely when faqAgentId is unset or unresolvable.
+    learningCenter: z
+      .object({
+        faqAgentId: z.string().optional(),
+        feedbackUrl: z.string().optional(),
       })
       .optional(),
     fileSearch: z.boolean().optional(),
@@ -2633,14 +2669,12 @@ export type TModelPricing = Record<
     inputPer1M: number;
     outputPer1M: number;
     provider?: string;
+    /** 1-5 relative price tier, shown as `$` to `$$$$$` in the model selector. */
+    tier: number;
+    /** Whether this tier is configured (via `highCostAlertTiers`) to show the "High Cost" callout. */
+    isHighCost: boolean;
   }
 >;
-
-export type TEndpointCostConfig = {
-  REFERENCE_MODEL_ID: string;
-  MULTIPLIER_ROUNDING_INCREMENT: number;
-  MIN_MULTIPLIER: number;
-};
 
 export type StartupConfigContext = 'share';
 
@@ -2708,7 +2742,6 @@ export type TStartupConfig = {
   customFooter?: string;
   modelSpecs?: TSpecsConfig;
   modelPricing?: TModelPricing;
-  endpointCostConfig?: TEndpointCostConfig;
   modelDescriptions?: Record<string, Record<string, string>>;
   sharedLinksEnabled: boolean;
   publicSharedLinksEnabled: boolean;
@@ -3365,11 +3398,6 @@ export const configSchema = z.object({
     .default({ socialLogins: defaultSocialLogins }),
   balance: balanceSchema.optional(),
   transactions: transactionsSchema.optional(),
-  modelPricing: z
-    .object({
-      referenceModelId: z.string().min(1),
-    })
-    .optional(),
   speech: z
     .object({
       tts: ttsSchema.optional(),
@@ -3564,6 +3592,8 @@ const sharedOpenAIModels = [
 const sharedAnthropicModels = [
   'claude-fable-5-1',
   'claude-fable-5',
+  // Deloitte Custom Change: Claude Haiku 5.5 gateway model.
+  'claude-haiku-5-5',
   'claude-opus-5-5',
   'claude-opus-5',
   'claude-sonnet-5-5',
@@ -3602,6 +3632,8 @@ const sharedAnthropicModels = [
 export const bedrockModels = [
   'global.anthropic.claude-fable-5-1',
   'global.anthropic.claude-fable-5',
+  // Deloitte Custom Change: Claude Haiku 5.5 gateway model (Bedrock global profile).
+  'global.anthropic.claude-haiku-5-5',
   'global.anthropic.claude-opus-5-5',
   'global.anthropic.claude-opus-5',
   'global.anthropic.claude-sonnet-5-5',
