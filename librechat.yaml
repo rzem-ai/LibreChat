@@ -11,7 +11,7 @@ balance:
   autoRefillEnabled: true # Automatically refill balances on a schedule
   refillIntervalValue: 1 # Number of interval units between each refill
   refillIntervalUnit: "days" # Unit for the refill interval: "seconds", "minutes", "hours", "days"
-  refillAmount: '${BALANCE_REFILL_AMOUNT}'  # Tokens added per refill cycle
+  refillAmount: '${BALANCE_REFILL_AMOUNT}' # Tokens added per refill cycle
 
 # 'includedTools' restricts the list of tools available in the Agent Builder.
 includedTools:
