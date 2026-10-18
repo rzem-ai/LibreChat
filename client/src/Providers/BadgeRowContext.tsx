@@ -184,9 +184,10 @@ export default function BadgeRowProvider({
       }
 
       // Deloitte Custom Change: admin-enabled tools start on unless the user has a stored toggle
-      const defaultEnabledValues = getDefaultEnabledToolValues(
-        startupConfig.interface?.customDeloitteFeatureFlags,
-      );
+      // Seeding is limited to new conversations so existing chats keep their prior state.
+      const defaultEnabledValues = isNewConvo
+        ? getDefaultEnabledToolValues(startupConfig.interface?.customDeloitteFeatureFlags)
+        : {};
       for (const [toolKey, value] of Object.entries(defaultEnabledValues)) {
         initialValues[toolKey] ??= value;
       }
@@ -237,7 +238,7 @@ export default function BadgeRowProvider({
         return changed ? result : prev;
       });
     }
-  }, [storageSuffix, specName, isSubmitting, setEphemeralAgent, startupConfig]);
+  }, [storageSuffix, specName, isSubmitting, setEphemeralAgent, startupConfig, isNewConvo]);
 
   /** CodeInterpreter hook — sandbox auth is handled server-side by the
    *  agents library, so the toggle no longer has an auth dialog gate. */
