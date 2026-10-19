@@ -2445,6 +2445,13 @@ export const interfaceSchema = z
     autoSubmitFromUrl: z.boolean().optional(),
     retentionMode: z.nativeEnum(RetentionMode).default(RetentionMode.TEMPORARY),
     retainAgentFiles: z.boolean().optional(),
+    // Deloitte Custom Change: Retention Update
+    fileRetentionHours: z.number().min(1).max(8760).optional(),
+    fileRetentionWarningHours: z.number().min(1).max(8760).optional(),
+    agentRetentionHours: z.number().min(1).max(8760).optional(),
+    agentRetentionWarningHours: z.number().min(1).max(8760).optional(),
+    memoryRetentionHours: z.number().min(1).max(8760).optional(),
+    agentFileRetentionHours: z.number().min(1).max(8760).optional(),
     runCode: z.boolean().optional(),
     webSearch: z.boolean().optional(),
     contextUsage: z.boolean().optional(),

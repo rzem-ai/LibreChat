@@ -12,12 +12,8 @@ const {
   createFallbackRetentionDate,
   createChatExpirationDate,
 } = require('@librechat/data-schemas');
-const {
-  EModelEndpoint,
-  Constants,
-  RetentionMode,
-  openAISettings,
-} = require('librechat-data-provider');
+// Deloitte Custom Change: Retention Update
+const { EModelEndpoint, Constants, openAISettings } = require('librechat-data-provider');
 const {
   bulkIncrementTagCounts,
   bulkSaveConvos,
@@ -85,11 +81,6 @@ class ImportBatchBuilder {
 
   getRetentionFields() {
     if (this.retentionFields !== undefined) {
-      return this.retentionFields;
-    }
-
-    if (this.interfaceConfig?.retentionMode !== RetentionMode.ALL) {
-      this.retentionFields = {};
       return this.retentionFields;
     }
 
@@ -219,8 +210,9 @@ class ImportBatchBuilder {
 
     try {
       await executeConversationImportWrites({
-        saveConversations: () => bulkSaveConvos(this.conversations),
-        saveMessages: () => bulkSaveMessages(this.messages, true),
+        // Deloitte Custom Change: Retention Update
+        saveConversations: () => bulkSaveConvos(this.conversations, this.interfaceConfig),
+        saveMessages: () => bulkSaveMessages(this.messages, true, this.interfaceConfig),
         updateTagCounts: () => bulkIncrementTagCounts(this.requestUserId, tags),
         deleteMessages: () => deleteImportedMessages(cleanupScope),
         deleteConversations: () => deleteImportedConversations(cleanupScope),

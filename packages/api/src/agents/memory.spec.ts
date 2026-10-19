@@ -158,6 +158,8 @@ describe('Memory attachment generation fencing', () => {
           withoutKeys: '',
           totalTokens: 0,
         }),
+        // Deloitte Custom Change: Retention Update
+        touchMemoriesLastActivity: jest.fn(),
       },
     });
 
@@ -796,6 +798,8 @@ describe('memory token limit guidance', () => {
           totalTokens: 150,
           tokenCountsByKey: new Map([['preferences', 150]]),
         }),
+        // Deloitte Custom Change: Retention Update
+        touchMemoriesLastActivity: jest.fn(),
       },
     });
 
@@ -854,6 +858,8 @@ describe('buildInlineMemoryTool content filtering', () => {
         setMemory,
         deleteMemory: jest.fn(),
         getFormattedMemories: jest.fn(),
+        // Deloitte Custom Change: Retention Update
+        touchMemoriesLastActivity: jest.fn(),
       },
       getRoleByName: jest.fn(),
     });
@@ -867,6 +873,8 @@ describe('buildInlineMemoryTool content filtering', () => {
         key: 'preferences',
         value: 'Keep ORG-SECRET',
       }),
+      // Deloitte Custom Change: Retention Update
+      expect.objectContaining({ retentionHours: expect.any(Number) }),
     );
   });
 });
@@ -893,7 +901,13 @@ describe('buildInlineMemoryTool read failure', () => {
       req,
       agent: { tools: [AgentCapabilities.memory] },
       userId: 'user-1',
-      memoryMethods: { setMemory, deleteMemory: jest.fn(), getFormattedMemories },
+      // Deloitte Custom Change: Retention Update
+      memoryMethods: {
+        setMemory,
+        deleteMemory: jest.fn(),
+        getFormattedMemories,
+        touchMemoriesLastActivity: jest.fn(),
+      },
       getRoleByName: jest.fn(),
     });
 
@@ -1073,6 +1087,8 @@ describe('createMemoryProcessor read failure', () => {
         deleteMemory: jest.fn(),
         getUserMemories: jest.fn(),
         getFormattedMemories,
+        // Deloitte Custom Change: Retention Update
+        touchMemoriesLastActivity: jest.fn(),
       },
     });
     expect(result).toEqual([undefined, undefined]);
@@ -1285,6 +1301,8 @@ describe('memory model-bound content preflight', () => {
             withoutKeys: 'memory',
             totalTokens: 1,
           }),
+          // Deloitte Custom Change: Retention Update
+          touchMemoriesLastActivity: jest.fn(),
         },
       }),
     ).rejects.toThrow('database unavailable');

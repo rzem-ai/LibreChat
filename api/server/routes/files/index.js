@@ -39,7 +39,8 @@ const initialize = async () => {
   const isUsagePath = (path) => path.replace(/\/+$/, '') === '/usage';
 
   /** Apply rate limiters to all POST routes (excluding /speech which is handled
-   *  above). `/usage` is a metadata touch, so it gets its own limiter rather
+   * Deloitte Custom Change: Retention Update
+   *  above). `/usage` is a metadata touch, so it shares its own limiter rather
    *  than consuming upload quota, but it is never left unmetered. */
   router.use((req, res, next) => {
     if (req.method !== 'POST' || req.path.startsWith('/speech')) {

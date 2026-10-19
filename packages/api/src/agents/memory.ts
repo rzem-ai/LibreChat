@@ -1,9 +1,10 @@
 /** Memories */
 import { z } from 'zod';
-import { logger } from '@librechat/data-schemas';
 import { tool } from '@librechat/agents/langchain/tools';
 import { Run, Providers, GraphEvents } from '@librechat/agents';
 import { HumanMessage } from '@librechat/agents/langchain/messages';
+// Deloitte Custom Change: Retention Update
+import { logger, getMemoryRetentionHours } from '@librechat/data-schemas';
 import {
   Tools,
   MemoryScope,
@@ -48,7 +49,12 @@ import Tokenizer from '~/utils/tokenizer';
 
 type RequiredMemoryMethods = Pick<
   MemoryMethods,
-  'setMemory' | 'deleteMemory' | 'getFormattedMemories' | 'getUserMemories'
+  // Deloitte Custom Change: Retention Update
+  | 'setMemory'
+  | 'deleteMemory'
+  | 'getFormattedMemories'
+  | 'getUserMemories'
+  | 'touchMemoriesLastActivity'
 >;
 
 type ToolEndMetadata = Record<string, unknown> & {
@@ -142,6 +148,8 @@ export const createMemoryTool = ({
   tokenCountsByKey,
   filters,
   onWrite,
+  // Deloitte Custom Change: Retention Update
+  retentionHours,
 }: {
   userId: string | ObjectId;
   /** Agent partition to write to; omit for the shared personal pool */
@@ -154,6 +162,8 @@ export const createMemoryTool = ({
   tokenCountsByKey?: ReadonlyMap<string, number>;
   filters?: FiltersConfig;
   onWrite?: () => void;
+  // Deloitte Custom Change: Retention Update
+  retentionHours?: number;
 }): DynamicStructuredTool => {
   /** Running token total, advanced after each successful write. Writes are
    *  serialized through `writeChain` so multiple `set_memory` calls in one
@@ -254,7 +264,11 @@ export const createMemoryTool = ({
             },
           };
 
-          const result = await setMemory({ userId, key, value, tokenCount, agentId });
+          // Deloitte Custom Change: Retention Update
+          const result = await setMemory(
+            { userId, key, value, tokenCount, agentId },
+            { retentionHours },
+          );
           if (result.ok) {
             if (tokenLimit) {
               currentTotalTokens = newTotalTokens;
@@ -521,12 +535,16 @@ export async function buildInlineMemoryContext({
   userId,
   memoryAvailable,
   getFormattedMemories,
+  // Deloitte Custom Change: Retention Update
+  touchMemoriesLastActivity,
 }: {
   agent: InlineMemoryAgent;
   req: ServerRequest;
   userId: string | ObjectId;
   memoryAvailable: boolean;
   getFormattedMemories: MemoryMethods['getFormattedMemories'];
+  // Deloitte Custom Change: Retention Update
+  touchMemoriesLastActivity?: MemoryMethods['touchMemoriesLastActivity'];
 }): Promise<string> {
   if (!memoryAvailable || !agentHasInlineMemoryTools(agent)) {
     return '';
@@ -537,6 +555,9 @@ export async function buildInlineMemoryContext({
       userId,
       agentId: getMemoryAgentId(agent),
       getFormattedMemories,
+      // Deloitte Custom Change: Retention Update
+      touchMemoriesLastActivity,
+      retentionHours: getMemoryRetentionHours(req.config?.interfaceConfig),
     });
     return formatMemoryContext(memories.withKeys) ?? '';
   } catch (error) {
@@ -557,12 +578,18 @@ export function getRequestMemories({
   userId,
   agentId,
   getFormattedMemories,
+  // Deloitte Custom Change: Retention Update
+  touchMemoriesLastActivity,
+  retentionHours,
 }: {
   req: object;
   userId: string | ObjectId;
   /** Agent partition; omit for the shared personal pool */
   agentId?: string;
   getFormattedMemories: MemoryMethods['getFormattedMemories'];
+  // Deloitte Custom Change: Retention Update
+  touchMemoriesLastActivity?: MemoryMethods['touchMemoriesLastActivity'];
+  retentionHours?: number;
 }): Promise<FormattedMemoriesResult> {
   let partitions = requestMemoriesCache.get(req);
   if (!partitions) {
@@ -574,6 +601,23 @@ export function getRequestMemories({
   if (!cached) {
     cached = getFormattedMemories({ userId, agentId });
     partitions.set(partitionKey, cached);
+    // Deloitte Custom Change: Retention Update
+    if (touchMemoriesLastActivity && retentionHours != null) {
+      /** Fire-and-forget: the throttled touch must never add latency to the
+       *  hot prompt-build path that awaits `cached`. */
+      cached
+        .then((result) => {
+          if (!result.readFailed && result.memoryIds?.length) {
+            return touchMemoriesLastActivity(result.memoryIds, retentionHours);
+          }
+        })
+        .catch((error) => {
+          logger.error(
+            '[memory] Failed to touch memory last-activity',
+            getSafeErrorMetadata(error),
+          );
+        });
+    }
   }
   return cached;
 }
@@ -648,7 +692,11 @@ export async function buildInlineMemoryTool({
   req: ServerRequest;
   agent: InlineMemoryAgent;
   userId: string | ObjectId;
-  memoryMethods: Pick<MemoryMethods, 'setMemory' | 'deleteMemory' | 'getFormattedMemories'>;
+  // Deloitte Custom Change: Retention Update
+  memoryMethods: Pick<
+    MemoryMethods,
+    'setMemory' | 'deleteMemory' | 'getFormattedMemories' | 'touchMemoriesLastActivity'
+  >;
   getRoleByName: GetRoleByName;
 }): Promise<DynamicStructuredTool | null> {
   if (!agentHasInlineMemoryTools(agent)) {
@@ -658,6 +706,8 @@ export async function buildInlineMemoryTool({
   const memoryConfig = req?.config?.memory;
   const validKeys = memoryConfig?.validKeys as string[] | undefined;
   const memoryAgentId = getMemoryAgentId(agent);
+  // Deloitte Custom Change: Retention Update
+  const retentionHours = getMemoryRetentionHours(req.config?.interfaceConfig);
 
   if (toolName === DELETE_MEMORY_TOOL_NAME) {
     const allowed = await isMemoryToolAllowed({
@@ -697,6 +747,9 @@ export async function buildInlineMemoryTool({
         userId,
         agentId: memoryAgentId,
         getFormattedMemories: memoryMethods.getFormattedMemories,
+        // Deloitte Custom Change: Retention Update
+        touchMemoriesLastActivity: memoryMethods.touchMemoriesLastActivity,
+        retentionHours,
       });
       /** A formatted read failure has no trustworthy usage total. */
       if (formatted.readFailed) {
@@ -726,6 +779,8 @@ export async function buildInlineMemoryTool({
     tokenCountsByKey,
     filters: req.config?.filters,
     onWrite: () => invalidateRequestMemories(req, memoryAgentId),
+    // Deloitte Custom Change: Retention Update
+    retentionHours,
   });
 }
 
@@ -776,6 +831,8 @@ export async function processMemory({
   jobCreatedAt,
   user,
   tenantId,
+  // Deloitte Custom Change: Retention Update
+  retentionHours,
 }: {
   res: ServerResponse;
   setMemory: MemoryMethods['setMemory'];
@@ -805,6 +862,8 @@ export async function processMemory({
   jobCreatedAt?: number;
   user?: IUser;
   tenantId?: string;
+  // Deloitte Custom Change: Retention Update
+  retentionHours?: number;
 }): Promise<(TAttachment | null)[] | undefined> {
   try {
     const submittedMessages = (inspectionMessages ?? messages).filter(
@@ -835,6 +894,8 @@ export async function processMemory({
       totalTokens,
       tokenCountsByKey,
       filters,
+      // Deloitte Custom Change: Retention Update
+      retentionHours,
     });
     const deleteMemoryTool = createDeleteMemoryTool({
       userId,
@@ -1071,6 +1132,10 @@ export async function createMemoryProcessor({
 > {
   const { validKeys, instructions, llmConfig, tokenLimit } = config;
   const finalInstructions = instructions || getDefaultInstructions(validKeys, tokenLimit);
+  // Deloitte Custom Change: Retention Update
+  const retentionHours = getMemoryRetentionHours(
+    (req as ServerRequest | undefined)?.config?.interfaceConfig,
+  );
 
   const [formatted, memoryEntries] = await Promise.all([
     (req
@@ -1079,6 +1144,9 @@ export async function createMemoryProcessor({
           userId,
           agentId,
           getFormattedMemories: memoryMethods.getFormattedMemories,
+          // Deloitte Custom Change: Retention Update
+          touchMemoriesLastActivity: memoryMethods.touchMemoriesLastActivity,
+          retentionHours,
         })
       : memoryMethods.getFormattedMemories({ userId, agentId })
     ).catch((error) => {
@@ -1126,6 +1194,8 @@ export async function createMemoryProcessor({
           deleteMemory: memoryMethods.deleteMemory,
           user,
           tenantId,
+          // Deloitte Custom Change: Retention Update
+          retentionHours,
         });
       } catch (error) {
         logger.error('Memory Agent failed to process memory', getSafeErrorMetadata(error));
