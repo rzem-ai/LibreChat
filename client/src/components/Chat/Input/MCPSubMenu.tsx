@@ -1,6 +1,7 @@
 import React from 'react';
 import * as Ariakit from '@ariakit/react';
 import { ChevronRight } from 'lucide-react';
+import ToolStateControl from '~/components/Chat/Input/ToolStateControl';
 import { MCPIcon, PinIcon } from '@librechat/client';
 import { MCPServerHoverGroup } from '~/components/MCP/MCPServerTooltip';
 import MCPServerMenuItem from '~/components/MCP/MCPServerMenuItem';
@@ -76,23 +77,12 @@ const MCPSubMenu = React.forwardRef<HTMLButtonElement, MCPSubMenuProps>(
               <span>{placeholder || placeholderText}</span>
               <ChevronRight className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
             </div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsPinned(!isPinned);
-              }}
-              className={cn(
-                'rounded p-1 transition-all duration-200',
-                'hover:bg-surface-tertiary hover:shadow-sm',
-                !isPinned && 'text-text-secondary hover:text-text-primary',
-              )}
-              aria-label={isPinned ? localize('com_ui_unpin') : localize('com_ui_pin')}
-            >
-              <div className="h-4 w-4">
-                <PinIcon unpin={isPinned} />
-              </div>
-            </button>
+            {/* Deloitte Custom Change: pin button follows `toolsDropdown.showPinButtons`. */}
+            <ToolStateControl
+              label={placeholder || placeholderText}
+              isPinned={isPinned}
+              setIsPinned={setIsPinned}
+            />
           </Ariakit.MenuButton>
 
           <Ariakit.Menu

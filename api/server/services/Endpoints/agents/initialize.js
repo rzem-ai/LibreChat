@@ -293,7 +293,7 @@ const initializeClientWithProvider = async ({
   const allowedStatefulCodeEnvironments = resolveAllowedStatefulCodeEnvironments(
     appConfig?.endpoints?.[EModelEndpoint.agents]?.statefulCodeSessions?.allowedEnvironments,
   );
-  const ephemeralSkillsToggle = req.body?.ephemeralAgent?.skills === true;
+  const ephemeralSkillsRequested = req.body?.ephemeralAgent?.skills === true;
   const skillDbMethods = getSkillDbMethods();
 
   if (!endpointOption.agent) {
@@ -333,6 +333,12 @@ const initializeClientWithProvider = async ({
   const skillCreateAllowedPromise = skillsCapabilityEnabled
     ? getSkillToolDeps().canCreateSkill({ req })
     : Promise.resolve(false);
+  /** Deloitte Custom Change: a role without SKILLS.USE can't activate skills through the
+   *  per-conversation toggle, whatever the client sent (e.g. a seeded `defaultEnabledTools`). */
+  const skillsUseAllowedPromise =
+    skillsCapabilityEnabled && ephemeralSkillsRequested
+      ? getSkillToolDeps().canUseSkills({ req })
+      : Promise.resolve(false);
   const skillStatesPromise = accessibleSkillIdsPromise.then((accessibleSkillIds) =>
     loadSkillStates({
       userId: req.user.id,
@@ -592,6 +598,7 @@ const initializeClientWithProvider = async ({
     accessibleSkillIds,
     editableSkillIds,
     skillCreateAllowed,
+    skillsUseAllowed,
     { skillStates, defaultActiveOnShare },
     { primaryAgent, modelsConfig },
     requestConversation,
@@ -601,11 +608,13 @@ const initializeClientWithProvider = async ({
     accessibleSkillIdsPromise,
     editableSkillIdsPromise,
     skillCreateAllowedPromise,
+    skillsUseAllowedPromise,
     skillStatesPromise,
     validatedPrimaryAgentPromise,
     requestConversationPromise,
     toolRoleGrantsPromise,
   ]);
+  const ephemeralSkillsToggle = ephemeralSkillsRequested && skillsUseAllowed === true;
   /** Preserve the owner-scoped fallback for loaders that share this request. */
   req.resolvedConversation = requestConversation;
   const { decision: codeEnvironmentDecision, conversation: admittedConversation } =

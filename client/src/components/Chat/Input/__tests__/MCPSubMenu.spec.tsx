@@ -8,6 +8,11 @@ const mockToggleServerSelection = jest.fn();
 const mockSetIsPinned = jest.fn();
 const mockMCPRefresh = jest.fn();
 
+// Deloitte Custom Change: stub the dropdown config hook (the spec renders without providers).
+jest.mock('~/hooks/Plugins/useToolsDropdownConfig', () => ({
+  useToolsDropdownConfig: () => ({ showPinButtons: true, isItemVisible: () => true }),
+}));
+
 jest.mock('~/hooks/MCP/useMCPRefresh', () => ({
   useMCPRefresh: (options: { enabled: boolean }) => mockMCPRefresh(options),
 }));

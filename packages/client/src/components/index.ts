@@ -29,6 +29,7 @@ export * from './Skeleton';
 export * from './Switch';
 export * from './Table';
 export * from './Tabs';
+export { TabsList, TabsTrigger } from './Tabs';
 export * from './Tag';
 export * from './Textarea';
 export * from './TextareaAutosize';
@@ -94,3 +95,4 @@ export type {
   DataTableSearchProps,
   DataTableProps as VirtualizedDataTableProps,
 } from './DataTable/DataTable.types';
+export * as GEL from './gel';

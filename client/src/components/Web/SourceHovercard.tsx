@@ -81,8 +81,9 @@ export function TooltipContent({
   children?: ReactNode;
 }) {
   const localize = useLocalize();
+  // Deloitte Custom Change: wrap unbroken citation titles within the hovercard width.
   const titleClassName =
-    'inline-block break-words text-sm font-medium leading-[1.5] text-text-primary';
+    'block max-w-full text-sm font-medium leading-[1.5] text-text-primary [overflow-wrap:anywhere]';
   let titleElement: ReactNode;
   if (href) {
     titleElement = (

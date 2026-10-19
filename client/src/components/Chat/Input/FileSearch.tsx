@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { CheckboxButton, VectorIcon } from '@librechat/client';
+import { useToolsDropdownConfig } from '~/hooks/Plugins/useToolsDropdownConfig';
 import { useGetStartupConfig } from '~/data-provider';
 import { useBadgeRowContext } from '~/Providers';
 import { useLocalize } from '~/hooks';
@@ -7,6 +8,8 @@ import { useLocalize } from '~/hooks';
 // Deloitte Custom Change: enable fileSearch without showing button
 function FileSearch() {
   const localize = useLocalize();
+  // Deloitte Custom Change: hide the pill when the tools dropdown is this tool's only control.
+  const { isDropdownOnly } = useToolsDropdownConfig();
   const context = useBadgeRowContext();
   const { data: startupConfig } = useGetStartupConfig();
   const { toggleState: fileSearchEnabled, debouncedChange, isPinned } = context?.fileSearch ?? {};
@@ -19,7 +22,7 @@ function FileSearch() {
 
   return (
     <>
-      {(fileSearchEnabled || isPinned) && (
+      {(isPinned || (fileSearchEnabled && !isDropdownOnly('file_search'))) && (
         <CheckboxButton
           checked={fileSearchEnabled}
           setValue={debouncedChange}

@@ -1,6 +1,7 @@
-import { isValidMemoryKey } from '@librechat/data-schemas';
 import { hasActivePiiPatterns } from 'librechat-data-provider';
-import type { MemoryMethods } from '@librechat/data-schemas';
+// Deloitte Custom Change: Retention Update
+import { isValidMemoryKey, getMemoryRetentionHours } from '@librechat/data-schemas';
+import type { MemoryMethods, AppConfig } from '@librechat/data-schemas';
 import type { FiltersConfig } from 'librechat-data-provider';
 import type { Request, Response } from 'express';
 import type { MemoryContentInput } from '../protection/adapters/submissions';
@@ -23,6 +24,8 @@ interface MemoryRequestConfig {
   memory?: {
     charLimit?: number;
   };
+  // Deloitte Custom Change: Retention Update
+  interfaceConfig?: AppConfig['interfaceConfig'];
 }
 
 type MemoryRequest = Request<{ id: string }, object, MemoryUpdateBody, MemoryQuery> & {
@@ -107,14 +110,18 @@ export function createMemoryManagementHandlers(deps: MemoryManagementHandlersDep
     }
 
     try {
-      const result = await deps.setMemoryById({
-        userId,
-        id: req.params.id,
-        key,
-        value,
-        tokenCount: deps.countTokens(value),
-        agentId: getAgentId(req.query.agentId),
-      });
+      // Deloitte Custom Change: Retention Update
+      const result = await deps.setMemoryById(
+        {
+          userId,
+          id: req.params.id,
+          key,
+          value,
+          tokenCount: deps.countTokens(value),
+          agentId: getAgentId(req.query.agentId),
+        },
+        { retentionHours: getMemoryRetentionHours(req.config?.interfaceConfig) },
+      );
       if (result.conflict) {
         return res.status(409).json({ error: 'Memory with this key already exists.' });
       }

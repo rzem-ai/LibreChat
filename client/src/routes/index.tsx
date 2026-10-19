@@ -46,6 +46,21 @@ const loadInsightsView = () =>
     Component: m.default,
   }));
 
+const loadAcademyLayout = () =>
+  import('~/components/Learn/Academy').then((m) => ({
+    Component: m.AcademyLayout,
+  }));
+
+const loadAcademyPage = () =>
+  import('~/components/Learn/Academy').then((m) => ({
+    Component: m.AcademyPage,
+  }));
+
+const loadAcademyArticle = () =>
+  import('~/components/Learn/Academy').then((m) => ({
+    Component: m.AcademyArticle,
+  }));
+
 const loadProjectsView = () =>
   import('~/components/Projects').then((m) => ({
     Component: m.ProjectsView,
@@ -159,6 +174,25 @@ export const router = createBrowserRouter(
             {
               path: 'insights',
               lazy: loadInsightsView,
+            },
+            /** Deloitte custom change: Learning Center (Academy) routes under /learn. */
+            {
+              path: 'learn',
+              lazy: loadAcademyLayout,
+              children: [
+                {
+                  index: true,
+                  element: <Navigate to="tours" replace={true} />,
+                },
+                {
+                  path: 'articles/:slug',
+                  lazy: loadAcademyArticle,
+                },
+                {
+                  path: ':tab',
+                  lazy: loadAcademyPage,
+                },
+              ],
             },
             {
               path: 'skills/new',

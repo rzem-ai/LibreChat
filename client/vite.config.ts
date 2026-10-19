@@ -1,4 +1,7 @@
+import mdx from '@mdx-js/rollup';
 import react from '@vitejs/plugin-react';
+import remarkFrontmatter from 'remark-frontmatter';
+import remarkMdxFrontmatter from 'remark-mdx-frontmatter';
 import fs from 'fs';
 import path from 'path';
 import { constants } from 'zlib';
@@ -54,6 +57,19 @@ const QUERY_DEVTOOLS_CHUNK_MODULES = [
   'node_modules/is-what',
 ];
 
+/** `@mdx-js/rollup` ignores the query string, so it would compile `?raw` imports instead of returning source text. */
+function mdxWithoutRaw(): Plugin {
+  const plugin = mdx({ remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter] });
+  const transform = plugin.transform as (this: unknown, code: string, id: string) => unknown;
+  return {
+    ...plugin,
+    enforce: 'pre',
+    transform(code, id) {
+      return id.endsWith('?raw') ? null : transform.call(this, code, id);
+    },
+  } as Plugin;
+}
+
 export default defineConfig(({ command }) => ({
   base: '',
   server: {
@@ -77,7 +93,8 @@ export default defineConfig(({ command }) => ({
   envDir: '../',
   envPrefix: ['VITE_', 'SCRIPT_', 'DOMAIN_', 'ALLOW_', 'REACT_APP_THEME_'],
   plugins: [
-    react(),
+    mdxWithoutRaw(),
+    react({ include: /\.(jsx|js|mdx|md|tsx|ts)$/ }),
     {
       name: 'node-polyfills-shims-resolver',
       resolveId(id) {

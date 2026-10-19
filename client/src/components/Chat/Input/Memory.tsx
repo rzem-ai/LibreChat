@@ -3,11 +3,14 @@ import { Brain } from 'lucide-react';
 import { CheckboxButton } from '@librechat/client';
 import { defaultAgentCapabilities } from 'librechat-data-provider';
 import { useLocalize, useHasMemoryAccess, useAgentCapabilities, useAuthContext } from '~/hooks';
+import { useToolsDropdownConfig } from '~/hooks/Plugins/useToolsDropdownConfig';
 import { useBadgeRowContext } from '~/Providers';
 import { badgeAccents } from './accents';
 
 function Memory() {
   const localize = useLocalize();
+  // Deloitte Custom Change: hide the pill when the tools dropdown is this tool's only control.
+  const { isDropdownOnly } = useToolsDropdownConfig();
   const { user } = useAuthContext();
   const context = useBadgeRowContext();
   const { toggleState: memoryActive, debouncedChange, isPinned } = context?.memory ?? {};
@@ -25,7 +28,7 @@ function Memory() {
   }
 
   return (
-    (memoryActive || isPinned) && (
+    (isPinned || (memoryActive && !isDropdownOnly('memory'))) && (
       <CheckboxButton
         checked={memoryActive}
         setValue={debouncedChange}

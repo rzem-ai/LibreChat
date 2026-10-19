@@ -1681,6 +1681,10 @@ html {
   height: 100%;
 }
 
+body {
+  color: rgb(var(--text-primary));
+}
+
 /* Scoped to the drawer-gesture breakpoint (useSidebarState's 768px): on small
    screens the app never scrolls at the root, so chaining out of nested
    scrollers has nothing legitimate to reach — this kills Chrome Android's
