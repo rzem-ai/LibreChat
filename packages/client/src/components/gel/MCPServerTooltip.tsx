@@ -78,10 +78,9 @@ export function MCPServerTooltipCard({
         </div>
         {limitedAccess && (
           <Tag
-            variant="warning"
             label={labels.limitedAccess}
             LabelNode={<Lock className="size-3.5" aria-hidden="true" />}
-            className="w-fit self-start"
+            className="w-fit self-start border border-amber-600/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
             labelClassName="!ml-0 flex items-center gap-1.5 px-1.5 py-0.5 text-[12px] font-medium tracking-wide whitespace-nowrap"
           />
         )}
