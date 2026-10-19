@@ -3,6 +3,7 @@ cache: true
 
 # ========================================
 # Balance Configuration
+# Deloitte Custom Change: per-user token balance with daily auto-refill; ${VAR} values are resolved from the environment.
 # https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/balance
 # ========================================
 balance:
@@ -171,9 +172,10 @@ interface:
     # the five $-$$$$$ tiers: costs below 2 are $, then 2, 5, 8, and 15 start the next tiers.
     modelPricingTierBreakpoints: [ 2, 5, 8, 15 ]
     highCostAlertTiers: [ 5 ] # Which of the 5 price tiers will show the High Cost alert chip.
+    # Deloitte Custom Change: balance display flags (see docs/balance_and_cost_controls.md).
     showBalanceAsCurrency: true # Show the user's balance in USD rather than tokens
-    showBalanceGauge: true
-    showBalanceHelperText: true
+    showBalanceGauge: true # Show a balance gauge above the account avatar (hover for details)
+    showBalanceHelperText: true # Show refill and cost-saving guidance in the gauge hover card
 fileConfig:
   endpoints:
     default:

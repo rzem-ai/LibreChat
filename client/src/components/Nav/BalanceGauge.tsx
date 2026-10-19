@@ -1,3 +1,4 @@
+// Deloitte Custom Change: hover-card balance gauge shown above the account avatar (showBalanceGauge)
 import { memo } from 'react';
 import * as Ariakit from '@ariakit/react';
 import type { GaugeTone } from '~/components/Chat/Input/TokenUsage/Gauge';
@@ -7,7 +8,7 @@ import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
 const TONE_CLASSES: Record<GaugeTone, string> = {
-  neutral: 'text-text-secondary',
+  neutral: 'text-text-tertiary',
   warning: 'text-status-warning',
   error: 'text-status-error',
 };
@@ -41,23 +42,18 @@ function BalanceGauge() {
       >
         <p className="font-medium">{gauge.label}</p>
         {gauge.remainingPercent != null && (
-          <p className={cn('font-medium', TONE_CLASSES[gauge.tone])}>
+          <p className={cn('text-xs', TONE_CLASSES[gauge.tone])}>
             {localize('com_nav_balance_percent_remaining', { 0: gauge.remainingPercent })}
           </p>
         )}
         {gauge.showHelperText && (
           <>
-            <p className="text-text-secondary">
-              {gauge.intervalText != null
-                ? localize(
-                    gauge.intervalIsSingular
-                      ? 'com_nav_balance_next_refill_info_simplified_one'
-                      : 'com_nav_balance_next_refill_info_simplified',
-                    { 0: gauge.intervalText },
-                  )
-                : localize('com_nav_balance_next_refill_info')}
-            </p>
             <p className="text-text-secondary">{localize('com_nav_balance_conserve_info')}</p>
+            {gauge.nextRefillText != null && (
+              <p className="border-t border-border-light pt-2 text-xs text-text-tertiary">
+                {gauge.nextRefillText}
+              </p>
+            )}
           </>
         )}
       </Ariakit.Hovercard>

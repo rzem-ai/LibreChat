@@ -1,3 +1,5 @@
+// Deloitte Custom Change: derives the balance gauge label, usage percent and refill wording from the balance API
+import { getRefillEligibilityDate } from 'librechat-data-provider';
 import type { RefillIntervalUnit, TBalanceResponse } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks/useLocalize';
 import { useGetStartupConfig, useGetUserBalance } from '~/data-provider';
@@ -13,22 +15,12 @@ interface BalanceGauge {
   percent: number;
   indeterminate: boolean;
   showHelperText: boolean;
-  /** Localized refill interval (e.g. "1 day"); null when auto-refill details are unavailable */
-  intervalText: string | null;
-  intervalIsSingular: boolean;
+  /** Localized next-refill caption; null when auto-refill details are unavailable */
+  nextRefillText: string | null;
   tone: GaugeTone;
   /** Whole percent of the allowance still available; null without a refill amount */
   remainingPercent: number | null;
 }
-
-const UNIT_KEYS: Record<RefillIntervalUnit, [singular: TranslationKeys, plural: TranslationKeys]> = {
-  seconds: ['com_nav_balance_second', 'com_nav_balance_seconds'],
-  minutes: ['com_nav_balance_minute', 'com_nav_balance_minutes'],
-  hours: ['com_nav_balance_hour', 'com_nav_balance_hours'],
-  days: ['com_nav_balance_day', 'com_nav_balance_days'],
-  weeks: ['com_nav_balance_week', 'com_nav_balance_weeks'],
-  months: ['com_nav_balance_month', 'com_nav_balance_months'],
-};
 
 /** Only a single day, week or month gets a named period; anything else reads as plain "Balance". */
 const PERIOD_KEYS: Partial<Record<RefillIntervalUnit, TranslationKeys>> = {
@@ -43,6 +35,31 @@ function getPeriodKey(balance: TBalanceResponse): TranslationKeys {
     return 'com_nav_balance';
   }
   return PERIOD_KEYS[refillIntervalUnit] ?? 'com_nav_balance';
+}
+
+const TIME_FORMAT = new Intl.DateTimeFormat(undefined, {
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+});
+const DATE_FORMAT = new Intl.DateTimeFormat(undefined, {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+});
+
+/** Compacts "2:00 PM" to "2:00pm". Local time, so no zone label. */
+function formatRefillTime(date: Date): string {
+  return TIME_FORMAT.format(date).replace(/\s?([ap]m)/i, (_match, period: string) =>
+    period.toLowerCase(),
+  );
+}
+
+/** Assembled from parts so the order is always "Mon 12 Oct 2026" regardless of locale punctuation. */
+function formatRefillDate(date: Date): string {
+  const parts = Object.fromEntries(DATE_FORMAT.formatToParts(date).map((p) => [p.type, p.value]));
+  return `${parts.weekday} ${parts.day} ${parts.month} ${parts.year}`;
 }
 
 export default function useBalanceGauge(): BalanceGauge | null {
@@ -67,11 +84,24 @@ export default function useBalanceGauge(): BalanceGauge | null {
     ? Math.min(100, Math.max(0, 100 - (balance.tokenCredits / limit) * 100))
     : 0;
 
-  const { refillIntervalValue, refillIntervalUnit } = balance;
-  const intervalText =
-    refillIntervalValue != null && refillIntervalUnit != null
-      ? `${refillIntervalValue} ${localize(UNIT_KEYS[refillIntervalUnit][refillIntervalValue === 1 ? 0 : 1])}`
-      : null;
+  const getNextRefillText = (): string | null => {
+    const { autoRefillEnabled, lastRefill, refillIntervalValue, refillIntervalUnit } = balance;
+    if (!autoRefillEnabled || !lastRefill || refillIntervalValue == null || !refillIntervalUnit) {
+      return null;
+    }
+    const eligibleAt = getRefillEligibilityDate(
+      new Date(lastRefill),
+      refillIntervalValue,
+      refillIntervalUnit,
+    );
+    if (eligibleAt.getTime() <= Date.now()) {
+      return localize('com_nav_balance_next_refill_now');
+    }
+    return localize('com_nav_balance_next_refill_at', {
+      0: formatRefillTime(eligibleAt),
+      1: formatRefillDate(eligibleAt),
+    });
+  };
 
   const getLabel = (): string => {
     if (!asCurrency) {
@@ -92,8 +122,7 @@ export default function useBalanceGauge(): BalanceGauge | null {
     percent,
     indeterminate: !hasLimit,
     showHelperText,
-    intervalText,
-    intervalIsSingular: refillIntervalValue === 1,
+    nextRefillText: getNextRefillText(),
     tone: getGaugeTone(percent, !hasLimit),
     remainingPercent: hasLimit ? Math.round(100 - percent) : null,
   };

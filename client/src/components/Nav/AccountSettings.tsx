@@ -109,6 +109,7 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
   const localize = useLocalize();
   const { user, isAuthenticated, logout } = useAuthContext();
   const { data: startupConfig } = useGetStartupConfig();
+  // Deloitte Custom Change: the balance readout moved out of this menu into the BalanceGauge above the avatar
   const [showSettings, setShowSettings] = useState(false);
   const setShowShortcutsDialog = useSetRecoilState(store.showShortcutsDialog);
   // Deloitte Custom Change: lets users reopen the Terms and Conditions modal (read-only) from the avatar menu.

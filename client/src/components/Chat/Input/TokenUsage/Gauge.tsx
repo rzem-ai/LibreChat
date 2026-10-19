@@ -12,6 +12,7 @@ interface GaugeProps {
   indeterminate: boolean;
 }
 
+// Deloitte Custom Change: warning/error thresholds are exported so the balance gauge text matches the ring colour
 export type GaugeTone = 'neutral' | 'warning' | 'error';
 
 export function getGaugeTone(percent: number, indeterminate: boolean): GaugeTone {
@@ -63,7 +64,10 @@ export default function Gauge({ percent, indeterminate }: GaugeProps) {
         strokeDasharray={CIRCUMFERENCE}
         strokeDashoffset={indeterminate ? CIRCUMFERENCE : offset}
         strokeLinecap="round"
-        className={cn('transition-all duration-300', STROKE_CLASSES[getGaugeTone(percent, indeterminate)])}
+        className={cn(
+          'transition-all duration-300',
+          STROKE_CLASSES[getGaugeTone(percent, indeterminate)],
+        )}
       />
     </svg>
   );

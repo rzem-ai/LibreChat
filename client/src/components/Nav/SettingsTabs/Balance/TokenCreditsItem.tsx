@@ -10,6 +10,7 @@ interface TokenCreditsItemProps {
 
 const TokenCreditsItem: React.FC<TokenCreditsItemProps> = ({ tokenCredits }) => {
   const localize = useLocalize();
+  // Deloitte Custom Change: show the balance in USD when showBalanceAsCurrency is enabled
   const { data: startupConfig } = useGetStartupConfig();
   const showBalanceAsCurrency =
     startupConfig?.interface?.customDeloitteFeatureFlags?.showBalanceAsCurrency === true;

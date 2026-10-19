@@ -1040,7 +1040,7 @@ function currencyFormatter(code: string, minDigits: number, maxDigits: number): 
   return formatter;
 }
 
-/** LibreChat token credits are priced at 1,000,000 credits per USD. */
+/** Deloitte Custom Change: LibreChat token credits are priced at 1,000,000 credits per USD. */
 const TOKEN_CREDITS_PER_USD = 1_000_000;
 
 export function formatBalance(

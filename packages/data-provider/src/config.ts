@@ -43,6 +43,7 @@ import { specsConfigSchema, TSpecsConfig } from './models';
 import { fileConfigSchema } from './file-config';
 import { isActionTool } from './types/tools';
 import { apiBaseUrl } from './api-endpoints';
+// Deloitte Custom Change: resolves ${VAR} placeholders in the balance schema
 import { extractEnvVariable } from './utils';
 import { FileSources } from './types/files';
 import { MCPServersSchema } from './mcp';
@@ -2996,7 +2997,7 @@ export const ocrSchema = z.object({
   strategy: z.nativeEnum(OCRStrategy).default(OCRStrategy.MISTRAL_OCR),
 });
 
-/** Resolves `${VAR}` strings from the environment into numbers; unresolved placeholders are left for validation to reject. */
+/** Deloitte Custom Change: resolves `${VAR}` strings from the environment into numbers; unresolved placeholders are left for validation to reject. */
 const envNumber = (value: unknown): unknown => {
   if (typeof value !== 'string') {
     return value;
@@ -3005,7 +3006,7 @@ const envNumber = (value: unknown): unknown => {
   return resolved.trim() !== '' && !Number.isNaN(Number(resolved)) ? Number(resolved) : resolved;
 };
 
-/** Resolves `${VAR}` strings from the environment into booleans (`true`/`false`, case-insensitive). */
+/** Deloitte Custom Change: resolves `${VAR}` strings from the environment into booleans (`true`/`false`, case-insensitive). */
 const envBoolean = (value: unknown): unknown => {
   if (typeof value !== 'string') {
     return value;
@@ -3017,6 +3018,7 @@ const envBoolean = (value: unknown): unknown => {
   return resolved;
 };
 
+// Deloitte Custom Change: enabled, startBalance and refillAmount accept ${VAR} placeholders from librechat.yaml
 export const balanceSchema = z.object({
   enabled: z.preprocess(envBoolean, z.boolean().optional().default(false)),
   startBalance: z.preprocess(envNumber, z.number().optional().default(20000)),

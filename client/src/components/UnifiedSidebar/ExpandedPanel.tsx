@@ -206,6 +206,7 @@ function ExpandedPanel({
           with a large mt-auto gap between them */}
       <div className="mt-auto flex flex-col gap-1">
         {learningLink && <LearningMenu link={learningLink} />}
+        {/* // Deloitte Custom Change: balance gauge pinned above the account avatar (showBalanceGauge) */}
         <BalanceGauge />
         <Suspense fallback={<Skeleton className="h-9 w-9 rounded-lg" />}>
           <AccountSettings collapsed />

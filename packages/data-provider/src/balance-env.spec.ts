@@ -1,3 +1,4 @@
+// Deloitte Custom Change: covers ${VAR} resolution in the balance schema
 import { balanceSchema } from './config';
 
 describe('balanceSchema env var resolution', () => {
