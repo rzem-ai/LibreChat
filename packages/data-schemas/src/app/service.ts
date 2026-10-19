@@ -166,7 +166,7 @@ export const AppService = async (params?: {
     | FileSources.azure_blob
     | FileSources.cloudfront;
 
-// Deloitte Custom Change: balance config is parsed so ${VAR} placeholders become numbers/booleans (see loadBalanceConfig)
+  // Deloitte Custom Change: balance config is parsed so ${VAR} placeholders become numbers/booleans (see loadBalanceConfig)
   const balance = loadBalanceConfig(config);
   const transactions = config.transactions ?? configDefaults.transactions;
   const imageOutputType = config?.imageOutputType ?? configDefaults.imageOutputType;

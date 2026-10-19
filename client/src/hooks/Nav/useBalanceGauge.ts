@@ -1,12 +1,12 @@
 // Deloitte Custom Change: derives the balance gauge label, usage percent and refill wording from the balance API
 import { getRefillEligibilityDate } from 'librechat-data-provider';
 import type { RefillIntervalUnit, TBalanceResponse } from 'librechat-data-provider';
+import type { GaugeTone } from '~/components/Chat/Input/TokenUsage/Gauge';
 import type { TranslationKeys } from '~/hooks/useLocalize';
 import { useGetStartupConfig, useGetUserBalance } from '~/data-provider';
+import { getGaugeTone } from '~/components/Chat/Input/TokenUsage/Gauge';
 import { useAuthContext } from '~/hooks/AuthContext';
 import useLocalize from '~/hooks/useLocalize';
-import { getGaugeTone } from '~/components/Chat/Input/TokenUsage/Gauge';
-import type { GaugeTone } from '~/components/Chat/Input/TokenUsage/Gauge';
 import { formatBalance } from '~/utils';
 
 interface BalanceGauge {

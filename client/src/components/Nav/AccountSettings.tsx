@@ -15,8 +15,8 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { ArchivedChatsModal } from '~/components/Nav/SettingsTabs/General/ArchivedChatsModal';
-import { useGetStartupConfig, useUserTermsQuery } from '~/data-provider';
 import TermsAndConditionsModal from '~/components/ui/TermsAndConditionsModal';
+import { useGetStartupConfig, useUserTermsQuery } from '~/data-provider';
 import { useAuthContext } from '~/hooks/AuthContext';
 import { showTermsViewerAtom } from '~/store/terms';
 import { openInNewTab } from '~/utils';
