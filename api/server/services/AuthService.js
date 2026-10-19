@@ -158,8 +158,24 @@ const getPasswordResetTokenDeleteQuery = (passwordResetToken) => {
 };
 
 // Deloitte Custom Change: OSS Vulnerabilities 8.8
-const getOpenIDAppAuthToken = (tokenset, sessionIdToken) =>
-  tokenset?.id_token || sessionIdToken || tokenset?.access_token;
+const isCurrentOpenIDIdToken = (expiresAt) =>
+  typeof expiresAt !== 'number' || expiresAt > Math.floor(Date.now() / 1000) + 30;
+
+// Deloitte Custom Change: OSS Vulnerabilities 8.8
+const getOpenIDAppAuthToken = (
+  tokenset,
+  sessionIdToken,
+  sessionIdTokenExpiresAt,
+  idTokenExpiresAt,
+) => {
+  if (tokenset?.id_token && isCurrentOpenIDIdToken(idTokenExpiresAt)) {
+    return tokenset.id_token;
+  }
+  if (sessionIdToken && isCurrentOpenIDIdToken(sessionIdTokenExpiresAt)) {
+    return sessionIdToken;
+  }
+  return tokenset?.access_token;
+};
 
 const clearOpenIDAuthTokens = (req, res, userId, tenantId) => {
   if (req.session?.openidTokens) {
@@ -745,6 +761,9 @@ const getStringClaim = (claims, claim) => {
   return typeof value === 'string' && value ? value : undefined;
 };
 
+const getNumberClaim = (claims, claim) =>
+  typeof claims?.[claim] === 'number' ? claims[claim] : undefined;
+
 const applyOpenIDSessionIdentity = (sessionOpenidTokens, identity) => {
   if (identity.appUserId) {
     sessionOpenidTokens.appUserId = identity.appUserId;
@@ -818,6 +837,8 @@ const setOpenIDAuthTokens = (
      * audience (e.g., Microsoft Graph API), which fails JWKS validation.
      * Falls back to access_token for providers where id_token is not available.
      */
+    const claims = getOpenIDTokenClaims(tokenset);
+    const idTokenExpiresAt = getNumberClaim(claims, 'exp');
     const sessionIdToken = req.session?.openidTokens?.idToken;
     /**
      * An inline refresh carries the previous id_token forward when the IdP omits one on
@@ -825,9 +846,13 @@ const setOpenIDAuthTokens = (
      * dependency to verify the token first. The bearer-token verification boundary validates
      * expiry, issuer, audience, and signature before authorizing a request.
      */
-    const appAuthToken = getOpenIDAppAuthToken(tokenset, sessionIdToken);
+    const appAuthToken = getOpenIDAppAuthToken(
+      tokenset,
+      sessionIdToken,
+      req.session?.openidTokens?.idTokenExpiresAt,
+      idTokenExpiresAt,
+    );
     const logoutIdToken = tokenset.id_token || sessionIdToken;
-    const claims = getOpenIDTokenClaims(tokenset);
     const sessionIdentity = createOpenIDSessionIdentity({
       user: req?.user,
       userId,
@@ -857,6 +882,9 @@ const setOpenIDAuthTokens = (
         expiresAt: expirationDate.getTime(),
         lastRefreshedAt: Date.now(),
       };
+      if (tokenset.id_token && idTokenExpiresAt != null) {
+        sessionOpenidTokens.idTokenExpiresAt = idTokenExpiresAt;
+      }
       applyOpenIDSessionIdentity(sessionOpenidTokens, sessionIdentity);
       /**
        * Capture the access-token's own expiry (unix seconds) when the IdP

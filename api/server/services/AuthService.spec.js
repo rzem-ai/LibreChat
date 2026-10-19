@@ -472,7 +472,7 @@ describe('setOpenIDAuthTokens', () => {
       expect(req.session.openidTokens.lastRefreshedAt).toEqual(expect.any(Number));
     });
 
-    it('does not trust an unverified session id_token expiry for token selection', () => {
+    it('falls back to access_token when the saved id_token expiry has elapsed', () => {
       const expiredIdToken = jwt.sign(
         { sub: 'user-123', exp: Math.floor(Date.now() / 1000) - 60 },
         'idp-signing-secret',
@@ -485,6 +485,7 @@ describe('setOpenIDAuthTokens', () => {
         openidTokens: {
           accessToken: 'old-access-token',
           idToken: expiredIdToken,
+          idTokenExpiresAt: Math.floor(Date.now() / 1000) - 60,
           refreshToken: 'old-refresh-token',
         },
       });
@@ -492,7 +493,7 @@ describe('setOpenIDAuthTokens', () => {
 
       const result = setOpenIDAuthTokens(tokenset, req, res, 'user-123');
 
-      expect(result).toBe(expiredIdToken);
+      expect(result).toBe('new-access-token');
       expect(req.session.openidTokens.idToken).toBe(expiredIdToken);
       expect(req.session.openidTokens.accessToken).toBe('new-access-token');
     });
@@ -534,7 +535,7 @@ describe('setOpenIDAuthTokens', () => {
       expect(setOpenIDAuthTokens(tokenset, req, res, 'user-123')).toBe('opaque-but-not-a-jwt');
     });
 
-    it('does not trust an unverified near-expiry session id_token for token selection', () => {
+    it('falls back to access_token when the saved id_token is near expiry', () => {
       const nearExpiryIdToken = jwt.sign(
         { sub: 'user-123', exp: Math.floor(Date.now() / 1000) + 10 },
         'idp-signing-secret',
@@ -547,6 +548,7 @@ describe('setOpenIDAuthTokens', () => {
         openidTokens: {
           accessToken: 'old-access-token',
           idToken: nearExpiryIdToken,
+          idTokenExpiresAt: Math.floor(Date.now() / 1000) + 10,
           refreshToken: 'old-refresh-token',
         },
       });
@@ -554,7 +556,7 @@ describe('setOpenIDAuthTokens', () => {
 
       const result = setOpenIDAuthTokens(tokenset, req, res, 'user-123');
 
-      expect(result).toBe(nearExpiryIdToken);
+      expect(result).toBe('new-access-token');
       expect(req.session.openidTokens.idToken).toBe(nearExpiryIdToken);
       expect(req.session.openidTokens.accessToken).toBe('new-access-token');
     });
