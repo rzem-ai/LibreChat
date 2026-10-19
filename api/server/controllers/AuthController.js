@@ -386,6 +386,7 @@ const refreshController = async (req, res) => {
                   has_access_token: Boolean(reuseSessionTokens?.accessToken),
                   cloudfront_cookies_set: cloudFrontCookiesSet,
                 });
+                // Deloitte Custom Change: OSS Vulnerabilities 8.8
                 return res.status(200).json({
                   token: reusableSessionToken.token,
                   user: sanitizeUserForAuthResponse(user),
@@ -584,6 +585,7 @@ const refreshController = async (req, res) => {
                     },
                     (sendAuthorized) =>
                       sendAuthorized(() =>
+                        // Deloitte Custom Change: OSS Vulnerabilities 8.8
                         res.status(200).json({
                           token: appAuthToken,
                           user: sanitizeUserForAuthResponse(bridgeUser),

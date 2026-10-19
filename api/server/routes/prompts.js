@@ -104,6 +104,7 @@ router.get(
         return;
       }
 
+      // Deloitte Custom Change: OSS Vulnerabilities 8.8
       res.status(200).json(projectStoredPromptGroup(group, req.config?.filters));
     } catch (error) {
       logger.error('Error getting prompt group', error);
@@ -142,11 +143,13 @@ router.get('/all', configMiddleware, async (req, res) => {
     });
 
     if (!result) {
+      // Deloitte Custom Change: OSS Vulnerabilities 8.8
       return res.status(200).json([]);
     }
 
     const { data: promptGroups = [] } = result;
     if (!promptGroups.length) {
+      // Deloitte Custom Change: OSS Vulnerabilities 8.8
       return res.status(200).json([]);
     }
 
@@ -157,6 +160,7 @@ router.get('/all', configMiddleware, async (req, res) => {
       readablePromptGroups,
       publiclyAccessibleIds,
     );
+    // Deloitte Custom Change: OSS Vulnerabilities 8.8
     res.status(200).json(groupsWithPublicFlag);
   } catch (error) {
     logger.error(error);
@@ -217,6 +221,7 @@ router.get('/groups', configMiddleware, async (req, res) => {
         pageSize: actualLimit,
         actualLimit,
       });
+      // Deloitte Custom Change: OSS Vulnerabilities 8.8
       return res.status(200).json(emptyResponse);
     }
 
@@ -235,6 +240,7 @@ router.get('/groups', configMiddleware, async (req, res) => {
       after,
     });
 
+    // Deloitte Custom Change: OSS Vulnerabilities 8.8
     res.status(200).json(response);
   } catch (error) {
     logger.error(error);
@@ -502,6 +508,7 @@ router.get('/', configMiddleware, async (req, res) => {
       const readablePrompts = Array.isArray(prompts)
         ? projectStoredPrompts(prompts, req.config?.filters)
         : prompts;
+      // Deloitte Custom Change: OSS Vulnerabilities 8.8
       return res.status(200).json(readablePrompts);
     }
 
@@ -521,6 +528,7 @@ router.get('/', configMiddleware, async (req, res) => {
     const readablePrompts = Array.isArray(prompts)
       ? projectStoredPrompts(prompts, req.config?.filters)
       : prompts;
+    // Deloitte Custom Change: OSS Vulnerabilities 8.8
     res.status(200).json(readablePrompts);
   } catch (error) {
     logger.error(error);

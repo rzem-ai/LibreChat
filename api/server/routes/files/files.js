@@ -103,6 +103,7 @@ router.get('/', async (req, res) => {
       }
       return file;
     });
+    // Deloitte Custom Change: OSS Vulnerabilities 8.8
     res.status(200).json(rewritten);
   } catch (error) {
     logger.error('[/files] Error getting files:', error);
@@ -694,6 +695,7 @@ router.get('/download/:userId/:file_id', fileAccess, async (req, res) => {
         : `${file.filename || file_id}.txt`;
       res.setHeader('Content-Disposition', getContentDisposition(textFilename));
       res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      // Deloitte Custom Change: OSS Vulnerabilities 8.8
       // Stored extraction text is untrusted, so never allow it to become an active document.
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.setHeader('Content-Security-Policy', 'sandbox');
@@ -1002,6 +1004,7 @@ const handleFileUpload = async (req, res) => {
     logger.error('[/files] Error processing file:', getSafeErrorMetadata(error));
 
     try {
+      // Deloitte Custom Change: OSS Vulnerabilities 8.8
       const tempPath = getUploadTempPath(req);
       if (tempPath) {
         await fs.unlink(tempPath);
@@ -1033,6 +1036,7 @@ const handleFileUpload = async (req, res) => {
   } finally {
     if (cleanup) {
       try {
+        // Deloitte Custom Change: OSS Vulnerabilities 8.8
         const tempPath = getUploadTempPath(req);
         if (tempPath) {
           await fs.unlink(tempPath);

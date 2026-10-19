@@ -95,6 +95,7 @@ type ReasoningDeltaUpdate = { type: ContentTypes.THINK; think: string };
  * the first generated title so compacted resume snapshots can still correlate
  * later label events by identity rather than relying only on a sparse index. */
 function prepareReasoningPartForStep(message: TMessage, index: number, stepId: string): TMessage {
+  // Deloitte Custom Change: OSS Vulnerabilities 8.8
   if (!Number.isSafeInteger(index) || index < 0) {
     return message;
   }
@@ -511,6 +512,7 @@ export default function useStepHandler({
     finalUpdate = false,
     metadata?: ContentMetadata,
   ) => {
+    // Deloitte Custom Change: OSS Vulnerabilities 8.8
     if (!Number.isSafeInteger(index) || index < 0) {
       return message;
     }

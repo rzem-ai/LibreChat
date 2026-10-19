@@ -157,6 +157,7 @@ const getPasswordResetTokenDeleteQuery = (passwordResetToken) => {
   };
 };
 
+// Deloitte Custom Change: OSS Vulnerabilities 8.8
 const getOpenIDAppAuthToken = (tokenset, sessionIdToken) =>
   tokenset?.id_token || sessionIdToken || tokenset?.access_token;
 
@@ -732,6 +733,7 @@ const getOpenIDTokenClaims = (tokenset) => {
     }
   }
 
+  // Deloitte Custom Change: OSS Vulnerabilities 8.8
   // Only use claims attached by the OpenID client after its token exchange.
   // Decoding an arbitrary id_token here would let unverified identity claims
   // be persisted into the session.

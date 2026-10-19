@@ -371,6 +371,7 @@ class STTService {
 
       let text;
       try {
+        // Deloitte Custom Change: OSS Vulnerabilities 8.8
         const tempPath = getUploadTempPath(req);
         if (!tempPath) {
           throw new Error('Invalid staged audio upload path');
@@ -424,6 +425,7 @@ class STTService {
       res.sendStatus(500);
     } finally {
       try {
+        // Deloitte Custom Change: OSS Vulnerabilities 8.8
         const tempPath = getUploadTempPath(req);
         if (tempPath) {
           await fs.unlink(tempPath);

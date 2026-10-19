@@ -106,6 +106,7 @@ type ToolCallPart = {
  *  matches the subset of `TMessageContentParts` a subagent run emits. */
 export type SubagentContentPart = TextPart | ThinkPart | ToolCallPart;
 
+// Deloitte Custom Change: OSS Vulnerabilities 8.8
 const createStringMap = <T>(): Record<string, T> => Object.create(null) as Record<string, T>;
 
 const copyStringMap = <T>(source: Record<string, T>): Record<string, T> =>

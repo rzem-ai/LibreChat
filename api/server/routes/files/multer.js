@@ -49,7 +49,8 @@ const createStorage = ({ uniqueTempPath = false } = {}) =>
 
 const storage = createStorage();
 
-/** Returns a staged upload path only when it remains inside Multer's user-scoped temp directory. */
+/** Deloitte Custom Change: OSS Vulnerabilities 8.8
+ * Returns a staged upload path only when it remains inside Multer's user-scoped temp directory. */
 const getUploadTempPath = (req) => {
   const uploadPath = req.file?.path;
   const uploadsPath = req.config?.paths?.uploads;
