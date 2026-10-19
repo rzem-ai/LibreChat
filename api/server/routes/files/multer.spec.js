@@ -61,13 +61,30 @@ describe('Multer Configuration', () => {
   });
 
   describe('getUploadTempPath', () => {
-    it('accepts only files within the authenticated user staging directory', () => {
+    it('reconstructs a direct staged path from the server-managed filename', () => {
       const stagedPath = path.join(tempDir, 'temp', mockReq.user.id, 'upload.txt');
-      expect(getUploadTempPath({ ...mockReq, file: { path: stagedPath } })).toBe(stagedPath);
       expect(
-        getUploadTempPath({ ...mockReq, file: { path: path.join(tempDir, 'secret.txt') } }),
+        getUploadTempPath({
+          ...mockReq,
+          file: { filename: 'upload.txt', path: '/untrusted/path' },
+        }),
+      ).toBe(stagedPath);
+      expect(getUploadTempPath({ ...mockReq, file: { filename: '../../secret.txt' } })).toBe(
+        undefined,
+      );
+      expect(getUploadTempPath({ ...mockReq, file: { filename: '..' } })).toBe(undefined);
+      expect(
+        getUploadTempPath({
+          ...mockReq,
+          file: { filename: path.join('nested', 'upload.txt') },
+        }),
       ).toBe(undefined);
-      expect(getUploadTempPath({ ...mockReq, file: { path: '../../secret.txt' } })).toBe(undefined);
+      expect(
+        getUploadTempPath({
+          ...mockReq,
+          file: { filename: path.join(tempDir, 'secret.txt') },
+        }),
+      ).toBe(undefined);
     });
   });
 

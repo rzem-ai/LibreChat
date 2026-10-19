@@ -50,23 +50,20 @@ const createStorage = ({ uniqueTempPath = false } = {}) =>
 const storage = createStorage();
 
 /** Deloitte Custom Change: OSS Vulnerabilities 8.8
- * Returns a staged upload path only when it remains inside Multer's user-scoped temp directory. */
+ * Reconstructs the staged path from Multer's validated filename rather than req.file.path. */
 const getUploadTempPath = (req) => {
-  const uploadPath = req.file?.path;
+  const filename = req.file?.filename;
   const uploadsPath = req.config?.paths?.uploads;
   const userId = req.user?.id;
-  if (typeof uploadPath !== 'string' || !uploadsPath || !userId) {
+  if (typeof filename !== 'string' || !uploadsPath || !userId) {
     return;
   }
 
-  const tempDir = path.resolve(uploadsPath, 'temp', String(userId));
-  const resolvedPath = path.resolve(uploadPath);
-  const relativePath = path.relative(tempDir, resolvedPath);
-  if (!relativePath || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
+  if (!filename || filename === '.' || filename === '..' || path.basename(filename) !== filename) {
     return;
   }
 
-  return resolvedPath;
+  return path.join(uploadsPath, 'temp', String(userId), filename);
 };
 
 const importFileFilter = (req, file, cb) => {
