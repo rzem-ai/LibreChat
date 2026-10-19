@@ -212,6 +212,7 @@ endpoints:
         'deferred_tools',
         'execute_code',
         'file_search',
+        'memory',
         'skills',
         'tools'
       ]

@@ -156,6 +156,11 @@ export default function MemoryEditDialog({
         className="w-11/12 md:max-w-lg"
         main={
           <div className="space-y-4">
+            {hasUpdateAccess && (
+              <p className="text-sm text-text-secondary">
+                {localize('com_ui_memory_edit_description')}
+              </p>
+            )}
             {hasUpdateAccess && <MemorySensitiveDataNotice />}
             {/* Memory metadata */}
             {memory && (

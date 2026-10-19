@@ -113,6 +113,9 @@ export default function MemoryCreateDialog({
         className="w-11/12 md:max-w-lg"
         main={
           <div className="space-y-4">
+            <p className="text-sm text-text-secondary">
+              {localize('com_ui_memory_create_description')}
+            </p>
             <MemorySensitiveDataNotice />
             <div className="space-y-2">
               <Label htmlFor="memory-key" className="text-sm font-medium text-text-primary">
