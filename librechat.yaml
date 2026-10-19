@@ -373,7 +373,7 @@ endpoints:
     #   modelDisplayLabel: 'Gemini'
     #   dropParams: [ 'stop', 'user', 'frequency_penalty', 'presence_penalty' ]
     #   headers:
-    #     x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
+    #     # same gateway identity-token header as the other custom endpoints above
     #     Content-Type: 'application/json'
     #   # Deloitte Custom Change: gateway has native web search disabled for Gemini; the empty list
     #   # is load-bearing — deleting this key would show a Web Search pill that errors.
