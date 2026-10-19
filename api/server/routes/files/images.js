@@ -37,6 +37,7 @@ const {
 } = require('~/server/services/Files/routing');
 const { checkPermission } = require('~/server/services/PermissionService');
 const { hasCapability } = require('~/server/middleware/roles/capabilities');
+const { getUploadTempPath } = require('./multer');
 const db = require('~/models');
 
 const router = express.Router();
@@ -211,8 +212,11 @@ router.post('/', async (req, res) => {
     }
   } finally {
     try {
-      await fs.unlink(req.file.path);
-      logger.debug('[/files/images] Temp. image upload file deleted');
+      const tempPath = getUploadTempPath(req);
+      if (tempPath) {
+        await fs.unlink(tempPath);
+        logger.debug('[/files/images] Temp. image upload file deleted');
+      }
     } catch {
       logger.debug('[/files/images] Temp. image upload file already deleted');
     }

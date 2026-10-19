@@ -49,6 +49,25 @@ const createStorage = ({ uniqueTempPath = false } = {}) =>
 
 const storage = createStorage();
 
+/** Returns a staged upload path only when it remains inside Multer's user-scoped temp directory. */
+const getUploadTempPath = (req) => {
+  const uploadPath = req.file?.path;
+  const uploadsPath = req.config?.paths?.uploads;
+  const userId = req.user?.id;
+  if (typeof uploadPath !== 'string' || !uploadsPath || !userId) {
+    return;
+  }
+
+  const tempDir = path.resolve(uploadsPath, 'temp', String(userId));
+  const resolvedPath = path.resolve(uploadPath);
+  const relativePath = path.relative(tempDir, resolvedPath);
+  if (!relativePath || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
+    return;
+  }
+
+  return resolvedPath;
+};
+
 const importFileFilter = (req, file, cb) => {
   if (file.mimetype === 'application/json') {
     cb(null, true);
@@ -148,6 +167,7 @@ const createMulterInstance = async (options = {}) => {
 module.exports = {
   createMulterInstance,
   createStorage,
+  getUploadTempPath,
   storage,
   importFileFilter,
   createFileFilter,

@@ -59,6 +59,7 @@ const { hasCapability } = require('~/server/middleware/roles/capabilities');
 const { getRoleByName } = require('~/models');
 const { checkPermission } = require('~/server/services/PermissionService');
 const { cleanFileName, getContentDisposition, SAFE_INLINE_TYPES } = require('~/server/utils/files');
+const { getUploadTempPath } = require('./multer');
 const { getLogStores } = require('~/cache');
 const { Readable } = require('stream');
 const db = require('~/models');
@@ -1001,7 +1002,10 @@ const handleFileUpload = async (req, res) => {
     logger.error('[/files] Error processing file:', getSafeErrorMetadata(error));
 
     try {
-      await fs.unlink(req.file.path);
+      const tempPath = getUploadTempPath(req);
+      if (tempPath) {
+        await fs.unlink(tempPath);
+      }
       cleanup = false;
     } catch (cleanupError) {
       logger.error('[/files] Error deleting file:', getSafeErrorMetadata(cleanupError));
@@ -1029,7 +1033,10 @@ const handleFileUpload = async (req, res) => {
   } finally {
     if (cleanup) {
       try {
-        await fs.unlink(req.file.path);
+        const tempPath = getUploadTempPath(req);
+        if (tempPath) {
+          await fs.unlink(tempPath);
+        }
       } catch (error) {
         logger.error(
           '[/files] Error deleting file after file processing:',

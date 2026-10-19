@@ -12,6 +12,7 @@ const { logger } = require('@librechat/data-schemas');
 const {
   createMulterInstance,
   createStorage,
+  getUploadTempPath,
   storage,
   importFileFilter,
   createFileFilter,
@@ -57,6 +58,17 @@ describe('Multer Configuration', () => {
     if (fs.existsSync(tempDir)) {
       fs.rmSync(tempDir, { recursive: true, force: true });
     }
+  });
+
+  describe('getUploadTempPath', () => {
+    it('accepts only files within the authenticated user staging directory', () => {
+      const stagedPath = path.join(tempDir, 'temp', mockReq.user.id, 'upload.txt');
+      expect(getUploadTempPath({ ...mockReq, file: { path: stagedPath } })).toBe(stagedPath);
+      expect(
+        getUploadTempPath({ ...mockReq, file: { path: path.join(tempDir, 'secret.txt') } }),
+      ).toBe(undefined);
+      expect(getUploadTempPath({ ...mockReq, file: { path: '../../secret.txt' } })).toBe(undefined);
+    });
   });
 
   describe('Storage Configuration', () => {
