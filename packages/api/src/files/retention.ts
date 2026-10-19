@@ -1,5 +1,10 @@
 import { RetentionMode } from 'librechat-data-provider';
-import { createFallbackRetentionDate } from '@librechat/data-schemas';
+// Deloitte Custom Change: Retention Update
+import {
+  createFallbackRetentionDate,
+  getFileRetentionHours,
+  getAgentFileRetentionHours,
+} from '@librechat/data-schemas';
 import type { AppConfig } from '@librechat/data-schemas';
 
 type InterfaceConfig = AppConfig['interfaceConfig'];
@@ -100,6 +105,8 @@ const getRetentionCacheKey = (req: RetentionRequest): string =>
     req.config?.interfaceConfig?.retentionMode ?? '',
     req.config?.interfaceConfig?.temporaryChatRetention ?? '',
     req.config?.interfaceConfig?.generalChatRetention ?? '',
+    // Deloitte Custom Change: Retention Update
+    req.config?.interfaceConfig?.fileRetentionHours ?? '',
     req.user?.id ?? '',
     req.body?.conversationId ?? '',
     String(req.body?.isTemporary ?? ''),
@@ -113,6 +120,12 @@ async function computeRetentionExpiry(
   dependencies: RetentionDependencies,
 ): Promise<RetentionExpiry> {
   const interfaceConfig = req?.config?.interfaceConfig;
+  // Deloitte Custom Change: Retention Update
+  const fileRetentionHours = getFileRetentionHours(interfaceConfig);
+  if (fileRetentionHours !== undefined) {
+    return { expiredAt: new Date(Date.now() + fileRetentionHours * 60 * 60 * 1000) };
+  }
+
   const isRetentionAll = interfaceConfig?.retentionMode === RetentionMode.ALL;
   const conversationId = req?.body?.conversationId;
   const userId = req?.user?.id;
@@ -207,14 +220,10 @@ const shouldRetainPersistentAgentFile = ({
   req,
   messageAttachment,
   toolResource,
-}: AgentFileRetentionRequest): boolean => {
-  const interfaceConfig = req?.config?.interfaceConfig;
-  return (
-    isPersistentAgentResourceUpload({ messageAttachment, toolResource }) &&
-    (interfaceConfig?.retentionMode !== RetentionMode.ALL ||
-      interfaceConfig?.retainAgentFiles === true)
-  );
-};
+  // Deloitte Custom Change: Retention Update
+}: AgentFileRetentionRequest): boolean =>
+  isPersistentAgentResourceUpload({ messageAttachment, toolResource }) &&
+  req?.config?.interfaceConfig?.retainAgentFiles === true;
 
 export async function getAgentFileRetentionExpiry(
   params: AgentFileRetentionRequest,
@@ -222,6 +231,12 @@ export async function getAgentFileRetentionExpiry(
 ): Promise<RetentionExpiry> {
   if (shouldRetainPersistentAgentFile(params)) {
     return {};
+  }
+
+  // Deloitte Custom Change: Retention Update
+  if (isPersistentAgentResourceUpload(params)) {
+    const hours = getAgentFileRetentionHours(params.req?.config?.interfaceConfig);
+    return { expiredAt: new Date(Date.now() + hours * 60 * 60 * 1000) };
   }
 
   return await getRetentionExpiry(params.req, dependencies);

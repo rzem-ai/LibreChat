@@ -38,7 +38,11 @@ describe('createMemoryManagementHandlers', () => {
   const storedId = new Types.ObjectId();
   const userId = new Types.ObjectId();
   const setMemoryById = jest.fn(
-    async (_params: SetMemoryByIdParams): Promise<SetMemoryByIdResult> => ({
+    // Deloitte Custom Change: Retention Update
+    async (
+      _params: SetMemoryByIdParams,
+      _options?: { retentionHours?: number },
+    ): Promise<SetMemoryByIdResult> => ({
       ok: true,
       memory: {
         _id: storedId,
@@ -75,14 +79,18 @@ describe('createMemoryManagementHandlers', () => {
 
     await handlers.updateById(request, response);
 
-    expect(setMemoryById).toHaveBeenCalledWith({
-      userId: userId.toString(),
-      id: storedId.toString(),
-      key: undefined,
-      value: 'safe replacement',
-      tokenCount: 2,
-      agentId: 'agent-1',
-    });
+    // Deloitte Custom Change: Retention Update
+    expect(setMemoryById).toHaveBeenCalledWith(
+      {
+        userId: userId.toString(),
+        id: storedId.toString(),
+        key: undefined,
+        value: 'safe replacement',
+        tokenCount: 2,
+        agentId: 'agent-1',
+      },
+      { retentionHours: expect.any(Number) },
+    );
     expect(response.status).toHaveBeenCalledWith(200);
     expect(response.json).toHaveBeenCalledWith({
       updated: true,

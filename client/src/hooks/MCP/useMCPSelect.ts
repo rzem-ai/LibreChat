@@ -5,6 +5,8 @@ import { useRecoilState } from 'recoil';
 import { Constants, LocalStorageKeys } from 'librechat-data-provider';
 import type { MCPServerDefinition } from './useMCPServerManager';
 import { ephemeralAgentByConvoId, mcpValuesAtomFamily, mcpPinnedAtom } from '~/store';
+// Deloitte Custom Change: forced-pin rule shared with the tools dropdown config.
+import { getShowPinButtons } from '~/hooks/Plugins/useToolsDropdownConfig';
 import { useGetStartupConfig } from '~/data-provider';
 import { setTimestamp } from '~/utils/timestamps';
 import { getModelSpec } from '~/utils';
@@ -91,7 +93,7 @@ export function useMCPSelect({
    * pin when the array includes the `'mcp'` keyword or any configured server name.
    * Only applies on first load when the user has no stored preference; when the option
    * is absent entirely, the legacy default (pinned) is kept.
-   * When `showToolsDropdown` is disabled the user cannot pin manually, so the admin
+   * When pin buttons are hidden the user cannot pin manually, so the admin
    * default is treated as forced and overrides any stored preference.
    */
   useEffect(() => {
@@ -104,10 +106,11 @@ export function useMCPSelect({
       return;
     }
 
-    // Deloitte Custom Change: Force pin the tool if tools dropdown is hidden
-    const toolsDropdownHidden =
-      startupConfig.interface?.customDeloitteFeatureFlags?.showToolsDropdown === false;
-    if (!toolsDropdownHidden && localStorage.getItem(LocalStorageKeys.PIN_MCP_) != null) {
+    // Deloitte Custom Change: force the admin default when users have no pin buttons
+    const pinButtonsHidden = !getShowPinButtons(
+      startupConfig.interface?.customDeloitteFeatureFlags,
+    );
+    if (!pinButtonsHidden && localStorage.getItem(LocalStorageKeys.PIN_MCP_) != null) {
       hasAppliedDefaultPin.current = true;
       return;
     }

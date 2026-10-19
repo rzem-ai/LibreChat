@@ -880,6 +880,8 @@
   "com_nav_slash_command_description": "Toggle command \"/\" for selecting a prompt via keyboard",
   "com_nav_smooth_streaming": "Smooth streaming text (fade in new words)",
   "com_nav_speech_to_text": "Speech to Text",
+  "com_nav_speech_notice_description": "If you choose the browser engine, speech relies on your device's built-in voice capabilities rather than high-performance voice models. Results may vary by device. Improved versions are coming soon.",
+  "com_nav_speech_notice_title": "Text-to-Speech and Speech-to-Text",
   "com_nav_stop_generating": "Stop generating",
   "com_nav_text_to_speech": "Text to Speech",
   "com_nav_theme": "Theme",

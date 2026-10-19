@@ -184,6 +184,8 @@ async function buildEndpointOption(req, res, next) {
       req.body.endpointOption.attachments = updateFilesUsage(req.body.files, undefined, {
         user: req.user.id,
         tenantId: req.user.tenantId,
+        // Deloitte Custom Change: Retention Update
+        fileRetentionHours: req.config?.interfaceConfig?.fileRetentionHours,
       });
     }
 

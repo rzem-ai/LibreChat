@@ -49,6 +49,8 @@ const deploymentSkillMethods = createDeploymentSkillMethods({
   getSkillFileByPath: db.getSkillFileByPath,
   updateSkillFileContent: db.updateSkillFileContent,
   updateSkillFileCodeEnvIds: db.updateSkillFileCodeEnvIds,
+  // Deloitte Custom Change: Retention Update
+  touchSkillsLastActivity: db.touchSkillsLastActivity,
 });
 
 function getSkillDbMethods() {
@@ -96,6 +98,17 @@ function canCreateSkill({ req }) {
     user: req.user,
     permissionType: PermissionTypes.SKILLS,
     permissions: [Permissions.USE, Permissions.CREATE],
+    getRoleByName: db.getRoleByName,
+  });
+}
+
+/** Deloitte Custom Change: the role-level SKILLS.USE gate for activating skills in a run. */
+function canUseSkills({ req }) {
+  return checkAccess({
+    req,
+    user: req.user,
+    permissionType: PermissionTypes.SKILLS,
+    permissions: [Permissions.USE],
     getRoleByName: db.getRoleByName,
   });
 }
@@ -330,6 +343,7 @@ const skillToolDeps = {
   updateSkill: db.updateSkill,
   deleteSkill: db.deleteSkill,
   canCreateSkill,
+  canUseSkills,
   canEditSkill,
   grantSkillOwner,
   saveSkillFileContent,

@@ -78,6 +78,11 @@ const { resumeAgentEventDetachedAction } = require('./services/Agents/detachedAc
 const { initializeScheduleEngine, recordExpiredScheduleApproval } = require('./services/Schedules');
 const { jwtLogin, ldapLogin, passportLogin } = require('~/strategies');
 const { startExpiredFileSweep } = require('./services/Files/process');
+// Deloitte Custom Change: Retention Update
+const { startConversationPurgeSweep } = require('./services/Retention/purgeWorker');
+const { startAgentRetentionSweep } = require('./services/Retention/agentRetentionWorker');
+const { startSkillRetentionSweep } = require('./services/Retention/skillRetentionWorker');
+const { startMemoryRetentionSweep } = require('./services/Retention/memoryRetentionWorker');
 const { checkMigrations } = require('./services/start/migration');
 const optionalJwtAuth = require('./middleware/optionalJwtAuth');
 const initializeMCPs = require('./services/initializeMCPs');
@@ -258,6 +263,11 @@ const startServer = async () => {
   });
   initializeGitHubSkillSync(appConfig);
   startExpiredFileSweep({ appConfig, loadAppConfig: getAppConfig });
+  // Deloitte Custom Change: Retention Update
+  startConversationPurgeSweep({ appConfig, loadAppConfig: getAppConfig });
+  startAgentRetentionSweep({ appConfig, loadAppConfig: getAppConfig });
+  startSkillRetentionSweep({ appConfig, loadAppConfig: getAppConfig });
+  startMemoryRetentionSweep();
   // Register any programmatic tool-approval policy hooks declared in
   // `endpoints.agents.toolApproval.hooks`. Honor the `enabled` kill switch: when tool
   // approval is off we pass no hooks, so a disabled endpoint imports/runs nothing (and any
@@ -422,6 +432,8 @@ const startServer = async () => {
   app.use('/api/admin/skills', routes.adminSkills);
   app.use('/api/admin/users', routes.adminUsers);
   app.use('/api/admin/audit-log', routes.adminAuditLog);
+  // Deloitte Custom Change: Retention Update
+  app.use('/api/admin/retention', routes.adminRetention);
   app.use('/api/actions', routes.actions);
   app.use('/api/keys', routes.keys);
   app.use('/api/api-keys', routes.apiKeys);
