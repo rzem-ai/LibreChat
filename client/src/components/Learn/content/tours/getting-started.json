@@ -30,9 +30,9 @@
       "side": "top"
     },
     {
-      "element": "#attach-file-menu-button",
+      "element": "#attach-file-menu-button, #attach-file-button, #attach-file",
       "title": "Attach Files",
-      "description": "Click to choose how to attach your file — each option changes how the model uses it:<br/><br/><strong>Upload as Text</strong> — extracts all text from a document and adds it directly to your message. Best for short documents where you want the full content visible.<br/><br/><strong>Upload for File Search</strong> — the recommended option for most documents. Breaks the file into sections the model can search and retrieve as needed, without overwhelming your message.<br/><br/><strong>Upload to Code Environment</strong> — use this when you need the model to open, read, or transform the file itself, such as reformatting a spreadsheet or extracting data.",
+      "description": "Click to attach a file for the model to use.",
       "side": "top"
     },
     {
@@ -144,6 +144,12 @@
       "element": "#nav-panel-learning",
       "title": "MyAssist Academy",
       "description": "You're here right now! Come back any time to revisit this tour or check for new learning content.",
+      "side": "right"
+    },
+    {
+      "element": "#balance-gauge",
+      "title": "Balance",
+      "description": "This gauge shows how much of your daily MyAssist usage balance you have left. Hover over it for more details.<br/><br/>To conserve your balance, choose a lower-cost model — you can compare model costs in the model selector.",
       "side": "right"
     },
     {

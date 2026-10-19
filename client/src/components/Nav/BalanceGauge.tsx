@@ -30,6 +30,7 @@ function BalanceGauge() {
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={gauge.indeterminate ? undefined : Math.round(gauge.percent)}
+        id="balance-gauge"
         data-testid="balance-gauge"
         className="flex size-9 items-center justify-center self-center rounded-lg hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary"
       >
