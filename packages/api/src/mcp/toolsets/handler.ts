@@ -4,10 +4,10 @@ import type { Response } from 'express';
 import type { OboTokenResolver, UpstreamTokenProvider } from '~/mcp/oauth/obo';
 import type { AuthIdentityContext } from '~/utils/identity';
 import type { ServerRequest } from '~/types';
+import { fetchAndCacheToolsets, getCachedToolsets } from './service';
 import { createAuthIdentityContext } from '~/utils/identity';
 import { resolveOboToken } from '~/mcp/oauth/obo';
 import { GatewayToolsetsError } from './errors';
-import { fetchAndCacheToolsets, getCachedToolsets } from './service';
 
 export interface ToolsetsHandlerDeps {
   getTenantId: () => string | undefined;

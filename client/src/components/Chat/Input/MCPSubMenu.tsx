@@ -1,8 +1,8 @@
 import React from 'react';
 import * as Ariakit from '@ariakit/react';
 import { ChevronRight } from 'lucide-react';
+import { MCPIcon } from '@librechat/client';
 import ToolStateControl from '~/components/Chat/Input/ToolStateControl';
-import { MCPIcon, PinIcon } from '@librechat/client';
 import { MCPServerHoverGroup } from '~/components/MCP/MCPServerTooltip';
 import MCPServerMenuItem from '~/components/MCP/MCPServerMenuItem';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
