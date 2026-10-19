@@ -94,7 +94,6 @@ ENV NODE_OPTIONS="--max-old-space-size=${NODE_MAX_OLD_SPACE_SIZE}"
 # Dockerfile for why this must be passed at build time, not runtime. CI must
 # pass this build-arg for the deployed manifest title to be correct here.
 ARG APP_TITLE=
-ENV APP_TITLE=${APP_TITLE}
 RUN npm run build
 
 # API setup (including client dist)

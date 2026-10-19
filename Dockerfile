@@ -47,10 +47,9 @@ ARG NPM_CI_ATTEMPTS=2
 # generation — CI must pass this as a build-arg per environment (e.g.
 # "MyAssist (DEV)") for the deployed manifest to match. Empty by default so
 # client/vite.config.ts falls through to its 'MyAssist' default. Declared as
-# ENV (not just ARG) so it's also set for any later RUN step without needing
-# to repeat it inline each time.
+# ARG only: an ENV would bake an empty APP_TITLE into the runtime image, and
+# dotenv never overrides an existing variable, so .env's value would be ignored.
 ARG APP_TITLE=
-ENV APP_TITLE=${APP_TITLE}
 
 RUN mkdir -p /app && chown node:node /app
 WORKDIR /app
