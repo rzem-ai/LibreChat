@@ -555,6 +555,27 @@ export interface GetAgent {
   ): Promise<IAgent | null>;
 }
 
+// Deloitte Custom Change: Retention Update
+/** An agent whose expiry made it eligible for the purge sweep and which this claim
+ * call successfully leased. `purgeAttempts` reflects the increment from this claim,
+ * so a caller can compute backoff without a second read. */
+export interface ClaimedPurgeAgent {
+  resourceId: string;
+  author: string;
+  id: string;
+  isPromoted: boolean;
+  tenantId?: string;
+  purgeClaimId: string;
+  purgeAttempts: number;
+}
+
+export interface ReleaseAgentPurgeClaimOptions {
+  success: boolean;
+  retryDelayMs?: number;
+  /** The claim token the release must still own; a stale release no longer stomps a newer claim. */
+  purgeClaimId: string;
+}
+
 export function createAgentMethods(
   mongoose: typeof import('mongoose'),
   deps: AgentDeps,
@@ -573,7 +594,11 @@ export function createAgentMethods(
     ids: string[],
     access?: AgentGraphAccessContext,
   ) => Promise<AgentGraphNode[]>;
-  createAgent: (agentData: Record<string, unknown>) => Promise<IAgent>;
+  // Deloitte Custom Change: Retention Update
+  createAgent: (
+    agentData: Record<string, unknown>,
+    options?: { retentionHours?: number },
+  ) => Promise<IAgent>;
   getAgentIdsByMCPServerName: (serverName: string) => Promise<Types.ObjectId[]>;
   getAgentsWithMCPServerNames: () => Promise<Array<Pick<IAgent, '_id' | 'mcpServerNames'>>>;
   updateAgent: (
@@ -583,6 +608,8 @@ export function createAgentMethods(
       updatingUserId?: string | null;
       forceVersion?: boolean;
       skipVersioning?: boolean;
+      // Deloitte Custom Change: Retention Update
+      retentionHours?: number;
     },
   ) => Promise<IAgent | null>;
   deleteAgent: (searchParameter: FilterQuery<IAgent>) => Promise<IAgent | null>;
@@ -667,6 +694,24 @@ export function createAgentMethods(
     excludeAgentObjectId?: string;
     excludeToolResource?: string;
   }) => Promise<string[]>;
+  // Deloitte Custom Change: Retention Update
+  claimExpiredAgents: (
+    limit: number,
+    options: { leaseMs: number; now?: Date },
+  ) => Promise<ClaimedPurgeAgent[]>;
+  releaseAgentPurgeClaim: (
+    resourceId: Types.ObjectId | string,
+    options: ReleaseAgentPurgeClaimOptions,
+  ) => Promise<void>;
+  touchAgentLastActivity: (
+    agentObjectId: Types.ObjectId | string,
+    retentionHours: number,
+    minIntervalMs?: number,
+  ) => Promise<void>;
+  setAgentRetentionException: (
+    agentId: string,
+    update: { exempt: boolean; reason?: string; setBy: string; setAt: Date },
+  ) => Promise<Pick<IAgent, 'id' | 'retentionException'> | null>;
 } {
   const { removeAllPermissions, getActions, getSoleOwnedResourceIds, isExternalSkillId } = deps;
 
@@ -701,8 +746,18 @@ export function createAgentMethods(
   /**
    * Create an agent with the provided data.
    */
-  async function createAgent(agentData: Record<string, unknown>): Promise<IAgent> {
+  // Deloitte Custom Change: Retention Update
+  async function createAgent(
+    agentData: Record<string, unknown>,
+    options: { retentionHours?: number } = {},
+  ): Promise<IAgent> {
     const Agent = mongoose.models.Agent as Model<IAgent>;
+    // Deloitte Custom Change: Retention Update
+    if (options.retentionHours != null) {
+      const now = new Date();
+      agentData.lastActivityAt = now;
+      agentData.expiredAt = new Date(now.getTime() + options.retentionHours * 60 * 60 * 1000);
+    }
     if (Array.isArray(agentData.skills) && agentData.skills.length > 0) {
       const prunedSkills = await filterExistingSkillIds(
         mongoose,
@@ -915,10 +970,23 @@ export function createAgentMethods(
       updatingUserId?: string | null;
       forceVersion?: boolean;
       skipVersioning?: boolean;
+      // Deloitte Custom Change: Retention Update
+      retentionHours?: number;
     } = {},
   ): Promise<IAgent | null> {
     const Agent = mongoose.models.Agent as Model<IAgent>;
-    const { updatingUserId = null, forceVersion = false, skipVersioning = false } = options;
+    // Deloitte Custom Change: Retention Update
+    const {
+      updatingUserId = null,
+      forceVersion = false,
+      skipVersioning = false,
+      retentionHours,
+    } = options;
+    if (retentionHours != null) {
+      const now = new Date();
+      updateData.lastActivityAt = now;
+      updateData.expiredAt = new Date(now.getTime() + retentionHours * 60 * 60 * 1000);
+    }
     const mongoOptions = { new: true, upsert: false };
     /** Set when the update would snapshot a version identical to the newest one. The write
      *  still lands; only the `versions` entry is dropped. */
@@ -1763,6 +1831,134 @@ export function createAgentMethods(
     );
   }
 
+  // Deloitte Custom Change: Retention Update
+  /**
+   * Leases up to `limit` expired, non-exempt, non-promoted agents for the retention
+   * purge sweep. Mirrors `claimExpiredConversations`: each claim is a conditional
+   * `findOneAndUpdate` per candidate, atomic without relying on DocumentDB's
+   * unsupported pipeline-form updates. An agent already leased by a live claim is
+   * skipped; one whose lease expired (`purgeClaimedAt` older than `leaseMs`) is
+   * reclaimed. Eligibility (promoted/legacy-global vs. not) happens in the caller
+   * after claiming — see `classifyAgentPurgeEligibility` in `@librechat/api`.
+   */
+  async function claimExpiredAgents(
+    limit: number,
+    { leaseMs, now = new Date() }: { leaseMs: number; now?: Date },
+  ): Promise<ClaimedPurgeAgent[]> {
+    const Agent = mongoose.models.Agent as Model<IAgent>;
+    const leaseExpiry = new Date(now.getTime() - leaseMs);
+    const unclaimedOrExpiredLease = {
+      $or: [{ purgeClaimId: { $exists: false } }, { purgeClaimedAt: { $lte: leaseExpiry } }],
+    };
+    const eligibilityFilter = {
+      expiredAt: { $lte: now },
+      'retentionException.exempt': { $ne: true },
+      $and: [
+        { $or: [{ purgeNotBefore: { $exists: false } }, { purgeNotBefore: { $lte: now } }] },
+        unclaimedOrExpiredLease,
+      ],
+    } as FilterQuery<IAgent>;
+
+    const candidates = await Agent.find(eligibilityFilter)
+      .select({ _id: 1, id: 1, author: 1, is_promoted: 1, tenantId: 1 })
+      .sort({ expiredAt: 1 })
+      .limit(limit)
+      .lean<Array<Pick<IAgent, '_id' | 'id' | 'author' | 'is_promoted' | 'tenantId'>>>();
+
+    const claimed: ClaimedPurgeAgent[] = [];
+    for (const candidate of candidates) {
+      const purgeClaimId = crypto.randomUUID();
+      const result = await Agent.findOneAndUpdate(
+        { _id: candidate._id, ...eligibilityFilter },
+        { $set: { purgeClaimId, purgeClaimedAt: now }, $inc: { purgeAttempts: 1 } },
+        { new: true },
+      ).lean<Pick<
+        IAgent,
+        '_id' | 'id' | 'author' | 'is_promoted' | 'tenantId' | 'purgeAttempts'
+      > | null>();
+
+      if (result?._id != null) {
+        claimed.push({
+          resourceId: String(result._id),
+          author: String(result.author),
+          id: result.id,
+          isPromoted: result.is_promoted ?? false,
+          tenantId: result.tenantId,
+          purgeClaimId,
+          purgeAttempts: result.purgeAttempts ?? 1,
+        });
+      }
+    }
+
+    return claimed;
+  }
+
+  /**
+   * Releases a purge claim after the sweep either finished the cascade
+   * (`success: true`) or failed/declined it (`success: false`, parking the row
+   * behind `purgeNotBefore` for `retryDelayMs`). Mirrors
+   * `releaseConversationPurgeClaim`.
+   */
+  async function releaseAgentPurgeClaim(
+    resourceId: Types.ObjectId | string,
+    { success, retryDelayMs, purgeClaimId }: ReleaseAgentPurgeClaimOptions,
+  ): Promise<void> {
+    const Agent = mongoose.models.Agent as Model<IAgent>;
+    const update: FilterQuery<IAgent> = {
+      $unset: { purgeClaimId: '', purgeClaimedAt: '' },
+    };
+    if (!success) {
+      update.$set = { purgeNotBefore: new Date(Date.now() + (retryDelayMs ?? 0)) };
+    }
+    await Agent.updateOne({ _id: resourceId, purgeClaimId }, update);
+  }
+
+  /**
+   * Fire-and-forget activity touch for the hot agent-resolution path. Throttled to
+   * a single write per `minIntervalMs` window (default 1 hour) via a guard on the
+   * update filter, so repeat use of the same agent within the window is a no-op
+   * write rather than one write per turn.
+   */
+  async function touchAgentLastActivity(
+    agentObjectId: Types.ObjectId | string,
+    retentionHours: number,
+    minIntervalMs: number = 60 * 60 * 1000,
+  ): Promise<void> {
+    const Agent = mongoose.models.Agent as Model<IAgent>;
+    const now = new Date();
+    const throttleWindow = new Date(now.getTime() - minIntervalMs);
+    await Agent.updateOne(
+      {
+        _id: agentObjectId,
+        $or: [{ lastActivityAt: { $exists: false } }, { lastActivityAt: { $lte: throttleWindow } }],
+      },
+      {
+        $set: {
+          lastActivityAt: now,
+          expiredAt: new Date(now.getTime() + retentionHours * 60 * 60 * 1000),
+        },
+      },
+    );
+  }
+
+  /**
+   * Admin-only, unconditional retention carve-out — the one lever that
+   * permanently exempts a specific agent from the purge sweep, independent of
+   * promotion/catalog status and regardless of who it's shared with. Not
+   * owner-scoped: the caller's route is responsible for admin authorization.
+   */
+  async function setAgentRetentionException(
+    agentId: string,
+    update: { exempt: boolean; reason?: string; setBy: string; setAt: Date },
+  ): Promise<Pick<IAgent, 'id' | 'retentionException'> | null> {
+    const Agent = mongoose.models.Agent as Model<IAgent>;
+    return await Agent.findOneAndUpdate(
+      { id: agentId },
+      { $set: { retentionException: update } },
+      { new: true, projection: { id: 1, retentionException: 1 } },
+    ).lean<Pick<IAgent, 'id' | 'retentionException'>>();
+  }
+
   return {
     getAgent,
     getAgentVersions,
@@ -1786,6 +1982,11 @@ export function createAgentMethods(
     removeAgentFromUserFavorites,
     removeAgentResourceFilesFromAllAgents,
     getSharedResourceFileIds,
+    // Deloitte Custom Change: Retention Update
+    claimExpiredAgents,
+    releaseAgentPurgeClaim,
+    touchAgentLastActivity,
+    setAgentRetentionException,
   };
 }
 

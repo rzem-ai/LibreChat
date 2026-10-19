@@ -110,4 +110,20 @@ export {
   migrateTenantIndexes,
   dropSupersededPromptGroupIndexes,
   backfillMCPServerNormalizedNames,
+  // Deloitte Custom Change: Retention Update
+  backfillConversationRetention,
+  dropRetentionTTLIndexes,
+  backfillFileRetention,
+  backfillAgentRetention,
+  backfillSkillRetention,
+} from './migrations';
+export type {
+  RetentionBackfillResult,
+  RetentionBackfillOptions,
+  FileRetentionBackfillResult,
+  FileRetentionBackfillOptions,
+  AgentRetentionBackfillResult,
+  AgentRetentionBackfillOptions,
+  SkillRetentionBackfillResult,
+  SkillRetentionBackfillOptions,
 } from './migrations';

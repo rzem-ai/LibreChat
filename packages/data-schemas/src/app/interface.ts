@@ -101,6 +101,13 @@ export async function loadDefaultInterface({
     generalChatRetention: interfaceConfig?.generalChatRetention,
     retentionMode: interfaceConfig?.retentionMode,
     retainAgentFiles: interfaceConfig?.retainAgentFiles,
+    // Deloitte Custom Change: Retention Update
+    fileRetentionHours: interfaceConfig?.fileRetentionHours,
+    fileRetentionWarningHours: interfaceConfig?.fileRetentionWarningHours,
+    agentRetentionHours: interfaceConfig?.agentRetentionHours,
+    agentRetentionWarningHours: interfaceConfig?.agentRetentionWarningHours,
+    memoryRetentionHours: interfaceConfig?.memoryRetentionHours,
+    agentFileRetentionHours: interfaceConfig?.agentFileRetentionHours,
     runCode: interfaceConfig?.runCode,
     webSearch: interfaceConfig?.webSearch,
     fileSearch: interfaceConfig?.fileSearch,

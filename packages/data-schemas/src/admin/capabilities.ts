@@ -40,6 +40,13 @@ export const SystemCapabilities = {
   /** Reserved — not yet enforced by any middleware. */
   READ_ASSISTANTS: 'read:assistants',
   MANAGE_ASSISTANTS: 'manage:assistants',
+  // Deloitte Custom Change: Retention Update
+  /**
+   * Reserved — not enforced by any middleware. Memory is never shared via `AclEntry`
+   * and has no admin-override/exemption path; this exists only to satisfy
+   * `ResourceCapabilityMap`'s exhaustive `Record<ResourceType, …>` typing.
+   */
+  MANAGE_MEMORIES: 'manage:memories',
   /**
    * Required to list, view, and CSV-export the SystemGrant audit log. Append-only
    * by design, so there is no MANAGE counterpart — modifying historical entries
@@ -185,6 +192,8 @@ export const ResourceCapabilityMap: Record<ResourceType, SystemCapability> = {
   [ResourceType.REMOTE_AGENT]: SystemCapabilities.MANAGE_AGENTS,
   [ResourceType.SKILL]: SystemCapabilities.MANAGE_SKILLS,
   [ResourceType.SHARED_LINK]: SystemCapabilities.MANAGE_SHARED_LINKS,
+  // Deloitte Custom Change: Retention Update
+  [ResourceType.MEMORY]: SystemCapabilities.MANAGE_MEMORIES,
 };
 
 /**

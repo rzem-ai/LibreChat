@@ -235,6 +235,19 @@ export interface IAgentEventBindingRecord {
   lineage: TSubagentThreadLineage;
 }
 
+// Deloitte Custom Change: Retention Update
+/**
+ * An explicit, auditable carve-out from default retention. Only a narrow,
+ * permissioned caller should ever set `exempt: true` — never accepted from a
+ * generic conversation/message save request body.
+ */
+export interface IRetentionException {
+  exempt: boolean;
+  reason?: string;
+  setBy?: string;
+  setAt?: Date;
+}
+
 export interface IActiveSubagentThreadLease {
   conversationId: string;
   parentConversationId: string;
@@ -335,6 +348,14 @@ export interface IConversation extends Document {
   // Additional fields
   files?: string[];
   expiredAt?: Date;
+  // Deloitte Custom Change: Retention Update
+  retentionException?: IRetentionException;
+  /** Lease holder for the in-flight purge sweep claiming this conversation. */
+  purgeClaimId?: string;
+  purgeClaimedAt?: Date;
+  purgeAttempts?: number;
+  /** Earliest time a sweep tick may claim this conversation again. */
+  purgeNotBefore?: Date;
   createdAt?: Date;
   updatedAt?: Date;
   tenantId?: string;

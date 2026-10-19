@@ -2354,6 +2354,27 @@ export const interfaceSchema = z
         simplifyFork: z.boolean().optional(),
         editChat: z.boolean().optional(),
         showToolsDropdown: z.boolean().optional(),
+        /** Deloitte Custom Change: tool keys (`skills`, `execute_code`, `artifacts`) switched on by default for users with no stored toggle. */
+        defaultEnabledTools: z.array(z.string()).optional(),
+        /** Deloitte Custom Change: which rows the tools dropdown lists (all when `items` is unset) and whether users get pin buttons. */
+        toolsDropdown: z
+          .object({
+            items: z
+              .array(
+                z.enum([
+                  'file_search',
+                  'web_search',
+                  'skills',
+                  'memory',
+                  'execute_code',
+                  'artifacts',
+                  'mcp',
+                ]),
+              )
+              .optional(),
+            showPinButtons: z.boolean().optional(),
+          })
+          .optional(),
         alwaysEnableFileSearch: z.boolean().optional(), // Deloitte Custom Change
         hideFileSearchToggle: z.boolean().optional(), // Deloitte Custom Change
         createActions: z.boolean().optional(),
@@ -2424,6 +2445,13 @@ export const interfaceSchema = z
     autoSubmitFromUrl: z.boolean().optional(),
     retentionMode: z.nativeEnum(RetentionMode).default(RetentionMode.TEMPORARY),
     retainAgentFiles: z.boolean().optional(),
+    // Deloitte Custom Change: Retention Update
+    fileRetentionHours: z.number().min(1).max(8760).optional(),
+    fileRetentionWarningHours: z.number().min(1).max(8760).optional(),
+    agentRetentionHours: z.number().min(1).max(8760).optional(),
+    agentRetentionWarningHours: z.number().min(1).max(8760).optional(),
+    memoryRetentionHours: z.number().min(1).max(8760).optional(),
+    agentFileRetentionHours: z.number().min(1).max(8760).optional(),
     runCode: z.boolean().optional(),
     webSearch: z.boolean().optional(),
     contextUsage: z.boolean().optional(),

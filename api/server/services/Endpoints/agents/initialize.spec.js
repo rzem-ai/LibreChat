@@ -702,6 +702,66 @@ describe('initializeClient — processAgent ACL gate', () => {
     expect(initializeParams.skillAuthoringAvailable).toBe(true);
   });
 
+  describe.each([
+    ['denied', false],
+    ['granted', true],
+  ])('ephemeral skills toggle with SKILLS.USE %s', (_label, canUse) => {
+    const expectActive = canUse;
+    it('scopes skills to the role grant', async () => {
+      const { skill } = await createSkill({
+        name: `role-gated-${_label}`,
+        description: 'Use for the role gate.',
+        body: '# Role gated skill\n',
+        author: testUser._id,
+        authorName: 'Skill Owner',
+      });
+      await AclEntry.create({
+        principalType: PrincipalType.USER,
+        principalId: testUser._id,
+        principalModel: PrincipalModel.USER,
+        resourceType: ResourceType.SKILL,
+        resourceId: skill._id,
+        permBits: PermissionBits.VIEW,
+        grantedBy: testUser._id,
+      });
+      const endpointOption = makeEndpointOption();
+      endpointOption.agent = Promise.resolve({
+        id: Constants.EPHEMERAL_AGENT_ID,
+        name: 'Ephemeral Primary',
+        provider: 'openai',
+        model: 'gpt-4',
+        tools: [],
+      });
+      mockInitializeAgent.mockResolvedValue(makePrimaryConfig([]));
+      const req = makeReq();
+      req.body.ephemeralAgent = { skills: true };
+      req.config.endpoints.agents = { capabilities: ['skills'] };
+      const canUseSkillsSpy = jest
+        .spyOn(getSkillToolDeps(), 'canUseSkills')
+        .mockResolvedValue(canUse);
+      const canCreateSkillSpy = jest
+        .spyOn(getSkillToolDeps(), 'canCreateSkill')
+        .mockResolvedValue(true);
+
+      try {
+        await initializeClient({
+          req,
+          res: {},
+          signal: new AbortController().signal,
+          endpointOption,
+        });
+      } finally {
+        canUseSkillsSpy.mockRestore();
+        canCreateSkillSpy.mockRestore();
+      }
+
+      const initializeParams = mockInitializeAgent.mock.calls[0][0];
+      const scopedIds = initializeParams.accessibleSkillIds.map(String);
+      expect(scopedIds.includes(skill._id.toString())).toBe(expectActive);
+      expect(initializeParams.skillAuthoringAvailable).toBe(expectActive);
+    });
+  });
+
   it('enables standalone authoring without exposing the persisted agent skill catalog', async () => {
     const endpointOption = makeEndpointOption();
     endpointOption.agent = Promise.resolve({

@@ -2,7 +2,8 @@ const { z } = require('zod');
 const { load } = require('js-yaml');
 const fs = require('fs').promises;
 const { nanoid } = require('nanoid');
-const { logger } = require('@librechat/data-schemas');
+// Deloitte Custom Change: Retention Update
+const { logger, getAgentRetentionHours } = require('@librechat/data-schemas');
 const {
   refreshS3Url,
   splitMCPToolKey,
@@ -23,6 +24,8 @@ const {
   mergeAgentOcrConversion,
   sanitizeModelParameters,
   MAX_AVATAR_REFRESH_AGENTS,
+  // Deloitte Custom Change: Retention Update
+  cascadeDeleteAgent,
   collectToolResourceFileIds,
   convertOcrToContextInPlace,
   normalizeToolResourceFiles,
@@ -82,7 +85,8 @@ const {
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { resizeAvatar } = require('~/server/services/Files/images/avatar');
 const { getFileStrategy } = require('~/server/utils/getFileStrategy');
-const { filterFile } = require('~/server/services/Files/process');
+// Deloitte Custom Change: Retention Update
+const { filterFile, processDeleteRequest } = require('~/server/services/Files/process');
 const { getCachedTools } = require('~/server/services/Config');
 const {
   createMCPPermissionContext,
@@ -908,7 +912,10 @@ const createAgentHandler = async (req, res) => {
       agentData.mcpServerNames = Array.from(resolvedServerNames);
     }
 
-    const agent = await db.createAgent(agentData);
+    // Deloitte Custom Change: Retention Update
+    const agent = await db.createAgent(agentData, {
+      retentionHours: getAgentRetentionHours(req.config?.interfaceConfig),
+    });
 
     try {
       await Promise.all([
@@ -1374,6 +1381,8 @@ const updateAgentHandler = async (req, res) => {
       Object.keys(updateData).length > 0
         ? await db.updateAgent({ id }, updateData, {
             updatingUserId: req.user.id,
+            // Deloitte Custom Change: Retention Update
+            retentionHours: getAgentRetentionHours(req.config?.interfaceConfig),
           })
         : existingAgent;
 
@@ -1635,7 +1644,10 @@ const duplicateAgentHandler = async (req, res) => {
 
     let newAgent;
     try {
-      newAgent = await db.createAgent(newAgentData);
+      // Deloitte Custom Change: Retention Update
+      newAgent = await db.createAgent(newAgentData, {
+        retentionHours: getAgentRetentionHours(req.config?.interfaceConfig),
+      });
     } catch (error) {
       await db.deleteActions({ agentId: newAgentId, user: userId }).catch((cleanupError) => {
         logger.error(
@@ -1699,11 +1711,32 @@ const duplicateAgentHandler = async (req, res) => {
 const deleteAgentHandler = async (req, res) => {
   try {
     const id = req.params.id;
-    const agent = await db.getAgent({ id });
-    if (!agent) {
+    // Deloitte Custom Change: Retention Update
+    const deleted = await cascadeDeleteAgent(
+      id,
+      { tenantId: req.user.tenantId },
+      {
+        getAgent: db.getAgent,
+        getFiles: db.getFiles,
+        getFileIdsAttachedToLiveConversations: db.getFileIdsAttachedToLiveConversations,
+        getSharedResourceFileIds: db.getSharedResourceFileIds,
+        removeAgentResourceFiles: db.removeAgentResourceFiles,
+        deleteFiles: (files) => processDeleteRequest({ req, files }),
+        deleteAvatarBlob: (avatar) => {
+          const { deleteFile } = getStrategyFunctions(avatar.source);
+          return deleteFile(req, {
+            filepath: avatar.filepath,
+            user: req.user.id,
+            tenantId: req.user.tenantId,
+          });
+        },
+        deleteFileByFilter: db.deleteFileByFilter,
+        deleteAgent: db.deleteAgent,
+      },
+    );
+    if (!deleted) {
       return res.status(404).json({ error: 'Agent not found' });
     }
-    await db.deleteAgent({ id });
     return res.json({ message: 'Agent deleted' });
   } catch (error) {
     logger.error('[/Agents/:id] Error deleting Agent', error);
@@ -2007,6 +2040,8 @@ const uploadAgentAvatarHandler = async (req, res) => {
 
     const updatedAgent = await db.updateAgent({ id: agent_id }, data, {
       updatingUserId: req.user.id,
+      // Deloitte Custom Change: Retention Update
+      retentionHours: getAgentRetentionHours(req.config?.interfaceConfig),
     });
     await attachOwnerContacts([updatedAgent]);
 
@@ -2195,7 +2230,11 @@ const revertAgentVersionHandler = async (req, res) => {
     }
 
     if (Object.keys(revertUpdates).length > 0) {
-      updatedAgent = await db.updateAgent({ id }, revertUpdates, { updatingUserId: req.user.id });
+      // Deloitte Custom Change: Retention Update
+      updatedAgent = await db.updateAgent({ id }, revertUpdates, {
+        updatingUserId: req.user.id,
+        retentionHours: getAgentRetentionHours(req.config?.interfaceConfig),
+      });
     }
 
     if (updatedAgent.author) {

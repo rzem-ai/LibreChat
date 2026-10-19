@@ -1074,6 +1074,8 @@ const executeResponse = async (envelope, { req, res }) => {
             userId: principal.userId,
             memoryAvailable,
             getFormattedMemories: db.getFormattedMemories,
+            // Deloitte Custom Change: Retention Update
+            touchMemoriesLastActivity: db.touchMemoriesLastActivity,
           });
           return applyContextToAgent({
             agent: runAgent,
