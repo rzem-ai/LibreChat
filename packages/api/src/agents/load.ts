@@ -1,4 +1,5 @@
-import { logger } from '@librechat/data-schemas';
+// Deloitte Custom Change: Retention Update
+import { logger, getAgentRetentionHours } from '@librechat/data-schemas';
 import {
   Tools,
   Constants,
@@ -35,6 +36,9 @@ export interface LoadAgentDeps {
   getAgent: (searchParameter: {
     id: string;
   }) => Promise<(Agent & { version?: number; versions?: { length: number } }) | null>;
+  // Deloitte Custom Change: Retention Update
+  /** Throttled fire-and-forget activity stamp; omitted, the touch is skipped. */
+  touchAgentLastActivity?: (agentObjectId: string, retentionHours: number) => Promise<void>;
   getMCPServerTools: (
     userId: string,
     serverName: string,
@@ -243,6 +247,15 @@ export async function loadAgent(
 
   if (!agent) {
     return null;
+  }
+
+  // Deloitte Custom Change: Retention Update
+  if (agent._id) {
+    deps
+      .touchAgentLastActivity?.(agent._id, getAgentRetentionHours(req.config?.interfaceConfig))
+      .catch((error: unknown) => {
+        logger.error('[loadAgent] Error touching agent last activity', error);
+      });
   }
 
   agent.version ??= agent.versions?.length ?? 0;

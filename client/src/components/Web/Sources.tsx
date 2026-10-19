@@ -45,7 +45,8 @@ function SourceItem({ source, expanded = false }: SourceItemProps) {
           <span className="truncate text-xs font-medium text-text-secondary">{domain}</span>
         </div>
         <div className="mt-1">
-          <span className="line-clamp-2 text-sm font-medium text-text-primary md:line-clamp-3">
+          {/* Deloitte Custom Change: wrap unbroken citation titles in expanded source cards. */}
+          <span className="line-clamp-2 text-sm font-medium text-text-primary [overflow-wrap:anywhere] md:line-clamp-3">
             {source.title || source.link}
           </span>
           {'snippet' in source && source.snippet && (
@@ -75,7 +76,8 @@ function SourceItem({ source, expanded = false }: SourceItemProps) {
                   <span className="truncate text-xs font-medium text-text-secondary">{domain}</span>
                 </div>
                 <div className="mt-1">
-                  <span className="line-clamp-2 text-sm font-medium text-text-primary md:line-clamp-3">
+                  {/* Deloitte Custom Change: wrap unbroken citation titles in source cards. */}
+                  <span className="line-clamp-2 text-sm font-medium text-text-primary [overflow-wrap:anywhere] md:line-clamp-3">
                     {source.title || source.link}
                   </span>
                 </div>
@@ -107,11 +109,12 @@ function SourceItem({ source, expanded = false }: SourceItemProps) {
                   <span className="float-right ml-2 max-w-[40%] truncate text-xs text-text-secondary">
                     {domain}
                   </span>
+                  {/* Deloitte Custom Change: wrap unbroken citation titles in source hovercards. */}
                   <a
                     href={source.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-medium text-text-primary hover:underline"
+                    className="block max-w-full font-medium text-text-primary [overflow-wrap:anywhere] hover:underline"
                   >
                     {source.title || source.link}
                   </a>
@@ -305,7 +308,8 @@ const FileItem = React.memo(function FileItem({
           {!isLocalFile && <Download className="ml-auto size-3" aria-hidden="true" />}
         </div>
         <div className="mt-1 min-w-0">
-          <span className="line-clamp-2 break-words text-left text-sm font-medium text-text-primary md:line-clamp-3">
+          {/* Deloitte Custom Change: wrap unbroken file citation titles in expanded source cards. */}
+          <span className="line-clamp-2 text-left text-sm font-medium text-text-primary [overflow-wrap:anywhere] md:line-clamp-3">
             {file.filename}
           </span>
           {file.pages && file.pages.length > 0 && (
@@ -346,7 +350,8 @@ const FileItem = React.memo(function FileItem({
         {!isLocalFile && <Download className="ml-auto size-3" aria-hidden="true" />}
       </div>
       <div className="mt-1 min-w-0">
-        <span className="line-clamp-2 break-words text-left text-sm font-medium text-text-primary md:line-clamp-3">
+        {/* Deloitte Custom Change: wrap unbroken file citation titles in source cards. */}
+        <span className="line-clamp-2 text-left text-sm font-medium text-text-primary [overflow-wrap:anywhere] md:line-clamp-3">
           {file.filename}
         </span>
         {file.pages && file.pages.length > 0 && (
@@ -452,7 +457,8 @@ const SourcesGroup = React.memo(function SourcesGroup({
                     className="h-5 w-5 flex-shrink-0"
                   />
                   <div className="min-w-0 flex-1">
-                    <h3 className="mb-0.5 truncate text-sm font-medium text-text-primary">
+                    {/* Deloitte Custom Change: wrap unbroken citation titles in the sources dialog. */}
+                    <h3 className="mb-0.5 line-clamp-2 text-sm font-medium text-text-primary [overflow-wrap:anywhere]">
                       {source.title || source.link}
                     </h3>
                     {'snippet' in source && source.snippet && (

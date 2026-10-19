@@ -51,6 +51,9 @@ export type TModelSpec = {
   authType?: AuthType;
   /** Hide the chat input tool badge row while this model spec is active. */
   hideBadgeRow?: boolean;
+  // TODO (deloitte) webSearch/fileSearch gate the spec's agent tools and overlap in spirit with
+  // details.supports.webSearch/fileIngestion, which describe model capability for display.
+  // A future pass could consolidate these so admins don't have to state the same fact twice.
   webSearch?: boolean;
   fileSearch?: boolean;
   executeCode?: boolean;
@@ -82,7 +85,32 @@ export type TModelSpec = {
   mcpServers?: string[];
   skills?: boolean | string[];
   subagents?: ModelSpecSubagentsConfig;
+  // Deloitte Custom Change: editorial per-model metadata (speed/intelligence/supports) for
+  // the model info tooltip, reusable by any future UI surface.
+  details?: ModelSpecDetails;
+  /**
+   * Deloitte Custom Change: Artificial Analysis API `slug` used by the
+   * `deloitte.sync-model-metadata` CI workflow to populate `details.speed`/`intelligence`.
+   * Omit for specs with no Artificial Analysis catalog equivalent.
+   */
+  artificialAnalysisBenchmarkModelName?: string;
 };
+
+// Deloitte Custom Change: schema for the new `details` field above.
+export const modelSpecDetailsSchema = z.object({
+  /** 1-5 rating, same scale as the cost `$` tier (`customDeloitteFeatureFlags.modelPricingTierBreakpoints`). */
+  speed: z.number().int().min(1).max(5).optional(),
+  intelligence: z.number().int().min(1).max(5).optional(),
+  supports: z
+    .object({
+      webSearch: z.boolean().optional(),
+      imageGeneration: z.boolean().optional(),
+      fileIngestion: z.boolean().optional(),
+    })
+    .optional(),
+});
+
+export type ModelSpecDetails = z.infer<typeof modelSpecDetailsSchema>;
 
 export const modelSpecSubagentsSchema = z
   .object({
@@ -205,6 +233,8 @@ export const tModelSpecSchema = z.object({
   mcpServers: z.array(z.string()).optional(),
   skills: z.union([z.boolean(), z.array(z.string())]).optional(),
   subagents: modelSpecSubagentsSchema.optional(),
+  details: modelSpecDetailsSchema.optional(), // Deloitte Custom Change
+  artificialAnalysisBenchmarkModelName: z.string().optional(), // Deloitte Custom Change
 });
 
 export const specsConfigSchema = z.object({

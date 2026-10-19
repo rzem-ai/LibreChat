@@ -885,6 +885,17 @@ describe('createMCPTool', () => {
         properties: { fileName: { type: 'string' }, content: { type: 'string' } },
         required: ['fileName', 'content'],
         oneOf: [{ required: ['fileName'] }],
+        // Deloitte Custom Change: preserve arguments declared by root allOf members.
+        allOf: [
+          {
+            properties: {
+              driveId: { type: 'string' },
+              content: { type: 'string' },
+              encoding: { type: 'string' },
+            },
+            required: ['driveId', 'content', 'encoding'],
+          },
+        ],
       },
     };
     getAppConfig.mockResolvedValue({
@@ -903,7 +914,9 @@ describe('createMCPTool', () => {
 
     expect(toolInstance.name).toBe(uploadKey);
     expect(toolInstance.mcpJsonSchema.properties.content).toBeUndefined();
+    expect(toolInstance.mcpJsonSchema.properties.driveId).toEqual({ type: 'string' });
     expect(toolInstance.mcpJsonSchema.properties.sourceFileName).toBeDefined();
+    expect(toolInstance.mcpJsonSchema.required).toEqual(['fileName', 'driveId']);
     expect(toolInstance.mcpJsonSchema.oneOf).toEqual([{ required: ['fileName'] }]);
     // Strict function-calling providers (e.g. OpenAI) reject oneOf/anyOf/allOf
     // at the schema root, so the upload tools must not add one here.
@@ -1120,13 +1133,63 @@ describe('resolveAttachmentUpload', () => {
     ).rejects.toThrow('Specify exactly one attachment source reference');
   });
 
+  // Deloitte Custom Change: require upload sources to be attached to the active request.
   it('rejects a sourceFileId that is not attached to the current request', async () => {
     await expect(
       resolveAttachmentUpload({
         toolArguments: { sourceFileId: 'other-user-file' },
         requestBody: { files: [{ file_id: 'file-1' }] },
       }),
-    ).rejects.toThrow('Attachment source must identify a file available to the current user');
+    ).rejects.toThrow('This file is not available for this upload. Attach it to this message');
+  });
+
+  // Deloitte Custom Change: explain when a failed generation leaves no uploadable artifact.
+  it('explains when a generated filename was not persisted in the active conversation', async () => {
+    getMessages.mockResolvedValue([]);
+    getCodeGeneratedFiles.mockResolvedValue([]);
+
+    await expect(
+      resolveAttachmentUpload({
+        toolArguments: { sourceFileName: 'AFR_Latest_News_v2.pptx' },
+        requestBody: { conversationId: 'conversation-1', parentMessageId: 'parent-1' },
+        user: { id: 'user-1' },
+      }),
+    ).rejects.toThrow('The generated file is unavailable');
+  });
+
+  // Deloitte Custom Change: keep duplicate filenames fail-closed rather than choosing an artifact.
+  it('rejects ambiguous generated filenames without selecting either file', async () => {
+    getMessages.mockResolvedValue([]);
+    getCodeGeneratedFiles.mockResolvedValue([
+      { file_id: 'file-1', filename: 'report.pptx' },
+      { file_id: 'file-2', filename: 'report.pptx' },
+    ]);
+
+    await expect(
+      resolveAttachmentUpload({
+        toolArguments: { sourceFileName: 'report.pptx' },
+        requestBody: { conversationId: 'conversation-1', parentMessageId: 'parent-1' },
+        user: { id: 'user-1' },
+      }),
+    ).rejects.toThrow('More than one file matches this name');
+  });
+
+  // Deloitte Custom Change: provide a recovery message for Gemini's combined file reference.
+  it('explains when a Gemini sourceFile matches neither an attachment nor a generated file', async () => {
+    await expect(
+      resolveAttachmentUpload({ toolArguments: { sourceFile: 'missing-file' } }),
+    ).rejects.toThrow('The requested file could not be found');
+  });
+
+  // Deloitte Custom Change: do not search outside the active conversation for generated files.
+  it('explains when a generated file is unavailable without active conversation context', async () => {
+    await expect(
+      resolveAttachmentUpload({
+        toolArguments: { sourceFileName: 'missing-context.pptx' },
+        user: { id: 'user-1' },
+      }),
+    ).rejects.toThrow('The generated file is unavailable');
+    expect(getMessages).not.toHaveBeenCalled();
   });
 
   it('rejects an empty sourceFileId instead of forwarding an incomplete upload', async () => {

@@ -1,3 +1,5 @@
+// Deloitte Custom Change: Retention Update
+import crypto from 'node:crypto';
 import {
   ResourceType,
   SkillsScope,
@@ -43,6 +45,24 @@ export type ValidationIssue = {
    */
   severity?: 'error' | 'warning';
 };
+
+// Deloitte Custom Change: Retention Update
+/** A skill claimed by the retention purge sweep, enough to classify and cascade-delete it. */
+export interface ClaimedPurgeSkill {
+  resourceId: string;
+  author: string;
+  source: string;
+  tenantId?: string;
+  purgeClaimId: string;
+  purgeAttempts: number;
+}
+
+export interface ReleaseSkillPurgeClaimOptions {
+  success: boolean;
+  retryDelayMs?: number;
+  /** The claim token the release must still own; a stale release no longer stomps a newer claim. */
+  purgeClaimId: string;
+}
 
 export type DeleteSkillCleanupStep = 'agent_allowlists' | 'skill_files' | 'permissions';
 
@@ -1033,7 +1053,11 @@ export function createSkillMethods(
   mongoose: typeof import('mongoose'),
   deps: SkillDeps,
 ): {
-  createSkill: (data: CreateSkillInput) => Promise<CreateSkillResult>;
+  // Deloitte Custom Change: Retention Update
+  createSkill: (
+    data: CreateSkillInput,
+    options?: { retentionHours?: number },
+  ) => Promise<CreateSkillResult>;
   getSkillById: (id: string | Types.ObjectId) => Promise<(ISkill & { _id: Types.ObjectId }) | null>;
   getSkillByName: (
     name: string,
@@ -1073,6 +1097,8 @@ export function createSkillMethods(
     id: string;
     expectedVersion: number;
     update: UpdateSkillInput;
+    // Deloitte Custom Change: Retention Update
+    retentionHours?: number;
   }) => Promise<UpdateSkillResult>;
   deleteSkill: (id: string) => Promise<DeleteSkillResult>;
   deleteUserSkills: (userId: Types.ObjectId | string) => Promise<number>;
@@ -1110,6 +1136,29 @@ export function createSkillMethods(
       codeEnvRef: CodeEnvRef;
     }>,
   ) => Promise<{ matchedCount: number; modifiedCount: number }>;
+  // Deloitte Custom Change: Retention Update
+  claimExpiredSkills: (
+    limit: number,
+    options: { leaseMs: number; now?: Date },
+  ) => Promise<ClaimedPurgeSkill[]>;
+  releaseSkillPurgeClaim: (
+    resourceId: Types.ObjectId | string,
+    options: ReleaseSkillPurgeClaimOptions,
+  ) => Promise<void>;
+  confirmSkillPurgeEligible: (
+    skillId: Types.ObjectId | string,
+    purgeClaimId: string,
+    now?: Date,
+  ) => Promise<Pick<ISkillDocument, '_id' | 'author'> | null>;
+  touchSkillsLastActivity: (
+    skillIds: Array<Types.ObjectId | string>,
+    retentionHours: number,
+    minIntervalMs?: number,
+  ) => Promise<void>;
+  setSkillRetentionException: (
+    skillId: string,
+    update: { exempt: boolean; reason?: string; setBy: string; setAt: Date },
+  ) => Promise<Pick<ISkillDocument, 'retentionException'> | null>;
 } {
   const { ObjectId } = mongoose.Types;
 
@@ -1164,7 +1213,11 @@ export function createSkillMethods(
     ).toString('base64');
   }
 
-  async function createSkill(data: CreateSkillInput): Promise<CreateSkillResult> {
+  // Deloitte Custom Change: Retention Update
+  async function createSkill(
+    data: CreateSkillInput,
+    options: { retentionHours?: number } = {},
+  ): Promise<CreateSkillResult> {
     const normalizedFrontmatter = isPlainObject(data.frontmatter)
       ? normalizeSkillFrontmatterKeys(data.frontmatter)
       : undefined;
@@ -1235,6 +1288,8 @@ export function createSkillMethods(
     }
 
     const derived = deriveStructuredFrontmatterFields(frontmatter);
+    // Deloitte Custom Change: Retention Update
+    const now = new Date();
     const doc = await Skill.create({
       name: data.name,
       displayTitle: data.displayTitle,
@@ -1256,6 +1311,13 @@ export function createSkillMethods(
         bodyAlwaysApply,
       ),
       tenantId: data.tenantId,
+      // Deloitte Custom Change: Retention Update
+      ...(options.retentionHours != null
+        ? {
+            lastActivityAt: now,
+            expiredAt: new Date(now.getTime() + options.retentionHours * 60 * 60 * 1000),
+          }
+        : {}),
       ...derived,
     });
     return {
@@ -1493,8 +1555,11 @@ export function createSkillMethods(
     id: string;
     expectedVersion: number;
     update: UpdateSkillInput;
+    // Deloitte Custom Change: Retention Update
+    retentionHours?: number;
   }): Promise<UpdateSkillResult> {
-    const { id, expectedVersion, update } = params;
+    // Deloitte Custom Change: Retention Update
+    const { id, expectedVersion, update, retentionHours } = params;
     if (!isValidObjectIdString(id)) {
       return { status: 'not_found' };
     }
@@ -1632,6 +1697,12 @@ export function createSkillMethods(
     }
     if (derivedAlwaysApply !== undefined) {
       setPayload.alwaysApply = derivedAlwaysApply;
+    }
+    // Deloitte Custom Change: Retention Update
+    if (retentionHours != null) {
+      const now = new Date();
+      setPayload.lastActivityAt = now;
+      setPayload.expiredAt = new Date(now.getTime() + retentionHours * 60 * 60 * 1000);
     }
 
     const updateOps: Record<string, unknown> = {
@@ -2013,6 +2084,165 @@ export function createSkillMethods(
     return { matchedCount: result.matchedCount, modifiedCount: result.modifiedCount };
   }
 
+  // Deloitte Custom Change: Retention Update
+  /**
+   * Leases up to `limit` expired, non-exempt skills for the retention purge
+   * sweep. Mirrors `claimExpiredAgents`/`claimExpiredConversations`: each claim
+   * is a conditional `findOneAndUpdate` per candidate, atomic without relying
+   * on DocumentDB's unsupported pipeline-form updates. A skill already leased
+   * by a live claim is skipped; one whose lease expired (`purgeClaimedAt`
+   * older than `leaseMs`) is reclaimed. Eligibility (inline vs. synced)
+   * happens in the caller after claiming — see `classifySkillPurgeEligibility`
+   * in `@librechat/api`.
+   */
+  async function claimExpiredSkills(
+    limit: number,
+    { leaseMs, now = new Date() }: { leaseMs: number; now?: Date },
+  ): Promise<ClaimedPurgeSkill[]> {
+    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
+    const leaseExpiry = new Date(now.getTime() - leaseMs);
+    const unclaimedOrExpiredLease = {
+      $or: [{ purgeClaimId: { $exists: false } }, { purgeClaimedAt: { $lte: leaseExpiry } }],
+    };
+    const eligibilityFilter = {
+      expiredAt: { $lte: now },
+      'retentionException.exempt': { $ne: true },
+      $and: [
+        { $or: [{ purgeNotBefore: { $exists: false } }, { purgeNotBefore: { $lte: now } }] },
+        unclaimedOrExpiredLease,
+      ],
+    } as FilterQuery<ISkillDocument>;
+
+    const candidates = await Skill.find(eligibilityFilter)
+      .select({ _id: 1, author: 1, source: 1, tenantId: 1 })
+      .sort({ expiredAt: 1 })
+      .limit(limit)
+      .lean<Array<Pick<ISkillDocument, '_id' | 'author' | 'source' | 'tenantId'>>>();
+
+    const claimed: ClaimedPurgeSkill[] = [];
+    for (const candidate of candidates) {
+      const purgeClaimId = crypto.randomUUID();
+      const result = await Skill.findOneAndUpdate(
+        { _id: candidate._id, ...eligibilityFilter },
+        { $set: { purgeClaimId, purgeClaimedAt: now }, $inc: { purgeAttempts: 1 } },
+        { new: true },
+      ).lean<Pick<
+        ISkillDocument,
+        '_id' | 'author' | 'source' | 'tenantId' | 'purgeAttempts'
+      > | null>();
+
+      if (result?._id != null) {
+        claimed.push({
+          resourceId: String(result._id),
+          author: String(result.author),
+          source: result.source ?? 'inline',
+          tenantId: result.tenantId,
+          purgeClaimId,
+          purgeAttempts: result.purgeAttempts ?? 1,
+        });
+      }
+    }
+
+    return claimed;
+  }
+
+  /**
+   * Releases a purge claim after the sweep either finished the cascade
+   * (`success: true`) or failed/declined it (`success: false`, parking the
+   * row behind `purgeNotBefore` for `retryDelayMs`). Mirrors
+   * `releaseAgentPurgeClaim`/`releaseConversationPurgeClaim`.
+   */
+  async function releaseSkillPurgeClaim(
+    resourceId: Types.ObjectId | string,
+    { success, retryDelayMs, purgeClaimId }: ReleaseSkillPurgeClaimOptions,
+  ): Promise<void> {
+    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
+    const update: FilterQuery<ISkillDocument> = {
+      $unset: { purgeClaimId: '', purgeClaimedAt: '' },
+    };
+    if (!success) {
+      update.$set = { purgeNotBefore: new Date(Date.now() + (retryDelayMs ?? 0)) };
+    }
+    await Skill.updateOne({ _id: resourceId, purgeClaimId }, update);
+  }
+
+  /**
+   * Re-checks the time-sensitive purge eligibility (expiry, exemption) and
+   * claim ownership immediately before the destructive cascade, closing the
+   * gap between `claimExpiredSkills` and `deleteSkill`. A renewal or
+   * exemption granted after the claim was taken makes this resolve to
+   * `null`, aborting the cascade instead of deleting a skill that's no
+   * longer eligible.
+   */
+  async function confirmSkillPurgeEligible(
+    skillId: Types.ObjectId | string,
+    purgeClaimId: string,
+    now: Date = new Date(),
+  ): Promise<Pick<ISkillDocument, '_id' | 'author'> | null> {
+    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
+    return await Skill.findOne({
+      _id: skillId,
+      purgeClaimId,
+      expiredAt: { $lte: now },
+      'retentionException.exempt': { $ne: true },
+    })
+      .select({ _id: 1, author: 1 })
+      .lean<Pick<ISkillDocument, '_id' | 'author'> | null>();
+  }
+
+  /**
+   * Fire-and-forget activity touch for skills primed into a turn. Throttled
+   * to a single write per `minIntervalMs` window (default 1 hour) via a
+   * guard on the update filter, so repeat use of the same skill within the
+   * window is a no-op write rather than one write per turn.
+   */
+  async function touchSkillsLastActivity(
+    skillIds: Array<Types.ObjectId | string>,
+    retentionHours: number,
+    minIntervalMs: number = 60 * 60 * 1000,
+  ): Promise<void> {
+    if (skillIds.length === 0) {
+      return;
+    }
+    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
+    const now = new Date();
+    const throttleWindow = new Date(now.getTime() - minIntervalMs);
+    await Skill.updateMany(
+      {
+        _id: { $in: skillIds },
+        $or: [{ lastActivityAt: { $exists: false } }, { lastActivityAt: { $lte: throttleWindow } }],
+      },
+      {
+        $set: {
+          lastActivityAt: now,
+          expiredAt: new Date(now.getTime() + retentionHours * 60 * 60 * 1000),
+        },
+      },
+    );
+  }
+
+  /**
+   * Admin-only, unconditional retention carve-out — the one lever that
+   * permanently exempts a specific skill from the purge sweep, independent of
+   * `source`/sync status and regardless of who it's shared with. Not
+   * owner-scoped: the caller's route is responsible for admin authorization.
+   */
+  async function setSkillRetentionException(
+    skillId: string,
+    update: { exempt: boolean; reason?: string; setBy: string; setAt: Date },
+  ): Promise<Pick<ISkillDocument, 'retentionException'> | null> {
+    if (!isValidObjectIdString(skillId)) {
+      return null;
+    }
+    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
+    const result = await Skill.findOneAndUpdate(
+      { _id: new ObjectId(skillId) },
+      { $set: { retentionException: update } },
+      { new: true, projection: { retentionException: 1 } },
+    ).lean<Pick<ISkillDocument, 'retentionException'>>();
+    return result;
+  }
+
   return {
     createSkill,
     getSkillById,
@@ -2031,6 +2261,12 @@ export function createSkillMethods(
     getSkillFileByPath,
     updateSkillFileContent,
     updateSkillFileCodeEnvIds,
+    // Deloitte Custom Change: Retention Update
+    claimExpiredSkills,
+    releaseSkillPurgeClaim,
+    confirmSkillPurgeEligible,
+    touchSkillsLastActivity,
+    setSkillRetentionException,
   };
 }
 

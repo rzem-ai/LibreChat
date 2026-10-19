@@ -48,17 +48,8 @@ pods:
           TOKEN_PROXY_MCP_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
     containers:
       librechat:
-        command:
-          - /bin/sh
-          - -c
-          - >-
-            mkdir -p /app/client/dist/assets && if [ -d /app/deloitte/assets ]; then
-              cp -a /app/deloitte/assets/. /app/client/dist/assets/;
-            elif [ -d /app/deloitte-assets ]; then
-              cp -a /app/deloitte-assets/. /app/client/dist/assets/;
-            fi && exec npm run backend
         image:
-          tag: 'develop@sha256:446e85128d20b71b07681855b122ff22e30aa36ccc38231e54b324376a39a88e'
+          tag: 'develop@sha256:fde5003c3ee8c8b8296d76053ba0eb9202b7a55a28b1cafdb005d9ec1a9e8e56'
         resources:
           requests:
             memory: "2Gi"
@@ -69,7 +60,7 @@ pods:
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
-          ANTHROPIC_MODELS: 'claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-sonnet-5,claude-opus-4-8'
+          ANTHROPIC_MODELS: 'claude-haiku-4-5,claude-haiku-5-5,claude-sonnet-4-6,claude-sonnet-5,claude-sonnet-5-5,claude-opus-4-6,claude-opus-4-8,claude-opus-5-5'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
           APP_TITLE: 'MyAssist (DEV)'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
@@ -78,7 +69,7 @@ pods:
           BEDROCK_AWS_ACCESS_KEY_ID: 'unused'
           BEDROCK_AWS_DEFAULT_REGION: 'ap-southeast-2'
           BEDROCK_AWS_SECRET_ACCESS_KEY: 'unused'
-          BEDROCK_AWS_MODELS: 'au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0'
+          BEDROCK_AWS_MODELS: 'au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0,au.anthropic.claude-haiku-5-5,au.anthropic.claude-sonnet-5-5,au.anthropic.claude-opus-5-5'
           BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081/bedrock'
           CUSTOM_FOOTER: '⚠️ WARNING: This is a development environment. Do not upload client or confidential data.'
           DOMAIN_CLIENT: 'https://librechat-dev.ctk.au.deloitte.com'
@@ -87,6 +78,7 @@ pods:
           EMBEDDINGS_PROVIDER: 'openai'
           ENDPOINTS: 'agents,anthropic,bedrock,custom'
           KEY_VAULT_NAME: 'kv-int-librechat-dev'
+          LEARNING_CENTER_FAQ_AGENT_ID: 'agent_arr_Uz20-PrgY9uY8eXAL'
           MCP_GATEWAY_OBO_SCOPE: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
           MCP_GATEWAY_TOOLSETS: 'teams,research,news,kx,desc,gims'
           MCP_GATEWAY_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
@@ -176,7 +168,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:2edee5f63cefc01bb1755c14aa6d79c34694c3ed385b2924b7c3235db67a2730'
+          tag: 'develop@sha256:31977a9827cb211a12bc1599478d7b001023e375c4a2516bf4941b8ec01fa028'
         resources:
           requests:
             memory: "1Gi"
@@ -240,7 +232,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:77cdd85576e4039b938a51bb743b214c87d651e3df1c6358ffc37ef3c8a3aa56'
+          tag: 'develop@sha256:cabc158f87d9c02a00cebfe83e7569a7695ab6530b0b0502661332ac867341bb'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'

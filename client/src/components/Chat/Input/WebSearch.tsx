@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { Globe } from 'lucide-react';
 import { CheckboxButton } from '@librechat/client';
 import { Permissions, PermissionTypes } from 'librechat-data-provider';
+import { useToolsDropdownConfig } from '~/hooks/Plugins/useToolsDropdownConfig';
 import { useLocalize, useHasAccess } from '~/hooks';
 import { useBadgeRowContext } from '~/Providers';
 import { badgeAccents } from './accents';
@@ -13,6 +14,8 @@ function WebSearch() {
     permission: Permissions.USE,
   });
   const context = useBadgeRowContext();
+  // Deloitte Custom Change: hide the pill when the tools dropdown is this tool's only control.
+  const { isDropdownOnly } = useToolsDropdownConfig();
   if (!canUseWebSearch) {
     return null;
   }
@@ -24,7 +27,7 @@ function WebSearch() {
   const { badgeTriggerRef } = searchApiKeyForm;
 
   return (
-    (isPinned || (webSearch && authData?.authenticated)) && (
+    (isPinned || (webSearch && authData?.authenticated && !isDropdownOnly('web_search'))) && (
       <CheckboxButton
         ref={badgeTriggerRef}
         checked={webSearch}

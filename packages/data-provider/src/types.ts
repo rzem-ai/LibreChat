@@ -978,7 +978,8 @@ export type TGetRandomPromptsRequest = {
   skip: number;
 };
 
-export type TCustomConfigSpeechResponse = { [key: string]: string };
+// Deloitte Custom Change: speech config responses include boolean and numeric preferences.
+export type TCustomConfigSpeechResponse = Record<string, string | number | boolean>;
 
 export type TUserTermsResponse = {
   termsAccepted: boolean;

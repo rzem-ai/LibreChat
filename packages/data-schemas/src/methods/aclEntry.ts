@@ -112,6 +112,11 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')): {
     resourceId: string | Types.ObjectId,
     session?: ClientSession,
   ) => Promise<IAclEntry[]>;
+  // Deloitte Custom Change: Retention Update
+  findEntriesByResources: (
+    resourceType: string,
+    resourceIds: Array<string | Types.ObjectId>,
+  ) => Promise<IAclEntry[]>;
   findEntriesByPrincipalsAndResource: (
     principalsList: Array<{ principalType: string; principalId?: string | Types.ObjectId }>,
     resourceType: string,
@@ -229,6 +234,29 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')): {
       query.session(session);
     }
     return await query.lean<IAclEntry[]>();
+  }
+
+  // Deloitte Custom Change: Retention Update
+  /**
+   * Find ACL entries across a batch of resources of the same type in one query,
+   * so callers classifying many candidates (e.g. a retention sweep claim batch)
+   * don't issue one round trip per resource.
+   * @param resourceType - The type of resource ('agent', 'skill', ...)
+   * @param resourceIds - The ids of the resources
+   * @returns Array of matching ACL entries across all requested resources
+   */
+  async function findEntriesByResources(
+    resourceType: string,
+    resourceIds: Array<string | Types.ObjectId>,
+  ): Promise<IAclEntry[]> {
+    const AclEntry = mongoose.models.AclEntry as Model<IAclEntry>;
+    if (resourceIds.length === 0) {
+      return [];
+    }
+    return await AclEntry.find({
+      resourceType,
+      resourceId: { $in: resourceIds },
+    }).lean<IAclEntry[]>();
   }
 
   /**
@@ -799,6 +827,8 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')): {
   return {
     findEntriesByPrincipal,
     findEntriesByResource,
+    // Deloitte Custom Change: Retention Update
+    findEntriesByResources,
     findEntriesByPrincipalsAndResource,
     hasPermission,
     getEffectivePermissions,

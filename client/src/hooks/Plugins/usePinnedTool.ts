@@ -1,6 +1,8 @@
 // Deloitte Custom Change: pin logic extracted from useToolToggle so non-ephemeral controls can reuse it
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import useLocalStorage from '~/hooks/useLocalStorageAlt';
+// Deloitte Custom Change: forced-pin rule shared with the tools dropdown config.
+import { getShowPinButtons } from './useToolsDropdownConfig';
 import { useGetStartupConfig } from '~/data-provider';
 
 interface UsePinnedToolOptions {
@@ -13,7 +15,7 @@ interface UsePinnedToolOptions {
  * 1. Admin `defaultPinnedTools` seeds the initial value.
  * 2. A user's stored pin preference always wins thereafter.
  * 3. Guards the cold-load race where `startupConfig` resolves after mount.
- * 4. Deloitte: when `showToolsDropdown` is off, `defaultPinnedTools` becomes a forced value.
+ * 4. Deloitte: when pin buttons are hidden (`toolsDropdown.showPinButtons: false` or no dropdown), `defaultPinnedTools` becomes a forced value.
  *
  * Extracted from `useToolToggle` (which now consumes it) so controls that don't touch
  * `ephemeralAgent` can reuse pinning. Single source of truth — don't reintroduce a local copy.
@@ -52,7 +54,7 @@ export function usePinnedTool({ toolKey, localStorageKey }: UsePinnedToolOptions
   /** Cold load: `startupConfig` can resolve after mount, so `defaultPinned` starts `false`
    *  and gets eagerly persisted. Once config arrives, apply the real default for users who
    *  have neither a stored preference nor an in-session pin click — runs once.
-   *  When `showToolsDropdown` is disabled the user has no way to pin tools manually, so
+   *  When pin buttons are hidden the user has no way to pin tools manually, so
    *  `defaultPinnedTools` is treated as a forced value. The forced path re-runs until stable
    *  rather than marking itself done on first pass — this handles the race where
    *  useLocalStorage reads a stale "false" from storage after the initial render already
@@ -63,10 +65,11 @@ export function usePinnedTool({ toolKey, localStorageKey }: UsePinnedToolOptions
     if (startupConfig == null) {
       return;
     }
-    // Deloitte Custom Change: Force pin the tool if tools dropdown is hidden
-    const toolsDropdownHidden =
-      startupConfig.interface?.customDeloitteFeatureFlags?.showToolsDropdown === false;
-    if (toolsDropdownHidden) {
+    // Deloitte Custom Change: Force pin state when users have no pin buttons
+    const pinButtonsHidden = !getShowPinButtons(
+      startupConfig.interface?.customDeloitteFeatureFlags,
+    );
+    if (pinButtonsHidden) {
       if (isPinned !== defaultPinned) {
         setIsPinnedRaw(defaultPinned);
       }

@@ -29,16 +29,16 @@ const deps: TokenomicsDeps = {
 
 function buildAppConfig(
   overrides: Partial<AppConfig> & {
-    showModelPricingIndicator?: boolean;
     modelPricingTierBreakpoints?: number[];
+    highCostAlertTiers?: number[];
   },
 ): AppConfig {
-  const { showModelPricingIndicator = true, modelPricingTierBreakpoints, ...rest } = overrides;
+  const { modelPricingTierBreakpoints, highCostAlertTiers, ...rest } = overrides;
   return {
     interfaceConfig: {
       customDeloitteFeatureFlags: {
-        showModelPricingIndicator,
         ...(modelPricingTierBreakpoints ? { modelPricingTierBreakpoints } : {}),
+        ...(highCostAlertTiers ? { highCostAlertTiers } : {}),
       },
     },
     ...rest,
@@ -48,8 +48,7 @@ function buildAppConfig(
 describe('getModelPricing', () => {
   beforeEach(() => mockCacheGet.mockReset().mockResolvedValue(null));
 
-  it('returns an empty map when the showModelPricingIndicator flag is not enabled', async () => {
-    expect(await getModelPricing(undefined, 'user-1', undefined, undefined, deps)).toEqual({});
+  it('computes pricing without any customDeloitteFeatureFlags set', async () => {
     expect(
       await getModelPricing(
         { endpoints: {} } as unknown as AppConfig,
@@ -58,19 +57,11 @@ describe('getModelPricing', () => {
         { [EModelEndpoint.anthropic]: [TEST_MODELS.builtIn] },
         deps,
       ),
-    ).toEqual({});
-    expect(
-      await getModelPricing(
-        buildAppConfig({ showModelPricingIndicator: false, endpoints: {} } as Partial<AppConfig>),
-        'user-1',
-        undefined,
-        { [EModelEndpoint.anthropic]: [TEST_MODELS.builtIn] },
-        deps,
-      ),
-    ).toEqual({});
+    ).not.toEqual({});
   });
 
   it('returns an empty map when no modelsConfig is provided', async () => {
+    expect(await getModelPricing(undefined, 'user-1', undefined, undefined, deps)).toEqual({});
     expect(
       await getModelPricing(
         buildAppConfig({ endpoints: {} } as Partial<AppConfig>),
@@ -98,6 +89,7 @@ describe('getModelPricing', () => {
       outputPer1M: 15,
       provider: EModelEndpoint.anthropic,
       tier: 4,
+      isHighCost: false,
     });
   });
 
@@ -128,6 +120,7 @@ describe('getModelPricing', () => {
       outputPer1M: 6,
       provider: 'Azure Global',
       tier: 2,
+      isHighCost: false,
     });
   });
 
@@ -154,6 +147,7 @@ describe('getModelPricing', () => {
       outputPer1M: 20,
       provider: 'MyProxy',
       tier: 4,
+      isHighCost: false,
     });
   });
 
@@ -177,6 +171,7 @@ describe('getModelPricing', () => {
       outputPer1M: 15,
       provider: 'MyProxy',
       tier: 4,
+      isHighCost: false,
     });
   });
 
@@ -211,12 +206,14 @@ describe('getModelPricing', () => {
         outputPer1M: 15,
         provider: EModelEndpoint.anthropic,
         tier: 4,
+        isHighCost: false,
       },
       [`VertexAI US:${TEST_MODELS.namespaced}`]: {
         inputPer1M: 1.25,
         outputPer1M: 10,
         provider: 'VertexAI US',
         tier: 3,
+        isHighCost: false,
       },
     });
   });
@@ -329,5 +326,58 @@ describe('getModelPricing', () => {
       deps,
     );
     expect(pricing['Azure Global:test-model'].tier).toBe(2);
+  });
+
+  it('flags only the top tier as high-cost by default when highCostAlertTiers is absent', async () => {
+    const appConfig = buildAppConfig({
+      endpoints: {
+        [EModelEndpoint.custom]: [
+          {
+            name: 'Azure Global',
+            tokenConfig: {
+              'tier-4-model': { prompt: 8, completion: 8, context: 1 },
+              'tier-5-model': { prompt: 15, completion: 15, context: 1 },
+            },
+          },
+        ],
+      },
+    } as Partial<AppConfig>);
+
+    const pricing = await getModelPricing(
+      appConfig,
+      'user-1',
+      undefined,
+      { 'Azure Global': ['tier-4-model', 'tier-5-model'] },
+      deps,
+    );
+    expect(pricing['Azure Global:tier-4-model'].isHighCost).toBe(false);
+    expect(pricing['Azure Global:tier-5-model'].isHighCost).toBe(true);
+  });
+
+  it('uses custom highCostAlertTiers from customDeloitteFeatureFlags when provided', async () => {
+    const appConfig = buildAppConfig({
+      highCostAlertTiers: [4, 5],
+      endpoints: {
+        [EModelEndpoint.custom]: [
+          {
+            name: 'Azure Global',
+            tokenConfig: {
+              'tier-3-model': { prompt: 5, completion: 5, context: 1 },
+              'tier-4-model': { prompt: 8, completion: 8, context: 1 },
+            },
+          },
+        ],
+      },
+    } as Partial<AppConfig>);
+
+    const pricing = await getModelPricing(
+      appConfig,
+      'user-1',
+      undefined,
+      { 'Azure Global': ['tier-3-model', 'tier-4-model'] },
+      deps,
+    );
+    expect(pricing['Azure Global:tier-3-model'].isHighCost).toBe(false);
+    expect(pricing['Azure Global:tier-4-model'].isHighCost).toBe(true);
   });
 });

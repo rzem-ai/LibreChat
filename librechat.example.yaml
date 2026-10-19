@@ -158,6 +158,10 @@ interface:
   #   isTutorialEnabled: true # Enable/disable the in-app Learning Hub tutorials (first-run prompt and guided tours).
   #   alwaysEnableFileSearch: true # Force-enable file_search for authorized users/capable endpoints.
   #   hideFileSearchToggle: true # Hide the file search pill without changing the underlying tool state.
+  #   toolsDropdown:
+  #     items: ['skills', 'execute_code', 'artifacts'] # Rows in the tools dropdown: file_search, web_search, skills, memory, execute_code, artifacts, mcp. Omit to list all.
+  #     showPinButtons: false # false: pin state follows interface.defaultPinnedTools and rows show an on/off checkbox instead of a pin.
+  #   defaultEnabledTools: ['skills', 'execute_code', 'artifacts'] # Tools switched on by default; users can still toggle them off.
   # Privacy policy settings
   privacyPolicy:
     externalUrl: 'https://librechat.ai/privacy-policy'
@@ -261,6 +265,14 @@ interface:
     # If omitted, all matching results are returned.
     # allowedDomains:
     #   - example.com
+  # Deloitte Custom Change: configures the Learning Center menu bar's FAQ agent and
+  # feedback link. faqAgentId must be set per deployment (it is a specific agent's
+  # id, which differs between environments) — the menu item is hidden entirely if
+  # unset or if the id doesn't resolve to an existing agent. feedbackUrl is likewise
+  # hidden if unset.
+  # learningCenter:
+  #   faqAgentId: 'agent_abc123'
+  #   feedbackUrl: 'https://example.com/feedback-form'
   marketplace:
     use: false
     # Deloitte Custom Change: documents the `interface.marketplace.categories` config block,

@@ -19,6 +19,7 @@ export * from './sandbox';
 export * from './ptc';
 export * from './usage';
 export * from './steer';
+export * from './terms';
 
 export default {
   ...artifacts,

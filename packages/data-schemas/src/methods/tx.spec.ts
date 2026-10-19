@@ -3209,6 +3209,7 @@ describe('Opus 5.5 pricing', () => {
     'claude-opus-5.5',
     'anthropic/claude-opus-5-5',
     'global.anthropic.claude-opus-5-5',
+    'au.anthropic.claude-opus-5-5',
   ])('prices %s independently of Opus 5, without a long-context surcharge', (model) => {
     const key = model.includes('5.5') ? 'claude-opus-5.5' : 'claude-opus-5-5';
     for (const inputTokenCount of [1000, 200000, 1000000]) {
@@ -3236,6 +3237,7 @@ describe('Sonnet 5.5 pricing', () => {
     'claude-sonnet-5.5',
     'anthropic/claude-sonnet-5-5',
     'global.anthropic.claude-sonnet-5-5',
+    'au.anthropic.claude-sonnet-5-5',
   ])('prices %s at the Sonnet 5 rate, without a long-context surcharge', (model) => {
     for (const inputTokenCount of [1000, 200000, 1000000]) {
       expect(getMultiplier({ model, tokenType: 'prompt', inputTokenCount })).toBe(
@@ -3251,6 +3253,20 @@ describe('Sonnet 5.5 pricing', () => {
         cacheTokenValues['claude-sonnet-5'].read,
       );
     }
+  });
+});
+
+describe('Haiku 5.5 pricing', () => {
+  it.each([
+    'claude-haiku-5-5',
+    'anthropic/claude-haiku-5-5',
+    'global.anthropic.claude-haiku-5-5',
+    'au.anthropic.claude-haiku-5-5',
+  ])('prices %s using the CTNP gateway rates', (model) => {
+    expect(getMultiplier({ model, tokenType: 'prompt' })).toBe(0.1);
+    expect(getMultiplier({ model, tokenType: 'completion' })).toBe(0.5);
+    expect(getCacheMultiplier({ model, cacheType: 'write' })).toBe(0.125);
+    expect(getCacheMultiplier({ model, cacheType: 'read' })).toBe(0.01);
   });
 });
 
