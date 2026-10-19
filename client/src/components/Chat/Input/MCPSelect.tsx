@@ -7,6 +7,7 @@ import { TooltipAnchor, composerControlClasses } from '@librechat/client';
 import MCPServerMenuItem from '~/components/MCP/MCPServerMenuItem';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
 import StackedMCPIcons from '~/components/MCP/StackedMCPIcons';
+import { useToolsDropdownConfig } from '~/hooks/Plugins/useToolsDropdownConfig';
 import { useMCPRefresh } from '~/hooks/MCP/useMCPRefresh';
 import { useHasAccess, useLocalize } from '~/hooks';
 import { useBadgeRowContext } from '~/Providers';
@@ -17,6 +18,7 @@ function MCPSelectContent() {
   const context = useBadgeRowContext();
   const { conversationId, storageContextKey, mcpServerManager: manager } = context ?? {};
 
+  const { isDropdownOnly } = useToolsDropdownConfig();
   const menuStore = Ariakit.useMenuStore({ focusLoop: true });
   const isOpen = menuStore.useState('open');
   const configDialogOpen = manager?.getConfigDialogProps()?.isOpen === true;
@@ -89,7 +91,7 @@ function MCPSelectContent() {
     getServerStatusIconProps,
   } = manager;
 
-  if (!isPinned && mcpValues?.length === 0) {
+  if (!isPinned && (mcpValues?.length === 0 || isDropdownOnly('mcp'))) {
     return null;
   }
 
