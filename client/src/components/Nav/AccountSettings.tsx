@@ -15,7 +15,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { ArchivedChatsModal } from '~/components/Nav/SettingsTabs/General/ArchivedChatsModal';
-import { useGetStartupConfig, useGetUserBalance, useUserTermsQuery } from '~/data-provider';
+import { useGetStartupConfig, useUserTermsQuery } from '~/data-provider';
 import TermsAndConditionsModal from '~/components/ui/TermsAndConditionsModal';
 import { useAuthContext } from '~/hooks/AuthContext';
 import { showTermsViewerAtom } from '~/store/terms';
@@ -109,9 +109,6 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
   const localize = useLocalize();
   const { user, isAuthenticated, logout } = useAuthContext();
   const { data: startupConfig } = useGetStartupConfig();
-  const balanceQuery = useGetUserBalance({
-    enabled: !!isAuthenticated && startupConfig?.balance?.enabled,
-  });
   const [showSettings, setShowSettings] = useState(false);
   const setShowShortcutsDialog = useSetRecoilState(store.showShortcutsDialog);
   // Deloitte Custom Change: lets users reopen the Terms and Conditions modal (read-only) from the avatar menu.
@@ -169,15 +166,6 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           {user?.email ?? localize('com_nav_user')}
         </div>
         <DropdownMenuSeparator />
-        {startupConfig?.balance?.enabled === true && balanceQuery.data != null && (
-          <>
-            <div className="text-token-text-secondary ml-3 mr-2 py-2 text-sm" role="note">
-              {localize('com_nav_balance')}:{' '}
-              {new Intl.NumberFormat().format(Math.round(balanceQuery.data.tokenCredits))}
-            </div>
-            <DropdownMenuSeparator />
-          </>
-        )}
         <HelpSubmenu
           helpAndFaqURL={startupConfig?.helpAndFaqURL}
           termsOfServiceURL={startupConfig?.interface?.termsOfService?.externalUrl}

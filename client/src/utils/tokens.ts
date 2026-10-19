@@ -1040,6 +1040,21 @@ function currencyFormatter(code: string, minDigits: number, maxDigits: number): 
   return formatter;
 }
 
+/** LibreChat token credits are priced at 1,000,000 credits per USD. */
+const TOKEN_CREDITS_PER_USD = 1_000_000;
+
+export function formatBalance(
+  tokenCredits: number,
+  asCurrency: boolean,
+  currency?: CurrencyConfig,
+): string {
+  if (asCurrency) {
+    /** Non-US locales render USD as `US$`; the balance reads cleaner as plain `$`. */
+    return formatCost(tokenCredits / TOKEN_CREDITS_PER_USD, currency).replace('US$', '$');
+  }
+  return new Intl.NumberFormat().format(Math.round(tokenCredits));
+}
+
 export function formatCost(usd: number, currency: CurrencyConfig = DEFAULT_CURRENCY): string {
   /** Resolve to a safe (code, rate): an unsupported code falls back to USD AND
    *  rate 1 — never present a converted amount under the wrong symbol. A

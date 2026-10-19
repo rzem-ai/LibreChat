@@ -8,6 +8,7 @@ import { useShortcutAriaKey, useShortcutHint } from '~/hooks/useKeyboardShortcut
 import { useActivePanel, resolveActivePanel, DEFAULT_PANEL } from '~/Providers';
 import AgentMarketplaceButton from '~/components/Nav/AgentMarketplaceButton';
 import { CLOSE_SIDEBAR_ID } from '~/components/Chat/Menus/OpenSidebar';
+import BalanceGauge from '~/components/Nav/BalanceGauge';
 import LearningMenu from '~/components/Learn/Menu';
 import useNewChat from '~/hooks/Chat/useNewChat';
 import { useLocalize } from '~/hooks';
@@ -205,6 +206,7 @@ function ExpandedPanel({
           with a large mt-auto gap between them */}
       <div className="mt-auto flex flex-col gap-1">
         {learningLink && <LearningMenu link={learningLink} />}
+        <BalanceGauge />
         <Suspense fallback={<Skeleton className="h-9 w-9 rounded-lg" />}>
           <AccountSettings collapsed />
         </Suspense>

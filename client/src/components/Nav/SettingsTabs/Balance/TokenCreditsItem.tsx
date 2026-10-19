@@ -1,5 +1,7 @@
 import React from 'react';
 import { Label, InfoHoverCard, ESide } from '@librechat/client';
+import { useGetStartupConfig } from '~/data-provider';
+import { formatBalance } from '~/utils';
 import { useLocalize } from '~/hooks';
 
 interface TokenCreditsItemProps {
@@ -8,6 +10,9 @@ interface TokenCreditsItemProps {
 
 const TokenCreditsItem: React.FC<TokenCreditsItemProps> = ({ tokenCredits }) => {
   const localize = useLocalize();
+  const { data: startupConfig } = useGetStartupConfig();
+  const showBalanceAsCurrency =
+    startupConfig?.interface?.customDeloitteFeatureFlags?.showBalanceAsCurrency === true;
 
   return (
     <div className="flex items-center justify-between">
@@ -19,7 +24,9 @@ const TokenCreditsItem: React.FC<TokenCreditsItemProps> = ({ tokenCredits }) => 
 
       {/* Right Section: tokenCredits Value */}
       <span className="text-sm font-medium text-text-primary" role="note">
-        {tokenCredits !== undefined ? tokenCredits.toFixed(2) : '0.00'}
+        {showBalanceAsCurrency
+          ? formatBalance(tokenCredits ?? 0, true, startupConfig?.interface?.currency)
+          : (tokenCredits ?? 0).toFixed(2)}
       </span>
     </div>
   );

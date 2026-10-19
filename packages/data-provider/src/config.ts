@@ -2395,6 +2395,12 @@ export const interfaceSchema = z
          * callout in the model selector tooltip. Defaults to `[5]` (top tier only) when unset.
          */
         highCostAlertTiers: z.array(z.number().int().min(1).max(5)).optional(),
+        /** Deloitte Custom Change: show the user's balance as currency (1,000,000 credits = 1 USD) instead of raw credits. */
+        showBalanceAsCurrency: z.boolean().optional(),
+        /** Deloitte Custom Change: show a small balance gauge above the account avatar. */
+        showBalanceGauge: z.boolean().optional(),
+        /** Deloitte Custom Change: show refill and cost-saving guidance in the balance gauge hover card. */
+        showBalanceHelperText: z.boolean().optional(),
       })
       .optional(),
     prompts: z
