@@ -16,6 +16,8 @@ export const CourseContentSchema = z.object({
   estimatedMinutes: z.number().optional(),
   isGettingStartedTour: z.boolean().optional(),
   comingSoon: z.boolean().default(false),
+  /** Sidebar panel that must be active before it starts. Defaults to `conversations`. */
+  startPanel: z.string().optional(),
   steps: z.array(TourStepSchema),
 });
 

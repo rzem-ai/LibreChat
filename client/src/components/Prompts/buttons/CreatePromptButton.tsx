@@ -29,6 +29,7 @@ export default function CreatePromptButton() {
               size="icon"
               className="size-9 shrink-0 bg-transparent"
               aria-label={localize('com_ui_create_prompt')}
+              data-tour="create-prompt"
               onClick={() => setIsDialogOpen(true)}
             >
               <Plus className="size-4" aria-hidden="true" />

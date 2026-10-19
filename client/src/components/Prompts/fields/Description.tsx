@@ -66,6 +66,7 @@ const Description = ({
             onChange={handleInputChange}
             className="peer w-full border-none pr-14"
             aria-label={localize('com_ui_description_placeholder')}
+            data-tour="prompt-description"
           />
           <label
             htmlFor={descriptionId}

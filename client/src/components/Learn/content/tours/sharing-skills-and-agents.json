@@ -1,0 +1,87 @@
+{
+  "id": "sharing-skills-and-agents",
+  "title": "Sharing Skills and Agents",
+  "description": "Explains how capabilities can be prepared and shared with others.",
+  "startPanel": "skills",
+  "steps": [
+    {
+      "element": "#nav-panel-skills",
+      "title": "Open Skills",
+      "description": "Select Skills from the side menu to open skills.",
+      "side": "right",
+      "expandSidebarBefore": true
+    },
+    {
+      "element": "[data-tour=\"skills-section-mine\"]",
+      "title": "Select your Skills",
+      "description": "Select Created by me to view and select the relevant Skill you want to share",
+      "side": "right"
+    },
+    {
+      "element": "[data-tour=\"share-skill\"]",
+      "title": "Share a Skill",
+      "description": "In the Skill, select Share to share the Skill.",
+      "side": "bottom"
+    },
+    {
+      "element": "[data-tour=\"share-search\"]",
+      "title": "Search for people or groups",
+      "description": "Search for people or groups you wish to share the Skill with. Select the relevant user or group.",
+      "side": "bottom"
+    },
+    {
+      "element": "[data-tour=\"share-role\"]",
+      "title": "Assign permission level",
+      "description": "Assign the appropriate permission level – Viewer, Editor or Owner before saving your changes. Users can access and use the prompt based on the permissions you grant.",
+      "side": "bottom"
+    },
+    {
+      "element": "[data-tour=\"share-save\"]",
+      "title": "Save Changes",
+      "description": "Select Save Changes to apply your changes and share the Skill with the selected user or group.",
+      "side": "top"
+    },
+    {
+      "element": "[data-tour=\"skills-section-shared\"]",
+      "title": "Access the Skill",
+      "description": "Once you have shared the Skill, the user will be able to view by selecting Skills and the Skill will be listed under Shared",
+      "side": "right"
+    },
+    {
+      "element": "#nav-panel-agents",
+      "title": "Open Agent Builder",
+      "description": "Select Agent Builder from the side menu to open Agents.",
+      "side": "right"
+    },
+    {
+      "element": "#agent-select",
+      "title": "Select your Agent",
+      "description": "Select the drop-down menu, then search for and select the Agent you want to share.",
+      "side": "bottom"
+    },
+    {
+      "element": "[data-tour=\"share-resource\"]",
+      "title": "Share an Agent",
+      "description": "In the Agent, scroll to the bottom of the Agent Builder form and select Share to share the Agent.",
+      "side": "top"
+    },
+    {
+      "element": "[data-tour=\"share-search\"]",
+      "title": "Search for people or groups",
+      "description": "Search for people or groups you wish to share the Agent with. Select the relevant user or group.",
+      "side": "bottom"
+    },
+    {
+      "element": "[data-tour=\"share-role\"]",
+      "title": "Assign permission level",
+      "description": "Assign the appropriate permission level – Viewer, Editor or Owner before saving your changes. Users can access and use the Agent based on the permissions you grant.",
+      "side": "bottom"
+    },
+    {
+      "element": "[data-tour=\"share-save\"]",
+      "title": "Save Changes",
+      "description": "Select Save Changes to apply your changes and share the Agent with the selected user or group.<br/><br/>Note: You will need to also share all the Skills associated with the Agent with the same users or groups",
+      "side": "top"
+    }
+  ]
+}

@@ -302,6 +302,7 @@ function SkillListItem({
       <div
         role="button"
         tabIndex={0}
+        data-tour="skill-item"
         onClick={handleSkillClick}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {

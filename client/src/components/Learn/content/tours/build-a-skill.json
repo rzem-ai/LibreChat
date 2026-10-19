@@ -1,0 +1,57 @@
+{
+  "id": "build-a-skill",
+  "title": "How to build a skill",
+  "description": "Guides users through creating a reusable Skill for repeatable work.",
+  "startPanel": "skills",
+  "steps": [
+    {
+      "element": "#nav-panel-skills",
+      "title": "Open Skills",
+      "description": "Select Skills from the side menu to open Skills.",
+      "side": "right",
+      "expandSidebarBefore": true
+    },
+    {
+      "element": "[data-tour=\"create-skill\"]",
+      "title": "Select Write skill instructions",
+      "description": "Select Write skill instructions",
+      "side": "right"
+    },
+    {
+      "element": "#create-skill-name",
+      "title": "Add a Skill name",
+      "description": "Enter a short, descriptive name using lowercase words seperated by hypens<br/><br/>Example: brand-guidelines",
+      "side": "bottom"
+    },
+    {
+      "element": "#create-skill-description",
+      "title": "Add a Skill description",
+      "description": "Briefly describe what the skill does and where it can be used.<br/><br/>Example: Apply brand guidelines to presentations and documents.",
+      "side": "bottom"
+    },
+    {
+      "element": "#create-skill-body",
+      "title": "Prompt Instructions - add custom variable content",
+      "description": "Define how the skill should work using Markdown. Complete each section of the template, including its purpose, when to use it, required inputs, two-step workflow, expected outputs, response guidelines, ground rules, and constraints. Replace all placeholder text and remove any guidance or examples that are not needed.<br/><br/>Template: &lt;insert link to SKILL.md&gt;<br/><br/>Tip: You may wish to work with Copilot or MyAssist to refine your Skill.",
+      "side": "bottom"
+    },
+    {
+      "element": "[data-tour=\"create-skill-submit\"]",
+      "title": "Create Skill",
+      "description": "Select Create to create the Skill",
+      "side": "top"
+    },
+    {
+      "element": "[data-tour=\"create-skill\"]",
+      "title": "Select Upload a Skill",
+      "description": "Select Upload a Skills",
+      "side": "right"
+    },
+    {
+      "element": "[data-tour=\"upload-skill\"]",
+      "title": "Upload your skill",
+      "description": "Select Upload skill and navigate to your skill’s root folder. The system validates the folder structure and SKILL.md content before publishing.<br/><br/>Note: For guidance on how to structure your SKILL.md file and folder structure, refer to the relevant article in the MyAssist Academy.",
+      "side": "bottom"
+    }
+  ]
+}

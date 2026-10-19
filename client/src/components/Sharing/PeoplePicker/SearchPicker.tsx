@@ -116,6 +116,7 @@ export function SearchPicker<TOption extends { key: string; value: string }>({
             value={localQuery}
             // autoSelect
             placeholder={placeholder || localize('com_ui_select_options')}
+            data-tour="share-search"
             className={cn('h-10 w-full pl-10 text-sm leading-tight', inputClassName)}
           />
         </div>

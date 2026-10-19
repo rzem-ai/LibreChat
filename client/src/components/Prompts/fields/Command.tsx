@@ -66,6 +66,7 @@ const Command = ({
             onChange={handleInputChange}
             className="peer w-full border-none pr-14"
             aria-label={localize('com_ui_command_placeholder')}
+            data-tour="prompt-command"
           />
           <label
             htmlFor={commandId}

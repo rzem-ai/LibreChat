@@ -10,7 +10,7 @@ All Academy content lives in `client/src/components/Learn/content/`. It is bundl
 | Resource card | `resources.json` | Nothing else |
 | Tour | `tours/<name>.json` | Import it in `registry.ts` (see limitation below) |
 
-Files starting with `_mock-` are placeholders. Delete or replace them before launch.
+Files starting with `_mock-` are placeholders. Delete or replace them before launch (none remain at present).
 
 ## Article
 
