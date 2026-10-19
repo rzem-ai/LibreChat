@@ -1,0 +1,118 @@
+name: Deloitte Sync Model Metadata
+
+# Populates modelSpecs.list[].details.speed/intelligence in librechat.yaml from the
+# Artificial Analysis API and pushes the result back onto the PR branch. See
+# .github/scripts/deloitte.sync-model-metadata.mjs for the matching/tiering logic — a spec
+# opts in via `artificialAnalysisBenchmarkModelName`.
+#
+# Deloitte Custom Change: the sync script (and its test) run from the PR's *base* revision, not
+# its head — a same-repo branch could otherwise modify the script itself and have it execute
+# with access to ARTIFICIAL_ANALYSIS_API_KEY before any review happens. The generated commit is
+# pushed with a short-lived GitHub App token (not GITHUB_TOKEN) so it retriggers required status
+# checks instead of landing on the PR unchecked. Requires a GitHub App (contents: write only)
+# installed on this repo, with its ID in `vars.SYNC_MODEL_METADATA_APP_ID` and its private key in
+# `secrets.SYNC_MODEL_METADATA_APP_PRIVATE_KEY`.
+on:
+  pull_request:
+    branches:
+      - develop
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - 'librechat.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Sync model speed/intelligence ratings
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Forked PRs can't be pushed to with a repo-scoped app token — skip rather than fail noisily.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Checkout trusted scripts (PR base revision)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts
+          path: trusted
+
+      # The scripts above are new in the PR that introduces this workflow, so the base
+      # revision won't have them yet. Never fall back to running the unreviewed head
+      # with secrets — skip synchronization cleanly until a merge bootstraps the base.
+      - name: Check whether trusted scripts exist on the base revision
+        id: trusted-scripts
+        run: |
+          if [ -f trusted/.github/scripts/deloitte.sync-model-metadata.mjs ] && \
+             [ -f trusted/.github/scripts/deloitte.sync-model-metadata.test.mjs ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Base revision ${{ github.event.pull_request.base.sha }} does not have the sync scripts yet. Skipping synchronization until this PR (or a bootstrap PR) merges them into the base branch."
+          fi
+
+      - name: Set up Node.js 24.17.0
+        if: steps.trusted-scripts.outputs.available == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.17.0'
+
+      - name: Install yaml (comment/anchor-preserving parser)
+        if: steps.trusted-scripts.outputs.available == 'true'
+        working-directory: trusted
+        run: npm install yaml@^2 --no-save --no-audit --no-fund --ignore-scripts
+
+      - name: Verify sync script against its base-revision tests
+        if: steps.trusted-scripts.outputs.available == 'true'
+        run: node --test trusted/.github/scripts/deloitte.sync-model-metadata.test.mjs
+
+      - name: Mint a repository-scoped short-lived sync token
+        if: steps.trusted-scripts.outputs.available == 'true'
+        id: app
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ vars.SYNC_MODEL_METADATA_APP_ID }}
+          private-key: ${{ secrets.SYNC_MODEL_METADATA_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+
+      - name: Checkout PR branch
+        if: steps.trusted-scripts.outputs.available == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ steps.app.outputs.token }}
+          sparse-checkout: |
+            librechat.yaml
+          sparse-checkout-cone-mode: false
+          path: head
+
+      - name: Fetch and populate model metadata
+        if: steps.trusted-scripts.outputs.available == 'true'
+        working-directory: head
+        run: node ../trusted/.github/scripts/deloitte.sync-model-metadata.mjs
+        env:
+          ARTIFICIAL_ANALYSIS_API_KEY: ${{ secrets.ARTIFICIAL_ANALYSIS_API_KEY }}
+
+      - name: Commit and push if librechat.yaml changed
+        if: steps.trusted-scripts.outputs.available == 'true'
+        working-directory: head
+        env:
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if git diff --quiet -- librechat.yaml; then
+            echo "No model metadata changes."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add librechat.yaml
+          git commit -m "chore: sync model speed/intelligence ratings from Artificial Analysis"
+          git push origin "HEAD:$PR_HEAD_REF"

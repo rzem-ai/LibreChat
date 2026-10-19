@@ -1,8 +1,8 @@
 import React from 'react';
 import '@testing-library/jest-dom/extend-expect';
+import { RecoilRoot } from 'recoil';
 import { render, fireEvent } from 'test/layout-test-utils';
 import TextToSpeechSwitch from '../TextToSpeechSwitch';
-import { RecoilRoot } from 'recoil';
 
 describe('TextToSpeechSwitch', () => {
   /**
@@ -24,6 +24,7 @@ describe('TextToSpeechSwitch', () => {
     expect(getByTestId('TextToSpeech')).toBeInTheDocument();
   });
 
+  // Deloitte Custom Change: verify toggling on from the new default-off state.
   it('calls onCheckedChange when the switch is toggled', () => {
     const { getByTestId } = render(
       <RecoilRoot>
@@ -33,6 +34,6 @@ describe('TextToSpeechSwitch', () => {
     const switchElement = getByTestId('TextToSpeech');
     fireEvent.click(switchElement);
 
-    expect(mockSetTextToSpeech).toHaveBeenCalledWith(false);
+    expect(mockSetTextToSpeech).toHaveBeenCalledWith(true);
   });
 });

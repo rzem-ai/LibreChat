@@ -8,6 +8,11 @@ import { logger } from '~/utils';
 import store from '~/store';
 
 const VALID_TTS_ENGINES: string[] = [TTSEndpoints.browser, TTSEndpoints.external];
+// Deloitte Custom Change: migrate legacy enabled speech defaults once, then preserve user choices.
+const DISABLED_SPEECH_DEFAULT_MIGRATION_KEYS = {
+  speechToText: 'speechToTextDisabledDefaultV1',
+  textToSpeech: 'textToSpeechDisabledDefaultV1',
+} as const;
 
 /**
  * Initializes speech-related Recoil values from the server-side custom
@@ -65,12 +70,125 @@ export default function useSpeechSettingsInit(isAuthenticated: boolean) {
       Object.entries(data).forEach(([key, value]) => {
         if (key === 'sttExternal' || key === 'ttsExternal') return;
 
-        if (localStorage.getItem(key) !== null) return;
+        const migrationKey =
+          value === false && (key === 'speechToText' || key === 'textToSpeech')
+            ? DISABLED_SPEECH_DEFAULT_MIGRATION_KEYS[key]
+            : undefined;
+        const shouldApplyDisabledDefault =
+          migrationKey !== undefined && localStorage.getItem(migrationKey) === null;
 
-        const setter = setters[key as keyof typeof setters];
-        if (setter) {
+        if (localStorage.getItem(key) !== null && !shouldApplyDisabledDefault) return;
+
+        let applied = false;
+
+        // Deloitte Custom Change: apply speech defaults with key-specific type checks.
+        switch (key) {
+          case 'conversationMode':
+            if (typeof value === 'boolean') {
+              setters.conversationMode(value);
+              applied = true;
+            }
+            break;
+          case 'advancedMode':
+            if (typeof value === 'boolean') {
+              setters.advancedMode(value);
+              applied = true;
+            }
+            break;
+          case 'speechToText':
+            if (typeof value === 'boolean') {
+              setters.speechToText(value);
+              applied = true;
+            }
+            break;
+          case 'textToSpeech':
+            if (typeof value === 'boolean') {
+              setters.textToSpeech(value);
+              applied = true;
+            }
+            break;
+          case 'cacheTTS':
+            if (typeof value === 'boolean') {
+              setters.cacheTTS(value);
+              applied = true;
+            }
+            break;
+          case 'engineSTT':
+            if (typeof value === 'string') {
+              setters.engineSTT(value);
+              applied = true;
+            }
+            break;
+          case 'languageSTT':
+            if (typeof value === 'string') {
+              setters.languageSTT(value);
+              applied = true;
+            }
+            break;
+          case 'autoTranscribeAudio':
+            if (typeof value === 'boolean') {
+              setters.autoTranscribeAudio(value);
+              applied = true;
+            }
+            break;
+          case 'decibelValue':
+            if (typeof value === 'number') {
+              setters.decibelValue(value);
+              applied = true;
+            }
+            break;
+          case 'autoSendText':
+            if (typeof value === 'number') {
+              setters.autoSendText(value);
+              applied = true;
+            }
+            break;
+          case 'engineTTS':
+            if (typeof value === 'string') {
+              setters.engineTTS(value);
+              applied = true;
+            }
+            break;
+          case 'voice':
+            if (typeof value === 'string') {
+              setters.voice(value);
+              applied = true;
+            }
+            break;
+          case 'cloudBrowserVoices':
+            if (typeof value === 'boolean') {
+              setters.cloudBrowserVoices(value);
+              applied = true;
+            }
+            break;
+          case 'languageTTS':
+            if (typeof value === 'string') {
+              setters.languageTTS(value);
+              applied = true;
+            }
+            break;
+          case 'automaticPlayback':
+            if (typeof value === 'boolean') {
+              setters.automaticPlayback(value);
+              applied = true;
+            }
+            break;
+          case 'playbackRate':
+            if (typeof value === 'number') {
+              setters.playbackRate(value);
+              applied = true;
+            }
+            break;
+          default:
+            break;
+        }
+
+        if (applied) {
           logger.log(`Setting default speech setting: ${key} = ${value}`);
-          setter(value as any);
+          if (shouldApplyDisabledDefault && migrationKey) {
+            localStorage.setItem(key, JSON.stringify(value));
+            localStorage.setItem(migrationKey, 'true');
+          }
         }
       });
     }

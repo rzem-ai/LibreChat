@@ -34,6 +34,7 @@ type ModelSelectorContextType = {
   assistantsMap: t.TAssistantsMap | undefined;
   endpointsConfig: t.TEndpointsConfig;
   modelPricing: t.TModelPricing;
+  /** Gates the in-menu `$` pricing chip only — the model info tooltip's cost row is unaffected. */
 
   // Functions
   endpointRequiresUserKey: (endpoint: string) => boolean;

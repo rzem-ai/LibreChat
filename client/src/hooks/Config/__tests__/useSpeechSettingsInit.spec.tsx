@@ -39,6 +39,20 @@ const useSpeechSettingsHarness = (isAuthenticated = true) => {
   };
 };
 
+/**
+ * Deloitte Custom Change: expose speech switches for rollout-migration tests.
+ *
+ * This test harness accepts no parameters.
+ * @returns The current speech-to-text and text-to-speech toggle values.
+ */
+const useSpeechTogglesHarness = (): { speechToText: boolean; textToSpeech: boolean } => {
+  useSpeechSettingsInit(true);
+  return {
+    speechToText: useRecoilValue(store.speechToText),
+    textToSpeech: useRecoilValue(store.textToSpeech),
+  };
+};
+
 describe('useSpeechSettingsInit', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -192,6 +206,44 @@ describe('useSpeechSettingsInit', () => {
     });
     expect(localStorage.getItem('engineSTT')).toBe(JSON.stringify('external'));
     expect(localStorage.getItem('engineTTS')).toBe(JSON.stringify('external'));
+  });
+
+  // Deloitte Custom Change: existing enabled local settings adopt the new defaults once.
+  it('migrates previously enabled speech toggles to the disabled server defaults once', async () => {
+    localStorage.setItem('speechToText', JSON.stringify(true));
+    localStorage.setItem('textToSpeech', JSON.stringify(true));
+    mockUseGetCustomConfigSpeechQuery.mockReturnValue({
+      data: { speechToText: false, textToSpeech: false },
+      isFetched: true,
+    });
+
+    const { result } = renderHook(() => useSpeechTogglesHarness(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current).toEqual({ speechToText: false, textToSpeech: false });
+    });
+    expect(localStorage.getItem('speechToText')).toBe(JSON.stringify(false));
+    expect(localStorage.getItem('textToSpeech')).toBe(JSON.stringify(false));
+    expect(localStorage.getItem('speechToTextDisabledDefaultV1')).toBe('true');
+    expect(localStorage.getItem('textToSpeechDisabledDefaultV1')).toBe('true');
+  });
+
+  // Deloitte Custom Change: retain user opt-in after the one-time migration completes.
+  it('preserves a user opting back in after the disabled defaults were migrated', async () => {
+    localStorage.setItem('speechToText', JSON.stringify(true));
+    localStorage.setItem('textToSpeech', JSON.stringify(true));
+    localStorage.setItem('speechToTextDisabledDefaultV1', 'true');
+    localStorage.setItem('textToSpeechDisabledDefaultV1', 'true');
+    mockUseGetCustomConfigSpeechQuery.mockReturnValue({
+      data: { speechToText: false, textToSpeech: false },
+      isFetched: true,
+    });
+
+    const { result } = renderHook(() => useSpeechTogglesHarness(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current).toEqual({ speechToText: true, textToSpeech: true });
+    });
   });
 
   it('does not write browser defaults before a server default is provided', () => {

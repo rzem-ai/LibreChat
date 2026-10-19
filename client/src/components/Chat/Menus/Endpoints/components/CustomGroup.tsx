@@ -1,4 +1,5 @@
 import React from 'react';
+import { ModelInfoHoverGroup } from '@librechat/client';
 import type { TModelSpec } from 'librechat-data-provider';
 import { useModelSelectorContext } from '../ModelSelectorContext';
 import { CustomMenu as Menu } from '../CustomMenu';
@@ -37,9 +38,13 @@ export function CustomGroup({ groupName, specs, groupIcon }: CustomGroupProps) {
         </div>
       }
     >
-      {specs.map((spec: TModelSpec) => (
-        <ModelSpecItem key={spec.name} spec={spec} isSelected={selectedSpec === spec.name} />
-      ))}
+      {/* Deloitte Custom Change: one hover card shared by every row in this group, anchored to
+          the whole list so its position doesn't jump between rows — see ModelInfoTooltip.tsx. */}
+      <ModelInfoHoverGroup>
+        {specs.map((spec: TModelSpec) => (
+          <ModelSpecItem key={spec.name} spec={spec} isSelected={selectedSpec === spec.name} />
+        ))}
+      </ModelInfoHoverGroup>
     </Menu>
   );
 }

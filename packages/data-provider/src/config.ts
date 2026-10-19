@@ -2382,6 +2382,10 @@ export const interfaceSchema = z
         conversationIcon: z.boolean().optional(),
         /** Enable/disable the in-app Learning Hub tutorials (first-run prompt, guided tours). */
         isTutorialEnabled: z.boolean().optional(),
+        /** Show the Learning Center "Common Questions" page (opt-in). */
+        learningCommonQuestions: z.boolean().optional(),
+        /** Show the Learning Center "Release Notes" page (opt-in). */
+        learningReleaseNotes: z.boolean().optional(),
         accountsTab: z.boolean().optional(),
         dataApiKeys: z.boolean().optional(),
         adminAgentApiKeys: z.boolean().optional(), // Deloitte Custom Change: admin-only service account API key management.
@@ -2389,8 +2393,6 @@ export const interfaceSchema = z
         externalVoiceProvider: z.boolean().optional(),
         artifactsShadcnOnly: z.boolean().optional(),
         showConversationTitleInHeader: z.boolean().optional(),
-        /** Set to true to show the 1-5 `$` price-tier badge in the model selector. */
-        showModelPricingIndicator: z.boolean().optional(),
         /**
          * 4 strictly ascending $/1M blended-cost breakpoints that split models into the
          * 5 price tiers (`$` to `$$$$$`) shown in the model selector. A model's blended
@@ -2408,6 +2410,11 @@ export const interfaceSchema = z
             },
           )
           .optional(),
+        /**
+         * Which 1-5 price tiers (see `modelPricingTierBreakpoints`) get the "High Cost"
+         * callout in the model selector tooltip. Defaults to `[5]` (top tier only) when unset.
+         */
+        highCostAlertTiers: z.array(z.number().int().min(1).max(5)).optional(),
       })
       .optional(),
     prompts: z
@@ -2679,6 +2686,8 @@ export type TModelPricing = Record<
     provider?: string;
     /** 1-5 relative price tier, shown as `$` to `$$$$$` in the model selector. */
     tier: number;
+    /** Whether this tier is configured (via `highCostAlertTiers`) to show the "High Cost" callout. */
+    isHighCost: boolean;
   }
 >;
 
@@ -3598,6 +3607,8 @@ const sharedOpenAIModels = [
 const sharedAnthropicModels = [
   'claude-fable-5-1',
   'claude-fable-5',
+  // Deloitte Custom Change: Claude Haiku 5.5 gateway model.
+  'claude-haiku-5-5',
   'claude-opus-5-5',
   'claude-opus-5',
   'claude-sonnet-5-5',
@@ -3636,6 +3647,8 @@ const sharedAnthropicModels = [
 export const bedrockModels = [
   'global.anthropic.claude-fable-5-1',
   'global.anthropic.claude-fable-5',
+  // Deloitte Custom Change: Claude Haiku 5.5 gateway model (Bedrock global profile).
+  'global.anthropic.claude-haiku-5-5',
   'global.anthropic.claude-opus-5-5',
   'global.anthropic.claude-opus-5',
   'global.anthropic.claude-sonnet-5-5',

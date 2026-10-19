@@ -48,6 +48,33 @@ describe('modelSpecs helpers', () => {
     expect(sanitizedModelSpecs.list[0]).not.toHaveProperty('skills');
   });
 
+  // Deloitte Custom Change: the new `details` field must survive config sanitization untouched.
+  it('should pass through the details block unmodified', () => {
+    const modelSpecs = {
+      enforce: false,
+      prioritize: true,
+      list: [
+        {
+          name: 'detailed-spec',
+          label: 'Detailed Spec',
+          details: {
+            speed: 4,
+            intelligence: 5,
+            supports: { webSearch: true, imageGeneration: false, fileIngestion: true },
+          },
+          preset: { endpoint: EModelEndpoint.openAI, model: 'gpt-4o' },
+        },
+      ],
+    };
+
+    const sanitizedModelSpecs = sanitizeModelSpecs(modelSpecs);
+    expect(sanitizedModelSpecs.list[0].details).toEqual({
+      speed: 4,
+      intelligence: 5,
+      supports: { webSearch: true, imageGeneration: false, fileIngestion: true },
+    });
+  });
+
   it('should preserve conversation starters on model specs', () => {
     const modelSpecs = {
       enforce: false,
