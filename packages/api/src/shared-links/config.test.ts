@@ -115,7 +115,7 @@ describe('buildSharedLinkStartupPayload', () => {
           }),
           {},
         ),
-      ).toEqual({ appTitle: 'MyAssist', interface: { codeHighlightThrottleMs } });
+      ).toEqual({ appTitle: 'LibreChat', interface: { codeHighlightThrottleMs } });
     },
   );
 
@@ -156,6 +156,6 @@ describe('buildSharedLinkStartupPayload', () => {
       {},
     );
 
-    expect(payload).toEqual({ appTitle: 'MyAssist' });
+    expect(payload).toEqual({ appTitle: 'LibreChat' });
   });
 });

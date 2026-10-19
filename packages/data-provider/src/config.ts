@@ -67,9 +67,6 @@ export const BASE_ONLY_CONFIG_SECTIONS = ['filters'] as const;
  * not be overridden or tombstoned by role, group, or user config documents. */
 export const BASE_PRINCIPAL_CONFIG_SECTIONS = ['langfuse'] as const;
 
-/** Product name shown when `APP_TITLE` is unset. */
-export const DEFAULT_APP_TITLE = 'MyAssist';
-
 export const defaultRetrievalModels = [
   'gpt-4o',
   'o1-preview-2024-09-12',
