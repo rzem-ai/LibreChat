@@ -24,6 +24,7 @@ interface:
 
   buildInfo: false # Set to false to hide the About section in settings
 
+  # Deloitte Custom Change: Retention Update
   fileRetentionHours: 1440 # Independent per-file retention deadline in hours (60 days)
 
   fileRetentionWarningHours: 168 # Lead time before expiry the renewal prompt surfaces (7 days)

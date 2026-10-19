@@ -27,6 +27,7 @@ const {
   isSpeechProviderConfigured,
   getCustomEndpointProvider,
 } = require('librechat-data-provider');
+// Deloitte Custom Change: Retention Update
 const { logger, runAsSystem, getFileRetentionHours } = require('@librechat/data-schemas');
 const {
   sanitizeFilename,
@@ -1428,6 +1429,7 @@ const processOpenAIFile = async ({
         file_id,
         user: userId,
         tenantId: openai.req?.user?.tenantId,
+        // Deloitte Custom Change: Retention Update
         fileRetentionHours: getFileRetentionHours(openai.req?.config?.interfaceConfig),
       });
     } catch (error) {

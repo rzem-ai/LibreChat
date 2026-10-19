@@ -339,10 +339,12 @@ describe('retention helpers', () => {
     await expect(getRetentionExpiry(undefined, dependencies)).resolves.toEqual({});
   });
 
+  // Deloitte Custom Change: Retention Update
   it('applies the 90-day agent-file default to a persistent agent upload with no config', async () => {
     const now = Date.now();
     const result = await getAgentFileRetentionExpiry(
       {
+        // Deloitte Custom Change: Retention Update
         req: request({ config: { interfaceConfig: {} } }),
         messageAttachment: false,
         toolResource: 'context',
@@ -350,6 +352,7 @@ describe('retention helpers', () => {
       dependencies,
     );
 
+    // Deloitte Custom Change: Retention Update
     const expectedMs = 24 * 90 * 60 * 60 * 1000;
     expect(result.expiredAt?.getTime()).toBeGreaterThanOrEqual(now + expectedMs);
     expect(result.expiredAt?.getTime()).toBeLessThan(now + expectedMs + 1000);
@@ -357,11 +360,13 @@ describe('retention helpers', () => {
     expect(dependencies.createExpirationDate).not.toHaveBeenCalled();
   });
 
+  // Deloitte Custom Change: Retention Update
   it('applies the 90-day agent-file default regardless of retentionMode', async () => {
     const now = Date.now();
     const result = await getAgentFileRetentionExpiry(
       {
         req: request({
+          // Deloitte Custom Change: Retention Update
           config: { interfaceConfig: { retentionMode: RetentionMode.TEMPORARY } },
         }),
         messageAttachment: false,
@@ -370,15 +375,18 @@ describe('retention helpers', () => {
       dependencies,
     );
 
+    // Deloitte Custom Change: Retention Update
     const expectedMs = 24 * 90 * 60 * 60 * 1000;
     expect(result.expiredAt?.getTime()).toBeGreaterThanOrEqual(now + expectedMs);
     expect(result.expiredAt?.getTime()).toBeLessThan(now + expectedMs + 1000);
   });
 
+  // Deloitte Custom Change: Retention Update
   it('honors a configured agentFileRetentionHours override', async () => {
     const now = Date.now();
     const result = await getAgentFileRetentionExpiry(
       {
+        // Deloitte Custom Change: Retention Update
         req: request({ config: { interfaceConfig: { agentFileRetentionHours: 48 } } }),
         messageAttachment: false,
         toolResource: 'context',
@@ -386,14 +394,17 @@ describe('retention helpers', () => {
       dependencies,
     );
 
+    // Deloitte Custom Change: Retention Update
     const expectedMs = 48 * 60 * 60 * 1000;
     expect(result.expiredAt?.getTime()).toBeGreaterThanOrEqual(now + expectedMs);
     expect(result.expiredAt?.getTime()).toBeLessThan(now + expectedMs + 1000);
   });
 
+  // Deloitte Custom Change: Retention Update
   it('keeps retainAgentFiles as the escape hatch that skips expiry entirely', async () => {
     const result = await getAgentFileRetentionExpiry(
       {
+        // Deloitte Custom Change: Retention Update
         req: request({ config: { interfaceConfig: { retainAgentFiles: true } } }),
         messageAttachment: false,
         toolResource: 'context',
@@ -406,6 +417,7 @@ describe('retention helpers', () => {
     expect(dependencies.createExpirationDate).not.toHaveBeenCalled();
   });
 
+  // Deloitte Custom Change: Retention Update
   it('leaves agent message attachments on the existing conversation-inherited path', async () => {
     const result = await getAgentFileRetentionExpiry(
       {
@@ -466,6 +478,7 @@ describe('retention helpers', () => {
     expect(createMinimalRetentionRequest()).toBeUndefined();
   });
 
+  // Deloitte Custom Change: Retention Update
   describe('independent file retention (fileRetentionHours)', () => {
     it('short-circuits with an upload-anchored expiry when configured, bypassing conversation lookup', async () => {
       const now = Date.now();

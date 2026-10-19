@@ -1,4 +1,5 @@
 const express = require('express');
+// Deloitte Custom Change: Retention Update
 const { isValidMemoryKey, getMemoryRetentionHours } = require('@librechat/data-schemas');
 const {
   Tokenizer,
@@ -237,6 +238,7 @@ router.post('/', createMemoryMiddleware, async (req, res) => {
       }
     }
 
+    // Deloitte Custom Change: Retention Update
     const result = await createMemory(
       {
         userId: req.user.id,
@@ -373,6 +375,7 @@ router.patch('/:key', updateMemoryMiddleware, async (req, res) => {
         return res.status(409).json({ error: 'Memory with this key already exists.' });
       }
 
+      // Deloitte Custom Change: Retention Update
       const createResult = await createMemory(
         {
           userId: req.user.id,
@@ -393,6 +396,7 @@ router.patch('/:key', updateMemoryMiddleware, async (req, res) => {
         return res.status(500).json({ error: 'Failed to delete old memory.' });
       }
     } else {
+      // Deloitte Custom Change: Retention Update
       const result = await setMemory(
         {
           userId: req.user.id,

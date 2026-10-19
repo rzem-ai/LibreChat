@@ -1,4 +1,5 @@
 import { Providers } from '@librechat/agents';
+// Deloitte Custom Change: Retention Update
 import {
   logger,
   getFileRetentionHours,
@@ -9,6 +10,7 @@ import {
   Tools,
   Constants,
   ErrorTypes,
+  // Deloitte Custom Change: Retention Update
   FileContext,
   EModelEndpoint,
   EToolResources,
@@ -172,6 +174,7 @@ export function partitionCommittedFiles<T extends { file_id?: string }>(
   return { committed: alreadyCommitted, pending };
 }
 
+// Deloitte Custom Change: Retention Update
 function partitionAgentResourceFiles(files: IMongoFile[]): {
   agentResourceFiles: IMongoFile[];
   messageFiles: IMongoFile[];
@@ -986,6 +989,7 @@ export interface InitializeAgentDbMethods extends EndpointDbMethods {
   updateFilesUsage: (
     files: Array<{ file_id: string }>,
     fileIds?: string[],
+    // Deloitte Custom Change: Retention Update
     options?: { user?: string; tenantId?: string | null; fileRetentionHours?: number },
   ) => Promise<unknown[]>;
   /** Get files from database */
@@ -1071,6 +1075,7 @@ export interface InitializeAgentDbMethods extends EndpointDbMethods {
   /** Resolves a role by name for the tool role-permission grants. Optional: when
    *  absent the role half of the web-search gate is not applied. */
   getRoleByName?: CheckAccessParams['getRoleByName'];
+  // Deloitte Custom Change: Retention Update
   /** Throttled fire-and-forget activity stamp for skills primed into the turn. */
   touchSkillsLastActivity?: (
     skillIds: Array<import('mongoose').Types.ObjectId | string>,
@@ -1305,6 +1310,7 @@ export async function initializeAgent(
     alwaysApplySkillPrimes =
       alwaysApplySkillPrimes == null ? undefined : selectedPrimes.alwaysApplySkillPrimes;
 
+    // Deloitte Custom Change: Retention Update
     const primedSkillIds = [...(manualSkillPrimes ?? []), ...(alwaysApplySkillPrimes ?? [])].map(
       (prime) => prime._id,
     );
@@ -1809,6 +1815,7 @@ export async function initializeAgent(
    * observe a different post-inspection snapshot.
    */
   if (requestFileOwnerId && requestUsageFiles.length > 0) {
+    // Deloitte Custom Change: Retention Update
     const { agentResourceFiles, messageFiles } = partitionAgentResourceFiles(requestUsageFiles);
     await Promise.all([
       agentResourceFiles.length > 0
@@ -1828,6 +1835,7 @@ export async function initializeAgent(
     ]);
   }
   if (requestFileOwnerId && toolUsageFiles.length > 0) {
+    // Deloitte Custom Change: Retention Update
     const { agentResourceFiles, messageFiles } = partitionAgentResourceFiles(toolUsageFiles);
     await Promise.all([
       agentResourceFiles.length > 0

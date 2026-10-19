@@ -1,5 +1,6 @@
 const { logger, getTenantId } = require('@librechat/data-schemas');
 const { Calculator, createSearchTool, createCodeExecutionTool } = require('@librechat/agents');
+// Deloitte Custom Change: Retention Update
 const {
   checkAccess,
   toolkitParent,
@@ -496,6 +497,7 @@ const loadTools = async ({
           req: options.req,
           agent,
           userId: user,
+          // Deloitte Custom Change: Retention Update
           memoryMethods: {
             setMemory,
             deleteMemory,

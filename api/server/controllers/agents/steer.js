@@ -121,6 +121,7 @@ const runSteerController = async (req, res, requireIdempotentDelivery) => {
       ...(requireIdempotentDelivery && { requireIdempotentDelivery: true }),
       getFiles: db.getFiles,
       updateFilesUsage: db.updateFilesUsage,
+      // Deloitte Custom Change: Retention Update
       fileRetentionHours: req.config?.interfaceConfig?.fileRetentionHours,
       checkAgentAccess: requireIdempotentDelivery
         ? async (run) =>

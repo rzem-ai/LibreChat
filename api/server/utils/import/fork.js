@@ -53,6 +53,7 @@ function cloneMessagesWithTimestamps(
  * @param {string} [params.latestMessageId] - latestMessageId - Required if splitAtTarget is true.
  * @param {object} [params.filters] - Source-aware content filters applied before cloned records are persisted.
  * @param {object} [params.legacyPii] - Legacy messageFilter.pii applied before cloned records are persisted.
+ * Deloitte Custom Change: Retention Update
  * @param {object} [params.interfaceConfig] - The requesting user's resolved interface config, so the fork's retention deadline honors a configured `generalChatRetention` override instead of falling back to the bare default.
  * @param {(userId: string, interfaceConfig?: object, filters?: object, legacyPii?: object) => ImportBatchBuilder} [params.builderFactory] - Optional factory function for creating an ImportBatchBuilder instance.
  * @returns {Promise<TForkConvoResponse>} The response after forking the conversation.
@@ -68,6 +69,7 @@ async function forkConversation({
   latestMessageId,
   filters,
   legacyPii,
+  // Deloitte Custom Change: Retention Update
   interfaceConfig,
   builderFactory = createImportBatchBuilder,
 }) {
@@ -86,6 +88,7 @@ async function forkConversation({
       targetMessageId = latestMessageId;
     }
 
+    // Deloitte Custom Change: Retention Update
     const importBatchBuilder =
       legacyPii == null
         ? builderFactory(requestUserId, interfaceConfig, filters)
@@ -483,6 +486,7 @@ async function forkSharedConversation({
  * @param {string} [params.title] - Optional title override for the duplicate.
  * @param {object} [params.filters] - Source-aware content filters applied before cloned records are persisted.
  * @param {object} [params.legacyPii] - Legacy messageFilter.pii applied before cloned records are persisted.
+ * Deloitte Custom Change: Retention Update
  * @param {object} [params.interfaceConfig] - The requesting user's resolved interface config, so the duplicate's retention deadline honors a configured `generalChatRetention` override instead of falling back to the bare default.
  * @param {(userId: string, interfaceConfig?: object, filters?: object, legacyPii?: object) => ImportBatchBuilder} [params.builderFactory] - Optional factory function for creating an ImportBatchBuilder instance.
  * @returns {Promise<{ conversation: TConversation, messages: TMessage[] }>} The duplicated conversation and messages.
@@ -493,6 +497,7 @@ async function duplicateConversation({
   title,
   filters,
   legacyPii,
+  // Deloitte Custom Change: Retention Update
   interfaceConfig,
   builderFactory = createImportBatchBuilder,
 }) {
@@ -511,6 +516,7 @@ async function duplicateConversation({
     originalMessages[originalMessages.length - 1].messageId,
   );
 
+  // Deloitte Custom Change: Retention Update
   const importBatchBuilder =
     legacyPii == null
       ? builderFactory(userId, interfaceConfig, filters)

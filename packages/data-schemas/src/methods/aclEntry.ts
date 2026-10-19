@@ -112,6 +112,7 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')): {
     resourceId: string | Types.ObjectId,
     session?: ClientSession,
   ) => Promise<IAclEntry[]>;
+  // Deloitte Custom Change: Retention Update
   findEntriesByResources: (
     resourceType: string,
     resourceIds: Array<string | Types.ObjectId>,
@@ -235,6 +236,7 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')): {
     return await query.lean<IAclEntry[]>();
   }
 
+  // Deloitte Custom Change: Retention Update
   /**
    * Find ACL entries across a batch of resources of the same type in one query,
    * so callers classifying many candidates (e.g. a retention sweep claim batch)
@@ -825,6 +827,7 @@ export function createAclEntryMethods(mongoose: typeof import('mongoose')): {
   return {
     findEntriesByPrincipal,
     findEntriesByResource,
+    // Deloitte Custom Change: Retention Update
     findEntriesByResources,
     findEntriesByPrincipalsAndResource,
     hasPermission,

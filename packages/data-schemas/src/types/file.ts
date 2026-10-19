@@ -166,6 +166,7 @@ export interface IMongoFile extends Omit<Document, 'model'> {
   llmDeliveryPath?: string;
   expiresAt?: Date;
   expiredAt?: Date | null;
+  // Deloitte Custom Change: Retention Update
   /**
    * Independent per-file retention anchor: set on create and re-stamped on
    * every usage touch (send, renewal). Distinct from `updatedAt`, which

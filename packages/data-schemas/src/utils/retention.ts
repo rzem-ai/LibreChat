@@ -1,4 +1,5 @@
 import type { FilterQuery } from 'mongoose';
+// Deloitte Custom Change: Retention Update
 import type { AppConfig } from '~/types';
 import {
   DEFAULT_RETENTION_HOURS,
@@ -36,6 +37,7 @@ export const buildRetentionVisibilityFilter = <
 
 export const createFallbackRetentionDate = (now: number = Date.now()): Date =>
   new Date(now + DEFAULT_RETENTION_HOURS * 60 * 60 * 1000);
+// Deloitte Custom Change: Retention Update
 
 /**
  * Default independent file-retention period in hours (60 days), used only when

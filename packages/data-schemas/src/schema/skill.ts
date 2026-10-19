@@ -218,6 +218,7 @@ const skillSchema: Schema<ISkillDocument> = new Schema(
       type: String,
       index: true,
     },
+    // Deloitte Custom Change: Retention Update
     /** Explicit activity anchor for retention; never inferred from `updatedAt`. */
     lastActivityAt: {
       type: Date,
@@ -262,6 +263,7 @@ skillSchema.index({ updatedAt: -1, _id: 1 });
 skillSchema.index({ name: 1, author: 1, tenantId: 1 }, { unique: true });
 skillSchema.index({ source: 1, 'sourceMetadata.upstreamId': 1, tenantId: 1 });
 skillSchema.index({ source: 1, 'sourceMetadata.sourceId': 1, tenantId: 1 });
+// Deloitte Custom Change: Retention Update
 /** Deletion is app-owned by the purge sweep worker, not MongoDB's TTL monitor: a native
  * TTL index deletes directly and bypasses the cascade (SkillFile blob deletion) that only
  * the sweep's `cascadeDeleteSkill` call runs. */

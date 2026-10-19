@@ -3764,22 +3764,26 @@ describe('Message Operations', () => {
       expect(result?.expiredAt).toEqual(inheritedExpiration);
     });
 
+    // Deloitte Custom Change: Retention Update
     it('should set a default 30-day expiredAt when isTemporary is false', async () => {
       mockCtx.isTemporary = false;
 
       const result = await saveMessage(mockCtx, mockMessageData);
 
       expect(result?.messageId).toBe('msg123');
+      // Deloitte Custom Change: Retention Update
       expect(result?.expiredAt).toBeInstanceOf(Date);
       expect(result?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
     });
 
+    // Deloitte Custom Change: Retention Update
     it('should set a default 30-day expiredAt when isTemporary is not provided', async () => {
       // No isTemporary set
 
       const result = await saveMessage(mockCtx, mockMessageData);
 
       expect(result?.messageId).toBe('msg123');
+      // Deloitte Custom Change: Retention Update
       expect(result?.expiredAt).toBeInstanceOf(Date);
       expect(result?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
     });
@@ -3983,6 +3987,7 @@ describe('Message Operations', () => {
       expect(secondSave?.expiredAt).toBeDefined();
     });
 
+    // Deloitte Custom Change: Retention Update
     it('sets a default expiredAt for a non-temporary message even when retentionMode is temporary', async () => {
       mockCtx.isTemporary = false;
       mockCtx.interfaceConfig = {
@@ -3990,6 +3995,7 @@ describe('Message Operations', () => {
         retentionMode: RetentionMode.TEMPORARY,
       };
       const result = await saveMessage(mockCtx, mockMessageData);
+      // Deloitte Custom Change: Retention Update
       expect(result?.expiredAt).toBeInstanceOf(Date);
       expect(result?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
     });
@@ -4090,11 +4096,13 @@ describe('Message Operations', () => {
       );
     });
 
+    // Deloitte Custom Change: Retention Update
     it('recomputes a fresh default deadline when saving without isTemporary and no generalChatRetention override', async () => {
       mockCtx.interfaceConfig = { temporaryChatRetention: 24 };
 
       mockCtx.isTemporary = true;
       const firstSave = await saveMessage(mockCtx, mockMessageData);
+      // Deloitte Custom Change: Retention Update
       const originalExpiredAt = firstSave?.expiredAt ?? new Date(0);
 
       mockCtx.isTemporary = undefined;
@@ -4103,10 +4111,12 @@ describe('Message Operations', () => {
 
       expect(secondSave?.text).toBe('Updated text');
       expect(secondSave?.isTemporary).toBe(true);
+      // Deloitte Custom Change: Retention Update
       expect(secondSave?.expiredAt?.getTime()).toBeGreaterThanOrEqual(originalExpiredAt.getTime());
     });
 
     it('should handle bulk operations with temporary messages', async () => {
+      // Deloitte Custom Change: Retention Update
       // This test verifies bulkSaveMessages preserves an explicit expiredAt and
       // derives a fallback default for any doc that omits one (see 1.5 hardening).
       const messages = [
@@ -4138,6 +4148,7 @@ describe('Message Operations', () => {
       const bulk2 = savedMessages.find((m) => m.messageId === 'bulk2');
 
       expect(bulk1?.expiredAt).toBeDefined();
+      // Deloitte Custom Change: Retention Update
       expect(bulk2?.expiredAt).toBeInstanceOf(Date);
       expect(bulk2?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
     });

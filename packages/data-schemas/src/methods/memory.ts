@@ -1,3 +1,4 @@
+// Deloitte Custom Change: Retention Update
 import crypto from 'node:crypto';
 import type { Types, FilterQuery, Model } from 'mongoose';
 import type * as t from '~/types';
@@ -14,6 +15,7 @@ const formatDate = (date: Date): string => {
  *  so pre-partition entries remain part of the shared personal pool. */
 const partitionFilter = (agentId?: string) => ({ agentId: agentId ?? null });
 
+// Deloitte Custom Change: Retention Update
 /** A memory claimed by the retention purge sweep, enough to classify and delete it. */
 export interface ClaimedPurgeMemory {
   resourceId: string;
@@ -32,6 +34,7 @@ export interface ReleaseMemoryPurgeClaimOptions {
 
 // Factory function that takes mongoose instance and returns the methods
 export function createMemoryMethods(mongoose: typeof import('mongoose')): {
+  // Deloitte Custom Change: Retention Update
   setMemory: (
     { userId, key, value, tokenCount, agentId }: t.SetMemoryParams,
     options?: { retentionHours?: number },
@@ -41,6 +44,7 @@ export function createMemoryMethods(mongoose: typeof import('mongoose')): {
     options?: { retentionHours?: number },
   ) => Promise<t.MemoryResult>;
   deleteMemory: ({ userId, key, agentId }: t.DeleteMemoryParams) => Promise<t.MemoryResult>;
+  // Deloitte Custom Change: Retention Update
   setMemoryById: (
     params: t.SetMemoryByIdParams,
     options?: { retentionHours?: number },
@@ -53,6 +57,7 @@ export function createMemoryMethods(mongoose: typeof import('mongoose')): {
     agentId,
   }: t.GetFormattedMemoriesParams) => Promise<t.FormattedMemoriesResult>;
   deleteAllUserMemories: (userId: string | Types.ObjectId) => Promise<number>;
+  // Deloitte Custom Change: Retention Update
   claimExpiredMemories: (
     limit: number,
     options: { leaseMs: number; now?: Date },
@@ -76,6 +81,7 @@ export function createMemoryMethods(mongoose: typeof import('mongoose')): {
    * Creates a new memory entry for a user
    * Throws an error if a memory with the same key already exists
    */
+  // Deloitte Custom Change: Retention Update
   async function createMemory(
     { userId, key, value, tokenCount = 0, agentId }: t.SetMemoryParams,
     options: { retentionHours?: number } = {},
@@ -95,6 +101,7 @@ export function createMemoryMethods(mongoose: typeof import('mongoose')): {
         throw new Error('Memory with this key already exists');
       }
 
+      // Deloitte Custom Change: Retention Update
       const now = new Date();
       await MemoryEntry.create({
         userId,
@@ -102,6 +109,7 @@ export function createMemoryMethods(mongoose: typeof import('mongoose')): {
         value,
         tokenCount,
         ...(agentId ? { agentId } : {}),
+        // Deloitte Custom Change: Retention Update
         updated_at: now,
         ...(options.retentionHours != null
           ? {
@@ -122,6 +130,7 @@ export function createMemoryMethods(mongoose: typeof import('mongoose')): {
   /**
    * Sets or updates a memory entry for a user
    */
+  // Deloitte Custom Change: Retention Update
   async function setMemory(
     { userId, key, value, tokenCount = 0, agentId }: t.SetMemoryParams,
     options: { retentionHours?: number } = {},
@@ -132,6 +141,7 @@ export function createMemoryMethods(mongoose: typeof import('mongoose')): {
       }
 
       const MemoryEntry = mongoose.models.MemoryEntry;
+      // Deloitte Custom Change: Retention Update
       const now = new Date();
       await MemoryEntry.findOneAndUpdate(
         { userId, key, ...partitionFilter(agentId) },
@@ -139,6 +149,7 @@ export function createMemoryMethods(mongoose: typeof import('mongoose')): {
           value,
           tokenCount,
           ...(agentId ? { agentId } : {}),
+          // Deloitte Custom Change: Retention Update
           updated_at: now,
           ...(options.retentionHours != null
             ? {
@@ -185,6 +196,7 @@ export function createMemoryMethods(mongoose: typeof import('mongoose')): {
   }
 
   /** Updates an existing memory without requiring its authored key. */
+  // Deloitte Custom Change: Retention Update
   async function setMemoryById(
     { userId, id, key, value, tokenCount = 0, agentId }: t.SetMemoryByIdParams,
     options: { retentionHours?: number } = {},
@@ -215,6 +227,7 @@ export function createMemoryMethods(mongoose: typeof import('mongoose')): {
         }
       }
 
+      // Deloitte Custom Change: Retention Update
       const now = new Date();
       const updatedMemory = (await MemoryEntry.findOneAndUpdate(
         recordFilter,
@@ -222,6 +235,7 @@ export function createMemoryMethods(mongoose: typeof import('mongoose')): {
           ...(key != null ? { key } : {}),
           value,
           tokenCount,
+          // Deloitte Custom Change: Retention Update
           updated_at: now,
           ...(options.retentionHours != null
             ? {
@@ -319,6 +333,7 @@ export function createMemoryMethods(mongoose: typeof import('mongoose')): {
           withoutKeys: '',
           totalTokens: 0,
           tokenCountsByKey: new Map<string, number>(),
+          // Deloitte Custom Change: Retention Update
           memoryIds: [],
         };
       }
@@ -352,6 +367,7 @@ export function createMemoryMethods(mongoose: typeof import('mongoose')): {
         })
         .join('\n\n');
 
+      // Deloitte Custom Change: Retention Update
       const memoryIds = sortedMemories.map((memory) => memory._id);
 
       return { withKeys, withoutKeys, totalTokens, tokenCountsByKey, memoryIds };
@@ -384,6 +400,7 @@ export function createMemoryMethods(mongoose: typeof import('mongoose')): {
     }
   }
 
+  // Deloitte Custom Change: Retention Update
   /**
    * Leases up to `limit` expired memories for the retention purge sweep.
    * Mirrors `claimExpiredSkills`/`claimExpiredAgents`: each claim is a
@@ -524,6 +541,7 @@ export function createMemoryMethods(mongoose: typeof import('mongoose')): {
     getUserMemories,
     getFormattedMemories,
     deleteAllUserMemories,
+    // Deloitte Custom Change: Retention Update
     claimExpiredMemories,
     releaseMemoryPurgeClaim,
     confirmMemoryPurgeEligible,

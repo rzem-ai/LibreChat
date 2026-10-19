@@ -1863,6 +1863,7 @@ describe('initializeAgent — attachment scoping', () => {
     ]);
   });
 
+  // Deloitte Custom Change: Retention Update
   it('stamps agent-resource files with the agent-file clock and message files with the general clock', async () => {
     const { filterFilesByEndpointRuntimeConfig } = jest.requireMock('~/files') as {
       filterFilesByEndpointRuntimeConfig: jest.Mock;

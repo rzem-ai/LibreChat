@@ -295,6 +295,7 @@ const messageSchema: Schema<IMessage> = new Schema(
     expiredAt: {
       type: Date,
     },
+    // Deloitte Custom Change: Retention Update
     /** Explicit, auditable carve-out from default retention. Only a narrow,
      * permissioned caller should ever set `exempt: true`. */
     retentionException: {
@@ -315,6 +316,7 @@ const messageSchema: Schema<IMessage> = new Schema(
   { timestamps: true },
 );
 
+// Deloitte Custom Change: Retention Update
 /** Deletion is app-owned by the conversation purge sweep, not MongoDB's TTL monitor: a
  * message has no independent claim state and is removed as part of its conversation's
  * cascade, so a bare TTL index here would delete rows outside that cascade entirely. */

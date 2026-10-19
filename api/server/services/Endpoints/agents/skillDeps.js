@@ -49,6 +49,7 @@ const deploymentSkillMethods = createDeploymentSkillMethods({
   getSkillFileByPath: db.getSkillFileByPath,
   updateSkillFileContent: db.updateSkillFileContent,
   updateSkillFileCodeEnvIds: db.updateSkillFileCodeEnvIds,
+  // Deloitte Custom Change: Retention Update
   touchSkillsLastActivity: db.touchSkillsLastActivity,
 });
 

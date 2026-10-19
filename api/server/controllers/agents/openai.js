@@ -1077,6 +1077,7 @@ const executeOpenAIChatCompletion = async (envelope, { req, res }) => {
             userId,
             memoryAvailable,
             getFormattedMemories: db.getFormattedMemories,
+            // Deloitte Custom Change: Retention Update
             touchMemoriesLastActivity: db.touchMemoriesLastActivity,
           });
           return applyContextToAgent({

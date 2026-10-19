@@ -1,3 +1,4 @@
+// Deloitte Custom Change: Retention Update
 import { backgroundResultMetadata, HITL_MESSAGE_FILTER_FIELDS } from 'librechat-data-provider';
 import type { DeleteResult, FilterQuery, Model, Types, UpdateQuery } from 'mongoose';
 import type { UserSubmittedMessageFieldPath } from 'librechat-data-provider';
@@ -718,8 +719,10 @@ export interface MessageMethods {
   bulkSaveMessages(
     messages: Array<Partial<IMessage>>,
     overrideTimestamp?: boolean,
+    // Deloitte Custom Change: Retention Update
     interfaceConfig?: AppConfig['interfaceConfig'],
   ): Promise<unknown>;
+  // Deloitte Custom Change: Retention Update
   /** @deprecated Unused outside tests — prefer `saveMessage`/`bulkSaveMessages`, which derive
    * retention. Kept only so a future caller doesn't silently create a permanently-retained row. */
   recordMessage(
@@ -845,6 +848,7 @@ export interface MessageMethods {
     hydrate?: boolean,
   ): Promise<Awaited<ReturnType<SchemaWithMeiliMethods['meiliSearch']>>>;
   deleteMessages(filter: FilterQuery<IMessage>): Promise<DeleteResult>;
+  // Deloitte Custom Change: Retention Update
   getFileIdsAttachedToLiveConversations(fileIds: string[]): Promise<Set<string>>;
 }
 
@@ -915,12 +919,14 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
       isTemporary,
       expiredAt,
       interfaceConfig,
+      // Deloitte Custom Change: Retention Update
       retentionException,
     }: {
       userId: string;
       isTemporary?: boolean;
       expiredAt?: Date;
       interfaceConfig?: AppConfig['interfaceConfig'];
+      // Deloitte Custom Change: Retention Update
       /** Explicit, auditable exemption from default retention. Never derive this from
        * a generic request body — only a narrow, permissioned caller should set it. */
       retentionException?: { exempt: boolean; reason?: string; setBy?: string };
@@ -953,8 +959,10 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
       };
       delete update.isTemporary;
       delete update.expiredAt;
+      // Deloitte Custom Change: Retention Update
       delete update.retentionException;
       let retentionOnInsert: { expiredAt: Date; isTemporary: false } | undefined;
+      // Deloitte Custom Change: Retention Update
       const isExemptFromRetention = retentionException?.exempt === true;
 
       if (expiredAt instanceof Date && !Number.isNaN(expiredAt.getTime())) {
@@ -962,6 +970,7 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
           update.isTemporary = isTemporary;
         }
         update.expiredAt = expiredAt;
+        // Deloitte Custom Change: Retention Update
       } else if (isExemptFromRetention) {
         /** The only remaining path to a null expiry for a non-temporary message: an
          * explicit, auditable exception from a narrow permissioned caller. */
@@ -982,6 +991,7 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
           logger.info(`---\`saveMessage\` context: ${metadata?.context}`);
           update.expiredAt = createFallbackRetentionDate();
         }
+        // Deloitte Custom Change: Retention Update
       } else {
         /** Default: every non-temporary, non-exempt message gets a retention deadline,
          * regardless of `interfaceConfig.retentionMode` — see `createChatExpirationDate`.
@@ -990,12 +1000,15 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
          * repaired by the backfill block below, and an existing `true` stays `true`). */
         if (
           typeof isTemporary === 'boolean' ||
+          // Deloitte Custom Change: Retention Update
           interfaceConfig?.generalChatRetention === undefined
         ) {
+          // Deloitte Custom Change: Retention Update
           if (typeof isTemporary === 'boolean') {
             update.isTemporary = isTemporary;
           }
           try {
+            // Deloitte Custom Change: Retention Update
             update.expiredAt = createChatExpirationDate(interfaceConfig, false);
           } catch (err) {
             logger.error('Error creating chat expiration date:', err);
@@ -1072,8 +1085,10 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
 
       /** Reuse the saved row's chat type when callers omit it, preserving existing deadlines. */
       if (
+        // Deloitte Custom Change: Retention Update
         interfaceConfig?.generalChatRetention !== undefined &&
         typeof isTemporary !== 'boolean' &&
+        // Deloitte Custom Change: Retention Update
         message.expiredAt == null &&
         message.retentionException?.exempt !== true
       ) {
@@ -1094,6 +1109,7 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
 
       if (
         typeof isTemporary !== 'boolean' &&
+        // Deloitte Custom Change: Retention Update
         message.retentionException?.exempt !== true &&
         (message.isTemporary == null ||
           (message.isTemporary === false && message.$isDefault('isTemporary')))
@@ -1144,6 +1160,7 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
   async function bulkSaveMessages(
     messages: Array<Record<string, unknown>>,
     overrideTimestamp = false,
+    // Deloitte Custom Change: Retention Update
     interfaceConfig?: AppConfig['interfaceConfig'],
   ) {
     try {
@@ -1168,6 +1185,7 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
         if (provenance.promoteWholeMessage) {
           normalizedMessage.isUserSubmitted = true;
         }
+        // Deloitte Custom Change: Retention Update
         if (
           normalizedMessage.expiredAt == null &&
           (normalizedMessage.retentionException as { exempt?: boolean } | undefined)?.exempt !==
@@ -1202,8 +1220,10 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
 
   /**
    * Records a message in the database (no UUID validation).
+// Deloitte Custom Change: Retention Update
    * @deprecated Unused outside tests — prefer `saveMessage`/`bulkSaveMessages`.
    */
+  // Deloitte Custom Change: Retention Update
   async function recordMessage(
     {
       user,
@@ -1236,6 +1256,7 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
         userSubmittedMessageFieldPaths: _userSubmittedMessageFieldPaths,
         ...safeRest
       } = rest;
+      // Deloitte Custom Change: Retention Update
       const message: Record<string, unknown> = {
         user,
         endpoint,
@@ -1251,6 +1272,7 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
         }),
         ...(provenance.promoteWholeMessage && { isUserSubmitted: true }),
       };
+      // Deloitte Custom Change: Retention Update
       if (
         message.expiredAt == null &&
         (message.retentionException as { exempt?: boolean } | undefined)?.exempt !== true
@@ -3801,6 +3823,7 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
    * Performs a MeiliSearch query on the Message collection.
    * Requires the meilisearch plugin to be registered on the Message model.
    */
+  // Deloitte Custom Change: Retention Update
   /**
    * Resolves which of the given file ids are still attached to a message in a
    * conversation that has not expired. Agent/skill cascade deletion uses this
@@ -3878,6 +3901,7 @@ export function createMessageMethods(mongoose: typeof import('mongoose')): Messa
     getMessagesByCursor,
     searchMessages,
     deleteMessages,
+    // Deloitte Custom Change: Retention Update
     getFileIdsAttachedToLiveConversations,
   };
 }

@@ -195,6 +195,7 @@ export type TSkill = {
    * responses.
    */
   warnings?: TSkillWarning[];
+  // Deloitte Custom Change: Retention Update
   /** Retention deadline for private inline skills; absent/null means not yet eligible or exempt. */
   expiredAt?: string | null;
 };

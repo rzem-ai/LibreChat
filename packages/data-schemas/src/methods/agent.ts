@@ -555,6 +555,7 @@ export interface GetAgent {
   ): Promise<IAgent | null>;
 }
 
+// Deloitte Custom Change: Retention Update
 /** An agent whose expiry made it eligible for the purge sweep and which this claim
  * call successfully leased. `purgeAttempts` reflects the increment from this claim,
  * so a caller can compute backoff without a second read. */
@@ -593,6 +594,7 @@ export function createAgentMethods(
     ids: string[],
     access?: AgentGraphAccessContext,
   ) => Promise<AgentGraphNode[]>;
+  // Deloitte Custom Change: Retention Update
   createAgent: (
     agentData: Record<string, unknown>,
     options?: { retentionHours?: number },
@@ -606,6 +608,7 @@ export function createAgentMethods(
       updatingUserId?: string | null;
       forceVersion?: boolean;
       skipVersioning?: boolean;
+      // Deloitte Custom Change: Retention Update
       retentionHours?: number;
     },
   ) => Promise<IAgent | null>;
@@ -691,6 +694,7 @@ export function createAgentMethods(
     excludeAgentObjectId?: string;
     excludeToolResource?: string;
   }) => Promise<string[]>;
+  // Deloitte Custom Change: Retention Update
   claimExpiredAgents: (
     limit: number,
     options: { leaseMs: number; now?: Date },
@@ -742,11 +746,13 @@ export function createAgentMethods(
   /**
    * Create an agent with the provided data.
    */
+  // Deloitte Custom Change: Retention Update
   async function createAgent(
     agentData: Record<string, unknown>,
     options: { retentionHours?: number } = {},
   ): Promise<IAgent> {
     const Agent = mongoose.models.Agent as Model<IAgent>;
+    // Deloitte Custom Change: Retention Update
     if (options.retentionHours != null) {
       const now = new Date();
       agentData.lastActivityAt = now;
@@ -964,10 +970,12 @@ export function createAgentMethods(
       updatingUserId?: string | null;
       forceVersion?: boolean;
       skipVersioning?: boolean;
+      // Deloitte Custom Change: Retention Update
       retentionHours?: number;
     } = {},
   ): Promise<IAgent | null> {
     const Agent = mongoose.models.Agent as Model<IAgent>;
+    // Deloitte Custom Change: Retention Update
     const {
       updatingUserId = null,
       forceVersion = false,
@@ -1823,6 +1831,7 @@ export function createAgentMethods(
     );
   }
 
+  // Deloitte Custom Change: Retention Update
   /**
    * Leases up to `limit` expired, non-exempt, non-promoted agents for the retention
    * purge sweep. Mirrors `claimExpiredConversations`: each claim is a conditional
@@ -1973,6 +1982,7 @@ export function createAgentMethods(
     removeAgentFromUserFavorites,
     removeAgentResourceFilesFromAllAgents,
     getSharedResourceFileIds,
+    // Deloitte Custom Change: Retention Update
     claimExpiredAgents,
     releaseAgentPurgeClaim,
     touchAgentLastActivity,

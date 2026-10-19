@@ -1,11 +1,13 @@
 import { logger } from '@librechat/data-schemas';
 import { AccessRoleIds, ResourceType, PrincipalType } from 'librechat-data-provider';
 import type { AccessRoleMethods, IAgent } from '@librechat/data-schemas';
+// Deloitte Custom Change: Retention Update
 import type { Model, Mongoose, mongo } from 'mongoose';
 import { ensureRequiredCollectionsExist } from '../db/utils';
 
 const GLOBAL_PROJECT_NAME = 'instance';
 
+// Deloitte Custom Change: Retention Update
 /**
  * Legacy pre-ACL-migration fallback: agents created before the granular permission
  * system have no `AclEntry` rows at all. Their sharing state instead lives on the
@@ -87,6 +89,7 @@ export async function checkAgentPermissionsMigration({
       };
     }
 
+    // Deloitte Custom Change: Retention Update
     const globalAgentIds = await getGlobalAgentIds(db);
 
     const AclEntry = mongoose.model('AclEntry');

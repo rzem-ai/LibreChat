@@ -177,10 +177,12 @@ async function deleteCodeEnvFile(req, file) {
         timeout: 15000,
       });
     } catch (error) {
+      // Deloitte Custom Change: Retention Update
       const status = error.response?.status;
       if (status !== 404 && status !== 403) {
         throw error;
       }
+      // Deloitte Custom Change: Retention Update
       /* Already gone. Logged rather than swallowed: a 404 (or a 403 from
        * codeapi's sessionAuth, which answers "this sandbox session no
        * longer exists" the same way for every caller, not just this one)
@@ -192,6 +194,7 @@ async function deleteCodeEnvFile(req, file) {
        * one-off. */
       logAxiosError({
         error,
+        // Deloitte Custom Change: Retention Update
         message: `Code environment object already absent or session expired: ${error.message}`,
       });
     }

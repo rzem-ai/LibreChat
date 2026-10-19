@@ -189,6 +189,7 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
     inc?: number;
     user?: string;
     tenantId?: string | null;
+    // Deloitte Custom Change: Retention Update
     fileRetentionHours?: number;
   }) => Promise<IMongoFile | null>;
   deleteFile: (file_id: string) => Promise<IMongoFile | null>;
@@ -205,6 +206,7 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
   updateFilesUsage: (
     files: Array<{ file_id: string }>,
     fileIds?: string[],
+    // Deloitte Custom Change: Retention Update
     options?: { user?: string; tenantId?: string | null; fileRetentionHours?: number },
   ) => Promise<IMongoFile[]>;
   extendFilesTTL: (
@@ -949,12 +951,15 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
     inc?: number;
     user?: string;
     tenantId?: string | null;
+    // Deloitte Custom Change: Retention Update
     fileRetentionHours?: number;
   }): Promise<IMongoFile | null> {
     const File = mongoose.models.File as Model<IMongoFile>;
+    // Deloitte Custom Change: Retention Update
     const { file_id, inc = 1, user, tenantId, fileRetentionHours } = data;
     const now = new Date();
     const updateOperation = {
+      // Deloitte Custom Change: Retention Update
       $set: {
         lastUsedAt: now,
         ...(fileRetentionHours != null
@@ -1056,6 +1061,7 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
   async function updateFilesUsage(
     files: Array<{ file_id: string }>,
     fileIds?: string[],
+    // Deloitte Custom Change: Retention Update
     options?: { user?: string; tenantId?: string | null; fileRetentionHours?: number },
   ): Promise<IMongoFile[]> {
     const promises: Promise<IMongoFile | null>[] = [];
@@ -1063,6 +1069,7 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
     // Preserve the same owner scope for every deduped ID in this batch.
     const user = options?.user;
     const tenantId = options?.tenantId;
+    // Deloitte Custom Change: Retention Update
     const fileRetentionHours = options?.fileRetentionHours;
 
     for (const file of files) {
@@ -1071,6 +1078,7 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
         continue;
       }
       seen.add(file_id);
+      // Deloitte Custom Change: Retention Update
       promises.push(updateFileUsage({ file_id, user, tenantId, fileRetentionHours }));
     }
 
@@ -1084,6 +1092,7 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
         continue;
       }
       seen.add(file_id);
+      // Deloitte Custom Change: Retention Update
       promises.push(updateFileUsage({ file_id, user, tenantId, fileRetentionHours }));
     }
 

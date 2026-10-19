@@ -372,6 +372,7 @@ const convoSchema: Schema<IConversation> = new Schema(
     expiredAt: {
       type: Date,
     },
+    // Deloitte Custom Change: Retention Update
     /** Explicit, auditable carve-out from default retention. Only a narrow,
      * permissioned caller should ever set `exempt: true`. */
     retentionException: {
@@ -415,6 +416,7 @@ const convoSchema: Schema<IConversation> = new Schema(
   { timestamps: true },
 );
 
+// Deloitte Custom Change: Retention Update
 /** Deletion is app-owned by the purge sweep worker, not MongoDB's TTL monitor: a native
  * TTL index deletes directly and bypasses the cascade (tool calls, shared links, agent
  * generations, checkpoints) that only the sweep's `purgeConversationCascade` call runs. */

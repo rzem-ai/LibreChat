@@ -455,6 +455,7 @@ describe('loadDefaultInterface', () => {
     expect(interfaceConfig).not.toHaveProperty('defaultPinnedTools');
   });
 
+  // Deloitte Custom Change: Retention Update
   it('preserves the configured file retention periods', async () => {
     const config: Partial<TCustomConfig> = {
       interface: {

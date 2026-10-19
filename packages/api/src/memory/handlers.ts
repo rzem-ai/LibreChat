@@ -1,4 +1,5 @@
 import { hasActivePiiPatterns } from 'librechat-data-provider';
+// Deloitte Custom Change: Retention Update
 import { isValidMemoryKey, getMemoryRetentionHours } from '@librechat/data-schemas';
 import type { MemoryMethods, AppConfig } from '@librechat/data-schemas';
 import type { FiltersConfig } from 'librechat-data-provider';
@@ -23,6 +24,7 @@ interface MemoryRequestConfig {
   memory?: {
     charLimit?: number;
   };
+  // Deloitte Custom Change: Retention Update
   interfaceConfig?: AppConfig['interfaceConfig'];
 }
 
@@ -108,6 +110,7 @@ export function createMemoryManagementHandlers(deps: MemoryManagementHandlersDep
     }
 
     try {
+      // Deloitte Custom Change: Retention Update
       const result = await deps.setMemoryById(
         {
           userId,

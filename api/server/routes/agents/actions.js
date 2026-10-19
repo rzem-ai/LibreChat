@@ -1,5 +1,6 @@
 const express = require('express');
 const { nanoid } = require('nanoid');
+// Deloitte Custom Change: Retention Update
 const { logger, getAgentRetentionHours } = require('@librechat/data-schemas');
 const {
   generateCheckAccess,
@@ -238,6 +239,7 @@ router.post(
         {
           updatingUserId: req.user.id,
           forceVersion: true,
+          // Deloitte Custom Change: Retention Update
           retentionHours: getAgentRetentionHours(appConfig?.interfaceConfig),
         },
       );
@@ -323,6 +325,7 @@ router.delete(
       await db.updateAgent(
         { id: agent_id },
         { tools: updatedTools, actions: updatedActions },
+        // Deloitte Custom Change: Retention Update
         {
           updatingUserId: req.user.id,
           forceVersion: true,

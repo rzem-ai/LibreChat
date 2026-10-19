@@ -167,6 +167,7 @@ const agentSchema: Schema<IAgent> = new Schema<IAgent>(
       type: String,
       index: true,
     },
+    // Deloitte Custom Change: Retention Update
     /** Explicit activity anchor for retention; never inferred from `updatedAt`. */
     lastActivityAt: {
       type: Date,
@@ -210,6 +211,7 @@ agentSchema.index({ mcpServerNames: 1, tenantId: 1 });
 agentSchema.index({ updatedAt: -1, _id: 1 });
 agentSchema.index({ tenantId: 1, updatedAt: -1, _id: 1 });
 agentSchema.index({ 'edges.to': 1 });
+// Deloitte Custom Change: Retention Update
 /** Deletion is app-owned by the purge sweep worker, not MongoDB's TTL monitor: a native
  * TTL index deletes directly and bypasses the cascade (resource files, avatar) that only
  * the sweep's `cascadeDeleteAgent` call runs. */

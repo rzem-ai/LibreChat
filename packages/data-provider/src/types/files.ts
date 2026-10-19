@@ -218,6 +218,7 @@ export type TFile = {
   llmDeliveryPath?: 'provider' | 'text' | 'none';
   createdAt?: string | Date;
   updatedAt?: string | Date;
+  // Deloitte Custom Change: Retention Update
   /** Retention deadline, present only when the file has one. */
   expiredAt?: string | Date | null;
   /** Independent file-retention anchor, advanced on every use. */

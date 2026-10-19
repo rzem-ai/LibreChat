@@ -1,5 +1,6 @@
 import type { CodeEnvRef, CodeEnvRefMap } from 'librechat-data-provider';
 import type { Document, Types } from 'mongoose';
+// Deloitte Custom Change: Retention Update
 import type { IRetentionException } from '~/types/convo';
 
 /**
@@ -95,6 +96,7 @@ export interface ISkill {
   updatedAt?: Date;
   /** Computed from ACL at read time, never persisted. */
   isPublic?: boolean;
+  // Deloitte Custom Change: Retention Update
   /** Explicit activity anchor for retention; never inferred from `updatedAt`. */
   lastActivityAt?: Date;
   expiredAt?: Date;

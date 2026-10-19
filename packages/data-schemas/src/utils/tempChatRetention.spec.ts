@@ -97,6 +97,7 @@ describe('tempChatRetention', () => {
       [RetentionMode.ALL, true, 1],
       [RetentionMode.ALL, false, 2160],
       [RetentionMode.TEMPORARY, true, 1],
+      // Deloitte Custom Change: Retention Update
       [RetentionMode.TEMPORARY, false, 2160],
     ])('selects the policy for mode=%s, temporary=%s', (retentionMode, isTemporary, hours) => {
       const now = Date.now();
@@ -113,6 +114,7 @@ describe('tempChatRetention', () => {
       ).toEqual(new Date(now + hours * 3600000));
     });
 
+    // Deloitte Custom Change: Retention Update
     it('applies the 30-day default to an ordinary chat even when retentionMode is temporary', () => {
       const now = Date.now();
       jest.spyOn(Date, 'now').mockReturnValue(now);

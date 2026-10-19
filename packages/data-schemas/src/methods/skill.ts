@@ -1,3 +1,4 @@
+// Deloitte Custom Change: Retention Update
 import crypto from 'node:crypto';
 import {
   ResourceType,
@@ -45,6 +46,7 @@ export type ValidationIssue = {
   severity?: 'error' | 'warning';
 };
 
+// Deloitte Custom Change: Retention Update
 /** A skill claimed by the retention purge sweep, enough to classify and cascade-delete it. */
 export interface ClaimedPurgeSkill {
   resourceId: string;
@@ -1051,6 +1053,7 @@ export function createSkillMethods(
   mongoose: typeof import('mongoose'),
   deps: SkillDeps,
 ): {
+  // Deloitte Custom Change: Retention Update
   createSkill: (
     data: CreateSkillInput,
     options?: { retentionHours?: number },
@@ -1094,6 +1097,7 @@ export function createSkillMethods(
     id: string;
     expectedVersion: number;
     update: UpdateSkillInput;
+    // Deloitte Custom Change: Retention Update
     retentionHours?: number;
   }) => Promise<UpdateSkillResult>;
   deleteSkill: (id: string) => Promise<DeleteSkillResult>;
@@ -1132,6 +1136,7 @@ export function createSkillMethods(
       codeEnvRef: CodeEnvRef;
     }>,
   ) => Promise<{ matchedCount: number; modifiedCount: number }>;
+  // Deloitte Custom Change: Retention Update
   claimExpiredSkills: (
     limit: number,
     options: { leaseMs: number; now?: Date },
@@ -1208,6 +1213,7 @@ export function createSkillMethods(
     ).toString('base64');
   }
 
+  // Deloitte Custom Change: Retention Update
   async function createSkill(
     data: CreateSkillInput,
     options: { retentionHours?: number } = {},
@@ -1282,6 +1288,7 @@ export function createSkillMethods(
     }
 
     const derived = deriveStructuredFrontmatterFields(frontmatter);
+    // Deloitte Custom Change: Retention Update
     const now = new Date();
     const doc = await Skill.create({
       name: data.name,
@@ -1304,6 +1311,7 @@ export function createSkillMethods(
         bodyAlwaysApply,
       ),
       tenantId: data.tenantId,
+      // Deloitte Custom Change: Retention Update
       ...(options.retentionHours != null
         ? {
             lastActivityAt: now,
@@ -1547,8 +1555,10 @@ export function createSkillMethods(
     id: string;
     expectedVersion: number;
     update: UpdateSkillInput;
+    // Deloitte Custom Change: Retention Update
     retentionHours?: number;
   }): Promise<UpdateSkillResult> {
+    // Deloitte Custom Change: Retention Update
     const { id, expectedVersion, update, retentionHours } = params;
     if (!isValidObjectIdString(id)) {
       return { status: 'not_found' };
@@ -1688,6 +1698,7 @@ export function createSkillMethods(
     if (derivedAlwaysApply !== undefined) {
       setPayload.alwaysApply = derivedAlwaysApply;
     }
+    // Deloitte Custom Change: Retention Update
     if (retentionHours != null) {
       const now = new Date();
       setPayload.lastActivityAt = now;
@@ -2073,6 +2084,7 @@ export function createSkillMethods(
     return { matchedCount: result.matchedCount, modifiedCount: result.modifiedCount };
   }
 
+  // Deloitte Custom Change: Retention Update
   /**
    * Leases up to `limit` expired, non-exempt skills for the retention purge
    * sweep. Mirrors `claimExpiredAgents`/`claimExpiredConversations`: each claim
@@ -2249,6 +2261,7 @@ export function createSkillMethods(
     getSkillFileByPath,
     updateSkillFileContent,
     updateSkillFileCodeEnvIds,
+    // Deloitte Custom Change: Retention Update
     claimExpiredSkills,
     releaseSkillPurgeClaim,
     confirmSkillPurgeEligible,

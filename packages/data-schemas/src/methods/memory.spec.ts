@@ -278,6 +278,7 @@ describe('memory partitions', () => {
       withoutKeys: '',
       totalTokens: 0,
       tokenCountsByKey: new Map(),
+      // Deloitte Custom Change: Retention Update
       memoryIds: [],
     });
   });
@@ -295,6 +296,7 @@ describe('memory partitions', () => {
     expect(await MemoryEntry.countDocuments({ userId: otherUserId })).toBe(1);
   });
 });
+// Deloitte Custom Change: Retention Update
 
 describe('memory retention stamping', () => {
   it('stamps lastActivityAt/expiredAt on createMemory, setMemory, and setMemoryById when retentionHours is provided', async () => {

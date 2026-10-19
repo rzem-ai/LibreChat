@@ -2,6 +2,7 @@ const { z } = require('zod');
 const { load } = require('js-yaml');
 const fs = require('fs').promises;
 const { nanoid } = require('nanoid');
+// Deloitte Custom Change: Retention Update
 const { logger, getAgentRetentionHours } = require('@librechat/data-schemas');
 const {
   refreshS3Url,
@@ -23,6 +24,7 @@ const {
   mergeAgentOcrConversion,
   sanitizeModelParameters,
   MAX_AVATAR_REFRESH_AGENTS,
+  // Deloitte Custom Change: Retention Update
   cascadeDeleteAgent,
   collectToolResourceFileIds,
   convertOcrToContextInPlace,
@@ -83,6 +85,7 @@ const {
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { resizeAvatar } = require('~/server/services/Files/images/avatar');
 const { getFileStrategy } = require('~/server/utils/getFileStrategy');
+// Deloitte Custom Change: Retention Update
 const { filterFile, processDeleteRequest } = require('~/server/services/Files/process');
 const { getCachedTools } = require('~/server/services/Config');
 const {
@@ -909,6 +912,7 @@ const createAgentHandler = async (req, res) => {
       agentData.mcpServerNames = Array.from(resolvedServerNames);
     }
 
+    // Deloitte Custom Change: Retention Update
     const agent = await db.createAgent(agentData, {
       retentionHours: getAgentRetentionHours(req.config?.interfaceConfig),
     });
@@ -1377,6 +1381,7 @@ const updateAgentHandler = async (req, res) => {
       Object.keys(updateData).length > 0
         ? await db.updateAgent({ id }, updateData, {
             updatingUserId: req.user.id,
+            // Deloitte Custom Change: Retention Update
             retentionHours: getAgentRetentionHours(req.config?.interfaceConfig),
           })
         : existingAgent;
@@ -1639,6 +1644,7 @@ const duplicateAgentHandler = async (req, res) => {
 
     let newAgent;
     try {
+      // Deloitte Custom Change: Retention Update
       newAgent = await db.createAgent(newAgentData, {
         retentionHours: getAgentRetentionHours(req.config?.interfaceConfig),
       });
@@ -1705,6 +1711,7 @@ const duplicateAgentHandler = async (req, res) => {
 const deleteAgentHandler = async (req, res) => {
   try {
     const id = req.params.id;
+    // Deloitte Custom Change: Retention Update
     const deleted = await cascadeDeleteAgent(
       id,
       { tenantId: req.user.tenantId },
@@ -2033,6 +2040,7 @@ const uploadAgentAvatarHandler = async (req, res) => {
 
     const updatedAgent = await db.updateAgent({ id: agent_id }, data, {
       updatingUserId: req.user.id,
+      // Deloitte Custom Change: Retention Update
       retentionHours: getAgentRetentionHours(req.config?.interfaceConfig),
     });
     await attachOwnerContacts([updatedAgent]);
@@ -2222,6 +2230,7 @@ const revertAgentVersionHandler = async (req, res) => {
     }
 
     if (Object.keys(revertUpdates).length > 0) {
+      // Deloitte Custom Change: Retention Update
       updatedAgent = await db.updateAgent({ id }, revertUpdates, {
         updatingUserId: req.user.id,
         retentionHours: getAgentRetentionHours(req.config?.interfaceConfig),

@@ -76,6 +76,7 @@ export function createTempChatExpirationDate(interfaceConfig?: AppConfig['interf
   return new Date(Date.now() + retentionHours * 60 * 60 * 1000);
 }
 
+// Deloitte Custom Change: Retention Update
 /**
  * Default eligibility policy for every non-exempt, non-temporary chat: applies
  * `generalChatRetention` when configured, otherwise the same 30-day default temp
@@ -86,6 +87,7 @@ export function createChatExpirationDate(
   interfaceConfig?: AppConfig['interfaceConfig'],
   isTemporary: boolean = false,
 ): Date {
+  // Deloitte Custom Change: Retention Update
   if (isTemporary || interfaceConfig?.generalChatRetention === undefined) {
     return createTempChatExpirationDate(interfaceConfig);
   }

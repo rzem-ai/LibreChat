@@ -50,6 +50,7 @@ export enum ResourceType {
   REMOTE_AGENT = 'remoteAgent',
   SKILL = 'skill',
   SHARED_LINK = 'sharedLink',
+  // Deloitte Custom Change: Retention Update
   MEMORY = 'memory',
 }
 

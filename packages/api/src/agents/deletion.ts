@@ -5,18 +5,23 @@ import {
   PermissionTypes,
   ResourceType,
 } from 'librechat-data-provider';
+// Deloitte Custom Change: Retention Update
 import type { IAgent, IMongoFile, IRole, IUser, SystemCapability } from '@librechat/data-schemas';
 import type { FilterQuery, Types } from 'mongoose';
 import type { Request, Response } from 'express';
+// Deloitte Custom Change: Retention Update
 import type { AgentResourceDeletionDeps, FileDeletionOutcome } from '../files/deletion';
 import type { AgentManagementProjectionSource } from './management';
 import { agentManagementDeleteResponseSchema, mapAgentManagementError } from './management';
+// Deloitte Custom Change: Retention Update
 import { collectToolResourceFileIds, TOOL_RESOURCE_KEYS } from './orphans';
 import { checkAccessWithRequestCache } from '../middleware/access';
+// Deloitte Custom Change: Retention Update
 import { deleteAgentResourceFiles } from '../files/deletion';
 
 type AgentManagementRecord = AgentManagementProjectionSource & { _id: Types.ObjectId };
 
+// Deloitte Custom Change: Retention Update
 export interface AgentManagementDeleteDeps
   extends Pick<
     CascadeDeleteAgentDeps,
@@ -39,6 +44,7 @@ export interface AgentManagementDeleteDeps
     requiredPermission: PermissionBits;
   }) => Promise<boolean>;
   hasCapability: (user: IUser, capability: SystemCapability) => Promise<boolean>;
+  // Deloitte Custom Change: Retention Update
   getAgent: (search: FilterQuery<IAgent>) => Promise<IAgent | null>;
   deleteFiles: (req: Request, files: IMongoFile[]) => Promise<FileDeletionOutcome>;
   deleteAvatarBlob: (req: Request, avatar: { filepath: string; source: string }) => Promise<void>;
@@ -106,6 +112,7 @@ export function createAgentManagementDeleteHandler(
         return sendError(res, 'permission_denied');
       }
 
+      // Deloitte Custom Change: Retention Update
       const deleted = await cascadeDeleteAgent(
         req.params.id,
         { tenantId: user.tenantId },
@@ -137,6 +144,7 @@ export function createAgentManagementDeleteHandler(
     }
   };
 }
+// Deloitte Custom Change: Retention Update
 
 export interface CascadeDeleteAgentDeps {
   getAgent: (searchParameter: FilterQuery<IAgent>) => Promise<IAgent | null>;

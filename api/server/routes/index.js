@@ -12,6 +12,7 @@ const adminRoles = require('./admin/roles');
 const adminSkills = require('./admin/skills');
 const adminUsers = require('./admin/users');
 const adminAuditLog = require('./admin/audit');
+// Deloitte Custom Change: Retention Update
 const adminRetention = require('./admin/retention');
 const endpoints = require('./endpoints');
 const staticRoute = require('./static');
@@ -61,6 +62,7 @@ module.exports = {
   adminSkills,
   adminUsers,
   adminAuditLog,
+  // Deloitte Custom Change: Retention Update
   adminRetention,
   keys,
   apiKeys,

@@ -43,6 +43,7 @@ const MemoryEntrySchema: Schema<IMemoryEntry> = new Schema({
     type: String,
     index: true,
   },
+  // Deloitte Custom Change: Retention Update
   /** Explicit activity anchor for retention; never inferred from `updated_at`. */
   lastActivityAt: {
     type: Date,
@@ -70,6 +71,7 @@ const MemoryEntrySchema: Schema<IMemoryEntry> = new Schema({
 });
 
 MemoryEntrySchema.index({ userId: 1, agentId: 1, key: 1 });
+// Deloitte Custom Change: Retention Update
 MemoryEntrySchema.index({ expiredAt: 1, purgeNotBefore: 1 });
 
 export default MemoryEntrySchema;

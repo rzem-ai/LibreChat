@@ -201,6 +201,7 @@ const file: Schema<IMongoFile> = new Schema(
        * backing storage first, then removes this metadata record. */
       type: Date,
     },
+    // Deloitte Custom Change: Retention Update
     lastUsedAt: {
       /* Independent per-file retention anchor: set on create and re-stamped on
        * every usage touch (send, renewal). Distinct from `updatedAt`, which

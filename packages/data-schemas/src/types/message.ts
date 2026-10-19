@@ -4,6 +4,7 @@ import type {
   UserSubmittedMessageFieldPath,
 } from 'librechat-data-provider';
 import type { Document } from 'mongoose';
+// Deloitte Custom Change: Retention Update
 import type { IAgentEventActorContextMeta, IRetentionException } from './convo';
 
 export type SubagentTaskControlAction =
@@ -136,6 +137,7 @@ export interface IMessage extends Document {
   /** Verbatim excerpts the user quoted to reference on this turn. UI-only metadata for `MessageQuotes`. */
   quotes?: string[];
   expiredAt?: Date | null;
+  // Deloitte Custom Change: Retention Update
   retentionException?: IRetentionException;
   createdAt?: Date;
   updatedAt?: Date;

@@ -149,6 +149,7 @@ describe('createMemoryTool', () => {
       expect(artifacts[Tools.memory].key).toBe('test');
       expect(artifacts[Tools.memory].value).toBe('small memory');
 
+      // Deloitte Custom Change: Retention Update
       expect(mockSetMemory).toHaveBeenCalledWith(
         {
           userId: 'test-user',
@@ -290,6 +291,7 @@ describe('createMemoryTool', () => {
           key: 'ORG-KEY',
           value: 'Prefers concise answers',
         }),
+        // Deloitte Custom Change: Retention Update
         expect.anything(),
       );
     });
@@ -333,6 +335,7 @@ describe('createMemoryTool', () => {
             key: 'policy_result',
             value: blocked[0],
           }),
+          // Deloitte Custom Change: Retention Update
           expect.anything(),
         );
       },

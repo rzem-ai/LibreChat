@@ -78,6 +78,7 @@ const { resumeAgentEventDetachedAction } = require('./services/Agents/detachedAc
 const { initializeScheduleEngine, recordExpiredScheduleApproval } = require('./services/Schedules');
 const { jwtLogin, ldapLogin, passportLogin } = require('~/strategies');
 const { startExpiredFileSweep } = require('./services/Files/process');
+// Deloitte Custom Change: Retention Update
 const { startConversationPurgeSweep } = require('./services/Retention/purgeWorker');
 const { startAgentRetentionSweep } = require('./services/Retention/agentRetentionWorker');
 const { startSkillRetentionSweep } = require('./services/Retention/skillRetentionWorker');
@@ -262,6 +263,7 @@ const startServer = async () => {
   });
   initializeGitHubSkillSync(appConfig);
   startExpiredFileSweep({ appConfig, loadAppConfig: getAppConfig });
+  // Deloitte Custom Change: Retention Update
   startConversationPurgeSweep({ appConfig, loadAppConfig: getAppConfig });
   startAgentRetentionSweep({ appConfig, loadAppConfig: getAppConfig });
   startSkillRetentionSweep({ appConfig, loadAppConfig: getAppConfig });
@@ -430,6 +432,7 @@ const startServer = async () => {
   app.use('/api/admin/skills', routes.adminSkills);
   app.use('/api/admin/users', routes.adminUsers);
   app.use('/api/admin/audit-log', routes.adminAuditLog);
+  // Deloitte Custom Change: Retention Update
   app.use('/api/admin/retention', routes.adminRetention);
   app.use('/api/actions', routes.actions);
   app.use('/api/keys', routes.keys);

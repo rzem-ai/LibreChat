@@ -24,6 +24,7 @@ const {
 const { checkBan, configMiddleware, createFileLimiters } = require('~/server/middleware');
 const { hasCapability } = require('~/server/middleware/roles/capabilities');
 const { checkPermission, findAccessibleResources } = require('~/server/services/PermissionService');
+// Deloitte Custom Change: Retention Update
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { processDeleteRequest } = require('~/server/services/Files/process');
 const { createMulterInstance } = require('~/server/routes/files/multer');
@@ -58,6 +59,7 @@ const deleteHandler = createAgentManagementDeleteHandler({
   getAgentWithVersionCount: db.getAgentWithVersionCount,
   checkPermission,
   hasCapability,
+  // Deloitte Custom Change: Retention Update
   getAgent: db.getAgent,
   getFiles: db.getFiles,
   getFileIdsAttachedToLiveConversations: db.getFileIdsAttachedToLiveConversations,

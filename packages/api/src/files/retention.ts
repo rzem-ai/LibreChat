@@ -1,4 +1,5 @@
 import { RetentionMode } from 'librechat-data-provider';
+// Deloitte Custom Change: Retention Update
 import {
   createFallbackRetentionDate,
   getFileRetentionHours,
@@ -104,6 +105,7 @@ const getRetentionCacheKey = (req: RetentionRequest): string =>
     req.config?.interfaceConfig?.retentionMode ?? '',
     req.config?.interfaceConfig?.temporaryChatRetention ?? '',
     req.config?.interfaceConfig?.generalChatRetention ?? '',
+    // Deloitte Custom Change: Retention Update
     req.config?.interfaceConfig?.fileRetentionHours ?? '',
     req.user?.id ?? '',
     req.body?.conversationId ?? '',
@@ -118,6 +120,7 @@ async function computeRetentionExpiry(
   dependencies: RetentionDependencies,
 ): Promise<RetentionExpiry> {
   const interfaceConfig = req?.config?.interfaceConfig;
+  // Deloitte Custom Change: Retention Update
   const fileRetentionHours = getFileRetentionHours(interfaceConfig);
   if (fileRetentionHours !== undefined) {
     return { expiredAt: new Date(Date.now() + fileRetentionHours * 60 * 60 * 1000) };
@@ -217,6 +220,7 @@ const shouldRetainPersistentAgentFile = ({
   req,
   messageAttachment,
   toolResource,
+  // Deloitte Custom Change: Retention Update
 }: AgentFileRetentionRequest): boolean =>
   isPersistentAgentResourceUpload({ messageAttachment, toolResource }) &&
   req?.config?.interfaceConfig?.retainAgentFiles === true;
@@ -229,6 +233,7 @@ export async function getAgentFileRetentionExpiry(
     return {};
   }
 
+  // Deloitte Custom Change: Retention Update
   if (isPersistentAgentResourceUpload(params)) {
     const hours = getAgentFileRetentionHours(params.req?.config?.interfaceConfig);
     return { expiredAt: new Date(Date.now() + hours * 60 * 60 * 1000) };

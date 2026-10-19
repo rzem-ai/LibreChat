@@ -89,6 +89,7 @@ describe('memories routes', () => {
       expect(response.body.created).toBe(true);
       expect(createMemory).toHaveBeenCalledWith(
         expect.objectContaining({ userId: 'user-1', key: 'my_key' }),
+        // Deloitte Custom Change: Retention Update
         expect.objectContaining({ retentionHours: expect.any(Number) }),
       );
     });
@@ -142,8 +143,10 @@ describe('memories routes', () => {
         .send({ key: '  new_key  ', value: 'updated value' });
 
       expect(response.status).toBe(200);
+      // Deloitte Custom Change: Retention Update
       expect(createMemory).toHaveBeenCalledWith(
         expect.objectContaining({ key: 'new_key' }),
+        // Deloitte Custom Change: Retention Update
         expect.objectContaining({ retentionHours: expect.any(Number) }),
       );
       expect(deleteMemory).toHaveBeenCalledWith(expect.objectContaining({ key: 'my_key' }));

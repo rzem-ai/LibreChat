@@ -1827,22 +1827,26 @@ describe('Conversation Operations', () => {
       expect(result?.expiredAt).toEqual(inheritedExpiration);
     });
 
+    // Deloitte Custom Change: Retention Update
     it('should set a default 30-day expiredAt when isTemporary is false', async () => {
       mockCtx.isTemporary = false;
 
       const result = await saveConvo(mockCtx, mockConversationData);
 
       expect(result?.conversationId).toBe(mockConversationData.conversationId);
+      // Deloitte Custom Change: Retention Update
       expect(result?.expiredAt).toBeInstanceOf(Date);
       expect(result?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
     });
 
+    // Deloitte Custom Change: Retention Update
     it('should set a default 30-day expiredAt when isTemporary is not provided', async () => {
       mockCtx.isTemporary = undefined;
 
       const result = await saveConvo(mockCtx, mockConversationData);
 
       expect(result?.conversationId).toBe(mockConversationData.conversationId);
+      // Deloitte Custom Change: Retention Update
       expect(result?.expiredAt).toBeInstanceOf(Date);
       expect(result?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
     });
@@ -1982,10 +1986,12 @@ describe('Conversation Operations', () => {
       );
     });
 
+    // Deloitte Custom Change: Retention Update
     it('recomputes a fresh default deadline when saving without isTemporary and no generalChatRetention override', async () => {
       mockCtx.interfaceConfig = { temporaryChatRetention: 24 };
       mockCtx.isTemporary = true;
       const firstSave = await saveConvo(mockCtx, mockConversationData);
+      // Deloitte Custom Change: Retention Update
       const originalExpiredAt = firstSave?.expiredAt ?? new Date(0);
 
       mockCtx.isTemporary = undefined;
@@ -1994,13 +2000,16 @@ describe('Conversation Operations', () => {
 
       expect(secondSave?.title).toBe('Updated Title');
       expect(secondSave?.isTemporary).toBe(true);
+      // Deloitte Custom Change: Retention Update
       expect(secondSave?.expiredAt?.getTime()).toBeGreaterThanOrEqual(originalExpiredAt.getTime());
     });
 
+    // Deloitte Custom Change: Retention Update
     it('sets a default 30-day expiredAt when updating a non-temporary conversation without isTemporary', async () => {
       // First save a non-temporary conversation
       mockCtx.isTemporary = false;
       const firstSave = await saveConvo(mockCtx, mockConversationData);
+      // Deloitte Custom Change: Retention Update
       expect(firstSave?.expiredAt).toBeInstanceOf(Date);
 
       // Update without isTemporary flag
@@ -2009,6 +2018,7 @@ describe('Conversation Operations', () => {
       const secondSave = await saveConvo(mockCtx, updatedData);
 
       expect(secondSave?.title).toBe('Updated Title');
+      // Deloitte Custom Change: Retention Update
       expect(secondSave?.expiredAt).toBeInstanceOf(Date);
       expect(secondSave?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
     });
@@ -2125,6 +2135,7 @@ describe('Conversation Operations', () => {
       expect(secondSave?.expiredAt).toBeDefined();
     });
 
+    // Deloitte Custom Change: Retention Update
     it('sets a default expiredAt for a non-temporary chat even when retentionMode is temporary', async () => {
       mockCtx.isTemporary = false;
       mockCtx.interfaceConfig = {
@@ -2132,6 +2143,7 @@ describe('Conversation Operations', () => {
         retentionMode: RetentionMode.TEMPORARY,
       };
       const result = await saveConvo(mockCtx, mockConversationData);
+      // Deloitte Custom Change: Retention Update
       expect(result?.expiredAt).toBeInstanceOf(Date);
       expect(result?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
       expect(result?.isTemporary).toBe(false);
@@ -7798,6 +7810,7 @@ describe('Conversation Operations', () => {
       ]);
     });
   });
+  // Deloitte Custom Change: Retention Update
 
   describe('claimExpiredConversations / releaseConversationPurgeClaim', () => {
     const leaseMs = 10 * 60 * 1000;

@@ -4,6 +4,7 @@ jest.mock('@librechat/data-schemas', () => ({
   logger: { warn: jest.fn(), debug: jest.fn(), error: jest.fn(), info: jest.fn() },
   runAsSystem: jest.fn((fn) => fn()),
   createChatExpirationDate: jest.fn(() => new Date('2030-01-01T00:00:00.000Z')),
+  // Deloitte Custom Change: Retention Update
   getFileRetentionHours: jest.fn(() => undefined),
 }));
 

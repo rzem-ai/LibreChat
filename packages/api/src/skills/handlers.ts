@@ -1,3 +1,4 @@
+// Deloitte Custom Change: Retention Update
 import { logger, getAgentRetentionHours } from '@librechat/data-schemas';
 import {
   ResourceType,
@@ -58,6 +59,7 @@ type DuplicateKeyError = Error & { code?: number | string };
  */
 export interface SkillsHandlersDeps {
   /** Skill CRUD — from `@librechat/data-schemas` `createMethods` output. */
+  // Deloitte Custom Change: Retention Update
   createSkill: (
     data: CreateSkillInput,
     options?: { retentionHours?: number },
@@ -68,6 +70,7 @@ export interface SkillsHandlersDeps {
     id: string;
     expectedVersion: number;
     update: UpdateSkillInput;
+    // Deloitte Custom Change: Retention Update
     retentionHours?: number;
   }) => Promise<UpdateSkillResult>;
   deleteSkill: (id: string) => Promise<DeleteSkillResult>;
@@ -472,6 +475,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
 
       let createResult: CreateSkillResult;
       try {
+        // Deloitte Custom Change: Retention Update
         createResult = await createSkill(
           {
             name: body.name,
@@ -636,9 +640,11 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
         throw error;
       }
 
+      // Deloitte Custom Change: Retention Update
       const isInlineSkill = (currentSkill.source ?? 'inline') === 'inline';
       let result: UpdateSkillResult;
       try {
+        // Deloitte Custom Change: Retention Update
         result = await updateSkill({
           id,
           expectedVersion,

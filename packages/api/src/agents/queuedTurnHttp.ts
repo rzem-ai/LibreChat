@@ -52,10 +52,12 @@ export interface AgentQueuedTurnHttpDeps {
   updateFilesUsage?: (
     files: Array<{ file_id: string }>,
     fileIds?: string[],
+    // Deloitte Custom Change: Retention Update
     options?: { user?: string; tenantId?: string | null; fileRetentionHours?: number },
   ) => Promise<unknown[]>;
   checkAgentAccess?: (run: { agentId?: string; endpoint?: string }) => Promise<boolean>;
   isPrincipalActive?: (userId: string) => boolean | Promise<boolean>;
+  // Deloitte Custom Change: Retention Update
   fileRetentionHours?: number;
 }
 
@@ -240,6 +242,7 @@ async function resolveFiles(
   const retained = await deps.updateFilesUsage(
     ids.map((file_id) => ({ file_id })),
     undefined,
+    // Deloitte Custom Change: Retention Update
     { user: user.id, tenantId: user.tenantId, fileRetentionHours: deps.fileRetentionHours },
   );
   const retainedIds = new Set<string>();

@@ -38,6 +38,7 @@ describe('createMemoryManagementHandlers', () => {
   const storedId = new Types.ObjectId();
   const userId = new Types.ObjectId();
   const setMemoryById = jest.fn(
+    // Deloitte Custom Change: Retention Update
     async (
       _params: SetMemoryByIdParams,
       _options?: { retentionHours?: number },
@@ -78,6 +79,7 @@ describe('createMemoryManagementHandlers', () => {
 
     await handlers.updateById(request, response);
 
+    // Deloitte Custom Change: Retention Update
     expect(setMemoryById).toHaveBeenCalledWith(
       {
         userId: userId.toString(),

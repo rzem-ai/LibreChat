@@ -1,4 +1,5 @@
 import { Buffer } from 'node:buffer';
+// Deloitte Custom Change: Retention Update
 import { randomUUID } from 'node:crypto';
 import type {
   AnyBulkWriteOperation,
@@ -321,6 +322,7 @@ export interface ConversationMethods {
       | { codeEnvironmentMode: 'without_attached'; codeWorkspaces?: undefined }
     ),
   ): Promise<IConversation | null>;
+  // Deloitte Custom Change: Retention Update
   bulkSaveConvos(
     conversations: Array<Record<string, unknown>>,
     interfaceConfig?: AppConfig['interfaceConfig'],
@@ -540,6 +542,7 @@ export interface ConversationMethods {
     },
   ): Promise<DeleteResult & { messages: DeleteResult; conversationIds: string[] }>;
   archiveAllConvos(user: string): Promise<{ archivedCount: number }>;
+  // Deloitte Custom Change: Retention Update
   claimExpiredConversations(
     limit: number,
     options: { leaseMs: number; now?: Date },
@@ -2229,12 +2232,14 @@ export function createConversationMethods(
       isTemporary,
       expiredAt,
       interfaceConfig,
+      // Deloitte Custom Change: Retention Update
       retentionException,
     }: {
       userId: string;
       isTemporary?: boolean;
       expiredAt?: Date;
       interfaceConfig?: AppConfig['interfaceConfig'];
+      // Deloitte Custom Change: Retention Update
       /** Explicit, auditable exemption from default retention. Never derive this from
        * a generic request body — only a narrow, permissioned caller should set it. */
       retentionException?: { exempt: boolean; reason?: string; setBy?: string };
@@ -2270,6 +2275,7 @@ export function createConversationMethods(
       const update: Record<string, unknown> = { ...convo, user: userId };
       delete update.isTemporary;
       delete update.expiredAt;
+      // Deloitte Custom Change: Retention Update
       delete update.retentionException;
       delete update.initial_agent_id;
       /** Ordinary saves may seed a decision, but only an explicit move may replace it. */
@@ -2331,6 +2337,7 @@ export function createConversationMethods(
       }
 
       let retentionOnInsert: { expiredAt: Date; isTemporary: false } | undefined;
+      // Deloitte Custom Change: Retention Update
       /** Set when the caller omits `isTemporary` and there's no `generalChatRetention`
        * deferral: the write can't tell whether the stored row is already an explicit
        * temporary chat, so it's applied as a compare-and-set at write time (see
@@ -2342,6 +2349,7 @@ export function createConversationMethods(
           update.isTemporary = isTemporary;
         }
         update.expiredAt = expiredAt;
+        // Deloitte Custom Change: Retention Update
       } else if (isExemptFromRetention) {
         /** The only remaining path to a null expiry for a non-temporary conversation:
          * an explicit, auditable exception from a narrow permissioned caller. */
@@ -2374,6 +2382,7 @@ export function createConversationMethods(
         if (typeof isTemporary === 'boolean') {
           update.isTemporary = isTemporary;
           try {
+            // Deloitte Custom Change: Retention Update
             update.expiredAt = createChatExpirationDate(interfaceConfig, false);
           } catch (err) {
             logger.error('Error creating chat expiration date:', err);
@@ -2522,6 +2531,7 @@ export function createConversationMethods(
             };
           }
         }
+        // Deloitte Custom Change: Retention Update
       } else if (temporaryCompareAndSet) {
         /** Same compare-and-set idiom as the `isArchived` branch above (DocumentDB has no
          * pipeline-form updates): stamp `isTemporary:false` only on a write that finds the
@@ -2590,8 +2600,10 @@ export function createConversationMethods(
 
       /** Reuse the saved row's chat type when callers omit it, preserving existing deadlines. */
       if (
+        // Deloitte Custom Change: Retention Update
         interfaceConfig?.generalChatRetention !== undefined &&
         typeof isTemporary !== 'boolean' &&
+        // Deloitte Custom Change: Retention Update
         conversation.expiredAt == null &&
         conversation.retentionException?.exempt !== true
       ) {
@@ -2615,11 +2627,13 @@ export function createConversationMethods(
 
       if (
         typeof isTemporary !== 'boolean' &&
+        // Deloitte Custom Change: Retention Update
         conversation.retentionException?.exempt !== true &&
         (conversation.isTemporary == null ||
           (conversation.isTemporary === false && conversation.$isDefault('isTemporary')))
       ) {
         /* This backfill runs after the main write, so it needs the same timestamp
+// Deloitte Custom Change: Retention Update
            suppression: otherwise the first pin or archive of a legacy chat
            bumps `updatedAt` here and lands in Today anyway. */
         await Conversation.updateOne(
@@ -2838,6 +2852,7 @@ export function createConversationMethods(
   /**
    * Saves multiple conversations in bulk.
    */
+  // Deloitte Custom Change: Retention Update
   async function bulkSaveConvos(
     conversations: Array<Record<string, unknown>>,
     interfaceConfig?: AppConfig['interfaceConfig'],
@@ -2913,6 +2928,7 @@ export function createConversationMethods(
         delete sanitized.initial_agent_id;
         delete sanitized.codeEnvironmentRevision;
         stripActorCheckpointFields(sanitized);
+        // Deloitte Custom Change: Retention Update
         /**
          * Defense-in-depth: bulk paths (import/duplicate/fork) are expected to
          * pre-stamp retention fields via `ImportBatchBuilder.getRetentionFields()`,
@@ -3691,6 +3707,7 @@ export function createConversationMethods(
     }
   }
 
+  // Deloitte Custom Change: Retention Update
   /**
    * Leases up to `limit` expired, non-exempt conversations for the purge sweep.
    * Each claim is a conditional `findOneAndUpdate` per candidate: the write content
@@ -3816,6 +3833,7 @@ export function createConversationMethods(
     getConvosQueried,
     getConvo,
     getSubagentThreadForParent,
+    // Deloitte Custom Change: Retention Update
     claimExpiredConversations,
     releaseConversationPurgeClaim,
     confirmConversationPurgeEligible,
