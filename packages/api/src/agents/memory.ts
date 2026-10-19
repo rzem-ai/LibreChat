@@ -50,6 +50,7 @@ import { inspectContent } from '~/protection/runtime';
 import { checkAccess } from '~/middleware/access';
 import { isMemoryEnabled } from '~/memory';
 import Tokenizer from '~/utils/tokenizer';
+export { createMemoryWriteAdmission, gateMemoryWrites } from './memoryWriteAdmission';
 
 type RequiredMemoryMethods = Pick<
   MemoryMethods,

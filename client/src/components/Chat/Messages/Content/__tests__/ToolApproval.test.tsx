@@ -18,6 +18,9 @@ const mockUseAgentsMapContext = jest.fn();
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string, values?: Record<string | number, string | number>) => {
+    if (key === 'com_ui_submit_decisions_progress') {
+      return `Submit (${values?.[0]}/${values?.[1]} selected)`;
+    }
     if (key === 'com_ui_submit_decisions') {
       return `Submit ${values?.[0]} decisions`;
     }
@@ -50,6 +53,11 @@ jest.mock('~/hooks', () => ({
       com_ui_memory_delete_target: 'Memory to delete',
       com_ui_memory_proposed: 'Proposed memory',
       com_ui_memory_topic: 'Memory topic',
+      com_ui_memory_current_information: 'Currently saved',
+      com_ui_memory_current_information_unavailable:
+        'The current value is hidden by content protection.',
+      com_ui_memory_current_value_unavailable: 'The current saved value could not be loaded.',
+      com_ui_memory_updated_information: 'Will be updated to',
       com_ui_memory_information_to_remember: 'Information to remember',
       com_ui_memory_view_technical_details: 'View technical details (JSON)',
     };
@@ -102,11 +110,12 @@ describe('ToolApproval', () => {
   test('enables Submit immediately after Approve is the first decision (#14390)', () => {
     renderCards(<ToolApproval approval={approval()} toolCallId="call-1" args={{ a: 1 }} />);
 
-    const submit = screen.getByRole('button', { name: 'Submit' });
+    const submit = screen.getByRole('button', { name: 'Submit (0/1 selected)' });
     expect(submit).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
 
+    expect(screen.getByRole('button', { name: 'Submit (1/1 selected)' })).toBeEnabled();
     expect(submit).toBeEnabled();
   });
 
@@ -115,22 +124,23 @@ describe('ToolApproval', () => {
 
     const approve = screen.getByRole('button', { name: 'Approve' });
     fireEvent.click(approve);
-    expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Submit (1/1 selected)' })).toBeEnabled();
 
     fireEvent.click(approve);
-    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Submit (0/1 selected)' })).toBeDisabled();
   });
 
   test('a respond decision only counts once its text is non-empty', () => {
     renderCards(<ToolApproval approval={approval(['respond'])} toolCallId="call-1" args={{}} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Respond' }));
-    const submit = screen.getByRole('button', { name: 'Submit' });
+    const submit = screen.getByRole('button', { name: 'Submit (0/1 selected)' });
     expect(submit).toBeDisabled();
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Respond' }), {
       target: { value: 'use the staging table' },
     });
+    expect(screen.getByRole('button', { name: 'Submit (1/1 selected)' })).toBeEnabled();
     expect(submit).toBeEnabled();
   });
 
@@ -169,7 +179,7 @@ describe('ToolApproval', () => {
     expect(screen.getByText('Invalid JSON')).toBeInTheDocument();
   });
 
-  test('multiple paused calls share one Submit that requires every decision', () => {
+  test('puts the batch Submit after the final card and shows selected decisions out of the total', () => {
     renderCards(
       <>
         <ToolApproval approval={approval()} toolCallId="call-1" args={{ a: 1 }} />
@@ -177,15 +187,20 @@ describe('ToolApproval', () => {
       </>,
     );
 
-    const submit = screen.getByRole('button', { name: 'Submit 2 decisions' });
+    const [firstCard, secondCard] = screen.getAllByTestId('tool-approval');
+    expect(within(firstCard).queryByRole('button', { name: /Submit/ })).not.toBeInTheDocument();
+    const submit = within(secondCard).getByRole('button', { name: 'Submit (0/2 selected)' });
     expect(submit).toBeDisabled();
 
     const [approveFirst, approveSecond] = screen.getAllByRole('button', { name: 'Approve' });
     fireEvent.click(approveFirst);
+    expect(
+      within(secondCard).getByRole('button', { name: 'Submit (1/2 selected)' }),
+    ).toBeDisabled();
     expect(submit).toBeDisabled();
 
     fireEvent.click(approveSecond);
-    expect(submit).toBeEnabled();
+    expect(within(secondCard).getByRole('button', { name: 'Submit (2/2 selected)' })).toBeEnabled();
   });
 
   test('restores a selected decision when the card remounts inside the same message', () => {
@@ -203,7 +218,7 @@ describe('ToolApproval', () => {
     view.rerender(tree('phase-slice'));
 
     expect(screen.getByRole('button', { name: 'Approve' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Submit (1/1 selected)' })).toBeEnabled();
   });
 
   describe('while the composer owns the pending action', () => {
@@ -370,10 +385,11 @@ describe('ToolApproval', () => {
       );
     });
 
+    // Deloitte Custom Change: Verify the approval preview compares the saved and proposed values.
     test('labels set_memory as an update when the same agent already has that key', () => {
       jest.mocked(useMemoriesQuery).mockReturnValue({
         data: {
-          memories: [{ key: 'favorite_quote', agentId: 'agent-1' }],
+          memories: [{ key: 'favorite_quote', value: 'The old quote.', agentId: 'agent-1' }],
         },
         isFetchedAfterMount: true,
         isError: false,
@@ -385,6 +401,34 @@ describe('ToolApproval', () => {
       expect(thread).toHaveTextContent(
         'The agent would like to update a saved memory. This will replace its value only if you approve.',
       );
+      expect(thread).toHaveTextContent('Currently saved');
+      expect(thread).toHaveTextContent('The old quote.');
+      expect(thread).toHaveTextContent('Will be updated to');
+      expect(thread).toHaveTextContent('To be, or not to be.');
+    });
+
+    // Deloitte Custom Change: Keep protected stored memory content out of the approval preview.
+    test('does not reveal a protected current value while showing the proposed replacement', () => {
+      jest.mocked(useMemoriesQuery).mockReturnValue({
+        data: {
+          memories: [
+            {
+              key: 'favorite_quote',
+              value: 'redacted sensitive value',
+              contentFilterBlocked: true,
+              agentId: 'agent-1',
+            },
+          ],
+        },
+        isFetchedAfterMount: true,
+        isError: false,
+      } as never);
+      renderWithComposer(true, undefined, memoryPendingAction);
+      const thread = screen.getByTestId('thread');
+
+      expect(thread).toHaveTextContent('The current value is hidden by content protection.');
+      expect(thread).not.toHaveTextContent('redacted sensitive value');
+      expect(thread).toHaveTextContent('To be, or not to be.');
     });
 
     test('matches user-scoped memories for agents using the shared personal pool', () => {
@@ -428,10 +472,8 @@ describe('ToolApproval', () => {
       expect(thread).toHaveTextContent('Memory to delete');
       expect(thread).toHaveTextContent('This memory will be removed if you approve the request.');
       expect(thread).toHaveTextContent('View technical details (JSON)');
-      expect(screen.getByText('favorite quote')).toHaveClass(
-        'line-through',
-        'text-text-destructive',
-      );
+      expect(screen.getByText('favorite quote')).toHaveClass('text-text-destructive');
+      expect(screen.getByText('favorite quote').tagName).not.toBe('DEL');
       expect(within(thread).getByRole('button', { name: 'Approve' })).toBeInTheDocument();
       expect(screen.queryByTestId('composer')).not.toBeInTheDocument();
     });

@@ -1,7 +1,12 @@
 import { TriangleAlert } from 'lucide-react';
+import type { ReactElement } from 'react';
 import { useLocalize } from '~/hooks';
 
-export default function MemorySensitiveDataNotice() {
+/**
+ * [Deloitte Custom Change] Warn users against saving sensitive or confidential information.
+ * @returns A localized memory-safety note for memory create and edit dialogs.
+ */
+export default function MemorySensitiveDataNotice(): ReactElement {
   const localize = useLocalize();
 
   return (

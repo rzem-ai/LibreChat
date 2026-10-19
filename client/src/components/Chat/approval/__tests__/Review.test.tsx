@@ -33,9 +33,9 @@ jest.mock('~/hooks', () => ({
       com_ui_proposed_replacements: 'Proposed replacements',
       com_ui_proposed_arguments: 'Proposed arguments',
       com_ui_decisions_selected: `${values?.[0]} of ${values?.[1]} decisions selected`,
+      com_ui_submit_decisions_progress: `Submit (${values?.[0]}/${values?.[1]} selected)`,
       com_ui_approve: 'Approve',
       com_ui_reject: 'Reject',
-      com_ui_continue: 'Continue',
       com_ui_collapse: 'Collapse',
     };
     return labels[key] ?? key;
@@ -43,6 +43,8 @@ jest.mock('~/hooks', () => ({
 }));
 
 jest.mock('~/data-provider', () => ({
+  // Deloitte Custom Change: Provide memory data for composer-rendered memory approvals.
+  useMemoriesQuery: () => ({ data: { memories: [] }, isFetchedAfterMount: false, isError: false }),
   useSubmitToolApprovalMutation: () => ({ mutate: jest.fn() }),
   useSubmitAskAnswerMutation: () => ({ mutate: jest.fn() }),
 }));
@@ -107,13 +109,13 @@ describe('PendingToolApproval', () => {
     expect(screen.getByText(/Create src\/new\.ts/)).toBeInTheDocument();
     expect(screen.getByText('npm test -- new')).toBeInTheDocument();
     expect(screen.getByText('0 of 2 decisions selected')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Submit (0/2 selected)' })).toBeDisabled();
 
     const approvals = screen.getAllByRole('button', { name: 'Approve' });
     fireEvent.click(approvals[0]);
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Submit (1/2 selected)' })).toBeDisabled();
     fireEvent.click(approvals[1]);
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Submit (2/2 selected)' })).toBeEnabled();
     expect(screen.getByText('2 of 2 decisions selected')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Collapse' }));
@@ -164,5 +166,59 @@ describe('PendingToolApproval', () => {
     expect(screen.queryByRole('region', { name: 'Review 1 action' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('pending-tool-approval-button')).not.toBeInTheDocument();
     expect(jotaiStore.get(composerOverlayCountFamily('conversation-1'))).toBe(0);
+  });
+
+  // Deloitte Custom Change: Verify readable memory content in mixed composer review batches.
+  test('mixed batches show memory details in the composer without a raw JSON summary', () => {
+    const mixedAction: Agents.PendingAction = {
+      ...pendingAction,
+      payload: {
+        type: 'tool_approval',
+        action_requests: [
+          {
+            name: 'set_memory',
+            toolClass: 'W1',
+            tool_call_id: 'memory-call',
+            arguments: { key: 'favorite_quote', value: 'To be, or not to be.' },
+          },
+          {
+            name: 'bash_tool',
+            tool_call_id: 'bash-call',
+            arguments: { command: 'npm test' },
+          },
+        ],
+        review_configs: [
+          {
+            action_name: 'set_memory',
+            tool_call_id: 'memory-call',
+            allowed_decisions: ['approve', 'reject'],
+          },
+          {
+            action_name: 'bash_tool',
+            tool_call_id: 'bash-call',
+            allowed_decisions: ['approve', 'reject'],
+          },
+        ],
+      },
+    };
+    const jotaiStore = createStore();
+    jotaiStore.set(pendingApprovalActionFamily('conversation-1'), mixedAction);
+
+    render(
+      <RecoilRoot>
+        <JotaiProvider store={jotaiStore}>
+          <ApprovalProvider pendingAction={mixedAction}>
+            <PendingToolApprovalPanel conversationId="conversation-1" />
+          </ApprovalProvider>
+        </JotaiProvider>
+      </RecoilRoot>,
+    );
+
+    expect(screen.getByRole('region', { name: 'com_ui_memory_proposed' })).toBeInTheDocument();
+    expect(screen.getAllByText('com_ui_memory_proposed')).toHaveLength(2);
+    expect(screen.getByText('favorite quote')).toBeInTheDocument();
+    expect(screen.getByText('To be, or not to be.')).toBeInTheDocument();
+    expect(screen.queryByText('com_ui_proposed_arguments')).not.toBeInTheDocument();
+    expect(screen.getByText(/npm test/)).toBeInTheDocument();
   });
 });

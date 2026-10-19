@@ -132,24 +132,40 @@ export const PendingToolApprovalPanel = memo(function PendingToolApprovalPanel({
               key={request.tool_call_id}
               aria-labelledby={`approval-${request.tool_call_id}`}
             >
-              <div className="mb-2">
-                <h3
-                  id={`approval-${request.tool_call_id}`}
-                  className="text-sm font-medium text-text-primary [overflow-wrap:anywhere]"
-                >
-                  {reviews.length > 1
-                    ? `${index + 1}. ${previewTitle(preview, localize)}`
-                    : previewTitle(preview, localize)}
+              {/* Deloitte Custom Change: Keep memory requests readable in mixed approval batches. */}
+              {(request.name === 'set_memory' || request.name === 'delete_memory') && (
+                <h3 id={`approval-${request.tool_call_id}`} className="sr-only">
+                  {localize(
+                    request.name === 'delete_memory'
+                      ? 'com_ui_memory_delete_target'
+                      : 'com_ui_memory_proposed',
+                  )}
                 </h3>
-                <p className="text-xs text-text-secondary">{localize(KIND_LABELS[preview.kind])}</p>
-              </div>
-              <pre className="max-h-52 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border-light bg-surface-tertiary p-3 font-mono text-xs text-text-primary">
-                {preview.body || localize('com_ui_no_arguments')}
-              </pre>
-              {preview.truncated && (
-                <p className="mt-1 text-xs text-text-secondary">
-                  {localize('com_ui_preview_truncated')}
-                </p>
+              )}
+              {request.name !== 'set_memory' && request.name !== 'delete_memory' && (
+                <>
+                  <div className="mb-2">
+                    <h3
+                      id={`approval-${request.tool_call_id}`}
+                      className="text-sm font-medium text-text-primary [overflow-wrap:anywhere]"
+                    >
+                      {reviews.length > 1
+                        ? `${index + 1}. ${previewTitle(preview, localize)}`
+                        : previewTitle(preview, localize)}
+                    </h3>
+                    <p className="text-xs text-text-secondary">
+                      {localize(KIND_LABELS[preview.kind])}
+                    </p>
+                  </div>
+                  <pre className="max-h-52 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border-light bg-surface-tertiary p-3 font-mono text-xs text-text-primary">
+                    {preview.body || localize('com_ui_no_arguments')}
+                  </pre>
+                  {preview.truncated && (
+                    <p className="mt-1 text-xs text-text-secondary">
+                      {localize('com_ui_preview_truncated')}
+                    </p>
+                  )}
+                </>
               )}
               {config != null ? (
                 <ToolApproval
@@ -160,6 +176,7 @@ export const PendingToolApprovalPanel = memo(function PendingToolApprovalPanel({
                   }}
                   toolCallId={request.tool_call_id}
                   args={request.arguments}
+                  toolName={request.name}
                   surface="composer"
                 />
               ) : (
@@ -196,7 +213,10 @@ export const PendingToolApprovalPanel = memo(function PendingToolApprovalPanel({
             >
               {status === 'submitting'
                 ? localize('com_ui_submitting')
-                : localize('com_ui_continue')}
+                : localize('com_ui_submit_decisions_progress', {
+                    0: decisions.length,
+                    1: reviews.length,
+                  })}
             </Button>
           </div>
         </div>

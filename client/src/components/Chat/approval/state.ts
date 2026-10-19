@@ -22,6 +22,11 @@ export const approvalPanelOpenFamily = atomFamily((_conversationId: string) => a
  * the same action to the composer panel would cover that card and duplicate its
  * controls. Only classify host memory tools with their server-attached classes.
  */
+/**
+ * [Deloitte Custom Change] Identify approvals composed exclusively of host memory tools.
+ * @param pendingAction - Server-owned pending action stored for one conversation.
+ * @returns Whether every requested tool is a memory write or delete with its expected class.
+ */
 export function isMemoryApprovalAction(
   pendingAction: Agents.PendingAction | null | undefined,
 ): boolean {
@@ -39,7 +44,12 @@ export function isMemoryApprovalAction(
   );
 }
 
-/** True while the composer's panel is open on this non-memory tool action. */
+/**
+ * [Deloitte Custom Change] True while the composer's panel is open on a non-memory action.
+ * @param conversationId - Conversation owning the pending approval, if any.
+ * @param actionId - Server action ID displayed by the composer panel.
+ * @returns Whether the expanded composer panel presents this non-memory action.
+ */
 export function useComposerPresentsApproval(
   conversationId: string | null | undefined,
   actionId: string,

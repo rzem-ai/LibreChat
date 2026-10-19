@@ -1,7 +1,15 @@
 import { useContext, useEffect, useMemo } from 'react';
 import { Button, TextareaAutosize } from '@librechat/client';
 import { MemoryScope, stripAgentIdSuffix } from 'librechat-data-provider';
-import { Check, X, Pencil, MessageSquare, ShieldQuestion, TriangleAlert } from 'lucide-react';
+import {
+  Check,
+  X,
+  Pencil,
+  MessageSquare,
+  ShieldQuestion,
+  TriangleAlert,
+  ArrowDown,
+} from 'lucide-react';
 import type { Agents } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks';
 import { boundApprovalLabel, buildApprovalPreview } from '~/components/Chat/approval/preview';
@@ -70,6 +78,11 @@ function seedArgs(args: string | Record<string, unknown> | undefined): string {
   }
 }
 
+/**
+ * [Deloitte Custom Change] Parse the JSON arguments used by inline memory tools.
+ * @param args - Serialized or structured arguments received with the paused tool call.
+ * @returns A plain argument object, or `undefined` when the input is malformed.
+ */
 function getMemoryArguments(
   args: string | Record<string, unknown> | undefined,
 ): Record<string, unknown> | undefined {
@@ -84,11 +97,21 @@ function getMemoryArguments(
   return isPlainObject(parsed) ? parsed : undefined;
 }
 
+/**
+ * [Deloitte Custom Change] Read and normalize the memory key from tool arguments.
+ * @param args - Serialized or structured memory-tool arguments.
+ * @returns The trimmed non-empty memory key, or `undefined` when absent.
+ */
 function getMemoryKey(args: string | Record<string, unknown> | undefined): string | undefined {
   const key = getMemoryArguments(args)?.key;
   return typeof key === 'string' && key.trim() !== '' ? key.trim() : undefined;
 }
 
+/**
+ * [Deloitte Custom Change] Read the proposed value from set-memory arguments.
+ * @param args - Serialized or structured memory-tool arguments.
+ * @returns The proposed string value, or `undefined` when absent.
+ */
 function getMemoryValue(args: string | Record<string, unknown> | undefined): string | undefined {
   const value = getMemoryArguments(args)?.value;
   return typeof value === 'string' ? value : undefined;
@@ -97,7 +120,7 @@ function getMemoryValue(args: string | Record<string, unknown> | undefined): str
 /**
  * Renders approve / reject / edit / respond controls for a paused tool call,
  * scoped to the decisions the server allows. Records its decision in the
- * batch {@link useApprovalContext}; the lead card additionally renders the
+ * batch {@link useApprovalContext}; the final card additionally renders the
  * single submit button covering every paused call in the action. When the
  * composer panel presents a non-memory action, a thread card steps back to a
  * request summary; host memory approvals stay detailed and inline.
@@ -113,7 +136,7 @@ export default function ToolApproval({
   toolCallId: string;
   args: string | Record<string, unknown> | undefined;
   toolName?: string;
-  /** The composer panel owns one batch submit; thread cards keep the lead button. */
+  /** The composer panel owns one batch submit; the final thread card owns its button. */
   surface?: 'thread' | 'composer';
 }) {
   const localize = useLocalize();
@@ -154,6 +177,11 @@ export default function ToolApproval({
             memory.key === memoryKey && (memory.agentId ?? '') === (memoryPartitionAgentId ?? ''),
         )
       : undefined;
+  // Deloitte Custom Change: Show the saved value beside its proposed replacement during updates.
+  const currentMemoryValue =
+    matchingMemory?.contentFilterBlocked === true ? undefined : matchingMemory?.value;
+  const safeCurrentMemoryValue =
+    currentMemoryValue == null ? undefined : boundApprovalLabel(currentMemoryValue, 16 * 1024);
   let memoryWriteKind: 'unknown' | 'create' | 'update' = 'unknown';
   if (memoriesAreFresh && memoryPartitionKnown && memoryKey != null) {
     memoryWriteKind = matchingMemory ? 'update' : 'create';
@@ -177,7 +205,8 @@ export default function ToolApproval({
     setDecisionDraft,
     isReady,
     getStatus,
-    getLeadToolCallId,
+    getDecisions,
+    getSubmitToolCallId,
     getRegisteredCount,
   } = useApprovalContext();
   const { submitToolApproval } = useResumeSubmit();
@@ -229,17 +258,39 @@ export default function ToolApproval({
     memoryApprovalDescription = 'com_ui_memory_approval_set_description';
   }
 
+  // Deloitte Custom Change: Make an existing-memory replacement visibly distinct from a create.
   let memoryContentPreview: React.ReactNode;
   if (toolName === 'delete_memory' && displayMemoryKey != null) {
     memoryContentPreview = (
       <div className="rounded-lg border border-status-error-border bg-status-error-subtle p-3">
         <p className="text-xs text-status-error">{localize('com_ui_memory_delete_if_approved')}</p>
         <p className="mt-1 break-words font-mono text-sm text-text-destructive">
-          <del className="text-text-destructive line-through decoration-2">{displayMemoryKey}</del>
+          {displayMemoryKey}
         </p>
       </div>
     );
   } else if (toolName === 'set_memory' && displayMemoryKey != null) {
+    let currentMemoryContentPreview: React.ReactNode;
+    if (matchingMemory?.contentFilterBlocked === true) {
+      currentMemoryContentPreview = (
+        <p className="mt-1 text-sm text-text-secondary">
+          {localize('com_ui_memory_current_information_unavailable')}
+        </p>
+      );
+    } else if (safeCurrentMemoryValue != null) {
+      currentMemoryContentPreview = (
+        <p className="mt-1 max-h-52 overflow-auto whitespace-pre-wrap break-words text-sm text-text-primary">
+          {safeCurrentMemoryValue.label}
+        </p>
+      );
+    } else {
+      currentMemoryContentPreview = (
+        <p className="mt-1 text-sm text-text-secondary">
+          {localize('com_ui_memory_current_value_unavailable')}
+        </p>
+      );
+    }
+
     memoryContentPreview = (
       <div className="space-y-2 rounded-lg border border-border-light bg-surface-tertiary p-3">
         <div>
@@ -248,12 +299,32 @@ export default function ToolApproval({
           </p>
           <p className="break-words text-sm font-medium text-text-primary">{displayMemoryKey}</p>
         </div>
+        {memoryWriteKind === 'update' && (
+          <>
+            <div className="rounded-md border border-border-light bg-surface-secondary p-3">
+              <p className="text-xs font-semibold text-text-secondary">
+                {localize('com_ui_memory_current_information')}
+              </p>
+              {currentMemoryContentPreview}
+              {safeCurrentMemoryValue?.truncated && (
+                <p className="mt-1 text-xs text-text-secondary">
+                  {localize('com_ui_memory_current_value_preview_truncated')}
+                </p>
+              )}
+            </div>
+            <ArrowDown className="mx-auto size-4 text-text-secondary" aria-hidden="true" />
+          </>
+        )}
         {safeMemoryValue != null && (
-          <div>
-            <p className="text-xs font-medium text-text-secondary">
-              {localize('com_ui_memory_information_to_remember')}
+          <div className="rounded-md border border-border-light bg-surface-secondary p-3">
+            <p className="text-xs font-semibold text-text-secondary">
+              {localize(
+                memoryWriteKind === 'update'
+                  ? 'com_ui_memory_updated_information'
+                  : 'com_ui_memory_information_to_remember',
+              )}
             </p>
-            <p className="max-h-52 overflow-auto whitespace-pre-wrap break-words text-sm text-text-primary">
+            <p className="mt-1 max-h-52 overflow-auto whitespace-pre-wrap break-words text-sm text-text-primary">
               {safeMemoryValue.label}
             </p>
             {safeMemoryValue.truncated && (
@@ -333,19 +404,17 @@ export default function ToolApproval({
     }
   }, [active, editText]);
 
-  const isLead = getLeadToolCallId(actionId) === toolCallId;
+  const isSubmitCard = getSubmitToolCallId(actionId) === toolCallId;
   const count = getRegisteredCount(actionId);
+  const selectedCount = getDecisions(actionId).length;
   const ready = isReady(actionId);
 
   const submitLabel = useMemo(() => {
     if (status === 'submitting') {
       return localize('com_ui_submitting');
     }
-    if (count > 1) {
-      return localize('com_ui_submit_decisions', { 0: count });
-    }
-    return localize('com_ui_submit');
-  }, [status, count, localize]);
+    return localize('com_ui_submit_decisions_progress', { 0: selectedCount, 1: count });
+  }, [status, selectedCount, count, localize]);
 
   if (status === 'submitted') {
     return null;
@@ -481,7 +550,7 @@ export default function ToolApproval({
         />
       )}
 
-      {surface === 'thread' && isLead && (
+      {surface === 'thread' && isSubmitCard && (
         <div className="mt-1 flex items-center gap-3">
           <Button
             size="sm"
