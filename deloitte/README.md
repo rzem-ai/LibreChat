@@ -582,6 +582,7 @@ For LOCAL development, we need to add each user's hostname to the Redirect URIs 
 
 - DEV: Linked to the MyAssist DEV user group (AU_App_MyGenAI_Dev, request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb))
 - UAT: Linked to the MyAssist UAT user Group (AU_App_MyGenAI_Stg, request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb))
+- PRD: Linked to the MyAssist UAT user Group (AU_App_MyGenAI_Stg, request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb))
 
 # 🔐 Security
 
