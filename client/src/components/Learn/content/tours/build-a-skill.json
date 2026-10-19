@@ -12,7 +12,7 @@
       "expandSidebarBefore": true
     },
     {
-      "element": "[data-tour=\"create-skill\"]",
+      "element": "#create-skill-button",
       "title": "Select Write skill instructions",
       "description": "Select Write skill instructions",
       "side": "right"
@@ -36,19 +36,19 @@
       "side": "bottom"
     },
     {
-      "element": "[data-tour=\"create-skill-submit\"]",
+      "element": "#create-skill-submit",
       "title": "Create Skill",
       "description": "Select Create to create the Skill",
       "side": "top"
     },
     {
-      "element": "[data-tour=\"create-skill\"]",
+      "element": "#create-skill-button",
       "title": "Select Upload a Skill",
       "description": "Select Upload a Skills",
       "side": "right"
     },
     {
-      "element": "[data-tour=\"upload-skill\"]",
+      "element": "#upload-skill-dropzone",
       "title": "Upload your skill",
       "description": "Select Upload skill and navigate to your skill’s root folder. The system validates the folder structure and SKILL.md content before publishing.<br/><br/>Note: For guidance on how to structure your SKILL.md file and folder structure, refer to the relevant article in the MyAssist Academy.",
       "side": "bottom"

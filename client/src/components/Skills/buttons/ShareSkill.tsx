@@ -45,7 +45,7 @@ function ShareSkill({ skill, disabled }: ShareSkillProps) {
             size="icon"
             className="size-9 border-border-medium"
             aria-label={localize('com_ui_share')}
-            data-tour="share-skill"
+            id="share-skill-button"
             disabled={disabled}
           >
             <Share2Icon className="size-5" aria-hidden="true" />
