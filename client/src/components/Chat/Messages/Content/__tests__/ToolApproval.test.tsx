@@ -345,7 +345,7 @@ describe('ToolApproval', () => {
       renderWithComposer(false);
       const thread = screen.getByTestId('thread');
       fireEvent.click(within(thread).getByRole('button', { name: 'Approve' }));
-      expect(within(thread).getByRole('button', { name: 'Submit' })).toBeEnabled();
+      expect(within(thread).getByRole('button', { name: 'Submit (1/1 selected)' })).toBeEnabled();
       expect(screen.queryByTestId('composer')).not.toBeInTheDocument();
     });
 
