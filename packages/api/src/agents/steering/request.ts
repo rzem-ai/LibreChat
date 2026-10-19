@@ -145,11 +145,14 @@ export interface SteerRequestDeps {
   updateFilesUsage?: (
     files: Array<{ file_id: string }>,
     fileIds?: string[],
-    options?: { user?: string; tenantId?: string | null },
+    // Deloitte Custom Change: Retention Update
+    options?: { user?: string; tenantId?: string | null; fileRetentionHours?: number },
   ) => Promise<unknown[]>;
   /** Agent authorization for the originating run (role + per-agent ACL),
    *  mirroring the chat route's middlewares. `false` → 403 FORBIDDEN. */
   checkAgentAccess?: (run: SteerRunContext) => Promise<boolean>;
+  // Deloitte Custom Change: Retention Update
+  fileRetentionHours?: number;
 }
 
 interface SanitizedFilesResult {
@@ -328,7 +331,8 @@ async function markSteerFilesUsed(
     const updated = await deps.updateFilesUsage(
       fileIds.map((file_id) => ({ file_id })),
       undefined,
-      { user: owner.id, tenantId: owner.tenantId },
+      // Deloitte Custom Change: Retention Update
+      { user: owner.id, tenantId: owner.tenantId, fileRetentionHours: deps.fileRetentionHours },
     );
     const updatedIds = new Set(
       updated.flatMap((file) =>

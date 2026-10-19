@@ -455,6 +455,61 @@ describe('loadDefaultInterface', () => {
     expect(interfaceConfig).not.toHaveProperty('defaultPinnedTools');
   });
 
+  // Deloitte Custom Change: Retention Update
+  it('preserves the configured file retention periods', async () => {
+    const config: Partial<TCustomConfig> = {
+      interface: {
+        fileRetentionHours: 1440,
+        fileRetentionWarningHours: 168,
+      },
+    };
+
+    const interfaceConfig = await loadDefaultInterface({
+      config,
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.fileRetentionHours).toBe(1440);
+    expect(interfaceConfig?.fileRetentionWarningHours).toBe(168);
+  });
+
+  it('omits file retention periods when not explicitly configured', async () => {
+    const interfaceConfig = await loadDefaultInterface({
+      config: {},
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig).not.toHaveProperty('fileRetentionHours');
+    expect(interfaceConfig).not.toHaveProperty('fileRetentionWarningHours');
+  });
+
+  it('preserves the configured agent retention periods', async () => {
+    const config: Partial<TCustomConfig> = {
+      interface: {
+        agentRetentionHours: 720,
+        agentRetentionWarningHours: 48,
+      },
+    };
+
+    const interfaceConfig = await loadDefaultInterface({
+      config,
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.agentRetentionHours).toBe(720);
+    expect(interfaceConfig?.agentRetentionWarningHours).toBe(48);
+  });
+
+  it('omits agent retention periods when not explicitly configured', async () => {
+    const interfaceConfig = await loadDefaultInterface({
+      config: {},
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig).not.toHaveProperty('agentRetentionHours');
+    expect(interfaceConfig).not.toHaveProperty('agentRetentionWarningHours');
+  });
+
   it('passes the trace viewer section through unchanged', async () => {
     const traceViewer = { enabled: true, showInputOutput: false, maxRecords: 200 };
     const interfaceConfig = await loadDefaultInterface({

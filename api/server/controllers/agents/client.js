@@ -233,6 +233,8 @@ const db = require('~/models');
 const loadAgent = (params) =>
   loadAgentFn(params, {
     getAgent: db.getAgentWithVersionCount,
+    // Deloitte Custom Change: Retention Update
+    touchAgentLastActivity: db.touchAgentLastActivity,
     getMCPServerTools,
     getAccessibleMCPServers,
   });
@@ -3388,6 +3390,8 @@ class AgentClient extends BaseClient {
         ...gatedMemoryMethods,
         getUserMemories: db.getUserMemories,
         getFormattedMemories: db.getFormattedMemories,
+        // Deloitte Custom Change: Retention Update
+        touchMemoriesLastActivity: db.touchMemoriesLastActivity,
       },
       req: this.options.req,
       res: this.options.res,

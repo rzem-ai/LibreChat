@@ -1335,6 +1335,8 @@ describe('createImportHandler', () => {
         expect.objectContaining({
           body: expect.stringContaining('cat references/many-fortunes.md'),
         }),
+        // Deloitte Custom Change: Retention Update
+        expect.anything(),
       );
 
       const body = res.body as { warnings?: Array<{ code: string; message: string }> };

@@ -3,6 +3,7 @@ import * as Ariakit from '@ariakit/react';
 import { CheckboxButton } from '@librechat/client';
 import { WandSparkles, ChevronDown } from 'lucide-react';
 import { ArtifactModes, defaultAgentCapabilities } from 'librechat-data-provider';
+import { useToolsDropdownConfig } from '~/hooks/Plugins/useToolsDropdownConfig';
 import useArtifactsShadcnOnly from '~/hooks/Artifacts/useArtifactsShadcnOnly';
 import { useLocalize, useAgentCapabilities } from '~/hooks';
 import { useBadgeRowContext } from '~/Providers';
@@ -16,6 +17,8 @@ interface ArtifactsToggleState {
 
 function Artifacts() {
   const localize = useLocalize();
+  // Deloitte Custom Change: hide the pill when the tools dropdown is this tool's only control.
+  const { isDropdownOnly } = useToolsDropdownConfig();
   const context = useBadgeRowContext();
   const { toggleState, debouncedChange, isPinned } = context?.artifacts ?? {};
   /** Deloitte Custom Change: limits Artifacts to shadcn/ui mode when enabled. */
@@ -93,7 +96,7 @@ function Artifacts() {
     return null;
   }
 
-  if (!isEnabled && !isPinned) {
+  if (!isPinned && (!isEnabled || isDropdownOnly('artifacts'))) {
     return null;
   }
 
