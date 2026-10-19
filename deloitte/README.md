@@ -206,8 +206,8 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 The `balance` block in `librechat.yaml` enables token balance tracking with a daily auto-refill. It reads these values from `.env`:
 
 ```env
-START_BALANCE=10000000
-BALANCE_REFILL_AMOUNT=10000000
+START_BALANCE=15000000
+BALANCE_REFILL_AMOUNT=15000000
 CHECK_BALANCE=true
 ```
 
