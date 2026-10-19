@@ -1285,6 +1285,7 @@ describe('File Routes - Delete with Agent Access', () => {
 
       expect(response.status).toBe(200);
       expect(response.headers['content-type']).toContain('text/plain');
+      expect(response.headers['content-disposition']).toContain('attachment');
       expect(response.headers['content-disposition']).toContain('screenshot.png.txt');
       expect(response.headers['x-content-type-options']).toBe('nosniff');
       expect(response.headers['content-security-policy']).toBe('sandbox');

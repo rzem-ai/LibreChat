@@ -95,6 +95,9 @@ type ReasoningDeltaUpdate = { type: ContentTypes.THINK; think: string };
  * the first generated title so compacted resume snapshots can still correlate
  * later label events by identity rather than relying only on a sparse index. */
 function prepareReasoningPartForStep(message: TMessage, index: number, stepId: string): TMessage {
+  if (!Number.isSafeInteger(index) || index < 0) {
+    return message;
+  }
   const current = message.content?.[index];
   if (current?.type !== ContentTypes.THINK || current.reasoning_label_step_id === stepId) {
     return message;
@@ -106,8 +109,8 @@ function prepareReasoningPartForStep(message: TMessage, index: number, stepId: s
   delete nextPart.reasoning_label_revision;
   delete nextPart.reasoning_label_status;
   nextPart.reasoning_label_step_id = stepId;
-  const nextContent = [...(message.content ?? [])];
-  nextContent[index] = nextPart;
+  const content = message.content ?? [];
+  const nextContent = [...content.slice(0, index), nextPart, ...content.slice(index + 1)];
   return { ...message, content: nextContent };
 }
 
@@ -508,6 +511,9 @@ export default function useStepHandler({
     finalUpdate = false,
     metadata?: ContentMetadata,
   ) => {
+    if (!Number.isSafeInteger(index) || index < 0) {
+      return message;
+    }
     const contentType = contentPart.type ?? '';
     if (!contentType) {
       console.warn('No content type found in content part');

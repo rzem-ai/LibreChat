@@ -1,5 +1,4 @@
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const { webcrypto } = require('node:crypto');
 const {
   logger,
@@ -60,7 +59,6 @@ const AuthTokenTypes = Object.freeze({
 const latestAuthTokenOptions = Object.freeze({ sort: { createdAt: -1 } });
 const genericVerificationMessage = 'Please check your email to verify your email address.';
 const invalidEmailVerificationMessage = 'Invalid or expired email verification token';
-const OPENID_SESSION_ID_TOKEN_EXPIRY_BUFFER_SECONDS = 30;
 
 const findPasswordResetToken = async (userId) => {
   const typedToken = await findToken(
@@ -159,41 +157,8 @@ const getPasswordResetTokenDeleteQuery = (passwordResetToken) => {
   };
 };
 
-const isExpiredOpenIDIdToken = (idToken) => {
-  if (!idToken) {
-    return false;
-  }
-
-  const decoded = jwt.decode(idToken);
-  if (!decoded || typeof decoded !== 'object' || typeof decoded.exp !== 'number') {
-    return false;
-  }
-
-  return (
-    decoded.exp <= Math.floor(Date.now() / 1000) + OPENID_SESSION_ID_TOKEN_EXPIRY_BUFFER_SECONDS
-  );
-};
-
-const getUnexpiredOpenIDSessionIdToken = (idToken) => {
-  if (!idToken) {
-    return;
-  }
-
-  const decoded = jwt.decode(idToken);
-  const now = Math.floor(Date.now() / 1000);
-  if (
-    decoded &&
-    typeof decoded === 'object' &&
-    decoded.exp > now + OPENID_SESSION_ID_TOKEN_EXPIRY_BUFFER_SECONDS
-  ) {
-    return idToken;
-  }
-};
-
 const getOpenIDAppAuthToken = (tokenset, sessionIdToken) =>
-  (isExpiredOpenIDIdToken(tokenset?.id_token) ? undefined : tokenset?.id_token) ||
-  getUnexpiredOpenIDSessionIdToken(sessionIdToken) ||
-  tokenset?.access_token;
+  tokenset?.id_token || sessionIdToken || tokenset?.access_token;
 
 const clearOpenIDAuthTokens = (req, res, userId, tenantId) => {
   if (req.session?.openidTokens) {
@@ -767,12 +732,10 @@ const getOpenIDTokenClaims = (tokenset) => {
     }
   }
 
-  if (typeof tokenset?.id_token !== 'string') {
-    return {};
-  }
-
-  const decoded = jwt.decode(tokenset.id_token);
-  return decoded && typeof decoded === 'object' ? decoded : {};
+  // Only use claims attached by the OpenID client after its token exchange.
+  // Decoding an arbitrary id_token here would let unverified identity claims
+  // be persisted into the session.
+  return {};
 };
 
 const getStringClaim = (claims, claim) => {
@@ -856,9 +819,9 @@ const setOpenIDAuthTokens = (
     const sessionIdToken = req.session?.openidTokens?.idToken;
     /**
      * An inline refresh carries the previous id_token forward when the IdP omits one on
-     * rotation, so `tokenset.id_token` is not necessarily freshly issued. Skip it only when it
-     * is provably expired; an id_token whose expiry cannot be read stays preferred, since
-     * access_token may be opaque or scoped to another audience and fail JWKS validation.
+     * rotation. Do not decode it here to infer expiry: this service has no issuer or JWKS
+     * dependency to verify the token first. The bearer-token verification boundary validates
+     * expiry, issuer, audience, and signature before authorizing a request.
      */
     const appAuthToken = getOpenIDAppAuthToken(tokenset, sessionIdToken);
     const logoutIdToken = tokenset.id_token || sessionIdToken;

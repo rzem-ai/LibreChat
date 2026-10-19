@@ -700,7 +700,7 @@ router.get('/download/:userId/:file_id', fileAccess, async (req, res) => {
         'X-File-Metadata',
         encodeURIComponent(JSON.stringify(getDownloadFileMetadata(file))),
       );
-      return res.send(textFile.text);
+      return res.end(Buffer.from(textFile.text, 'utf8'));
     }
 
     if (checkOpenAIStorage(file.source) && !file.model) {
