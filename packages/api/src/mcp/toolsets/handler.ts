@@ -7,7 +7,7 @@ import type { ServerRequest } from '~/types';
 import { createAuthIdentityContext } from '~/utils/identity';
 import { resolveOboToken } from '~/mcp/oauth/obo';
 import { GatewayToolsetsError } from './errors';
-import { getToolsetsForUser } from './service';
+import { fetchAndCacheToolsets, getCachedToolsets } from './service';
 
 export interface ToolsetsHandlerDeps {
   getTenantId: () => string | undefined;
@@ -24,12 +24,17 @@ export interface ToolsetsHandlerDeps {
 }
 
 /**
- * Builds the `GET /api/mcp/toolsets` handler. Unauthenticated callers get 401; a missing gateway
- * config or any operational failure (OBO exchange, allowlist, gateway) is reported with a safe
- * non-2xx status rather than an empty catalogue, so clients can tell an outage from "no toolsets".
+ * Builds the `GET /api/mcp/toolsets` handler. Unauthenticated callers get 401; a per-user cache hit
+ * is served before any token exchange. A missing gateway config or any operational failure
+ * (OBO exchange, allowlist, gateway) is reported with a safe non-2xx status rather than an empty
+ * catalogue, so clients can tell an outage from "no toolsets".
  */
 export function createGetMCPToolsets(deps: ToolsetsHandlerDeps) {
   async function resolveToolsets(req: ServerRequest, res: Response, userId: string) {
+    const cached = await getCachedToolsets(userId);
+    if (cached) {
+      return cached;
+    }
     const gatewayUrl = process.env.MCP_GATEWAY_URL;
     const oboScope = process.env.MCP_GATEWAY_OBO_SCOPE;
     if (!gatewayUrl || !oboScope) {
@@ -48,7 +53,7 @@ export function createGetMCPToolsets(deps: ToolsetsHandlerDeps) {
       userId,
       role: user.role,
     });
-    return getToolsetsForUser({
+    return fetchAndCacheToolsets({
       userId,
       gatewayUrl,
       bearerToken: oboTokens.access_token,

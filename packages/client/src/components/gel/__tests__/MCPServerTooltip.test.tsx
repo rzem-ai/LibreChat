@@ -1,6 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { MCPServerTooltipContent } from '../MCPServerTooltip';
-import { MCPServerTooltipCard } from '../MCPServerTooltip';
+import {
+  MCPServerHoverGroup,
+  MCPServerHoverTarget,
+  MCPServerTooltipCard,
+} from '../MCPServerTooltip';
 
 const content: MCPServerTooltipContent = {
   icon: <svg data-testid="icon" />,
@@ -47,5 +51,25 @@ describe('MCPServerTooltipCard', () => {
 
     expect(screen.queryByText('Limited access')).not.toBeInTheDocument();
     expect(screen.queryByText('Use cases')).not.toBeInTheDocument();
+  });
+});
+
+describe('MCPServerHoverTarget', () => {
+  it('points aria-describedby at the rendered card region', () => {
+    render(
+      <MCPServerHoverGroup>
+        <MCPServerHoverTarget content={content}>
+          <button type="button">SharePoint row</button>
+        </MCPServerHoverTarget>
+      </MCPServerHoverGroup>,
+    );
+
+    const row = screen.getByRole('button', { name: 'SharePoint row' });
+    fireEvent.pointerEnter(row);
+
+    const region = screen.getByRole('region', { name: 'SharePoint' });
+    const describedBy = row.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    expect(region).toHaveAttribute('id', describedBy);
   });
 });

@@ -1,7 +1,8 @@
 // Deloitte Custom Change: MCP Gateway toolset metadata for connector tooltips.
+import { logger } from '@librechat/data-schemas';
 import type { GatewayToolset } from './types';
+import { GatewayToolsetListResponseSchema, GatewayToolsetSchema } from './types';
 import { createHardenedOAuthFetch } from '~/mcp/oauth/hardenedFetch';
-import { GatewayToolsetListResponseSchema } from './types';
 import { GatewayToolsetsError } from './errors';
 import { isOAuthUrlAllowed } from '~/auth';
 
@@ -62,5 +63,12 @@ export async function fetchGatewayToolsets({
     throw new Error(`MCP Gateway toolsets response failed validation: ${parsed.error.message}`);
   }
 
-  return parsed.data.toolsets;
+  return parsed.data.toolsets.flatMap((candidate) => {
+    const toolset = GatewayToolsetSchema.safeParse(candidate);
+    if (toolset.success) {
+      return [toolset.data];
+    }
+    logger.warn(`[fetchGatewayToolsets] Dropping malformed toolset: ${toolset.error.message}`);
+    return [];
+  });
 }

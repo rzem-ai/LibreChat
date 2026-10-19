@@ -117,6 +117,19 @@ describe('createGetMCPToolsets', () => {
     }
   });
 
+  it('serves a cached response without exchanging a token, even if the exchange would fail', async () => {
+    process.env.MCP_GATEWAY_URL = 'https://gateway.example.com/mcp';
+    await standardCache(CacheKeys.MCP_GATEWAY_TOOLSETS).set('user-1', [TOOLSET]);
+    exchangeOboToken.mockRejectedValue(new Error('exchange failed'));
+    const res = createRes();
+    await createHandler()(request({ id: 'user-1' }), res);
+
+    expect(exchangeOboToken).not.toHaveBeenCalled();
+    expect(resolveAllowlists).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({ toolsets: [TOOLSET] });
+  });
+
   it('returns 502 when the OBO token exchange fails', async () => {
     process.env.MCP_GATEWAY_URL = 'https://gateway.example.com/mcp';
     exchangeOboToken.mockRejectedValue(new Error('exchange failed'));

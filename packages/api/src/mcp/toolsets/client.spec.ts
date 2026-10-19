@@ -108,10 +108,10 @@ describe('fetchGatewayToolsets', () => {
     }
   });
 
-  it('throws when the response body fails schema validation', async () => {
+  it('throws when the response body is not a toolsets envelope', async () => {
     const server = await createLocalServer((_req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ toolsets: [{ name: 'sharepoint' }] }));
+      res.end(JSON.stringify({ toolsets: 'nope' }));
     });
     try {
       await expect(
@@ -121,6 +121,32 @@ describe('fetchGatewayToolsets', () => {
           allowedDomains: ['localhost'],
         }),
       ).rejects.toThrow('MCP Gateway toolsets response failed validation');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('drops only malformed toolsets and defaults missing list fields to []', async () => {
+    const { limitations: _omitted, ...withoutLimitations } = VALID_TOOLSET;
+    const server = await createLocalServer((_req, res) => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          toolsets: [VALID_TOOLSET, { name: 'broken' }, { ...withoutLimitations, name: 'partial' }],
+        }),
+      );
+    });
+    try {
+      const result = await fetchGatewayToolsets({
+        gatewayUrl: `http://localhost:${server.port}/mcp`,
+        bearerToken: 'test-token',
+        allowedDomains: ['localhost'],
+      });
+
+      expect(result).toEqual([
+        VALID_TOOLSET,
+        { ...withoutLimitations, name: 'partial', limitations: [] },
+      ]);
     } finally {
       await server.close();
     }

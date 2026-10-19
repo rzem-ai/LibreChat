@@ -146,7 +146,7 @@ export function MCPServerHoverTarget({
   children: ReactElement;
 }): ReactElement {
   const render = useMemo<HoverCardRender>(
-    () => () => <MCPServerTooltipCard {...content} />,
+    () => (cardId) => <MCPServerTooltipCard {...content} id={cardId} />,
     [content],
   );
   return <HoverCardTarget render={render}>{children}</HoverCardTarget>;
