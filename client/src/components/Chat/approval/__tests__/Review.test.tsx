@@ -124,4 +124,45 @@ describe('PendingToolApproval', () => {
       'false',
     );
   });
+
+  test('memory approvals use the inline card instead of the composer review panel', () => {
+    const memoryAction: Agents.PendingAction = {
+      ...pendingAction,
+      payload: {
+        type: 'tool_approval',
+        action_requests: [
+          {
+            name: 'set_memory',
+            toolClass: 'W1',
+            tool_call_id: 'memory-call',
+            arguments: { key: 'favorite_quote', value: 'To be, or not to be.' },
+          },
+        ],
+        review_configs: [
+          {
+            action_name: 'set_memory',
+            tool_call_id: 'memory-call',
+            allowed_decisions: ['approve', 'reject', 'edit'],
+          },
+        ],
+      },
+    };
+    const jotaiStore = createStore();
+    jotaiStore.set(pendingApprovalActionFamily('conversation-1'), memoryAction);
+
+    render(
+      <RecoilRoot>
+        <JotaiProvider store={jotaiStore}>
+          <ApprovalProvider pendingAction={memoryAction}>
+            <PendingToolApprovalPanel conversationId="conversation-1" />
+            <PendingToolApprovalButton conversationId="conversation-1" />
+          </ApprovalProvider>
+        </JotaiProvider>
+      </RecoilRoot>,
+    );
+
+    expect(screen.queryByRole('region', { name: 'Review 1 action' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('pending-tool-approval-button')).not.toBeInTheDocument();
+    expect(jotaiStore.get(composerOverlayCountFamily('conversation-1'))).toBe(0);
+  });
 });

@@ -1873,6 +1873,7 @@
   "com_ui_memory_removed": "Deleted memory",
   "com_ui_memory_saved": "Saved memory",
   "com_ui_memory_saving": "Saving memory",
+  "com_ui_memory_sensitive_data_warning": "Do not store confidential or sensitive information in memories, such as passwords, API keys, financial details, health information, or other restricted data.",
   "com_ui_memory_storage_full": "Memory Storage Full",
   "com_ui_memory_updated": "Updated saved memory",
   "com_ui_memory_would_exceed": "Cannot save - would exceed limit by {{tokens}} tokens. Delete existing memories to make space.",

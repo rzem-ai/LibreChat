@@ -18,12 +18,28 @@ export const pendingApprovalActionFamily = atomFamily((_conversationId: string) 
 export const approvalPanelOpenFamily = atomFamily((_conversationId: string) => atom(false));
 
 /**
- * True while the composer's review panel is open on this tool-approval action.
- * The panel then owns the decisions and the batch submit, and it overlays the
- * tail of the thread where the live approval card sits, so the thread card
- * steps back to a record of the request until the panel is collapsed.
- * Without a conversation there is no composer, so nothing is presented there.
+ * Memory actions are reviewed inline beside the proposed memory content; sending
+ * the same action to the composer panel would cover that card and duplicate its
+ * controls. Only classify host memory tools with their server-attached classes.
  */
+export function isMemoryApprovalAction(
+  pendingAction: Agents.PendingAction | null | undefined,
+): boolean {
+  if (pendingAction?.payload.type !== 'tool_approval') {
+    return false;
+  }
+  const { action_requests: requests } = pendingAction.payload;
+  return (
+    requests.length > 0 &&
+    requests.every(
+      (request) =>
+        (request.name === 'set_memory' && request.toolClass === 'W1') ||
+        (request.name === 'delete_memory' && request.toolClass === 'D'),
+    )
+  );
+}
+
+/** True while the composer's panel is open on this non-memory tool action. */
 export function useComposerPresentsApproval(
   conversationId: string | null | undefined,
   actionId: string,
@@ -35,6 +51,7 @@ export function useComposerPresentsApproval(
     conversationId != null &&
     open &&
     pendingAction?.actionId === actionId &&
-    pendingAction.payload.type === 'tool_approval'
+    pendingAction.payload.type === 'tool_approval' &&
+    !isMemoryApprovalAction(pendingAction)
   );
 }

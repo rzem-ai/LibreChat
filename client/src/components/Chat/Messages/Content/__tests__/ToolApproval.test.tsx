@@ -1,10 +1,11 @@
 import React from 'react';
 import { RecoilRoot } from 'recoil';
 import { Provider, createStore } from 'jotai';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { Agents } from 'librechat-data-provider';
 import {
   approvalPanelOpenFamily,
+  isMemoryApprovalAction,
   pendingApprovalActionFamily,
 } from '~/components/Chat/approval/state';
 import { ChatContext } from '~/Providers/ChatContext';
@@ -27,6 +28,8 @@ jest.mock('~/hooks', () => ({
       com_ui_reject_reason_placeholder: 'Reason',
       com_ui_tool_response_placeholder: 'Response',
       com_ui_approval_review_in_composer: 'Review in composer',
+      com_ui_proposed_arguments: 'Proposed arguments',
+      com_ui_memory_sensitive_data_warning: 'Do not store confidential information.',
     };
     return map[key] ?? key;
   },
@@ -145,38 +148,6 @@ describe('ToolApproval', () => {
     expect(submit).toBeEnabled();
   });
 
-  test('duplicated review surfaces show and submit the same decision state', () => {
-    renderCards(
-      <>
-        <ToolApproval approval={approval()} toolCallId="call-1" args={{ a: 1 }} />
-        <ToolApproval
-          approval={approval()}
-          toolCallId="call-1"
-          args={{ a: 1 }}
-          surface="composer"
-        />
-      </>,
-    );
-
-    const [timelineApprove, composerApprove] = screen.getAllByRole('button', { name: 'Approve' });
-    const [timelineReject, composerReject] = screen.getAllByRole('button', { name: 'Reject' });
-
-    fireEvent.click(timelineApprove);
-    expect(timelineApprove).toHaveAttribute('aria-pressed', 'true');
-    expect(composerApprove).toHaveAttribute('aria-pressed', 'true');
-
-    fireEvent.click(composerReject);
-    expect(timelineApprove).toHaveAttribute('aria-pressed', 'false');
-    expect(composerApprove).toHaveAttribute('aria-pressed', 'false');
-    expect(timelineReject).toHaveAttribute('aria-pressed', 'true');
-    expect(composerReject).toHaveAttribute('aria-pressed', 'true');
-    const [timelineReason, composerReason] = screen.getAllByRole('textbox', { name: 'Reject' });
-    fireEvent.change(timelineReason, { target: { value: 'not on this machine' } });
-    expect(timelineReason).toHaveValue('not on this machine');
-    expect(composerReason).toHaveValue('not on this machine');
-    expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled();
-  });
-
   test('restores a selected decision when the card remounts inside the same message', () => {
     const tree = (key: string) => (
       <RecoilRoot>
@@ -195,7 +166,7 @@ describe('ToolApproval', () => {
     expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled();
   });
 
-  describe('while the composer review panel presents the pending action', () => {
+  describe('while the composer owns the pending action', () => {
     const conversationId = 'convo-1';
     const pendingAction: Agents.PendingAction = {
       actionId: 'action-1',
@@ -215,26 +186,63 @@ describe('ToolApproval', () => {
       },
     };
 
-    const renderWithComposer = (open: boolean, extra?: React.ReactNode) => {
+    const memoryPendingAction: Agents.PendingAction = {
+      ...pendingAction,
+      payload: {
+        type: 'tool_approval',
+        action_requests: [
+          {
+            name: 'set_memory',
+            toolClass: 'W1',
+            tool_call_id: 'call-1',
+            arguments: { key: 'favorite_quote', value: 'To be, or not to be.' },
+          },
+        ],
+        review_configs: [
+          {
+            action_name: 'set_memory',
+            tool_call_id: 'call-1',
+            allowed_decisions: ['approve', 'reject', 'edit'],
+          },
+        ],
+      },
+    };
+
+    const renderWithComposer = (
+      open: boolean,
+      extra?: React.ReactNode,
+      action: Agents.PendingAction = pendingAction,
+    ) => {
       const store = createStore();
-      store.set(pendingApprovalActionFamily(conversationId), pendingAction);
+      store.set(pendingApprovalActionFamily(conversationId), action);
       store.set(approvalPanelOpenFamily(conversationId), open);
+      const request =
+        action.payload.type === 'tool_approval' ? action.payload.action_requests[0] : undefined;
       render(
         <RecoilRoot>
           <Provider store={store}>
             <ChatContext.Provider value={{ conversation: { conversationId } } as never}>
-              <ApprovalProvider pendingAction={pendingAction}>
+              <ApprovalProvider pendingAction={action}>
                 <div data-testid="thread">
-                  <ToolApproval approval={approval()} toolCallId="call-1" args={{ a: 1 }} />
-                </div>
-                <div data-testid="composer">
                   <ToolApproval
-                    approval={approval()}
+                    approval={approval(
+                      request?.name === 'set_memory' ? ['approve', 'reject', 'edit'] : undefined,
+                    )}
                     toolCallId="call-1"
-                    args={{ a: 1 }}
-                    surface="composer"
+                    args={request?.arguments ?? {}}
+                    toolName={request?.name}
                   />
                 </div>
+                {open && !isMemoryApprovalAction(action) && (
+                  <div data-testid="composer">
+                    <ToolApproval
+                      approval={approval()}
+                      toolCallId="call-1"
+                      args={{ a: 1 }}
+                      surface="composer"
+                    />
+                  </div>
+                )}
                 {extra}
               </ApprovalProvider>
             </ChatContext.Provider>
@@ -244,28 +252,39 @@ describe('ToolApproval', () => {
       return store;
     };
 
-    test('the thread card is a record with no decisions or Submit while the panel is open', () => {
+    test('the thread omits its approval card while the composer panel is open', () => {
       renderWithComposer(true);
       const thread = screen.getByTestId('thread');
 
-      expect(thread).toHaveTextContent('Review in composer');
       expect(thread.querySelectorAll('button')).toHaveLength(0);
+      expect(thread.querySelector('[data-testid="tool-approval"]')).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Submit' })).not.toBeInTheDocument();
       expect(screen.getAllByRole('button', { name: 'Approve' })).toHaveLength(1);
     });
 
-    test('collapsing the panel hands the decisions and Submit back to the thread card', () => {
-      const store = renderWithComposer(true);
-
-      act(() => store.set(approvalPanelOpenFamily(conversationId), false));
-
+    test('collapsing the panel hands decisions and Submit back to the thread card', () => {
+      renderWithComposer(false);
       const thread = screen.getByTestId('thread');
-      expect(thread).not.toHaveTextContent('Review in composer');
       fireEvent.click(within(thread).getByRole('button', { name: 'Approve' }));
       expect(within(thread).getByRole('button', { name: 'Submit' })).toBeEnabled();
-      expect(
-        within(screen.getByTestId('composer')).queryByRole('button', { name: 'Submit' }),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByTestId('composer')).not.toBeInTheDocument();
+    });
+
+    test('memory approvals keep their detailed review inline and skip the composer panel', () => {
+      renderWithComposer(true, undefined, memoryPendingAction);
+      const thread = screen.getByTestId('thread');
+
+      expect(thread).toHaveTextContent('Proposed arguments');
+      expect(thread).toHaveTextContent('favorite_quote');
+      expect(thread).toHaveTextContent('To be, or not to be.');
+      expect(thread).toHaveTextContent('Do not store confidential information.');
+      expect(within(thread).getByRole('button', { name: 'Approve' })).toBeInTheDocument();
+      expect(screen.queryByTestId('composer')).not.toBeInTheDocument();
+
+      fireEvent.click(within(thread).getByRole('button', { name: 'Edit' }));
+      expect(within(thread).getByRole('textbox', { name: 'Edit' })).toHaveValue(
+        '{\n  "key": "favorite_quote",\n  "value": "To be, or not to be."\n}',
+      );
     });
 
     test('a thread card for a different action keeps its controls', () => {
@@ -281,7 +300,6 @@ describe('ToolApproval', () => {
       );
 
       const other = screen.getByTestId('other-action');
-      expect(other).not.toHaveTextContent('Review in composer');
       expect(within(other).getByRole('button', { name: 'Approve' })).toBeInTheDocument();
       expect(screen.getByTestId('thread')).toHaveTextContent('Review in composer');
     });

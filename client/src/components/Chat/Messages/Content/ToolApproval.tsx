@@ -3,8 +3,8 @@ import { Button, TextareaAutosize } from '@librechat/client';
 import { Check, X, Pencil, MessageSquare, ShieldQuestion, TriangleAlert } from 'lucide-react';
 import type { Agents } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks';
+import { boundApprovalLabel, buildApprovalPreview } from '~/components/Chat/approval/preview';
 import { useComposerPresentsApproval } from '~/components/Chat/approval/state';
-import { boundApprovalLabel } from '~/components/Chat/approval/preview';
 import { useApprovalContext, useResumeSubmit } from './ApprovalContext';
 import { ChatContext } from '~/Providers/ChatContext';
 import { useLocalize } from '~/hooks';
@@ -71,20 +71,21 @@ function seedArgs(args: string | Record<string, unknown> | undefined): string {
  * Renders approve / reject / edit / respond controls for a paused tool call,
  * scoped to the decisions the server allows. Records its decision in the
  * batch {@link useApprovalContext}; the lead card additionally renders the
- * single submit button covering every paused call in the action. While the
- * composer's review panel is open on the same action, a thread card renders
- * only the record of the request: the panel owns the decisions and the submit,
- * and it overlays the tail of the thread where this card sits.
+ * single submit button covering every paused call in the action. When the
+ * composer panel presents a non-memory action, a thread card steps back to a
+ * request summary; host memory approvals stay detailed and inline.
  */
 export default function ToolApproval({
   approval,
   toolCallId,
   args,
+  toolName,
   surface = 'thread',
 }: {
   approval: NonNullable<Agents.ToolCall['approval']>;
   toolCallId: string;
   args: string | Record<string, unknown> | undefined;
+  toolName?: string;
   /** The composer panel owns one batch submit; thread cards keep the lead button. */
   surface?: 'thread' | 'composer';
 }) {
@@ -93,6 +94,17 @@ export default function ToolApproval({
   const conversationId = useContext(ChatContext)?.conversation?.conversationId;
   const composerPresents = useComposerPresentsApproval(conversationId, actionId);
   const deferToComposer = surface === 'thread' && composerPresents;
+  const isMemoryTool = toolName === 'set_memory' || toolName === 'delete_memory';
+  const memoryPreview = useMemo(() => {
+    if (!isMemoryTool) {
+      return null;
+    }
+    return buildApprovalPreview({
+      name: toolName ?? 'memory',
+      arguments: args ?? {},
+      tool_call_id: toolCallId,
+    });
+  }, [args, isMemoryTool, toolCallId, toolName]);
   const {
     registerToolCall,
     unregisterToolCall,
@@ -244,6 +256,30 @@ export default function ToolApproval({
       data-tool-call-id={toolCallId}
     >
       {descriptionNode}
+      {memoryPreview != null && (
+        <>
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-text-secondary">
+              {localize('com_ui_proposed_arguments')}
+            </p>
+            <pre className="max-h-52 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border-light bg-surface-tertiary p-3 font-mono text-xs text-text-primary">
+              {memoryPreview.body || localize('com_ui_no_arguments')}
+            </pre>
+            {memoryPreview.truncated && (
+              <p className="text-xs text-text-secondary">{localize('com_ui_preview_truncated')}</p>
+            )}
+          </div>
+          {toolName === 'set_memory' && (
+            <p
+              className="flex items-start gap-1.5 rounded-lg border border-border-light bg-surface-tertiary p-2 text-xs text-text-warning"
+              role="note"
+            >
+              <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+              {localize('com_ui_memory_sensitive_data_warning')}
+            </p>
+          )}
+        </>
+      )}
       <div className="flex flex-wrap gap-2">
         {allowedDecisions.map((decision) => {
           const Icon = DECISION_ICON[decision];

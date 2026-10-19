@@ -5,13 +5,14 @@ import { ChevronDown, ChevronUp, ShieldQuestion, TriangleAlert } from 'lucide-re
 import type { Agents } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks';
 import {
+  approvalPanelOpenFamily,
+  isMemoryApprovalAction,
+  pendingApprovalActionFamily,
+} from '~/components/Chat/approval/state';
+import {
   useApprovalContext,
   useResumeSubmit,
 } from '~/components/Chat/Messages/Content/ApprovalContext';
-import {
-  approvalPanelOpenFamily,
-  pendingApprovalActionFamily,
-} from '~/components/Chat/approval/state';
 import { buildApprovalPreview, buildApprovalPreviews } from '~/components/Chat/approval/preview';
 import ToolApproval from '~/components/Chat/Messages/Content/ToolApproval';
 import { useComposerOverlay } from '~/components/Chat/Input/overlay';
@@ -62,14 +63,15 @@ export const PendingToolApprovalPanel = memo(function PendingToolApprovalPanel({
   const { getDecisions, getStatus, isReady } = useApprovalContext();
   const { submitToolApproval } = useResumeSubmit();
   const actionId = pendingAction?.actionId;
+  const memoryAction = isMemoryApprovalAction(pendingAction);
 
   useEffect(() => {
     if (actionId != null) {
-      setOpen(true);
+      setOpen(!memoryAction);
     }
-  }, [actionId, setOpen]);
+  }, [actionId, memoryAction, setOpen]);
 
-  useComposerOverlay(conversationId, open && pendingAction != null);
+  useComposerOverlay(conversationId, open && pendingAction != null && !memoryAction);
 
   const reviews = useMemo(() => {
     if (pendingAction == null) return [];
@@ -84,7 +86,7 @@ export const PendingToolApprovalPanel = memo(function PendingToolApprovalPanel({
     }));
   }, [pendingAction]);
 
-  if (!open || pendingAction == null) {
+  if (!open || pendingAction == null || memoryAction) {
     return null;
   }
 
@@ -212,7 +214,7 @@ export const PendingToolApprovalButton = memo(function PendingToolApprovalButton
   const pendingAction = usePendingToolApproval(conversationId);
   const [open, setOpen] = useAtom(approvalPanelOpenFamily(conversationId));
 
-  if (pendingAction == null) {
+  if (pendingAction == null || isMemoryApprovalAction(pendingAction)) {
     return null;
   }
 
