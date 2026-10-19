@@ -20,7 +20,6 @@ import {
   invalidateRequestMemories,
   agentHasInlineMemoryTools,
   buildInlineMemoryContext,
-  getMemoryToolDefinitions,
 } from './memory';
 import { GenerationJobManager } from '~/stream/GenerationJobManager';
 
@@ -95,15 +94,6 @@ beforeEach(() => {
         processStream: jest.fn(() => Promise.resolve('success')),
       }) as never,
   );
-});
-
-describe('inline memory tool approval classification', () => {
-  it('classifies memory updates as writes and deletions as destructive', () => {
-    expect(getMemoryToolDefinitions()).toMatchObject([
-      { name: 'set_memory', toolClass: 'W1' },
-      { name: 'delete_memory', toolClass: 'D' },
-    ]);
-  });
 });
 
 function createTestUser(overrides: Partial<IUser> = {}): IUser {

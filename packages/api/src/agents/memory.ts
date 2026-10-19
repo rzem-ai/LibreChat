@@ -32,12 +32,7 @@ import type {
   IUser,
   FormattedMemoriesResult,
 } from '@librechat/data-schemas';
-import type {
-  TAttachment,
-  FiltersConfig,
-  MCPToolClass,
-  MemoryArtifact,
-} from 'librechat-data-provider';
+import type { TAttachment, FiltersConfig, MemoryArtifact } from 'librechat-data-provider';
 import type { BaseMessage, ToolMessage } from '@librechat/agents/langchain/messages';
 import type { DynamicStructuredTool } from '@librechat/agents/langchain/tools';
 import type { Response as ServerResponse } from 'express';
@@ -51,7 +46,6 @@ import { inspectContent } from '~/protection/runtime';
 import { checkAccess } from '~/middleware/access';
 import { isMemoryEnabled } from '~/memory';
 import Tokenizer from '~/utils/tokenizer';
-export { createMemoryWriteAdmission, gateMemoryWrites } from './memoryWriteAdmission';
 
 type RequiredMemoryMethods = Pick<
   MemoryMethods,
@@ -139,7 +133,6 @@ ${tokenLimit ? `\nTOKEN LIMIT: Maximum ${tokenLimit} tokens across all memory va
 When in doubt, and the user hasn't asked to remember or forget anything, END THE TURN IMMEDIATELY.`;
 
 type MemoryArtifactRecord = Record<Tools.memory, MemoryArtifact>;
-type ClassifiedMemoryToolDefinition = LCTool & { toolClass: MCPToolClass };
 
 /**
  * Creates a memory tool instance with user context
@@ -403,14 +396,12 @@ export const memoryToolUsageGuard = `Only use the \`set_memory\` and \`delete_me
  * `validKeys` is surfaced in the key descriptions so the model is told the
  * allowed keys up front, matching the runtime `createMemoryTool` schema.
  */
-export function getMemoryToolDefinitions(validKeys?: string[]): ClassifiedMemoryToolDefinition[] {
+export function getMemoryToolDefinitions(validKeys?: string[]): LCTool[] {
   const hasValidKeys = Array.isArray(validKeys) && validKeys.length > 0;
   return [
     {
       name: SET_MEMORY_TOOL_NAME,
       description: SET_MEMORY_DESCRIPTION,
-      // Memory updates persist user data and must pause for the existing HITL review flow.
-      toolClass: 'W1',
       parameters: {
         type: 'object',
         properties: {
@@ -432,7 +423,6 @@ export function getMemoryToolDefinitions(validKeys?: string[]): ClassifiedMemory
     {
       name: DELETE_MEMORY_TOOL_NAME,
       description: DELETE_MEMORY_DESCRIPTION,
-      toolClass: 'D',
       parameters: {
         type: 'object',
         properties: {
@@ -446,7 +436,7 @@ export function getMemoryToolDefinitions(validKeys?: string[]): ClassifiedMemory
         required: ['key'],
       },
     },
-  ];
+  ] as LCTool[];
 }
 
 /**

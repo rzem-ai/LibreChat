@@ -13,7 +13,6 @@ import {
 } from '@librechat/client';
 import { getMemoryKeyError, getMemoryValueError, getMemoryApiErrorMessage } from '~/utils/memory';
 import { useCreateMemoryMutation, useMemoriesQuery } from '~/data-provider';
-import MemorySensitiveDataNotice from './MemorySensitiveDataNotice';
 import { useLocalize, useHasAccess } from '~/hooks';
 
 interface MemoryCreateDialogProps {
@@ -113,7 +112,6 @@ export default function MemoryCreateDialog({
         className="w-11/12 md:max-w-lg"
         main={
           <div className="space-y-4">
-            <MemorySensitiveDataNotice />
             <div className="space-y-2">
               <Label htmlFor="memory-key" className="text-sm font-medium text-text-primary">
                 {localize('com_ui_key')}

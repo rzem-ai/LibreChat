@@ -9,8 +9,8 @@ jest.mock('~/hooks', () => ({
     () =>
     (key: string, params?: { tokens?: number }): string => {
       const translations: Record<string, string> = {
-        com_ui_memory_saving: 'Saving or updating memory',
-        com_ui_memory_saved: 'Memory saved or updated',
+        com_ui_memory_saving: 'Saving memory',
+        com_ui_memory_saved: 'Saved memory',
         com_ui_memory_deleting: 'Deleting memory',
         com_ui_memory_removed: 'Deleted memory',
         com_ui_memory_deleted: 'Memory deleted',
@@ -94,9 +94,7 @@ describe('MemoryCall', () => {
       />,
     );
 
-    expect(screen.getByTestId('progress-text')).toHaveTextContent(
-      'Memory saved or updated preferences',
-    );
+    expect(screen.getByTestId('progress-text')).toHaveTextContent('Saved memory preferences');
     expect(screen.getByText('preferences')).toHaveClass('font-bold', 'uppercase');
     expect(screen.getByText('Prefers dark mode.')).toBeInTheDocument();
     expect(screen.queryByText(/Memory set for key/)).not.toBeInTheDocument();
@@ -113,7 +111,7 @@ describe('MemoryCall', () => {
       />,
     );
 
-    expect(screen.getByTestId('progress-text')).toHaveTextContent('Saving or updating memory');
+    expect(screen.getByTestId('progress-text')).toHaveTextContent('Saving memory');
     expect(screen.getByTestId('progress-text')).toHaveAttribute('data-has-input', 'false');
   });
 

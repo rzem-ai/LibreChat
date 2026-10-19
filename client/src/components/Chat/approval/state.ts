@@ -18,37 +18,10 @@ export const pendingApprovalActionFamily = atomFamily((_conversationId: string) 
 export const approvalPanelOpenFamily = atomFamily((_conversationId: string) => atom(false));
 
 /**
- * Memory actions are reviewed inline beside the proposed memory content; sending
- * the same action to the composer panel would cover that card and duplicate its
- * controls. Only classify host memory tools with their server-attached classes.
- */
-/**
- * [Deloitte Custom Change] Identify approvals composed exclusively of host memory tools.
- * @param pendingAction - Server-owned pending action stored for one conversation.
- * @returns Whether every requested tool is a memory write or delete with its expected class.
- */
-export function isMemoryApprovalAction(
-  pendingAction: Agents.PendingAction | null | undefined,
-): boolean {
-  if (pendingAction?.payload.type !== 'tool_approval') {
-    return false;
-  }
-  const { action_requests: requests } = pendingAction.payload;
-  return (
-    requests.length > 0 &&
-    requests.every(
-      (request) =>
-        (request.name === 'set_memory' && request.toolClass === 'W1') ||
-        (request.name === 'delete_memory' && request.toolClass === 'D'),
-    )
-  );
-}
-
-/**
- * [Deloitte Custom Change] True while the composer's panel is open on a non-memory action.
+ * True while the composer's review panel is open on this tool-approval action.
  * @param conversationId - Conversation owning the pending approval, if any.
  * @param actionId - Server action ID displayed by the composer panel.
- * @returns Whether the expanded composer panel presents this non-memory action.
+ * @returns Whether the expanded composer panel presents this action.
  */
 export function useComposerPresentsApproval(
   conversationId: string | null | undefined,
@@ -61,7 +34,6 @@ export function useComposerPresentsApproval(
     conversationId != null &&
     open &&
     pendingAction?.actionId === actionId &&
-    pendingAction.payload.type === 'tool_approval' &&
-    !isMemoryApprovalAction(pendingAction)
+    pendingAction.payload.type === 'tool_approval'
   );
 }

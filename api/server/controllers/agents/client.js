@@ -120,8 +120,6 @@ const {
   normalizeAgentEventActorSummary,
   getRequestMemories,
   getMemoryAgentId,
-  createMemoryWriteAdmission,
-  gateMemoryWrites,
   createMemoryProcessor,
   agentHasInlineMemoryTools,
   loadAgent: loadAgentFn,
@@ -3245,7 +3243,6 @@ class AgentClient extends BaseClient {
     /** Memory partition of the primary agent; undefined = shared personal pool */
     const memoryAgentId = getMemoryAgentId(this.options.agent);
     this.processMemory = undefined;
-    this.memoryWriteAdmission = undefined;
 
     if (!isMemoryAgentEnabled(memoryConfig)) {
       try {
@@ -3372,11 +3369,6 @@ class AgentClient extends BaseClient {
     const messageId = this.responseMessageId + '';
     const conversationId = this.conversationId + '';
     const streamId = this.options.req?._resumableStreamId || null;
-    this.memoryWriteAdmission = createMemoryWriteAdmission();
-    const gatedMemoryMethods = gateMemoryWrites(
-      { setMemory: db.setMemory, deleteMemory: db.deleteMemory },
-      this.memoryWriteAdmission,
-    );
     const [withoutKeys, processMemory] = await createMemoryProcessor({
       userId,
       agentId: memoryAgentId,
@@ -3387,7 +3379,8 @@ class AgentClient extends BaseClient {
       jobCreatedAt: this.jobCreatedAt,
       conversationId,
       memoryMethods: {
-        ...gatedMemoryMethods,
+        setMemory: db.setMemory,
+        deleteMemory: db.deleteMemory,
         getUserMemories: db.getUserMemories,
         getFormattedMemories: db.getFormattedMemories,
         // Deloitte Custom Change: Retention Update
@@ -4866,7 +4859,6 @@ class AgentClient extends BaseClient {
         //   messages = addCacheControl(messages);
         // }
 
-        // Hold the automatic processor's mutations until HITL has resolved this run.
         if (this.processMemory && !isCompactionTurn) {
           memoryPromise = this.runMemory(memoryMessages);
         }
@@ -5248,10 +5240,6 @@ class AgentClient extends BaseClient {
       }
 
       try {
-        this.memoryWriteAdmission?.resolve(
-          this.pendingApproval == null && this.stagedApproval == null,
-        );
-        this.memoryWriteAdmission = undefined;
         const attachments = await this.awaitMemoryWithTimeout(memoryPromise);
         if (attachments && attachments.length > 0) {
           this.artifactPromises.push(...attachments);

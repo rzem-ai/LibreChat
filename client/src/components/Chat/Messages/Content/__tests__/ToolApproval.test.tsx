@@ -1,20 +1,15 @@
 import React from 'react';
 import { RecoilRoot } from 'recoil';
 import { Provider, createStore } from 'jotai';
-import { MemoryScope } from 'librechat-data-provider';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { Agents } from 'librechat-data-provider';
 import {
   approvalPanelOpenFamily,
-  isMemoryApprovalAction,
   pendingApprovalActionFamily,
 } from '~/components/Chat/approval/state';
 import { ChatContext } from '~/Providers/ChatContext';
-import { useMemoriesQuery } from '~/data-provider';
 import ApprovalProvider from '../ApprovalContext';
 import ToolApproval from '../ToolApproval';
-
-const mockUseAgentsMapContext = jest.fn();
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string, values?: Record<string | number, string | number>) => {
@@ -36,60 +31,18 @@ jest.mock('~/hooks', () => ({
       com_ui_tool_response_placeholder: 'Response',
       com_ui_approval_review_in_composer: 'Review in composer',
       com_ui_proposed_arguments: 'Proposed arguments',
-      com_ui_memory_sensitive_data_warning: 'Do not store confidential information.',
-      com_ui_memory_approval_set_title: 'Save or update memory',
-      com_ui_memory_approval_set_description:
-        'The agent would like to save or update a memory. It will only run if you approve.',
-      com_ui_memory_approval_create_title: 'Create memory',
-      com_ui_memory_approval_create_description:
-        'The agent would like to save a memory. This will create a new memory only if you approve.',
-      com_ui_memory_approval_update_title: 'Update memory',
-      com_ui_memory_approval_update_description:
-        'The agent would like to update a saved memory. This will replace its value only if you approve.',
-      com_ui_memory_approval_delete_title: 'Delete memory',
-      com_ui_memory_approval_delete_description:
-        'The agent would like to delete a saved memory. It can no longer retrieve it if you approve.',
-      com_ui_memory_delete_if_approved: 'This memory will be removed if you approve the request.',
-      com_ui_memory_delete_target: 'Memory to delete',
-      com_ui_memory_proposed: 'Proposed memory',
-      com_ui_memory_topic: 'Memory topic',
-      com_ui_memory_current_information: 'Currently saved',
-      com_ui_memory_current_information_unavailable:
-        'The current value is hidden by content protection.',
-      com_ui_memory_current_value_unavailable: 'The current saved value could not be loaded.',
-      com_ui_memory_updated_information: 'Will be updated to',
-      com_ui_memory_information_to_remember: 'Information to remember',
-      com_ui_memory_view_technical_details: 'View technical details (JSON)',
     };
     return map[key] ?? key;
   },
 }));
 
 jest.mock('~/data-provider', () => ({
-  useMemoriesQuery: jest.fn(() => ({
-    data: undefined,
-    isFetchedAfterMount: false,
-    isError: false,
-  })),
   useSubmitToolApprovalMutation: () => ({ mutate: jest.fn() }),
   useSubmitAskAnswerMutation: () => ({ mutate: jest.fn() }),
 }));
 
-beforeEach(() => {
-  jest
-    .mocked(useMemoriesQuery)
-    .mockReturnValue({ data: undefined, isFetchedAfterMount: false, isError: false } as never);
-  mockUseAgentsMapContext.mockReturnValue({
-    'agent-1': { id: 'agent-1', memory_scope: MemoryScope.agent },
-  });
-});
-
 jest.mock('~/Providers/ChatContext', () => ({
   ChatContext: jest.requireActual('react').createContext(null),
-}));
-
-jest.mock('~/Providers/AgentsMapContext', () => ({
-  useAgentsMapContext: () => mockUseAgentsMapContext(),
 }));
 
 const approval = (
@@ -241,78 +194,19 @@ describe('ToolApproval', () => {
       },
     };
 
-    const memoryPendingAction: Agents.PendingAction = {
-      ...pendingAction,
-      payload: {
-        type: 'tool_approval',
-        action_requests: [
-          {
-            name: 'set_memory',
-            toolClass: 'W1',
-            tool_call_id: 'call-1',
-            arguments: { key: 'favorite_quote', value: 'To be, or not to be.' },
-          },
-        ],
-        review_configs: [
-          {
-            action_name: 'set_memory',
-            tool_call_id: 'call-1',
-            allowed_decisions: ['approve', 'reject', 'edit'],
-          },
-        ],
-      },
-    };
-
-    const deleteMemoryPendingAction: Agents.PendingAction = {
-      ...memoryPendingAction,
-      payload: {
-        type: 'tool_approval',
-        action_requests: [
-          {
-            name: 'delete_memory',
-            toolClass: 'D',
-            tool_call_id: 'call-1',
-            arguments: { key: 'favorite_quote' },
-          },
-        ],
-        review_configs: [
-          {
-            action_name: 'delete_memory',
-            tool_call_id: 'call-1',
-            allowed_decisions: ['approve', 'reject'],
-          },
-        ],
-      },
-    };
-
-    const renderWithComposer = (
-      open: boolean,
-      extra?: React.ReactNode,
-      action: Agents.PendingAction = pendingAction,
-    ) => {
+    const renderWithComposer = (open: boolean, extra?: React.ReactNode) => {
       const store = createStore();
-      store.set(pendingApprovalActionFamily(conversationId), action);
+      store.set(pendingApprovalActionFamily(conversationId), pendingAction);
       store.set(approvalPanelOpenFamily(conversationId), open);
-      const request =
-        action.payload.type === 'tool_approval' ? action.payload.action_requests[0] : undefined;
       render(
         <RecoilRoot>
           <Provider store={store}>
-            <ChatContext.Provider
-              value={{ conversation: { conversationId, agent_id: 'agent-1' } } as never}
-            >
-              <ApprovalProvider pendingAction={action}>
+            <ChatContext.Provider value={{ conversation: { conversationId } } as never}>
+              <ApprovalProvider pendingAction={pendingAction}>
                 <div data-testid="thread">
-                  <ToolApproval
-                    approval={approval(
-                      request?.name === 'set_memory' ? ['approve', 'reject', 'edit'] : undefined,
-                    )}
-                    toolCallId="call-1"
-                    args={request?.arguments ?? {}}
-                    toolName={request?.name}
-                  />
+                  <ToolApproval approval={approval()} toolCallId="call-1" args={{ a: 1 }} />
                 </div>
-                {open && !isMemoryApprovalAction(action) && (
+                {open && (
                   <div data-testid="composer">
                     <ToolApproval
                       approval={approval()}
@@ -346,135 +240,6 @@ describe('ToolApproval', () => {
       const thread = screen.getByTestId('thread');
       fireEvent.click(within(thread).getByRole('button', { name: 'Approve' }));
       expect(within(thread).getByRole('button', { name: 'Submit (1/1 selected)' })).toBeEnabled();
-      expect(screen.queryByTestId('composer')).not.toBeInTheDocument();
-    });
-
-    test('memory approvals keep their detailed review inline and skip the composer panel', () => {
-      jest.mocked(useMemoriesQuery).mockReturnValue({
-        data: {
-          memories: [{ key: 'favorite_quote', agentId: 'another-agent' }],
-        },
-        isFetchedAfterMount: true,
-        isError: false,
-      } as never);
-      renderWithComposer(true, undefined, memoryPendingAction);
-      const thread = screen.getByTestId('thread');
-
-      expect(thread).toHaveTextContent('Proposed memory');
-      expect(thread).toHaveTextContent('Create memory');
-      expect(thread).toHaveTextContent(
-        'The agent would like to save a memory. This will create a new memory only if you approve.',
-      );
-      expect(thread).toHaveTextContent('favorite quote');
-      expect(thread).toHaveTextContent('To be, or not to be.');
-      expect(thread).toHaveTextContent('View technical details (JSON)');
-      const technicalDetails = within(thread)
-        .getByText('View technical details (JSON)')
-        .closest('details');
-      expect(technicalDetails).not.toHaveAttribute('open');
-      fireEvent.click(within(thread).getByText('View technical details (JSON)'));
-      expect(technicalDetails).toHaveAttribute('open');
-      expect(technicalDetails).toHaveTextContent('"key": "favorite_quote"');
-      expect(thread).toHaveTextContent('Do not store confidential information.');
-      expect(within(thread).getByRole('button', { name: 'Approve' })).toBeInTheDocument();
-      expect(screen.queryByTestId('composer')).not.toBeInTheDocument();
-
-      fireEvent.click(within(thread).getByRole('button', { name: 'Edit' }));
-      expect(within(thread).getByRole('textbox', { name: 'Edit' })).toHaveValue(
-        '{\n  "key": "favorite_quote",\n  "value": "To be, or not to be."\n}',
-      );
-    });
-
-    // Deloitte Custom Change: Verify the approval preview compares the saved and proposed values.
-    test('labels set_memory as an update when the same agent already has that key', () => {
-      jest.mocked(useMemoriesQuery).mockReturnValue({
-        data: {
-          memories: [{ key: 'favorite_quote', value: 'The old quote.', agentId: 'agent-1' }],
-        },
-        isFetchedAfterMount: true,
-        isError: false,
-      } as never);
-      renderWithComposer(true, undefined, memoryPendingAction);
-      const thread = screen.getByTestId('thread');
-
-      expect(thread).toHaveTextContent('Update memory');
-      expect(thread).toHaveTextContent(
-        'The agent would like to update a saved memory. This will replace its value only if you approve.',
-      );
-      expect(thread).toHaveTextContent('Currently saved');
-      expect(thread).toHaveTextContent('The old quote.');
-      expect(thread).toHaveTextContent('Will be updated to');
-      expect(thread).toHaveTextContent('To be, or not to be.');
-    });
-
-    // Deloitte Custom Change: Keep protected stored memory content out of the approval preview.
-    test('does not reveal a protected current value while showing the proposed replacement', () => {
-      jest.mocked(useMemoriesQuery).mockReturnValue({
-        data: {
-          memories: [
-            {
-              key: 'favorite_quote',
-              value: 'redacted sensitive value',
-              contentFilterBlocked: true,
-              agentId: 'agent-1',
-            },
-          ],
-        },
-        isFetchedAfterMount: true,
-        isError: false,
-      } as never);
-      renderWithComposer(true, undefined, memoryPendingAction);
-      const thread = screen.getByTestId('thread');
-
-      expect(thread).toHaveTextContent('The current value is hidden by content protection.');
-      expect(thread).not.toHaveTextContent('redacted sensitive value');
-      expect(thread).toHaveTextContent('To be, or not to be.');
-    });
-
-    test('matches user-scoped memories for agents using the shared personal pool', () => {
-      mockUseAgentsMapContext.mockReturnValue({
-        'agent-1': { id: 'agent-1', memory_scope: MemoryScope.user },
-      });
-      jest.mocked(useMemoriesQuery).mockReturnValue({
-        data: {
-          memories: [{ key: 'favorite_quote' }],
-        },
-        isFetchedAfterMount: true,
-        isError: false,
-      } as never);
-      renderWithComposer(true, undefined, memoryPendingAction);
-
-      expect(screen.getByTestId('thread')).toHaveTextContent('Update memory');
-    });
-
-    test('uses the generic description when the agent memory scope is unavailable', () => {
-      mockUseAgentsMapContext.mockReturnValue(undefined);
-      jest.mocked(useMemoriesQuery).mockReturnValue({
-        data: {
-          memories: [{ key: 'favorite_quote', agentId: 'agent-1' }],
-        },
-        isFetchedAfterMount: true,
-        isError: false,
-      } as never);
-      renderWithComposer(true, undefined, memoryPendingAction);
-
-      expect(screen.getByTestId('thread')).toHaveTextContent('Save or update memory');
-    });
-
-    test('memory delete approvals identify the removal and explain that it pauses for review', () => {
-      renderWithComposer(true, undefined, deleteMemoryPendingAction);
-      const thread = screen.getByTestId('thread');
-
-      expect(thread).toHaveTextContent('Delete memory');
-      expect(thread).toHaveTextContent(
-        'The agent would like to delete a saved memory. It can no longer retrieve it if you approve.',
-      );
-      expect(thread).toHaveTextContent('Memory to delete');
-      expect(thread).toHaveTextContent('This memory will be removed if you approve the request.');
-      expect(thread).toHaveTextContent('View technical details (JSON)');
-      expect(screen.getByText('favorite quote')).toHaveClass('text-text-destructive');
-      expect(screen.getByText('favorite quote').tagName).not.toBe('DEL');
-      expect(within(thread).getByRole('button', { name: 'Approve' })).toBeInTheDocument();
       expect(screen.queryByTestId('composer')).not.toBeInTheDocument();
     });
 
