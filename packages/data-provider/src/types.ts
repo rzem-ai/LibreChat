@@ -999,10 +999,42 @@ export type TTutorialFeedback = {
   updatedAt?: Date | string;
 };
 
+export const MAX_TOUR_STEP_TITLE_LENGTH = 200;
+export const MAX_TOUR_STEP_ID_LENGTH = 64;
+
+/**
+ * Per-tour progress. Tour steps can change between releases, so `step` is only a hint:
+ * `stepId` and `stepTitle` identify where the user actually was when it was saved.
+ */
+export type TTourProgress = {
+  /** Zero-based position in the full step list at the time it was saved. */
+  step: number;
+  /** Number of steps in the tour at the time it was saved. */
+  total: number;
+  stepId?: string;
+  stepTitle?: string;
+  completed: boolean;
+  startedAt?: Date | string;
+  updatedAt?: Date | string;
+  /** Most recent completion; kept when the tour is restarted. */
+  completedAt?: Date | string;
+};
+
+export type TTourProgressUpdate = Pick<
+  TTourProgress,
+  'step' | 'total' | 'stepId' | 'stepTitle' | 'completed'
+>;
+
+export type TUpdateTourProgressRequest = {
+  courseId: string;
+  progress: TTourProgressUpdate;
+};
+
 export type TTutorialStateResponse = {
   tutorialPromptSeen: boolean;
   tutorialRatings: Record<string, number>;
   tutorialFeedback: Record<string, TTutorialFeedback>;
+  tutorialProgress: Record<string, TTourProgress>;
 };
 
 export type TBannerResponse = TBanner | null;

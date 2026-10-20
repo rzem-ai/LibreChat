@@ -16,6 +16,7 @@ const {
   finalizeMCPAuthorizationMutation,
   // Deloitte Custom Change
   validateTutorialStateUpdate,
+  validateTourProgressUpdate,
   toTutorialStateResponse,
   MAX_TUTORIAL_RATINGS,
 } = require('@librechat/api');
@@ -135,7 +136,7 @@ const getTutorialStateController = async (req, res) => {
   try {
     const user = await db.getUserById(
       req.user.id,
-      'tutorialPromptSeen tutorialRatings tutorialFeedback',
+      'tutorialPromptSeen tutorialRatings tutorialFeedback tutorialProgress',
     );
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -144,6 +145,34 @@ const getTutorialStateController = async (req, res) => {
   } catch (error) {
     logger.error('Error fetching tutorial state:', error);
     res.status(500).json({ message: 'Error fetching tutorial state' });
+  }
+};
+
+const updateTourProgressController = async (req, res) => {
+  // Deloitte Custom Change
+  try {
+    const result = validateTourProgressUpdate(req.body);
+    if ('error' in result) {
+      return res.status(400).json({ message: result.error });
+    }
+
+    const { user, capExceeded } = await db.setTutorialProgress(
+      req.user.id,
+      result.courseId,
+      result.progress,
+    );
+    if (capExceeded) {
+      return res.status(400).json({
+        message: `tutorialProgress cannot exceed ${MAX_TUTORIAL_RATINGS} entries`,
+      });
+    }
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.status(200).json(toTutorialStateResponse(user));
+  } catch (error) {
+    logger.error('Error updating tour progress:', error);
+    res.status(500).json({ message: 'Error updating tour progress' });
   }
 };
 
@@ -743,6 +772,7 @@ module.exports = {
   acceptTermsController,
   getTutorialStateController,
   updateTutorialStateController,
+  updateTourProgressController,
   deleteUserController,
   verifyEmailController,
   updateUserPluginsController,

@@ -1488,11 +1488,42 @@ export const useUpdateTutorialStateMutation = (
               ...(variables.tutorialRatings ?? {}),
             },
             tutorialFeedback,
+            tutorialProgress: current?.tutorialProgress ?? {},
           }),
         );
         await options?.onMutate?.(variables);
         return { previousTutorialState };
       },
+    },
+  );
+};
+
+/**
+ * Saves one tour's progress. The cache is updated optimistically so the Academy reflects
+ * the step immediately; a failed save is left as-is since the next step re-saves it.
+ */
+export const useUpdateTourProgressMutation = (
+  options?: t.UpdateTourProgressMutationOptions,
+): UseMutationResult<t.TTutorialStateResponse, unknown, t.TUpdateTourProgressRequest> => {
+  const queryClient = useQueryClient();
+  const user = useRecoilValue<t.TUser | undefined>(store.user);
+  const queryKey = [QueryKeys.userTutorialState, user?.id];
+  return useMutation(
+    (payload: t.TUpdateTourProgressRequest) => dataService.updateUserTourProgress(payload),
+    {
+      onMutate: async ({ courseId, progress }) => {
+        queryClient.setQueryData<t.TTutorialStateResponse>(queryKey, (current) => ({
+          tutorialPromptSeen: current?.tutorialPromptSeen ?? false,
+          tutorialRatings: current?.tutorialRatings ?? {},
+          tutorialFeedback: current?.tutorialFeedback ?? {},
+          tutorialProgress: { ...current?.tutorialProgress, [courseId]: progress },
+        }));
+      },
+      onSuccess: (data, variables, context) => {
+        queryClient.setQueryData<t.TTutorialStateResponse>(queryKey, data);
+        options?.onSuccess?.(data, variables, context);
+      },
+      onError: options?.onError,
     },
   );
 };

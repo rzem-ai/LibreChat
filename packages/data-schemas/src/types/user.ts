@@ -12,6 +12,17 @@ export interface TutorialFeedback {
   updatedAt?: Date;
 }
 
+export interface TourProgress {
+  step: number;
+  total: number;
+  stepId?: string;
+  stepTitle?: string;
+  completed: boolean;
+  startedAt?: Date;
+  updatedAt?: Date;
+  completedAt?: Date;
+}
+
 export interface IUser extends Document {
   _id: Types.ObjectId;
   /**
@@ -82,6 +93,8 @@ export interface IUser extends Document {
   tutorialRatings?: Record<string, number>;
   /** Per-course tutorial feedback. Key = course id, value = rating plus optional comment. */
   tutorialFeedback?: Record<string, TutorialFeedback>;
+  /** Per-tour progress. Key = course id. */
+  tutorialProgress?: Record<string, TourProgress>;
   createdAt?: Date;
   updatedAt?: Date;
   /** Field for external source identification (for consistency with TPrincipal schema) */

@@ -447,6 +447,13 @@ export type UpdateTutorialStateMutationOptions = MutationOptions<
   unknown
 >;
 
+export type UpdateTourProgressMutationOptions = MutationOptions<
+  types.TTutorialStateResponse,
+  types.TUpdateTourProgressRequest,
+  unknown,
+  unknown
+>;
+
 /* Tools */
 export type UpdatePluginAuthOptions = MutationOptions<types.TUser, types.TUpdateUserPlugins>;
 

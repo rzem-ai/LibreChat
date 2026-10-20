@@ -4,6 +4,8 @@ import {
   STATEFUL_CODE_ENVIRONMENTS,
   // Deloitte Custom Change: tutorial feedback comment length cap
   MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH,
+  MAX_TOUR_STEP_ID_LENGTH,
+  MAX_TOUR_STEP_TITLE_LENGTH,
 } from 'librechat-data-provider';
 import { IUser } from '~/types';
 
@@ -45,6 +47,20 @@ const TutorialFeedbackSchema = new Schema(
       type: Date,
       default: Date.now,
     },
+  },
+  { _id: false },
+);
+
+const TourProgressSchema = new Schema(
+  {
+    step: { type: Number, min: 0, required: true },
+    total: { type: Number, min: 0, required: true },
+    stepId: { type: String, maxlength: MAX_TOUR_STEP_ID_LENGTH },
+    stepTitle: { type: String, trim: true, maxlength: MAX_TOUR_STEP_TITLE_LENGTH },
+    completed: { type: Boolean, default: false },
+    startedAt: { type: Date },
+    updatedAt: { type: Date },
+    completedAt: { type: Date },
   },
   { _id: false },
 );
@@ -228,6 +244,11 @@ const userSchema: Schema<IUser> = new Schema<IUser>(
     tutorialFeedback: {
       type: Map,
       of: TutorialFeedbackSchema,
+      default: () => new Map(),
+    },
+    tutorialProgress: {
+      type: Map,
+      of: TourProgressSchema,
       default: () => new Map(),
     },
     /** Field for external source identification (for consistency with TPrincipal schema) */

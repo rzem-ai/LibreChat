@@ -1405,6 +1405,113 @@ describe('User Methods - Database Tests', () => {
     });
   });
 
+  // Deloitte Custom Change: per-tour progress tests for MyAssist Academy
+  describe('setTutorialProgress', () => {
+    const createUser = async (extra: Partial<t.IUser> = {}): Promise<string> => {
+      const user = await User.create({
+        name: 'Tour User',
+        email: `tour-${Math.random()}@example.com`,
+        provider: 'local',
+        ...extra,
+      });
+      return user._id.toString();
+    };
+
+    const fetchProgress = async (userId: string): Promise<Record<string, t.TourProgress>> => {
+      const user = await User.findById(userId).lean<t.IUser>();
+      return user?.tutorialProgress ?? {};
+    };
+
+    const stepProgress = {
+      step: 2,
+      total: 9,
+      stepId: 'projects',
+      stepTitle: 'Projects',
+      completed: false,
+    };
+
+    test('stores the step id, title and number with server-assigned timestamps', async () => {
+      const userId = await createUser();
+
+      const result = await methods.setTutorialProgress(userId, 'getting-started', stepProgress);
+      const saved = (await fetchProgress(userId))['getting-started'];
+
+      expect(result.capExceeded).toBe(false);
+      expect(saved).toMatchObject(stepProgress);
+      expect(saved.startedAt).toBeInstanceOf(Date);
+      expect(saved.updatedAt).toBeInstanceOf(Date);
+      expect(saved.completedAt).toBeUndefined();
+    });
+
+    test('keeps startedAt while in progress and leaves other tours untouched', async () => {
+      const userId = await createUser();
+      await methods.setTutorialProgress(userId, 'other-tour', { ...stepProgress, step: 1 });
+      await methods.setTutorialProgress(userId, 'getting-started', stepProgress);
+      const first = (await fetchProgress(userId))['getting-started'];
+
+      await methods.setTutorialProgress(userId, 'getting-started', { ...stepProgress, step: 3 });
+      const progress = await fetchProgress(userId);
+
+      expect(progress['getting-started'].step).toBe(3);
+      expect(progress['getting-started'].startedAt).toEqual(first.startedAt);
+      expect(progress['other-tour'].step).toBe(1);
+    });
+
+    test('records completedAt and preserves it when the tour is restarted', async () => {
+      const userId = await createUser();
+      await methods.setTutorialProgress(userId, 'getting-started', stepProgress);
+      const started = (await fetchProgress(userId))['getting-started'];
+
+      await methods.setTutorialProgress(userId, 'getting-started', {
+        step: 9,
+        total: 9,
+        completed: true,
+      });
+      const completed = (await fetchProgress(userId))['getting-started'];
+      expect(completed.completed).toBe(true);
+      expect(completed.completedAt).toBeInstanceOf(Date);
+
+      await methods.setTutorialProgress(userId, 'getting-started', { ...stepProgress, step: 0 });
+      const restarted = (await fetchProgress(userId))['getting-started'];
+
+      expect(restarted.completed).toBe(false);
+      expect(restarted.completedAt).toEqual(completed.completedAt);
+      expect(restarted.startedAt?.getTime()).toBeGreaterThanOrEqual(
+        started.startedAt?.getTime() ?? 0,
+      );
+      expect(restarted.startedAt).not.toEqual(started.startedAt);
+    });
+
+    test('rejects a new tour past the cap but still updates existing ones', async () => {
+      const progress = Object.fromEntries(
+        Array.from({ length: MAX_TUTORIAL_RATINGS }, (_, index) => [
+          `course-${index}`,
+          { step: 1, total: 3, completed: false },
+        ]),
+      );
+      const userId = await createUser({ tutorialProgress: progress });
+
+      const rejected = await methods.setTutorialProgress(userId, 'one-too-many', stepProgress);
+      const updated = await methods.setTutorialProgress(userId, 'course-0', stepProgress);
+      const persisted = await fetchProgress(userId);
+
+      expect(rejected.capExceeded).toBe(true);
+      expect(persisted['one-too-many']).toBeUndefined();
+      expect(updated.capExceeded).toBe(false);
+      expect(persisted['course-0'].step).toBe(2);
+    });
+
+    test('returns a null user for an unknown id', async () => {
+      const result = await methods.setTutorialProgress(
+        new mongoose.Types.ObjectId().toString(),
+        'getting-started',
+        stepProgress,
+      );
+
+      expect(result).toEqual({ user: null, capExceeded: false });
+    });
+  });
+
   describe('Email Normalization Edge Cases', () => {
     test('should handle email with multiple spaces', async () => {
       await User.create({

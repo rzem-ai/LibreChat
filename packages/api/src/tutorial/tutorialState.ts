@@ -8,6 +8,7 @@
 import { MAX_TUTORIAL_RATINGS } from '@librechat/data-schemas';
 import {
   MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH,
+  type TTourProgress,
   type TTutorialFeedback,
 } from 'librechat-data-provider';
 
@@ -146,7 +147,11 @@ export function validateTutorialStateUpdate(body: unknown): TutorialStateValidat
   if ('tutorialFeedback' in raw) {
     const tutorialFeedback = raw.tutorialFeedback;
 
-    if (!tutorialFeedback || typeof tutorialFeedback !== 'object' || Array.isArray(tutorialFeedback)) {
+    if (
+      !tutorialFeedback ||
+      typeof tutorialFeedback !== 'object' ||
+      Array.isArray(tutorialFeedback)
+    ) {
       return { error: 'tutorialFeedback must be a plain object' };
     }
 
@@ -228,11 +233,17 @@ export function toTutorialStateResponse(user: {
   tutorialPromptSeen?: boolean | null;
   tutorialRatings?: Map<string, number> | Record<string, number> | null;
   tutorialFeedback?: Map<string, TTutorialFeedback> | Record<string, TTutorialFeedback> | null;
+  tutorialProgress?: Map<string, TTourProgress> | Record<string, TTourProgress> | null;
 }): {
   tutorialPromptSeen: boolean;
   tutorialRatings: Record<string, number>;
   tutorialFeedback: Record<string, TTutorialFeedback>;
+  tutorialProgress: Record<string, TTourProgress>;
 } {
+  const tutorialProgress =
+    user.tutorialProgress instanceof Map
+      ? Object.fromEntries(user.tutorialProgress)
+      : (user.tutorialProgress ?? {});
   const tutorialRatings =
     user.tutorialRatings instanceof Map
       ? Object.fromEntries(user.tutorialRatings)
@@ -241,7 +252,9 @@ export function toTutorialStateResponse(user: {
     user.tutorialFeedback instanceof Map
       ? Object.fromEntries(user.tutorialFeedback)
       : (user.tutorialFeedback ?? {});
-  const combinedTutorialFeedback = Object.entries(tutorialRatings).reduce<Record<string, TTutorialFeedback>>(
+  const combinedTutorialFeedback = Object.entries(tutorialRatings).reduce<
+    Record<string, TTutorialFeedback>
+  >(
     (acc, [courseId, score]) => {
       acc[courseId] = tutorialFeedback[courseId] ?? { score };
       return acc;
@@ -253,5 +266,6 @@ export function toTutorialStateResponse(user: {
     tutorialPromptSeen: !!user.tutorialPromptSeen,
     tutorialRatings,
     tutorialFeedback: combinedTutorialFeedback,
+    tutorialProgress,
   };
 }
