@@ -40,7 +40,7 @@ describe('useNativeWebSearchToggle', () => {
     localStorage.clear();
     mockConversation = {
       endpoint: OPENAI_ENDPOINT,
-      model: 'gpt-56-luna',
+      model: 'gpt-6-luna',
       web_search: false,
     };
     mockEndpointsConfig = undefined;
@@ -65,7 +65,7 @@ describe('useNativeWebSearchToggle', () => {
 
     it('follows the configured list for the conversation model', () => {
       mockEndpointsConfig = {
-        openAI: { nativeWebSearch: { supportedModels: ['gpt-56-luna'] } },
+        openAI: { nativeWebSearch: { supportedModels: ['gpt-6-luna'] } },
       } as unknown as TEndpointsConfig;
 
       const { result, rerender } = renderHook(() => useNativeWebSearchToggle());
@@ -84,12 +84,12 @@ describe('useNativeWebSearchToggle', () => {
       mockConversation = {
         endpoint: AGENTS_ENDPOINT,
         agent_id: 'agent-1',
-        model: 'gpt-56-luna',
+        model: 'gpt-6-luna',
         web_search: false,
       };
       mockAgentData = { provider: 'openAI', model: 'gpt-41-nano' };
       mockEndpointsConfig = {
-        openAI: { nativeWebSearch: { supportedModels: ['gpt-56-luna'] } },
+        openAI: { nativeWebSearch: { supportedModels: ['gpt-6-luna'] } },
       } as unknown as TEndpointsConfig;
 
       const { result } = renderHook(() => useNativeWebSearchToggle());
@@ -116,7 +116,7 @@ describe('useNativeWebSearchToggle', () => {
         web_search: true,
       };
       mockEndpointsConfig = {
-        openAI: { nativeWebSearch: { supportedModels: ['gpt-56-luna'] } },
+        openAI: { nativeWebSearch: { supportedModels: ['gpt-6-luna'] } },
       } as unknown as TEndpointsConfig;
 
       renderHook(() => useNativeWebSearchToggle());
@@ -127,11 +127,11 @@ describe('useNativeWebSearchToggle', () => {
     it('leaves the flag alone while the model is supported', () => {
       mockConversation = {
         endpoint: OPENAI_ENDPOINT,
-        model: 'gpt-56-luna',
+        model: 'gpt-6-luna',
         web_search: true,
       };
       mockEndpointsConfig = {
-        openAI: { nativeWebSearch: { supportedModels: ['gpt-56-luna'] } },
+        openAI: { nativeWebSearch: { supportedModels: ['gpt-6-luna'] } },
       } as unknown as TEndpointsConfig;
 
       renderHook(() => useNativeWebSearchToggle());

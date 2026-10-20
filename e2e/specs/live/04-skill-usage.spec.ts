@@ -18,7 +18,7 @@ import {
  */
 const SKILL = process.env.LIVE_SKILL_USAGE?.trim() || 'capability-builder';
 const ENDPOINT = process.env.LIVE_ENDPOINT?.trim() || 'Azure Global';
-const MODEL = process.env.LIVE_MODEL?.trim() || 'gpt-56-luna';
+const MODEL = process.env.LIVE_MODEL?.trim() || 'gpt-6-luna';
 const QUESTION = 'If you can see this skill, just reply with "Yes"';
 
 test.describe.serial('live skill usage', { tag: ['@live'] }, () => {
@@ -65,9 +65,7 @@ test.describe.serial('live skill usage', { tag: ['@live'] }, () => {
     const composer = page.getByTestId('text-input');
     await composer.click();
     await composer.pressSequentially('$'); //using pressSequentially to avoid issues with keyup not being triggered
-    const skillOption = page
-      .getByRole('button', { name: new RegExp(`^${SKILL}`) })
-      .first();
+    const skillOption = page.getByRole('button', { name: new RegExp(`^${SKILL}`) }).first();
     await expect(skillOption).toBeVisible({ timeout: 10000 });
     await skillOption.click();
 

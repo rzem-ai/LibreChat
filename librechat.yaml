@@ -198,8 +198,8 @@ memory:
   messageWindowSize: 5 # Number of recent messages to consider
   agent:
     enabled: true
-    provider: 'anthropic'
-    model: 'claude-haiku-4-5'
+    provider: 'bedrock'
+    model: 'au.anthropic.claude-haiku-5-5'
     instructions: |
       You are a memory extraction assistant.
       CRITICAL: Do not create a memory for general conversational remarks, fleeting topics, or casual statements.
@@ -246,8 +246,12 @@ endpoints:
     streamRate: 25
     modelDisplayLabel: 'Anthropic'
     titleConvo: true
-    titleModel: 'claude-haiku-4-5'
+    titleModel: 'gpt-6-luna'
+    titleEndpoint: 'Azure Global'
     titleMethod: 'completion'
+    activityLabel: true
+    activityModel: 'gpt-6-luna'
+    activityEndpoint: 'Azure Global'
     # Deloitte Custom Change: gates the native provider web-search tool per model.
     # Omitting this key entirely enables native web search for EVERY model of the
     # endpoint; an empty `supportedModels` list disables it for every model.
@@ -341,12 +345,14 @@ endpoints:
       baseURL: '${BASE_URL_AZURE_GLOBAL}'
       models:
         default:
-          - 'gpt-56-luna'
           - 'gpt-56-terra'
-          - 'gpt-56-sol'
+          - 'gpt-6-luna'
+          - 'gpt-61-sol'
         fetch: false
       titleConvo: true
-      titleModel: 'gpt-56-terra'
+      titleModel: 'gpt-6-luna'
+      activityLabel: true
+      activityModel: 'gpt-6-luna'
       modelDisplayLabel: 'OpenAI'
       dropParams: [ 'stop', 'user', 'frequency_penalty', 'presence_penalty' ]
       headers:
@@ -354,24 +360,24 @@ endpoints:
         Content-Type: 'application/json'
       nativeWebSearch:
         supportedModels:
-          - 'gpt-56-luna'
           - 'gpt-56-terra'
-          - 'gpt-56-sol'
+          - 'gpt-6-luna'
+          - 'gpt-61-sol'
       # Deloitte Custom Change: pricing used for real token billing and the relative-cost
       # tier in the model tooltip. Prices are USD per 1M tokens; context is in tokens.
-      # GPT-5.6 Sol/Luna/Terra publish a 1,050,000-token context window (128,000 max output).
+      # GPT-5.6 Terra and GPT-6 Luna/GPT-6.1 Sol publish a 1,050,000-token context window (128,000 max output).
       tokenConfig:
-        gpt-56-luna:
-          prompt: 1
-          completion: 6
-          context: 1050000
         gpt-56-terra:
           prompt: 2.5
           completion: 15
           context: 1050000
-        gpt-56-sol:
-          prompt: 5
-          completion: 30
+        gpt-6-luna:
+          prompt: 0
+          completion: 0
+          context: 1050000
+        gpt-61-sol:
+          prompt: 2
+          completion: 10
           context: 1050000
     # --- VertexAI / Google (us-central1) ---
     # Gemini 2.5 models removed. Re-enable by uncommenting and adding models
@@ -407,6 +413,9 @@ endpoints:
   bedrock:
     regional: true
     modelDisplayLabel: 'Anthropic Australia'
+    titleModel: 'au.anthropic.claude-haiku-5-5'
+    activityLabel: true
+    activityModel: 'au.anthropic.claude-haiku-5-5'
     models:
       - 'au.anthropic.claude-sonnet-4-6'
       - 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
@@ -502,36 +511,32 @@ modelSpecs:
         model: 'gpt-56-terra'
         promptPrefix: *deloitteSystemPrompt
 
-    - name: 'azure-global-gpt-56-luna'
-      label: 'GPT 5.6 Luna'
+    - name: 'azure-global-gpt-6-luna'
+      label: 'GPT 6 Luna'
       group: 'OpenAI Global'
       iconURL: 'openAI'
-      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
-      artificialAnalysisBenchmarkModelName: 'gpt-5-6-luna'
+      artificialAnalysisBenchmarkModelName: 'gpt-6-luna'
       preset:
         endpoint: 'Azure Global'
-        model: 'gpt-56-luna'
+        model: 'gpt-6-luna'
         promptPrefix: *deloitteSystemPrompt
+        useResponsesApi: true
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
         supports:
           webSearch: true
           imageGeneration: false
 
-    - name: 'azure-global-gpt-56-sol'
-      label: 'GPT 5.6 Sol'
+    - name: 'azure-global-gpt-61-sol'
+      label: 'GPT 6.1 Sol'
       group: 'OpenAI Global'
       iconURL: 'openAI'
-      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
-      artificialAnalysisBenchmarkModelName: 'gpt-5-6-sol'
+      artificialAnalysisBenchmarkModelName: 'gpt-6-1-sol'
       preset:
         endpoint: 'Azure Global'
-        model: 'gpt-56-sol'
+        model: 'gpt-61-sol'
         promptPrefix: *deloitteSystemPrompt
+        useResponsesApi: true
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
         supports:
           webSearch: true
           imageGeneration: false
