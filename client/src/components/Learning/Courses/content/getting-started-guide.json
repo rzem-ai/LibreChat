@@ -103,7 +103,7 @@
     {
       "element": "#nav-panel-skills",
       "title": "Skill Library",
-      "description": "This is where you can create, edit and share skills. Skills are reusable instruction files that help the AI follow repeatable patterns.",
+      "description": "This is where you can create, edit and share skills. Skills are specialised instruction files that provide the AI with expertise for specific tasks and actions.",
       "side": "right"
     },
     {
