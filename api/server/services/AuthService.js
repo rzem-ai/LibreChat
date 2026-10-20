@@ -882,8 +882,11 @@ const setOpenIDAuthTokens = (
         expiresAt: expirationDate.getTime(),
         lastRefreshedAt: Date.now(),
       };
-      if (tokenset.id_token && idTokenExpiresAt != null) {
-        sessionOpenidTokens.idTokenExpiresAt = idTokenExpiresAt;
+      const logoutIdTokenExpiresAt =
+        idTokenExpiresAt ??
+        (logoutIdToken === sessionIdToken ? req.session.openidTokens?.idTokenExpiresAt : undefined);
+      if (logoutIdToken && logoutIdTokenExpiresAt != null) {
+        sessionOpenidTokens.idTokenExpiresAt = logoutIdTokenExpiresAt;
       }
       applyOpenIDSessionIdentity(sessionOpenidTokens, sessionIdentity);
       /**

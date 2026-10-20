@@ -473,10 +473,8 @@ describe('setOpenIDAuthTokens', () => {
     });
 
     it('falls back to access_token when the saved id_token expiry has elapsed', () => {
-      const expiredIdToken = jwt.sign(
-        { sub: 'user-123', exp: Math.floor(Date.now() / 1000) - 60 },
-        'idp-signing-secret',
-      );
+      const expiredAt = Math.floor(Date.now() / 1000) - 60;
+      const expiredIdToken = jwt.sign({ sub: 'user-123', exp: expiredAt }, 'idp-signing-secret');
       const tokenset = {
         access_token: 'new-access-token',
         refresh_token: 'new-refresh-token',
@@ -485,7 +483,7 @@ describe('setOpenIDAuthTokens', () => {
         openidTokens: {
           accessToken: 'old-access-token',
           idToken: expiredIdToken,
-          idTokenExpiresAt: Math.floor(Date.now() / 1000) - 60,
+          idTokenExpiresAt: expiredAt,
           refreshToken: 'old-refresh-token',
         },
       });
@@ -495,7 +493,11 @@ describe('setOpenIDAuthTokens', () => {
 
       expect(result).toBe('new-access-token');
       expect(req.session.openidTokens.idToken).toBe(expiredIdToken);
+      expect(req.session.openidTokens.idTokenExpiresAt).toBe(expiredAt);
       expect(req.session.openidTokens.accessToken).toBe('new-access-token');
+
+      expect(setOpenIDAuthTokens(tokenset, req, res, 'user-123')).toBe('new-access-token');
+      expect(req.session.openidTokens.idTokenExpiresAt).toBe(expiredAt);
     });
 
     it('does not trust an unverified refreshed id_token expiry for token selection', () => {
