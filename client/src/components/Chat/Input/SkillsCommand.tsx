@@ -231,7 +231,7 @@ function SkillsCommandContent({
     }
     const scope = resolveAgentSkillsScope(agent.skills, agent.skills_enabled, agent.skills_scope);
     if (scope === SkillsScope.none) {
-      return { agentSkillIds: [], isAgentDisabled: false };
+      return { agentSkillIds: [], isAgentDisabled: true };
     }
     if (scope === SkillsScope.all) {
       return { agentSkillIds: undefined, isAgentDisabled: false };
