@@ -505,6 +505,7 @@ describe('Prompt Routes - ACL Permissions', () => {
       const response = await request(app).get('/api/prompts/all').expect(200);
       const responseIds = response.body.map((group) => group._id);
 
+      expect(response.headers['content-type']).toContain('application/json');
       expect(responseIds).toContain(safe.group._id.toString());
       expect(responseIds).not.toContain(blockedPlain.group._id.toString());
       expect(responseIds).not.toContain(blockedVariable.group._id.toString());
@@ -570,6 +571,8 @@ describe('Prompt Routes - ACL Permissions', () => {
           .expect(200),
       ]);
 
+      expect(groupResponse.headers['content-type']).toContain('application/json');
+      expect(promptsResponse.headers['content-type']).toContain('application/json');
       expect(groupResponse.body.productionPrompt).toEqual(
         expect.objectContaining({
           prompt: '',
@@ -1066,6 +1069,7 @@ describe('Prompt Routes - ACL Permissions', () => {
         .expect(200);
 
       expect(response.body.promptGroups).toHaveLength(10);
+      expect(response.headers['content-type']).toContain('application/json');
       expect(response.body.has_more).toBe(true);
       expect(response.body.after).toBeTruthy();
       // Since has_more is true, pages should be a high number (9999 in our fix)
