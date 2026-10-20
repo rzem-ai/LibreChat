@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { AgentSubagentsConfig } from './types/assistants';
+import type { AgentSubagentsConfig } from './types/agents';
 import type { TModelSpecPreset } from './schemas';
 import {
   EModelEndpoint,
@@ -8,7 +8,9 @@ import {
   AuthType,
   authTypeSchema,
 } from './schemas';
-import { MAX_SUBAGENTS } from './limits';
+import { getMaxSubagents } from './limits';
+
+type ModelSpecSubagentsConfig = Omit<AgentSubagentsConfig, 'graphs'>;
 
 export type TModelSpec = {
   name: string;
@@ -49,6 +51,9 @@ export type TModelSpec = {
   authType?: AuthType;
   /** Hide the chat input tool badge row while this model spec is active. */
   hideBadgeRow?: boolean;
+  // TODO (deloitte) webSearch/fileSearch gate the spec's agent tools and overlap in spirit with
+  // details.supports.webSearch/fileIngestion, which describe model capability for display.
+  // A future pass could consolidate these so admins don't have to state the same fact twice.
   webSearch?: boolean;
   fileSearch?: boolean;
   executeCode?: boolean;
@@ -79,14 +84,125 @@ export type TModelSpec = {
   artifacts?: string | boolean;
   mcpServers?: string[];
   skills?: boolean | string[];
-  subagents?: AgentSubagentsConfig;
+  subagents?: ModelSpecSubagentsConfig;
+  // Deloitte Custom Change: editorial per-model metadata (speed/intelligence/supports) for
+  // the model info tooltip, reusable by any future UI surface.
+  details?: ModelSpecDetails;
+  /**
+   * Deloitte Custom Change: Artificial Analysis API `slug` used by the
+   * `deloitte.sync-model-metadata` CI workflow to populate `details.speed`/`intelligence`.
+   * Omit for specs with no Artificial Analysis catalog equivalent.
+   */
+  artificialAnalysisBenchmarkModelName?: string;
 };
 
-export const modelSpecSubagentsSchema = z.object({
-  enabled: z.boolean().optional(),
-  allowSelf: z.boolean().optional(),
-  agent_ids: z.array(z.string()).max(MAX_SUBAGENTS).optional(),
+// Deloitte Custom Change: schema for the new `details` field above.
+export const modelSpecDetailsSchema = z.object({
+  /** 1-5 rating, same scale as the cost `$` tier (`customDeloitteFeatureFlags.modelPricingTierBreakpoints`). */
+  speed: z.number().int().min(1).max(5).optional(),
+  intelligence: z.number().int().min(1).max(5).optional(),
+  supports: z
+    .object({
+      webSearch: z.boolean().optional(),
+      imageGeneration: z.boolean().optional(),
+      fileIngestion: z.boolean().optional(),
+    })
+    .optional(),
 });
+
+export type ModelSpecDetails = z.infer<typeof modelSpecDetailsSchema>;
+
+export const modelSpecSubagentsSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    allowSelf: z.boolean().optional(),
+    shareFiles: z.boolean().optional(),
+    agent_ids: z.array(z.string()).optional(),
+  })
+  .superRefine((subagents, ctx) => {
+    const maxSubagents = getMaxSubagents();
+    if ((subagents.agent_ids?.length ?? 0) > maxSubagents) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['agent_ids'],
+        message: `agent_ids must contain at most ${maxSubagents} item(s)`,
+      });
+    }
+  });
+
+/**
+ * The endpoint a spec targets. Only the agents endpoint can serve a preset that
+ * names an `agent_id`, so an omitted `endpoint` is inferred rather than left
+ * undefined — otherwise the spec matches no endpoint at all, the client sends
+ * no endpoint when it is selected, and the request is rejected as a mismatch.
+ *
+ * Shared so the selector and the request pipeline resolve a spec identically.
+ */
+/**
+ * Structural view of the fields endpoint resolution reads, so partial spec
+ * shapes (e.g. `AppConfig['modelSpecs']`, which is deep-partial) qualify.
+ */
+type ModelSpecEndpointSource = {
+  preset?: Pick<TModelSpecPreset, 'endpoint' | 'agent_id'> | null;
+};
+
+export function resolveModelSpecEndpoint(
+  modelSpec: ModelSpecEndpointSource | undefined,
+): string | undefined {
+  const preset = modelSpec?.preset;
+  if (preset?.endpoint != null) {
+    return preset.endpoint;
+  }
+  /**
+   * An explicit `endpoint: null` is a statement, not an omission — such specs
+   * validated (and were skipped downstream) before inference existed, so
+   * inferring here would silently activate them. Only an absent key infers,
+   * and only from a non-empty `agent_id`: form-backed writers persist
+   * untouched fields as `''`, which names no agent.
+   */
+  if (preset?.endpoint === null) {
+    return undefined;
+  }
+  return preset?.agent_id ? EModelEndpoint.agents : undefined;
+}
+
+/**
+ * Writes each spec's resolved endpoint back onto its preset so every consumer —
+ * endpoint matching, the selector, access filters, startup presets, provider-key
+ * reachability — reads a complete spec instead of re-deriving it. Apply once
+ * where the effective config is assembled (YAML load and DB-override merge);
+ * downstream code then needs no awareness of inference.
+ *
+ * Returns the original object, and the original spec objects, when nothing
+ * needs filling in, so cached configs and memoized consumers see no new
+ * identities.
+ */
+export function materializeModelSpecEndpoints<
+  T extends { list?: ModelSpecEndpointSource[] } | null | undefined,
+>(modelSpecs: T): T {
+  const list = modelSpecs?.list;
+  if (!list?.length) {
+    return modelSpecs;
+  }
+
+  let changed = false;
+  const materialized = list.map((spec) => {
+    if (spec?.preset == null || spec.preset.endpoint != null) {
+      return spec;
+    }
+    const endpoint = resolveModelSpecEndpoint(spec);
+    if (endpoint == null) {
+      return spec;
+    }
+    changed = true;
+    return { ...spec, preset: { ...spec.preset, endpoint } };
+  });
+
+  if (!changed) {
+    return modelSpecs;
+  }
+  return { ...modelSpecs, list: materialized } as T;
+}
 
 export const tModelSpecSchema = z.object({
   name: z.string(),
@@ -117,6 +233,8 @@ export const tModelSpecSchema = z.object({
   mcpServers: z.array(z.string()).optional(),
   skills: z.union([z.boolean(), z.array(z.string())]).optional(),
   subagents: modelSpecSubagentsSchema.optional(),
+  details: modelSpecDetailsSchema.optional(), // Deloitte Custom Change
+  artificialAnalysisBenchmarkModelName: z.string().optional(), // Deloitte Custom Change
 });
 
 export const specsConfigSchema = z.object({

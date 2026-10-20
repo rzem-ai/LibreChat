@@ -1,4 +1,5 @@
 import { Providers, WebSearchToolDefinition } from '@librechat/agents';
+import type { JsonSchemaType } from '@librechat/agents';
 import type {
   LoadToolDefinitionsParams,
   LoadToolDefinitionsDeps,
@@ -31,6 +32,57 @@ describe('definitions.ts', () => {
   });
 
   describe('loadToolDefinitions', () => {
+    // Deloitte Custom Change: the definitions-only path must hide file bytes from the
+    // model for operator-approved upload tools, same as the full tool-dispatch path.
+    it('rewrites approved attachment upload schemas in the definitions-only path', async () => {
+      const params: LoadToolDefinitionsParams = {
+        userId: 'user-123',
+        agentId: 'agent-123',
+        tools: ['sp_upload_file_mcp_sharepoint'],
+        rawServerNames: ['sharepoint'],
+        attachmentUploadTools: { sharepoint: ['sp_upload_file'] },
+        attachmentFiles: [{ file_id: 'file-123', filename: 'report.pptx' }],
+      };
+      const deps: LoadToolDefinitionsDeps = {
+        getOrFetchMCPServerTools: jest.fn().mockResolvedValue({
+          sp_upload_file_mcp_sharepoint: {
+            function: {
+              name: 'sp_upload_file',
+              parameters: {
+                type: 'object',
+                properties: {
+                  driveId: { type: 'string' },
+                  content: { type: 'string' },
+                  encoding: { type: 'string' },
+                },
+                required: ['driveId', 'content'],
+                oneOf: [{ required: ['driveId'] }],
+              },
+            },
+          },
+        }),
+        isBuiltInTool: mockIsBuiltInTool,
+      };
+
+      const result = await loadToolDefinitions(params, deps);
+      const definition = result.toolDefinitions[0];
+      // `rewriteAttachmentUploadSchema` adds raw JSON Schema combinators that
+      // `@librechat/agents`'s `JsonSchemaType` doesn't model yet.
+      const parameters = definition?.parameters as
+        | (JsonSchemaType & { oneOf?: Array<{ required?: string[] }>; allOf?: unknown[] })
+        | undefined;
+
+      expect(parameters?.properties).not.toHaveProperty('content');
+      expect(parameters?.properties).not.toHaveProperty('encoding');
+      expect(parameters?.properties).toHaveProperty('sourceFileId');
+      expect(parameters?.properties).toHaveProperty('sourceFileName');
+      expect(parameters?.required).toEqual(['driveId']);
+      expect(parameters?.oneOf).toEqual([{ required: ['driveId'] }]);
+      // Strict function-calling providers (e.g. OpenAI) reject oneOf/anyOf/allOf
+      // at the schema root, so the upload tools must not add one here.
+      expect(parameters?.allOf).toBeUndefined();
+    });
+
     it('should return empty result for empty tools array', async () => {
       const params: LoadToolDefinitionsParams = {
         userId: 'user-123',
@@ -48,6 +100,7 @@ describe('definitions.ts', () => {
       expect(result.toolDefinitions).toHaveLength(0);
       expect(result.toolRegistry.size).toBe(0);
       expect(result.hasDeferredTools).toBe(false);
+      expect(result.oauthActionToolNames).toEqual([]);
     });
 
     describe('action tool definitions', () => {
@@ -128,6 +181,53 @@ describe('definitions.ts', () => {
         );
         expect(actionDef).toBeDefined();
         expect(actionDef?.parameters).toBeUndefined();
+      });
+
+      it('collects OAuth action tool names and strips the marker from emitted defs', async () => {
+        const mockActionDefs: ActionToolDefinition[] = [
+          {
+            name: 'getWeather_action_weather_com',
+            description: 'Get weather for a location',
+            oauth: false,
+          },
+          {
+            name: 'sendMail_action_mail_example_com',
+            description: 'Send an email',
+            oauth: true,
+          },
+          {
+            name: 'listItems_action_api_example_com',
+            description: 'List all items',
+          },
+        ];
+
+        const mockGetActionToolDefinitions = jest.fn().mockResolvedValue(mockActionDefs);
+
+        const params: LoadToolDefinitionsParams = {
+          userId: 'user-123',
+          agentId: 'agent-123',
+          tools: [
+            'getWeather_action_weather---com',
+            'sendMail_action_mail---example---com',
+            'listItems_action_api---example---com',
+          ],
+        };
+
+        const deps: LoadToolDefinitionsDeps = {
+          getOrFetchMCPServerTools: mockGetOrFetchMCPServerTools,
+          isBuiltInTool: mockIsBuiltInTool,
+          getActionToolDefinitions: mockGetActionToolDefinitions,
+        };
+
+        const result = await loadToolDefinitions(params, deps);
+
+        expect(result.oauthActionToolNames).toEqual(['sendMail_action_mail_example_com']);
+        for (const def of result.toolDefinitions) {
+          expect(def).not.toHaveProperty('oauth');
+        }
+        const registryEntry = result.toolRegistry.get('sendMail_action_mail_example_com');
+        expect(registryEntry).toBeDefined();
+        expect(registryEntry).not.toHaveProperty('oauth');
       });
 
       it('should not classify MCP tools with _action in name as action tools', async () => {
@@ -356,6 +456,37 @@ describe('definitions.ts', () => {
         );
 
         expect(result.toolDefinitions.some((d) => d.name === 'run_tools_with_bash')).toBe(false);
+        expect(result.toolRegistry.has('run_tools_with_bash')).toBe(false);
+      });
+
+      it('passes the selected attached environment into definitions-only classification', async () => {
+        mockGetOrFetchMCPServerTools.mockResolvedValueOnce(serverTools);
+        const result = await loadToolDefinitions(
+          {
+            userId: 'user-123',
+            agentId: 'agent-123',
+            tools: [mcpToolName],
+            toolOptions: { [mcpToolName]: { allowed_callers: ['code_execution'] } },
+            programmaticToolsEnabled: true,
+            codeExecutionEnabled: true,
+            codeExecutionContext: {
+              baseUrl: 'https://code.example',
+              codeSessionKey: 'session',
+              executionProfile: 'stateful',
+              statefulSessions: true,
+              environmentType: 'attached',
+              environmentId: 'attached',
+              bridgeWorkerId: 'worker',
+            },
+          },
+          {
+            getOrFetchMCPServerTools: mockGetOrFetchMCPServerTools,
+            isBuiltInTool: mockIsBuiltInTool,
+          },
+        );
+        expect(
+          result.toolDefinitions.some((definition) => definition.name === 'run_tools_with_bash'),
+        ).toBe(false);
         expect(result.toolRegistry.has('run_tools_with_bash')).toBe(false);
       });
 
@@ -614,6 +745,72 @@ describe('definitions.ts', () => {
         const getItemDef = result.toolDefinitions.find((d) => d.name === 'get_item_mcp_server_one');
         expect(getItemDef).toBeDefined();
         expect(getItemDef?.description).toBe('Get a specific item');
+      });
+
+      it('resolves a pre-strip persisted key against the stripped catalog, keeping the persisted name', async () => {
+        /** Catalog keys drop a redundant leading server-name prefix; an agent
+         *  saved before that must still resolve, and the definition keeps the
+         *  persisted spelling so it matches the runtime instance name. */
+        const mockServerTools = {
+          search_mcp_acme: {
+            serverToolName: 'acme_search',
+            function: {
+              name: 'search_mcp_acme',
+              description: 'Search things',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+        };
+
+        mockGetOrFetchMCPServerTools.mockResolvedValue(mockServerTools);
+
+        const params: LoadToolDefinitionsParams = {
+          userId: 'user-123',
+          agentId: 'agent-123',
+          tools: ['acme_search_mcp_acme'],
+        };
+
+        const deps: LoadToolDefinitionsDeps = {
+          getOrFetchMCPServerTools: mockGetOrFetchMCPServerTools,
+          isBuiltInTool: mockIsBuiltInTool,
+        };
+
+        const result = await loadToolDefinitions(params, deps);
+
+        expect(result.toolDefinitions).toHaveLength(1);
+        expect(result.toolDefinitions[0]?.name).toBe('acme_search_mcp_acme');
+        expect(result.toolDefinitions[0]?.description).toBe('Search things');
+      });
+
+      it('rejects a stripped-spelling match without matching upstream identity', async () => {
+        /** A stale key for a removed tool must not resolve onto a DIFFERENT
+         *  sibling whose key merely coincides with the stripped spelling. */
+        const mockServerTools = {
+          acme_foo_mcp_acme: {
+            function: {
+              name: 'acme_foo_mcp_acme',
+              description: 'Different tool',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+        };
+
+        mockGetOrFetchMCPServerTools.mockResolvedValue(mockServerTools);
+
+        const params: LoadToolDefinitionsParams = {
+          userId: 'user-123',
+          agentId: 'agent-123',
+          tools: ['acme_acme_foo_mcp_acme'],
+        };
+
+        const deps: LoadToolDefinitionsDeps = {
+          getOrFetchMCPServerTools: mockGetOrFetchMCPServerTools,
+          isBuiltInTool: mockIsBuiltInTool,
+        };
+
+        const result = await loadToolDefinitions(params, deps);
+
+        expect(result.toolDefinitions).toHaveLength(0);
       });
 
       it('union-flattens MCP tool schemas for Google, but preserves unions otherwise', async () => {

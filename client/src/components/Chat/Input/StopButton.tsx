@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { TooltipAnchor } from '@librechat/client';
 import { useLocalize } from '~/hooks';
+// Deloitte Custom Change: restore cn for the GEL bg-primary CTA styling kept below; composerSubmitClasses is upstream's generic style and isn't used here
 import { cn } from '~/utils';
 
 export default memo(function StopButton({
@@ -19,6 +20,7 @@ export default memo(function StopButton({
         <button
           type="button"
           data-testid="stop-generation-button"
+          // Deloitte Custom Change: keep GEL brand CTA styling (bg-primary) instead of upstream's composerSubmitClasses(), pairing with the icon's text-primary-foreground below
           className={cn(
             'rounded-full bg-primary p-1.5 text-primary-foreground outline-offset-4 transition-all duration-200 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary',
           )}

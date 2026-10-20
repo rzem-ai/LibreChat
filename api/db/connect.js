@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { isEnabled, instrumentMongooseQueryMetrics } = require('@librechat/api');
+const { optionalEnabled, instrumentMongooseQueryMetrics } = require('@librechat/api');
 const { logger } = require('@librechat/data-schemas');
 
 const mongoose = require('mongoose');
@@ -12,7 +12,9 @@ if (!MONGO_URI) {
   throw new Error('Please define the MONGO_URI environment variable');
 }
 if (!MONGO_DB_NAME) {
-  logger.warn('[connectDb] MONGO_DB is not defined; will use database from MONGO_URI path or default to "test"');
+  logger.warn(
+    '[connectDb] MONGO_DB is not defined; will use database from MONGO_URI path or default to "test"',
+  );
 }
 
 // Warn if URI path already contains a database
@@ -21,7 +23,7 @@ if (MONGO_DB_NAME) {
     const url = new URL(MONGO_URI);
     if (url.pathname && url.pathname !== '/') {
       logger.warn(
-        `[connectDb] MONGO_URI contains database path "${url.pathname.slice(1)}" but MONGO_DB="${MONGO_DB_NAME}" is set. Using MONGO_DB.`
+        `[connectDb] MONGO_URI contains database path "${url.pathname.slice(1)}" but MONGO_DB="${MONGO_DB_NAME}" is set. Using MONGO_DB.`,
       );
     }
   } catch (error) {
@@ -43,16 +45,10 @@ const maxIdleTimeMS = parseInt(process.env.MONGO_MAX_IDLE_TIME_MS) || undefined;
 /** The maximum time in milliseconds that a thread can wait for a connection to become available. */
 const waitQueueTimeoutMS = parseInt(process.env.MONGO_WAIT_QUEUE_TIMEOUT_MS) || undefined;
 /** Set to false to disable automatic index creation for all models associated with this connection. */
-const autoIndex =
-  process.env.MONGO_AUTO_INDEX != undefined
-    ? isEnabled(process.env.MONGO_AUTO_INDEX) || false
-    : undefined;
+const autoIndex = optionalEnabled(process.env.MONGO_AUTO_INDEX);
 
 /** Set to `false` to disable Mongoose automatically calling `createCollection()` on every model created on this connection. */
-const autoCreate =
-  process.env.MONGO_AUTO_CREATE != undefined
-    ? isEnabled(process.env.MONGO_AUTO_CREATE) || false
-    : undefined;
+const autoCreate = optionalEnabled(process.env.MONGO_AUTO_CREATE);
 /**
  * Global is used here to maintain a cached connection across hot reloads
  * in development. This prevents connections growing exponentially

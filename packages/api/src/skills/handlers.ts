@@ -1,4 +1,5 @@
-import { logger } from '@librechat/data-schemas';
+// Deloitte Custom Change: Retention Update
+import { logger, getAgentRetentionHours } from '@librechat/data-schemas';
 import {
   ResourceType,
   AccessRoleIds,
@@ -26,14 +27,23 @@ import type {
   CreateSkillResult,
   UpdateSkillInput,
   ListSkillsByAccessResult,
+  ListSkillsByAccessParams,
   UpdateSkillResult,
   ValidationIssue,
+  DeleteSkillResult,
 } from '@librechat/data-schemas';
 import type { Response } from 'express';
 import type { Types } from 'mongoose';
 import type { ServerRequest, StrategyFunctions } from '~/types';
+// Deloitte Custom Change: OBO-based skill scanner integration (resolveScannerToken, scanSkillOnCreate/Update) preserved alongside upstream's content-filter/cleanup/deployment additions below.
 import { isSkillScanError, scanSkillOnCreate, scanSkillOnUpdate } from './scanner';
+import { extractSkillContent, inspectContentWithTraversal } from '~/protection';
+import { deleteSkillWithRetry, mergeDeleteSkillResults } from './cleanup';
+import { contentFilterBlockResponse } from '~/middleware/contentFilter';
+import { getDeploymentSkillIds } from './deployment';
+import { resolveDownloadPath } from '~/storage/path';
 import { resolveSkillFilePathParam } from './path';
+import { parseSkillMarkdown } from './parse';
 import { isBinaryBuffer } from './binary';
 
 /** Thin error shape the skill methods throw on validation failure. */
@@ -49,21 +59,21 @@ type DuplicateKeyError = Error & { code?: number | string };
  */
 export interface SkillsHandlersDeps {
   /** Skill CRUD — from `@librechat/data-schemas` `createMethods` output. */
-  createSkill: (data: CreateSkillInput) => Promise<CreateSkillResult>;
+  // Deloitte Custom Change: Retention Update
+  createSkill: (
+    data: CreateSkillInput,
+    options?: { retentionHours?: number },
+  ) => Promise<CreateSkillResult>;
   getSkillById: (id: string | Types.ObjectId) => Promise<(ISkill & { _id: Types.ObjectId }) | null>;
-  listSkillsByAccess: (params: {
-    accessibleIds: Types.ObjectId[];
-    category?: string;
-    search?: string;
-    limit: number;
-    cursor?: string | null;
-  }) => Promise<ListSkillsByAccessResult>;
+  listSkillsByAccess: (params: ListSkillsByAccessParams) => Promise<ListSkillsByAccessResult>;
   updateSkill: (params: {
     id: string;
     expectedVersion: number;
     update: UpdateSkillInput;
+    // Deloitte Custom Change: Retention Update
+    retentionHours?: number;
   }) => Promise<UpdateSkillResult>;
-  deleteSkill: (id: string) => Promise<{ deleted: boolean }>;
+  deleteSkill: (id: string) => Promise<DeleteSkillResult>;
   listSkillFiles: (
     skillId: string | Types.ObjectId,
   ) => Promise<Array<ISkillFile & { _id: Types.ObjectId }>>;
@@ -106,6 +116,7 @@ export interface SkillsHandlersDeps {
     skillId: string | Types.ObjectId,
     relativePath: string,
     update: { content?: string; isBinary?: boolean },
+    expectedFileId?: string,
   ) => Promise<void>;
 
   /** Storage strategy resolver — returns stream/URL helpers keyed by source. */
@@ -165,7 +176,7 @@ function serializeSkill(
     author: skill.author.toString(),
     authorName: skill.authorName,
     version: skill.version,
-    source: skill.source,
+    source: skill.source ?? 'inline',
     sourceMetadata: serializeSourceMetadata(skill.sourceMetadata),
     fileCount: skill.fileCount,
     alwaysApply: skill.alwaysApply,
@@ -193,7 +204,7 @@ function serializeSkillSummary(
     author: skill.author.toString(),
     authorName: skill.authorName,
     version: skill.version,
-    source: skill.source,
+    source: skill.source ?? 'inline',
     sourceMetadata: serializeSourceMetadata(skill.sourceMetadata),
     fileCount: skill.fileCount,
     alwaysApply: skill.alwaysApply,
@@ -272,6 +283,46 @@ function parseLimit(raw: unknown): number {
   return Math.min(Math.max(1, parsed), 100);
 }
 
+function blockFilteredSkillContent(
+  req: ServerRequest,
+  res: Response,
+  input: TCreateSkill | TUpdateSkillPayload,
+): boolean {
+  if (req.config?.filters == null) {
+    return false;
+  }
+  const inlineFrontmatter =
+    typeof input.body === 'string' ? parseSkillMarkdown(input.body).frontmatter : undefined;
+  const { finding, traversalError } = inspectContentWithTraversal(
+    () =>
+      extractSkillContent({
+        name: input.name,
+        displayTitle: input.displayTitle,
+        description: input.description,
+        body: input.body,
+        frontmatter: {
+          ...inlineFrontmatter,
+          ...(input.frontmatter as Record<string, unknown> | undefined),
+        },
+        category: input.category,
+      }),
+    { filters: req.config?.filters },
+  );
+  if (finding != null) {
+    res.status(400).json(contentFilterBlockResponse(finding));
+    return true;
+  }
+  if (traversalError != null) {
+    res.status(traversalError.statusCode).json(traversalError.body);
+    return true;
+  }
+  return false;
+}
+
+type SkillResponseOptions = { includePublicStatus?: boolean };
+
+type SkillListOptions = Pick<ListSkillsByAccessParams, 'manageTenantId' | 'limit' | 'cursor'>;
+
 /**
  * Factory for the typed Express handlers served at `/api/skills`.
  * The legacy `api/server/routes/skills.js` imports this, passes in concrete
@@ -279,10 +330,10 @@ function parseLimit(raw: unknown): number {
  * onto the Express router.
  */
 export function createSkillsHandlers(deps: SkillsHandlersDeps): {
-  list: (req: ServerRequest, res: Response) => Promise<Response>;
+  list: (req: ServerRequest, res: Response, options?: SkillListOptions) => Promise<Response>;
   create: (req: ServerRequest, res: Response) => Promise<Response>;
-  get: (req: ServerRequest, res: Response) => Promise<Response>;
-  patch: (req: ServerRequest, res: Response) => Promise<Response>;
+  get: (req: ServerRequest, res: Response, options?: SkillResponseOptions) => Promise<Response>;
+  patch: (req: ServerRequest, res: Response, options?: SkillResponseOptions) => Promise<Response>;
   delete: (req: ServerRequest, res: Response) => Promise<Response>;
   listFiles: (req: ServerRequest, res: Response) => Promise<Response>;
   downloadFile: (req: ServerRequest, res: Response) => Promise<Response | undefined>;
@@ -320,7 +371,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
     }
   }
 
-  async function listHandler(req: ServerRequest, res: Response) {
+  async function listHandler(req: ServerRequest, res: Response, options?: SkillListOptions) {
     try {
       const user = req.user;
       if (!user || !user.id) {
@@ -334,18 +385,20 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       };
       const parsedLimit = parseLimit(limit);
 
-      const [accessibleIds, publicIds] = await Promise.all([
-        findAccessibleResources({
-          userId: user.id,
-          role: user.role,
-          resourceType: ResourceType.SKILL,
-          requiredPermissions: PermissionBits.VIEW,
-        }),
-        findPubliclyAccessibleResources({
-          resourceType: ResourceType.SKILL,
-          requiredPermissions: PermissionBits.VIEW,
-        }),
-      ]);
+      const [accessibleIds, publicIds] = options?.manageTenantId
+        ? [getDeploymentSkillIds(), []]
+        : await Promise.all([
+            findAccessibleResources({
+              userId: user.id,
+              role: user.role,
+              resourceType: ResourceType.SKILL,
+              requiredPermissions: PermissionBits.VIEW,
+            }),
+            findPubliclyAccessibleResources({
+              resourceType: ResourceType.SKILL,
+              requiredPermissions: PermissionBits.VIEW,
+            }),
+          ]);
 
       const mergedIds = Array.from(
         new Map([...accessibleIds, ...publicIds].map((id) => [id.toString(), id])).values(),
@@ -355,8 +408,10 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
         accessibleIds: mergedIds,
         category: typeof category === 'string' && category.length > 0 ? category : undefined,
         search: typeof search === 'string' && search.length > 0 ? search : undefined,
-        limit: parsedLimit,
-        cursor: typeof cursor === 'string' && cursor.length > 0 ? cursor : null,
+        manageTenantId: options?.manageTenantId,
+        limit: options?.limit ?? parsedLimit,
+        cursor:
+          options?.cursor ?? (typeof cursor === 'string' && cursor.length > 0 ? cursor : null),
       });
 
       const publicSet = new Set(publicIds.map((id) => id.toString()));
@@ -388,6 +443,9 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       if (!body.description || typeof body.description !== 'string') {
         return res.status(400).json({ error: 'Skill description is required' });
       }
+      if (blockFilteredSkillContent(req, res, body)) {
+        return res;
+      }
 
       const authorId = (user._id ?? user.id) as unknown as Types.ObjectId;
       const authorName = user.name ?? user.username ?? 'Unknown';
@@ -417,18 +475,22 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
 
       let createResult: CreateSkillResult;
       try {
-        createResult = await createSkill({
-          name: body.name,
-          displayTitle: body.displayTitle,
-          description: body.description,
-          body: body.body,
-          frontmatter: body.frontmatter as Record<string, unknown> | undefined,
-          category: body.category,
-          alwaysApply: body.alwaysApply,
-          author: authorId,
-          authorName,
-          tenantId: user.tenantId,
-        });
+        // Deloitte Custom Change: Retention Update
+        createResult = await createSkill(
+          {
+            name: body.name,
+            displayTitle: body.displayTitle,
+            description: body.description,
+            body: body.body,
+            frontmatter: body.frontmatter as Record<string, unknown> | undefined,
+            category: body.category,
+            alwaysApply: body.alwaysApply,
+            author: authorId,
+            authorName,
+            tenantId: user.tenantId,
+          },
+          { retentionHours: getAgentRetentionHours(req.config?.interfaceConfig) },
+        );
       } catch (error) {
         if (isValidationError(error)) {
           return res.status(400).json({ error: 'Validation failed', issues: error.issues });
@@ -456,7 +518,12 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
           permissionError,
         );
         try {
-          await deleteSkill(skill._id.toString());
+          const deletion = await deleteSkillWithRetry(deleteSkill, skill._id.toString());
+          if (!deletion.cleanupComplete) {
+            logger.error(
+              `[POST /skills] Compensating delete incomplete for orphaned skill ${skill._id.toString()}: ${deletion.failedCleanupSteps.join(', ')}`,
+            );
+          }
         } catch (rollbackError) {
           logger.error(
             `[POST /skills] Compensating delete failed for orphaned skill ${skill._id.toString()}:`,
@@ -477,7 +544,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
     }
   }
 
-  async function getHandler(req: ServerRequest, res: Response) {
+  async function getHandler(req: ServerRequest, res: Response, options?: SkillResponseOptions) {
     try {
       const { id } = req.params as { id: string };
       // The canAccessSkillResource middleware already resolved the skill via
@@ -492,7 +559,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       if (!skill) {
         return res.status(404).json({ error: 'Skill not found' });
       }
-      const pub = await isSkillPublic(skill._id);
+      const pub = options?.includePublicStatus === false ? false : await isSkillPublic(skill._id);
       return res.status(200).json(serializeSkill(skill, pub));
     } catch (error) {
       logger.error('[GET /skills/:id] Error fetching skill', error);
@@ -500,7 +567,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
     }
   }
 
-  async function patchHandler(req: ServerRequest, res: Response) {
+  async function patchHandler(req: ServerRequest, res: Response, options?: SkillResponseOptions) {
     try {
       const { id } = req.params as { id: string };
       const body = (req.body ?? {}) as TUpdateSkillPayload & { expectedVersion?: number };
@@ -533,6 +600,9 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
 
       if (Object.keys(update).length === 0) {
         return res.status(400).json({ error: 'At least one field must be provided for update' });
+      }
+      if (blockFilteredSkillContent(req, res, rest)) {
+        return res;
       }
 
       const resolved = (
@@ -570,9 +640,19 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
         throw error;
       }
 
+      // Deloitte Custom Change: Retention Update
+      const isInlineSkill = (currentSkill.source ?? 'inline') === 'inline';
       let result: UpdateSkillResult;
       try {
-        result = await updateSkill({ id, expectedVersion, update });
+        // Deloitte Custom Change: Retention Update
+        result = await updateSkill({
+          id,
+          expectedVersion,
+          update,
+          ...(isInlineSkill
+            ? { retentionHours: getAgentRetentionHours(req.config?.interfaceConfig) }
+            : {}),
+        });
       } catch (error) {
         if (isValidationError(error)) {
           return res.status(400).json({ error: 'Validation failed', issues: error.issues });
@@ -586,7 +666,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       if (result.status === 'not_found') {
         return res.status(404).json({ error: 'Skill not found' });
       }
-      const pub = await isSkillPublic(id);
+      const pub = options?.includePublicStatus === false ? false : await isSkillPublic(id);
       if (result.status === 'conflict') {
         const conflict: TSkillConflictResponse = {
           error: 'skill_version_conflict',
@@ -613,28 +693,60 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       // Collect file records before deletion so we can clean up storage blobs
       const files = await listSkillFiles(id);
 
-      const result = await deleteSkill(id);
-      if (!result.deleted) {
-        return res.status(404).json({ error: 'Skill not found' });
+      let result = await deleteSkill(id);
+      if (result.skillAbsent && !result.cleanupComplete) {
+        try {
+          result = mergeDeleteSkillResults(result, await deleteSkill(id));
+        } catch (error) {
+          logger.error(`[deleteSkill] Cleanup retry failed for ${id}:`, error);
+        }
       }
-
-      // Fire-and-forget blob cleanup for each file
-      for (const file of files) {
-        const { deleteFile: deleteBlob } = getStrategyFunctions(file.source);
-        if (deleteBlob) {
-          deleteBlob(req, {
+      /** Once SkillFile cleanup succeeds, the records loaded above are the
+       * only remaining references to their blobs. Use them even if an
+       * independent allowlist or permission cleanup step needs a retry. */
+      let blobCleanupComplete = true;
+      if (!result.failedCleanupSteps.includes('skill_files')) {
+        const blobDeletions = files.map(async (file) => {
+          const { deleteFile: deleteBlob } = getStrategyFunctions(file.source);
+          if (!deleteBlob) {
+            throw new Error(`No delete strategy for ${file.source}`);
+          }
+          await deleteBlob(req, {
             filepath: file.filepath,
             storageKey: file.storageKey,
             storageRegion: file.storageRegion,
             user: file.author?.toString?.(),
             tenantId: file.tenantId?.toString?.(),
-          }).catch((e) =>
-            logger.error(`[deleteSkill] Blob cleanup failed for ${file.relativePath}:`, e),
-          );
+          });
+        });
+        const blobResults = await Promise.allSettled(blobDeletions);
+        for (const [index, blobResult] of blobResults.entries()) {
+          if (blobResult.status === 'rejected') {
+            blobCleanupComplete = false;
+            logger.error(
+              `[deleteSkill] Blob cleanup failed for ${files[index].relativePath}:`,
+              blobResult.reason,
+            );
+          }
         }
       }
 
-      const response: TDeleteSkillResponse = { id, deleted: true };
+      const cleanupComplete = result.cleanupComplete && blobCleanupComplete;
+      if (!cleanupComplete) {
+        if (result.skillAbsent) {
+          /** The client must evict the now-missing skill even though dependent
+           * cleanup still needs repair. A 2xx response reaches the mutation's
+           * cache reconciliation path; the flag preserves the warning. */
+          const response: TDeleteSkillResponse = { id, deleted: true, cleanupComplete: false };
+          return res.status(200).json(response);
+        }
+        return res.status(500).json({ error: 'Skill deletion cleanup did not finish' });
+      }
+      if (!result.deleted && files.length === 0) {
+        return res.status(404).json({ error: 'Skill not found' });
+      }
+
+      const response: TDeleteSkillResponse = { id, deleted: true, cleanupComplete };
       return res.status(200).json(response);
     } catch (error) {
       logger.error('[DELETE /skills/:id] Error deleting skill', error);
@@ -677,7 +789,12 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
 
       // SKILL.md is the skill body itself, not a SkillFile document
       if (decodedPath === 'SKILL.md') {
-        const skill = await getSkillById(id);
+        const resolved = (
+          req as ServerRequest & {
+            resourceAccess?: { resourceInfo?: ISkill & { _id: Types.ObjectId } };
+          }
+        ).resourceAccess?.resourceInfo;
+        const skill = resolved ?? (await getSkillById(id));
         if (!skill) {
           return res.status(404).json({ error: 'Skill not found' });
         }
@@ -715,7 +832,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
           'Content-Disposition',
           `${isImageMime ? 'inline' : 'attachment'}; filename="${safeName}"`,
         );
-        const stream = await strategy.getDownloadStream(req, file.storageKey || file.filepath);
+        const stream = await strategy.getDownloadStream(req, resolveDownloadPath(file));
         stream.on('error', (err: Error) => {
           logger.error('[downloadFile] Stream error:', err);
           if (!res.headersSent) {
@@ -729,6 +846,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       }
 
       const base: Omit<TSkillFileContentResponse, 'content' | 'isBinary'> = {
+        fileId: file.file_id,
         mimeType: file.mimeType,
         relativePath: file.relativePath,
         filename: file.filename,
@@ -749,7 +867,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
       // destroy (binary) or continue reading (text) in the same iteration.
       // N.B. breaking out of `for await...of` destroys the stream via
       // iterator.return(), so we must NOT use break + a second loop.
-      const stream = await strategy.getDownloadStream(req, file.storageKey || file.filepath);
+      const stream = await strategy.getDownloadStream(req, resolveDownloadPath(file));
       const chunks: Buffer[] = [];
       let totalBytes = 0;
       let binaryChecked = false;
@@ -762,7 +880,7 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
         if (!binaryChecked && totalBytes >= 8192) {
           binaryChecked = true;
           if (isBinaryBuffer(Buffer.concat(chunks))) {
-            updateSkillFileContent(id, decodedPath, { isBinary: true }).catch((e) =>
+            updateSkillFileContent(id, decodedPath, { isBinary: true }, file.file_id).catch((e) =>
               logger.error('[downloadFile] Cache write failed:', e),
             );
             if ('destroy' in stream && typeof stream.destroy === 'function') {
@@ -783,20 +901,22 @@ export function createSkillsHandlers(deps: SkillsHandlersDeps): {
         }
       }
 
-      // File was shorter than 8 KB — check what we have
-      if (!binaryChecked && isBinaryBuffer(Buffer.concat(chunks))) {
-        updateSkillFileContent(id, decodedPath, { isBinary: true }).catch((e) =>
+      const buffer = Buffer.concat(chunks);
+      if (isBinaryBuffer(buffer)) {
+        updateSkillFileContent(id, decodedPath, { isBinary: true }, file.file_id).catch((e) =>
           logger.error('[downloadFile] Cache write failed:', e),
         );
         return res.status(200).json({ ...base, isBinary: true });
       }
 
-      const buffer = Buffer.concat(chunks);
       const text = buffer.toString('utf-8');
       if (buffer.length <= MAX_TEXT_CACHE_BYTES) {
-        updateSkillFileContent(id, decodedPath, { content: text, isBinary: false }).catch((e) =>
-          logger.error('[downloadFile] Cache write failed:', e),
-        );
+        updateSkillFileContent(
+          id,
+          decodedPath,
+          { content: text, isBinary: false },
+          file.file_id,
+        ).catch((e) => logger.error('[downloadFile] Cache write failed:', e));
       }
       return res.status(200).json({ ...base, isBinary: false, content: text });
     } catch (error) {

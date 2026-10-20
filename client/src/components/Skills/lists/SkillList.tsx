@@ -1,19 +1,20 @@
 import { useMemo, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
-import { Skeleton } from '@librechat/client';
 import { useSearchParams } from 'react-router-dom';
-import type { TSkill } from 'librechat-data-provider';
+import type { TSkillSummary } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks/useLocalize';
 import type { SkillGroup } from '~/common';
 import { useLocalize, useAuthContext } from '~/hooks';
 import { resolveSkillGroup } from '~/common';
 import SkillListItem from './SkillListItem';
+import { Collapse } from '~/components/ui';
 import { cn } from '~/utils';
 
 interface SkillListProps {
-  skills: TSkill[];
-  isLoading: boolean;
+  skills: TSkillSummary[];
   activeSkillId?: string;
+  sectionOpen: boolean;
+  onSectionOpenChange: (open: boolean) => void;
 }
 
 /**
@@ -31,14 +32,22 @@ const GROUP_LABEL_KEYS: Record<SkillGroup, TranslationKeys> = {
 
 interface SkillListSectionProps {
   group: SkillGroup;
-  skills: TSkill[];
+  skills: TSkillSummary[];
   activeSkillId?: string;
   activeFile: string | null;
   expandedSkillId: string | null;
   onToggleExpand: (skillId: string) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-/** One collapsible Public/Shared/Mine section. Hidden entirely when empty. */
+/**
+ * One collapsible Public/Shared/Mine section. Hidden entirely when empty.
+ * Deloitte Custom Change: open/close state is now a controlled prop (instead
+ * of a local `useState`) so `SkillList` can derive an aggregate "is any group
+ * visible" signal for the lifted `sectionOpen`/`onSectionOpenChange` contract
+ * added upstream for infinite-scroll gating (see `SkillsSidePanel.tsx`).
+ */
 function SkillListSection({
   group,
   skills,
@@ -46,9 +55,10 @@ function SkillListSection({
   activeFile,
   expandedSkillId,
   onToggleExpand,
+  open,
+  onOpenChange,
 }: SkillListSectionProps) {
   const localize = useLocalize();
-  const [sectionOpen, setSectionOpen] = useState(true);
 
   if (skills.length === 0) {
     return null;
@@ -59,14 +69,15 @@ function SkillListSection({
       <div className="flex items-center justify-between px-2 pb-2">
         <button
           type="button"
-          onClick={() => setSectionOpen((prev) => !prev)}
+          onClick={() => onOpenChange(!open)}
           className="flex cursor-pointer items-center gap-1.5"
-          aria-expanded={sectionOpen}
+          aria-expanded={open}
+          id={`skills-section-${group}`}
         >
           <ChevronRight
             className={cn(
               'size-3 shrink-0 text-text-secondary transition-transform duration-200',
-              sectionOpen && 'rotate-90',
+              open && 'rotate-90',
             )}
             aria-hidden="true"
           />
@@ -74,7 +85,7 @@ function SkillListSection({
         </button>
       </div>
 
-      {sectionOpen && (
+      <Collapse open={open}>
         <div className="flex flex-col gap-px">
           {skills.map((skill) => (
             <SkillListItem
@@ -87,7 +98,7 @@ function SkillListSection({
             />
           ))}
         </div>
-      )}
+      </Collapse>
     </div>
   );
 }
@@ -97,15 +108,31 @@ function SkillListSection({
  * precedence rule (`resolveSkillGroup`) used by the agent-builder skill
  * picker, so a skill lands in the same bucket on both surfaces.
  */
-export default function SkillList({ skills, isLoading, activeSkillId }: SkillListProps) {
+export default function SkillList({
+  skills,
+  activeSkillId,
+  sectionOpen,
+  onSectionOpenChange,
+}: SkillListProps) {
   const localize = useLocalize();
   const { user } = useAuthContext();
   const [searchParams] = useSearchParams();
   const activeFile = searchParams.get('file');
   const [expandedSkillId, setExpandedSkillId] = useState<string | null>(activeSkillId ?? null);
+  /**
+   * Deloitte Custom Change: one open/closed flag per Public/Shared/Mine
+   * group, seeded from the lifted `sectionOpen` prop. `SkillsSidePanel` uses
+   * that prop only to gate infinite-scroll fetching while the list is
+   * visible, so any group being open is reported upstream as "section open."
+   */
+  const [groupOpen, setGroupOpen] = useState<Record<SkillGroup, boolean>>({
+    public: sectionOpen,
+    shared: sectionOpen,
+    mine: sectionOpen,
+  });
 
   const grouped = useMemo(() => {
-    const buckets: Record<SkillGroup, TSkill[]> = { public: [], shared: [], mine: [] };
+    const buckets: Record<SkillGroup, TSkillSummary[]> = { public: [], shared: [], mine: [] };
     for (const skill of skills) {
       buckets[resolveSkillGroup(skill, user?.id)].push(skill);
     }
@@ -116,15 +143,11 @@ export default function SkillList({ skills, isLoading, activeSkillId }: SkillLis
     setExpandedSkillId((prev) => (prev === id ? null : id));
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col gap-2 px-2 pt-2">
-        <Skeleton className="h-8 w-full rounded-lg" />
-        <Skeleton className="h-8 w-full rounded-lg" />
-        <Skeleton className="h-8 w-full rounded-lg" />
-      </div>
-    );
-  }
+  const handleGroupOpenChange = (group: SkillGroup, open: boolean) => {
+    const next = { ...groupOpen, [group]: open };
+    setGroupOpen(next);
+    onSectionOpenChange(Object.values(next).some(Boolean));
+  };
 
   if (skills.length === 0) {
     return (
@@ -145,6 +168,8 @@ export default function SkillList({ skills, isLoading, activeSkillId }: SkillLis
           activeFile={activeFile}
           expandedSkillId={expandedSkillId}
           onToggleExpand={handleToggleExpand}
+          open={groupOpen[group]}
+          onOpenChange={(open) => handleGroupOpenChange(group, open)}
         />
       ))}
     </div>

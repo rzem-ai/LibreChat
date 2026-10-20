@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useId, useMemo, useState } from 'react';
 import * as Ariakit from '@ariakit/react';
 import { useTranslation } from 'react-i18next';
 import { DropdownPopup } from '@librechat/client';
@@ -14,13 +14,18 @@ interface CategorySelectorProps {
   currentCategory?: string;
   onValueChange?: (value: string) => void;
   className?: string;
+  /** Portaled menus are unclickable inside a modal dialog, which locks pointer events on the body */
+  portal?: boolean;
 }
 
 const CategorySelector: React.FC<CategorySelectorProps> = ({
   currentCategory,
   onValueChange,
   className = '',
+  portal = true,
 }) => {
+  const instanceId = useId();
+  const menuId = `${instanceId}-category-menu`;
   const { t } = useTranslation();
   const formContext = useFormContext();
   const [isOpen, setIsOpen] = useState(false);
@@ -56,7 +61,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
     if (!categories) return [];
 
     return categories.map((category) => ({
-      id: category.value,
+      id: `${menuId}-item-${category.value}`,
       label: category.label,
       icon: 'icon' in category ? category.icon : undefined,
       onClick: () => {
@@ -69,17 +74,18 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
         setIsOpen(false);
       },
     }));
-  }, [categories, formContext, setValue, onValueChange]);
+  }, [categories, formContext, menuId, setValue, onValueChange]);
 
   const trigger = (
     <Ariakit.MenuButton
       className={cn(
-        'focus:ring-offset-ring-offset relative inline-flex h-9 items-center justify-between rounded-xl border border-border-medium bg-transparent px-3 text-sm text-text-primary transition-all duration-200 ease-in-out hover:bg-accent hover:text-accent-foreground focus:ring-ring-primary',
+        'relative inline-flex h-9 items-center justify-between rounded-xl border border-border-medium bg-transparent px-3 text-sm text-text-primary transition-all duration-200 ease-in-out hover:bg-surface-hover hover:text-text-primary focus:ring-2 focus:ring-ring-primary',
         'gap-2 sm:w-fit',
         className,
       )}
       onClick={() => setIsOpen(!isOpen)}
       aria-label={t('com_ui_prompt_category_selector_aria')}
+      id="prompt-category-select"
     >
       <div className="flex items-center space-x-2">
         {'icon' in displayCategory && displayCategory.icon != null && (
@@ -101,9 +107,9 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
           items={menuItems}
           isOpen={isOpen}
           setIsOpen={setIsOpen}
-          menuId="category-selector-menu"
+          menuId={menuId}
           className="mt-2"
-          portal={true}
+          portal={portal}
         />
       )}
     />
@@ -113,9 +119,9 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
       items={menuItems}
       isOpen={isOpen}
       setIsOpen={setIsOpen}
-      menuId="category-selector-menu"
+      menuId={menuId}
       className="mt-2"
-      portal={true}
+      portal={portal}
     />
   );
 };

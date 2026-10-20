@@ -10,6 +10,13 @@ export interface IMemoryEntry extends Document {
   tokenCount?: number;
   updated_at?: Date;
   tenantId?: string;
+  // Deloitte Custom Change: Retention Update
+  lastActivityAt?: Date;
+  expiredAt?: Date;
+  purgeClaimId?: string;
+  purgeClaimedAt?: Date;
+  purgeAttempts?: number;
+  purgeNotBefore?: Date;
 }
 
 export interface IMemoryEntryLean {
@@ -39,6 +46,19 @@ export interface DeleteMemoryParams {
   agentId?: string;
 }
 
+export interface MemoryByIdParams {
+  userId: string | Types.ObjectId;
+  id: string;
+  agentId?: string;
+}
+
+export interface SetMemoryByIdParams extends MemoryByIdParams {
+  /** Omit to preserve the existing key. */
+  key?: string;
+  value: string;
+  tokenCount?: number;
+}
+
 export interface GetUserMemoriesParams {
   userId: string | Types.ObjectId;
   agentId?: string;
@@ -54,8 +74,29 @@ export interface MemoryResult {
   ok: boolean;
 }
 
-export interface FormattedMemoriesResult {
-  withKeys: string;
-  withoutKeys: string;
-  totalTokens?: number;
+export interface SetMemoryByIdResult extends MemoryResult {
+  conflict?: boolean;
+  memory?: IMemoryEntryLean;
 }
+
+/** A failed read is not an empty memory partition. Consumers can suppress
+ *  memory guidance and writes without changing the shape of successful reads. */
+export type FormattedMemoriesResult =
+  | {
+      withKeys: string;
+      withoutKeys: string;
+      totalTokens?: number;
+      tokenCountsByKey?: Map<string, number>;
+      // Deloitte Custom Change: Retention Update
+      memoryIds?: Types.ObjectId[];
+      readFailed?: false;
+    }
+  | {
+      withKeys: undefined;
+      withoutKeys: undefined;
+      totalTokens?: number;
+      tokenCountsByKey?: Map<string, number>;
+      // Deloitte Custom Change: Retention Update
+      memoryIds?: Types.ObjectId[];
+      readFailed: true;
+    };

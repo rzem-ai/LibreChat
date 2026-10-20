@@ -108,9 +108,8 @@ const skillSchema: Schema<ISkillDocument> = new Schema(
     },
     /**
      * Structured YAML frontmatter bag (everything except `name`/`description`,
-     * which live as first-class columns). Validated in strict mode against
-     * `validateSkillFrontmatter` before write — unknown keys are rejected
-     * so any expansion of the allowed set is an explicit code change.
+     * which live as first-class columns). `validateSkillFrontmatter` type-checks
+     * recognized keys and bounds tolerated extension values before write.
      */
     frontmatter: {
       type: Schema.Types.Mixed,
@@ -219,6 +218,39 @@ const skillSchema: Schema<ISkillDocument> = new Schema(
       type: String,
       index: true,
     },
+    // Deloitte Custom Change: Retention Update
+    /** Explicit activity anchor for retention; never inferred from `updatedAt`. */
+    lastActivityAt: {
+      type: Date,
+    },
+    expiredAt: {
+      type: Date,
+    },
+    /** Explicit, auditable carve-out from default retention. Only a narrow,
+     * permissioned caller should ever set `exempt: true`. */
+    retentionException: {
+      exempt: { type: Boolean, default: false },
+      reason: { type: String },
+      setBy: { type: String },
+      setAt: { type: Date },
+    },
+    /** Lease holder for the in-flight purge sweep claiming this skill, so two
+     * sweep ticks (or replicas) never cascade-delete the same expired skill twice. */
+    purgeClaimId: {
+      type: String,
+    },
+    purgeClaimedAt: {
+      type: Date,
+    },
+    purgeAttempts: {
+      type: Number,
+      default: 0,
+    },
+    /** Earliest time a sweep tick may claim this skill again, set on release to
+     * back off a failed attempt or to let an expired lease be reclaimed. */
+    purgeNotBefore: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
@@ -231,5 +263,10 @@ skillSchema.index({ updatedAt: -1, _id: 1 });
 skillSchema.index({ name: 1, author: 1, tenantId: 1 }, { unique: true });
 skillSchema.index({ source: 1, 'sourceMetadata.upstreamId': 1, tenantId: 1 });
 skillSchema.index({ source: 1, 'sourceMetadata.sourceId': 1, tenantId: 1 });
+// Deloitte Custom Change: Retention Update
+/** Deletion is app-owned by the purge sweep worker, not MongoDB's TTL monitor: a native
+ * TTL index deletes directly and bypasses the cascade (SkillFile blob deletion) that only
+ * the sweep's `cascadeDeleteSkill` call runs. */
+skillSchema.index({ expiredAt: 1, purgeNotBefore: 1 });
 
 export default skillSchema;

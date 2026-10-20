@@ -14,6 +14,7 @@ export default function SendIcon({
       height={size}
       viewBox={'0 0 24 24'}
       fill="none"
+      // Deloitte Custom Change: text-primary-foreground pairs with SendButton's GEL bg-primary CTA styling (upstream's text-text-inverted assumes the default dark SendButton background)
       className={cn('text-primary-foreground', className)}
       aria-hidden="true"
     >

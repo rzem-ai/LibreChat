@@ -44,11 +44,18 @@ type ShareMiddleware = (
 
 const resourceToPermissionType: Record<ResourceType, PermissionTypes> = {
   [ResourceType.AGENT]: PermissionTypes.AGENTS,
+  /** Environment sharing is capability-gated by MANAGE_CODE_ENVIRONMENTS.
+   * RUN_CODE intentionally has no public-sharing bit, so public grants remain denied. */
+  [ResourceType.CODE_ENVIRONMENT]: PermissionTypes.RUN_CODE,
   [ResourceType.PROMPTGROUP]: PermissionTypes.PROMPTS,
   [ResourceType.MCPSERVER]: PermissionTypes.MCP_SERVERS,
   [ResourceType.REMOTE_AGENT]: PermissionTypes.REMOTE_AGENTS,
   [ResourceType.SKILL]: PermissionTypes.SKILLS,
   [ResourceType.SHARED_LINK]: PermissionTypes.SHARED_LINKS,
+  // Deloitte Custom Change: Retention Update
+  /** Memory is never shared via `AclEntry`; no share route targets it. Present only to
+   * satisfy this map's exhaustive `Record<ResourceType, …>` typing. */
+  [ResourceType.MEMORY]: PermissionTypes.MEMORIES,
 };
 
 function formatError(error: unknown): string {

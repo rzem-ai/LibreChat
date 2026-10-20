@@ -1,14 +1,15 @@
-import { Input } from '@librechat/client';
+import { Input, Label } from '@librechat/client';
+import { Constants } from 'librechat-data-provider';
 import { Controller, useWatch, useFormContext } from 'react-hook-form';
-import { Constants, EModelEndpoint, getEndpointField } from 'librechat-data-provider';
-import type { AgentForm, IconComponentTypes } from '~/common';
+import type { AgentForm } from '~/common';
+import { ResolvedProviderIcon } from '~/components/Endpoints/ResolvedProviderIcon';
 import AgentCategorySelector from './AgentCategorySelector';
 import { useLocalize, useAgentCapabilities } from '~/hooks';
-import { validateEmail, getIconKey, cn } from '~/utils';
 import { useAgentFileEntries } from './Tools/hooks';
 import { useAgentPanelContext } from '~/Providers';
+import { useProviderIcon } from '~/hooks/Endpoint';
 import ToolsSection from './Tools/ToolsSection';
-import { icons } from '~/hooks/Endpoint/Icons';
+import { validateEmail, cn } from '~/utils';
 import Instructions from './Instructions';
 import FileContext from './FileContext';
 import AgentAvatar from './AgentAvatar';
@@ -33,22 +34,10 @@ export default function AgentConfig() {
   const { contextFiles } = useAgentFileEntries();
 
   const providerValue = typeof provider === 'string' ? provider : provider?.value;
-  let Icon: IconComponentTypes | null | undefined;
-  let endpointType: EModelEndpoint | undefined;
-  let endpointIconURL: string | undefined;
-  let iconKey: string | undefined;
-
-  if (providerValue !== undefined) {
-    endpointType = getEndpointField(endpointsConfig, providerValue as string, 'type');
-    endpointIconURL = getEndpointField(endpointsConfig, providerValue as string, 'iconURL');
-    iconKey = getIconKey({
-      endpoint: providerValue as string,
-      endpointsConfig,
-      endpointType,
-      endpointIconURL,
-    });
-    Icon = icons[iconKey];
-  }
+  const { provider: providerId, imageURL } = useProviderIcon({
+    endpoint: providerValue as string,
+    endpointsConfig,
+  });
 
   return (
     <div className="h-auto pt-1">
@@ -72,6 +61,8 @@ export default function AgentConfig() {
             }}
             control={control}
             render={({ field }) => {
+              // Deloitte Custom Change: live character counter against the configurable
+              // agent-name length limit.
               const nameLength = (field.value ?? '').length;
               const isAtLimit = nameLength >= Constants.AGENT_NAME_MAX_LENGTH;
               return (
@@ -100,7 +91,11 @@ export default function AgentConfig() {
                     </span>
                   </div>
                   {errors.name && (
-                    <div id="agent-name-error" className="mt-1 text-xs text-red-500" role="alert">
+                    <div
+                      id="agent-name-error"
+                      className="mt-1 text-xs text-text-destructive"
+                      role="alert"
+                    >
                       {errors.name.message}
                     </div>
                   )}
@@ -130,13 +125,14 @@ export default function AgentConfig() {
       {/* MODEL + CATEGORY — balanced 2-column grid */}
       <div className="mb-3 grid grid-cols-2 gap-2">
         <div className="flex min-w-0 flex-col">
-          <label
+          <Label
             className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-text-secondary"
             htmlFor="provider"
           >
-            {localize('com_ui_model')} <span className="text-red-500">*</span>
-          </label>
+            {localize('com_ui_model')} <span className="text-text-destructive">*</span>
+          </Label>
           <button
+            id="provider"
             type="button"
             onClick={() => setActivePanel(Panel.model)}
             title={model || undefined}
@@ -146,13 +142,13 @@ export default function AgentConfig() {
             )}
           >
             <div className="flex w-full min-w-0 items-center gap-2">
-              {Icon && (
+              {providerValue !== undefined && (
                 <div className="shadow-stroke relative flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white text-black dark:bg-white">
-                  <Icon
+                  <ResolvedProviderIcon
+                    provider={providerId}
+                    imageURL={imageURL}
+                    size={16}
                     className="h-2/3 w-2/3"
-                    endpoint={providerValue as string}
-                    endpointType={endpointType}
-                    iconURL={endpointIconURL}
                   />
                 </div>
               )}
@@ -163,12 +159,12 @@ export default function AgentConfig() {
           </button>
         </div>
         <div className="flex flex-col">
-          <label
+          <Label
             className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-text-secondary"
             htmlFor="category-selector"
           >
-            {localize('com_ui_category')} <span className="text-red-500">*</span>
-          </label>
+            {localize('com_ui_category')} <span className="text-text-destructive">*</span>
+          </Label>
           <AgentCategorySelector className="w-full rounded-lg" />
         </div>
       </div>
@@ -189,9 +185,9 @@ export default function AgentConfig() {
 
       {/* SUPPORT CONTACT */}
       <div className="mb-3 flex flex-col">
-        <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-text-secondary">
+        <Label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-text-secondary">
           {localize('com_ui_support_contact')}
-        </label>
+        </Label>
         <div className="space-y-2">
           <Controller
             name="support_contact.name"
@@ -207,7 +203,7 @@ export default function AgentConfig() {
                 <Input
                   {...field}
                   value={field.value ?? ''}
-                  className={cn(fieldClass, error && 'border-2 border-red-500')}
+                  className={cn(fieldClass, error && 'border-2 border-border-destructive')}
                   id="support-contact-name"
                   type="text"
                   placeholder={localize('com_ui_support_contact_name_placeholder')}
@@ -218,7 +214,7 @@ export default function AgentConfig() {
                 {error && (
                   <span
                     id="support-contact-name-error"
-                    className="mt-1 text-xs text-red-500"
+                    className="mt-1 text-xs text-text-destructive"
                     role="alert"
                     aria-live="polite"
                   >
@@ -240,7 +236,7 @@ export default function AgentConfig() {
                 <Input
                   {...field}
                   value={field.value ?? ''}
-                  className={cn(fieldClass, error && 'border-2 border-red-500')}
+                  className={cn(fieldClass, error && 'border-2 border-border-destructive')}
                   id="support-contact-email"
                   type="email"
                   placeholder={localize('com_ui_support_contact_email_placeholder')}
@@ -251,7 +247,7 @@ export default function AgentConfig() {
                 {error && (
                   <span
                     id="support-contact-email-error"
-                    className="mt-1 text-xs text-red-500"
+                    className="mt-1 text-xs text-text-destructive"
                     role="alert"
                     aria-live="polite"
                   >

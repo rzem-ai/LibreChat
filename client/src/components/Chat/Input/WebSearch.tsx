@@ -2,8 +2,10 @@ import React, { memo } from 'react';
 import { Globe } from 'lucide-react';
 import { CheckboxButton } from '@librechat/client';
 import { Permissions, PermissionTypes } from 'librechat-data-provider';
+import { useToolsDropdownConfig } from '~/hooks/Plugins/useToolsDropdownConfig';
 import { useLocalize, useHasAccess } from '~/hooks';
 import { useBadgeRowContext } from '~/Providers';
+import { badgeAccents } from './accents';
 
 function WebSearch() {
   const localize = useLocalize();
@@ -12,6 +14,8 @@ function WebSearch() {
     permission: Permissions.USE,
   });
   const context = useBadgeRowContext();
+  // Deloitte Custom Change: hide the pill when the tools dropdown is this tool's only control.
+  const { isDropdownOnly } = useToolsDropdownConfig();
   if (!canUseWebSearch) {
     return null;
   }
@@ -23,15 +27,14 @@ function WebSearch() {
   const { badgeTriggerRef } = searchApiKeyForm;
 
   return (
-    (isPinned || (webSearch && authData?.authenticated)) && (
+    (isPinned || (webSearch && authData?.authenticated && !isDropdownOnly('web_search'))) && (
       <CheckboxButton
         ref={badgeTriggerRef}
-        className="max-w-fit"
         checked={webSearch}
         setValue={debouncedChange}
         id="toolbar-toggle-web-search"
         label={localize('com_ui_search')}
-        isCheckedClassName="border-blue-600/40 bg-blue-500/10 hover:bg-blue-700/10"
+        isCheckedClassName={badgeAccents.blue}
         icon={<Globe className="icon-md" aria-hidden="true" />}
       />
     )

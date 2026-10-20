@@ -1,6 +1,7 @@
 import React, { memo, useState } from 'react';
 import { AlertCircle } from 'lucide-react';
-import { icons } from '~/hooks/Endpoint/Icons';
+import { ProviderIcon, useAuthenticatedImageSrc } from '@librechat/client';
+import type { ProviderId } from 'librechat-data-provider';
 
 export const URLIcon = memo(
   ({
@@ -9,46 +10,55 @@ export const URLIcon = memo(
     containerStyle = { width: 20, height: 20 },
     imageStyle = { width: '100%', height: '100%' },
     className = 'icon-md mr-1 shrink-0 overflow-hidden rounded-full',
-    endpoint,
+    provider,
   }: {
     iconURL: string;
     altName?: string | null;
     className?: string;
     containerStyle?: React.CSSProperties;
     imageStyle?: React.CSSProperties;
-    endpoint?: string;
+    provider?: ProviderId | null;
   }) => {
     const [imageError, setImageError] = useState(false);
+    // Deloitte Custom Change: private Azure avatar proxies need authenticated image retrieval.
+    const {
+      src: authenticatedImageSrc,
+      isLoading: isImageLoading,
+      isError: imageFetchError,
+    } = useAuthenticatedImageSrc(iconURL);
 
     const handleImageError = () => {
       setImageError(true);
     };
 
-    const DefaultIcon: React.ElementType =
-      endpoint && icons[endpoint] ? icons[endpoint]! : icons.unknown!;
-
-    if (imageError || !iconURL) {
+    if (imageError || imageFetchError || !iconURL) {
+      const numericSize =
+        typeof containerStyle.width === 'number' ? containerStyle.width : undefined;
       return (
         <div className="relative" style={{ ...containerStyle, margin: '2px' }}>
           <div className={className}>
-            <DefaultIcon endpoint={endpoint} context="menu-item" size={containerStyle.width} />
+            <ProviderIcon provider={provider} size={numericSize} className="h-full w-full" />
           </div>
-          {imageError && iconURL && (
+          {(imageError || imageFetchError) && iconURL && (
             <div
-              className="absolute flex items-center justify-center rounded-full bg-red-500"
+              className="absolute flex items-center justify-center rounded-full bg-status-error-strong"
               style={{ width: '14px', height: '14px', top: 0, right: 0 }}
             >
-              <AlertCircle size={10} className="text-white" aria-hidden="true" />
+              <AlertCircle size={10} className="text-text-on-status" aria-hidden="true" />
             </div>
           )}
         </div>
       );
     }
 
+    if (isImageLoading) {
+      return <div className={className} style={containerStyle} aria-hidden="true" />;
+    }
+
     return (
       <div className={className} style={containerStyle}>
         <img
-          src={iconURL}
+          src={authenticatedImageSrc}
           alt={altName ?? 'Icon'}
           style={imageStyle}
           className="object-cover"

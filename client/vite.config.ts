@@ -1,11 +1,15 @@
+import mdx from '@mdx-js/rollup';
 import react from '@vitejs/plugin-react';
+import remarkFrontmatter from 'remark-frontmatter';
+import remarkMdxFrontmatter from 'remark-mdx-frontmatter';
 import fs from 'fs';
 import path from 'path';
-import { defineConfig } from 'vite';
+import { constants } from 'zlib';
+import { defineConfig, loadEnv } from 'vite';
 import { createRequire } from 'module';
 import { VitePWA } from 'vite-plugin-pwa';
-import { compression } from 'vite-plugin-compression2';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import { compression, defineAlgorithm } from 'vite-plugin-compression2';
 import type { Plugin } from 'vite';
 
 const require = createRequire(import.meta.url);
@@ -38,6 +42,13 @@ const backendURL = backendHost
   ? `http://${backendHost}:${backendPort}`
   : `http://localhost:${backendPort}`;
 const buildSourceMap = process.env.NODE_ENV === 'development';
+/** `process.env.APP_TITLE` is set by the Dockerfile's `ARG`/`ENV APP_TITLE` for Docker builds —
+ * Helm's APP_TITLE only reaches the container at runtime, too late for this build-time manifest.
+ * For `npm run frontend:dev` (no Docker), read a local `.env` directly via `loadEnv`, since Vite
+ * doesn't populate `process.env` from it until after this config factory has already returned. */
+const repoRoot = path.resolve(import.meta.dirname, '..');
+const localEnv = loadEnv(process.env.NODE_ENV || 'production', repoRoot, '');
+const appTitle = process.env.APP_TITLE || localEnv.APP_TITLE || 'MyAssist';
 const QUERY_DEVTOOLS_CHUNK_MODULES = [
   '@tanstack/react-query-devtools',
   '@tanstack/match-sorter-utils',
@@ -45,6 +56,19 @@ const QUERY_DEVTOOLS_CHUNK_MODULES = [
   'node_modules/copy-anything',
   'node_modules/is-what',
 ];
+
+/** `@mdx-js/rollup` ignores the query string, so it would compile `?raw` imports instead of returning source text. */
+function mdxWithoutRaw(): Plugin {
+  const plugin = mdx({ remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter] });
+  const transform = plugin.transform as (this: unknown, code: string, id: string) => unknown;
+  return {
+    ...plugin,
+    enforce: 'pre',
+    transform(code, id) {
+      return id.endsWith('?raw') ? null : transform.call(this, code, id);
+    },
+  } as Plugin;
+}
 
 export default defineConfig(({ command }) => ({
   base: '',
@@ -67,9 +91,10 @@ export default defineConfig(({ command }) => ({
   },
   // Set the directory where environment variables are loaded from and restrict prefixes
   envDir: '../',
-  envPrefix: ['VITE_', 'SCRIPT_', 'DOMAIN_', 'ALLOW_'],
+  envPrefix: ['VITE_', 'SCRIPT_', 'DOMAIN_', 'ALLOW_', 'REACT_APP_THEME_'],
   plugins: [
-    react(),
+    mdxWithoutRaw(),
+    react({ include: /\.(jsx|js|mdx|md|tsx|ts)$/ }),
     {
       name: 'node-polyfills-shims-resolver',
       resolveId(id) {
@@ -84,10 +109,11 @@ export default defineConfig(({ command }) => ({
         this.emitFile({
           type: 'asset',
           fileName: 'sw-heal.js',
-          source: fs.readFileSync(path.resolve(__dirname, 'sw/heal.js'), 'utf8'),
+          source: fs.readFileSync(path.resolve(import.meta.dirname, 'sw/heal.js'), 'utf8'),
         });
       },
     },
+    copyPublicAssets(),
     VitePWA({
       injectRegister: 'auto', // 'auto' | 'manual' | 'disabled'
       registerType: 'autoUpdate', // 'prompt' | 'autoUpdate'
@@ -99,12 +125,9 @@ export default defineConfig(({ command }) => ({
       workbox: {
         globPatterns: [
           '**/*.{js,css,html}',
-          'assets/favicon*.png',
-          'assets/fav-*.svg',
+          'assets/mark-foreground*.svg',
           'assets/icon-*.png',
           'assets/apple-touch-icon*.png',
-          'assets/maskable-icon.png',
-          'manifest.webmanifest',
         ],
         globIgnores: [
           'images/**/*',
@@ -116,6 +139,14 @@ export default defineConfig(({ command }) => ({
           'assets/query-devtools*.js',
         ],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        /**
+         * vite-plugin-pwa defaults this to `/^assets\//`, which is only true for the
+         * hashed bundle output: the icons live in `assets/` under stable filenames, so the
+         * default marks them immutable (`revision: null`) and an installed PWA would keep
+         * a rebranded icon forever. Match Vite's `[name].[hash].[ext]` shape instead so
+         * hashed chunks stay revision-free while the icons get content revisions.
+         */
+        dontCacheBustURLsMatching: /\.[\w-]{8}\.(?:js|css)$/,
         /** LibreChat mutates index.html per request for subpath and language support. */
         navigateFallback: null,
         /** Reloads window clients that cannot answer a ping after activation —
@@ -141,37 +172,21 @@ export default defineConfig(({ command }) => ({
       },
       includeAssets: [],
       manifest: {
-        name: 'LibreChat',
-        short_name: 'LibreChat',
+        name: appTitle,
+        short_name: appTitle,
         display: 'standalone',
         background_color: '#000000',
         theme_color: '#009688',
         icons: [
-          {
-            src: 'assets/favicon-32x32.png',
-            sizes: '32x32',
-            type: 'image/png',
-          },
-          {
-            src: 'assets/favicon-16x16.png',
-            sizes: '16x16',
-            type: 'image/png',
-          },
-          {
-            src: 'assets/apple-touch-icon-180x180.png',
-            sizes: '180x180',
-            type: 'image/png',
-          },
           {
             src: 'assets/icon-192x192.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: 'assets/maskable-icon.png',
+            src: 'assets/icon-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'maskable',
           },
         ],
       },
@@ -179,6 +194,20 @@ export default defineConfig(({ command }) => ({
     ...(buildSourceMap ? [sourcemapExclude({ excludeNodeModules: true })] : []),
     compression({
       threshold: 10240,
+      /**
+       * Brotli's default quality of 11 costs ~13s of single-threaded CPU on this bundle
+       * against ~0.5s for gzip, and the plugin's scheduler serializes quality >= 10 as a
+       * high-memory operation. Quality 5 compresses in ~0.2s, still lands under gzip
+       * (4.3MB vs 5.0MB), and parallelizes. `.br` is only served when
+       * ENABLE_STATIC_ASSET_BROTLI is set, so the extra 0.5MB buys far less than it costs
+       * on every build of every platform.
+       */
+      algorithms: [
+        defineAlgorithm('gzip', { level: 9 }),
+        defineAlgorithm('brotliCompress', {
+          params: { [constants.BROTLI_PARAM_QUALITY]: 5 },
+        }),
+      ],
     }),
   ],
   optimizeDeps: {
@@ -408,8 +437,8 @@ export default defineConfig(({ command }) => ({
   },
   resolve: {
     alias: {
-      '~': path.join(__dirname, 'src/'),
-      $fonts: path.resolve(__dirname, 'public/fonts'),
+      '~': path.join(import.meta.dirname, 'src/'),
+      $fonts: path.resolve(import.meta.dirname, 'public/fonts'),
       'micromark-extension-math': 'micromark-extension-llm-math',
     },
   },
@@ -430,6 +459,41 @@ export function sourcemapExclude(opts?: SourcemapExclude): Plugin {
           map: { mappings: '' },
         };
       }
+    },
+  };
+}
+
+/**
+ * Production builds set `publicDir: false`, so nothing under public/ reaches dist on its
+ * own. This copies what the server actually has to serve: all of public/assets (the PWA
+ * icons plus the endpoint, tool and language logos referenced at runtime) and robots.txt.
+ * public/fonts is deliberately left out, since fonts are emitted as bundle assets through
+ * the `$fonts` alias.
+ *
+ * The copy MUST happen inside the build. vite-plugin-pwa globs dist/ for
+ * `workbox.globPatterns` from its `closeBundle` hook, which runs after every plugin's
+ * `writeBundle`, so copying here is what lets the `assets/*.png` icon patterns match. An
+ * `npm run build && node scripts/post-build.cjs` chain cannot: it runs after the service
+ * worker has already been generated, so the icons were silently absent from the precache
+ * manifest.
+ */
+export function copyPublicAssets(): Plugin {
+  const publicDir = path.resolve(import.meta.dirname, 'public');
+  let outDir = path.resolve(import.meta.dirname, 'dist');
+  return {
+    name: 'copy-public-assets',
+    apply: 'build',
+    configResolved(config) {
+      outDir = path.resolve(config.root, config.build.outDir);
+    },
+    async writeBundle() {
+      await fs.promises.cp(path.join(publicDir, 'assets'), path.join(outDir, 'assets'), {
+        recursive: true,
+      });
+      await fs.promises.copyFile(
+        path.join(publicDir, 'robots.txt'),
+        path.join(outDir, 'robots.txt'),
+      );
     },
   };
 }

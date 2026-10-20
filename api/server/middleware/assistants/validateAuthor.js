@@ -7,12 +7,21 @@ const { getAssistant } = require('~/models');
  * @param {object} params
  * @param {object} params.req - Express Request
  * @param {object} params.req.body - The request payload.
+ * @param {object} [params.assistantDoc] - The stored assistant document, if already loaded.
  * @param {string} params.overrideEndpoint - The override endpoint
  * @param {string} params.overrideAssistantId - The override assistant ID
- * @param {OpenAIClient} params.openai - OpenAI API Client
+ * @param {OpenAIClient} [params.openai] - OpenAI API Client
+ * @param {() => Promise<OpenAIClient>} [params.getOpenAI] - Lazily initializes the OpenAI API Client.
  * @returns {Promise<void>}
  */
-const validateAuthor = async ({ req, openai, overrideEndpoint, overrideAssistantId }) => {
+const validateAuthor = async ({
+  req,
+  openai,
+  getOpenAI,
+  assistantDoc,
+  overrideEndpoint,
+  overrideAssistantId,
+}) => {
   const endpoint = overrideEndpoint ?? req.body.endpoint ?? req.query.endpoint;
   const assistant_id =
     overrideAssistantId ?? req.params.id ?? req.body.assistant_id ?? req.query.assistant_id;
@@ -40,11 +49,17 @@ const validateAuthor = async ({ req, openai, overrideEndpoint, overrideAssistant
     return;
   }
 
-  const assistantDoc = await getAssistant({ assistant_id, user: req.user.id });
-  if (assistantDoc) {
+  // Deloitte Custom Change: reuse the avatar route's loaded assistant before initializing its provider.
+  const storedAssistant =
+    assistantDoc ?? (await getAssistant({ assistantId: assistant_id, user: req.user.id }));
+  if (storedAssistant && String(storedAssistant.user) === req.user.id) {
     return;
   }
-  const assistant = await openai.beta.assistants.retrieve(assistant_id);
+  const client = openai ?? (getOpenAI ? await getOpenAI() : undefined);
+  if (!client) {
+    throw new Error('OpenAI client is required to validate assistant ownership.');
+  }
+  const assistant = await client.beta.assistants.retrieve(assistant_id);
   if (req.user.id !== assistant?.metadata?.author) {
     throw new Error(`Assistant ${assistant_id} is not authored by the user.`);
   }

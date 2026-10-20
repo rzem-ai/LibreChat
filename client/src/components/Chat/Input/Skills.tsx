@@ -2,11 +2,15 @@ import React, { memo } from 'react';
 import { ScrollText } from 'lucide-react';
 import { CheckboxButton } from '@librechat/client';
 import { Permissions, PermissionTypes, defaultAgentCapabilities } from 'librechat-data-provider';
+import { useToolsDropdownConfig } from '~/hooks/Plugins/useToolsDropdownConfig';
 import { useLocalize, useHasAccess, useAgentCapabilities } from '~/hooks';
 import { useBadgeRowContext } from '~/Providers';
+import { badgeAccents } from './accents';
 
 function Skills() {
   const localize = useLocalize();
+  // Deloitte Custom Change: hide the pill when the tools dropdown is this tool's only control.
+  const { isDropdownOnly } = useToolsDropdownConfig();
   const context = useBadgeRowContext();
   const { toggleState: skillsActive, debouncedChange, isPinned } = context?.skills ?? {};
 
@@ -24,14 +28,13 @@ function Skills() {
   }
 
   return (
-    (skillsActive || isPinned) && (
+    (isPinned || (skillsActive && !isDropdownOnly('skills'))) && (
       <CheckboxButton
-        className="max-w-fit"
         checked={skillsActive}
         setValue={debouncedChange}
         id="toolbar-toggle-skills"
         label={localize('com_ui_skills')}
-        isCheckedClassName="border-cyan-600/40 bg-cyan-500/10 hover:bg-cyan-700/10"
+        isCheckedClassName={badgeAccents.cyan}
         icon={<ScrollText className="icon-md" aria-hidden="true" />}
       />
     )

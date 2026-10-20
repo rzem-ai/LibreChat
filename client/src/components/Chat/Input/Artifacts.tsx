@@ -3,9 +3,11 @@ import * as Ariakit from '@ariakit/react';
 import { CheckboxButton } from '@librechat/client';
 import { WandSparkles, ChevronDown } from 'lucide-react';
 import { ArtifactModes, defaultAgentCapabilities } from 'librechat-data-provider';
+import { useToolsDropdownConfig } from '~/hooks/Plugins/useToolsDropdownConfig';
 import useArtifactsShadcnOnly from '~/hooks/Artifacts/useArtifactsShadcnOnly';
 import { useLocalize, useAgentCapabilities } from '~/hooks';
 import { useBadgeRowContext } from '~/Providers';
+import { badgeAccents } from './accents';
 import { cn } from '~/utils';
 
 interface ArtifactsToggleState {
@@ -15,6 +17,8 @@ interface ArtifactsToggleState {
 
 function Artifacts() {
   const localize = useLocalize();
+  // Deloitte Custom Change: hide the pill when the tools dropdown is this tool's only control.
+  const { isDropdownOnly } = useToolsDropdownConfig();
   const context = useBadgeRowContext();
   const { toggleState, debouncedChange, isPinned } = context?.artifacts ?? {};
   /** Deloitte Custom Change: limits Artifacts to shadcn/ui mode when enabled. */
@@ -92,19 +96,20 @@ function Artifacts() {
     return null;
   }
 
-  if (!isEnabled && !isPinned) {
+  if (!isPinned && (!isEnabled || isDropdownOnly('artifacts'))) {
     return null;
   }
 
   return (
     <div className="flex">
       <CheckboxButton
-        className={cn('max-w-fit', isEnabled && !shadcnOnly && 'rounded-r-none border-r-0')}
+        // Deloitte Custom Change: skip the rounded-right override when shadcn-only mode is forced, since the mode dropdown chevron is hidden in that case
+        className={cn(isEnabled && !shadcnOnly && 'rounded-r-none border-r-0')}
         checked={isEnabled}
         setValue={handleToggle}
         id="toolbar-toggle-artifacts"
         label={localize('com_ui_artifacts')}
-        isCheckedClassName="border-amber-600/40 bg-amber-500/10 hover:bg-amber-700/10"
+        isCheckedClassName={badgeAccents.amber}
         icon={<WandSparkles className="icon-md" aria-hidden="true" />}
       />
 
@@ -113,7 +118,7 @@ function Artifacts() {
           <Ariakit.MenuButton
             className={cn(
               'w-7 rounded-l-none rounded-r-full border-b border-l-0 border-r border-t border-border-light md:w-6',
-              'border-amber-600/40 bg-amber-500/10 hover:bg-amber-700/10',
+              badgeAccents.amber,
               'transition-colors',
             )}
             onClick={handleMenuButtonClick}

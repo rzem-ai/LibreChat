@@ -1,0 +1,86 @@
+[
+  {
+    "id": "getting-started-guide",
+    "title": "Getting Started Tour",
+    "description": "A short tour of chats, projects and the context panel.",
+    "type": "tour",
+    "tags": ["Getting started"]
+  },
+  {
+    "id": "agentic-ecosystem",
+    "title": "What is the agentic ecosystem",
+    "description": "The shared foundation that brings together the technology, data, governance, skills, connectors and tools needed to build, deploy and manage enterprise AI agents securely and at scale.",
+    "type": "article",
+    "tags": ["Getting started", "Skills"],
+    "durationLabel": "1 min read",
+    "updated": "16 October 2026"
+  },
+  {
+    "id": "lumo-ms-teams",
+    "title": "Lumo Agent — MS Teams",
+    "description": "Shows users how to access and use the Lumo Agent within Microsoft Teams.",
+    "type": "external",
+    "tags": ["Agents"],
+    "externalHref": "https://teams.microsoft.com/l/app/?source=app-bar-share-entrypoint&titleId=T_58ce1182-293d-2351-2d1d-89d7c421103d"
+  },
+  {
+    "id": "book-myassist-team",
+    "title": "Book in with a MyAssist Team Member",
+    "description": "Provides a clear route to request or book a training session with the MyAssist team.",
+    "type": "external",
+    "tags": ["Getting started"],
+    "externalHref": "https://bookings.cloud.microsoft/book/Deloitte_MyAssistGeniusBar_Bookings@deloitte.onmicrosoft.com/?ismsaljsauthenabled"
+  },
+  {
+    "id": "what-should-i-use",
+    "title": "What should I use?",
+    "description": "Start with Chat. Add another capability when you need more consistency, expertise, information or coordination.",
+    "type": "article",
+    "tags": ["Getting started", "Skills", "Agents"],
+    "updated": "16 October 2026"
+  },
+  {
+    "id": "write-an-effective-prompt",
+    "title": "Write an effective prompt",
+    "description": "A prompt is the instruction, question or request you give an AI tool. The clearer your prompt, the easier it is for the AI to understand what you need and produce a useful response.",
+    "type": "article",
+    "tags": ["Getting started", "Prompts"],
+    "updated": "16 October 2026"
+  },
+  {
+    "id": "connectors",
+    "title": "Use Connectors",
+    "description": "Use Connectors when MyAssist NextGen needs approved information from a source or business system beyond the files you have provided or the context already in your conversation.",
+    "type": "article",
+    "tags": ["Connectors"],
+    "updated": "16 October 2026"
+  },
+  {
+    "id": "using-connectors",
+    "title": "Using Connectors",
+    "description": "Explains when approved external information or systems are needed.",
+    "type": "tour",
+    "tags": ["Getting started"]
+  },
+  {
+    "id": "saved-prompts-and-prompt-library",
+    "title": "Saved Prompts and Prompt Library",
+    "description": "Explains how to create, save and reuse prompts.",
+    "type": "tour",
+    "tags": ["Getting started"]
+  },
+  {
+    "id": "build-a-skill",
+    "title": "How to build a skill",
+    "description": "Guides users through creating a reusable Skill for repeatable work.",
+    "type": "tour",
+    "tags": ["Skills"]
+  },
+  {
+    "id": "sharing-skills-and-agents",
+    "title": "Sharing Skills and Agents",
+    "description": "Explains how capabilities can be prepared and shared with others.",
+    "type": "tour",
+    "tags": ["Skills"]
+  }
+]

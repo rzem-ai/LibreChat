@@ -2,10 +2,14 @@ import { Document, Types } from 'mongoose';
 import type {
   GraphEdge,
   MemoryScope,
+  SkillsScope,
   AgentToolOptions,
   AgentToolResources,
   AgentSubagentsConfig,
+  AgentGitIdentity,
 } from 'librechat-data-provider';
+// Deloitte Custom Change: Retention Update
+import type { IRetentionException } from '~/types/convo';
 
 export interface ISupportContact {
   name?: string;
@@ -30,6 +34,8 @@ export interface IAgent extends Omit<Document, 'model'> {
   tools?: string[];
   skills?: string[];
   skills_enabled?: boolean;
+  skill_authoring_enabled?: boolean;
+  skills_scope?: SkillsScope;
   tool_kwargs?: Array<unknown>;
   actions?: string[];
   author: Types.ObjectId;
@@ -37,6 +43,11 @@ export interface IAgent extends Omit<Document, 'model'> {
   hide_sequential_outputs?: boolean;
   end_after_tools?: boolean;
   stateful_code_sessions?: boolean;
+  stateful_code_environment?: 'user' | 'agent-user' | 'conversation';
+  code_environment_id?: string;
+  code_workspace_id?: string;
+  repositoryInstructions?: 'prefer' | 'defer' | 'off';
+  git_identity?: AgentGitIdentity | null;
   /** @deprecated Use edges instead */
   agent_ids?: string[];
   edges?: GraphEdge[];
@@ -55,4 +66,13 @@ export interface IAgent extends Omit<Document, 'model'> {
   /** Memory partition: 'agent' isolates memories per (user, agent); default shared pool */
   memory_scope?: MemoryScope;
   tenantId?: string;
+  // Deloitte Custom Change: Retention Update
+  /** Explicit activity anchor for retention; never inferred from `updatedAt`. */
+  lastActivityAt?: Date;
+  expiredAt?: Date;
+  retentionException?: IRetentionException;
+  purgeClaimId?: string;
+  purgeClaimedAt?: Date;
+  purgeAttempts?: number;
+  purgeNotBefore?: Date;
 }

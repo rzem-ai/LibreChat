@@ -1,4 +1,5 @@
 import { useState, memo, useRef } from 'react';
+import { useAtom } from 'jotai';
 import { useSetRecoilState } from 'recoil';
 import * as Menu from '@ariakit/react/menu';
 import { GearIcon, DropdownMenuSeparator, Avatar } from '@librechat/client';
@@ -6,17 +7,19 @@ import {
   Archive,
   ChevronRight,
   CircleHelp,
-  FileText,
   Keyboard,
   LifeBuoy,
   LogOut,
   Scale,
+  ScrollText,
   ShieldCheck,
 } from 'lucide-react';
 import { ArchivedChatsModal } from '~/components/Nav/SettingsTabs/General/ArchivedChatsModal';
-import { MyFilesModal } from '~/components/Chat/Input/Files/MyFilesModal';
-import { useGetStartupConfig, useGetUserBalance } from '~/data-provider';
+import { useGetStartupConfig, useGetUserBalance, useUserTermsQuery } from '~/data-provider';
+import TermsAndConditionsModal from '~/components/ui/TermsAndConditionsModal';
 import { useAuthContext } from '~/hooks/AuthContext';
+import { showTermsViewerAtom } from '~/store/terms';
+import { openInNewTab } from '~/utils';
 import { useLocalize } from '~/hooks';
 import Settings from './Settings';
 import store from '~/store';
@@ -26,17 +29,21 @@ function HelpSubmenu({
   termsOfServiceURL,
   privacyPolicyURL,
   onShowShortcuts,
+  // Deloitte Custom Change: reopen the in-app Terms and Conditions modal on demand.
+  onShowTerms,
 }: {
   helpAndFaqURL?: string;
   termsOfServiceURL?: string;
   privacyPolicyURL?: string;
   onShowShortcuts: () => void;
+  onShowTerms?: () => void;
 }) {
   const localize = useLocalize();
   const hasHelpFaq = !!helpAndFaqURL && helpAndFaqURL !== '/';
   const hasTos = !!termsOfServiceURL;
+  const hasTermsModal = !!onShowTerms;
   const hasPrivacy = !!privacyPolicyURL;
-  const showLegalDivider = (hasHelpFaq || true) && (hasTos || hasPrivacy);
+  const showLegalDivider = (hasHelpFaq || true) && (hasTos || hasTermsModal || hasPrivacy);
 
   return (
     <Menu.MenuProvider placement="right-start">
@@ -57,7 +64,7 @@ function HelpSubmenu({
       >
         {hasHelpFaq && (
           <Menu.MenuItem
-            onClick={() => window.open(helpAndFaqURL, '_blank', 'noopener,noreferrer')}
+            onClick={() => openInNewTab(helpAndFaqURL)}
             className="select-item text-sm"
           >
             <LifeBuoy className="icon-md" aria-hidden="true" />
@@ -68,19 +75,25 @@ function HelpSubmenu({
           <Keyboard className="icon-md" aria-hidden="true" />
           {localize('com_shortcut_keyboard_shortcuts')}
         </Menu.MenuItem>
-        {showLegalDivider && (hasTos || hasPrivacy) && <DropdownMenuSeparator />}
+        {showLegalDivider && (hasTos || hasTermsModal || hasPrivacy) && <DropdownMenuSeparator />}
         {hasTos && (
           <Menu.MenuItem
-            onClick={() => window.open(termsOfServiceURL, '_blank', 'noopener,noreferrer')}
+            onClick={() => openInNewTab(termsOfServiceURL)}
             className="select-item text-sm"
           >
             <Scale className="icon-md" aria-hidden="true" />
             {localize('com_ui_terms_of_service')}
           </Menu.MenuItem>
         )}
+        {hasTermsModal && (
+          <Menu.MenuItem onClick={onShowTerms} className="select-item text-sm">
+            <ScrollText className="icon-md" aria-hidden="true" />
+            {localize('com_ui_terms_and_conditions')}
+          </Menu.MenuItem>
+        )}
         {hasPrivacy && (
           <Menu.MenuItem
-            onClick={() => window.open(privacyPolicyURL, '_blank', 'noopener,noreferrer')}
+            onClick={() => openInNewTab(privacyPolicyURL)}
             className="select-item text-sm"
           >
             <ShieldCheck className="icon-md" aria-hidden="true" />
@@ -100,8 +113,18 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
     enabled: !!isAuthenticated && startupConfig?.balance?.enabled,
   });
   const [showSettings, setShowSettings] = useState(false);
-  const [showFiles, setShowFiles] = useState(false);
   const setShowShortcutsDialog = useSetRecoilState(store.showShortcutsDialog);
+  // Deloitte Custom Change: lets users reopen the Terms and Conditions modal (read-only) from the avatar menu.
+  const [showTermsViewer, setShowTermsViewer] = useAtom(showTermsViewerAtom);
+  const termsModalConfigured = startupConfig?.interface?.termsOfService?.modalAcceptance === true;
+  // Deloitte Custom Change: `modalAcceptance` only says the deployment uses the
+  // acceptance flow, not that this user has accepted. Gate the reopen entry on the
+  // same user-scoped query Root.tsx uses, so the menu item (and the viewer it opens)
+  // can't appear before acceptance is confirmed or while the query is loading/erroring.
+  const { data: termsData } = useUserTermsQuery({
+    enabled: !!isAuthenticated && termsModalConfigured,
+  });
+  const termsModalEnabled = termsModalConfigured && termsData?.termsAccepted === true;
   const [showArchived, setShowArchived] = useState(false);
   const accountSettingsButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -160,11 +183,8 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           termsOfServiceURL={startupConfig?.interface?.termsOfService?.externalUrl}
           privacyPolicyURL={startupConfig?.interface?.privacyPolicy?.externalUrl}
           onShowShortcuts={() => setShowShortcutsDialog(true)}
+          onShowTerms={termsModalEnabled ? () => setShowTermsViewer(true) : undefined}
         />
-        <Menu.MenuItem onClick={() => setShowFiles(true)} className="select-item text-sm">
-          <FileText className="icon-md" aria-hidden="true" />
-          {localize('com_nav_my_files')}
-        </Menu.MenuItem>
         <Menu.MenuItem onClick={() => setShowArchived(true)} className="select-item text-sm">
           <Archive className="icon-md" aria-hidden="true" />
           {localize('com_nav_archived_chats')}
@@ -183,13 +203,6 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
           {localize('com_nav_log_out')}
         </Menu.MenuItem>
       </Menu.Menu>
-      {showFiles && (
-        <MyFilesModal
-          open={showFiles}
-          onOpenChange={setShowFiles}
-          triggerRef={accountSettingsButtonRef}
-        />
-      )}
       {showArchived && (
         <ArchivedChatsModal
           open={showArchived}
@@ -198,6 +211,19 @@ function AccountSettings({ collapsed = false }: { collapsed?: boolean }) {
         />
       )}
       {showSettings && <Settings open={showSettings} onOpenChange={setShowSettings} />}
+      {/* Deloitte Custom Change: read-only terms viewer, opened from the Help submenu above —
+          no Accept/Decline, since the user has already made that choice to sign in. Rendered
+          here (not Root.tsx) so the dialog can restore focus to the avatar button it owns. */}
+      {termsModalEnabled && showTermsViewer && startupConfig?.interface?.termsOfService != null && (
+        <TermsAndConditionsModal
+          open={showTermsViewer}
+          onOpenChange={setShowTermsViewer}
+          title={startupConfig.interface.termsOfService.modalTitle}
+          eyebrow={startupConfig.appTitle}
+          modalContent={startupConfig.interface.termsOfService.modalContent}
+          triggerRef={accountSettingsButtonRef}
+        />
+      )}
     </Menu.MenuProvider>
   );
 }

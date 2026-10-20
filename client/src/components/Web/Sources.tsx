@@ -5,6 +5,7 @@ import { VisuallyHidden } from '@ariakit/react';
 import { Tools } from 'librechat-data-provider';
 import { X, Globe, Newspaper, Image, ChevronDown, File, Download } from 'lucide-react';
 import {
+  Button,
   OGDialog,
   AnimatedTabs,
   OGDialogClose,
@@ -44,7 +45,8 @@ function SourceItem({ source, expanded = false }: SourceItemProps) {
           <span className="truncate text-xs font-medium text-text-secondary">{domain}</span>
         </div>
         <div className="mt-1">
-          <span className="line-clamp-2 text-sm font-medium text-text-primary md:line-clamp-3">
+          {/* Deloitte Custom Change: wrap unbroken citation titles in expanded source cards. */}
+          <span className="line-clamp-2 text-sm font-medium text-text-primary [overflow-wrap:anywhere] md:line-clamp-3">
             {source.title || source.link}
           </span>
           {'snippet' in source && source.snippet && (
@@ -74,14 +76,15 @@ function SourceItem({ source, expanded = false }: SourceItemProps) {
                   <span className="truncate text-xs font-medium text-text-secondary">{domain}</span>
                 </div>
                 <div className="mt-1">
-                  <span className="line-clamp-2 text-sm font-medium text-text-primary md:line-clamp-3">
+                  {/* Deloitte Custom Change: wrap unbroken citation titles in source cards. */}
+                  <span className="line-clamp-2 text-sm font-medium text-text-primary [overflow-wrap:anywhere] md:line-clamp-3">
                     {source.title || source.link}
                   </span>
                 </div>
               </a>
             }
           />
-          <Ariakit.HovercardDisclosure className="absolute right-2 rounded-full text-text-primary focus:outline-none focus:ring-2 focus:ring-ring">
+          <Ariakit.HovercardDisclosure className="absolute right-2 rounded-full text-text-primary focus:outline-none focus:ring-2 focus:ring-text-primary">
             <VisuallyHidden>
               {localize('com_citation_more_details', { label: domain })}
             </VisuallyHidden>
@@ -106,11 +109,12 @@ function SourceItem({ source, expanded = false }: SourceItemProps) {
                   <span className="float-right ml-2 max-w-[40%] truncate text-xs text-text-secondary">
                     {domain}
                   </span>
+                  {/* Deloitte Custom Change: wrap unbroken citation titles in source hovercards. */}
                   <a
                     href={source.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-medium text-text-primary hover:underline"
+                    className="block max-w-full font-medium text-text-primary [overflow-wrap:anywhere] hover:underline"
                   >
                     {source.title || source.link}
                   </a>
@@ -304,7 +308,8 @@ const FileItem = React.memo(function FileItem({
           {!isLocalFile && <Download className="ml-auto size-3" aria-hidden="true" />}
         </div>
         <div className="mt-1 min-w-0">
-          <span className="line-clamp-2 break-words text-left text-sm font-medium text-text-primary md:line-clamp-3">
+          {/* Deloitte Custom Change: wrap unbroken file citation titles in expanded source cards. */}
+          <span className="line-clamp-2 text-left text-sm font-medium text-text-primary [overflow-wrap:anywhere] md:line-clamp-3">
             {file.filename}
           </span>
           {file.pages && file.pages.length > 0 && (
@@ -319,7 +324,9 @@ const FileItem = React.memo(function FileItem({
             </span>
           )}
         </div>
-        {error && <div className="mt-1 text-xs text-red-500">{getErrorMessage(error)}</div>}
+        {error && (
+          <div className="mt-1 text-xs text-text-destructive">{getErrorMessage(error)}</div>
+        )}
       </button>
     );
   }
@@ -343,7 +350,8 @@ const FileItem = React.memo(function FileItem({
         {!isLocalFile && <Download className="ml-auto size-3" aria-hidden="true" />}
       </div>
       <div className="mt-1 min-w-0">
-        <span className="line-clamp-2 break-words text-left text-sm font-medium text-text-primary md:line-clamp-3">
+        {/* Deloitte Custom Change: wrap unbroken file citation titles in source cards. */}
+        <span className="line-clamp-2 text-left text-sm font-medium text-text-primary [overflow-wrap:anywhere] md:line-clamp-3">
           {file.filename}
         </span>
         {file.pages && file.pages.length > 0 && (
@@ -353,7 +361,7 @@ const FileItem = React.memo(function FileItem({
           </span>
         )}
       </div>
-      {error && <div className="mt-1 text-xs text-red-500">{getErrorMessage(error)}</div>}
+      {error && <div className="mt-1 text-xs text-text-destructive">{getErrorMessage(error)}</div>}
     </button>
   );
 });
@@ -422,8 +430,8 @@ const SourcesGroup = React.memo(function SourcesGroup({
             </div>
           </OGDialogTrigger>
         )}
-        <OGDialogContent className="flex max-h-[80vh] max-w-full flex-col overflow-hidden rounded-lg bg-surface-primary p-0 md:max-w-[600px]">
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-light bg-surface-primary px-3 py-2">
+        <OGDialogContent className="flex max-h-[80vh] max-w-full flex-col overflow-hidden rounded-lg bg-surface-dialog p-0 md:max-w-[600px]">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-light bg-surface-dialog px-3 py-2">
             <OGDialogTitle className="text-base font-medium">
               {localize('com_sources_title')}
             </OGDialogTitle>
@@ -449,7 +457,8 @@ const SourcesGroup = React.memo(function SourcesGroup({
                     className="h-5 w-5 flex-shrink-0"
                   />
                   <div className="min-w-0 flex-1">
-                    <h3 className="mb-0.5 truncate text-sm font-medium text-text-primary">
+                    {/* Deloitte Custom Change: wrap unbroken citation titles in the sources dialog. */}
+                    <h3 className="mb-0.5 line-clamp-2 text-sm font-medium text-text-primary [overflow-wrap:anywhere]">
                       {source.title || source.link}
                     </h3>
                     {'snippet' in source && source.snippet && (
@@ -518,8 +527,8 @@ function FilesGroup({ files, messageId, conversationId, limit = 3 }: FilesGroupP
             </div>
           </OGDialogTrigger>
         )}
-        <OGDialogContent className="flex max-h-[80vh] max-w-full flex-col overflow-hidden rounded-lg bg-surface-primary p-0 md:max-w-[600px]">
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-light bg-surface-primary px-3 py-2">
+        <OGDialogContent className="flex max-h-[80vh] max-w-full flex-col overflow-hidden rounded-lg bg-surface-dialog p-0 md:max-w-[600px]">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-light bg-surface-dialog px-3 py-2">
             <OGDialogTitle className="text-base font-medium">
               {localize('com_sources_agent_files')}
             </OGDialogTitle>
@@ -723,7 +732,7 @@ function SourcesComponent({ messageId, conversationId }: SourcesProps = {}) {
         containerClassName="flex min-w-full mb-4"
         tabListClassName="flex items-center mb-2 border-b border-border-light overflow-x-auto"
         tabPanelClassName="w-full overflow-x-auto scrollbar-none md:mx-0 md:px-0"
-        tabClassName="flex items-center whitespace-nowrap text-xs font-medium text-token-text-secondary px-1 pt-2 pb-1 border-b-2 border-transparent data-[state=active]:text-text-primary outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        tabClassName="flex items-center whitespace-nowrap text-xs font-medium text-token-text-secondary px-1 pt-2 pb-1 border-b-2 border-transparent data-[state=active]:text-text-primary outline-none focus:ring-2 focus:ring-text-primary focus:ring-offset-2"
       />
     </div>
   );
@@ -750,13 +759,15 @@ export default function Sources(props: SourcesProps) {
       <div className="mb-2 text-sm text-text-secondary">
         {localize('com_sources_error_fallback')}
       </div>
-      <button
+      <Button
+        variant="outline"
+        size="sm"
         onClick={() => window.location.reload()}
-        className="hover:bg-surface-primary-hover rounded-md bg-surface-primary px-3 py-1 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+        className="rounded-md bg-surface-primary px-3 py-1 text-sm text-text-primary hover:bg-surface-hover"
         aria-label={localize('com_sources_reload_page')}
       >
         {localize('com_ui_refresh')}
-      </button>
+      </Button>
     </div>
   );
 

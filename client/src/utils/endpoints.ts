@@ -1,5 +1,6 @@
 import {
   Constants,
+  ArtifactModes,
   EModelEndpoint,
   defaultEndpoints,
   modularEndpoints,
@@ -8,10 +9,12 @@ import {
   isAgentsEndpoint,
   isEphemeralAgentId,
   isAssistantsEndpoint,
+  resolveModelSpecEndpoint,
 } from 'librechat-data-provider';
 import type * as t from 'librechat-data-provider';
-import type { LocalizeFunction, IconsRecord } from '~/common';
+import type { LocalizeFunction } from '~/common';
 import { getTimestampedValue } from './timestamps';
+import { getAgentAvatarUrl } from './agents';
 
 /**
  * Clears model for non-ephemeral agent conversations.
@@ -139,8 +142,8 @@ interface InitiatedTemplateResult {
 
 type StoredModelSelection = Pick<
   t.TConversation,
-  'endpoint' | 'model' | 'spec' | 'agent_id' | 'assistant_id'
->;
+  'model' | 'spec' | 'agent_id' | 'assistant_id'
+> & { endpoint?: EModelEndpoint | string | null };
 
 function hasSelectionValue(value?: string | null): boolean {
   return typeof value === 'string' && value.trim() !== '';
@@ -158,6 +161,16 @@ function parseStoredModelSelection(
   } catch {
     return;
   }
+}
+
+function isStoredAgentPick(
+  selection?: Partial<StoredModelSelection> | null,
+): selection is Partial<StoredModelSelection> & { agent_id: string } {
+  return (
+    isAgentsEndpoint(selection?.endpoint ?? '') &&
+    hasSelectionValue(selection?.agent_id) &&
+    !isEphemeralAgentId(selection?.agent_id ?? '')
+  );
 }
 
 export function hasModelSelection(selection?: Partial<StoredModelSelection> | null): boolean {
@@ -234,10 +247,7 @@ function hasSelectableEntitySelection({
   if (!modelSelect || !endpoint) {
     return false;
   }
-  const isAgentPick =
-    isAgentsEndpoint(endpoint) &&
-    hasSelectionValue(selection.agent_id) &&
-    !isEphemeralAgentId(selection.agent_id);
+  const isAgentPick = isStoredAgentPick(selection);
   const isAssistantPick =
     isAssistantsEndpoint(endpoint) && hasSelectionValue(selection.assistant_id);
   if (!isAgentPick && !isAssistantPick) {
@@ -324,11 +334,31 @@ export function getModelSpec({
   return startupConfig.modelSpecs?.list?.find((spec) => spec.name === specName);
 }
 
+/** Deloitte Custom Change: ephemeral-agent values seeded by `defaultEnabledTools`. */
+export type DefaultEnabledValues = Pick<t.TEphemeralAgent, 'execute_code' | 'skills' | 'artifacts'>;
+
+/** Deloitte Custom Change: builds the seeded values for tools listed in `defaultEnabledTools`. */
+export function getDefaultEnabledToolValues(
+  flags?: t.TInterfaceConfig['customDeloitteFeatureFlags'],
+): DefaultEnabledValues {
+  const enabled = new Set(flags?.defaultEnabledTools);
+  const artifactsMode =
+    flags?.artifactsShadcnOnly === true ? ArtifactModes.SHADCNUI : ArtifactModes.DEFAULT;
+  return {
+    ...(enabled.has('execute_code') && { execute_code: true }),
+    ...(enabled.has('skills') && { skills: true }),
+    ...(enabled.has('artifacts') && { artifacts: artifactsMode }),
+  };
+}
+
 export function applyModelSpecEphemeralAgent({
   convoId,
   modelSpec,
   updateEphemeralAgent,
+  // Deloitte Custom Change: admin-enabled tools apply where the spec sets nothing.
+  defaultEnabledValues = {},
 }: {
+  defaultEnabledValues?: DefaultEnabledValues;
   convoId?: string | null;
   modelSpec?: t.TModelSpec;
   updateEphemeralAgent: ((convoId: string, agent: t.TEphemeralAgent | null) => void) | undefined;
@@ -337,14 +367,20 @@ export function applyModelSpecEphemeralAgent({
     return;
   }
   const key = (convoId ?? Constants.NEW_CONVO) || Constants.NEW_CONVO;
+  const specArtifacts = modelSpec.artifacts === true ? 'default' : modelSpec.artifacts || '';
   const agent: t.TEphemeralAgent = {
     mcp: modelSpec.mcpServers ?? [],
     web_search: modelSpec.webSearch ?? false,
     file_search: modelSpec.fileSearch ?? false,
-    execute_code: modelSpec.executeCode ?? false,
+    execute_code: modelSpec.executeCode ?? defaultEnabledValues.execute_code ?? false,
     memory: modelSpec.memory ?? false,
-    artifacts: modelSpec.artifacts === true ? 'default' : modelSpec.artifacts || '',
+    artifacts: modelSpec.artifacts == null ? (defaultEnabledValues.artifacts ?? '') : specArtifacts,
   };
+  if (modelSpec.skills != null) {
+    agent.skills = Array.isArray(modelSpec.skills) ? modelSpec.skills.length > 0 : modelSpec.skills;
+  } else if (defaultEnabledValues.skills != null) {
+    agent.skills = defaultEnabledValues.skills;
+  }
 
   // For existing conversations, layer per-conversation localStorage overrides
   // on top of spec defaults so user modifications persist across navigation.
@@ -355,6 +391,8 @@ export function applyModelSpecEphemeralAgent({
       ['web_search', LocalStorageKeys.LAST_WEB_SEARCH_TOGGLE_],
       ['file_search', LocalStorageKeys.LAST_FILE_SEARCH_TOGGLE_],
       ['artifacts', LocalStorageKeys.LAST_ARTIFACTS_TOGGLE_],
+      // Deloitte Custom Change: persist the Skills toggle per conversation like the other tools.
+      ['skills', LocalStorageKeys.LAST_SKILLS_TOGGLE_],
       ['memory', LocalStorageKeys.LAST_MEMORY_TOGGLE_],
     ];
 
@@ -399,10 +437,17 @@ export function applyModelSpecEphemeralAgent({
  * strands a new chat on an unselectable endpoint. The legacy first-spec fallback applies
  * only when specs are prioritized (or the model menu is hidden) and no soft default is
  * configured.
+ *
+ * A stored agent pick is trusted only until the agent list can weigh in: pass `agentsMap`
+ * once loaded, and a pick naming an agent missing from it (deleted, or selected in another
+ * org sharing this browser storage) is residue the soft default overrides. An undefined
+ * map means the list is unknown and leaves the pick trusted; gate on
+ * `defaultSpecAwaitsAgents` to defer the decision until the map settles.
  */
 export function getDefaultModelSpec(
   startupConfig?: t.TStartupConfig,
   endpointsConfig?: t.TEndpointsConfig,
+  agentsMap?: t.TAgentsMap,
 ):
   | {
       default?: t.TModelSpec;
@@ -437,6 +482,11 @@ export function getDefaultModelSpec(
     if (lastSpec?.name === softDefaultSpec.name) {
       return { softDefault: softDefaultSpec };
     }
+    const staleAgentPick =
+      agentsMap != null && isStoredAgentPick(lastSetup) && agentsMap[lastSetup.agent_id] == null;
+    if (staleAgentPick) {
+      return { softDefault: softDefaultSpec };
+    }
     const modelSelect = interfaceConfig?.modelSelect;
     const yieldsToSelection =
       (hasModelSelection(lastSetup) &&
@@ -456,12 +506,50 @@ export function getDefaultModelSpec(
   return;
 }
 
+/**
+ * Whether resolving the default spec for a new chat hinges on the agent list:
+ * a soft default is configured, no hard default or stored spec decides first,
+ * and the stored last setup names a concrete agent whose existence only the
+ * loaded agent map can confirm. Callers should defer `getDefaultModelSpec`
+ * until the agent list query settles (data or error) while this returns true.
+ */
+export function defaultSpecAwaitsAgents(
+  startupConfig?: t.TStartupConfig,
+  endpointsConfig?: t.TEndpointsConfig,
+): boolean {
+  const list = startupConfig?.modelSpecs?.list;
+  if (!list || list.some((spec) => spec.default) || !list.some((spec) => spec.softDefault)) {
+    return false;
+  }
+
+  /** With the selector disabled the soft default can never yield to a stored
+   * pick, so the decision is deterministic without the agent list. */
+  if (!startupConfig?.interface?.modelSelect) {
+    return false;
+  }
+
+  const lastSetup = parseStoredModelSelection(
+    localStorage.getItem(LocalStorageKeys.LAST_CONVO_SETUP + '_0'),
+  );
+  if (hasSelectionValue(lastSetup?.spec) && list.some((spec) => spec.name === lastSetup?.spec)) {
+    return false;
+  }
+
+  return isStoredAgentPick(lastSetup) && endpointsConfig?.[EModelEndpoint.agents] != null;
+}
+
 export function getModelSpecPreset(modelSpec?: t.TModelSpec) {
   if (!modelSpec) {
     return;
   }
   return {
     ...modelSpec.preset,
+    /**
+     * Specs are materialized at config load, but a preset flowing into
+     * `TPreset` contexts must carry an endpoint decision either way — resolve
+     * here so startup and URL flows never receive an endpoint-less preset.
+     */
+    endpoint: resolveModelSpecEndpoint(modelSpec) ?? null,
     spec: modelSpec.name,
     iconURL: getModelSpecIconURL(modelSpec),
   };
@@ -491,9 +579,102 @@ export function mergeQuerySettingsWithSpec(
   };
 }
 
-/** Gets the model spec iconURL by explicit icon, preset icon, then preset endpoint. */
-export function getModelSpecIconURL(modelSpec: t.TModelSpec) {
-  return modelSpec.iconURL ?? modelSpec.preset?.iconURL ?? modelSpec.preset?.endpoint ?? '';
+/**
+ * Config authored through a form stores an untouched icon field as an empty
+ * string rather than omitting it, so `??` would stop on it and suppress every
+ * later candidate. `applyModelSpecPreset` already treats an empty `iconURL` as
+ * unset; `showIconInMenu` is the explicit way to render no icon.
+ */
+function firstPresentIcon(...candidates: Array<string | null | undefined>): string {
+  for (const candidate of candidates) {
+    if (candidate != null && candidate !== '') {
+      return candidate;
+    }
+  }
+
+  return '';
+}
+
+/** Gets the model spec iconURL by explicit icon, preset icon, agent avatar, then preset endpoint. */
+export function getModelSpecIconURL(modelSpec: t.TModelSpec, agentAvatarURL?: string) {
+  return firstPresentIcon(
+    modelSpec.iconURL,
+    modelSpec.preset?.iconURL,
+    agentAvatarURL,
+    modelSpec.preset?.endpoint,
+  );
+}
+
+/**
+ * Resolves the avatar of the agent a spec targets. Returns a primitive so callers
+ * can hand it to memoized icon components without widening their comparison to
+ * the identity of the whole agents map.
+ */
+export function getSpecAgentAvatarURL(
+  modelSpec: t.TModelSpec,
+  agentsMap?: t.TAgentsMap,
+): string | undefined {
+  const preset = modelSpec.preset;
+  /**
+   * `tModelSpecPresetSchema` permits `agent_id` alongside any endpoint, so a
+   * leftover id on a non-agent spec would otherwise surface an unrelated
+   * agent's identity ahead of that spec's own endpoint icon.
+   */
+  if (!isAgentsEndpoint(preset?.endpoint)) {
+    return undefined;
+  }
+
+  const agentId = preset?.agent_id;
+  if (agentId == null) {
+    return undefined;
+  }
+
+  /** Agents persist `avatar` as either a URL string or an object. */
+  return getAgentAvatarUrl(agentsMap?.[agentId]) ?? undefined;
+}
+
+/**
+ * `label` is required by `tModelSpecSchema`, yet specs can still reach the
+ * client without one when an external writer persists an incomplete config.
+ * Normalizing on ingest keeps every consumer — row rendering, search
+ * filtering, and the spec/endpoint discriminator — working from a complete
+ * spec, rather than each guarding separately and one inevitably being missed.
+ *
+ * Returns the original array, and the original spec objects, when nothing
+ * needs filling in, so memoized consumers see no new identities.
+ */
+export function normalizeModelSpecs(specs: t.TModelSpec[]): t.TModelSpec[] {
+  let normalized: t.TModelSpec[] | null = null;
+  for (let i = 0; i < specs.length; i++) {
+    const spec = specs[i];
+    if (spec.label) {
+      normalized?.push(spec);
+      continue;
+    }
+    /** Lazy copy: allocated only when the first incomplete spec is found. */
+    normalized ??= specs.slice(0, i);
+    normalized.push({ ...spec, label: spec.name });
+  }
+  return normalized ?? specs;
+}
+
+/**
+ * Applies `normalizeModelSpecs` to a fetched startup config, so normalization
+ * happens once at the query boundary and every consumer of
+ * `startupConfig.modelSpecs.list` — the selector, mentions, favorites,
+ * provider-key reachability — reads complete specs. Identity-preserving when
+ * nothing needs filling in.
+ */
+export function normalizeStartupConfigModelSpecs(config: t.TStartupConfig): t.TStartupConfig {
+  const modelSpecs = config?.modelSpecs;
+  if (!modelSpecs?.list?.length) {
+    return config;
+  }
+  const normalized = normalizeModelSpecs(modelSpecs.list);
+  if (normalized === modelSpecs.list) {
+    return config;
+  }
+  return { ...config, modelSpecs: { ...modelSpecs, list: normalized } };
 }
 
 /** Gets the default frontend-facing endpoint, dependent on iconURL definition.
@@ -510,26 +691,6 @@ export function getIconEndpoint({
   endpoint?: string | null;
 }) {
   return (endpointsConfig?.[iconURL ?? ''] ? (iconURL ?? endpoint) : endpoint) ?? '';
-}
-
-/** Gets the key to use for the default endpoint iconURL, as defined by the custom config */
-export function getIconKey({
-  endpoint,
-  endpointType: _eType,
-  endpointsConfig,
-  endpointIconURL: iconURL,
-}: {
-  endpoint?: string | null;
-  endpointsConfig?: t.TEndpointsConfig | null;
-  endpointType?: string | null;
-  endpointIconURL?: string;
-}): keyof IconsRecord {
-  const endpointType = _eType ?? getEndpointField(endpointsConfig, endpoint, 'type') ?? '';
-  const endpointIconURL = iconURL ?? getEndpointField(endpointsConfig, endpoint, 'iconURL') ?? '';
-  if (endpointIconURL && EModelEndpoint[endpointIconURL] != null) {
-    return endpointIconURL;
-  }
-  return endpointType ? 'unknown' : (endpoint ?? 'unknown');
 }
 
 export const getEntity = ({

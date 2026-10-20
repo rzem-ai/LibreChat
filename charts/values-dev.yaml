@@ -4,6 +4,13 @@ branch: 'develop'
 llmGateway:
   namespace: 'llm-gateway-ctnp'
 
+# ea-code-runtime's namespace — enables a direct in-cluster egress rule in
+# networkpolicy.yaml (bypasses Cilium Ingress/Envoy's ~1MiB buffer limit).
+# Not used until LIBRECHAT_CODE_BASEURL below is also switched to the
+# in-cluster URL.
+codeInterpreter:
+  namespace: 'code-runtime-dev'
+
 serviceAccount:
   name: sa-librechat-dev
 
@@ -22,7 +29,7 @@ ingress:
 
 pods:
   librechat:
-    replicas: 1
+    replicas: 3
     securityContext:
       fsGroup: 1000
     initContainers:
@@ -31,31 +38,29 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'develop@sha256:5e71af45f812b4f1a42b21cea6e38506a986bdc24d0ab1c0c3935d5222f9854f'
+          tag: 'develop@sha256:309da553281b5d57d9bc07eab902fad6c85db87bf1c6a6b52e201eb8fdc2d9d3'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://foundry-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
-          TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-global.llm-gateway-ctnp.svc.cluster.local:8080'
+          TOKEN_PROXY_VERTEXAI_URL: 'http://vertexai-us-central1.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_ANTHROPIC_URL: 'http://anthropic-eastus2.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_BEDROCK_AU_URL: 'http://bedrock-ap-southeast-2.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_MCP_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
     containers:
       librechat:
-        command:
-          - /bin/sh
-          - -c
-          - >-
-            mkdir -p /app/client/dist/assets && if [ -d /app/deloitte/assets ]; then
-              cp -a /app/deloitte/assets/. /app/client/dist/assets/;
-            elif [ -d /app/deloitte-assets ]; then
-              cp -a /app/deloitte-assets/. /app/client/dist/assets/;
-            fi && exec npm run backend
         image:
-          tag: 'develop@sha256:76685c8f92fcd35704e568ef43ea999f9000dfefab2e34b5e5c124dcaa63658e'
+          tag: 'develop@sha256:d8bd07942e0f41f7bc8e7f39e390892ae95287a6f69c09cd714ced9150e2a5dc'
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "32Gi"
+            cpu: "6000m"
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
-          ANTHROPIC_MODELS: 'claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-sonnet-5,claude-opus-4-8'
+          ANTHROPIC_MODELS: 'claude-haiku-4-5,claude-haiku-5-5,claude-sonnet-4-6,claude-sonnet-5,claude-sonnet-5-5,claude-opus-4-6,claude-opus-4-8,claude-opus-5-5'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
           APP_TITLE: 'MyAssist (DEV)'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
@@ -64,7 +69,7 @@ pods:
           BEDROCK_AWS_ACCESS_KEY_ID: 'unused'
           BEDROCK_AWS_DEFAULT_REGION: 'ap-southeast-2'
           BEDROCK_AWS_SECRET_ACCESS_KEY: 'unused'
-          BEDROCK_AWS_MODELS: 'au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0'
+          BEDROCK_AWS_MODELS: 'au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0,au.anthropic.claude-haiku-5-5,au.anthropic.claude-sonnet-5-5,au.anthropic.claude-opus-5-5'
           BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081/bedrock'
           CUSTOM_FOOTER: '⚠️ WARNING: This is a development environment. Do not upload client or confidential data.'
           DOMAIN_CLIENT: 'https://librechat-dev.ctk.au.deloitte.com'
@@ -73,12 +78,10 @@ pods:
           EMBEDDINGS_PROVIDER: 'openai'
           ENDPOINTS: 'agents,anthropic,bedrock,custom'
           KEY_VAULT_NAME: 'kv-int-librechat-dev'
+          LEARNING_CENTER_FAQ_AGENT_ID: 'agent_arr_Uz20-PrgY9uY8eXAL'
           MCP_GATEWAY_OBO_SCOPE: 'api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user'
           MCP_GATEWAY_TOOLSETS: 'teams,research,news,kx,desc,gims'
           MCP_GATEWAY_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
-          MODEL_PRICING_MIN_MULTIPLIER: '0.1'
-          MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT: '0.1'
-          MODEL_PRICING_REFERENCE_MODEL_ID: 'gpt-56-luna'
           MONGO_DB: 'mdb-librechat-database-dev'
           NODE_ENV: 'development'
           NODE_TLS_REJECT_UNAUTHORIZED: '0'
@@ -92,12 +95,16 @@ pods:
           RAG_API_URL: 'http://127.0.0.1:8000'
           #RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
           #RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com'
-          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_REGIONAL_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_GLOBAL_BASEURL: 'http://127.0.0.1:8081/azure-global'
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
           RAG_PORT: '8000'
-          REFRESH_TOKEN_EXPIRY: '86400000' # (ms) - 1 day refresh token expiration
           # ClearTrack Code Interpreter (ea-code-runtime)
-          LIBRECHAT_CODE_BASEURL: 'https://code-runtime-dev.ctk.au.deloitte.com/v1'
+          # NOTE: switch to the direct in-cluster URL below (and set
+          # codeInterpreter.namespace) to bypass the Cilium Ingress/Envoy
+          # ~1MiB buffer limit on large file uploads:
+          LIBRECHAT_CODE_BASEURL: 'http://code-runtime-dev-code-interpreter-service.code-runtime-dev.svc.cluster.local:3112/v1'
+          # LIBRECHAT_CODE_BASEURL: 'https://code-runtime-dev.ctk.au.deloitte.com/v1'
           CODEAPI_AUTH_PROVIDER: 'librechat-jwt'
           CODEAPI_JWT_ALGORITHM: 'EdDSA'
           CODEAPI_JWT_KID: 'lc-codeapi-dev-2026-05'
@@ -161,7 +168,14 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:e91f5a765745daeefdb44521275c85ddf4cde061a26dd3c4b430da55c88a69ee'
+          tag: 'develop@sha256:b1f9a2f9e961a48333a8080bb8a8542d9061b409ba592803454f1b8d306988eb'
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "16Gi"
+            cpu: "3000m"
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
@@ -177,7 +191,8 @@ pods:
           # RAG_AZURE_OPENAI_API_VERSION: '2024-10-21'
           # RAG_AZURE_OPENAI_ENDPOINT: 'https://dttau-myassist-uat-models-openai-aueast.openai.azure.com/'
           EMBEDDINGS_PROVIDER: 'openai'
-          RAG_OPENAI_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_REGIONAL_BASEURL: 'http://127.0.0.1:8081/azure-au'
+          RAG_OPENAI_GLOBAL_BASEURL: 'http://127.0.0.1:8081/azure-global'
           RAG_OPENAI_API_KEY: 'dummy' # openai API key set to dummy due to proxy
         secrets:
           # AZURE_OPENAI_API_KEY: librechat-azure-api-key
@@ -217,7 +232,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:adb4267a5abf38fd85961b1a5116e18020312bcddc4d59cf4e4128dbc35c8263'
+          tag: 'develop@sha256:1384a8aa2e0ca5a6e0382776a22883a9f0b63e323b6c0c7cc479dc78fc62b2b8'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
@@ -227,6 +242,7 @@ pods:
           SESSION_COOKIE_SECURE: 'true'
         secrets:
           SESSION_SECRET: librechat-admin-panel-session-secret-dev
+          ADMIN_PANEL_METRICS_SECRET: librechat-admin-panel-metrics-secret-dev
         service:
           enabled: true
           type: ClusterIP
@@ -240,7 +256,7 @@ pods:
 
 valkey:
   image:
-    tag: 'develop@sha256:87ebb22a20d8ee2f450574f70068388acb9d2b5b60f74b9cf873c6be845102b3'
+    tag: 'develop@sha256:4fdf384b8cad080df2e9429b4aa512c090cb9d83368488ba0aa9d58e7c2e1d0e'
   persistence:
     storageClass: 'managed-csi-standard-private'
   passwordSecretName: 'librechat-valkey-password-dev'

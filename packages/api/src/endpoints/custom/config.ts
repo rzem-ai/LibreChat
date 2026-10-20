@@ -1,6 +1,7 @@
 import { EModelEndpoint, extractEnvVariable, normalizeEndpointName } from 'librechat-data-provider';
 import type { TCustomEndpoints, TEndpoint } from 'librechat-data-provider';
 import type { TCustomEndpointsConfig } from '~/types/endpoints';
+import { resolveEndpointProviderId } from './providers';
 import { isUserProvided } from '~/utils';
 
 /**
@@ -65,7 +66,14 @@ export function loadCustomEndpointsConfig(
         customParams: resolvedCustomParams,
         modelDisplayLabel,
         iconURL,
+        // Deloitte Custom Change: surface the native web-search allowlist to the client
         nativeWebSearch,
+        providerId: resolveEndpointProviderId({
+          name,
+          baseURL: resolvedBaseURL,
+          iconURL,
+          provider,
+        }),
       };
     }
   }

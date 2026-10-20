@@ -1,9 +1,10 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Skeleton } from '@librechat/client';
 import { apiBaseUrl, FileSources } from 'librechat-data-provider';
+// Deloitte Custom Change: fetch private azure_blob images via authenticated blob URL
 import { useAuthenticatedBlobUrl } from '~/data-provider';
+import { cn, toAbsoluteFilePath } from '~/utils';
 import DialogImage from './DialogImage';
-import { cn } from '~/utils';
 
 /** Max display height for chat images (Tailwind JIT class) */
 export const IMAGE_MAX_H = 'max-h-[45vh]' as const;
@@ -30,6 +31,7 @@ const Image = ({
   altText,
   fileName,
   className,
+  alignRight = false,
   args,
   width,
   height,
@@ -42,6 +44,7 @@ const Image = ({
   /** Filename used for the download link. Falls back to altText then 'image' if absent. */
   fileName?: string;
   className?: string;
+  alignRight?: boolean;
   args?: {
     prompt?: string;
     quality?: 'low' | 'medium' | 'high';
@@ -58,7 +61,7 @@ const Image = ({
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  // Deloitte: rewrite raw azure_blob URLs to same-origin proxy so browser doesn't hit
+  // Deloitte Custom Change: rewrite raw azure_blob URLs to same-origin proxy so browser doesn't hit
   // private container directly (avoids 403 + prevents Bearer leak to blob.core.windows.net).
   const rewrittenPath = useMemo(() => {
     if (source === FileSources.azure_blob && fileId && userId && imagePath?.startsWith('http')) {
@@ -68,21 +71,15 @@ const Image = ({
     return imagePath;
   }, [imagePath, source, fileId, userId]);
 
-  const absoluteImageUrl = useMemo(() => {
-    if (!rewrittenPath) return rewrittenPath;
+  /** Root-relative server paths (`/images/...` static, `/api/...` downloads and
+   *  share routes) are resolved against the API base so they load under a
+   *  subpath deployment. */
+  const absoluteImageUrl = useMemo(
+    () => toAbsoluteFilePath(rewrittenPath, apiBaseUrl()),
+    [rewrittenPath],
+  );
 
-    if (rewrittenPath.startsWith('http') || rewrittenPath.startsWith('data:')) {
-      return rewrittenPath;
-    }
-
-    if (rewrittenPath.startsWith('/images/') || rewrittenPath.startsWith('/api/')) {
-      return `${apiBaseUrl()}${rewrittenPath}`;
-    }
-
-    return rewrittenPath;
-  }, [rewrittenPath]);
-
-  // Deloitte: /api/ routes need Bearer JWT; <img src> can't send it — fetch via axios blob.
+  // Deloitte Custom Change: /api/ routes need Bearer JWT; <img src> can't send it — fetch via axios blob.
   const needsBlob = rewrittenPath?.startsWith('/api/') ?? false;
   const { url: blobUrl } = useAuthenticatedBlobUrl(absoluteImageUrl, needsBlob);
   const displayUrl = needsBlob ? blobUrl : absoluteImageUrl;
@@ -145,7 +142,7 @@ const Image = ({
   const showSkeleton = hasDimensions && !paintedUrls.has(absoluteImageUrl);
 
   return (
-    <div>
+    <div className={alignRight ? 'ml-auto' : undefined}>
       <button
         ref={triggerRef}
         type="button"
@@ -154,7 +151,7 @@ const Image = ({
         onClick={() => setIsOpen(true)}
         className={cn(
           'relative mt-1 w-full max-w-lg cursor-pointer overflow-hidden rounded-lg border border-border-light text-text-secondary-alt shadow-md transition-shadow',
-          'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary',
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-primary',
           className,
         )}
         style={heightStyle}

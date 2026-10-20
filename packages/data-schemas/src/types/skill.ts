@@ -1,5 +1,7 @@
-import type { CodeEnvRef } from 'librechat-data-provider';
+import type { CodeEnvRef, CodeEnvRefMap } from 'librechat-data-provider';
 import type { Document, Types } from 'mongoose';
+// Deloitte Custom Change: Retention Update
+import type { IRetentionException } from '~/types/convo';
 
 /**
  * Skill — the single source of truth for a LibreChat skill.
@@ -94,6 +96,15 @@ export interface ISkill {
   updatedAt?: Date;
   /** Computed from ACL at read time, never persisted. */
   isPublic?: boolean;
+  // Deloitte Custom Change: Retention Update
+  /** Explicit activity anchor for retention; never inferred from `updatedAt`. */
+  lastActivityAt?: Date;
+  expiredAt?: Date;
+  retentionException?: IRetentionException;
+  purgeClaimId?: string;
+  purgeClaimedAt?: Date;
+  purgeAttempts?: number;
+  purgeNotBefore?: Date;
 }
 
 export interface ISkillDocument extends ISkill, Document {}
@@ -137,6 +148,7 @@ export interface ISkillFile {
    * when the skill file is re-uploaded to storage.
    */
   codeEnvRef?: CodeEnvRef;
+  codeEnvRefs?: CodeEnvRefMap;
   createdAt?: Date;
   updatedAt?: Date;
 }

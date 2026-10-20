@@ -25,9 +25,12 @@ export const SystemCapabilities = {
   MANAGE_CONFIGS: 'manage:configs',
   ASSIGN_CONFIGS: 'assign:configs',
   READ_USAGE: 'read:usage',
+  READ_INSIGHTS: 'read:insights',
   READ_AGENTS: 'read:agents',
   MANAGE_AGENTS: 'manage:agents',
   MANAGE_MCP_SERVERS: 'manage:mcpservers',
+  /** Enrolls and revokes deployment-owned Code API workers. */
+  MANAGE_CODE_ENVIRONMENTS: 'manage:code_environments',
   READ_PROMPTS: 'read:prompts',
   MANAGE_PROMPTS: 'manage:prompts',
   READ_SKILLS: 'read:skills',
@@ -37,6 +40,13 @@ export const SystemCapabilities = {
   /** Reserved — not yet enforced by any middleware. */
   READ_ASSISTANTS: 'read:assistants',
   MANAGE_ASSISTANTS: 'manage:assistants',
+  // Deloitte Custom Change: Retention Update
+  /**
+   * Reserved — not enforced by any middleware. Memory is never shared via `AclEntry`
+   * and has no admin-override/exemption path; this exists only to satisfy
+   * `ResourceCapabilityMap`'s exhaustive `Record<ResourceType, …>` typing.
+   */
+  MANAGE_MEMORIES: 'manage:memories',
   /**
    * Required to list, view, and CSV-export the SystemGrant audit log. Append-only
    * by design, so there is no MANAGE counterpart — modifying historical entries
@@ -176,11 +186,14 @@ export function expandImplications(directCaps: string[]): string[] {
  */
 export const ResourceCapabilityMap: Record<ResourceType, SystemCapability> = {
   [ResourceType.AGENT]: SystemCapabilities.MANAGE_AGENTS,
+  [ResourceType.CODE_ENVIRONMENT]: SystemCapabilities.MANAGE_CODE_ENVIRONMENTS,
   [ResourceType.PROMPTGROUP]: SystemCapabilities.MANAGE_PROMPTS,
   [ResourceType.MCPSERVER]: SystemCapabilities.MANAGE_MCP_SERVERS,
   [ResourceType.REMOTE_AGENT]: SystemCapabilities.MANAGE_AGENTS,
   [ResourceType.SKILL]: SystemCapabilities.MANAGE_SKILLS,
   [ResourceType.SHARED_LINK]: SystemCapabilities.MANAGE_SHARED_LINKS,
+  // Deloitte Custom Change: Retention Update
+  [ResourceType.MEMORY]: SystemCapabilities.MANAGE_MEMORIES,
 };
 
 /**
@@ -251,6 +264,7 @@ export const CAPABILITY_CATEGORIES: CapabilityCategory[] = [
       SystemCapabilities.MANAGE_ASSISTANTS,
       SystemCapabilities.READ_ASSISTANTS,
       SystemCapabilities.MANAGE_MCP_SERVERS,
+      SystemCapabilities.MANAGE_CODE_ENVIRONMENTS,
       SystemCapabilities.MANAGE_SHARED_LINKS,
       SystemCapabilities.READ_SHARED_LINKS,
     ],
@@ -261,6 +275,7 @@ export const CAPABILITY_CATEGORIES: CapabilityCategory[] = [
     capabilities: [
       SystemCapabilities.ACCESS_ADMIN,
       SystemCapabilities.READ_USAGE,
+      SystemCapabilities.READ_INSIGHTS,
       SystemCapabilities.READ_AUDIT_LOG,
     ],
   },
