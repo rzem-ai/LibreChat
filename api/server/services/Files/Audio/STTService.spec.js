@@ -277,6 +277,7 @@ describe('STT transcript content filtering', () => {
     config: { ...config, paths: { ...config?.paths, uploads: '/tmp' } },
     user: { id: 'test-user' },
     file: {
+      filename: 'audio.webm',
       path: '/tmp/temp/test-user/audio.webm',
       originalname: 'audio.webm',
       mimetype: 'audio/webm',
