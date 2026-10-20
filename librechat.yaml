@@ -504,8 +504,8 @@ modelSpecs:
       # Deloitte Custom Change: editorial metadata for the model info tooltip — 1-5 ratings
       # and capability flags shown to users, separate from the tool-enablement flags below.
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -530,6 +530,8 @@ modelSpecs:
         supports:
           webSearch: true
           imageGeneration: false
+        speed: 1 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
 
     - name: 'azure-global-gpt-61-sol'
       label: 'GPT 6.1 Sol'
@@ -545,6 +547,8 @@ modelSpecs:
         supports:
           webSearch: true
           imageGeneration: false
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
 
     - name: 'anthropic-claude-haiku-4-5'
       label: 'Claude Haiku 4.5'
@@ -558,8 +562,8 @@ modelSpecs:
         model: 'claude-haiku-4-5'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -576,8 +580,8 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-haiku-5-5'
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -593,8 +597,8 @@ modelSpecs:
         model: 'claude-sonnet-5'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -612,8 +616,8 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-sonnet-5-5'
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -629,8 +633,8 @@ modelSpecs:
         model: 'claude-sonnet-4-6'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -646,8 +650,8 @@ modelSpecs:
         model: 'claude-opus-4-6'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -663,8 +667,8 @@ modelSpecs:
         model: 'claude-opus-4-8'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 1 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        speed: 3 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -680,8 +684,8 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-opus-5-5'
       details:
-        speed: 4 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        speed: 4 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -698,8 +702,8 @@ modelSpecs:
         model: 'au.anthropic.claude-sonnet-4-6'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
         supports:
           webSearch: false
           imageGeneration: false
@@ -715,8 +719,8 @@ modelSpecs:
         model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
         supports:
           webSearch: false
           imageGeneration: false
@@ -733,8 +737,8 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-haiku-5-5'
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -750,8 +754,8 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-sonnet-5-5'
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -767,8 +771,8 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-opus-5-5'
       details:
-        speed: 4 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        speed: 4 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
         supports:
           webSearch: true
           imageGeneration: false
