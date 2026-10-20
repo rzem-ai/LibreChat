@@ -171,11 +171,7 @@ const getOpenIDAppAuthToken = (
   if (tokenset?.id_token && isCurrentOpenIDIdToken(idTokenExpiresAt)) {
     return tokenset.id_token;
   }
-  if (
-    sessionIdToken &&
-    Number.isFinite(sessionIdTokenExpiresAt) &&
-    isCurrentOpenIDIdToken(sessionIdTokenExpiresAt)
-  ) {
+  if (sessionIdToken && isCurrentOpenIDIdToken(sessionIdTokenExpiresAt)) {
     return sessionIdToken;
   }
   return tokenset?.access_token;

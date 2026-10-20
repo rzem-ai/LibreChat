@@ -472,6 +472,30 @@ describe('setOpenIDAuthTokens', () => {
       expect(req.session.openidTokens.lastRefreshedAt).toEqual(expect.any(Number));
     });
 
+    it('returns a saved id_token when trusted expiry metadata is current', () => {
+      const idTokenExpiresAt = Math.floor(Date.now() / 1000) + 3600;
+      const existingIdToken = jwt.sign(
+        { sub: 'user-123', exp: idTokenExpiresAt },
+        'idp-signing-secret',
+      );
+      const req = mockRequest({
+        openidTokens: {
+          idToken: existingIdToken,
+          idTokenExpiresAt,
+          refreshToken: 'old-refresh-token',
+        },
+      });
+
+      expect(
+        setOpenIDAuthTokens(
+          { access_token: 'new-access-token', refresh_token: 'new-refresh-token' },
+          req,
+          mockResponse(),
+          'user-123',
+        ),
+      ).toBe(existingIdToken);
+    });
+
     it('falls back to access_token when the saved id_token expiry has elapsed', () => {
       const expiredAt = Math.floor(Date.now() / 1000) - 60;
       const expiredIdToken = jwt.sign({ sub: 'user-123', exp: expiredAt }, 'idp-signing-secret');
