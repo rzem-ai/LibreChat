@@ -1569,6 +1569,7 @@ export function updateUserTutorialState(
   return request.post(endpoints.userTutorialState(), update);
 }
 
+// Deloitte Custom Change: tour progress stored in MongoDB
 export function updateUserTourProgress(
   payload: t.TUpdateTourProgressRequest,
 ): Promise<t.TTutorialStateResponse> {

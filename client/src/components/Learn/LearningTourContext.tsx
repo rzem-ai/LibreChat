@@ -11,6 +11,7 @@ import { useRecoilState } from 'recoil';
 import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { TourStep } from './content/schema';
+// Deloitte Custom Change: tour progress stored in MongoDB
 import useTourProgress, {
   resolveResumeIndex,
   toStepSnapshot,
@@ -59,6 +60,7 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
   const { markPromptSeen } = useTutorialPrompt();
   const showMarketplace = useShowMarketplace();
   const { recordStep, recordComplete } = useTourProgress();
+  // Deloitte Custom Change: tour progress stored in MongoDB: one-time upload of legacy browser progress
   useMigrateLegacyProgress();
 
   // Capture the user's sidebar state before the tour starts so we can restore
@@ -92,6 +94,7 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
     {
       onStep: (index) => {
         const courseId = activeCourseIdRef.current;
+        // Deloitte Custom Change: tour progress stored in MongoDB: save step id and title, not just the index
         recordStep(
           courseId,
           toStepSnapshot(getCourseSteps(courseId), activeStepsRef.current[index]),

@@ -8,6 +8,7 @@
 import { MAX_TUTORIAL_RATINGS } from '@librechat/data-schemas';
 import {
   MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH,
+  // Deloitte Custom Change: tour progress stored in MongoDB
   type TTourProgress,
   type TTutorialFeedback,
 } from 'librechat-data-provider';
@@ -233,13 +234,16 @@ export function toTutorialStateResponse(user: {
   tutorialPromptSeen?: boolean | null;
   tutorialRatings?: Map<string, number> | Record<string, number> | null;
   tutorialFeedback?: Map<string, TTutorialFeedback> | Record<string, TTutorialFeedback> | null;
+  // Deloitte Custom Change: tour progress stored in MongoDB
   tutorialProgress?: Map<string, TTourProgress> | Record<string, TTourProgress> | null;
 }): {
   tutorialPromptSeen: boolean;
   tutorialRatings: Record<string, number>;
   tutorialFeedback: Record<string, TTutorialFeedback>;
+  // Deloitte Custom Change: tour progress stored in MongoDB
   tutorialProgress: Record<string, TTourProgress>;
 } {
+  // Deloitte Custom Change: tour progress stored in MongoDB
   const tutorialProgress =
     user.tutorialProgress instanceof Map
       ? Object.fromEntries(user.tutorialProgress)
@@ -266,6 +270,7 @@ export function toTutorialStateResponse(user: {
     tutorialPromptSeen: !!user.tutorialPromptSeen,
     tutorialRatings,
     tutorialFeedback: combinedTutorialFeedback,
+    // Deloitte Custom Change: tour progress stored in MongoDB
     tutorialProgress,
   };
 }

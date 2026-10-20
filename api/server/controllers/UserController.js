@@ -16,6 +16,7 @@ const {
   finalizeMCPAuthorizationMutation,
   // Deloitte Custom Change
   validateTutorialStateUpdate,
+  // Deloitte Custom Change: tour progress stored in MongoDB
   validateTourProgressUpdate,
   toTutorialStateResponse,
   MAX_TUTORIAL_RATINGS,
@@ -136,6 +137,7 @@ const getTutorialStateController = async (req, res) => {
   try {
     const user = await db.getUserById(
       req.user.id,
+      // Deloitte Custom Change: tour progress stored in MongoDB
       'tutorialPromptSeen tutorialRatings tutorialFeedback tutorialProgress',
     );
     if (!user) {
@@ -772,6 +774,7 @@ module.exports = {
   acceptTermsController,
   getTutorialStateController,
   updateTutorialStateController,
+  // Deloitte Custom Change: tour progress stored in MongoDB
   updateTourProgressController,
   deleteUserController,
   verifyEmailController,

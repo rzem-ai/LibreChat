@@ -7,6 +7,7 @@ import {
 } from 'librechat-data-provider';
 import type {
   IUser,
+  // Deloitte Custom Change: tour progress stored in MongoDB
   TourProgress,
   BalanceConfig,
   CreateUserRequest,
@@ -31,6 +32,7 @@ const MAX_SUBAGENT_ADMISSION_FENCES = 32;
  */
 export const MAX_TUTORIAL_RATINGS = 50;
 
+// Deloitte Custom Change: tour progress stored in MongoDB
 /** Client-reported tour progress; the server owns the timestamps. */
 export type TourProgressInput = Pick<
   TourProgress,
@@ -183,6 +185,7 @@ export function createUserMethods(
     ratings: Record<string, number>,
     updateData?: TutorialStateMergeUpdate,
   ) => Promise<{ user: IUser | null; capExceeded: boolean; conflict: boolean }>;
+  // Deloitte Custom Change: tour progress stored in MongoDB
   setTutorialProgress: (
     userId: string,
     courseId: string,
@@ -941,6 +944,7 @@ export function createUserMethods(
     };
   }
 
+  // Deloitte Custom Change: tour progress stored in MongoDB
   /**
    * Upserts progress for a single tour, leaving other tours untouched.
    *
@@ -1014,6 +1018,7 @@ export function createUserMethods(
     updateUserStatefulCodeEnvironment,
     // Deloitte Custom Change: tutorial ratings/feedback merge for MyAssist Academy
     mergeTutorialRatings,
+    // Deloitte Custom Change: tour progress stored in MongoDB
     setTutorialProgress,
   };
 }

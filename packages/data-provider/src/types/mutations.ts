@@ -447,6 +447,7 @@ export type UpdateTutorialStateMutationOptions = MutationOptions<
   unknown
 >;
 
+// Deloitte Custom Change: tour progress stored in MongoDB
 export type UpdateTourProgressMutationOptions = MutationOptions<
   types.TTutorialStateResponse,
   types.TUpdateTourProgressRequest,

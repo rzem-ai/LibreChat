@@ -999,6 +999,7 @@ export type TTutorialFeedback = {
   updatedAt?: Date | string;
 };
 
+// Deloitte Custom Change: tour progress stored in MongoDB
 export const MAX_TOUR_STEP_TITLE_LENGTH = 200;
 export const MAX_TOUR_STEP_ID_LENGTH = 64;
 
@@ -1034,6 +1035,7 @@ export type TTutorialStateResponse = {
   tutorialPromptSeen: boolean;
   tutorialRatings: Record<string, number>;
   tutorialFeedback: Record<string, TTutorialFeedback>;
+  // Deloitte Custom Change: tour progress stored in MongoDB
   tutorialProgress: Record<string, TTourProgress>;
 };
 

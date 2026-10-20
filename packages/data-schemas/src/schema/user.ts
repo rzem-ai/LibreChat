@@ -4,6 +4,7 @@ import {
   STATEFUL_CODE_ENVIRONMENTS,
   // Deloitte Custom Change: tutorial feedback comment length cap
   MAX_TUTORIAL_FEEDBACK_COMMENT_LENGTH,
+  // Deloitte Custom Change: tour progress stored in MongoDB
   MAX_TOUR_STEP_ID_LENGTH,
   MAX_TOUR_STEP_TITLE_LENGTH,
 } from 'librechat-data-provider';
@@ -51,6 +52,7 @@ const TutorialFeedbackSchema = new Schema(
   { _id: false },
 );
 
+// Deloitte Custom Change: tour progress stored in MongoDB
 const TourProgressSchema = new Schema(
   {
     step: { type: Number, min: 0, required: true },
@@ -246,6 +248,7 @@ const userSchema: Schema<IUser> = new Schema<IUser>(
       of: TutorialFeedbackSchema,
       default: () => new Map(),
     },
+    // Deloitte Custom Change: tour progress stored in MongoDB
     tutorialProgress: {
       type: Map,
       of: TourProgressSchema,

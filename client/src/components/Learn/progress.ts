@@ -1,3 +1,4 @@
+// Deloitte Custom Change: tour progress stored in MongoDB: previously browser localStorage only
 import { useCallback, useEffect, useRef } from 'react';
 import type { TTourProgress, TTourProgressUpdate } from 'librechat-data-provider';
 import type { TourStatus, TourStep } from './content/schema';

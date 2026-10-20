@@ -1,3 +1,4 @@
+// Deloitte Custom Change: tour progress stored in MongoDB
 import {
   MAX_TOUR_STEP_ID_LENGTH,
   MAX_TOUR_STEP_TITLE_LENGTH,

@@ -1,5 +1,6 @@
 import type { JSX } from 'react/jsx-runtime';
 import type { CourseContent } from '../../content/schema';
+// Deloitte Custom Change: tour progress stored in MongoDB: resume by step id/title
 import useTourProgress, { findSavedStep, getTourStatus } from '../../progress';
 import { useLearningTour } from '../../LearningTourContext';
 import { TOURS } from '../../content/registry';
@@ -15,6 +16,7 @@ export default function Tours(): JSX.Element {
 
   const renderTour = (tour: CourseContent, isHero = false): JSX.Element => {
     const { status, percent } = getTourStatus(progressById[tour.id]);
+    // Deloitte Custom Change: tour progress stored in MongoDB: resume by step id/title
     const resumeStep =
       status === 'in-progress' ? findSavedStep(tour.steps, progressById[tour.id]) : 0;
     const statusLabel = {

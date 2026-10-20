@@ -1488,6 +1488,7 @@ export const useUpdateTutorialStateMutation = (
               ...(variables.tutorialRatings ?? {}),
             },
             tutorialFeedback,
+            // Deloitte Custom Change: tour progress stored in MongoDB
             tutorialProgress: current?.tutorialProgress ?? {},
           }),
         );
@@ -1498,6 +1499,7 @@ export const useUpdateTutorialStateMutation = (
   );
 };
 
+// Deloitte Custom Change: tour progress stored in MongoDB
 /**
  * Saves one tour's progress. The cache is updated optimistically so the Academy reflects
  * the step immediately; a failed save is left as-is since the next step re-saves it.
