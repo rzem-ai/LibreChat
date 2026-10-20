@@ -84,3 +84,55 @@ have been dropped. Keep writers stopped, correct the reported problem, and rerun
 A later failure can leave a partial migration; rerunning safely completes it.
 Index builds may take time on large collections. Do not drop all indexes to
 resolve a failure.
+
+## Data retention migration/backfill scripts
+
+Six offline scripts back the data-retention program, each with a `--dry-run`
+mode and a corresponding `npm run migrate:<name>[:dry-run]` script:
+
+- `migrate:drop-retention-ttl` — swaps the native Mongo TTL index on
+  conversations for an app-owned one. Must run, with the purge worker already
+  live, before `migrate:conversation-retention` ever stamps an `expiredAt`.
+- `migrate:conversation-retention`, `migrate:file-retention`,
+  `migrate:agent-retention`, `migrate:skill-retention`,
+  `migrate:memory-retention` — backfill a `lastActivityAt`/`lastUsedAt` anchor
+  on rows that predate each field. Idempotent; safe to rerun.
+
+All six are non-destructive reads-then-writes, but `file-retention`,
+`agent-retention`, `skill-retention`, and `memory-retention` scan unindexed
+fields, so none of them should run as always-on, every-deploy automation.
+
+### Self-hosted / Docker Compose
+
+Same pattern as the tenant-index migration above:
+
+```sh
+docker compose stop api
+docker compose run --rm --no-deps -w /app api npm run migrate:<name>:dry-run
+docker compose run --rm --no-deps -w /app api npm run migrate:<name>
+docker compose up -d api
+```
+
+### Kubernetes (this repo's ArgoCD-deployed `charts/`)
+
+Each script also renders as a Kubernetes Job (`charts/templates/migration-jobs.yaml`,
+driven by the `migrationJobs` map in `charts/values.yaml`), reusing the deployed
+`librechat` image/Mongo secret — no separate image or `kubectl` access needed.
+ArgoCD is configured to **never** auto-run these on a normal sync
+(`argocd.argoproj.io/sync-options: Skip=true`); an operator triggers one
+deliberately:
+
+1. For `drop-retention-ttl`, first confirm the purge-worker-bearing `librechat`
+   Deployment is already `Healthy` in ArgoCD.
+2. In the ArgoCD UI, select the single `<release>-migrate-<name>` resource and
+   **Sync** it. With `dryRun: true` (the default), inspect the Job's pod logs
+   for the `DRY RUN RESULTS` JSON block.
+3. Open a PR flipping that job's `dryRun: false` in the relevant
+   `values-{env}.yaml`, merge, then repeat step 2 to do the real run. Inspect
+   `MIGRATION RESULTS` and the Job's exit code.
+4. Optionally flip `dryRun` back to `true` afterward so the chart's default
+   state always stays "safe to accidentally sync."
+
+`drop-retention-ttl` carries `hook-weight: "0"`; the five backfills carry
+`hook-weight: "1"`, so if more than one is ever synced in the same ArgoCD
+action, the TTL swap is ordered first.

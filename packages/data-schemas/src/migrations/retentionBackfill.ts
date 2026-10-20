@@ -1,6 +1,7 @@
 // Deloitte Custom Change: Retention Update
 import type { Connection, Types } from 'mongoose';
 import { DEFAULT_RETENTION_HOURS } from '~/utils/tempChatRetention';
+import logger from '~/config/winston';
 
 interface RetentionBackfillRow {
   _id: Types.ObjectId;
@@ -40,6 +41,12 @@ async function backfillCollection(
   const batchSize = options?.batchSize ?? MIGRATION_BATCH_SIZE;
   const dryRun = options?.dryRun === true;
 
+  logger.info('[ConversationRetentionMigration] Starting backfill', {
+    collectionName,
+    dryRun,
+    batchSize,
+  });
+
   let scanned = 0;
   let updated = 0;
   let batch: Array<{
@@ -62,6 +69,11 @@ async function backfillCollection(
       // eslint-disable-next-line no-restricted-syntax -- offline all-tenant migration intentionally bypasses request tenant scoping
       const result = await collection.bulkWrite(batch, { ordered: false });
       updated += result.modifiedCount;
+      logger.debug('[ConversationRetentionMigration] Flushed batch', {
+        collectionName,
+        batchUpdated: result.modifiedCount,
+        totalUpdated: updated,
+      });
       batch = [];
     }
   }
@@ -69,7 +81,19 @@ async function backfillCollection(
     // eslint-disable-next-line no-restricted-syntax -- offline all-tenant migration intentionally bypasses request tenant scoping
     const result = await collection.bulkWrite(batch, { ordered: false });
     updated += result.modifiedCount;
+    logger.debug('[ConversationRetentionMigration] Flushed batch', {
+      collectionName,
+      batchUpdated: result.modifiedCount,
+      totalUpdated: updated,
+    });
   }
+
+  logger.info('[ConversationRetentionMigration] Backfill complete', {
+    collectionName,
+    scanned,
+    updated,
+    dryRun,
+  });
 
   return { scanned, updated };
 }
@@ -90,6 +114,11 @@ export async function backfillConversationRetention(
 ): Promise<{ conversations: RetentionBackfillResult; messages: RetentionBackfillResult }> {
   const migrationRunTime = options?.now ?? new Date();
   const deadline = new Date(migrationRunTime.getTime() + DEFAULT_RETENTION_HOURS * 60 * 60 * 1000);
+
+  logger.info('[ConversationRetentionMigration] Starting backfill', {
+    dryRun: options?.dryRun === true,
+    deadline,
+  });
 
   const conversations = await backfillCollection(connection, 'conversations', deadline, options);
   const messages = await backfillCollection(connection, 'messages', deadline, options);

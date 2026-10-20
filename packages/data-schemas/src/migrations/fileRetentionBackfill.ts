@@ -1,5 +1,6 @@
 // Deloitte Custom Change: Retention Update
 import type { Connection, Types } from 'mongoose';
+import logger from '~/config/winston';
 
 interface FileRetentionBackfillRow {
   _id: Types.ObjectId;
@@ -40,6 +41,8 @@ export async function backfillFileRetention(
   const batchSize = options?.batchSize ?? MIGRATION_BATCH_SIZE;
   const dryRun = options?.dryRun === true;
 
+  logger.info('[FileRetentionMigration] Starting backfill', { dryRun, batchSize });
+
   let scanned = 0;
   let updated = 0;
   let batch: Array<{
@@ -63,6 +66,10 @@ export async function backfillFileRetention(
       // eslint-disable-next-line no-restricted-syntax -- offline all-tenant migration intentionally bypasses request tenant scoping
       const result = await collection.bulkWrite(batch, { ordered: false });
       updated += result.modifiedCount;
+      logger.debug('[FileRetentionMigration] Flushed batch', {
+        batchUpdated: result.modifiedCount,
+        totalUpdated: updated,
+      });
       batch = [];
     }
   }
@@ -70,7 +77,13 @@ export async function backfillFileRetention(
     // eslint-disable-next-line no-restricted-syntax -- offline all-tenant migration intentionally bypasses request tenant scoping
     const result = await collection.bulkWrite(batch, { ordered: false });
     updated += result.modifiedCount;
+    logger.debug('[FileRetentionMigration] Flushed batch', {
+      batchUpdated: result.modifiedCount,
+      totalUpdated: updated,
+    });
   }
+
+  logger.info('[FileRetentionMigration] Backfill complete', { scanned, updated, dryRun });
 
   return { scanned, updated };
 }
