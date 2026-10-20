@@ -15,7 +15,8 @@
       "element": "#create-prompt-button",
       "title": "Create prompt",
       "description": "Select Create prompt to open the fields for a new reusable prompt.",
-      "side": "right"
+      "side": "right",
+      "clickOnNext": ["#create-prompt-button"]
     },
     {
       "element": "#prompt-name",

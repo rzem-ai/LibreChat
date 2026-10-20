@@ -94,6 +94,8 @@ Add an object to `resources.json`. `type` decides what a click does:
    }
    ```
 
+   Steps whose target only exists after something is opened (a dialog or menu) are skipped when the target is missing. Add `"clickOnNext": ["#selector"]` to the step before them to click those selectors, in order, when Next is pressed.
+
    `element` is a CSS selector for the thing to highlight. `side` is `top`, `right`, `bottom` or `left`. Add `"comingSoon": true` (with `"steps": []`) to show a disabled card.
 
 2. Import it in `registry.ts` and add it to the `TOURS` array. Exactly one tour must have `"isGettingStartedTour": true`; it is shown first as the hero card.

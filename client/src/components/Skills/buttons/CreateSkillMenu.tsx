@@ -17,11 +17,13 @@ export default function CreateSkillMenu() {
   const items: MenuItemProps[] = useMemo(
     () => [
       {
+        id: 'create-skill-write',
         label: localize('com_ui_skill_write_instructions'),
         onClick: () => setWriteOpen(true),
         icon: <PenLine className="icon-md" aria-hidden="true" />,
       },
       {
+        id: 'create-skill-upload',
         label: localize('com_ui_skill_upload'),
         onClick: () => setUploadOpen(true),
         icon: <Upload className="icon-md" aria-hidden="true" />,

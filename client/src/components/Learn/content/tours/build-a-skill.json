@@ -15,7 +15,8 @@
       "element": "#create-skill-button",
       "title": "Select Write skill instructions",
       "description": "Select Write skill instructions",
-      "side": "right"
+      "side": "right",
+      "clickOnNext": ["#create-skill-button", "#create-skill-write"]
     },
     {
       "element": "#create-skill-name",
@@ -45,7 +46,8 @@
       "element": "#create-skill-button",
       "title": "Select Upload a Skill",
       "description": "Select Upload a Skills",
-      "side": "right"
+      "side": "right",
+      "clickOnNext": ["#create-skill-button", "#create-skill-upload"]
     },
     {
       "element": "#upload-skill-dropzone",
