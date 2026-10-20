@@ -17,7 +17,7 @@ export function gptPointReleaseFamily(model: string): string | undefined {
 export type Gpt6Tier = 'astra' | 'sol' | 'luna';
 
 const GPT6_TIERS: Record<string, Gpt6Tier> = { astra: 'astra', sol: 'sol', luna: 'luna' };
-const GPT6_TIER = /^gpt-6(?:\.\d+)?-(astra|sol|luna)(?=-|$)/i;
+const GPT6_TIER = /^gpt-6(?:\.\d+|[1-9])?-(astra|sol|luna)(?=-|$)/i;
 
 /** The GPT-6 tier of `model`, including point releases and snapshots (`gpt-6.1-sol-2026-10-01` → `sol`). */
 export function gpt6Tier(model?: string | null): Gpt6Tier | undefined {

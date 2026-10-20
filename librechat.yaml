@@ -355,6 +355,8 @@ endpoints:
       activityModel: 'gpt-6-luna'
       modelDisplayLabel: 'OpenAI'
       dropParams: [ 'stop', 'user', 'frequency_penalty', 'presence_penalty' ]
+      addParams:
+        useResponsesApi: true
       headers:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
@@ -371,6 +373,9 @@ endpoints:
           prompt: 2.5
           completion: 15
           context: 1050000
+        # Intentionally free: Luna is the cheap fallback model for users who have consumed their
+        # whole balance, so it must never be billed (an explicit 0 overrides the built-in rate).
+        # Real cost, for reference: prompt 0.1 / completion 0.5 (USD per 1M tokens).
         gpt-6-luna:
           prompt: 0
           completion: 0
