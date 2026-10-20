@@ -14,8 +14,8 @@ Status: proposal. Written against PR #1527 (`feature/learning-tasks-create-plan`
 
 ## Done in this PR (consistency only)
 
-- Every tour target is an element `id`, matching the existing tours (`#nav-panel-*`, `#toolbar-toggle-*`). No extra wrapper elements and no second convention.
-- Elements that had `useId` ids now use fixed ids: the prompt description, command and special-variables button (`prompt-description`, `prompt-command`, `special-variables-button`). Their labels reference the same constant, so the wiring is unchanged. This assumes one prompt form is mounted at a time.
+- Every tour target is an element `id` (three exceptions below), matching the existing tours (`#nav-panel-*`, `#toolbar-toggle-*`). No extra wrapper elements and no second convention.
+- Exception: the prompt description field, command field and special-variables button keep their `useId` ids (existing tests `PromptFieldIds` and `PromptDropdownIds` require unique ids when several prompt forms are mounted, so fixed ids fail CI). They carry `data-tour="prompt-description"`, `"prompt-command"` and `"special-variables"` instead, and the tour targets them with `[data-tour="…"]`.
 - `AgentSelect` uses `selectId="agent-select"`. The message list uses `id="chat-messages"` (`messages-view` is already taken by `SidePanelGroup`).
 - Share dialog ids (`share-search`, `share-role-picker`, `share-save-button`) are shared by prompts, skills and agents. Only one dialog is open at a time.
 - `clickOnNext` (schema + `useCourseTour`) opens a dialog or menu when Next is pressed.

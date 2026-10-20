@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useId, useState, useEffect } from 'react';
 import { Info } from 'lucide-react';
 import { Input } from '@librechat/client';
 import { useLocalize } from '~/hooks';
@@ -21,7 +21,7 @@ const Description = ({
   labelBgClassName?: string;
 }) => {
   const localize = useLocalize();
-  const descriptionId = 'prompt-description';
+  const descriptionId = useId();
   const [description, setDescription] = useState(initialValue || '');
   const [charCount, setCharCount] = useState(initialValue?.length || 0);
 
@@ -66,6 +66,7 @@ const Description = ({
             onChange={handleInputChange}
             className="peer w-full border-none pr-14"
             aria-label={localize('com_ui_description_placeholder')}
+            data-tour="prompt-description"
           />
           <label
             htmlFor={descriptionId}

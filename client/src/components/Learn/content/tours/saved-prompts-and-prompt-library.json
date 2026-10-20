@@ -37,19 +37,19 @@
       "side": "bottom"
     },
     {
-      "element": "#special-variables-button",
+      "element": "[data-tour=\"special-variables\"]",
       "title": "Add special variables",
       "description": "Select Special variables to insert dynamic details that update automatically when the prompt is used, such as the current date, current user, UTC date and time, or local date and time.",
       "side": "bottom"
     },
     {
-      "element": "#prompt-description",
+      "element": "[data-tour=\"prompt-description\"]",
       "title": "Add a description",
       "description": "Enter an optional description to explain what the prompt does and help users recognise when to use it.<br/><br/>Example: Creates a concise monthly project update for senior leaders, covering progress, decisions, risks and next steps.",
       "side": "bottom"
     },
     {
-      "element": "#prompt-command",
+      "element": "[data-tour=\"prompt-command\"]",
       "title": "Add a command",
       "description": "Enter an optional short command to quickly find and launch the prompt.<br/><br/>Example: Monthly Project Update",
       "side": "bottom"
