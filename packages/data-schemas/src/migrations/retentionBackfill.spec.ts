@@ -2,6 +2,9 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { backfillConversationRetention } from './retentionBackfill';
+import logger from '~/config/winston';
+
+logger.silent = true;
 
 let mongoServer: InstanceType<typeof MongoMemoryServer>;
 
