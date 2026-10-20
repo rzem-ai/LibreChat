@@ -68,6 +68,7 @@ jest.mock('~/utils/elements', () => ({
 
 jest.mock('../content/registry', () => ({
   GETTING_STARTED_COURSE_ID: 'getting-started-guide',
+  getCourse: () => undefined,
   getCourseSteps: () => FIXTURE_STEPS,
 }));
 

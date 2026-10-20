@@ -47,7 +47,7 @@ interface ApprovalContextValue {
    * Bumped whenever registrations or decisions change. Decisions live in refs
    * (synchronous reads), so this is what makes the context value a NEW reference
    * on each change; without it, consumers never re-render and never re-read
-   * `isReady`/`getLeadToolCallId` after an update.
+   * `isReady`/`getSubmitToolCallId` after an update.
    */
   version: number;
   /** Record (or clear) a card's decision for its tool_call within an action. */
@@ -73,9 +73,8 @@ interface ApprovalContextValue {
   /** Drop a tool_call's registration when its card unmounts, so a resolved/removed
    *  card can't keep `isReady` false and wedge the batch submit. */
   unregisterToolCall: (actionId: string, toolCallId: string) => void;
-  /** The first-registered tool_call for an action — the single card that owns
-   *  the batch submit button (avoids N buttons across sibling cards). */
-  getLeadToolCallId: (actionId: string) => string | undefined;
+  /** The final tool_call for an action — the card that owns the batch submit button. */
+  getSubmitToolCallId: (actionId: string) => string | undefined;
   /** Number of tool calls paused under an action (for a "1 of N" label). */
   getRegisteredCount: (actionId: string) => number;
   /** True once every registered tool_call in the action has a decision. */
@@ -119,7 +118,7 @@ const FALLBACK: ApprovalContextValue = {
   getDecisions: () => [],
   registerToolCall: () => undefined,
   unregisterToolCall: () => undefined,
-  getLeadToolCallId: () => undefined,
+  getSubmitToolCallId: () => undefined,
   getRegisteredCount: () => 0,
   isReady: () => false,
   getStatus: () => 'idle',
@@ -139,7 +138,7 @@ const isExpiredError = (error: unknown): boolean => {
  * Coordinates human-in-the-loop decisions for a single response message.
  *
  * An action may pause multiple tool calls (same `actionId`); each `ToolApproval`
- * card registers its `tool_call_id` and records a decision here, and the lead card
+ * card registers its `tool_call_id` and records a decision here, and the final card
  * submits ONCE with the full `decisions[]` covering every paused call (the server
  * rejects a partial batch).
  *
@@ -220,7 +219,7 @@ function ApprovalStateProvider({
       const counts = registeredRef.current.get(actionId) ?? new Map<string, number>();
       counts.set(toolCallId, (counts.get(toolCallId) ?? 0) + 1);
       registeredRef.current.set(actionId, counts);
-      /** A newly-registered call shifts the lead / "of N" count for sibling
+      /** A newly-registered call shifts the submit-card / "of N" count for sibling
        *  cards — re-render so they reflect it. */
       rerender();
     },
@@ -252,12 +251,14 @@ function ApprovalStateProvider({
     [rerender],
   );
 
-  const getLeadToolCallId = useCallback(
-    (actionId: string) =>
-      authoritativeRef.current.get(actionId)?.[0] ??
-      registeredRef.current.get(actionId)?.keys().next().value,
-    [],
-  );
+  const getSubmitToolCallId = useCallback((actionId: string) => {
+    const authoritative = authoritativeRef.current.get(actionId);
+    if (authoritative != null && authoritative.length > 0) {
+      return authoritative[authoritative.length - 1];
+    }
+    const registered = registeredRef.current.get(actionId);
+    return registered == null ? undefined : Array.from(registered.keys()).pop();
+  }, []);
 
   const getRegisteredCount = useCallback(
     (actionId: string) =>
@@ -376,7 +377,7 @@ function ApprovalStateProvider({
       getDecisions,
       registerToolCall,
       unregisterToolCall,
-      getLeadToolCallId,
+      getSubmitToolCallId,
       getRegisteredCount,
       isReady,
       getStatus,
@@ -395,7 +396,7 @@ function ApprovalStateProvider({
       getDecisions,
       registerToolCall,
       unregisterToolCall,
-      getLeadToolCallId,
+      getSubmitToolCallId,
       getRegisteredCount,
       isReady,
       getStatus,

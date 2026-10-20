@@ -25,7 +25,7 @@ const resourceIcons: Record<Resource['type'], GEL.IconName> = {
 
 export default function Resources({ onOpenArticle }: ResourcesProps): JSX.Element {
   const localize = useLocalize();
-  const { startGettingStartedTour } = useLearningTour();
+  const { startCourseTour } = useLearningTour();
   const typeLabels = {
     tour: localize('com_learning_type_tour'),
     article: localize('com_learning_type_article'),
@@ -42,7 +42,9 @@ export default function Resources({ onOpenArticle }: ResourcesProps): JSX.Elemen
       external: localize('com_learning_action_external', { 0: resource.title }),
     }[resource.type];
     const onSelect =
-      resource.type === 'article' ? () => onOpenArticle(resource.id) : startGettingStartedTour;
+      resource.type === 'article'
+        ? () => onOpenArticle(resource.id)
+        : () => startCourseTour(resource.id);
 
     return (
       <ResourceCard

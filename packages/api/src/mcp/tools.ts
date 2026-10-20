@@ -9,15 +9,28 @@ import {
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import type { JsonSchemaType } from '@librechat/agents';
 import type { LCAvailableTools, LCFunctionTool, ParsedServerConfig } from './types';
-import { canUseAppConnection, requiresEphemeralUserConnection } from './utils';
+import {
+  canUseAppConnection,
+  hasRuntimeUrlPlaceholders,
+  requiresEphemeralUserConnection,
+} from './utils';
 import { getMCPAppToolsPublicationGeneration } from './toolsChanged';
 import { normalizeJsonSchema, resolveJsonSchemaRefs } from './zod';
 
 export type MCPToolInput = Pick<Tool, 'name' | 'description' | '_meta'> &
-  Partial<Pick<Tool, 'inputSchema'>> & {
-    /** Deloitte Custom Change: Gateway class supplied by callers that already resolved tool metadata. */
-    toolClass?: unknown;
-  };
+  Partial<Pick<Tool, 'inputSchema'>>;
+
+/** [Deloitte: Trust authorization classes only from opted-in operator gateways.]
+ * @param config - Effective MCP server configuration and provenance.
+ * @returns Whether classifications from this configured server may drive approval enforcement.
+ */
+export function trustsToolClassification(config: ParsedServerConfig | undefined): boolean {
+  return (
+    config?.trustedToolClassification === true &&
+    (config.source === 'yaml' || config.source === 'config') &&
+    !hasRuntimeUrlPlaceholders(config)
+  );
+}
 
 export interface MCPToolCacheDeps {
   getCachedTools: (options?: {
@@ -88,8 +101,17 @@ export interface MCPToolCacheService {
   ) => Promise<LCAvailableTools | null>;
 }
 
-/** Converts an MCP tools/list response into LibreChat's server-qualified catalog format. */
-export function formatMCPServerTools(serverName: string, tools: MCPToolInput[]): LCAvailableTools {
+/** Converts an MCP tools/list response into LibreChat's server-qualified catalog format.
+ * @param serverName - Configured MCP server name used in runtime tool keys.
+ * @param tools - Tools returned by the MCP server.
+ * @param serverConfig - Effective configuration that establishes classification provenance.
+ * @returns Server-qualified tool definitions, including only trusted classifications.
+ */
+export function formatMCPServerTools(
+  serverName: string,
+  tools: MCPToolInput[],
+  serverConfig?: ParsedServerConfig,
+): LCAvailableTools {
   const serverTools: LCAvailableTools = {};
   const keyServerName = normalizeServerName(serverName);
   const keyToolNames = stripServerNamePrefixes(
@@ -99,10 +121,12 @@ export function formatMCPServerTools(serverName: string, tools: MCPToolInput[]):
   for (const tool of tools) {
     const keyToolName = keyToolNames.get(tool.name) ?? tool.name;
     const name = `${keyToolName}${Constants.mcp_delimiter}${keyServerName}`;
-    // Deloitte Custom Change: validate every class at the persistence boundary,
-    // including caller-supplied values, before approval metadata can consume it.
-    const toolClass =
-      getMCPToolClass({ 'tool-class': tool.toolClass }) ?? getMCPToolClass(tool._meta);
+    // Tool classification is an authorization input and is trusted only from the
+    // MCP server's tools/list metadata, never from a caller-supplied cache field.
+    // Deloitte Custom Change: An authorization class is accepted only from an explicitly trusted gateway.
+    const toolClass = trustsToolClassification(serverConfig)
+      ? getMCPToolClass(tool._meta)
+      : undefined;
     const entry: LCFunctionTool = {
       type: 'function',
       ['function']: {
@@ -265,10 +289,9 @@ export function createMCPToolCacheService(deps: MCPToolCacheDeps): MCPToolCacheS
         logger.debug('[MCP Cache] No tools to update');
         return {};
       }
-      /** Cache keys are model-facing and must match runtime tool instance names. */
-      const serverTools = formatMCPServerTools(serverName, tools);
-
       const resolvedConfig = await resolveCacheConfig(userId, serverName, serverConfig);
+      /** Cache keys are model-facing and must match runtime tool instance names. */
+      const serverTools = formatMCPServerTools(serverName, tools, resolvedConfig);
       const configGeneration = resolvedConfig
         ? getMCPAppToolsPublicationGeneration(resolvedConfig)
         : undefined;
@@ -535,6 +558,33 @@ export function createMCPToolCacheService(deps: MCPToolCacheDeps): MCPToolCacheS
     return changed ? next : tools;
   }
 
+  /** [Deloitte: Remove authorization classes from cached tools without trusted provenance.]
+   * @param tools - Cached tool definitions loaded for one MCP server.
+   * @param config - Effective MCP configuration used to validate classification provenance.
+   * @returns The original trusted catalog or a copy with untrusted classes removed.
+   */
+  function removeUntrustedToolClasses(
+    tools: LCAvailableTools | null,
+    config: ParsedServerConfig | undefined,
+  ): LCAvailableTools | null {
+    if (tools == null || trustsToolClassification(config)) {
+      return tools;
+    }
+
+    let changed = false;
+    const sanitized: LCAvailableTools = {};
+    for (const [name, entry] of Object.entries(tools)) {
+      if (entry['function'].toolClass == null) {
+        sanitized[name] = entry;
+        continue;
+      }
+      const { toolClass: _toolClass, ...definition } = entry['function'];
+      sanitized[name] = { ...entry, ['function']: definition };
+      changed = true;
+    }
+    return changed ? sanitized : tools;
+  }
+
   async function getMCPServerTools(
     userId: string,
     serverName: string,
@@ -554,7 +604,10 @@ export function createMCPToolCacheService(deps: MCPToolCacheDeps): MCPToolCacheS
         if (serverTools == null) {
           return null;
         }
-        return normalizeCachedToolKeys(serverTools, serverName);
+        return removeUntrustedToolClasses(
+          normalizeCachedToolKeys(serverTools, serverName),
+          resolvedConfig,
+        );
       }
       const configGeneration = resolvedConfig
         ? getMCPAppToolsPublicationGeneration(resolvedConfig)
@@ -563,7 +616,10 @@ export function createMCPToolCacheService(deps: MCPToolCacheDeps): MCPToolCacheS
       if (!cached) {
         return null;
       }
-      return normalizeCachedToolKeys(cached, serverName);
+      return removeUntrustedToolClasses(
+        normalizeCachedToolKeys(cached, serverName),
+        resolvedConfig,
+      );
     } catch {
       logger.error('[MCP Cache] Error fetching cached server tools');
       return null;

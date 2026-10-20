@@ -34,7 +34,7 @@ interface TourOptions {
 // Extra data carried alongside driver.js's own DriveStep fields — driver.js
 // hands the same step object back to onHighlightStarted, so this survives
 // the round trip without needing an index to look it up by.
-type EngineStep = DriveStep & Pick<TourStep, 'expandSidebarBefore'>;
+type EngineStep = DriveStep & Pick<TourStep, 'expandSidebarBefore' | 'clickOnNext'>;
 
 function toEngineStep(step: TourStep): EngineStep {
   return {
@@ -45,7 +45,27 @@ function toEngineStep(step: TourStep): EngineStep {
       side: step.side,
     },
     expandSidebarBefore: step.expandSidebarBefore,
+    clickOnNext: step.clickOnNext,
   };
+}
+
+const CLICK_WAIT_MS = 600;
+const CLICK_POLL_MS = 50;
+
+const waitForElement = async (selector: string): Promise<HTMLElement | null> => {
+  const deadline = Date.now() + CLICK_WAIT_MS;
+  let element = document.querySelector<HTMLElement>(selector);
+  while (element == null && Date.now() < deadline) {
+    await new Promise((resolve) => window.setTimeout(resolve, CLICK_POLL_MS));
+    element = document.querySelector<HTMLElement>(selector);
+  }
+  return element;
+};
+
+async function clickInOrder(selectors: string[]): Promise<void> {
+  for (const selector of selectors) {
+    (await waitForElement(selector))?.click();
+  }
 }
 
 export default function useCourseTour(
@@ -137,9 +157,12 @@ export default function useCourseTour(
               nextLabel={nextLabel}
               canGoPrevious={canGoPrevious}
               onPrevious={() => driverInstance.movePrevious()}
-              onNext={() => {
+              onNext={async () => {
                 if (driverInstance.isLastStep()) {
                   completedFromLastStepNext = true;
+                }
+                if (step.clickOnNext) {
+                  await clickInOrder(step.clickOnNext);
                 }
                 driverInstance.moveNext();
               }}

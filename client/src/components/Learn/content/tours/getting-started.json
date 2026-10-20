@@ -44,7 +44,7 @@
     {
       "element": "#toolbar-toggle-skills, #tools-dropdown-button",
       "title": "Skills",
-      "description": "Skills are automatically enabled by default.<br/><br/>Skills are instruction files which give the AI access to repeatable patterns. If a skill is enabled, the AI will auto-select it when you send a relevant query.<br/><br/>For example, if you ask the AI to summarise a meeting, you may see the meeting-summariser skill get called.",
+      "description": "Skills are automatically enabled by default.<br/><br/>Skills are specialised instruction files that provide the AI with expertise for specific tasks and actions. If a skill is enabled, MyAssist will automatically use it when it can help with your request or the action you want to complete.<br/><br/>For example, if you ask the AI to summarise a meeting, you may see the meeting-summariser skill appear while your response or action is being generated.",
       "side": "top"
     },
     {
@@ -107,7 +107,7 @@
     {
       "element": "#nav-panel-skills",
       "title": "Skill Library",
-      "description": "This is where you can create, edit and share skills. Skills are reusable instruction files that help the AI follow repeatable patterns.",
+      "description": "This is where you can create, edit and share skills. Skills are specialised instruction files that provide the AI with expertise for specific tasks and actions.",
       "side": "right"
     },
     {

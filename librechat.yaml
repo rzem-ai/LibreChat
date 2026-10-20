@@ -373,41 +373,37 @@ endpoints:
           prompt: 5
           completion: 30
           context: 1050000
-
     # --- VertexAI / Google (us-central1) ---
+    # Gemini 2.5 models removed. Re-enable by uncommenting and adding models
+    # (a custom endpoint needs at least one entry in models.default).
     # OpenAI-compatible endpoint, model names use google/ prefix
-    - name: 'VertexAI US'
-      apiKey: 'dummy'
-      baseURL: '${BASE_URL_VERTEXAI}'
-      models:
-        default:
-          - 'google/gemini-2.5-flash'
-          - 'google/gemini-2.5-pro'
-        fetch: false
-      titleConvo: true
-      titleModel: 'google/gemini-2.5-flash'
-      modelDisplayLabel: 'Gemini'
-      dropParams: [ 'stop', 'user', 'frequency_penalty', 'presence_penalty' ]
-      headers:
-        x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
-        Content-Type: 'application/json'
-      # Deloitte Custom Change: gateway has native web search disabled for Gemini; the empty list
-      # is load-bearing — deleting this key would show a Web Search pill that errors.
-      nativeWebSearch:
-        supportedModels: []
-      # Deloitte Custom Change: pricing used for real token billing and the relative-cost
-      # tier in the model tooltip. Prices are USD per 1M tokens; context is in tokens.
-      tokenConfig:
-        google/gemini-2.5-flash:
-          prompt: 0.3
-          completion: 2.5
-          context: 1000000
-        google/gemini-2.5-pro:
-          prompt: 1.25
-          completion: 10
-          context: 1000000
+    # - name: 'VertexAI US'
+    #   apiKey: 'dummy'
+    #   baseURL: '${BASE_URL_VERTEXAI}'
+    #   models:
+    #     default:
+    #       - 'google/<model>'
+    #     fetch: false
+    #   titleConvo: true
+    #   titleModel: 'google/<model>'
+    #   modelDisplayLabel: 'Gemini'
+    #   dropParams: [ 'stop', 'user', 'frequency_penalty', 'presence_penalty' ]
+    #   headers:
+    #     # same gateway identity-token header as the other custom endpoints above
+    #     Content-Type: 'application/json'
+    #   # Deloitte Custom Change: gateway has native web search disabled for Gemini; the empty list
+    #   # is load-bearing — deleting this key would show a Web Search pill that errors.
+    #   nativeWebSearch:
+    #     supportedModels: []
+    #   # Deloitte Custom Change: pricing used for real token billing and the relative-cost
+    #   # tier in the model tooltip. Prices are USD per 1M tokens; context is in tokens.
+    #   tokenConfig:
+    #     google/<model>:
+    #       prompt: <usd per 1M>
+    #       completion: <usd per 1M>
+    #       context: <tokens>
 
-  # Anthropic Regional models use Bedrock's native API and inference-profile IDs.
+    # Anthropic Regional models use Bedrock's native API and inference-profile IDs.
   bedrock:
     regional: true
     modelDisplayLabel: 'Anthropic Australia'
@@ -540,42 +536,6 @@ modelSpecs:
           webSearch: true
           imageGeneration: false
 
-    - name: 'vertexai-us-gemini-2-5-flash'
-      label: 'Gemini 2.5 Flash'
-      group: 'Gemini Global'
-      groupIcon: 'google'
-      iconURL: 'google'
-      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata to
-      # populate details.speed/intelligence above.
-      artificialAnalysisBenchmarkModelName: 'gemini-2-5-flash'
-      preset:
-        endpoint: 'VertexAI US'
-        model: 'google/gemini-2.5-flash'
-        promptPrefix: *deloitteSystemPrompt
-      details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        supports:
-          webSearch: false
-          imageGeneration: false
-
-    - name: 'vertexai-us-gemini-2-5-pro'
-      label: 'Gemini 2.5 Pro'
-      group: 'Gemini Global'
-      iconURL: 'google'
-      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
-      artificialAnalysisBenchmarkModelName: 'gemini-2-5-pro'
-      preset:
-        endpoint: 'VertexAI US'
-        model: 'google/gemini-2.5-pro'
-        promptPrefix: *deloitteSystemPrompt
-      details:
-        speed: 4 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        supports:
-          webSearch: false
-          imageGeneration: false
-
     - name: 'anthropic-claude-haiku-4-5'
       label: 'Claude Haiku 4.5'
       group: 'Anthropic Global'
@@ -624,7 +584,7 @@ modelSpecs:
         promptPrefix: *deloitteSystemPrompt
       details:
         speed: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -710,7 +670,7 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-opus-5-5'
       details:
-        speed: 4 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        speed: 3 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
         intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
         supports:
           webSearch: true
@@ -797,7 +757,7 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-opus-5-5'
       details:
-        speed: 4 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        speed: 3 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
         intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
         supports:
           webSearch: true
@@ -817,6 +777,8 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=ibis'
+    # Trust classifications from operator-managed ClearTrack gateways.
+    trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     iconPath: '/assets/mcp/ibisworld.png' # same logo in both themes
@@ -826,6 +788,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=afr'
+    trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     iconPath: '/assets/mcp/afr.png' # same logo in both themes
@@ -835,6 +798,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=kx'
+    trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     iconPathLight: '/assets/mcp/kx-light.png'
@@ -845,6 +809,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=desc'
+    trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     iconPathLight: '/assets/mcp/deloitte-light.png' # placeholder: no dedicated DESC logo yet
@@ -855,6 +820,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=gims'
+    trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     iconPathLight: '/assets/mcp/deloitte-light.png' # placeholder: no dedicated GIMS logo yet
@@ -865,6 +831,7 @@ mcpServers: # https://www.librechat.ai/docs/features/mcp
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=sharepoint'
+    trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     # Deloitte Custom Change: Only this trusted tool may receive current-request attachment bytes.

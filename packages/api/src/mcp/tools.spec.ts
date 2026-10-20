@@ -505,6 +505,13 @@ describe('createMCPToolCacheService', () => {
         const result = await createMCPToolCacheService(deps).updateMCPServerTools({
           userId: 'u1',
           serverName: 'gateway',
+          // Deloitte Custom Change: Exercise classification under explicit operator trust.
+          serverConfig: {
+            source: 'yaml',
+            type: 'http',
+            url: '${MCP_GATEWAY_URL}/mcp',
+            trustedToolClassification: true,
+          } satisfies ParsedServerConfig,
           tools: [{ name: 'write', _meta: { 'tool-class': 'W2' } }],
         });
 
@@ -525,17 +532,80 @@ describe('createMCPToolCacheService', () => {
         expect(result?.[writeKey]['function'].toolClass).toBeUndefined();
       });
 
-      /** Deloitte Custom Change: caller-supplied classes are also validated before caching. */
-      it('drops an invalid caller-supplied gateway tool class', async () => {
+      // Deloitte Custom Change: Untrusted MCP metadata cannot activate authorization behavior.
+      it('drops valid-looking classes from servers without operator trust', async () => {
+        const result = await createMCPToolCacheService(createMockDeps()).updateMCPServerTools({
+          userId: 'u1',
+          serverName: 'gateway',
+          tools: [{ name: 'write', _meta: { 'tool-class': 'W2' } }],
+        });
+
+        expect(result?.[writeKey]['function'].toolClass).toBeUndefined();
+      });
+
+      // Deloitte Custom Change: User-managed MCP configuration cannot assert gateway provenance.
+      it('rejects opt-in metadata from user-sourced servers', async () => {
+        const result = await createMCPToolCacheService(createMockDeps()).updateMCPServerTools({
+          userId: 'u1',
+          serverName: 'gateway',
+          serverConfig: {
+            source: 'user',
+            type: 'http',
+            url: 'https://gateway.example.test',
+            trustedToolClassification: true,
+          } satisfies ParsedServerConfig,
+          tools: [{ name: 'write', _meta: { 'tool-class': 'W2' } }],
+        });
+
+        expect(result?.[writeKey]['function'].toolClass).toBeUndefined();
+      });
+
+      // Deloitte Custom Change: Legacy cache entries cannot bypass the provenance check.
+      it('strips classes persisted before the server became untrusted', async () => {
+        const cachedTools: LCAvailableTools = {
+          [writeKey]: {
+            type: 'function',
+            function: {
+              name: writeKey,
+              description: '',
+              parameters: { type: 'object', properties: {} },
+              toolClass: 'W2',
+            },
+          },
+        };
+        const deps = createMockDeps({
+          getServerConfig: jest.fn().mockResolvedValue(cacheableConfig),
+          getCachedAppServerTools: jest.fn().mockResolvedValue(cachedTools),
+        });
+
+        const result = await createMCPToolCacheService(deps).getMCPServerTools('u1', 'gateway');
+
+        expect(result?.[writeKey]['function'].toolClass).toBeUndefined();
+      });
+
+      // [Deloitte: Verify only trusted server metadata supplies authorization classifications.]
+      it('ignores caller-supplied classes, including conflicting valid values', async () => {
         const deps = createMockDeps();
 
         const result = await createMCPToolCacheService(deps).updateMCPServerTools({
           userId: 'u1',
           serverName: 'gateway',
-          tools: [{ name: 'write', toolClass: 'unsafe' }],
+          serverConfig: {
+            source: 'yaml',
+            type: 'http',
+            url: 'https://gateway.example.test',
+            trustedToolClassification: true,
+          } satisfies ParsedServerConfig,
+          tools: [
+            {
+              name: 'write',
+              toolClass: 'W2',
+              _meta: { 'tool-class': 'R1' },
+            } as MCPToolInput & { toolClass: unknown },
+          ],
         });
 
-        expect(result?.[writeKey]['function'].toolClass).toBeUndefined();
+        expect(result?.[writeKey]['function'].toolClass).toBe('R1');
       });
     });
 

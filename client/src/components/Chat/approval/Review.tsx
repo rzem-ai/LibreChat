@@ -194,7 +194,10 @@ export const PendingToolApprovalPanel = memo(function PendingToolApprovalPanel({
             >
               {status === 'submitting'
                 ? localize('com_ui_submitting')
-                : localize('com_ui_continue')}
+                : localize('com_ui_submit_decisions_progress', {
+                    0: decisions.length,
+                    1: reviews.length,
+                  })}
             </Button>
           </div>
         </div>
