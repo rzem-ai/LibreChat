@@ -31,7 +31,7 @@
       "side": "top"
     },
     {
-      "element": "[data-tour=\"messages-view\"]",
+      "element": "#chat-messages",
       "title": "Review the request",
       "description": "Check that MyAssist used the selected Connector and that the response meets your needs.",
       "side": "left"

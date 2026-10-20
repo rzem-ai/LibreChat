@@ -25,7 +25,7 @@ export default function AutoSendPrompt({
       onClick={() => handleCheckedChange(!autoSendPrompts)}
       aria-label={localize('com_nav_auto_send_prompts')}
       aria-pressed={autoSendPrompts}
-      data-tour="auto-send-prompts-toggle"
+      id="auto-send-prompts-toggle"
       className={`relative h-9 w-full gap-2 rounded-lg border-border-light font-medium ${autoSendPrompts ? 'bg-surface-hover hover:bg-surface-hover' : ''}`}
     >
       <Checkbox

@@ -81,8 +81,7 @@ export default function AccessRolesPicker({
         setIsOpen={setIsOpen}
         trigger={
           <Ariakit.MenuButton
-            id={id}
-            data-tour="share-role-picker"
+            id={id ?? 'share-role-picker'}
             aria-label={
               ariaLabel || selectedRoleInfo?.description || localize('com_ui_role_select')
             }

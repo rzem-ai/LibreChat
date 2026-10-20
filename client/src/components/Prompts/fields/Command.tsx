@@ -1,4 +1,4 @@
-import { useId, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '@librechat/client';
 import { SquareSlash } from 'lucide-react';
 import { Constants } from 'librechat-data-provider';
@@ -20,7 +20,7 @@ const Command = ({
   labelBgClassName?: string;
 }) => {
   const localize = useLocalize();
-  const commandId = useId();
+  const commandId = 'prompt-command';
   const [command, setCommand] = useState(initialValue || '');
   const [charCount, setCharCount] = useState(initialValue?.length || 0);
 
@@ -66,7 +66,6 @@ const Command = ({
             onChange={handleInputChange}
             className="peer w-full border-none pr-14"
             aria-label={localize('com_ui_command_placeholder')}
-            data-tour="prompt-command"
           />
           <label
             htmlFor={commandId}

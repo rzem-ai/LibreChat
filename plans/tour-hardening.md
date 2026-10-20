@@ -10,18 +10,19 @@ Status: proposal. Written against PR #1527 (`feature/learning-tasks-create-plan`
    - driver.js measures with `animate: false` while dialogs are still animating in.
    - Modal dialogs (Radix) carry their own overlay, z-index and focus trap, and block pointer events outside themselves, so the spotlight and tour card can sit behind them or not be clickable.
    - Targets in scrolling or portalled containers are measured before layout settles.
-4. **Mixed selector conventions.** Tour targets were a mix of app `id`s, `useId` ids, `data-testid` and `data-tour`.
+4. **Mixed selector conventions.** Tour targets were a mix of app ids, `useId` ids and `data-testid`. Now all ids.
 
 ## Done in this PR (consistency only)
 
-- Every tour-specific target is a `data-tour="<name>"` attribute. App ids that already existed (`#nav-panel-*`, `#prompt-name`, `#create-skill-name`, `#prompt-textarea`, toolbar toggles) are used as-is.
-- Exceptions kept as ids because they are menu items without attribute passthrough: `#create-skill-write`, `#create-skill-upload`.
-- `AgentSelect` is wrapped in `<div data-tour="agent-select">` because `ControlCombobox` cannot take extra attributes.
+- Every tour target is an element `id`, matching the existing tours (`#nav-panel-*`, `#toolbar-toggle-*`). No extra wrapper elements and no second convention.
+- Elements that had `useId` ids now use fixed ids: the prompt description, command and special-variables button (`prompt-description`, `prompt-command`, `special-variables-button`). Their labels reference the same constant, so the wiring is unchanged. This assumes one prompt form is mounted at a time.
+- `AgentSelect` uses `selectId="agent-select"`. The message list uses `id="chat-messages"` (`messages-view` is already taken by `SidePanelGroup`).
+- Share dialog ids (`share-search`, `share-role-picker`, `share-save-button`) are shared by prompts, skills and agents. Only one dialog is open at a time.
 - `clickOnNext` (schema + `useCourseTour`) opens a dialog or menu when Next is pressed.
 
 ## Proposed work
 
-1. **One convention, one source of truth.** Keep `data-tour` for tour-specific targets. Add a typed `TOUR_TARGETS` map (in `Learn/content`) and a `tourTarget(name)` helper used by components, so a typo is a type error. Add a Jest test that every `data-tour` name in `tours/*.json` exists in component source.
+1. **Guard the ids.** Add a Jest test that every `#id` in `tours/*.json` exists in component source, so a renamed or removed target fails CI. Optionally a typed `TOUR_TARGETS` map shared by components and tours.
 2. **Never skip silently.** Set `skipMissingElement: false`. When a target is missing, show the step's text as a centred card (a driver.js step with no `element`), so the counter never jumps and the instruction is still shown.
 3. **Prepare steps, don't assume state.** Extend `clickOnNext` into a small `prepare` contract per step (click, wait-for, navigate). Steps that need a selected prompt/skill or a sent message should say so in the previous step or be split into their own short tour.
 4. **Fix the spotlight.**

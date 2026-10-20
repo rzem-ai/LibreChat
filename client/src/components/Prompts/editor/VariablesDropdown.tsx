@@ -27,7 +27,7 @@ export default function VariablesDropdown({
   portal = true,
 }: VariablesDropdownProps) {
   const menuId = useId();
-  const triggerId = `${menuId}-button`;
+  const triggerId = 'special-variables-button';
   const localize = useLocalize();
   const methods = useFormContext();
   const { setValue, getValues, watch } = methods;
@@ -120,7 +120,6 @@ export default function VariablesDropdown({
             id={triggerId}
             onMouseDown={(e) => e.preventDefault()}
             aria-label={localize('com_ui_add_special_variables')}
-            data-tour="special-variables"
             className={`group flex h-8 items-center gap-1.5 rounded-lg bg-transparent px-2 text-sm ${buttonClass}`}
           >
             <Sparkles className="size-3.5 text-text-secondary" aria-hidden="true" />

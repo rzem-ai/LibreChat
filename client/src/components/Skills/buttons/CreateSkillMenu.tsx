@@ -47,7 +47,7 @@ export default function CreateSkillMenu() {
             render={
               <Ariakit.MenuButton
                 aria-label={createLabel}
-                data-tour="create-skill-button"
+                id="create-skill-button"
                 className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border-light bg-transparent text-text-primary transition-colors hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary"
               >
                 <Plus className="size-4" aria-hidden="true" />
