@@ -442,6 +442,8 @@ export const registry: SettingEntry[] = [
     tab: CHAT,
     section: 'conversations',
     labelKey: 'com_nav_default_temporary_chat',
+    // Deloitte Custom Change: only show the default when temporary chat is permitted.
+    show: (ctx) => ctx.temporaryChatEnabled,
     Component: toggleControl({
       stateAtom: store.defaultTemporaryChat,
       localizationKey: 'com_nav_default_temporary_chat',
@@ -627,6 +629,8 @@ export const registry: SettingEntry[] = [
     tab: DATA,
     section: 'data',
     labelKey: 'com_ui_settings_label_import',
+    // Deloitte Custom Change: hide conversation import when chat sharing is disabled by deployment.
+    show: (ctx) => ctx.sharedLinksEnabled,
     Component: ImportConversations,
   },
   {
@@ -634,6 +638,8 @@ export const registry: SettingEntry[] = [
     tab: DATA,
     section: 'data',
     labelKey: 'com_ui_settings_label_shared_links',
+    // Deloitte Custom Change: hide the shared-chat manager when sharing is disabled.
+    show: (ctx) => ctx.sharedLinksEnabled,
     Component: SharedLinks,
   },
   {
@@ -687,7 +693,8 @@ export const registry: SettingEntry[] = [
     section: 'langfuse',
     labelKey: 'com_ui_langfuse_title',
     keywords: ['langfuse', 'observability', 'tracing', 'telemetry', 'traces'],
-    show: (ctx) => ctx.langfuseConnectionAccess,
+    // Deloitte Custom Change: hide the connection from non-admins.
+    show: (ctx) => ctx.isAdmin && ctx.langfuseConnectionAccess,
     Component: LangfuseConnection,
   },
   // Deloitte Custom Change: `dataDangerZone` controls the Data controls Danger zone settings.
