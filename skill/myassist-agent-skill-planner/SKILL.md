@@ -185,20 +185,36 @@ Apply this internal framework:
 
 **Agent-level tools and connectors:**
 
-- Tools and connectors are configured at the Agent level, not on individual Skills.
+- Tools and connectors can be configured on an Agent, or enabled in general chat when the FAQ confirms session-level availability.
 - A Skill cannot activate a tool or connector on its own.
-- If a model-invoked Skill needs a connector, enable it on the Agent before the Skill is selected.
-- List each Skill's tool/connector requirements in the plan so users know what to enable on the Agent.
+- For a Skill used through an Agent, enable its required tools and connectors on that Agent.
+- For a Skill used directly in general chat, list the specific supported tools or connectors the user must enable in their chat.
 
 **Present draft recommendation and diagram:**
 
 Once scope is clear and feasibility is validated, immediately present:
 
 1. **Draft recommendation** (in chat):
-   - **Recommendation:** [Agent only / Agent + 1 Skill / Agent + multiple Skills]
-   - **What to build:** [One sentence describing the complete workflow]
-   - **Why:** [No more than two short sentences based on the user's answers]
-   - **Feasibility notes:** [Only material constraints, unavailable capabilities, or agreed alternatives. Omit if everything is feasible.]
+    - **Recommendation:** [Agent only / Agent + 1 Skill / Agent + multiple Skills]
+    - **What to build:** [One sentence describing the complete workflow]
+    - **Why:** [No more than two short sentences based on the user's answers]
+    - **Feasibility notes:** [Only material constraints, unavailable capabilities, or agreed alternatives. Omit if everything is feasible.]
+    - **Standalone Skill tip:** [Include only when the conditions below are met; otherwise omit this item.]
+
+**Standalone Skill tip:**
+
+Show this tip only when the recommendation is **Agent + 1 Skill** and the confirmed design:
+- Does not need reference documents or a persistent knowledge source configured for an Agent. Files supplied by the user as input for each run do not count as reference documents.
+- Does not need persistent Agent-specific setup beyond the Skill's own instructions, such as a custom persona, model choice, or Agent instructions that apply outside this task.
+- Has enough confirmed detail to know that running the Skill directly in general chat is feasible.
+
+If any condition is false or unclear, omit the tip. Do not ask extra questions just to decide whether to show it.
+
+When the conditions are met, say:
+
+**Tip:** This task doesn't need reference documents or a custom assistant set-up, so you could create it as a Skill on its own with MyAssist Skill Builder.
+
+If the design needs tools or connectors that the FAQ confirms users can enable in general chat, add: `Before using it, turn on [name each required tool or connector] in your chat.` Name only the confirmed requirements. If a required capability is available only through an Agent, omit the tip.
 
 2. **Architecture diagram** (automatic artifact):
    - Read the appropriate diagram template.
