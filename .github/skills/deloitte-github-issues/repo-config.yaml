@@ -6,8 +6,8 @@ github:
   account: Deloitte-Australia
 
 labels:
-  bug: "🐛bug"
-  enhancement: "✨enhancement"
+  bug: "🐛 bug"
+  enhancement: "✨ enhancement"
 
 assignees:
   Alleena: alwaseem_deloitte

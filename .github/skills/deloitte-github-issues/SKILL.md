@@ -2,7 +2,7 @@
 name: deloitte-github-issues
 description: >
   Create GitHub issues in Deloitte-Australia/tt-librechat using the
-  repository-specific configuration defined in repo_config.yaml.
+  repository-specific configuration defined in repo-config.yaml.
 ---
 
 # Deloitte GitHub Issue Creator
@@ -11,7 +11,7 @@ Create and manage GitHub issues for `Deloitte-Australia/tt-librechat`.
 
 ## Required Reference
 
-Read `repo_config.yaml` before doing anything else.
+Read `repo-config.yaml` before doing anything else.
 
 It is the authoritative source for:
 
@@ -20,7 +20,6 @@ It is the authoritative source for:
 - assignee mappings
 - expertise mappings
 - epic definitions
-- routing rules
 - GitHub account configuration
 
 Do not invent values when configuration exists.
@@ -45,7 +44,7 @@ If the user specifies a count that does not match the supplied rows, stop and as
 
 ## Step 2 - Load configuration
 
-Read `repo_config.yaml`.
+Read `repo-config.yaml`.
 
 Normalise:
 
@@ -68,9 +67,8 @@ If the user explicitly specifies an epic:
 If no epic is specified:
 
 1. Compare the issue title and description against epic keywords.
-2. Apply any matching routing rule.
-3. Select the most appropriate epic.
-4. Explain the routing decision.
+2. Select the most appropriate epic.
+3. Explain the routing decision.
 
 If multiple epics are plausible:
 
@@ -89,10 +87,9 @@ If the user specifies an assignee:
 
 If the user does not specify an assignee:
 
-1. Check applicable routing rules.
-2. Use the epic default assignee.
-3. Use expertise mappings to determine whether another configured specialist is a stronger fit.
-4. Recommend the specialist and explain why.
+1. Use the epic default assignee.
+2. Use expertise mappings to determine whether another configured specialist is a stronger fit.
+3. Recommend the specialist and explain why.
 
 If a user-supplied assignee cannot be found in configuration:
 
@@ -104,19 +101,16 @@ Never guess GitHub usernames.
 
 ## Step 5 - Normalize labels
 
-Apply the configured label aliases.
+Resolve each requested label against the `labels` section of `repo-config.yaml`.
 
-Examples:
+- Match case-insensitively on the config key (for example `bug`, `Bug` and `BUG` all resolve to `bug`).
+- Apply the mapped value exactly as written, including emoji and spacing (for example `bug` → `🐛 bug`).
+- Apply only labels that exist in the config.
 
-- Alpha → alpha patch
-- Alpha Patch → alpha patch
-- Beta → beta
-- GA → GA
-- Could do → backlog
+If a requested label has no match in the config:
 
-If no matching label exists:
-
-- ask the user.
+- do not create or guess a label;
+- list the unmatched labels and ask the user how to proceed.
 
 ---
 
@@ -145,22 +139,54 @@ Create the issue with:
 
 Use the exact user-provided title.
 
-Use this template unless another template is supplied:
+Use this template unless another template is supplied.
 
-```md
-**Parent epic:** #<epic_number>
+Inputs, taken from the user's report:
 
-**Severity*** <value>
-**Ease of implementation:** <value>
-**When:** <value>
-**Requested devs:** <value>
-**Dependencies:** <value>
+- `submitter_email` - who reported it
+- `date_reported` - when it was reported
+- `feedback_type` - the type of feedback
+- `feedback_topic` - the details of the feedback
+- `severity_desirability` - the severity or desirability
 
-**Notes**
-<notes>
-```
+Output only the complete issue body in markdown, ready to paste into GitHub. Do not add any pre-amble or post-amble.
 
-Only include fields that were provided.
+````md
+## Summary
+**Issue description:**  
+[Add a clear summary of the issue]
+
+**Severity / Desirability:**  
+[Repeat from submission]
+
+## Details
+**Background / context:**  
+[Add any relevant context]
+
+**Observed behaviour:**  
+[Describe what is happening now]
+
+**Expected behaviour:**  
+[Describe what should happen instead]
+
+## Acceptance criteria
+- [ ] Criterion 1
+- [ ] Criterion 2
+- [ ] Criterion 3
+
+## User quotes
+### Quote 1
+- **Date:** [DD/MM/YYYY]
+- **Email:** [user@example.com]
+- **Quote:** “[Insert user quote]”
+
+### Quote 2
+- **Date:** [DD/MM/YYYY]
+- **Email:** [user@example.com]
+- **Quote:** “[Insert user quote]”
+````
+
+Only include the User quotes section if quotes are available. Never invent quotes, dates or emails.
 
 ---
 
@@ -206,29 +232,6 @@ Do not claim epic linkage unless the parent issue update succeeded.
 
 ---
 
-# Routing Guidance
-
-When classifying issues automatically:
-
-| Topic | Preferred Epic | Preferred Owner |
-|---------|---------|---------|
-| Agent Builder | Agents | Sunny |
-| Agent Marketplace | Agents | Sunny |
-| MCP Integrations | MCPs | Isabelle |
-| Tool Calling | MCPs | Isabelle |
-| Testing | Testing | Jyotin |
-| Evaluation | Evaluation | Kosi |
-| File Uploads | File Handling | Ishaq |
-| Security | Security | Ally |
-| Ways of Working | Ways of Working | Ally |
-| Strategy | Strategy Work | Jack |
-| Skill Uploads | Skills | Alleena |
-| Skill Behaviour | Skills | Sunny |
-
-Routing guidance can be overridden by explicit user instructions.
-
----
-
 # Guardrails
 
 - Preserve titles exactly.
@@ -236,7 +239,7 @@ Routing guidance can be overridden by explicit user instructions.
 - Never invent epics.
 - Never invent assignees.
 - Never invent GitHub usernames.
-- Always use repo_config.yaml as the source of truth.
+- Always use repo-config.yaml as the source of truth.
 - Explain routing decisions when done automatically.
 - Report failures clearly.
 
