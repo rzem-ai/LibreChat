@@ -15,7 +15,8 @@
       "element": "#toolbar-toggle-mcp-servers",
       "title": "Open Connectors",
       "description": "Select Connectors from the toolbar beneath the chat box.",
-      "side": "top"
+      "side": "top",
+      "clickOnNext": ["#toolbar-toggle-mcp-servers"]
     },
     {
       "element": "[role=\"menuitemcheckbox\"][name=\"mcp-servers\"]",
@@ -30,7 +31,7 @@
       "side": "top"
     },
     {
-      "element": "[data-testid=\"screenshot-target\"]",
+      "element": "#messages-view",
       "title": "Review the request",
       "description": "Check that MyAssist used the selected Connector and that the response meets your needs.",
       "side": "left"

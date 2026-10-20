@@ -108,7 +108,7 @@ function MessagesViewContent({
                 </div>
               ) : (
                 <>
-                  <div ref={screenshotTargetRef} data-testid="screenshot-target">
+                  <div ref={screenshotTargetRef} id="messages-view" data-testid="screenshot-target">
                     <RowMountProvider mountWindow={mountWindow}>
                       {FLAT_THREAD && threadRows ? (
                         <ThreadList
