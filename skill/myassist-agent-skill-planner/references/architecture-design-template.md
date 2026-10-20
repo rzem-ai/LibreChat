@@ -6,9 +6,9 @@ Use this template when the user requests a full build plan. Complete only the se
 
 **Purpose:** [Business problem and intended outcome]
 
-**Users:** [Who will use it]
+**Users:** [Who will use it, or `[OPEN]` if not yet known]
 
-**Recommendation:** [Skill / Agent only / Agent + N Skills]
+**Recommendation:** [Agent only / Agent + 1 Skill / Agent + multiple Skills]
 
 **Workflow summary:** [One or two sentences describing the end-to-end flow]
 
@@ -36,9 +36,9 @@ Use this template when the user requests a full build plan. Complete only the se
 
 ## Existing Skills Assessment
 
-Review skills available in the Skills Library. Identify candidates that could be reused instead of building new.
+Review only skills listed in the Skills Library catalogue visible in the current Agent/session context. Do not assume the complete Skills Library is available. If no catalogue or skill list is visible, omit the assessment table and state that reuse was not assessed and should be checked in the Agent Builder. Do not invent skill names or use the missing catalogue as evidence that a new Skill is needed.
 
-**Disclaimer:** This assessment is based on skills currently visible in the Skills Library catalogue. Skills that are shared but inactive may not appear here. Confirm final availability in the Agent Builder's Skills Library before selecting a skill.
+**Disclaimer:** This assessment is based only on skills visible in the current Agent/session catalogue, which may be incomplete. Confirm final availability in the Agent Builder's Skills Library before selecting a skill. If no catalogue was visible, reuse was not assessed.
 
 | Proposed capability | Existing skills to consider | Assessment | Recommendation |
 |---|---|---|---|
@@ -78,7 +78,7 @@ Repeat this section once for each skill. Clearly state whether the skill is bein
 | Always apply | [Yes / No and why] |
 | User invocable | [Yes / No and why] |
 
-For the complete pre-filled information package to pass to MyAssist Skill Builder, request the **New Skill Handoff** output option.
+The Planner prepares the New Skill Handoff internally after the user agrees to start MyAssist Skill Builder. Do not present the handoff as a separate user-facing output option.
 
 ## Execution Flow
 
@@ -102,7 +102,7 @@ Tools and connectors are enabled on the Agent. Skills cannot activate them indep
 |---|---|---|---|
 | [Document] | [File Search / SharePoint / `references/` path] | [Agent or skill] | [File Search / connector / `read_file`] |
 
-Use File Search for up to 50 Agent files. For a larger document set, use the SharePoint connector. Reference files inside a skill are not automatically available; the skill instructions must explicitly call `read_file` before using them.
+Check the attached MyAssist FAQ for current file-count limits and supported source/connector capabilities before recommending a knowledge-source configuration. Reference files inside a skill are not automatically available; the skill instructions must explicitly call `read_file` before using them.
 
 ## Platform Constraints And Dependencies
 
@@ -111,9 +111,7 @@ Use File Search for up to 50 Agent files. For a larger document set, use the Sha
 | [Requirement 1] | [Supported / Supported with limited access / Not supported] | [How this affects the design] | [What the user must do, or None] |
 | [Requirement 2] | [Status] | [Impact] | [Action or None] |
 
-**Examples:**
-- Read files from SharePoint folder | Supported, subject to access | Use SharePoint connector | Confirm all intended users have access
-- Upload workbook to SharePoint | Not supported | Users download and upload manually | Submit connector request if needed
+Use the attached MyAssist FAQ to determine each requirement's current support status, access dependencies, and any required user action. Do not copy platform-specific limits, access rules, request URLs, or unsupported-capability claims into this template.
 
 ## Other Constraints and Assumptions
 

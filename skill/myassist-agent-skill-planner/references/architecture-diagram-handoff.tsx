@@ -21,9 +21,10 @@
  * lucide-react icons, typography, or output-format badges.
  *
  * DATA SOURCE MAPPING:
- * Never show a local computer folder path. Use the SharePoint connector (MCPIcon) for
- * SharePoint or OneDrive files, with file nodes showing "Provide SharePoint folder link"
- * or "Provide OneDrive folder link" as user input. User uploads show "Upload Files".
+ * Never show a local computer folder path. Check the attached FAQ for SharePoint/OneDrive
+ * connector mapping and read/write support. Show the confirmed connector as an Agent-level
+ * capability, and represent user-provided locations as file input/output nodes with clear link
+ * labels. User uploads show "Upload Files".
  * File Search appears as bottom tool text only when reference material is uploaded.
  */
 

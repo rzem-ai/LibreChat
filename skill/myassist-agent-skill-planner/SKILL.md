@@ -1,6 +1,6 @@
 ---
 name: myassist-agent-skill-planner
-description: Use first when a user wants to plan, design, build, or assess a MyAssist Agent or Skill, including workflows, tools, connectors, inputs, outputs, and feasibility. Determines whether a request needs an Agent-only design, Agent with Skills, or a defined new Skill flow. May generate a New Skill Handoff and pass directly to MyAssist Skill Builder when the task flow is clear and suitable. Do not use this for writing final SKILL.md instructions without planning first, or for simple MyAssist platform questions.
+description: Use when users are unsure whether they need a MyAssist Agent or Skill, or want to plan/assess a workflow, tools, connectors, inputs, outputs, and feasibility. Not for direct SKILL.md drafting.
 always-apply: false
 user-invocable: true
 ---
@@ -35,7 +35,7 @@ All inputs are gathered conversationally across multiple turns. The planner main
 | Input | Type | Required | Description |
 |---|---|---|---|
 | Task purpose | Text | Yes | What the user wants to build — the task, workflow, or problem they want to solve |
-| Users | Text | Yes | Who will use this — just the user, a team, or wider |
+| Users | Text | Conditional | Who will use this, if known. Mark as `[OPEN]` when it is not needed to recommend the initial architecture. |
 | Inputs | Text | Yes | The specific inputs the user expects to provide (files, typed text, live system data, etc.) |
 | Outputs | Text | Yes | The specific outputs the user expects to receive (document, summary, table, diagram, etc.) |
 | Data sources | Text | Yes | Whether the task needs to pull live information from an external system, and which system |
@@ -61,7 +61,7 @@ Before we start, here's a quick summary of the two building blocks in MyAssist:
 
 If you're unsure which you need, that's what this planner is for.
 
-**To get started: describe what you want to build — what should it do, who will use it, and what are the inputs and outputs?**
+**To get started: describe what you want to build — what should it do, and what are the inputs and outputs?**
 
 - Maintain a running record of confirmed information throughout the conversation:
   - Task purpose and intended outcome
@@ -75,7 +75,8 @@ If you're unsure which you need, that's what this planner is for.
 
 - **Before asking any discovery question**, assess whether the user has already provided enough information for an initial architecture recommendation.
 - If purpose, source/input, workflow, and intended output are clear, proceed directly to feasibility validation and draft recommendation.
-- Do not ask for information that only affects later configuration (such as audience, specific folder location, file count, or output-column detail) when it would delay the initial recommendation. Mark those details as `[OPEN]` for the detailed plan.
+- Users/audience is conditional, not a prerequisite for the initial architecture recommendation. Do not delay the recommendation to collect it; mark it `[OPEN]` when relevant to later configuration or the detailed plan.
+- Do not ask for other information that only affects later configuration (such as specific folder location, file count, or output-column detail) when it would delay the initial recommendation. Mark those details as `[OPEN]` for the detailed plan.
 - Ask questions conversationally — **one or two at a time** — only when material information is genuinely missing.
 - Do not repeat questions the user has already answered.
 - Treat a later correction as replacing the earlier answer.
@@ -109,8 +110,8 @@ For each stated input, output, data source, and tool requirement:
 1. Check whether it is available in MyAssist.
 2. Apply the correct decision rule:
    - **Supported capability:** include it in the architecture.
-   - **Supported but access-limited (e.g. SharePoint):** include it and flag the access dependency.
-   - **Unavailable connector:** exclude it and direct the user to submit a connector request at `https://forms.cloud.microsoft/e/E9AyvN4Ayx`.
+   - **Supported but access-limited:** include it and flag the access dependency stated in the FAQ.
+   - **Unavailable connector:** exclude it and direct the user to the connector request route documented in the attached FAQ, if one is provided. Do not invent a request URL or process.
    - **External product:** may be mentioned only as a separate topic to investigate, never as part of the MyAssist design.
 
 When a platform limitation affects the design:
@@ -125,10 +126,9 @@ If a required capability is unavailable:
 
 **Data Source Mapping:**
 
-- **SharePoint files:** Use the SharePoint connector with a configured site and folder. Can read, search, list, and download files.
-- **OneDrive files:** Use the SharePoint connector with a configured OneDrive folder path. SharePoint supports reading source files and writing generated files to the configured OneDrive folder. Do not recommend manual OneDrive upload.
+- **SharePoint or OneDrive locations:** Confirm connector mapping, read/write support, and access requirements from the attached FAQ. In diagrams, show the confirmed connector as an Agent-level capability and represent user-provided locations as file input/output nodes with clear link labels.
 - **User uploads working files:** Show `User -> Upload Files -> Agent`.
-- **File Search:** Use only when users upload reference material to File Search. Show as a bottom Agent tool note, not as a separate flow node. Do not recommend File Search merely because documents need to be read from SharePoint.
+- **File Search:** Use only when users upload reference material to File Search. Show as a bottom Agent tool note, not as a separate flow node. Do not recommend File Search merely because documents remain in an external source.
 - **Never show a local computer folder path** in diagrams or recommendations.
 
 **Do not:**
@@ -142,13 +142,14 @@ If a required capability is unavailable:
 
 Before proposing the architecture:
 
-1. Review skills visible in the current Skills Library catalogue.
-2. For each proposed capability, identify at most **2–3 potentially relevant existing skills**.
-3. Assess each candidate:
+1. Review only skills listed in the Skills Library catalogue visible in the current Agent/session context. Do not assume the complete Skills Library is available.
+2. If no catalogue or skill list is visible in the current context, skip the reuse assessment. Do not invent skill names or claim that no suitable skills exist; state in the detailed design that reuse was not assessed and should be checked in the Agent Builder. Do not use the absence of a visible catalogue as evidence that a new Skill is needed.
+3. For each proposed capability, identify at most **2–3 potentially relevant existing skills** from the visible catalogue.
+4. Assess each candidate:
    - **Fully covers** — the existing skill can be reused as-is.
    - **Partial overlap** — the existing skill could be adapted or extended.
    - **Not suitable** — related but does not fit the requirement.
-4. Decide whether to:
+5. Decide whether to:
    - Reuse an existing skill (if it fully covers the need).
    - Build a new skill (if no existing skill is suitable or adaptation is too complex).
 
@@ -158,9 +159,9 @@ Before proposing the architecture:
 - Display the assessment table until the user requests the full architecture design.
 - Claim a skill is definitely available to all users.
 
-The existing-skill assessment table will appear only in the detailed architecture design document, with this disclaimer:
+The existing-skill assessment table will appear only in the detailed architecture design document when a catalogue was visible and assessed. Include this disclaimer:
 
-> Existing-skill suggestions are based on skills visible to the planner at the time of assessment. Shared skills that are inactive may not be visible and may therefore not be considered.
+> Existing-skill suggestions are based only on skills visible to the planner in the current Agent/session catalogue. The catalogue may be incomplete; confirm availability in the Agent Builder. If no catalogue was visible, reuse was not assessed.
 
 **Agent vs Skill decision logic:**
 
@@ -194,7 +195,7 @@ Apply this internal framework:
 Once scope is clear and feasibility is validated, immediately present:
 
 1. **Draft recommendation** (in chat):
-   - **Recommendation:** [Agent only / Agent + 1 Skill / Agent + N Skills]
+   - **Recommendation:** [Agent only / Agent + 1 Skill / Agent + multiple Skills]
    - **What to build:** [One sentence describing the complete workflow]
    - **Why:** [No more than two short sentences based on the user's answers]
    - **Feasibility notes:** [Only material constraints, unavailable capabilities, or agreed alternatives. Omit if everything is feasible.]
@@ -346,6 +347,8 @@ Use `references/architecture-diagram-handoff.tsx` as the visual and structural b
 
 **Icon mapping:**
 
+The main diagram template exports an `AVAILABLE_ICONS` catalogue containing these supported icons. Keep the catalogue intact when adapting a diagram, and use its mapped icon values for nodes.
+
 - Agent: `Bot`
 - Skill: `ScrollText`
 - Connector / MCP server: `MCPIcon` (inline SVG component — do not substitute with lucide-react)
@@ -399,7 +402,7 @@ Regenerate only when the user explicitly agrees or directly requests a new diagr
 ## Expected Outputs
 
 - Initial output: Concise recommendation in chat plus one React architecture diagram artifact plus prospective-plan disclaimer
-- On-request output: Full build plan as a Markdown artifact; agent instructions; new skill handoff information in specified format
+- On-request output: Full build plan as a Markdown artifact or Agent instructions. New Skill Handoff data is internal context prepared only after the user agrees to start Skill Builder; it is not a user-facing output option.
 - Quality criteria: Every tool and connector recommended must exist in MyAssist capabilities. Every unfeasible input/output must be flagged before the recommendation is produced. Diagrams must use the supplied template without hand-drawn icons or alternate visual systems. New skill handoff information must collate confirmed user requirements, marking unknown fields as `[OPEN]`.
 
 ## Response Guidelines
@@ -416,14 +419,14 @@ Regenerate only when the user explicitly agrees or directly requests a new diagr
 ## Ground Rules
 
 - This skill produces a plan only — it cannot create, save, or publish agents or skills in MyAssist on the user's behalf. Make this clear if the user asks to "build" or "create" something directly.
-- Do not produce a build plan before all required inputs are captured and feasibility is confirmed.
+- Do not produce a build plan before the required workflow inputs (purpose, source/input, workflow, and output) are captured and feasibility is confirmed. Conditional details such as audience may remain `[OPEN]` when they do not block the design.
 - Do not recommend tools, connectors, or capabilities that are not confirmed in the attached MyAssist FAQ.
 - If a stated input or output is not feasible, flag it explicitly before continuing — do not silently work around it.
 - Do not invent skill names, connector capabilities, or system integrations.
 - If the workflow is fundamentally unfeasible as described, say so clearly and offer to help the user revise scope.
 - During discovery, focus on the user's context and requirements. Do not proactively produce capability assessments, platform comparison tables, or FAQ-derived detail while material scope questions remain unresolved.
 - When a platform limitation affects the design, explain it in one or two plain-language sentences. Do not use source quotations, Markdown block quotes for capability information, citation markers, or reference excerpts.
-- Use the SharePoint connector when files remain in SharePoint. Use File Search only when the user explicitly uploads reference files to the Agent. Do not recommend File Search merely because documents need to be read.
+- Use the FAQ-confirmed connector when files remain in an external source. Use File Search only when the user explicitly uploads reference files to the Agent. Do not recommend File Search merely because documents need to be read from an external source.
 - New skill handoff information must be based on confirmed user requirements — mark unknown fields as `[OPEN]`, do not invent them.
 - Agent instructions drafted in State 3 must follow the structure in `references/agent-instructions-template.md`.
 - For standalone chat agents (no skills), new skill handoff is not applicable — offer only the agent instructions draft or template.
@@ -434,10 +437,8 @@ Regenerate only when the user explicitly agrees or directly requests a new diagr
 
 ## Notes and Constraints
 
-- Skills deployed by the MyAssist platform team are read-only and shared across all users. Users can create their own skills through the Skills Library in MyAssist.
 - When a skill is attached to an Agent, the skill's `SKILL.md` instructions are read as part of the Agent context. Files in the skill's `references/` folder are not automatically loaded; the instructions must explicitly call `read_file` before relying on them.
-- Agents can be shared with specific Deloitte colleagues (deloitte.com.au and deloitte.co.nz domains) but cannot be made public to everyone.
-- SharePoint connector has limited access — not all users have it enabled. Flag this when recommending it.
-- Native web search is available as a toggle for supported models. When recommending it, instruct the user to choose a model listed as web-search-enabled in `myassist-capabilities.md`.
+- Validate current sharing rules, skill availability, connector access, and model/tool capabilities against the attached FAQ when they affect the design. Do not hard-code platform limits or access details in the plan.
+- For web search recommendations, use the attached MyAssist FAQ to confirm whether native web search is available and which models support it.
 - After the plan is produced and if new skills are needed, offer to start MyAssist Skill Builder in the same session.
 - If the user already has a skill draft to improve, direct them to MyAssist Skill Refiner.

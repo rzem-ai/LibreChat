@@ -186,11 +186,7 @@ These are **Agent-level** configurations, not skill-level settings. List what th
 
 ## After Generation
 
-After generating the handoff information, ask the user:
-
-> I have prepared the pre-filled information for the new skill(s). Would you like me to start MyAssist Skill Builder now?
-
-If yes, invoke `myassist-skill-builder` in the same Agent/session, keeping the handoff information in the conversation context for Skill Builder to use.
+This handoff is internal planning context, not a user-facing deliverable. The Planner must obtain the user's agreement to start MyAssist Skill Builder before preparing the handoff. Once prepared, invoke `myassist-skill-builder` in the same Agent/session immediately; do not ask for consent again.
 
 ---
 

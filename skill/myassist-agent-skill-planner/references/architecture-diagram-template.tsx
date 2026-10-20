@@ -31,7 +31,7 @@
  * WHAT YOU MUST NOT CHANGE:
  * - PAL colour values (keep colour consistency across all diagrams)
  * - Node component structure (the div + icon + label layout)
- * - Icon imports (use only the icons listed below)
+ * - The `AVAILABLE_ICONS` catalogue; use only its entries when adapting nodes
  * - Canvas dimensions (W=1080, H=520)
  * - SVG arrow marker definition
  * - Font sizes and weights (maintain visual hierarchy)
@@ -44,10 +44,9 @@
  * DATA SOURCE MAPPING:
  * Never show a local computer folder path — MyAssist users cannot point to local folders.
  *
- * - SharePoint source files: Show SharePoint as a connector block (MCPIcon) pointing into the Agent,
- *   with a yellow file node labeled "Provide SharePoint folder link" as user input
- * - OneDrive output files: Show as output with sublabel "Save to configured OneDrive folder" or
- *   a separate input node "Provide OneDrive folder link" if users supply the destination each time
+ * - SharePoint or OneDrive locations: Check the attached FAQ for connector mapping and read/write
+ *   support. Show the confirmed connector as an Agent-level capability and represent user-provided
+ *   locations as file input/output nodes with clear link labels.
  * - User uploads working files: Show yellow file node "Upload Files" pointing into Agent
  * - File Search: Show as bottom tool text only when users upload reference material to File Search,
  *   not as a separate flow node. Example: "File Search: Upload files to File Search"
@@ -117,6 +116,22 @@ function MCPIcon({
     </svg>
   );
 }
+
+/** Icon catalogue available to generated diagram layouts. */
+export const AVAILABLE_ICONS = {
+  Agent: Bot,
+  Skill: ScrollText,
+  Connector: MCPIcon,
+  Tool: Wrench,
+  FileSearch,
+  RunCode: Terminal,
+  Artifacts: WandSparkles,
+  Memory: Brain,
+  WebSearch: Globe,
+  User,
+  File: FileText,
+  Spreadsheet: FileSpreadsheet,
+} as const;
 
 interface NodeProps {
   cx: number;
