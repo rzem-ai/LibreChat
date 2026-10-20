@@ -27,18 +27,13 @@ services:
       - RAG_PORT=${RAG_PORT:-8000}
       - RAG_API_URL=http://rag_api:${RAG_PORT:-8000}
       - NODE_TLS_REJECT_UNAUTHORIZED=0
-    # On startup: copy Deloitte GEL assets over the defaults, then launch normally.
-    # deloitte/assets is mounted read-only; the copy targets the live client/dist/assets.
-    command: >
-      sh -c "set -eu; mkdir -p /app/client/dist/assets; cp -a /app/deloitte-assets/. /app/client/dist/assets/; npm run backend"
     volumes:
       - type: bind
         source: ./librechat.yaml
         target: /app/librechat.yaml
-      # Deloitte GEL assets — auto-injected at container start via command above
       - type: bind
-        source: ./deloitte/assets
-        target: /app/deloitte-assets
+        source: ./charts/config/endpoint-costs.yaml
+        target: /app/endpoint-costs.yaml
         read_only: true
     depends_on:
       - mongodb

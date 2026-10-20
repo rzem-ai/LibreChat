@@ -189,6 +189,8 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
     inc?: number;
     user?: string;
     tenantId?: string | null;
+    // Deloitte Custom Change: Retention Update
+    fileRetentionHours?: number;
   }) => Promise<IMongoFile | null>;
   deleteFile: (file_id: string) => Promise<IMongoFile | null>;
   deleteFiles: (file_ids: string[], user?: string) => Promise<{ deletedCount?: number }>;
@@ -204,7 +206,8 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
   updateFilesUsage: (
     files: Array<{ file_id: string }>,
     fileIds?: string[],
-    options?: { user?: string; tenantId?: string | null },
+    // Deloitte Custom Change: Retention Update
+    options?: { user?: string; tenantId?: string | null; fileRetentionHours?: number },
   ) => Promise<IMongoFile[]>;
   extendFilesTTL: (
     fileIds: string[],
@@ -948,10 +951,21 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
     inc?: number;
     user?: string;
     tenantId?: string | null;
+    // Deloitte Custom Change: Retention Update
+    fileRetentionHours?: number;
   }): Promise<IMongoFile | null> {
     const File = mongoose.models.File as Model<IMongoFile>;
-    const { file_id, inc = 1, user, tenantId } = data;
+    // Deloitte Custom Change: Retention Update
+    const { file_id, inc = 1, user, tenantId, fileRetentionHours } = data;
+    const now = new Date();
     const updateOperation = {
+      // Deloitte Custom Change: Retention Update
+      $set: {
+        lastUsedAt: now,
+        ...(fileRetentionHours != null
+          ? { expiredAt: new Date(now.getTime() + fileRetentionHours * 60 * 60 * 1000) }
+          : {}),
+      },
       $inc: { usage: inc },
       $unset: { expiresAt: '', temp_file_id: '' },
     };
@@ -1047,13 +1061,16 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
   async function updateFilesUsage(
     files: Array<{ file_id: string }>,
     fileIds?: string[],
-    options?: { user?: string; tenantId?: string | null },
+    // Deloitte Custom Change: Retention Update
+    options?: { user?: string; tenantId?: string | null; fileRetentionHours?: number },
   ): Promise<IMongoFile[]> {
     const promises: Promise<IMongoFile | null>[] = [];
     const seen = new Set<string>();
     // Preserve the same owner scope for every deduped ID in this batch.
     const user = options?.user;
     const tenantId = options?.tenantId;
+    // Deloitte Custom Change: Retention Update
+    const fileRetentionHours = options?.fileRetentionHours;
 
     for (const file of files) {
       const { file_id } = file;
@@ -1061,7 +1078,8 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
         continue;
       }
       seen.add(file_id);
-      promises.push(updateFileUsage({ file_id, user, tenantId }));
+      // Deloitte Custom Change: Retention Update
+      promises.push(updateFileUsage({ file_id, user, tenantId, fileRetentionHours }));
     }
 
     if (!fileIds) {
@@ -1074,7 +1092,8 @@ export function createFileMethods(mongoose: typeof import('mongoose')): {
         continue;
       }
       seen.add(file_id);
-      promises.push(updateFileUsage({ file_id, user, tenantId }));
+      // Deloitte Custom Change: Retention Update
+      promises.push(updateFileUsage({ file_id, user, tenantId, fileRetentionHours }));
     }
 
     const results = await Promise.all(promises);

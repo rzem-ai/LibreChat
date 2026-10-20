@@ -24,7 +24,7 @@ jest.mock('librechat-data-provider', () => {
   };
 });
 
-jest.mock('~/components/Learning/LearningTourContext', () => ({
+jest.mock('~/components/Learn/LearningTourContext', () => ({
   useLearningTour: () => ({ startGettingStartedTour: mockStartGettingStartedTour }),
 }));
 

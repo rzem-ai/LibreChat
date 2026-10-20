@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { TModelSpec } from 'librechat-data-provider';
+import type { ReactNode } from 'react';
 import { ModelSpecItem } from '../ModelSpecItem';
 
 const mockHandleSelectSpec = jest.fn();
@@ -29,6 +30,12 @@ jest.mock('~/components/Chat/Menus/Endpoints/CustomMenu', () => {
 jest.mock('../SpecIcon', () => ({
   __esModule: true,
   default: () => <span data-testid="spec-icon" />,
+}));
+
+// Deloitte Custom Change: stub the new tooltip, which needs a QueryClientProvider this suite lacks.
+jest.mock('../ModelInfoTooltip', () => ({
+  __esModule: true,
+  default: ({ children }: { children: ReactNode }) => children,
 }));
 
 jest.mock('~/hooks', () => ({

@@ -9,6 +9,8 @@ export * from './Checkbox';
 export * from './DisclosureChevron';
 export * from './Dialog';
 export * from './DropdownMenu';
+// Deloitte Custom Change: GEL-branded dialog building blocks, reusable by any dialog needing GEL styling.
+export * from './gel';
 export * from './HoverCard';
 export * from './Field';
 export * from './Input';
@@ -27,6 +29,7 @@ export * from './Skeleton';
 export * from './Switch';
 export * from './Table';
 export * from './Tabs';
+export { TabsList, TabsTrigger } from './Tabs';
 export * from './Tag';
 export * from './Textarea';
 export * from './TextareaAutosize';
@@ -35,6 +38,8 @@ export * from './Tooltip';
 export * from './Pagination';
 export * from './Progress';
 export * from './SegmentedMeter';
+// Deloitte Custom Change: export the new gel/ primitives directory added for the model info tooltip.
+export * from './gel';
 export * from './Collapsible';
 export * from './InputOTP';
 export * from './IconButton';
@@ -90,3 +95,4 @@ export type {
   DataTableSearchProps,
   DataTableProps as VirtualizedDataTableProps,
 } from './DataTable/DataTable.types';
+export * as GEL from './gel';

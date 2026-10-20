@@ -177,15 +177,25 @@ async function deleteCodeEnvFile(req, file) {
         timeout: 15000,
       });
     } catch (error) {
-      if (error.response?.status !== 404) {
+      // Deloitte Custom Change: Retention Update
+      const status = error.response?.status;
+      if (status !== 404 && status !== 403) {
         throw error;
       }
-      /* Already gone. Logged rather than swallowed: a 404 from a
-       * misconfigured base URL is indistinguishable from one for an absent
-       * object, and this branch drops the file's record either way. */
+      // Deloitte Custom Change: Retention Update
+      /* Already gone. Logged rather than swallowed: a 404 (or a 403 from
+       * codeapi's sessionAuth, which answers "this sandbox session no
+       * longer exists" the same way for every caller, not just this one)
+       * is indistinguishable from a misconfigured base URL, and this
+       * branch drops the file's record either way. Sandbox sessions are
+       * short-lived (hours) while file records now outlive them by design
+       * (RET-03's 60-day file retention), so a stale codeEnvRef pointing
+       * at an expired session is an expected, routine case, not a
+       * one-off. */
       logAxiosError({
         error,
-        message: `Code environment object already absent: ${error.message}`,
+        // Deloitte Custom Change: Retention Update
+        message: `Code environment object already absent or session expired: ${error.message}`,
       });
     }
   }

@@ -60,6 +60,7 @@ function UnifiedSidebar({ isSliding = false }: { isSliding?: boolean }) {
 
   const links = useUnifiedSidebarLinks();
   const isInsightsRoute = location.pathname.startsWith('/insights');
+  const isLearnRoute = location.pathname.startsWith('/learn');
   const panelExpanded = expanded && !isInsightsRoute;
 
   /** The aside's max width is a viewport percentage, so the announced range has to track
@@ -245,7 +246,13 @@ function UnifiedSidebar({ isSliding = false }: { isSliding?: boolean }) {
     // shared instance above LearningTourProvider, which also drives this panel state
     <SidebarChatProvider>
       <aside
-        className="relative flex h-full flex-shrink-0 overflow-hidden"
+        className={cn(
+          'relative flex h-full flex-shrink-0 overflow-hidden',
+          /** Deloitte Custom Change: the aside draws its own right edge when collapsed (the
+           *  icon rail's border falls in its clipped last pixel) and on /learn (the Academy
+           *  shares the sidebar's surface tone, so the expanded panel needs a drawn edge). */
+          (!panelExpanded || isLearnRoute) && 'border-r border-border',
+        )}
         // Deloitte Custom Change: stable attribute so the Getting Started tour can anchor to the sidebar
         data-sidebar-container
         style={{

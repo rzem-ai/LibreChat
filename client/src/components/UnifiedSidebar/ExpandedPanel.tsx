@@ -8,7 +8,7 @@ import { useShortcutAriaKey, useShortcutHint } from '~/hooks/useKeyboardShortcut
 import { useActivePanel, resolveActivePanel, DEFAULT_PANEL } from '~/Providers';
 import AgentMarketplaceButton from '~/components/Nav/AgentMarketplaceButton';
 import { CLOSE_SIDEBAR_ID } from '~/components/Chat/Menus/OpenSidebar';
-import LearningMenu from '~/components/UnifiedSidebar/LearningMenu';
+import LearningMenu from '~/components/Learn/Menu';
 import useNewChat from '~/hooks/Chat/useNewChat';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -154,7 +154,8 @@ function ExpandedPanel({
   const toggleSidebarAriaKey = useShortcutAriaKey('toggleSidebar');
 
   return (
-    <div className="flex h-full flex-shrink-0 flex-col gap-2 border-r border-border-light bg-surface-primary-alt px-2 py-2">
+    // Deloitte Custom Change: border-border (not border-light) so the rail edge reads against the panel
+    <div className="flex h-full flex-shrink-0 flex-col gap-2 border-r border-border bg-surface-primary-alt px-2 py-2">
       <TooltipAnchor
         side="right"
         description={toggleSidebarHint}

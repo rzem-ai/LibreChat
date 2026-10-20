@@ -107,6 +107,20 @@ describe('SpecIcon', () => {
     );
   });
 
+  it('passes an explicit size through to the entity-endpoint mark when there is no avatar', () => {
+    const currentSpec = {
+      name: 'agent-spec',
+      label: 'Agent Spec',
+      preset: { endpoint: EModelEndpoint.agents },
+    } as TModelSpec;
+
+    render(<SpecIcon currentSpec={currentSpec} endpointsConfig={endpointsConfig} size={32} />);
+
+    const icon = document.querySelector('svg[aria-hidden="true"]');
+    expect(icon).toHaveAttribute('width', '32');
+    expect(icon).toHaveAttribute('height', '32');
+  });
+
   it('prefers an explicit spec icon over the agent avatar', () => {
     const currentSpec = {
       name: 'agent-spec',

@@ -60,6 +60,15 @@ function makeDeps(overrides: Partial<AgentManagementDeleteDeps> = {}): AgentMana
     getAgentWithVersionCount: jest.fn().mockResolvedValue(existingAgent),
     checkPermission: jest.fn().mockResolvedValue(true),
     hasCapability: jest.fn().mockResolvedValue(false),
+    // Deloitte Custom Change: Retention Update
+    getAgent: jest.fn().mockResolvedValue(existingAgent as IAgent),
+    getFiles: jest.fn().mockResolvedValue([]),
+    getFileIdsAttachedToLiveConversations: jest.fn().mockResolvedValue(new Set()),
+    getSharedResourceFileIds: jest.fn().mockResolvedValue(new Set()),
+    removeAgentResourceFiles: jest.fn().mockResolvedValue(undefined),
+    deleteFiles: jest.fn().mockResolvedValue({ deletedFileIds: [], failedFileIds: [] }),
+    deleteAvatarBlob: jest.fn().mockResolvedValue(undefined),
+    deleteFileByFilter: jest.fn().mockResolvedValue(null),
     deleteAgent: jest.fn().mockResolvedValue(existingAgent as IAgent),
     ...overrides,
   };

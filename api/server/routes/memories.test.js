@@ -157,6 +157,8 @@ describe('agent memory partition authorization', () => {
     expect(response.status).toBe(201);
     expect(mockCreateMemory).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'user-1', agentId: 'agent-1' }),
+      // Deloitte Custom Change: Retention Update
+      expect.objectContaining({ retentionHours: expect.any(Number) }),
     );
   });
 
@@ -176,6 +178,8 @@ describe('agent memory partition authorization', () => {
     expect(mockCheckPermission).not.toHaveBeenCalled();
     expect(mockCreateMemory).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'user-1', agentId: 'agent-1' }),
+      // Deloitte Custom Change: Retention Update
+      expect.objectContaining({ retentionHours: expect.any(Number) }),
     );
   });
 

@@ -1106,12 +1106,11 @@ describe('agent background task config', () => {
 });
 
 describe('customDeloitteFeatureFlags.modelPricingTierBreakpoints', () => {
-  it('accepts a valid ascending tierBreakpoints array alongside the indicator flag', () => {
+  it('accepts a valid ascending tierBreakpoints array on its own', () => {
     const result = configSchema.safeParse({
       version: '1.0',
       interface: {
         customDeloitteFeatureFlags: {
-          showModelPricingIndicator: true,
           modelPricingTierBreakpoints: [2, 5, 8, 15],
         },
       },
@@ -1120,7 +1119,6 @@ describe('customDeloitteFeatureFlags.modelPricingTierBreakpoints', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       const flags = result.data.interface?.customDeloitteFeatureFlags;
-      expect(flags?.showModelPricingIndicator).toBe(true);
       expect(flags?.modelPricingTierBreakpoints).toEqual([2, 5, 8, 15]);
     }
   });
@@ -1165,6 +1163,43 @@ describe('customDeloitteFeatureFlags.modelPricingTierBreakpoints', () => {
         interface: {
           customDeloitteFeatureFlags: { modelPricingTierBreakpoints: [-1, 2, 5, 8] },
         },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('customDeloitteFeatureFlags.highCostAlertTiers', () => {
+  it('accepts a valid tiers array on its own', () => {
+    const result = configSchema.safeParse({
+      version: '1.0',
+      interface: {
+        customDeloitteFeatureFlags: {
+          highCostAlertTiers: [4, 5],
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const flags = result.data.interface?.customDeloitteFeatureFlags;
+      expect(flags?.highCostAlertTiers).toEqual([4, 5]);
+    }
+  });
+
+  it('is optional', () => {
+    expect(
+      configSchema.safeParse({
+        version: '1.0',
+        interface: { customDeloitteFeatureFlags: {} },
+      }).success,
+    ).toBe(true);
+  });
+
+  it.each([[0], [6], [-1]])('rejects an out-of-range tier value: %i', (tier) => {
+    expect(
+      configSchema.safeParse({
+        version: '1.0',
+        interface: { customDeloitteFeatureFlags: { highCostAlertTiers: [tier] } },
       }).success,
     ).toBe(false);
   });

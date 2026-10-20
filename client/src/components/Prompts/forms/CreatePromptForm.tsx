@@ -201,6 +201,7 @@ const CreatePromptForm = ({
                       tabIndex={0}
                       placeholder={localize('com_ui_prompt_input')}
                       aria-label={localize('com_ui_prompt_input_field')}
+                      id="prompt-text"
                       aria-required="true"
                     />
                     <div
@@ -231,6 +232,7 @@ const CreatePromptForm = ({
             <Button
               variant="submit"
               aria-label={localize('com_ui_create_prompt')}
+              id="create-prompt-submit"
               className={cn('w-full gap-2 sm:w-auto', isBlocked && 'opacity-50')}
               tabIndex={0}
               type="submit"

@@ -339,17 +339,73 @@ describe('retention helpers', () => {
     await expect(getRetentionExpiry(undefined, dependencies)).resolves.toEqual({});
   });
 
-  it('skips persistent agent files in temporary retention mode when retainAgentFiles is disabled', async () => {
+  // Deloitte Custom Change: Retention Update
+  it('applies the 90-day agent-file default to a persistent agent upload with no config', async () => {
+    const now = Date.now();
+    const result = await getAgentFileRetentionExpiry(
+      {
+        // Deloitte Custom Change: Retention Update
+        req: request({ config: { interfaceConfig: {} } }),
+        messageAttachment: false,
+        toolResource: 'context',
+      },
+      dependencies,
+    );
+
+    // Deloitte Custom Change: Retention Update
+    const expectedMs = 24 * 90 * 60 * 60 * 1000;
+    expect(result.expiredAt?.getTime()).toBeGreaterThanOrEqual(now + expectedMs);
+    expect(result.expiredAt?.getTime()).toBeLessThan(now + expectedMs + 1000);
+    expect(dependencies.getConvo).not.toHaveBeenCalled();
+    expect(dependencies.createExpirationDate).not.toHaveBeenCalled();
+  });
+
+  // Deloitte Custom Change: Retention Update
+  it('applies the 90-day agent-file default regardless of retentionMode', async () => {
+    const now = Date.now();
     const result = await getAgentFileRetentionExpiry(
       {
         req: request({
-          config: {
-            interfaceConfig: {
-              retentionMode: RetentionMode.TEMPORARY,
-              retainAgentFiles: false,
-            },
-          },
+          // Deloitte Custom Change: Retention Update
+          config: { interfaceConfig: { retentionMode: RetentionMode.TEMPORARY } },
         }),
+        messageAttachment: false,
+        toolResource: 'context',
+      },
+      dependencies,
+    );
+
+    // Deloitte Custom Change: Retention Update
+    const expectedMs = 24 * 90 * 60 * 60 * 1000;
+    expect(result.expiredAt?.getTime()).toBeGreaterThanOrEqual(now + expectedMs);
+    expect(result.expiredAt?.getTime()).toBeLessThan(now + expectedMs + 1000);
+  });
+
+  // Deloitte Custom Change: Retention Update
+  it('honors a configured agentFileRetentionHours override', async () => {
+    const now = Date.now();
+    const result = await getAgentFileRetentionExpiry(
+      {
+        // Deloitte Custom Change: Retention Update
+        req: request({ config: { interfaceConfig: { agentFileRetentionHours: 48 } } }),
+        messageAttachment: false,
+        toolResource: 'context',
+      },
+      dependencies,
+    );
+
+    // Deloitte Custom Change: Retention Update
+    const expectedMs = 48 * 60 * 60 * 1000;
+    expect(result.expiredAt?.getTime()).toBeGreaterThanOrEqual(now + expectedMs);
+    expect(result.expiredAt?.getTime()).toBeLessThan(now + expectedMs + 1000);
+  });
+
+  // Deloitte Custom Change: Retention Update
+  it('keeps retainAgentFiles as the escape hatch that skips expiry entirely', async () => {
+    const result = await getAgentFileRetentionExpiry(
+      {
+        // Deloitte Custom Change: Retention Update
+        req: request({ config: { interfaceConfig: { retainAgentFiles: true } } }),
         messageAttachment: false,
         toolResource: 'context',
       },
@@ -361,87 +417,8 @@ describe('retention helpers', () => {
     expect(dependencies.createExpirationDate).not.toHaveBeenCalled();
   });
 
-  it('skips persistent agent files in temporary retention mode when retainAgentFiles is enabled', async () => {
-    const result = await getAgentFileRetentionExpiry(
-      {
-        req: request({
-          config: {
-            interfaceConfig: {
-              retentionMode: RetentionMode.TEMPORARY,
-              retainAgentFiles: true,
-            },
-          },
-        }),
-        messageAttachment: false,
-        toolResource: 'context',
-      },
-      dependencies,
-    );
-
-    expect(result).toEqual({});
-    expect(dependencies.getConvo).not.toHaveBeenCalled();
-    expect(dependencies.createExpirationDate).not.toHaveBeenCalled();
-  });
-
-  it('applies all-data retention to persistent agent files when retainAgentFiles is disabled', async () => {
-    const result = await getAgentFileRetentionExpiry(
-      {
-        req: request({
-          config: {
-            interfaceConfig: {
-              retentionMode: RetentionMode.ALL,
-              retainAgentFiles: false,
-            },
-          },
-        }),
-        messageAttachment: false,
-        toolResource: 'context',
-      },
-      dependencies,
-    );
-
-    expect(result).toEqual({ expiredAt: expirationDate });
-    expect(dependencies.getConvo).not.toHaveBeenCalled();
-    expect(dependencies.createExpirationDate).toHaveBeenCalledTimes(1);
-  });
-
-  it('keeps current all-data retention behavior when retainAgentFiles is unset', async () => {
-    const result = await getAgentFileRetentionExpiry(
-      {
-        req: request({ config: { interfaceConfig: { retentionMode: RetentionMode.ALL } } }),
-        messageAttachment: false,
-        toolResource: 'context',
-      },
-      dependencies,
-    );
-
-    expect(result).toEqual({ expiredAt: expirationDate });
-    expect(dependencies.createExpirationDate).toHaveBeenCalledTimes(1);
-  });
-
-  it('skips all-data retention for persistent agent files when retainAgentFiles is enabled', async () => {
-    const result = await getAgentFileRetentionExpiry(
-      {
-        req: request({
-          config: {
-            interfaceConfig: {
-              retentionMode: RetentionMode.ALL,
-              retainAgentFiles: true,
-            },
-          },
-        }),
-        messageAttachment: false,
-        toolResource: 'context',
-      },
-      dependencies,
-    );
-
-    expect(result).toEqual({});
-    expect(dependencies.getConvo).not.toHaveBeenCalled();
-    expect(dependencies.createExpirationDate).not.toHaveBeenCalled();
-  });
-
-  it('still applies all-data retention to agent message attachments when retainAgentFiles is enabled', async () => {
+  // Deloitte Custom Change: Retention Update
+  it('leaves agent message attachments on the existing conversation-inherited path', async () => {
     const result = await getAgentFileRetentionExpiry(
       {
         req: request({
@@ -499,6 +476,55 @@ describe('retention helpers', () => {
     });
 
     expect(createMinimalRetentionRequest()).toBeUndefined();
+  });
+
+  // Deloitte Custom Change: Retention Update
+  describe('independent file retention (fileRetentionHours)', () => {
+    it('short-circuits with an upload-anchored expiry when configured, bypassing conversation lookup', async () => {
+      const now = Date.now();
+      const result = await getRetentionExpiry(
+        request({
+          config: { interfaceConfig: { fileRetentionHours: 1440 } },
+        }),
+        dependencies,
+      );
+
+      const expectedMs = 1440 * 60 * 60 * 1000;
+      expect(result.expiredAt?.getTime()).toBeGreaterThanOrEqual(now + expectedMs);
+      expect(result.expiredAt?.getTime()).toBeLessThan(now + expectedMs + 1000);
+      expect(dependencies.getConvo).not.toHaveBeenCalled();
+      expect(dependencies.createExpirationDate).not.toHaveBeenCalled();
+    });
+
+    it('ignores retentionMode/conversation branches entirely once configured', async () => {
+      const req = request({
+        config: {
+          interfaceConfig: { fileRetentionHours: 24, retentionMode: RetentionMode.ALL },
+        },
+      });
+      req.fileRetentionSource = { isTemporary: true, expiredAt: expirationDate };
+
+      const result = await getRetentionExpiry(req, dependencies);
+
+      expect(result.expiredAt).not.toEqual(expirationDate);
+      expect(dependencies.getConvo).not.toHaveBeenCalled();
+    });
+
+    it('falls through to conversation-inherited behavior when unset', async () => {
+      dependencies.getConvo.mockResolvedValue(null);
+      await getRetentionExpiry(request({ body: { isTemporary: false } }), dependencies);
+      expect(dependencies.getConvo).toHaveBeenCalledWith('user-1', 'convo-1');
+    });
+
+    it('is part of the cache key, so toggling it recomputes rather than reusing a stale expiry', async () => {
+      const req = request({ config: { interfaceConfig: { fileRetentionHours: 1 } } });
+      const first = await getRetentionExpiry(req, dependencies);
+
+      req.config!.interfaceConfig!.fileRetentionHours = 2;
+      const second = await getRetentionExpiry(req, dependencies);
+
+      expect(second.expiredAt?.getTime()).not.toEqual(first.expiredAt?.getTime());
+    });
   });
 
   describe('getSharedLinkExpiration', () => {

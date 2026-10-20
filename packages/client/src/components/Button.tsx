@@ -42,7 +42,8 @@ const buttonVariantRecipe = cva(
   {
     variants: {
       variant: {
-        default: 'bg-surface-inverted text-text-inverted hover:bg-surface-inverted-hover',
+        /** Deloitte Custom Change: default is the GEL brand green (was the inverted surface). */
+        default: 'bg-surface-submit text-text-on-status hover:bg-surface-submit-hover',
         destructive:
           'bg-surface-destructive text-text-on-status hover:bg-surface-destructive-hover',
         outline:

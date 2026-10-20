@@ -23,6 +23,8 @@ const dependencies = (req) => {
     updateFilesUsage: db.updateFilesUsage,
     checkAgentAccess: createAgentAccessCheck(req),
     isPrincipalActive: db.isAgentTriggerPrincipalActive,
+    // Deloitte Custom Change: Retention Update
+    fileRetentionHours: req.config?.interfaceConfig?.fileRetentionHours,
   };
 };
 

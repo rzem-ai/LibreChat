@@ -8,6 +8,8 @@ import type {
   AgentSubagentsConfig,
   AgentGitIdentity,
 } from 'librechat-data-provider';
+// Deloitte Custom Change: Retention Update
+import type { IRetentionException } from '~/types/convo';
 
 export interface ISupportContact {
   name?: string;
@@ -64,4 +66,13 @@ export interface IAgent extends Omit<Document, 'model'> {
   /** Memory partition: 'agent' isolates memories per (user, agent); default shared pool */
   memory_scope?: MemoryScope;
   tenantId?: string;
+  // Deloitte Custom Change: Retention Update
+  /** Explicit activity anchor for retention; never inferred from `updatedAt`. */
+  lastActivityAt?: Date;
+  expiredAt?: Date;
+  retentionException?: IRetentionException;
+  purgeClaimId?: string;
+  purgeClaimedAt?: Date;
+  purgeAttempts?: number;
+  purgeNotBefore?: Date;
 }
