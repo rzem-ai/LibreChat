@@ -2708,6 +2708,7 @@
   "com_ui_subagent_waiting": "Working…",
   "com_ui_submit": "Submit",
   "com_ui_submit_decisions": "Submit {{0}} decisions",
+  "com_ui_submit_decisions_progress": "Submit ({{0}}/{{1}} selected)",
   "com_ui_submitting": "Submitting…",
   "com_ui_summarize_failed": "Summarization failed",
   "com_ui_summarized": "Summarized",

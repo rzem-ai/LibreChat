@@ -584,7 +584,7 @@ modelSpecs:
         promptPrefix: *deloitteSystemPrompt
       details:
         speed: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
-        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -670,7 +670,7 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-opus-5-5'
       details:
-        speed: 4 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        speed: 3 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
         intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
         supports:
           webSearch: true
@@ -757,7 +757,7 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-opus-5-5'
       details:
-        speed: 4 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
+        speed: 3 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
         intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 19 October 2026
         supports:
           webSearch: true
@@ -773,6 +773,8 @@ mcpServers:
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=research'
+    # Trust classifications from operator-managed ClearTrack gateways.
+    trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     iconPath: '/assets/mcp/ibisworld.png' # same logo in both themes
@@ -782,6 +784,7 @@ mcpServers:
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=news'
+    trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     iconPath: '/assets/mcp/afr.png' # same logo in both themes
@@ -791,6 +794,7 @@ mcpServers:
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=kx'
+    trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     iconPathLight: '/assets/mcp/kx-light.png'
@@ -801,6 +805,7 @@ mcpServers:
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=desc'
+    trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     iconPathLight: '/assets/mcp/deloitte-light.png' # placeholder: no dedicated DESC logo yet
@@ -811,6 +816,7 @@ mcpServers:
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=gims'
+    trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     iconPathLight: '/assets/mcp/deloitte-light.png' # placeholder: no dedicated GIMS logo yet
@@ -821,6 +827,7 @@ mcpServers:
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=sharepoint'
+    trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     # Deloitte Custom Change: Only this trusted tool may receive current-request attachment bytes.

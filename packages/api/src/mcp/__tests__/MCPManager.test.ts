@@ -679,9 +679,13 @@ describe('MCPManager', () => {
       resolveRecovery?.();
 
       await expect(toolsPromise).resolves.toEqual({});
+      // Deloitte Custom Change: Refresh catalogs with the effective config that establishes trust.
       expect(MCPServerInspector.getToolCatalog).toHaveBeenCalledWith(
         serverName,
         recoveredConnection,
+        undefined,
+        undefined,
+        expect.objectContaining({ source: 'yaml', type: 'stdio' }),
       );
     });
 
@@ -740,7 +744,14 @@ describe('MCPManager', () => {
         manager.getServerToolFunctionsSnapshot(userId, serverName, overlayConfig),
       ).resolves.toEqual({ tools: expectedTools, publicationGeneration: undefined });
       expect(appGet).not.toHaveBeenCalled();
-      expect(MCPServerInspector.getToolCatalog).toHaveBeenCalledWith(serverName, overlayConnection);
+      // Deloitte Custom Change: Preserve operator provenance through live catalog refresh.
+      expect(MCPServerInspector.getToolCatalog).toHaveBeenCalledWith(
+        serverName,
+        overlayConnection,
+        undefined,
+        undefined,
+        overlayConfig,
+      );
     });
   });
 
@@ -5632,6 +5643,7 @@ describe('MCPManager', () => {
           mockConnection,
           deadlineMs,
           expect.any(AbortSignal),
+          serverConfig,
         );
         expect(notifySpy).toHaveBeenCalledWith({
           tools,

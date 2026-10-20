@@ -17,6 +17,7 @@ import { normalizeJsonSchema, resolveJsonSchemaRefs } from '~/mcp/zod';
 import { isDirectOpenIDBearerRecoveryEnabled } from '~/mcp/openid';
 import { MCPConnectionFactory } from '~/mcp/MCPConnectionFactory';
 import { MCPDomainNotAllowedError } from '~/mcp/errors';
+import { trustsToolClassification } from '~/mcp/tools';
 import { detectOAuthRequirement } from '~/mcp/oauth';
 import { isEnabled } from '~/utils';
 
@@ -179,7 +180,13 @@ export class MCPServerInspector {
 
   private async fetchToolFunctions(): Promise<void> {
     this.config.toolFunctions = (
-      await MCPServerInspector.getToolCatalog(this.serverName, this.connection!)
+      await MCPServerInspector.getToolCatalog(
+        this.serverName,
+        this.connection!,
+        undefined,
+        undefined,
+        this.config,
+      )
     ).tools;
   }
 
@@ -189,12 +196,17 @@ export class MCPServerInspector {
    * revision — a catalog write that cannot be ordered against concurrent replicas is dropped.
    * @param serverName - The name of the server
    * @param connection - The MCP connection
+   * @param deadlineMs - Optional absolute deadline for tools/list.
+   * @param signal - Optional cancellation signal for tools/list.
+   * @param config - Effective server config used to validate classification provenance.
+   * @returns The server-qualified catalog and optional publication revision.
    */
   public static async getToolCatalog(
     serverName: string,
     connection: MCPConnection,
     deadlineMs?: number,
     signal?: AbortSignal,
+    config?: t.ParsedServerConfig,
   ): Promise<{ tools: t.LCAvailableTools; publicationRevision?: string }> {
     const snapshot = await connection.fetchOrderedToolsSnapshot(deadlineMs, signal);
     if (!snapshot.complete) {
@@ -216,7 +228,8 @@ export class MCPServerInspector {
       // Deloitte Custom Change: the gateway class rides with each tool's `_meta`
       // so it is persisted with the definition it describes and survives both
       // discovery writes (list + selected-server refresh).
-      const toolClass = getMCPToolClass(tool._meta);
+      // Deloitte Custom Change: only explicit operator-trusted gateways may provide tool classes.
+      const toolClass = trustsToolClassification(config) ? getMCPToolClass(tool._meta) : undefined;
       toolFunctions[name] = {
         type: 'function',
         ...(keyToolName !== tool.name && { serverToolName: tool.name }),

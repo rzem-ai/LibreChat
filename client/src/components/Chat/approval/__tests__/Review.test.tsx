@@ -33,9 +33,9 @@ jest.mock('~/hooks', () => ({
       com_ui_proposed_replacements: 'Proposed replacements',
       com_ui_proposed_arguments: 'Proposed arguments',
       com_ui_decisions_selected: `${values?.[0]} of ${values?.[1]} decisions selected`,
+      com_ui_submit_decisions_progress: `Submit (${values?.[0]}/${values?.[1]} selected)`,
       com_ui_approve: 'Approve',
       com_ui_reject: 'Reject',
-      com_ui_continue: 'Continue',
       com_ui_collapse: 'Collapse',
     };
     return labels[key] ?? key;
@@ -107,13 +107,13 @@ describe('PendingToolApproval', () => {
     expect(screen.getByText(/Create src\/new\.ts/)).toBeInTheDocument();
     expect(screen.getByText('npm test -- new')).toBeInTheDocument();
     expect(screen.getByText('0 of 2 decisions selected')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Submit (0/2 selected)' })).toBeDisabled();
 
     const approvals = screen.getAllByRole('button', { name: 'Approve' });
     fireEvent.click(approvals[0]);
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Submit (1/2 selected)' })).toBeDisabled();
     fireEvent.click(approvals[1]);
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Submit (2/2 selected)' })).toBeEnabled();
     expect(screen.getByText('2 of 2 decisions selected')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Collapse' }));
