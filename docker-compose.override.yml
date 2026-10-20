@@ -18,7 +18,6 @@ services:
       dockerfile: Dockerfile
       args:
         NODE_MAX_OLD_SPACE_SIZE: ${NODE_MAX_OLD_SPACE_SIZE:-6144}
-    user: "node"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -36,10 +35,6 @@ services:
       - type: bind
         source: ./librechat.yaml
         target: /app/librechat.yaml
-      - type: bind
-        source: ./charts/config/endpoint-costs.yaml
-        target: /app/endpoint-costs.yaml
-        read_only: true
       # Deloitte GEL assets — auto-injected at container start via command above
       - type: bind
         source: ./deloitte/assets
@@ -74,6 +69,7 @@ services:
       args:
         VITE_BASE_PATH: /admin
     environment:
+      - VITE_BASE_PATH=/admin
       - PORT=3000
       - SESSION_SECRET=${ADMIN_PANEL_SESSION_SECRET}
       - API_SERVER_URL=http://api:3080
