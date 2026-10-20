@@ -2,12 +2,6 @@
 localhost {
     tls internal
 
-    @adminStatic path /admin/assets/* /admin/favicon.ico
-    handle @adminStatic {
-        uri strip_prefix /admin
-        reverse_proxy admin-panel:3000
-    }
-
     @admin path /admin /admin/*
     handle @admin {
         reverse_proxy admin-panel:3000
@@ -21,12 +15,6 @@ localhost {
 # Run hostname in your terminal to find the correct hostname for your machine
 YOURHOSTNAME.local {
     tls internal
-
-    @adminStatic path /admin/assets/* /admin/favicon.ico
-    handle @adminStatic {
-        uri strip_prefix /admin
-        reverse_proxy admin-panel:3000
-    }
 
     @admin path /admin /admin/*
     handle @admin {
