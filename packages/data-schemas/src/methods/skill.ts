@@ -1,5 +1,8 @@
+// Deloitte Custom Change: Retention Update
+import crypto from 'node:crypto';
 import {
   ResourceType,
+  SkillsScope,
   SKILL_NAME_MAX_LENGTH,
   SKILL_DESCRIPTION_MAX_LENGTH,
   SKILL_DESCRIPTION_SHORT_THRESHOLD as SKILL_DESCRIPTION_SHORT_THRESHOLD_SHARED,
@@ -28,7 +31,7 @@ import logger from '~/config/winston';
 /**
  * A single validation issue emitted by a skill validator. Most issues are
  * errors and block the mutation; some are warnings (e.g. "description is
- * awfully short, Claude may undertrigger the skill") that surface inline
+ * awfully short, the agent may undertrigger the skill") that surface inline
  * coaching without rejecting the request.
  */
 export type ValidationIssue = {
@@ -41,6 +44,36 @@ export type ValidationIssue = {
    * are surfaced on successful responses so the UI can show inline feedback.
    */
   severity?: 'error' | 'warning';
+};
+
+// Deloitte Custom Change: Retention Update
+/** A skill claimed by the retention purge sweep, enough to classify and cascade-delete it. */
+export interface ClaimedPurgeSkill {
+  resourceId: string;
+  author: string;
+  source: string;
+  tenantId?: string;
+  purgeClaimId: string;
+  purgeAttempts: number;
+}
+
+export interface ReleaseSkillPurgeClaimOptions {
+  success: boolean;
+  retryDelayMs?: number;
+  /** The claim token the release must still own; a stale release no longer stomps a newer claim. */
+  purgeClaimId: string;
+}
+
+export type DeleteSkillCleanupStep = 'agent_allowlists' | 'skill_files' | 'permissions';
+
+export type DeleteSkillResult = {
+  /** Whether this call removed the Skill row. */
+  deleted: boolean;
+  /** Whether the Skill row is absent after this call, including an idempotent retry. */
+  skillAbsent: boolean;
+  /** Whether every dependent database cleanup step completed. */
+  cleanupComplete: boolean;
+  failedCleanupSteps: DeleteSkillCleanupStep[];
 };
 
 type SkillFileUpsertResult = {
@@ -161,6 +194,8 @@ export function validateSkillDescription(description: unknown): ValidationIssue[
       field: 'description',
       code: 'TOO_SHORT',
       severity: 'warning',
+      // Deloitte Custom Change: "assistant" branding terminology (MyAssist) used in
+      // place of upstream's "agent" wording, consistent with other user-facing strings.
       message:
         'Short descriptions may cause the assistant to miss triggering opportunities — aim for a concrete "when to use this skill" sentence.',
     });
@@ -236,10 +271,12 @@ export function validateAlwaysApply(alwaysApply: unknown): ValidationIssue[] {
 
 /**
  * Known fields allowed inside a skill's YAML frontmatter. Anything else is
- * rejected in strict mode. The list is derived from Anthropic's Agent Skills
- * spec plus the fields LibreChat needs to pass through (`name`/`description`
- * are duplicated from the top-level columns because real `SKILL.md` files
- * include them in their frontmatter block).
+ * reported as a warning (see `validateSkillFrontmatter`) rather than rejected:
+ * the frontmatter convention keeps growing, and a single unrecognized key in
+ * one `SKILL.md` used to fail its whole GitHub sync source. The list is derived
+ * from Anthropic's Agent Skills spec plus the fields LibreChat needs to pass
+ * through (`name`/`description` are duplicated from the top-level columns
+ * because real `SKILL.md` files include them in their frontmatter block).
  */
 const ALLOWED_FRONTMATTER_KEYS = new Set<string>([
   'name',
@@ -263,11 +300,42 @@ const ALLOWED_FRONTMATTER_KEYS = new Set<string>([
   'license',
   'compatibility',
   'metadata',
+  'references',
 ]);
+
+const CANONICAL_FRONTMATTER_KEYS = new Map(
+  Array.from(ALLOWED_FRONTMATTER_KEYS, (key) => [key.toLowerCase(), key]),
+);
+
+export function getCanonicalSkillFrontmatterKey(key: string): string | undefined {
+  return CANONICAL_FRONTMATTER_KEYS.get(key.toLowerCase());
+}
+
+export function normalizeSkillFrontmatterKeys(
+  frontmatter: Record<string, unknown>,
+): { frontmatter: Record<string, unknown> } | { error: string } {
+  const normalized = Object.create(null) as Record<string, unknown>;
+  const recognizedKeys = new Map<string, string>();
+  for (const [key, value] of Object.entries(frontmatter)) {
+    const canonicalKey = getCanonicalSkillFrontmatterKey(key);
+    if (canonicalKey) {
+      const previousKey = recognizedKeys.get(canonicalKey);
+      if (previousKey) {
+        return {
+          error: `Recognized frontmatter keys "${previousKey}" and "${key}" both resolve to "${canonicalKey}"`,
+        };
+      }
+      recognizedKeys.set(canonicalKey, key);
+    }
+    normalized[canonicalKey ?? key] = value;
+  }
+  return { frontmatter: normalized };
+}
 
 const FRONTMATTER_MAX_STRING = 2000;
 const FRONTMATTER_MAX_ARRAY = 100;
 const FRONTMATTER_MAX_DEPTH = 4;
+const NON_PERSISTABLE_FRONTMATTER_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
 type FrontmatterKind = 'string' | 'number' | 'boolean' | 'stringArray';
 
@@ -294,7 +362,31 @@ const FRONTMATTER_KIND: Record<string, FrontmatterKind | FrontmatterKind[]> = {
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function isValidFrontmatterKey(key: string): boolean {
+  return !key.includes('\u0000') && !NON_PERSISTABLE_FRONTMATTER_KEYS.has(key);
+}
+
+function containsInvalidFrontmatterKey(value: unknown, depth = 0): boolean {
+  if (depth > FRONTMATTER_MAX_DEPTH) {
+    return false;
+  }
+  if (Array.isArray(value)) {
+    return value.some((nestedValue) => containsInvalidFrontmatterKey(nestedValue, depth + 1));
+  }
+  if (!isPlainObject(value)) {
+    return false;
+  }
+  return Object.entries(value).some(
+    ([key, nestedValue]) =>
+      !isValidFrontmatterKey(key) || containsInvalidFrontmatterKey(nestedValue, depth + 1),
+  );
 }
 
 function isStringArray(value: unknown): value is string[] {
@@ -338,17 +430,20 @@ function isJsonSafe(value: unknown, depth: number): boolean {
     return value.every((v) => isJsonSafe(v, depth + 1));
   }
   if (isPlainObject(value)) {
-    return Object.values(value).every((v) => isJsonSafe(v, depth + 1));
+    return Object.entries(value).every(
+      ([key, nestedValue]) => isValidFrontmatterKey(key) && isJsonSafe(nestedValue, depth + 1),
+    );
   }
   return false;
 }
 
 /**
- * Validate a skill's structured YAML frontmatter. Strict mode: unknown keys
- * are rejected so any expansion of the allowed set is an intentional code
- * change. Known keys are type-checked against `FRONTMATTER_KIND`; `hooks` and
- * `metadata` fall back to a shallow JSON-safety check because their full
- * schemas live outside this module.
+ * Validate a skill's structured YAML frontmatter. Known keys are type-checked
+ * against `FRONTMATTER_KIND`; `hooks`, `metadata` and `references` fall back to
+ * a shallow JSON-safety check because their full schemas live outside this
+ * module. Unknown keys are reported as warnings, not errors: authors regularly
+ * carry keys from other tooling, and failing the skill for one of them takes
+ * down every other skill in the same GitHub sync source.
  */
 export function validateSkillFrontmatter(frontmatter: unknown): ValidationIssue[] {
   if (frontmatter === undefined || frontmatter === null) {
@@ -364,14 +459,63 @@ export function validateSkillFrontmatter(frontmatter: unknown): ValidationIssue[
     ];
   }
 
+  const normalized = normalizeSkillFrontmatterKeys(frontmatter);
+  if ('error' in normalized) {
+    return [
+      {
+        field: 'frontmatter',
+        code: 'DUPLICATE_KEY',
+        message: normalized.error,
+      },
+    ];
+  }
+
   const issues: ValidationIssue[] = [];
-  for (const [key, value] of Object.entries(frontmatter)) {
+  for (const [key, value] of Object.entries(normalized.frontmatter)) {
+    if (!isValidFrontmatterKey(key)) {
+      issues.push({
+        field: 'frontmatter',
+        code: 'INVALID_KEY',
+        message: 'Frontmatter keys must be persistable object property names',
+      });
+      continue;
+    }
+    if (containsInvalidFrontmatterKey(value)) {
+      issues.push({
+        field: `frontmatter.${key}`,
+        code: 'INVALID_KEY',
+        message: `"${key}" contains a frontmatter key that cannot be persisted`,
+      });
+      continue;
+    }
     if (!ALLOWED_FRONTMATTER_KEYS.has(key)) {
       issues.push({
         field: `frontmatter.${key}`,
         code: 'UNKNOWN_KEY',
-        message: `"${key}" is not a recognized frontmatter key`,
+        severity: 'warning',
+        message: `"${key}" is not a recognized frontmatter key and is stored as-is`,
       });
+      /* The key is tolerated, its value still is not: an unrecognized key is
+         persisted, so it stays inside the same depth, array and string bounds
+         every structured key is held to. */
+      if (!isJsonSafe(value, 0)) {
+        issues.push({
+          field: `frontmatter.${key}`,
+          code: 'INVALID_SHAPE',
+          message: `"${key}" must be a JSON-safe value (max depth ${FRONTMATTER_MAX_DEPTH}, max string ${FRONTMATTER_MAX_STRING}, max array ${FRONTMATTER_MAX_ARRAY})`,
+        });
+      }
+      continue;
+    }
+
+    if (key === 'references') {
+      if (!isJsonSafe(value, 0)) {
+        issues.push({
+          field: 'frontmatter.references',
+          code: 'INVALID_SHAPE',
+          message: `"references" must be a JSON-safe value (max depth ${FRONTMATTER_MAX_DEPTH}, max string ${FRONTMATTER_MAX_STRING})`,
+        });
+      }
       continue;
     }
 
@@ -531,6 +675,11 @@ export function deriveStructuredFrontmatterFields(
   if (!frontmatter || typeof frontmatter !== 'object') {
     return {};
   }
+  const normalized = normalizeSkillFrontmatterKeys(frontmatter);
+  if ('error' in normalized) {
+    return {};
+  }
+  frontmatter = normalized.frontmatter;
   const derived: {
     disableModelInvocation?: boolean;
     userInvocable?: boolean;
@@ -619,6 +768,10 @@ function getAlwaysApplyFrontmatterValue(
 }
 
 export type UpsertSkillFileInput = {
+  /** When supplied, replace only this stored revision; never recreate a deleted file. */
+  expectedFileId?: string;
+  /** Insert only when the path is absent, even if another writer creates it first. */
+  createOnly?: boolean;
   skillId: Types.ObjectId | string;
   relativePath: string;
   file_id: string;
@@ -631,11 +784,13 @@ export type UpsertSkillFileInput = {
   mimeType: string;
   bytes: number;
   isExecutable?: boolean;
-  author: Types.ObjectId;
+  author: Types.ObjectId | string;
   tenantId?: string;
 };
 
 export type ListSkillsByAccessParams = {
+  /** Trusted capability-authorized tenant scope; never accept directly from client input. */
+  manageTenantId?: string;
   accessibleIds: Types.ObjectId[];
   category?: string;
   search?: string;
@@ -673,7 +828,9 @@ export type ListAlwaysApplySkillsResult = {
     name: string;
     body: string;
     author: Types.ObjectId;
+    frontmatter?: Record<string, unknown>;
     allowedTools?: string[];
+    version: number;
   }>;
   /** `true` when another page exists beyond this one. */
   has_more: boolean;
@@ -896,7 +1053,11 @@ export function createSkillMethods(
   mongoose: typeof import('mongoose'),
   deps: SkillDeps,
 ): {
-  createSkill: (data: CreateSkillInput) => Promise<CreateSkillResult>;
+  // Deloitte Custom Change: Retention Update
+  createSkill: (
+    data: CreateSkillInput,
+    options?: { retentionHours?: number },
+  ) => Promise<CreateSkillResult>;
   getSkillById: (id: string | Types.ObjectId) => Promise<(ISkill & { _id: Types.ObjectId }) | null>;
   getSkillByName: (
     name: string,
@@ -936,8 +1097,10 @@ export function createSkillMethods(
     id: string;
     expectedVersion: number;
     update: UpdateSkillInput;
+    // Deloitte Custom Change: Retention Update
+    retentionHours?: number;
   }) => Promise<UpdateSkillResult>;
-  deleteSkill: (id: string) => Promise<{ deleted: boolean }>;
+  deleteSkill: (id: string) => Promise<DeleteSkillResult>;
   deleteUserSkills: (userId: Types.ObjectId | string) => Promise<number>;
   findSkillBySourceIdentity: (params: {
     source: 'github' | 'notion';
@@ -964,6 +1127,7 @@ export function createSkillMethods(
     skillId: Types.ObjectId | string,
     relativePath: string,
     update: { content?: string; isBinary?: boolean },
+    expectedFileId?: string,
   ) => Promise<void>;
   updateSkillFileCodeEnvIds: (
     updates: Array<{
@@ -972,15 +1136,41 @@ export function createSkillMethods(
       codeEnvRef: CodeEnvRef;
     }>,
   ) => Promise<{ matchedCount: number; modifiedCount: number }>;
+  // Deloitte Custom Change: Retention Update
+  claimExpiredSkills: (
+    limit: number,
+    options: { leaseMs: number; now?: Date },
+  ) => Promise<ClaimedPurgeSkill[]>;
+  releaseSkillPurgeClaim: (
+    resourceId: Types.ObjectId | string,
+    options: ReleaseSkillPurgeClaimOptions,
+  ) => Promise<void>;
+  confirmSkillPurgeEligible: (
+    skillId: Types.ObjectId | string,
+    purgeClaimId: string,
+    now?: Date,
+  ) => Promise<Pick<ISkillDocument, '_id' | 'author'> | null>;
+  touchSkillsLastActivity: (
+    skillIds: Array<Types.ObjectId | string>,
+    retentionHours: number,
+    minIntervalMs?: number,
+  ) => Promise<void>;
+  setSkillRetentionException: (
+    skillId: string,
+    update: { exempt: boolean; reason?: string; setBy: string; setAt: Date },
+  ) => Promise<Pick<ISkillDocument, 'retentionException'> | null>;
 } {
   const { ObjectId } = mongoose.Types;
 
   function buildSkillFilter(
-    params: Pick<ListSkillsByAccessParams, 'accessibleIds' | 'category' | 'search'>,
+    params: Pick<
+      ListSkillsByAccessParams,
+      'accessibleIds' | 'category' | 'search' | 'manageTenantId'
+    >,
   ): FilterQuery<ISkillDocument> {
-    const filter: FilterQuery<ISkillDocument> = {
-      _id: { $in: params.accessibleIds },
-    };
+    const filter: FilterQuery<ISkillDocument> = params.manageTenantId
+      ? { tenantId: params.manageTenantId }
+      : { _id: { $in: params.accessibleIds } };
     if (params.category && params.category.length > 0) {
       filter.category = params.category;
     }
@@ -1023,18 +1213,32 @@ export function createSkillMethods(
     ).toString('base64');
   }
 
-  async function createSkill(data: CreateSkillInput): Promise<CreateSkillResult> {
+  // Deloitte Custom Change: Retention Update
+  async function createSkill(
+    data: CreateSkillInput,
+    options: { retentionHours?: number } = {},
+  ): Promise<CreateSkillResult> {
+    const normalizedFrontmatter = isPlainObject(data.frontmatter)
+      ? normalizeSkillFrontmatterKeys(data.frontmatter)
+      : undefined;
+    const frontmatter =
+      normalizedFrontmatter && 'frontmatter' in normalizedFrontmatter
+        ? normalizedFrontmatter.frontmatter
+        : data.frontmatter;
+    const bodyIssues = validateSkillBody(data.body);
     /* Parse body's always-apply status once — reused for validation
        (below) and derivation in `resolveAlwaysApplyFromInput`. Avoids
        parsing the same YAML frontmatter block twice per create. */
     const bodyAlwaysApply =
-      data.body !== undefined ? extractAlwaysApplyFromBody(data.body) : undefined;
+      bodyIssues.length === 0 && data.body !== undefined
+        ? extractAlwaysApplyFromBody(data.body)
+        : undefined;
     const issues: ValidationIssue[] = [
       ...validateSkillName(data.name),
       ...validateSkillDescription(data.description),
-      ...validateSkillBody(data.body),
+      ...bodyIssues,
       ...validateSkillDisplayTitle(data.displayTitle),
-      ...validateSkillFrontmatter(data.frontmatter),
+      ...validateSkillFrontmatter(frontmatter),
       ...validateAlwaysApply(data.alwaysApply),
     ];
     /* Body-level `always-apply:` only needs to be well-formed when a
@@ -1047,7 +1251,7 @@ export function createSkillMethods(
     if (
       bodyAlwaysApply?.status === 'invalid' &&
       typeof data.alwaysApply !== 'boolean' &&
-      getAlwaysApplyFrontmatterValue(data.frontmatter) === undefined
+      getAlwaysApplyFrontmatterValue(frontmatter) === undefined
     ) {
       issues.push({
         field: 'body.frontmatter.alwaysApply',
@@ -1083,13 +1287,15 @@ export function createSkillMethods(
       throw error;
     }
 
-    const derived = deriveStructuredFrontmatterFields(data.frontmatter);
+    const derived = deriveStructuredFrontmatterFields(frontmatter);
+    // Deloitte Custom Change: Retention Update
+    const now = new Date();
     const doc = await Skill.create({
       name: data.name,
       displayTitle: data.displayTitle,
       description: data.description,
       body: data.body ?? '',
-      frontmatter: data.frontmatter ?? {},
+      frontmatter: frontmatter ?? {},
       category: data.category ?? '',
       author: data.author,
       authorName: data.authorName,
@@ -1099,12 +1305,19 @@ export function createSkillMethods(
       fileCount: 0,
       alwaysApply: resolveAlwaysApplyFromInput(
         data.alwaysApply,
-        data.frontmatter,
+        frontmatter,
         data.body,
         false,
         bodyAlwaysApply,
       ),
       tenantId: data.tenantId,
+      // Deloitte Custom Change: Retention Update
+      ...(options.retentionHours != null
+        ? {
+            lastActivityAt: now,
+            expiredAt: new Date(now.getTime() + options.retentionHours * 60 * 60 * 1000),
+          }
+        : {}),
       ...derived,
     });
     return {
@@ -1297,7 +1510,7 @@ export function createSkillMethods(
     const rows = await Skill.find(filter)
       .sort({ updatedAt: -1, _id: 1 })
       .limit(limit + 1)
-      .select('name body author updatedAt allowedTools')
+      .select('name body author frontmatter updatedAt allowedTools version')
       .lean();
 
     const has_more = rows.length > limit;
@@ -1326,6 +1539,8 @@ export function createSkillMethods(
         name: row.name,
         body: row.body ?? '',
         author: row.author as Types.ObjectId,
+        version: row.version,
+        frontmatter: row.frontmatter,
       };
       if (row.allowedTools !== undefined) {
         result.allowedTools = row.allowedTools;
@@ -1340,27 +1555,39 @@ export function createSkillMethods(
     id: string;
     expectedVersion: number;
     update: UpdateSkillInput;
+    // Deloitte Custom Change: Retention Update
+    retentionHours?: number;
   }): Promise<UpdateSkillResult> {
-    const { id, expectedVersion, update } = params;
+    // Deloitte Custom Change: Retention Update
+    const { id, expectedVersion, update, retentionHours } = params;
     if (!isValidObjectIdString(id)) {
       return { status: 'not_found' };
     }
+    const normalizedFrontmatter = isPlainObject(update.frontmatter)
+      ? normalizeSkillFrontmatterKeys(update.frontmatter)
+      : undefined;
+    const frontmatter =
+      normalizedFrontmatter && 'frontmatter' in normalizedFrontmatter
+        ? normalizedFrontmatter.frontmatter
+        : update.frontmatter;
 
+    const bodyIssues = update.body !== undefined ? validateSkillBody(update.body) : [];
     /* Parse body's always-apply status once — reused for validation
        (precedence-aware, below) and the derivation cascade further
        down. Avoids parsing the same YAML frontmatter block twice per
        update. */
     const bodyAlwaysApply =
-      update.body !== undefined ? extractAlwaysApplyFromBody(update.body) : undefined;
+      bodyIssues.length === 0 && update.body !== undefined
+        ? extractAlwaysApplyFromBody(update.body)
+        : undefined;
     const issues: ValidationIssue[] = [];
     if (update.name !== undefined) issues.push(...validateSkillName(update.name));
     if (update.description !== undefined)
       issues.push(...validateSkillDescription(update.description));
-    if (update.body !== undefined) issues.push(...validateSkillBody(update.body));
+    issues.push(...bodyIssues);
     if (update.displayTitle !== undefined)
       issues.push(...validateSkillDisplayTitle(update.displayTitle));
-    if (update.frontmatter !== undefined)
-      issues.push(...validateSkillFrontmatter(update.frontmatter));
+    if (update.frontmatter !== undefined) issues.push(...validateSkillFrontmatter(frontmatter));
     if (update.alwaysApply !== undefined) issues.push(...validateAlwaysApply(update.alwaysApply));
     /* Body-level `always-apply:` only needs to be well-formed when a
        higher-precedence source won't override it (see
@@ -1371,7 +1598,7 @@ export function createSkillMethods(
     if (
       bodyAlwaysApply?.status === 'invalid' &&
       update.alwaysApply === undefined &&
-      getAlwaysApplyFrontmatterValue(update.frontmatter) === undefined
+      getAlwaysApplyFrontmatterValue(frontmatter) === undefined
     ) {
       issues.push({
         field: 'body.frontmatter.alwaysApply',
@@ -1398,14 +1625,14 @@ export function createSkillMethods(
     if (update.source !== undefined) setPayload.source = update.source;
     if (update.sourceMetadata !== undefined) setPayload.sourceMetadata = update.sourceMetadata;
     if (update.frontmatter !== undefined) {
-      setPayload.frontmatter = update.frontmatter;
+      setPayload.frontmatter = frontmatter;
       /**
        * Derived columns track frontmatter — when frontmatter changes, the
        * derived view must follow. Fields the new frontmatter omits are
        * unset (back to schema default) so removing `disable-model-invocation`
        * from a SKILL.md re-enables model invocation on the next save.
        */
-      const derived = deriveStructuredFrontmatterFields(update.frontmatter);
+      const derived = deriveStructuredFrontmatterFields(frontmatter);
       for (const key of ['disableModelInvocation', 'userInvocable', 'allowedTools'] as const) {
         if (derived[key] !== undefined) {
           setPayload[key] = derived[key];
@@ -1445,7 +1672,7 @@ export function createSkillMethods(
       derivedAlwaysApply = update.alwaysApply;
     }
     if (derivedAlwaysApply === undefined && update.frontmatter !== undefined) {
-      const fromFrontmatter = getAlwaysApplyFrontmatterValue(update.frontmatter);
+      const fromFrontmatter = getAlwaysApplyFrontmatterValue(frontmatter);
       if (typeof fromFrontmatter === 'boolean') {
         derivedAlwaysApply = fromFrontmatter;
       }
@@ -1470,6 +1697,12 @@ export function createSkillMethods(
     }
     if (derivedAlwaysApply !== undefined) {
       setPayload.alwaysApply = derivedAlwaysApply;
+    }
+    // Deloitte Custom Change: Retention Update
+    if (retentionHours != null) {
+      const now = new Date();
+      setPayload.lastActivityAt = now;
+      setPayload.expiredAt = new Date(now.getTime() + retentionHours * 60 * 60 * 1000);
     }
 
     const updateOps: Record<string, unknown> = {
@@ -1519,16 +1752,31 @@ export function createSkillMethods(
    * accessible catalog at runtime, so a plain `$pull` would silently widen
    * a deliberately restricted agent. Disabling skills preserves the
    * restriction until an author makes a new explicit choice.
+   *
+   * That inference only applies to agents with no explicit `skills_scope`.
+   * With a scope persisted, the field already says what an empty allowlist
+   * means -- `selected` resolves to no skills on its own, and `all` means the
+   * full catalog on purpose -- so disabling them would turn skills off behind
+   * the author's back.
    */
-  async function removeSkillsFromAgentAllowlists(skillIds: string[]): Promise<void> {
+  async function removeSkillsFromAgentAllowlists(skillIds: string[]): Promise<boolean> {
     if (skillIds.length === 0) {
-      return;
+      return true;
     }
     const ids = skillIds.map((id) => id.toLowerCase());
     const Agent = mongoose.models.Agent as Model<IAgent>;
     try {
       await Agent.updateMany(
-        { skills: { $in: ids, $not: { $elemMatch: { $nin: ids } } } },
+        {
+          skills: { $in: ids, $not: { $elemMatch: { $nin: ids } } },
+          /** Only `all` and `selected` opt out: each already defines what an
+           *  empty allowlist means. A missing field (matched here because
+           *  `$nin` also matches absent) is the legacy shape, and an explicit
+           *  `none` with the master flag still true is a contradictory shape
+           *  the API accepts, which `skillDeps` would otherwise keep reading
+           *  as permission to expose the skill-authoring tools. */
+          skills_scope: { $nin: [SkillsScope.all, SkillsScope.selected] },
+        },
         { $set: { skills: [], skills_enabled: false } },
         { timestamps: false },
       );
@@ -1537,36 +1785,54 @@ export function createSkillMethods(
         { $pull: { skills: { $in: ids } } },
         { timestamps: false },
       );
+      return true;
     } catch (error) {
       logger.error(
         '[removeSkillsFromAgentAllowlists] Error pruning agent skill allowlists:',
         error,
       );
+      return false;
     }
   }
 
-  async function deleteSkill(id: string): Promise<{ deleted: boolean }> {
+  async function deleteSkill(id: string): Promise<DeleteSkillResult> {
     if (!isValidObjectIdString(id)) {
-      return { deleted: false };
+      return {
+        deleted: false,
+        skillAbsent: false,
+        cleanupComplete: false,
+        failedCleanupSteps: [],
+      };
     }
     const Skill = mongoose.models.Skill as Model<ISkillDocument>;
     const SkillFile = mongoose.models.SkillFile as Model<ISkillFileDocument>;
     const objectId = new ObjectId(id);
     const res = await Skill.deleteOne({ _id: objectId });
-    if (!res.deletedCount) {
-      return { deleted: false };
+    const failedCleanupSteps: DeleteSkillCleanupStep[] = [];
+    const allowlistsRemoved = await removeSkillsFromAgentAllowlists([id]);
+    if (!allowlistsRemoved) {
+      failedCleanupSteps.push('agent_allowlists');
     }
-    /** Prune allowlists immediately after the Skill row is gone: if the
-     *  SkillFile cleanup below throws, a retry exits early on
-     *  `deletedCount === 0` and would never reach a later prune. */
-    await removeSkillsFromAgentAllowlists([id]);
-    await SkillFile.deleteMany({ skillId: objectId });
-    try {
-      await deps.removeAllPermissions({ resourceType: ResourceType.SKILL, resourceId: id });
-    } catch (error) {
-      logger.error(`[deleteSkill] Error removing permissions for ${id}:`, error);
+
+    const [filesResult, permissionsResult] = await Promise.allSettled([
+      SkillFile.deleteMany({ skillId: objectId }),
+      deps.removeAllPermissions({ resourceType: ResourceType.SKILL, resourceId: id }),
+    ]);
+    if (filesResult.status === 'rejected') {
+      failedCleanupSteps.push('skill_files');
+      logger.error(`[deleteSkill] Error removing files for ${id}:`, filesResult.reason);
     }
-    return { deleted: true };
+    if (permissionsResult.status === 'rejected') {
+      failedCleanupSteps.push('permissions');
+      logger.error(`[deleteSkill] Error removing permissions for ${id}:`, permissionsResult.reason);
+    }
+
+    return {
+      deleted: Boolean(res.deletedCount),
+      skillAbsent: true,
+      cleanupComplete: failedCleanupSteps.length === 0,
+      failedCleanupSteps,
+    };
   }
 
   async function deleteUserSkills(userId: Types.ObjectId | string): Promise<number> {
@@ -1679,32 +1945,59 @@ export function createSkillMethods(
       throw error;
     }
     const SkillFile = mongoose.models.SkillFile as Model<ISkillFileDocument>;
-    const category = inferSkillFileCategory(row.relativePath);
+    const fields = {
+      skillId: row.skillId,
+      relativePath: row.relativePath,
+      file_id: row.file_id,
+      filename: row.filename,
+      filepath: row.filepath,
+      storageKey: row.storageKey,
+      storageRegion: row.storageRegion,
+      source: row.source,
+      sourceMetadata: row.sourceMetadata,
+      mimeType: row.mimeType,
+      bytes: row.bytes,
+      category: inferSkillFileCategory(row.relativePath),
+      isExecutable: row.isExecutable ?? false,
+      author: row.author,
+      tenantId: row.tenantId,
+    };
+    if (row.createOnly) {
+      if (row.expectedFileId != null) {
+        throw new Error('A file cannot require both an absent path and an existing revision');
+      }
+      let created: ISkillFileDocument;
+      try {
+        created = await SkillFile.create(fields);
+      } catch (error) {
+        if (error instanceof Error && 'code' in error && error.code === 11000) {
+          throw Object.assign(new Error('Skill file was created by another writer'), {
+            code: 'SKILL_FILE_CONFLICT',
+          });
+        }
+        throw error;
+      }
+      await bumpSkillVersionAndAdjustFileCount(row.skillId, 1);
+      return created.toObject() as unknown as ISkillFile & { _id: Types.ObjectId };
+    }
     const result = (await SkillFile.findOneAndUpdate(
-      { skillId: row.skillId, relativePath: row.relativePath },
       {
-        $set: {
-          skillId: row.skillId,
-          relativePath: row.relativePath,
-          file_id: row.file_id,
-          filename: row.filename,
-          filepath: row.filepath,
-          storageKey: row.storageKey,
-          storageRegion: row.storageRegion,
-          source: row.source,
-          sourceMetadata: row.sourceMetadata,
-          mimeType: row.mimeType,
-          bytes: row.bytes,
-          category,
-          isExecutable: row.isExecutable ?? false,
-          author: row.author,
-          tenantId: row.tenantId,
-        },
-        $unset: { content: '', isBinary: '', codeEnvRef: '' },
+        skillId: row.skillId,
+        relativePath: row.relativePath,
+        ...(row.expectedFileId != null ? { file_id: row.expectedFileId } : {}),
       },
-      { new: true, upsert: true, includeResultMetadata: true },
+      {
+        $set: fields,
+        $unset: { content: '', isBinary: '', codeEnvRef: '', codeEnvRefs: '' },
+      },
+      { new: true, upsert: row.expectedFileId == null, includeResultMetadata: true },
     ).lean()) as unknown as SkillFileUpsertResult;
     const current = result.value;
+    if (!current && row.expectedFileId != null) {
+      throw Object.assign(new Error('Skill file changed since it was read'), {
+        code: 'SKILL_FILE_CONFLICT',
+      });
+    }
     if (!current) {
       const error = new Error('Skill file upsert failed to read the saved file row');
       (error as Error & { code?: string }).code = 'SKILL_FILE_UPSERT_NOT_FOUND';
@@ -1742,9 +2035,13 @@ export function createSkillMethods(
     skillId: Types.ObjectId | string,
     relativePath: string,
     update: { content?: string; isBinary?: boolean },
+    expectedFileId?: string,
   ): Promise<void> {
     const SkillFile = mongoose.models.SkillFile as Model<ISkillFileDocument>;
-    await SkillFile.updateOne({ skillId, relativePath }, { $set: update });
+    await SkillFile.updateOne(
+      { skillId, relativePath, ...(expectedFileId != null ? { file_id: expectedFileId } : {}) },
+      { $set: update },
+    );
   }
 
   async function updateSkillFileCodeEnvIds(
@@ -1756,12 +2053,20 @@ export function createSkillMethods(
   ): Promise<{ matchedCount: number; modifiedCount: number }> {
     if (updates.length === 0) return { matchedCount: 0, modifiedCount: 0 };
     const SkillFile = mongoose.models.SkillFile as Model<ISkillFileDocument>;
-    const ops = updates.map((u) => ({
-      updateOne: {
-        filter: { skillId: u.skillId, relativePath: u.relativePath },
-        update: { $set: { codeEnvRef: u.codeEnvRef } },
-      },
-    }));
+    const ops = updates.map((u) => {
+      const routeKey = u.codeEnvRef.executionRouteKey ?? u.codeEnvRef.executionProfile ?? 'default';
+      return {
+        updateOne: {
+          filter: { skillId: u.skillId, relativePath: u.relativePath },
+          update: {
+            $set: {
+              codeEnvRef: u.codeEnvRef,
+              [`codeEnvRefs.${routeKey}`]: u.codeEnvRef,
+            },
+          },
+        },
+      };
+    });
 
     /**
      * The returned `{matchedCount, modifiedCount}` lets callers warn on
@@ -1777,6 +2082,165 @@ export function createSkillMethods(
       );
     }
     return { matchedCount: result.matchedCount, modifiedCount: result.modifiedCount };
+  }
+
+  // Deloitte Custom Change: Retention Update
+  /**
+   * Leases up to `limit` expired, non-exempt skills for the retention purge
+   * sweep. Mirrors `claimExpiredAgents`/`claimExpiredConversations`: each claim
+   * is a conditional `findOneAndUpdate` per candidate, atomic without relying
+   * on DocumentDB's unsupported pipeline-form updates. A skill already leased
+   * by a live claim is skipped; one whose lease expired (`purgeClaimedAt`
+   * older than `leaseMs`) is reclaimed. Eligibility (inline vs. synced)
+   * happens in the caller after claiming — see `classifySkillPurgeEligibility`
+   * in `@librechat/api`.
+   */
+  async function claimExpiredSkills(
+    limit: number,
+    { leaseMs, now = new Date() }: { leaseMs: number; now?: Date },
+  ): Promise<ClaimedPurgeSkill[]> {
+    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
+    const leaseExpiry = new Date(now.getTime() - leaseMs);
+    const unclaimedOrExpiredLease = {
+      $or: [{ purgeClaimId: { $exists: false } }, { purgeClaimedAt: { $lte: leaseExpiry } }],
+    };
+    const eligibilityFilter = {
+      expiredAt: { $lte: now },
+      'retentionException.exempt': { $ne: true },
+      $and: [
+        { $or: [{ purgeNotBefore: { $exists: false } }, { purgeNotBefore: { $lte: now } }] },
+        unclaimedOrExpiredLease,
+      ],
+    } as FilterQuery<ISkillDocument>;
+
+    const candidates = await Skill.find(eligibilityFilter)
+      .select({ _id: 1, author: 1, source: 1, tenantId: 1 })
+      .sort({ expiredAt: 1 })
+      .limit(limit)
+      .lean<Array<Pick<ISkillDocument, '_id' | 'author' | 'source' | 'tenantId'>>>();
+
+    const claimed: ClaimedPurgeSkill[] = [];
+    for (const candidate of candidates) {
+      const purgeClaimId = crypto.randomUUID();
+      const result = await Skill.findOneAndUpdate(
+        { _id: candidate._id, ...eligibilityFilter },
+        { $set: { purgeClaimId, purgeClaimedAt: now }, $inc: { purgeAttempts: 1 } },
+        { new: true },
+      ).lean<Pick<
+        ISkillDocument,
+        '_id' | 'author' | 'source' | 'tenantId' | 'purgeAttempts'
+      > | null>();
+
+      if (result?._id != null) {
+        claimed.push({
+          resourceId: String(result._id),
+          author: String(result.author),
+          source: result.source ?? 'inline',
+          tenantId: result.tenantId,
+          purgeClaimId,
+          purgeAttempts: result.purgeAttempts ?? 1,
+        });
+      }
+    }
+
+    return claimed;
+  }
+
+  /**
+   * Releases a purge claim after the sweep either finished the cascade
+   * (`success: true`) or failed/declined it (`success: false`, parking the
+   * row behind `purgeNotBefore` for `retryDelayMs`). Mirrors
+   * `releaseAgentPurgeClaim`/`releaseConversationPurgeClaim`.
+   */
+  async function releaseSkillPurgeClaim(
+    resourceId: Types.ObjectId | string,
+    { success, retryDelayMs, purgeClaimId }: ReleaseSkillPurgeClaimOptions,
+  ): Promise<void> {
+    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
+    const update: FilterQuery<ISkillDocument> = {
+      $unset: { purgeClaimId: '', purgeClaimedAt: '' },
+    };
+    if (!success) {
+      update.$set = { purgeNotBefore: new Date(Date.now() + (retryDelayMs ?? 0)) };
+    }
+    await Skill.updateOne({ _id: resourceId, purgeClaimId }, update);
+  }
+
+  /**
+   * Re-checks the time-sensitive purge eligibility (expiry, exemption) and
+   * claim ownership immediately before the destructive cascade, closing the
+   * gap between `claimExpiredSkills` and `deleteSkill`. A renewal or
+   * exemption granted after the claim was taken makes this resolve to
+   * `null`, aborting the cascade instead of deleting a skill that's no
+   * longer eligible.
+   */
+  async function confirmSkillPurgeEligible(
+    skillId: Types.ObjectId | string,
+    purgeClaimId: string,
+    now: Date = new Date(),
+  ): Promise<Pick<ISkillDocument, '_id' | 'author'> | null> {
+    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
+    return await Skill.findOne({
+      _id: skillId,
+      purgeClaimId,
+      expiredAt: { $lte: now },
+      'retentionException.exempt': { $ne: true },
+    })
+      .select({ _id: 1, author: 1 })
+      .lean<Pick<ISkillDocument, '_id' | 'author'> | null>();
+  }
+
+  /**
+   * Fire-and-forget activity touch for skills primed into a turn. Throttled
+   * to a single write per `minIntervalMs` window (default 1 hour) via a
+   * guard on the update filter, so repeat use of the same skill within the
+   * window is a no-op write rather than one write per turn.
+   */
+  async function touchSkillsLastActivity(
+    skillIds: Array<Types.ObjectId | string>,
+    retentionHours: number,
+    minIntervalMs: number = 60 * 60 * 1000,
+  ): Promise<void> {
+    if (skillIds.length === 0) {
+      return;
+    }
+    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
+    const now = new Date();
+    const throttleWindow = new Date(now.getTime() - minIntervalMs);
+    await Skill.updateMany(
+      {
+        _id: { $in: skillIds },
+        $or: [{ lastActivityAt: { $exists: false } }, { lastActivityAt: { $lte: throttleWindow } }],
+      },
+      {
+        $set: {
+          lastActivityAt: now,
+          expiredAt: new Date(now.getTime() + retentionHours * 60 * 60 * 1000),
+        },
+      },
+    );
+  }
+
+  /**
+   * Admin-only, unconditional retention carve-out — the one lever that
+   * permanently exempts a specific skill from the purge sweep, independent of
+   * `source`/sync status and regardless of who it's shared with. Not
+   * owner-scoped: the caller's route is responsible for admin authorization.
+   */
+  async function setSkillRetentionException(
+    skillId: string,
+    update: { exempt: boolean; reason?: string; setBy: string; setAt: Date },
+  ): Promise<Pick<ISkillDocument, 'retentionException'> | null> {
+    if (!isValidObjectIdString(skillId)) {
+      return null;
+    }
+    const Skill = mongoose.models.Skill as Model<ISkillDocument>;
+    const result = await Skill.findOneAndUpdate(
+      { _id: new ObjectId(skillId) },
+      { $set: { retentionException: update } },
+      { new: true, projection: { retentionException: 1 } },
+    ).lean<Pick<ISkillDocument, 'retentionException'>>();
+    return result;
   }
 
   return {
@@ -1797,6 +2261,12 @@ export function createSkillMethods(
     getSkillFileByPath,
     updateSkillFileContent,
     updateSkillFileCodeEnvIds,
+    // Deloitte Custom Change: Retention Update
+    claimExpiredSkills,
+    releaseSkillPurgeClaim,
+    confirmSkillPurgeEligible,
+    touchSkillsLastActivity,
+    setSkillRetentionException,
   };
 }
 

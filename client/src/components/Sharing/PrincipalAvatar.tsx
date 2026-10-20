@@ -2,6 +2,7 @@ import React from 'react';
 import { Users, User, Shield } from 'lucide-react';
 import { PrincipalType } from 'librechat-data-provider';
 import type { TPrincipal } from 'librechat-data-provider';
+import { useAuthenticatedImageSrc } from '@librechat/client';
 import { cn } from '~/utils';
 
 interface PrincipalAvatarProps {
@@ -16,6 +17,11 @@ export default function PrincipalAvatar({
   className,
 }: PrincipalAvatarProps) {
   const { avatar, type, name } = principal;
+  const {
+    src: authenticatedAvatar,
+    isLoading: isAvatarLoading,
+    isError: avatarFetchError,
+  } = useAuthenticatedImageSrc(avatar ?? '');
   const displayName = name || 'Unknown';
 
   const sizeClasses = {
@@ -68,19 +74,21 @@ export default function PrincipalAvatar({
   if (avatar) {
     return (
       <div className={cn('flex-shrink-0', className)}>
-        <img
-          src={avatar}
-          alt={`${displayName} avatar`}
-          className={cn(avatarSizeClass, 'rounded-full object-cover')}
-          onError={(e) => {
-            // Fallback to icon if image fails to load
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-            target.nextElementSibling?.classList.remove('hidden');
-          }}
-        />
+        {!isAvatarLoading && !avatarFetchError && (
+          <img
+            src={authenticatedAvatar}
+            alt={`${displayName} avatar`}
+            className={cn(avatarSizeClass, 'rounded-full object-cover')}
+            onError={(e) => {
+              // Fallback to icon if image fails to load
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              target.nextElementSibling?.classList.remove('hidden');
+            }}
+          />
+        )}
         {/* Hidden fallback icon that shows if image fails */}
-        <div className={cn('hidden', avatarSizeClass)}>
+        <div className={cn(avatarFetchError ? '' : 'hidden', avatarSizeClass)}>
           <div
             className={cn(
               avatarSizeClass,

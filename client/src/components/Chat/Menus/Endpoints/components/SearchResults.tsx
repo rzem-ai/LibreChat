@@ -1,38 +1,191 @@
-import React, { Fragment } from 'react';
+import React, { Fragment, useCallback, useMemo } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 import { VisuallyHidden } from '@ariakit/react';
-import { CheckCircle2, EarthIcon } from 'lucide-react';
+import { ModelInfoHoverGroup } from '@librechat/client';
 import { isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider';
 import type { TModelSpec } from 'librechat-data-provider';
-import type { Endpoint } from '~/common';
+import type { Endpoint, LocalizeFunction } from '~/common';
+import { EndpointModelItem, VIRTUALIZE_THRESHOLD } from './EndpointModelItem';
 import MarketplaceItem, { marketplaceSearchMatches } from './Marketplace';
 import { useModelSelectorContext } from '../ModelSelectorContext';
 import { CustomMenuItem as MenuItem } from '../CustomMenu';
+import VirtualizedModelList from './VirtualizedModelList';
 import { shouldRenderEndpointOption } from '../utils';
+import { cn, getSpecAgentAvatarURL } from '~/utils';
+import ModelInfoTooltip from './ModelInfoTooltip';
 import SpecDescription from './SpecDescription';
-import ModelCost from './ModelCost';
+import { useFavorites } from '~/hooks';
 import SpecIcon from './SpecIcon';
-import { cn } from '~/utils';
+
+type SearchModel = { name: string; isGlobal?: boolean };
+
+type SearchResult =
+  | { kind: 'spec'; spec: TModelSpec }
+  | {
+      kind: 'models';
+      endpoint: Endpoint;
+      filteredModels: SearchModel[];
+      showMarketplace: boolean;
+    }
+  | { kind: 'endpoint'; endpoint: Endpoint };
+
+/**
+ * Resolves the same selectable search entries that are rendered below and
+ * counts only options, not endpoint headings. Keeping this as one pass makes
+ * the ARIA offset and set size cover every option in the shared listbox.
+ */
+function prepareSearchResults(
+  results: (TModelSpec | Endpoint)[],
+  localize: LocalizeFunction,
+  searchValue: string,
+): SearchResult[] {
+  const lowerQuery = searchValue.toLowerCase();
+
+  return results.flatMap<SearchResult>((item): SearchResult[] => {
+    if ('name' in item && 'label' in item) {
+      return [{ kind: 'spec', spec: item as TModelSpec }];
+    }
+
+    const endpoint = item as Endpoint;
+    if (!shouldRenderEndpointOption(endpoint)) {
+      return [];
+    }
+
+    if (!endpoint.hasModels) {
+      return [{ kind: 'endpoint', endpoint }];
+    }
+
+    const endpointMatches = endpoint.label.toLowerCase().includes(lowerQuery);
+    const showMarketplace =
+      endpoint.showMarketplace === true &&
+      (endpointMatches || marketplaceSearchMatches(searchValue, localize));
+    const models = endpoint.models ?? [];
+    const filteredModels = endpointMatches
+      ? models
+      : models.filter((model) => {
+          let modelName = model.name;
+          if (
+            isAgentsEndpoint(endpoint.value) &&
+            endpoint.agentNames &&
+            endpoint.agentNames[model.name]
+          ) {
+            modelName = endpoint.agentNames[model.name];
+          } else if (
+            isAssistantsEndpoint(endpoint.value) &&
+            endpoint.assistantNames &&
+            endpoint.assistantNames[model.name]
+          ) {
+            modelName = endpoint.assistantNames[model.name];
+          }
+          return modelName.toLowerCase().includes(lowerQuery);
+        });
+
+    if (!filteredModels.length && !showMarketplace) {
+      return [];
+    }
+
+    return [{ kind: 'models', endpoint, filteredModels, showMarketplace }];
+  });
+}
+
+function searchResultOptionCount(result: SearchResult): number {
+  if (result.kind === 'spec' || result.kind === 'endpoint') {
+    return 1;
+  }
+  return result.filteredModels.length + (result.showMarketplace ? 1 : 0);
+}
+
+/**
+ * Renders search matches with the same row component as the endpoint list. The
+ * virtualized branch only changes how many rows are mounted, not the row
+ * affordances or selection/favorite behavior.
+ */
+function SearchModelRows({
+  endpoint,
+  filteredModels,
+  precedingOptionCount,
+  listboxSetSize,
+  searchValue,
+}: {
+  endpoint: Endpoint;
+  filteredModels: SearchModel[];
+  precedingOptionCount: number;
+  listboxSetSize: number;
+  searchValue: string;
+}) {
+  const { isFavoriteModel, toggleFavoriteModel, isFavoriteAgent, toggleFavoriteAgent } =
+    useFavorites();
+  const isAgent = isAgentsEndpoint(endpoint.value);
+
+  const isFavorite = useCallback(
+    (modelId: string) =>
+      isAgent ? isFavoriteAgent(modelId) : isFavoriteModel(modelId, endpoint.value),
+    [isAgent, isFavoriteAgent, isFavoriteModel, endpoint.value],
+  );
+  const onToggleFavorite = useCallback(
+    (modelId: string) => {
+      if (isAgent) {
+        toggleFavoriteAgent(modelId);
+      } else {
+        toggleFavoriteModel({ model: modelId, endpoint: endpoint.value });
+      }
+    },
+    [isAgent, toggleFavoriteAgent, toggleFavoriteModel, endpoint.value],
+  );
+
+  const modelIds = useMemo(() => filteredModels.map((model) => model.name), [filteredModels]);
+  const globalByName = useMemo(
+    () => new Map(filteredModels.map((model) => [model.name, model.isGlobal ?? false])),
+    [filteredModels],
+  );
+
+  if (filteredModels.length > VIRTUALIZE_THRESHOLD) {
+    return (
+      <VirtualizedModelList
+        key={searchValue}
+        endpoint={endpoint}
+        modelIds={modelIds}
+        globalByName={globalByName}
+        isFavorite={isFavorite}
+        onToggleFavorite={onToggleFavorite}
+        precedingOptionCount={precedingOptionCount}
+        listboxSetSize={listboxSetSize}
+      />
+    );
+  }
+
+  return modelIds.map((modelId, index) => (
+    <EndpointModelItem
+      key={`${endpoint.value}-${modelId}-search`}
+      modelId={modelId}
+      endpoint={endpoint}
+      isGlobal={globalByName.get(modelId) ?? false}
+      isFavorite={isFavorite(modelId)}
+      onToggleFavorite={onToggleFavorite}
+      posInSet={precedingOptionCount + index + 1}
+      setSize={listboxSetSize}
+    />
+  ));
+}
 
 interface SearchResultsProps {
   results: (TModelSpec | Endpoint)[] | null;
-  localize: (phraseKey: any, options?: any) => string;
+  localize: LocalizeFunction;
   searchValue: string;
 }
 
 export function SearchResults({ results, localize, searchValue }: SearchResultsProps) {
-  const {
-    selectedValues,
-    handleSelectSpec,
-    handleSelectModel,
-    handleSelectEndpoint,
-    endpointsConfig,
-  } = useModelSelectorContext();
-
-  const {
-    modelSpec: selectedSpec,
-    endpoint: selectedEndpoint,
-    model: selectedModel,
-  } = selectedValues;
+  const { selectedValues, handleSelectSpec, handleSelectEndpoint, endpointsConfig, agentsMap } =
+    useModelSelectorContext();
+  const { modelSpec: selectedSpec, endpoint: selectedEndpoint } = selectedValues;
+  const preparedResults = useMemo(
+    () => (results ? prepareSearchResults(results, localize, searchValue) : []),
+    [results, localize, searchValue],
+  );
+  const listboxSetSize = preparedResults.reduce(
+    (total, result) => total + searchResultOptionCount(result),
+    0,
+  );
 
   if (!results) {
     return null;
@@ -50,6 +203,8 @@ export function SearchResults({ results, localize, searchValue }: SearchResultsP
     );
   }
 
+  let precedingOptionCount = 0;
+
   return (
     <>
       <div role="alert" aria-live="polite" className="sr-only">
@@ -57,91 +212,73 @@ export function SearchResults({ results, localize, searchValue }: SearchResultsP
           ? localize('com_files_result_found', { count: results.length })
           : localize('com_files_results_found', { count: results.length })}
       </div>
-      {results.map((item, i) => {
-        if ('name' in item && 'label' in item) {
-          // Render model spec
-          const spec = item as TModelSpec;
-          return (
-            <MenuItem
-              key={spec.name}
-              onClick={() => handleSelectSpec(spec)}
-              aria-selected={selectedSpec === spec.name || undefined}
-              className={cn(
-                'flex w-full cursor-pointer justify-between rounded-lg px-2 text-sm',
-                spec.description ? 'items-start' : 'items-center',
-              )}
-            >
-              <div
-                className={cn(
-                  'flex w-full min-w-0 gap-2 px-1 py-1',
-                  spec.description ? 'items-start' : 'items-center',
-                )}
+      {/* Deloitte Custom Change: one shared hover card for all spec rows, as in ModelSpecItem. */}
+      <ModelInfoHoverGroup>
+        {preparedResults.map((result) => {
+          const resultOffset = precedingOptionCount;
+          const resultOptionCount = searchResultOptionCount(result);
+          precedingOptionCount += resultOptionCount;
+
+          if (result.kind === 'spec') {
+            const { spec } = result;
+            return (
+              <ModelInfoTooltip
+                key={spec.name}
+                spec={spec}
+                endpointsConfig={endpointsConfig}
+                agentAvatarURL={getSpecAgentAvatarURL(spec, agentsMap)}
               >
-                {(spec.showIconInMenu ?? true) && (
-                  <div className="flex-shrink-0">
-                    <SpecIcon currentSpec={spec} endpointsConfig={endpointsConfig} />
-                  </div>
-                )}
-                <div className="flex min-w-0 flex-col gap-1">
-                  <span className="truncate text-left">{spec.label}</span>
-                  <SpecDescription description={spec.description} />
-                </div>
-              </div>
-              <ModelCost modelId={spec.preset.model} />
-              {selectedSpec === spec.name && (
-                <>
-                  <CheckCircle2
+                <MenuItem
+                  onClick={() => handleSelectSpec(spec)}
+                  aria-selected={selectedSpec === spec.name || undefined}
+                  aria-posinset={resultOffset + 1}
+                  aria-setsize={listboxSetSize}
+                  className={cn(
+                    'flex w-full cursor-pointer justify-between rounded-lg px-2 text-sm',
+                    spec.description ? 'items-start' : 'items-center',
+                  )}
+                >
+                  <div
                     className={cn(
-                      'size-4 shrink-0 text-text-primary',
-                      spec.description ? 'mt-1' : '',
+                      'flex w-full min-w-0 gap-2 px-1 py-1',
+                      spec.description ? 'items-start' : 'items-center',
                     )}
-                    aria-hidden="true"
-                  />
-                  <VisuallyHidden>{localize('com_a11y_selected')}</VisuallyHidden>
-                </>
-              )}
-            </MenuItem>
-          );
-        } else {
-          // For an endpoint item
-          const endpoint = item as Endpoint;
-          if (!shouldRenderEndpointOption(endpoint)) {
-            return null;
+                  >
+                    {(spec.showIconInMenu ?? true) && (
+                      <div className="flex-shrink-0">
+                        <SpecIcon
+                          currentSpec={spec}
+                          endpointsConfig={endpointsConfig}
+                          agentAvatarURL={getSpecAgentAvatarURL(spec, agentsMap)}
+                        />
+                      </div>
+                    )}
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <span className="truncate text-left">{spec.label}</span>
+                      <SpecDescription description={spec.description} />
+                    </div>
+                  </div>
+                  {selectedSpec === spec.name && (
+                    <>
+                      <CheckCircle2
+                        className={cn(
+                          'size-4 shrink-0 text-text-primary',
+                          spec.description ? 'mt-1' : '',
+                        )}
+                        aria-hidden="true"
+                      />
+                      <VisuallyHidden>{localize('com_a11y_selected')}</VisuallyHidden>
+                    </>
+                  )}
+                </MenuItem>
+              </ModelInfoTooltip>
+            );
           }
 
-          if (endpoint.hasModels) {
-            const lowerQuery = searchValue.toLowerCase();
-            const endpointMatches = endpoint.label.toLowerCase().includes(lowerQuery);
-            const showMarketplace =
-              endpoint.showMarketplace === true &&
-              (endpointMatches || marketplaceSearchMatches(searchValue, localize));
-            const models = endpoint.models ?? [];
-            const filteredModels = endpointMatches
-              ? models
-              : models.filter((model) => {
-                  let modelName = model.name;
-                  if (
-                    isAgentsEndpoint(endpoint.value) &&
-                    endpoint.agentNames &&
-                    endpoint.agentNames[model.name]
-                  ) {
-                    modelName = endpoint.agentNames[model.name];
-                  } else if (
-                    isAssistantsEndpoint(endpoint.value) &&
-                    endpoint.assistantNames &&
-                    endpoint.assistantNames[model.name]
-                  ) {
-                    modelName = endpoint.assistantNames[model.name];
-                  }
-                  return modelName.toLowerCase().includes(lowerQuery);
-                });
-
-            if (!filteredModels.length && !showMarketplace) {
-              return null; // skip if no models match
-            }
-
+          if (result.kind === 'models') {
+            const { endpoint, filteredModels, showMarketplace } = result;
             return (
-              <Fragment key={`endpoint-${endpoint.value}-search-${i}`}>
+              <Fragment key={`endpoint-${endpoint.value}-search`}>
                 <div className="flex items-center gap-2 px-3 py-1 text-sm font-medium">
                   {endpoint.icon && (
                     <div className="flex items-center justify-center overflow-hidden rounded-full p-1">
@@ -154,112 +291,60 @@ export function SearchResults({ results, localize, searchValue }: SearchResultsP
                   <MarketplaceItem
                     className="px-3 py-2 pl-6"
                     label={localize('com_agents_marketplace')}
+                    posInSet={resultOffset + 1}
+                    setSize={listboxSetSize}
                   />
                 )}
-                {filteredModels.map((model) => {
-                  const modelId = model.name;
-
-                  let isGlobal = false;
-                  let modelName = modelId;
-                  if (
-                    isAgentsEndpoint(endpoint.value) &&
-                    endpoint.agentNames &&
-                    endpoint.agentNames[modelId]
-                  ) {
-                    modelName = endpoint.agentNames[modelId];
-                    const modelInfo = endpoint?.models?.find((m) => m.name === modelId);
-                    isGlobal = modelInfo?.isGlobal ?? false;
-                  } else if (
-                    isAssistantsEndpoint(endpoint.value) &&
-                    endpoint.assistantNames &&
-                    endpoint.assistantNames[modelId]
-                  ) {
-                    modelName = endpoint.assistantNames[modelId];
-                  }
-
-                  const isModelSelected =
-                    !selectedSpec &&
-                    selectedEndpoint === endpoint.value &&
-                    selectedModel === modelId;
-                  return (
-                    <MenuItem
-                      key={`${endpoint.value}-${modelId}-search-${i}`}
-                      onClick={() => handleSelectModel(endpoint, modelId)}
-                      aria-selected={isModelSelected || undefined}
-                      className="flex w-full cursor-pointer items-center justify-start gap-2 rounded-lg px-3 py-2 pl-6 text-sm"
-                    >
-                      <div className="flex min-w-0 flex-1 items-center gap-2">
-                        {endpoint.modelIcons?.[modelId] && (
-                          <div className="flex h-5 w-5 items-center justify-center overflow-hidden rounded-full">
-                            <img
-                              src={endpoint.modelIcons[modelId]}
-                              alt={modelName}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        )}
-                        <span className="truncate">{modelName}</span>
-                      </div>
-                      <ModelCost modelId={modelId} />
-                      {isGlobal && (
-                        <EarthIcon className="ml-auto size-4 text-green-400" aria-hidden="true" />
-                      )}
-                      {isModelSelected && (
-                        <>
-                          <CheckCircle2
-                            className="size-4 shrink-0 text-text-primary"
-                            aria-hidden="true"
-                          />
-                          <VisuallyHidden>{localize('com_a11y_selected')}</VisuallyHidden>
-                        </>
-                      )}
-                    </MenuItem>
-                  );
-                })}
+                <SearchModelRows
+                  endpoint={endpoint}
+                  filteredModels={filteredModels}
+                  precedingOptionCount={resultOffset + (showMarketplace ? 1 : 0)}
+                  listboxSetSize={listboxSetSize}
+                  searchValue={searchValue}
+                />
               </Fragment>
             );
-          } else {
-            // Endpoints with no models
-            const isEndpointSelected = !selectedSpec && selectedEndpoint === endpoint.value;
-            return (
-              <MenuItem
-                key={`endpoint-${endpoint.value}-search-item`}
-                onClick={() => handleSelectEndpoint(endpoint)}
-                aria-selected={isEndpointSelected || undefined}
-                className="flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-sm"
-              >
-                <div className="flex items-center gap-2">
-                  {endpoint.icon && (
-                    <div
-                      className="flex items-center justify-center overflow-hidden rounded-full border border-gray-200 p-1 dark:border-gray-700"
-                      style={{ borderRadius: '50%' }}
-                    >
-                      {endpoint.icon}
-                    </div>
-                  )}
-                  <span>{endpoint.label}</span>
-                </div>
-                {isEndpointSelected && (
-                  <>
-                    <CheckCircle2
-                      className="size-4 shrink-0 text-text-primary"
-                      aria-hidden="true"
-                    />
-                    <VisuallyHidden>{localize('com_a11y_selected')}</VisuallyHidden>
-                  </>
-                )}
-              </MenuItem>
-            );
           }
-        }
-      })}
+
+          const { endpoint } = result;
+          const isEndpointSelected = !selectedSpec && selectedEndpoint === endpoint.value;
+          return (
+            <MenuItem
+              key={`endpoint-${endpoint.value}-search-item`}
+              onClick={() => handleSelectEndpoint(endpoint)}
+              aria-selected={isEndpointSelected || undefined}
+              aria-posinset={resultOffset + 1}
+              aria-setsize={listboxSetSize}
+              className="flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-sm"
+            >
+              <div className="flex items-center gap-2">
+                {endpoint.icon && (
+                  <div
+                    className="flex items-center justify-center overflow-hidden rounded-full border border-border-light p-1"
+                    style={{ borderRadius: '50%' }}
+                  >
+                    {endpoint.icon}
+                  </div>
+                )}
+                <span>{endpoint.label}</span>
+              </div>
+              {isEndpointSelected && (
+                <>
+                  <CheckCircle2 className="size-4 shrink-0 text-text-primary" aria-hidden="true" />
+                  <VisuallyHidden>{localize('com_a11y_selected')}</VisuallyHidden>
+                </>
+              )}
+            </MenuItem>
+          );
+        })}
+      </ModelInfoHoverGroup>
     </>
   );
 }
 
 export function renderSearchResults(
   results: (TModelSpec | Endpoint)[] | null,
-  localize: (phraseKey: any, options?: any) => string,
+  localize: LocalizeFunction,
   searchValue: string,
 ) {
   return (

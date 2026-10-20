@@ -1,6 +1,12 @@
 import { Schema } from 'mongoose';
 import type { IMemoryEntry } from '~/types/memory';
 
+const MEMORY_KEY_REGEX = /^[a-z_]+$/;
+
+export function isValidMemoryKey(key: string): boolean {
+  return MEMORY_KEY_REGEX.test(key);
+}
+
 const MemoryEntrySchema: Schema<IMemoryEntry> = new Schema({
   userId: {
     type: Schema.Types.ObjectId,
@@ -12,7 +18,7 @@ const MemoryEntrySchema: Schema<IMemoryEntry> = new Schema({
     type: String,
     required: true,
     validate: {
-      validator: (v: string) => /^[a-z_]+$/.test(v),
+      validator: isValidMemoryKey,
       message: 'Key must only contain lowercase letters and underscores',
     },
   },
@@ -37,8 +43,35 @@ const MemoryEntrySchema: Schema<IMemoryEntry> = new Schema({
     type: String,
     index: true,
   },
+  // Deloitte Custom Change: Retention Update
+  /** Explicit activity anchor for retention; never inferred from `updated_at`. */
+  lastActivityAt: {
+    type: Date,
+  },
+  expiredAt: {
+    type: Date,
+  },
+  /** Lease holder for the in-flight purge sweep claiming this memory, so two
+   * sweep ticks (or replicas) never delete the same expired memory twice. */
+  purgeClaimId: {
+    type: String,
+  },
+  purgeClaimedAt: {
+    type: Date,
+  },
+  purgeAttempts: {
+    type: Number,
+    default: 0,
+  },
+  /** Earliest time a sweep tick may claim this memory again, set on release to
+   * back off a failed attempt or to let an expired lease be reclaimed. */
+  purgeNotBefore: {
+    type: Date,
+  },
 });
 
 MemoryEntrySchema.index({ userId: 1, agentId: 1, key: 1 });
+// Deloitte Custom Change: Retention Update
+MemoryEntrySchema.index({ expiredAt: 1, purgeNotBefore: 1 });
 
 export default MemoryEntrySchema;

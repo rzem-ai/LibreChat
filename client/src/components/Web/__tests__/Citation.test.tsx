@@ -68,9 +68,19 @@ jest.mock('~/hooks', () => ({
 
 jest.mock('~/components/Chat/Messages/Content/FilePreviewDialog', () => ({
   __esModule: true,
-  default: ({ open, fileId, fileName }: { open: boolean; fileId?: string; fileName: string }) =>
+  default: ({
+    open,
+    fileId,
+    fileName,
+    fileSource,
+  }: {
+    open: boolean;
+    fileId?: string;
+    fileName: string;
+    fileSource?: string;
+  }) =>
     open ? (
-      <div data-testid="file-preview-dialog" data-file-id={fileId}>
+      <div data-testid="file-preview-dialog" data-file-id={fileId} data-file-source={fileSource}>
         {fileName}
       </div>
     ) : null,
@@ -103,6 +113,26 @@ function renderWithProviders(
 }
 
 describe('Citation', () => {
+  it('uses the semantic active surface for a highlighted passage', () => {
+    const highlightedPassage = 'Highlighted passage';
+    render(
+      // Deloitte Custom Change: CitationContext now tracks a Set of hovered
+      // citation ids (hoveredCitationIds/setHoveredCitationIds) instead of a
+      // single hoveredCitationId, to support highlighting multiple citations
+      // that share the same quoted span.
+      <CitationContext.Provider
+        value={{
+          hoveredCitationIds: new Set(['cite-highlight']),
+          setHoveredCitationIds: jest.fn(),
+        }}
+      >
+        <HighlightedText citationId="cite-highlight">{highlightedPassage}</HighlightedText>
+      </CitationContext.Provider>,
+    );
+
+    expect(screen.getByText(highlightedPassage)).toHaveClass('bg-surface-active');
+  });
+
   it('renders composite file citations as buttons and opens the preview dialog', () => {
     const searchResults = {
       '0': {
@@ -115,6 +145,7 @@ describe('Citation', () => {
             metadata: {
               fileBytes: 2048,
               fileType: 'application/pdf',
+              storageType: 'text',
             },
             pageRelevance: { 1: 0.92 },
             pages: [1],
@@ -146,6 +177,7 @@ describe('Citation', () => {
     fireEvent.click(fileButton);
 
     expect(screen.getByTestId('file-preview-dialog')).toHaveAttribute('data-file-id', 'file-123');
+    expect(screen.getByTestId('file-preview-dialog')).toHaveAttribute('data-file-source', 'text');
   });
 
   it('keeps standalone web citations as links', () => {
@@ -709,12 +741,14 @@ describe('Citation', () => {
     const span = screen.getByText(quotedSpanText);
     const chip = screen.getByRole('link', { name: 'example.com' });
 
-    expect(span).not.toHaveClass('bg-amber-300/20');
+    // Deloitte Custom Change: GEL design-system semantic token (bg-surface-active)
+    // replaced the literal Tailwind amber highlight color.
+    expect(span).not.toHaveClass('bg-surface-active');
 
     fireEvent.mouseEnter(chip);
-    expect(span).toHaveClass('bg-amber-300/20');
+    expect(span).toHaveClass('bg-surface-active');
 
     fireEvent.mouseLeave(chip);
-    expect(span).not.toHaveClass('bg-amber-300/20');
+    expect(span).not.toHaveClass('bg-surface-active');
   });
 });

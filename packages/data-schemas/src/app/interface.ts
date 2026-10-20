@@ -1,4 +1,4 @@
-import { extractEnvVariable, removeNullishValues } from 'librechat-data-provider';
+import { envVarRegex, extractEnvVariable, removeNullishValues } from 'librechat-data-provider';
 import type { TCustomConfig, TConfigDefaults } from 'librechat-data-provider';
 import type { AppConfig } from '~/types/app';
 import { isMemoryEnabled } from './memory';
@@ -10,6 +10,12 @@ import { isMemoryEnabled } from './memory';
  * @param params.configDefaults - The custom configuration default values.
  * @returns default interface object.
  */
+/** Resolves a `${VAR}` value, or `undefined` when it is empty or the var is unset. */
+function resolveEnvValue(value?: string): string | undefined {
+  const resolved = value && extractEnvVariable(value);
+  return resolved && !envVarRegex.test(resolved) ? resolved : undefined;
+}
+
 export async function loadDefaultInterface({
   config,
   configDefaults,
@@ -35,6 +41,13 @@ export async function loadDefaultInterface({
     deloitteHeader = { ...interfaceConfig.deloitteHeader, title };
   }
 
+  // Deloitte Custom Change: the FAQ agent id differs per environment, so librechat.yaml supplies
+  // it as `${LEARNING_CENTER_FAQ_AGENT_ID}`; an unset var is dropped, not sent as a placeholder.
+  const learningCenter = interfaceConfig?.learningCenter && {
+    ...interfaceConfig.learningCenter,
+    faqAgentId: resolveEnvValue(interfaceConfig.learningCenter.faqAgentId),
+  };
+
   const memoryConfig = config?.memory;
   const memoryEnabled = isMemoryEnabled(memoryConfig);
   /** Only disable memories if memory config is present and explicitly disabled */
@@ -58,6 +71,9 @@ export async function loadDefaultInterface({
     modelSelect:
       interfaceConfig?.modelSelect ??
       (hasModelSpecs ? includesAddedEndpoints : defaults.modelSelect),
+    codeHighlightThrottleMs:
+      interfaceConfig?.codeHighlightThrottleMs ?? defaults.codeHighlightThrottleMs,
+    agentSelectorLimit: interfaceConfig?.agentSelectorLimit ?? defaults.agentSelectorLimit,
     parameters: interfaceConfig?.parameters ?? (hasModelSpecs ? false : defaults.parameters),
     presets: interfaceConfig?.presets ?? (hasModelSpecs ? false : defaults.presets),
     customDeloitteFeatureFlags,
@@ -69,6 +85,7 @@ export async function loadDefaultInterface({
     buildInfo: interfaceConfig?.buildInfo ?? defaults.buildInfo,
     contextUsage: interfaceConfig?.contextUsage ?? defaults.contextUsage,
     contextCost: interfaceConfig?.contextCost ?? defaults.contextCost,
+    feedback: interfaceConfig?.feedback ?? defaults.feedback,
     currency: interfaceConfig?.currency ?? defaults.currency,
     userMessageAlignment: interfaceConfig?.userMessageAlignment ?? defaults.userMessageAlignment,
     isTutorialEnabled,
@@ -81,21 +98,33 @@ export async function loadDefaultInterface({
     agents: interfaceConfig?.agents,
     temporaryChat: interfaceConfig?.temporaryChat,
     temporaryChatRetention: interfaceConfig?.temporaryChatRetention,
+    generalChatRetention: interfaceConfig?.generalChatRetention,
     retentionMode: interfaceConfig?.retentionMode,
     retainAgentFiles: interfaceConfig?.retainAgentFiles,
+    // Deloitte Custom Change: Retention Update
+    fileRetentionHours: interfaceConfig?.fileRetentionHours,
+    fileRetentionWarningHours: interfaceConfig?.fileRetentionWarningHours,
+    agentRetentionHours: interfaceConfig?.agentRetentionHours,
+    agentRetentionWarningHours: interfaceConfig?.agentRetentionWarningHours,
+    memoryRetentionHours: interfaceConfig?.memoryRetentionHours,
+    agentFileRetentionHours: interfaceConfig?.agentFileRetentionHours,
     runCode: interfaceConfig?.runCode,
     webSearch: interfaceConfig?.webSearch,
     fileSearch: interfaceConfig?.fileSearch,
     // Deloitte Custom Tests: # Visible icons for file uploads- PR #219
     providerUpload: interfaceConfig?.providerUpload,
     fileCitations: interfaceConfig?.fileCitations,
+    // Deloitte Custom Change: Deloitte Logo Lockup header (PR #269)
     deloitteHeader,
+    traceViewer: interfaceConfig?.traceViewer,
     defaultPinnedTools: interfaceConfig?.defaultPinnedTools,
     peoplePicker: interfaceConfig?.peoplePicker,
     marketplace: interfaceConfig?.marketplace,
+    learningCenter,
     remoteAgents: interfaceConfig?.remoteAgents,
     skills: interfaceConfig?.skills,
     sharedLinks: interfaceConfig?.sharedLinks,
+    schedules: interfaceConfig?.schedules,
   });
 
   return loadedInterface;

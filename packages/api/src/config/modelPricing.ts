@@ -1,179 +1,90 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { logger } from '@librechat/data-schemas';
-import type { TEndpointCostConfig, TModelPricing } from 'librechat-data-provider';
+import type { TModelPricing, TModelsConfig } from 'librechat-data-provider';
+import type { AppConfig } from '@librechat/data-schemas';
+import { buildTokenConfigMap, type TokenomicsDeps } from '~/endpoints/pricing';
+import { collectCustomTokenConfigs } from '~/endpoints/tokenConfig';
 
-const DEFAULT_PRICING_PATH = '/app/endpoint-costs.yaml';
-const LOCAL_CONFIGMAP_PATH = path.resolve(process.cwd(), 'charts/config/endpoint-costs.yaml');
-const DEFAULT_ENDPOINT_COST_CONFIG: TEndpointCostConfig = {
-  REFERENCE_MODEL_ID: 'gpt-56-luna',
-  MULTIPLIER_ROUNDING_INCREMENT: 0.1,
-  MIN_MULTIPLIER: 0.1,
-};
+/**
+ * Deloitte Custom Change: this entire file is a Deloitte addition with no upstream
+ * LibreChat equivalent. It used to read and hand-parse a bespoke `endpoint-costs.yaml`
+ * ConfigMap (providers -> models -> input_per_1m/output_per_1m) to build a relative-cost
+ * badge (a multiplier against a configured reference model) shown in the model selector.
+ * That file has been removed — pricing now lives as native `tokenConfig` blocks on each
+ * custom endpoint in `librechat.yaml` (or the fetched-and-cached config for custom
+ * endpoints without a static override), and the tier is an absolute 1-5 `$` tier derived
+ * from each model's own blended price, with no reference model needed. `getModelPricing`
+ * below computes pricing for every model; the result feeds the model info tooltip's cost row.
+ * The 4 breakpoints
+ * separating the 5 tiers are configurable via `customDeloitteFeatureFlags.modelPricingTierBreakpoints`
+ * in `librechat.yaml`, falling back to `DEFAULT_PRICE_TIER_BREAKPOINTS` when unset.
+ * `getModelPricing` resolves every model's rate through `buildTokenConfigMap` — the
+ * same override-or-multiplier resolution used for real billing: custom endpoints use their
+ * static/cached `tokenConfig` override when present, and every other model (including
+ * built-in OpenAI/Anthropic/Google/Bedrock endpoints, which never carry a `tokenConfig`)
+ * falls back to the built-in `getMultiplier`/`getCacheMultiplier` tables — so the
+ * tooltip can never advertise a rate the request isn't actually billed at. Which
+ * tiers additionally earn the tooltip's "High Cost" callout is configurable via
+ * `customDeloitteFeatureFlags.highCostAlertTiers`, falling back to `DEFAULT_HIGH_COST_TIERS`
+ * (top tier only) when unset.
+ */
+const DEFAULT_PRICE_TIER_BREAKPOINTS = [2, 5, 8, 15];
+const DEFAULT_HIGH_COST_TIERS = [5];
 
-let cachedEndpointCosts:
-  | { modelPricing: TModelPricing; endpointCostConfig: TEndpointCostConfig }
-  | undefined;
-
-function readFirstExisting(paths: Array<string | undefined>): string | null {
-  for (const filePath of paths) {
-    if (!filePath || !fs.existsSync(filePath)) {
-      continue;
+/** Maps a blended $/1M-token cost to a 1-5 price tier, rendered as `$` to `$$$$$`. */
+function getPriceTier(blendedCost: number, breakpoints: number[]): number {
+  let tier = 1;
+  for (const breakpoint of breakpoints) {
+    if (blendedCost >= breakpoint) {
+      tier += 1;
     }
-    return fs.readFileSync(filePath, 'utf8');
   }
-  return null;
+  return tier;
 }
 
-function extractPricingYaml(contents: string): string {
-  if (!contents.includes('pricing.yaml: |')) {
-    return contents;
+/**
+ * Flattens every configured model's resolved rate into the `{ inputPer1M, outputPer1M,
+ * provider, tier, isHighCost }` shape, keyed by endpoint and model. Returns an empty map
+ * only when no `modelsConfig` is available.
+ */
+export async function getModelPricing(
+  appConfig: AppConfig | undefined,
+  userId: string,
+  tenantId: string | null | undefined,
+  modelsConfig: TModelsConfig | undefined,
+  deps: TokenomicsDeps,
+): Promise<TModelPricing> {
+  if (!modelsConfig) {
+    return {};
   }
+  const customDeloitteFeatureFlags = appConfig?.interfaceConfig?.customDeloitteFeatureFlags;
 
-  const lines = contents.split('\n');
-  const startIndex = lines.findIndex((line) => line.includes('pricing.yaml: |'));
-  if (startIndex === -1) {
-    return contents;
-  }
+  const endpointTokenConfigs = await collectCustomTokenConfigs(appConfig, userId, tenantId);
+  const tokenConfigMap = buildTokenConfigMap(
+    { modelsConfig, endpointTokenConfigs, includePricing: true },
+    deps,
+  );
 
-  const pricingLines: string[] = [];
-  for (const line of lines.slice(startIndex + 1)) {
-    if (line.trim().startsWith('{{-')) {
-      break;
-    }
-    if (line.trim() && !line.startsWith('    ')) {
-      break;
-    }
-    pricingLines.push(line.startsWith('    ') ? line.slice(4) : line);
-  }
-
-  return pricingLines.join('\n');
-}
-
-function parsePricingYaml(pricingYaml: string): TModelPricing {
+  const breakpoints =
+    customDeloitteFeatureFlags?.modelPricingTierBreakpoints ?? DEFAULT_PRICE_TIER_BREAKPOINTS;
+  const highCostTiers = new Set(
+    customDeloitteFeatureFlags?.highCostAlertTiers ?? DEFAULT_HIGH_COST_TIERS,
+  );
   const pricing: TModelPricing = {};
-  let provider: string | undefined;
-  let model: string | undefined;
 
-  for (const line of pricingYaml.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#') || trimmed === 'providers:' || trimmed === 'models:') {
-      continue;
-    }
-
-    const indentation = line.search(/\S/);
-    const sectionMatch = trimmed.match(/^([^:]+):$/);
-    if (sectionMatch) {
-      if (indentation === 2) {
-        provider = sectionMatch[1];
-        model = undefined;
-      } else if (provider) {
-        model = sectionMatch[1];
-        pricing[model] = { inputPer1M: Number.NaN, outputPer1M: Number.NaN, provider };
+  for (const [endpoint, models] of Object.entries(tokenConfigMap)) {
+    for (const [model, { prompt, completion }] of Object.entries(models)) {
+      if (prompt == null || completion == null) {
+        continue;
       }
-      continue;
-    }
-
-    if (!model) {
-      continue;
-    }
-
-    const valueMatch = trimmed.match(/^(input_per_1m|output_per_1m):\s*([0-9.]+)$/);
-    if (!valueMatch) {
-      continue;
-    }
-    const value = Number(valueMatch[2]);
-    if (!Number.isFinite(value)) {
-      continue;
-    }
-    if (valueMatch[1] === 'input_per_1m') {
-      pricing[model].inputPer1M = value;
-    } else {
-      pricing[model].outputPer1M = value;
-    }
-  }
-
-  for (const [modelName, modelPricing] of Object.entries(pricing)) {
-    if (!Number.isFinite(modelPricing.inputPer1M) || !Number.isFinite(modelPricing.outputPer1M)) {
-      delete pricing[modelName];
+      const tier = getPriceTier((prompt + completion) / 2, breakpoints);
+      pricing[`${endpoint}:${model}`] = {
+        inputPer1M: prompt,
+        outputPer1M: completion,
+        provider: endpoint,
+        tier,
+        isHighCost: highCostTiers.has(tier),
+      };
     }
   }
 
   return pricing;
-}
-
-function applyEndpointCostOverrides(
-  config: TEndpointCostConfig,
-  referenceModelId?: string,
-): TEndpointCostConfig {
-  const nextConfig = { ...config };
-
-  const envReferenceModelId = process.env.MODEL_PRICING_REFERENCE_MODEL_ID?.trim();
-  if (envReferenceModelId) {
-    nextConfig.REFERENCE_MODEL_ID = envReferenceModelId;
-  } else if (referenceModelId?.trim()) {
-    nextConfig.REFERENCE_MODEL_ID = referenceModelId.trim();
-  }
-
-  const roundingIncrement = Number(process.env.MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT);
-  if (Number.isFinite(roundingIncrement) && roundingIncrement > 0) {
-    nextConfig.MULTIPLIER_ROUNDING_INCREMENT = roundingIncrement;
-  }
-
-  const minMultiplier = Number(process.env.MODEL_PRICING_MIN_MULTIPLIER);
-  if (Number.isFinite(minMultiplier) && minMultiplier > 0) {
-    nextConfig.MIN_MULTIPLIER = minMultiplier;
-  }
-
-  return nextConfig;
-}
-
-function getEndpointCosts() {
-  if (cachedEndpointCosts) {
-    return cachedEndpointCosts;
-  }
-
-  try {
-    const rawContents = readFirstExisting([
-      process.env.ENDPOINT_COSTS_CONFIG_PATH,
-      process.env.LLM_PRICING_CONFIG_PATH,
-      DEFAULT_PRICING_PATH,
-      LOCAL_CONFIGMAP_PATH,
-    ]);
-    if (!rawContents) {
-      cachedEndpointCosts = {
-        modelPricing: {},
-        endpointCostConfig: DEFAULT_ENDPOINT_COST_CONFIG,
-      };
-      return cachedEndpointCosts;
-    }
-
-    const pricingYaml = extractPricingYaml(rawContents);
-    const endpointCostConfig = DEFAULT_ENDPOINT_COST_CONFIG;
-    cachedEndpointCosts = {
-      modelPricing: parsePricingYaml(pricingYaml),
-      endpointCostConfig,
-    };
-    return cachedEndpointCosts;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    logger.warn(`[config] Failed to load model pricing: ${message}`);
-    cachedEndpointCosts = {
-      modelPricing: {},
-      endpointCostConfig: DEFAULT_ENDPOINT_COST_CONFIG,
-    };
-    return cachedEndpointCosts;
-  }
-}
-
-export function getModelPricing(): TModelPricing {
-  return getEndpointCosts().modelPricing;
-}
-
-export function getEndpointCostConfig(referenceModelId?: string): TEndpointCostConfig {
-  return applyEndpointCostOverrides(getEndpointCosts().endpointCostConfig, referenceModelId);
-}
-
-export function clearModelPricingCache(): void {
-  cachedEndpointCosts = undefined;
 }

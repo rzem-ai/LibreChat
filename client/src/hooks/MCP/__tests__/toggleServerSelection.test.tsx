@@ -46,12 +46,17 @@ jest.mock('~/hooks', () => ({
     connectionStatus: mockConnectionStatus,
     isConnectionStatusLoading: mockIsConnectionStatusLoading,
   }),
+  // Deloitte Custom Change: useMCPServerManager now gates on catalog warmup
+  useCatalogReady: () => true,
 }));
 
 let mockLoadedServers: Record<string, { chatMenu?: boolean; customUserVars?: unknown }> = {};
 jest.mock('~/data-provider', () => ({
   useGetStartupConfig: () => ({ data: {} }),
   useMCPServersQuery: () => ({ data: mockLoadedServers, isLoading: false }),
+  // Deloitte Custom Change: useMCPServerManager now also queries discovered
+  // MCP tools for authorization observation.
+  useMCPToolsQuery: () => ({ data: undefined }),
 }));
 
 function makeServer(customUserVars?: Record<string, unknown>) {

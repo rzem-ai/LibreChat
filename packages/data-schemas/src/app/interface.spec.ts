@@ -12,6 +12,54 @@ describe('loadDefaultInterface', () => {
     expect(interfaceConfig?.autoSubmitFromUrl).toBe(true);
   });
 
+  it('uses the schema default for code highlight throttling when not configured', async () => {
+    const interfaceConfig = await loadDefaultInterface({
+      config: {},
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.codeHighlightThrottleMs).toBe(300);
+  });
+
+  it('preserves a configured code highlight throttle interval', async () => {
+    const config: Partial<TCustomConfig> = {
+      interface: {
+        codeHighlightThrottleMs: 100,
+      },
+    };
+
+    const interfaceConfig = await loadDefaultInterface({
+      config,
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.codeHighlightThrottleMs).toBe(100);
+  });
+
+  it('uses the schema default for the agent selector list cap when not configured', async () => {
+    const interfaceConfig = await loadDefaultInterface({
+      config: {},
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.agentSelectorLimit).toBe(10);
+  });
+
+  it('forwards a configured agent selector list cap to the served interface', async () => {
+    const config: Partial<TCustomConfig> = {
+      interface: {
+        agentSelectorLimit: 4,
+      },
+    };
+
+    const interfaceConfig = await loadDefaultInterface({
+      config,
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.agentSelectorLimit).toBe(4);
+  });
+
   it('preserves disabled URL auto-submit config', async () => {
     const config: Partial<TCustomConfig> = {
       interface: {
@@ -64,6 +112,30 @@ describe('loadDefaultInterface', () => {
     });
 
     expect(interfaceConfig?.buildInfo).toBe(true);
+  });
+
+  it('enables response feedback by default', async () => {
+    const interfaceConfig = await loadDefaultInterface({
+      config: {},
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.feedback).toBe(true);
+  });
+
+  it('preserves a disabled response feedback flag', async () => {
+    const config: Partial<TCustomConfig> = {
+      interface: {
+        feedback: false,
+      },
+    };
+
+    const interfaceConfig = await loadDefaultInterface({
+      config,
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.feedback).toBe(false);
   });
 
   it('disables context cost by default', async () => {
@@ -144,6 +216,44 @@ describe('loadDefaultInterface', () => {
     expect(interfaceConfig?.autoSubmitFromUrl).toBe(true);
   });
 
+  it('passes the learning center config through to the client', async () => {
+    const learningCenter = { faqAgentId: 'agent_123', feedbackUrl: 'https://example.com/form' };
+    const interfaceConfig = await loadDefaultInterface({
+      config: { interface: { learningCenter } },
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.learningCenter).toEqual(learningCenter);
+  });
+
+  describe('learningCenter faqAgentId env substitution', () => {
+    const load = (faqAgentId: string) =>
+      loadDefaultInterface({
+        config: { interface: { learningCenter: { faqAgentId, feedbackUrl: 'https://f.example' } } },
+        configDefaults: getConfigDefaults(),
+      });
+
+    afterEach(() => {
+      delete process.env.LEARNING_CENTER_FAQ_AGENT_ID;
+    });
+
+    it('resolves the env placeholder to the configured agent id', async () => {
+      process.env.LEARNING_CENTER_FAQ_AGENT_ID = 'agent_abc';
+      const result = await load('${LEARNING_CENTER_FAQ_AGENT_ID}');
+      expect(result?.learningCenter).toEqual({
+        faqAgentId: 'agent_abc',
+        feedbackUrl: 'https://f.example',
+      });
+    });
+
+    it('drops an unset placeholder instead of sending it to the client', async () => {
+      const result = await load('${LEARNING_CENTER_FAQ_AGENT_ID}');
+      expect(result?.learningCenter?.faqAgentId).toBeUndefined();
+      expect(result?.learningCenter?.feedbackUrl).toBe('https://f.example');
+    });
+  });
+
+  // Deloitte Custom Change: tutorial flag migration tests (MyAssist Academy getting-started tour, PR #903)
   it('preserves disabled tutorial flag config', async () => {
     const config: Partial<TCustomConfig> = {
       interface: {
@@ -221,10 +331,11 @@ describe('loadDefaultInterface', () => {
     expect(interfaceConfig?.customDeloitteFeatureFlags?.isTutorialEnabled).toBeUndefined();
   });
 
-  it('preserves the configured temporary chat retention period', async () => {
+  it('preserves the configured chat retention periods', async () => {
     const config: Partial<TCustomConfig> = {
       interface: {
         temporaryChatRetention: 24,
+        generalChatRetention: 2160,
       },
     };
 
@@ -234,6 +345,7 @@ describe('loadDefaultInterface', () => {
     });
 
     expect(interfaceConfig?.temporaryChatRetention).toBe(24);
+    expect(interfaceConfig?.generalChatRetention).toBe(2160);
   });
 
   it('omits temporary chat retention when it is not explicitly configured', async () => {
@@ -243,6 +355,7 @@ describe('loadDefaultInterface', () => {
     });
 
     expect(interfaceConfig).not.toHaveProperty('temporaryChatRetention');
+    expect(interfaceConfig).not.toHaveProperty('generalChatRetention');
   });
 
   it('preserves the configured agent file retention exemption', async () => {
@@ -340,5 +453,79 @@ describe('loadDefaultInterface', () => {
     });
 
     expect(interfaceConfig).not.toHaveProperty('defaultPinnedTools');
+  });
+
+  // Deloitte Custom Change: Retention Update
+  it('preserves the configured file retention periods', async () => {
+    const config: Partial<TCustomConfig> = {
+      interface: {
+        fileRetentionHours: 1440,
+        fileRetentionWarningHours: 168,
+      },
+    };
+
+    const interfaceConfig = await loadDefaultInterface({
+      config,
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.fileRetentionHours).toBe(1440);
+    expect(interfaceConfig?.fileRetentionWarningHours).toBe(168);
+  });
+
+  it('omits file retention periods when not explicitly configured', async () => {
+    const interfaceConfig = await loadDefaultInterface({
+      config: {},
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig).not.toHaveProperty('fileRetentionHours');
+    expect(interfaceConfig).not.toHaveProperty('fileRetentionWarningHours');
+  });
+
+  it('preserves the configured agent retention periods', async () => {
+    const config: Partial<TCustomConfig> = {
+      interface: {
+        agentRetentionHours: 720,
+        agentRetentionWarningHours: 48,
+      },
+    };
+
+    const interfaceConfig = await loadDefaultInterface({
+      config,
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.agentRetentionHours).toBe(720);
+    expect(interfaceConfig?.agentRetentionWarningHours).toBe(48);
+  });
+
+  it('omits agent retention periods when not explicitly configured', async () => {
+    const interfaceConfig = await loadDefaultInterface({
+      config: {},
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig).not.toHaveProperty('agentRetentionHours');
+    expect(interfaceConfig).not.toHaveProperty('agentRetentionWarningHours');
+  });
+
+  it('passes the trace viewer section through unchanged', async () => {
+    const traceViewer = { enabled: true, showInputOutput: false, maxRecords: 200 };
+    const interfaceConfig = await loadDefaultInterface({
+      config: { interface: { traceViewer } },
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.traceViewer).toEqual(traceViewer);
+  });
+
+  it('leaves the trace viewer unset when not configured', async () => {
+    const interfaceConfig = await loadDefaultInterface({
+      config: {},
+      configDefaults: getConfigDefaults(),
+    });
+
+    expect(interfaceConfig?.traceViewer).toBeUndefined();
   });
 });

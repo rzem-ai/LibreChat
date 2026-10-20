@@ -21,19 +21,11 @@ interface MCPAttachmentPayload {
   sources?: MCPResultSource[];
 }
 
-interface DeduplicatedSource {
-  fileId: string;
-  fileName: string;
-  pages: number[];
-  relevance: number;
-  pageRelevance: Record<string, number>;
-  metadata?: FileReferenceMetadata;
-}
-
 /**
  * `MCPResultSource.content` is `title + description` joined for server-side citation
  * matching; strip the leading title back off so the chip doesn't show it twice.
  */
+// Deloitte Custom Change: supports MCP result citation chips (PR #526)
 function getMCPSnippet(source: MCPResultSource): string {
   const description =
     source.title && source.content.startsWith(source.title)
@@ -73,7 +65,18 @@ export function useSearchResultsByTurn(attachments?: TAttachment[]) {
       if (attachment.type === Tools.web_search && attachment[Tools.web_search]) {
         const searchData = attachment[Tools.web_search];
         if (searchData && typeof searchData.turn === 'number') {
-          turnMap[searchData.turn.toString()] = searchData;
+          // `searchData.turn` is trusted as unique across the whole message because the
+          // backend guarantees it — `applyEndOfTraceCitations` (citations.ts) recounts it
+          // positionally before persisting, specifically because a multi-agent/handoff
+          // response can have two different agents' web_search calls both independently
+          // labeled turn 0 by their own agent-scoped tool-call counters. Don't reintroduce
+          // trust in a raw, agent-local turn value here without that same guarantee.
+          // Merge rather than overwrite: file_search/MCP count turns independently from
+          // web_search, so the same numeric key can legitimately hold both a file_search
+          // entry (`references`) and a web_search entry (`organic`/`topStories`/etc.) —
+          // overwriting would silently drop whichever attachment was processed first.
+          const turnKey = searchData.turn.toString();
+          turnMap[turnKey] = { ...turnMap[turnKey], ...searchData };
         }
       }
 
@@ -81,42 +84,14 @@ export function useSearchResultsByTurn(attachments?: TAttachment[]) {
       if (attachment.type === Tools.file_search && attachment[Tools.file_search]) {
         const sources = getFileSearchSources(attachment[Tools.file_search]);
 
-        // Deduplicate sources by fileId and merge pages
-        const deduplicatedSources = new Map<string, DeduplicatedSource>();
-
-        sources.forEach((source: FileSource) => {
-          const fileId = source.fileId;
-          if (deduplicatedSources.has(fileId)) {
-            // Merge pages for the same file
-            const existing = deduplicatedSources.get(fileId);
-            if (existing) {
-              const existingPages = existing.pages || [];
-              const newPages = source.pages || [];
-              const allPages = [...existingPages, ...newPages];
-              const uniquePages = [...new Set(allPages)].sort((a, b) => a - b);
-              const mergedPageRelevance = {
-                ...existing.pageRelevance,
-                ...source.pageRelevance,
-              };
-              existing.pages = uniquePages;
-              existing.relevance = Math.max(existing.relevance || 0, source.relevance || 0);
-              existing.pageRelevance = mergedPageRelevance;
-            }
-          } else {
-            deduplicatedSources.set(fileId, {
-              fileId: source.fileId,
-              fileName: source.fileName,
-              pages: source.pages || [],
-              relevance: source.relevance || 0.5,
-              pageRelevance: source.pageRelevance || {},
-              metadata: source.metadata,
-            });
-          }
-        });
-
+        /* Dedup-by-fileId is intentionally not done here: merging would desync
+         * reference array indices from the citation markers anchored in the message
+         * text. Per-file merging (for the aggregate Sources panel) happens downstream
+         * in Sources.tsx, which reads `relevance`/`pages`/`pageRelevance` off each
+         * raw reference below. */
         const agentSearchData: SearchResultData = {
           turn: agentFileSearchTurn,
-          references: Array.from(deduplicatedSources.values()).map(
+          references: sources.map(
             (source) =>
               ({
                 title: source.fileName || localize('com_file_unknown'),
@@ -129,15 +104,21 @@ export function useSearchResultsByTurn(attachments?: TAttachment[]) {
                 type: 'file' as const,
                 fileId: source.fileId,
                 fileName: source.fileName,
-                pages: source.pages,
-                pageRelevance: source.pageRelevance,
+                pages: source.pages || [],
+                pageRelevance: source.pageRelevance || {},
+                // Deloitte Custom Change: powers the inline file-citation relevance
+                // badge (Citation.tsx) and the cross-reference merge in Sources.tsx.
                 relevance: source.relevance,
                 metadata: source.metadata,
               }) as ResultReference,
           ),
         };
 
-        turnMap[agentFileSearchTurn.toString()] = agentSearchData;
+        // Merge rather than overwrite: web_search counts turns independently from
+        // file_search, so the same numeric key can legitimately hold both an already-merged
+        // web_search entry and this file_search entry.
+        const turnKey = agentFileSearchTurn.toString();
+        turnMap[turnKey] = { ...turnMap[turnKey], ...agentSearchData };
         agentFileSearchTurn++;
       }
 

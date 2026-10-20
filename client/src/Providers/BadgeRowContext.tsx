@@ -1,6 +1,6 @@
 // Deloitte Custom Change: added new imports
 import React, { createContext, useContext, useEffect, useMemo, useRef } from 'react';
-import { useSetRecoilState } from 'recoil';
+import { useRecoilState } from 'recoil';
 import {
   Tools,
   Constants,
@@ -23,6 +23,9 @@ import {
 import useNativeWebSearchToggle from '~/hooks/Plugins/useNativeWebSearchToggle';
 import useArtifactsShadcnOnly from '~/hooks/Artifacts/useArtifactsShadcnOnly';
 import { getTimestampedValue } from '~/utils/timestamps';
+import { AuthContext } from '~/hooks/AuthContext';
+// Deloitte Custom Change: helper for `defaultEnabledTools` seeding.
+import { getDefaultEnabledToolValues } from '~/utils/endpoints';
 import { useGetStartupConfig } from '~/data-provider';
 import { ephemeralAgentByConvoId } from '~/store';
 
@@ -54,6 +57,7 @@ interface BadgeRowProviderProps {
   isSubmitting?: boolean;
   conversationId?: string | null;
   specName?: string | null;
+  observeToolAuthorization?: boolean;
 }
 
 export default function BadgeRowProvider({
@@ -61,6 +65,7 @@ export default function BadgeRowProvider({
   isSubmitting,
   conversationId,
   specName,
+  observeToolAuthorization = false,
 }: BadgeRowProviderProps) {
   const lastContextKeyRef = useRef<string>('');
   const hasInitializedRef = useRef(false);
@@ -92,13 +97,14 @@ export default function BadgeRowProvider({
   const isNewConvo = key === Constants.NEW_CONVO;
   const storageSuffix = isNewConvo && storageContextKey ? storageContextKey : key;
 
-  const setEphemeralAgent = useSetRecoilState(ephemeralAgentByConvoId(key));
+  const [ephemeralAgent, setEphemeralAgent] = useRecoilState(ephemeralAgentByConvoId(key));
 
   /** Initialize ephemeralAgent from localStorage on mount and when conversation/spec changes.
    *  Skipped when a spec is active — applyModelSpecEphemeralAgent handles both new conversations
    *  (pure spec values) and existing conversations (spec values + localStorage overrides). */
   useEffect(() => {
-    if (isSubmitting) {
+    // Deloitte Custom Change: wait for startupConfig so `defaultEnabledTools` can seed the initial toggles.
+    if (isSubmitting || startupConfig == null) {
       return;
     }
     if (specName) {
@@ -177,6 +183,15 @@ export default function BadgeRowProvider({
         }
       }
 
+      // Deloitte Custom Change: admin-enabled tools start on unless the user has a stored toggle
+      // Seeding is limited to new conversations so existing chats keep their prior state.
+      const defaultEnabledValues = isNewConvo
+        ? getDefaultEnabledToolValues(startupConfig.interface?.customDeloitteFeatureFlags)
+        : {};
+      for (const [toolKey, value] of Object.entries(defaultEnabledValues)) {
+        initialValues[toolKey] ??= value;
+      }
+
       const hasOverrides = Object.keys(initialValues).length > 0;
 
       /** Read persisted MCP values from localStorage */
@@ -223,7 +238,7 @@ export default function BadgeRowProvider({
         return changed ? result : prev;
       });
     }
-  }, [storageSuffix, specName, isSubmitting, setEphemeralAgent]);
+  }, [storageSuffix, specName, isSubmitting, setEphemeralAgent, startupConfig, isNewConvo]);
 
   /** CodeInterpreter hook — sandbox auth is handled server-side by the
    *  agents library, so the toggle no longer has an auth dialog gate. */
@@ -343,7 +358,68 @@ export default function BadgeRowProvider({
     isAuthenticated: true,
   });
 
-  const mcpServerManager = useMCPServerManager({ conversationId, storageContextKey });
+  /** Deloitte Custom Change: `defaultEnabledTools` is seeded before the role and capabilities are
+   *  known, so once the role has loaded, switch off any default-enabled tool the user may not use. */
+  const authContext = useContext(AuthContext);
+  const canUseSkills = useHasAccess({
+    permissionType: PermissionTypes.SKILLS,
+    permission: Permissions.USE,
+  });
+  const canRunCode = useHasAccess({
+    permissionType: PermissionTypes.RUN_CODE,
+    permission: Permissions.USE,
+  });
+  const { skillsEnabled, codeEnabled, artifactsEnabled } = useAgentCapabilities(
+    agentsConfig?.capabilities ?? defaultAgentCapabilities,
+  );
+  // Deloitte Custom Change: watch the current values so the cleanup re-runs after a model-spec switch re-seeds them.
+  const {
+    skills: skillsValue,
+    execute_code: codeValue,
+    artifacts: artifactsValue,
+  } = ephemeralAgent ?? {};
+  const userRole = authContext?.user?.role;
+  const rolesLoaded = userRole != null && authContext?.roles?.[userRole] != null;
+  const defaultEnabledTools =
+    startupConfig?.interface?.customDeloitteFeatureFlags?.defaultEnabledTools;
+  useEffect(() => {
+    if (!rolesLoaded || !defaultEnabledTools?.length) {
+      return;
+    }
+    const disabledOff: Partial<TEphemeralAgent> = {
+      ...(!(canUseSkills && skillsEnabled) && { skills: false }),
+      ...(!(canRunCode && codeEnabled) && { execute_code: false }),
+      ...(!artifactsEnabled && { artifacts: '' }),
+    };
+    const keys = Object.keys(disabledOff).filter((key) => defaultEnabledTools.includes(key));
+    setEphemeralAgent((prev) => {
+      const stale = keys.filter((key) => prev?.[key]);
+      if (prev == null || stale.length === 0) {
+        return prev;
+      }
+      return { ...prev, ...Object.fromEntries(stale.map((key) => [key, disabledOff[key]])) };
+    });
+  }, [
+    rolesLoaded,
+    defaultEnabledTools,
+    canUseSkills,
+    skillsEnabled,
+    canRunCode,
+    codeEnabled,
+    artifactsEnabled,
+    skillsValue,
+    codeValue,
+    artifactsValue,
+    setEphemeralAgent,
+  ]);
+
+  const mcpServerManager = useMCPServerManager({
+    conversationId,
+    storageContextKey,
+    specName,
+    ownsChatSelection: true,
+    observeToolAuthorization,
+  });
 
   const value: BadgeRowContextType = {
     skills,

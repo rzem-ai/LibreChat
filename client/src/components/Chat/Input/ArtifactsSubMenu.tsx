@@ -1,8 +1,8 @@
 import React from 'react';
 import * as Ariakit from '@ariakit/react';
-import { PinIcon } from '@librechat/client';
 import { ArtifactModes } from 'librechat-data-provider';
 import { ChevronRight, WandSparkles } from 'lucide-react';
+import ToolStateControl from '~/components/Chat/Input/ToolStateControl';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
 
@@ -68,31 +68,24 @@ const ArtifactsSubMenu = React.forwardRef<HTMLButtonElement, ArtifactsSubMenuPro
               <span>{localize('com_ui_artifacts')}</span>
               {isEnabled && <ChevronRight className="ml-auto h-3 w-3" aria-hidden="true" />}
             </div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsArtifactsPinned(!isArtifactsPinned);
-              }}
-              className={cn(
-                'rounded p-1 transition-all duration-200',
-                'hover:bg-surface-tertiary hover:shadow-sm',
-                !isArtifactsPinned && 'text-text-secondary hover:text-text-primary',
-              )}
-              aria-label={isArtifactsPinned ? 'Unpin' : 'Pin'}
-            >
-              <div className="h-4 w-4">
-                <PinIcon unpin={isArtifactsPinned} />
-              </div>
-            </button>
+            {/* Deloitte Custom Change: pin button or on/off checkbox, per `toolsDropdown.showPinButtons`. */}
+            <ToolStateControl
+              label={localize('com_ui_artifacts')}
+              isPinned={isArtifactsPinned}
+              setIsPinned={setIsArtifactsPinned}
+              checked={typeof artifactsMode === 'string' && artifactsMode.length > 0}
+            />
           </Ariakit.MenuButton>
 
           {isEnabled && (
             <Ariakit.Menu
               portal={true}
               unmountOnHide={true}
+              gutter={12}
+              shift={24}
+              flip="left bottom-end top-end"
               className={cn(
-                'animate-popover-left z-40 ml-3 mt-6 flex min-w-[250px] flex-col rounded-xl',
+                'animate-popover-left z-40 flex min-w-[min(250px,calc(100vw-1rem))] max-w-[calc(100vw-1rem)] flex-col rounded-xl',
                 'border border-border-light bg-surface-secondary shadow-lg',
               )}
             >

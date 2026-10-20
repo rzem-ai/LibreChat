@@ -8,9 +8,11 @@ import { useLocalize } from '~/hooks';
 
 type ItemProps = {
   apiKey: TAgentApiKeyListItem;
+  /** Deloitte Custom Change: preserves the service account scope for key revocation. */
+  userEmail: string;
 };
 
-export default function Item({ apiKey }: ItemProps) {
+export default function Item({ apiKey, userEmail }: ItemProps) {
   const localize = useLocalize();
   const deleteButtonRef = useRef<HTMLButtonElement | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -18,17 +20,17 @@ export default function Item({ apiKey }: ItemProps) {
   const status = getExpiryStatus(apiKey.expiresAt);
 
   return (
-    <li className="hover:bg-surface-secondary/50 group flex items-start justify-between gap-3 px-4 py-3 transition-colors first:rounded-t-xl last:rounded-b-xl">
+    <li className="group flex items-start justify-between gap-3 px-4 py-3 transition-colors first:rounded-t-xl last:rounded-b-xl hover:bg-surface-secondary/50">
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex items-center gap-2">
           <span className="truncate font-medium text-text-primary">{apiKey.name}</span>
           {status?.state === 'expired' && (
-            <span className="shrink-0 rounded-full border border-red-500/20 bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600 dark:text-red-400">
+            <span className="shrink-0 rounded-full border border-status-error-border bg-status-error-subtle px-2 py-0.5 text-xs font-medium text-status-error">
               {localize('com_ui_api_key_expired')}
             </span>
           )}
           {status?.state === 'expiring' && (
-            <span className="shrink-0 rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-500">
+            <span className="shrink-0 rounded-full border border-status-warning-border bg-status-warning-subtle px-2 py-0.5 text-xs font-medium text-status-warning">
               {status.days === 1
                 ? localize('com_ui_api_key_expires_in_day')
                 : localize('com_ui_api_key_expires_in_days', { 0: status.days })}
@@ -70,6 +72,7 @@ export default function Item({ apiKey }: ItemProps) {
         id={apiKey.id}
         name={apiKey.name}
         keyPrefix={apiKey.keyPrefix}
+        userEmail={userEmail}
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         triggerRef={deleteButtonRef}

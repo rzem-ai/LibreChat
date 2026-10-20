@@ -117,7 +117,8 @@ test('renders login form', () => {
       setError={jest.fn()}
     />,
   );
-  expect(getByLabelText(/email/i)).toBeInTheDocument();
+  // Deloitte Custom Change: GEL design-system input styling uses h-12, not upstream's h-auto
+  expect(getByLabelText(/email/i)).toHaveClass('h-12');
   expect(getByLabelText(/password/i)).toBeInTheDocument();
 });
 

@@ -1,5 +1,6 @@
 const DEFAULT_SERVICE_NAME = 'librechat';
 export const DEFAULT_HEALTH_PATH = '/health';
+export const DEFAULT_LOGS_LEVEL = 'info';
 
 export type TelemetryStatus = 'disabled' | 'failed' | 'started' | 'starting' | 'stopped';
 
@@ -7,9 +8,13 @@ export interface TelemetryConfig {
   enabled: boolean;
   healthPath: string;
   ioredisTracingEnabled: boolean;
+  logsEnabled: boolean;
+  logsLevel: string;
   sdkDisabled: boolean;
   serviceName: string;
   serviceVersion?: string;
+  tracingEnabled: boolean;
+  // Deloitte Custom Change: Azure Monitor OTLP traces endpoint + managed identity auth support
   tracesEndpoint?: string;
   azureMonitorAuthEnabled: boolean;
   azureMonitorClientId?: string;
@@ -32,18 +37,23 @@ function normalizeEnvValue(value?: string): string | undefined {
 
 export function getTelemetryConfig(env: NodeJS.ProcessEnv = process.env): TelemetryConfig {
   const sdkDisabled = isTruthy(env.OTEL_SDK_DISABLED);
-  const enabled = isTruthy(env.OTEL_TRACING_ENABLED) && !sdkDisabled;
+  const tracingEnabled = isTruthy(env.OTEL_TRACING_ENABLED) && !sdkDisabled;
+  const logsEnabled = isTruthy(env.OTEL_LOGS_ENABLED) && !sdkDisabled;
   const serviceName = normalizeEnvValue(env.OTEL_SERVICE_NAME) ?? DEFAULT_SERVICE_NAME;
   const serviceVersion =
     normalizeEnvValue(env.OTEL_SERVICE_VERSION) ?? normalizeEnvValue(env.npm_package_version);
   const ioredisTracingEnabled = isTruthy(env.OTEL_IOREDIS_TRACING_ENABLED);
+  const logsLevel = normalizeEnvValue(env.OTEL_LOGS_LEVEL)?.toLowerCase() ?? DEFAULT_LOGS_LEVEL;
 
   return {
-    enabled,
+    enabled: tracingEnabled || logsEnabled,
     serviceName,
     ioredisTracingEnabled,
+    logsEnabled,
+    logsLevel,
     sdkDisabled,
     serviceVersion,
+    tracingEnabled,
     healthPath: DEFAULT_HEALTH_PATH,
     tracesEndpoint: normalizeEnvValue(env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT),
     azureMonitorAuthEnabled: isTruthy(env.AZURE_MONITOR_AUTH_ENABLED),

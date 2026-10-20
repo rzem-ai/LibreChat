@@ -1,8 +1,9 @@
 import React from 'react';
 import '@testing-library/jest-dom/extend-expect';
-import { render, fireEvent } from 'test/layout-test-utils';
-import ConversationModeSwitch from './ConversationModeSwitch';
 import { RecoilRoot } from 'recoil';
+import ConversationModeSwitch from './ConversationModeSwitch';
+import { render, fireEvent } from 'test/layout-test-utils';
+import store from '~/store';
 
 describe('ConversationModeSwitch', () => {
   /**
@@ -24,9 +25,15 @@ describe('ConversationModeSwitch', () => {
     expect(getByTestId('ConversationMode')).toBeInTheDocument();
   });
 
+  // Deloitte Custom Change: enable prerequisite speech features for the conversation-mode test.
   it('calls onCheckedChange when the switch is toggled', () => {
     const { getByTestId } = render(
-      <RecoilRoot>
+      <RecoilRoot
+        initializeState={({ set }) => {
+          set(store.speechToText, true);
+          set(store.textToSpeech, true);
+        }}
+      >
         <ConversationModeSwitch onCheckedChange={mockSetConversationMode} />
       </RecoilRoot>,
     );

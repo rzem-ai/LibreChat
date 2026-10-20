@@ -2,9 +2,13 @@ import { Agent } from 'undici';
 import { logger } from '@librechat/data-schemas';
 import { AnthropicClientOptions } from '@librechat/agents';
 import {
+  THINKING_BINDING_BETA,
+  THINKING_DISPLAY_UPDATES_BETA,
+  requestsThinkingDisplayUpdates,
   clampOutputConfigEffort,
   omitsSamplingParameters,
-  isThinkingDisabled,
+  bindsThinkingBlocks,
+  isThinkingOffConfig,
   anthropicSettings,
   removeNullishValues,
   ThinkingDisplay,
@@ -36,6 +40,8 @@ import { getProxyDispatcher } from '~/utils/proxy';
 import { mergeHeaders } from '~/utils/headers';
 
 const WEB_SEARCH_BETA = 'web-search-2025-03-05';
+// Deloitte Custom Change: Haiku 4.5 rejects requests that set both temperature and top_p.
+const HAIKU_4_5_MODEL_PATTERN = /claude-haiku-4[-.]5/;
 
 type FetchOptions = { dispatcher?: Dispatcher; redirect?: RequestRedirect };
 
@@ -152,12 +158,13 @@ function getLLMConfig(
   /**
    * `thinking` may round-trip as the full Anthropic object rather than a
    * boolean. Normalize to a flag so a persisted `{ type: 'disabled' }` (e.g. a
-   * Sonnet 5 "thinking off" config stored back into `model_parameters`) is
-   * treated as off — a truthy object would otherwise flip thinking back on.
+   * Sonnet 5 "thinking off" config stored back into `model_parameters`) or
+   * `{ type: 'between_tools' }` (Sonnet 5.5) is treated as off — a truthy
+   * object would otherwise flip thinking back on.
    */
   const thinkingFlag =
     typeof persistedThinking === 'object' && persistedThinking != null
-      ? (persistedThinking as { type?: string }).type !== 'disabled'
+      ? !isThinkingOffConfig(persistedThinking)
       : (persistedThinking ?? anthropicSettings.thinking.default);
 
   const systemOptions = {
@@ -261,12 +268,12 @@ function getLLMConfig(
   }
 
   /**
-   * Opus 5 rejects `xhigh`/`max` effort while thinking is disabled (400).
-   * `configureReasoning` returns before setting effort on the disabled path, so
-   * the value applied just above is the one that would ship — clamp it to the
-   * highest level the model accepts in that combination.
+   * Opus 5 rejects `xhigh`/`max` effort while thinking is disabled, and Sonnet
+   * 5.5 does the same under `between_tools` (400). `configureReasoning` returns
+   * before setting effort on that path, so the value applied just above is the
+   * one that would ship — clamp it to the highest level the model accepts.
    */
-  if (isThinkingDisabled(requestOptions.thinking)) {
+  if (isThinkingOffConfig(requestOptions.thinking)) {
     clampOutputConfigEffort(resolvedModel, requestOptions.invocationKwargs?.output_config);
   }
 
@@ -372,10 +379,37 @@ function getLLMConfig(
     }
   }
 
+  /** The SDK reads outputConfig, not invocationKwargs.output_config. Keep the
+   * legacy field for persisted configs and OpenAI-compatible transforms. */
+  if (
+    requestOptions.invocationKwargs?.output_config &&
+    !options.dropParams?.includes('outputConfig')
+  ) {
+    requestOptions.outputConfig = requestOptions.invocationKwargs.output_config;
+  }
+
+  /** block_binding and display `updates` are invalid without their beta headers.
+   * Honor an administrator dropping clientOptions without leaving a beta-only
+   * field in the body. */
+  if (
+    shouldDropClientOptions &&
+    requestOptions.thinking &&
+    'block_binding' in requestOptions.thinking
+  ) {
+    delete requestOptions.thinking.block_binding;
+  }
+  if (shouldDropClientOptions && requestsThinkingDisplayUpdates(requestOptions.thinking)) {
+    (requestOptions.thinking as { display?: string }).display = ThinkingDisplay.summarized;
+  }
+
   if (shouldOmitSamplingParameters) {
     delete requestOptions.temperature;
     delete requestOptions.topP;
     delete requestOptions.topK;
+  } else if (HAIKU_4_5_MODEL_PATTERN.test(resolvedModel)) {
+    // Deloitte Custom Change: Haiku 4.5 rejects requests that include both temperature and top_p.
+    // Keep temperature because Agent Builder supplies it as the primary sampling control.
+    delete requestOptions.topP;
   }
 
   const tools = [];
@@ -408,8 +442,14 @@ function getLLMConfig(
     }
     requestOptions.clientOptions.defaultHeaders = appendAnthropicBetaHeader(
       requestOptions.clientOptions.defaultHeaders as Record<string, string> | undefined,
-      FINE_GRAINED_TOOL_STREAMING_BETA,
+      bindsThinkingBlocks(resolvedModel) ? THINKING_BINDING_BETA : FINE_GRAINED_TOOL_STREAMING_BETA,
     );
+    if (requestsThinkingDisplayUpdates(requestOptions.thinking)) {
+      requestOptions.clientOptions.defaultHeaders = appendAnthropicBetaHeader(
+        requestOptions.clientOptions.defaultHeaders as Record<string, string> | undefined,
+        THINKING_DISPLAY_UPDATES_BETA,
+      );
+    }
   }
 
   /**

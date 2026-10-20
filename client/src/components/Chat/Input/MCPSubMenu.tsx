@@ -1,9 +1,11 @@
 import React from 'react';
 import * as Ariakit from '@ariakit/react';
 import { ChevronRight } from 'lucide-react';
-import { MCPIcon, PinIcon } from '@librechat/client';
+import { MCPIcon } from '@librechat/client';
+import ToolStateControl from '~/components/Chat/Input/ToolStateControl';
 import MCPServerMenuItem from '~/components/MCP/MCPServerMenuItem';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
+import { useMCPRefresh } from '~/hooks/MCP/useMCPRefresh';
 import { useBadgeRowContext } from '~/Providers';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -22,6 +24,13 @@ const MCPSubMenu = React.forwardRef<HTMLButtonElement, MCPSubMenuProps>(
       focusLoop: true,
       showTimeout: 100,
       placement: 'right',
+    });
+
+    const isOpen = menuStore.useState('open');
+    const configDialogOpen = mcpServerManager?.getConfigDialogProps()?.isOpen === true;
+    useMCPRefresh({
+      enabled:
+        (isOpen || configDialogOpen) && (mcpServerManager?.selectableServers.length ?? 0) > 0,
     });
 
     if (!mcpServerManager) {
@@ -67,32 +76,24 @@ const MCPSubMenu = React.forwardRef<HTMLButtonElement, MCPSubMenuProps>(
               <span>{placeholder || placeholderText}</span>
               <ChevronRight className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
             </div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsPinned(!isPinned);
-              }}
-              className={cn(
-                'rounded p-1 transition-all duration-200',
-                'hover:bg-surface-tertiary hover:shadow-sm',
-                !isPinned && 'text-text-secondary hover:text-text-primary',
-              )}
-              aria-label={isPinned ? localize('com_ui_unpin') : localize('com_ui_pin')}
-            >
-              <div className="h-4 w-4">
-                <PinIcon unpin={isPinned} />
-              </div>
-            </button>
+            {/* Deloitte Custom Change: pin button follows `toolsDropdown.showPinButtons`. */}
+            <ToolStateControl
+              label={placeholder || placeholderText}
+              isPinned={isPinned}
+              setIsPinned={setIsPinned}
+            />
           </Ariakit.MenuButton>
 
           <Ariakit.Menu
             portal={true}
             unmountOnHide={true}
+            gutter={12}
+            flip="left bottom-end top-end"
             aria-label={localize('com_ui_mcp_servers')}
-            // Deloitte Custom Change: Increase minimum width on MCP selector.
+            // Deloitte Custom Change: Increase minimum width on MCP selector so the dropdown
+            // doesn't shrink/snap during auth; clamped to viewport width on small screens.
             className={cn(
-              'animate-popover-left z-40 ml-3 flex min-w-[300px] max-w-[320px] flex-col rounded-xl',
+              'animate-popover-left z-40 ml-3 flex min-w-[min(300px,calc(100vw-1rem))] max-w-[min(320px,calc(100vw-1rem))] flex-col rounded-xl',
               'border border-border-light bg-presentation p-1.5 shadow-lg',
             )}
           >

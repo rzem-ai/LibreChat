@@ -1,9 +1,10 @@
 /** Memories */
 import { z } from 'zod';
-import { logger } from '@librechat/data-schemas';
 import { tool } from '@librechat/agents/langchain/tools';
 import { Run, Providers, GraphEvents } from '@librechat/agents';
 import { HumanMessage } from '@librechat/agents/langchain/messages';
+// Deloitte Custom Change: Retention Update
+import { logger, getMemoryRetentionHours } from '@librechat/data-schemas';
 import {
   Tools,
   MemoryScope,
@@ -11,6 +12,7 @@ import {
   EModelEndpoint,
   PermissionTypes,
   AgentCapabilities,
+  hasActivePiiPatterns,
   stripAgentIdSuffix,
 } from 'librechat-data-provider';
 import type {
@@ -30,20 +32,29 @@ import type {
   IUser,
   FormattedMemoriesResult,
 } from '@librechat/data-schemas';
+import type { TAttachment, FiltersConfig, MemoryArtifact } from 'librechat-data-provider';
 import type { BaseMessage, ToolMessage } from '@librechat/agents/langchain/messages';
 import type { DynamicStructuredTool } from '@librechat/agents/langchain/tools';
-import type { TAttachment, MemoryArtifact } from 'librechat-data-provider';
 import type { Response as ServerResponse } from 'express';
 import type { ServerRequest, RunLLMConfig } from '~/types';
+import { resolveConfigHeaders, createSafeUser, getSafeErrorMetadata } from '~/utils';
+import { contentFilterModelBoundBlockResponse } from '~/middleware/contentFilter';
+import { extractMemoryContent } from '~/protection/adapters/submissions';
+import { assertModelBoundContent } from '~/middleware/modelBoundContent';
 import { GenerationJobManager } from '~/stream/GenerationJobManager';
-import { resolveConfigHeaders, createSafeUser } from '~/utils';
+import { inspectContent } from '~/protection/runtime';
 import { checkAccess } from '~/middleware/access';
 import { isMemoryEnabled } from '~/memory';
 import Tokenizer from '~/utils/tokenizer';
 
 type RequiredMemoryMethods = Pick<
   MemoryMethods,
-  'setMemory' | 'deleteMemory' | 'getFormattedMemories'
+  // Deloitte Custom Change: Retention Update
+  | 'setMemory'
+  | 'deleteMemory'
+  | 'getFormattedMemories'
+  | 'getUserMemories'
+  | 'touchMemoriesLastActivity'
 >;
 
 type ToolEndMetadata = Record<string, unknown> & {
@@ -69,7 +80,16 @@ function normalizeMemoryLLMConfig(llmConfig?: Partial<LLMConfig>): SanitizedMemo
 }
 
 export const memoryInstructions =
-  'The system automatically stores important user information and can update or delete memories based on user requests, enabling dynamic memory management.';
+  'Persistent memory is available across conversations within the current memory scope. Saved memories, if any, are shown below. No entries shown here does not mean memory is unavailable. Use memory tools only if provided; claim a memory was saved or deleted only after the action is confirmed.';
+
+export function formatMemoryContext(memory: string | undefined): string | undefined {
+  if (memory == null) {
+    return undefined;
+  }
+  return memory
+    ? `${memoryInstructions}\n\n# Existing memory about the user:\n${memory}`
+    : memoryInstructions;
+}
 
 export const SET_MEMORY_TOOL_NAME = 'set_memory';
 export const DELETE_MEMORY_TOOL_NAME = 'delete_memory';
@@ -108,7 +128,7 @@ The \`delete_memory\` tool should only be used in two scenarios:
 
 ${validKeys && validKeys.length > 0 ? `\nVALID KEYS: ${validKeys.join(', ')}` : ''}
 
-${tokenLimit ? `\nTOKEN LIMIT: Maximum ${tokenLimit} tokens per memory value.` : ''}
+${tokenLimit ? `\nTOKEN LIMIT: Maximum ${tokenLimit} tokens across all memory values.` : ''}
 
 When in doubt, and the user hasn't asked to remember or forget anything, END THE TURN IMMEDIATELY.`;
 
@@ -125,7 +145,11 @@ export const createMemoryTool = ({
   charLimit,
   tokenLimit,
   totalTokens = 0,
+  tokenCountsByKey,
+  filters,
   onWrite,
+  // Deloitte Custom Change: Retention Update
+  retentionHours,
 }: {
   userId: string | ObjectId;
   /** Agent partition to write to; omit for the shared personal pool */
@@ -135,7 +159,11 @@ export const createMemoryTool = ({
   charLimit?: number;
   tokenLimit?: number;
   totalTokens?: number;
+  tokenCountsByKey?: ReadonlyMap<string, number>;
+  filters?: FiltersConfig;
   onWrite?: () => void;
+  // Deloitte Custom Change: Retention Update
+  retentionHours?: number;
 }): DynamicStructuredTool => {
   /** Running token total, advanced after each successful write. Writes are
    *  serialized through `writeChain` so multiple `set_memory` calls in one
@@ -143,24 +171,15 @@ export const createMemoryTool = ({
    *  check against the same stale total and collectively exceed `tokenLimit`. */
   let currentTotalTokens = totalTokens;
   let writeChain: Promise<unknown> = Promise.resolve();
-  /** Tokens this instance has already committed per key. `set_memory` upserts,
-   *  so a repeat write to the same key REPLACES its value — the running total
-   *  must swap the prior contribution for the new one, not add both. */
-  const writtenTokensByKey = new Map<string, number>();
+  /** Token counts are seeded from persisted memory and advanced after each
+   *  successful write. `set_memory` upserts, so every write replaces this
+   *  key's prior contribution instead of adding both values to the total. */
+  const currentTokensByKey = new Map(tokenCountsByKey);
 
   return tool(
     async ({ key, value }) => {
       const run = async (): Promise<[string, MemoryArtifactRecord?]> => {
         try {
-          if (validKeys && validKeys.length > 0 && !validKeys.includes(key)) {
-            logger.warn(
-              `Memory Agent failed to set memory: Invalid key "${key}". Must be one of: ${validKeys.join(
-                ', ',
-              )}`,
-            );
-            return [`Invalid key "${key}". Must be one of: ${validKeys.join(', ')}`, undefined];
-          }
-
           /** Mirror the REST memory routes' size guards so inline writes can't
            *  persist values the normal memory UI/API would reject. */
           if (key.length > MEMORY_KEY_CHAR_LIMIT) {
@@ -173,10 +192,26 @@ export const createMemoryTool = ({
             return [`Value exceeds maximum length of ${charLimit} characters.`, undefined];
           }
 
+          const finding =
+            filters == null
+              ? null
+              : inspectContent(extractMemoryContent({ key, value }), { filters });
+          if (finding != null) {
+            return [JSON.stringify(contentFilterModelBoundBlockResponse(finding)), undefined];
+          }
+
+          if (validKeys && validKeys.length > 0 && !validKeys.includes(key)) {
+            logger.warn('Memory Agent rejected an invalid memory key', {
+              keyLength: key.length,
+              allowedKeyCount: validKeys.length,
+            });
+            return [`Invalid key "${key}". Must be one of: ${validKeys.join(', ')}`, undefined];
+          }
+
           const tokenCount = Tokenizer.getTokenCount(value, 'o200k_base');
-          /** Total excluding this key's prior in-instance write, so a same-key
-           *  rewrite is measured as a replacement rather than an addition. */
-          const baseTotalTokens = currentTotalTokens - (writtenTokensByKey.get(key) ?? 0);
+          /** Total excluding this key's prior persisted or in-instance value,
+           *  so a rewrite is measured as a replacement rather than an addition. */
+          const baseTotalTokens = currentTotalTokens - (currentTokensByKey.get(key) ?? 0);
           const remainingTokens = tokenLimit ? tokenLimit - baseTotalTokens : Infinity;
 
           if (tokenLimit && remainingTokens <= 0) {
@@ -229,11 +264,15 @@ export const createMemoryTool = ({
             },
           };
 
-          const result = await setMemory({ userId, key, value, tokenCount, agentId });
+          // Deloitte Custom Change: Retention Update
+          const result = await setMemory(
+            { userId, key, value, tokenCount, agentId },
+            { retentionHours },
+          );
           if (result.ok) {
             if (tokenLimit) {
               currentTotalTokens = newTotalTokens;
-              writtenTokensByKey.set(key, tokenCount);
+              currentTokensByKey.set(key, tokenCount);
             }
             onWrite?.();
             logger.debug(`Memory set for key "${key}" (${tokenCount} tokens) for user "${userId}"`);
@@ -242,7 +281,7 @@ export const createMemoryTool = ({
           logger.warn(`Failed to set memory for key "${key}" for user "${userId}"`);
           return [`Failed to set memory for key "${key}"`, undefined];
         } catch (error) {
-          logger.error('Memory Agent failed to set memory', error);
+          logger.error('Memory Agent failed to set memory', getSafeErrorMetadata(error));
           return [`Error setting memory for key "${key}"`, undefined];
         }
       };
@@ -321,7 +360,7 @@ export const createDeleteMemoryTool = ({
         logger.warn(`Failed to delete memory for key "${key}" for user "${userId}"`);
         return [`Failed to delete memory for key "${key}"`, undefined];
       } catch (error) {
-        logger.error('Memory Agent failed to delete memory', error);
+        logger.error('Memory Agent failed to delete memory', getSafeErrorMetadata(error));
         return [`Error deleting memory for key "${key}"`, undefined];
       }
     },
@@ -489,6 +528,44 @@ export function agentHasInlineMemoryTools(agent: InlineMemoryAgent): boolean {
   );
 }
 
+/** Builds the memory system context for an inline-memory agent. */
+export async function buildInlineMemoryContext({
+  agent,
+  req,
+  userId,
+  memoryAvailable,
+  getFormattedMemories,
+  // Deloitte Custom Change: Retention Update
+  touchMemoriesLastActivity,
+}: {
+  agent: InlineMemoryAgent;
+  req: ServerRequest;
+  userId: string | ObjectId;
+  memoryAvailable: boolean;
+  getFormattedMemories: MemoryMethods['getFormattedMemories'];
+  // Deloitte Custom Change: Retention Update
+  touchMemoriesLastActivity?: MemoryMethods['touchMemoriesLastActivity'];
+}): Promise<string> {
+  if (!memoryAvailable || !agentHasInlineMemoryTools(agent)) {
+    return '';
+  }
+  try {
+    const memories = await getRequestMemories({
+      req,
+      userId,
+      agentId: getMemoryAgentId(agent),
+      getFormattedMemories,
+      // Deloitte Custom Change: Retention Update
+      touchMemoriesLastActivity,
+      retentionHours: getMemoryRetentionHours(req.config?.interfaceConfig),
+    });
+    return formatMemoryContext(memories.withKeys) ?? '';
+  } catch (error) {
+    logger.error('[memory] Error loading inline agent memory context', error);
+    return '';
+  }
+}
+
 /**
  * Request-scoped cache so that multiple memory-enabled agents in one run (and
  * the run's memory context load) share a single `getFormattedMemories` call
@@ -501,12 +578,18 @@ export function getRequestMemories({
   userId,
   agentId,
   getFormattedMemories,
+  // Deloitte Custom Change: Retention Update
+  touchMemoriesLastActivity,
+  retentionHours,
 }: {
   req: object;
   userId: string | ObjectId;
   /** Agent partition; omit for the shared personal pool */
   agentId?: string;
   getFormattedMemories: MemoryMethods['getFormattedMemories'];
+  // Deloitte Custom Change: Retention Update
+  touchMemoriesLastActivity?: MemoryMethods['touchMemoriesLastActivity'];
+  retentionHours?: number;
 }): Promise<FormattedMemoriesResult> {
   let partitions = requestMemoriesCache.get(req);
   if (!partitions) {
@@ -518,6 +601,23 @@ export function getRequestMemories({
   if (!cached) {
     cached = getFormattedMemories({ userId, agentId });
     partitions.set(partitionKey, cached);
+    // Deloitte Custom Change: Retention Update
+    if (touchMemoriesLastActivity && retentionHours != null) {
+      /** Fire-and-forget: the throttled touch must never add latency to the
+       *  hot prompt-build path that awaits `cached`. */
+      cached
+        .then((result) => {
+          if (!result.readFailed && result.memoryIds?.length) {
+            return touchMemoriesLastActivity(result.memoryIds, retentionHours);
+          }
+        })
+        .catch((error) => {
+          logger.error(
+            '[memory] Failed to touch memory last-activity',
+            getSafeErrorMetadata(error),
+          );
+        });
+    }
   }
   return cached;
 }
@@ -569,7 +669,7 @@ export async function isMemoryToolAllowed({
       getRoleByName,
     });
   } catch (error) {
-    logger.error('[memory] Memory permission check failed', error);
+    logger.error('[memory] Memory permission check failed', getSafeErrorMetadata(error));
     return false;
   }
 }
@@ -592,7 +692,11 @@ export async function buildInlineMemoryTool({
   req: ServerRequest;
   agent: InlineMemoryAgent;
   userId: string | ObjectId;
-  memoryMethods: Pick<MemoryMethods, 'setMemory' | 'deleteMemory' | 'getFormattedMemories'>;
+  // Deloitte Custom Change: Retention Update
+  memoryMethods: Pick<
+    MemoryMethods,
+    'setMemory' | 'deleteMemory' | 'getFormattedMemories' | 'touchMemoriesLastActivity'
+  >;
   getRoleByName: GetRoleByName;
 }): Promise<DynamicStructuredTool | null> {
   if (!agentHasInlineMemoryTools(agent)) {
@@ -602,6 +706,8 @@ export async function buildInlineMemoryTool({
   const memoryConfig = req?.config?.memory;
   const validKeys = memoryConfig?.validKeys as string[] | undefined;
   const memoryAgentId = getMemoryAgentId(agent);
+  // Deloitte Custom Change: Retention Update
+  const retentionHours = getMemoryRetentionHours(req.config?.interfaceConfig);
 
   if (toolName === DELETE_MEMORY_TOOL_NAME) {
     const allowed = await isMemoryToolAllowed({
@@ -633,6 +739,7 @@ export async function buildInlineMemoryTool({
   const charLimit = memoryConfig?.charLimit as number | undefined;
   const tokenLimit = memoryConfig?.tokenLimit as number | undefined;
   let totalTokens = 0;
+  let tokenCountsByKey: ReadonlyMap<string, number> | undefined;
   if (tokenLimit) {
     try {
       const formatted = await getRequestMemories({
@@ -640,10 +747,21 @@ export async function buildInlineMemoryTool({
         userId,
         agentId: memoryAgentId,
         getFormattedMemories: memoryMethods.getFormattedMemories,
+        // Deloitte Custom Change: Retention Update
+        touchMemoriesLastActivity: memoryMethods.touchMemoriesLastActivity,
+        retentionHours,
       });
-      totalTokens = formatted?.totalTokens ?? 0;
+      /** A formatted read failure has no trustworthy usage total. */
+      if (formatted.readFailed) {
+        return null;
+      }
+      totalTokens = formatted.totalTokens ?? 0;
+      tokenCountsByKey = formatted.tokenCountsByKey;
     } catch (error) {
-      logger.error('[memory] Failed to load memory token count for set_memory', error);
+      logger.error(
+        '[memory] Failed to load memory token count for set_memory',
+        getSafeErrorMetadata(error),
+      );
       /** Fail closed: without the current usage total a configured tokenLimit
        *  could be silently bypassed. */
       return null;
@@ -658,7 +776,11 @@ export async function buildInlineMemoryTool({
     charLimit,
     tokenLimit,
     totalTokens,
+    tokenCountsByKey,
+    filters: req.config?.filters,
     onWrite: () => invalidateRequestMemories(req, memoryAgentId),
+    // Deloitte Custom Change: Retention Update
+    retentionHours,
   });
 }
 
@@ -693,7 +815,9 @@ export async function processMemory({
   setMemory,
   deleteMemory,
   messages,
+  inspectionMessages,
   memory,
+  memoryEntries,
   messageId,
   conversationId,
   validKeys,
@@ -701,9 +825,14 @@ export async function processMemory({
   llmConfig,
   tokenLimit,
   totalTokens = 0,
+  tokenCountsByKey,
+  filters,
   streamId = null,
   jobCreatedAt,
   user,
+  tenantId,
+  // Deloitte Custom Change: Retention Update
+  retentionHours,
 }: {
   res: ServerResponse;
   setMemory: MemoryMethods['setMemory'];
@@ -715,16 +844,47 @@ export async function processMemory({
   messageId: string;
   conversationId: string;
   messages: BaseMessage[];
+  inspectionMessages?: BaseMessage[];
   validKeys?: string[];
   instructions: string;
+  /** Canonical rows preserve key/value granularity for field-scoped policy. */
+  memoryEntries?: readonly {
+    key?: string;
+    value?: string;
+    summary?: string;
+  }[];
   tokenLimit?: number;
   totalTokens?: number;
+  tokenCountsByKey?: ReadonlyMap<string, number>;
+  filters?: FiltersConfig;
   llmConfig?: Partial<LLMConfig>;
   streamId?: string | null;
   jobCreatedAt?: number;
   user?: IUser;
+  tenantId?: string;
+  // Deloitte Custom Change: Retention Update
+  retentionHours?: number;
 }): Promise<(TAttachment | null)[] | undefined> {
   try {
+    const submittedMessages = (inspectionMessages ?? messages).filter(
+      (message) => message._getType() !== 'ai',
+    );
+    let memories = memoryEntries ?? [];
+    if (memoryEntries == null && memory) {
+      /**
+       * Direct callers may only have the formatted context. Inspect it
+       * conservatively under every field so field selection cannot turn
+       * missing canonical provenance into a bypass.
+       */
+      memories = [{ key: memory, value: memory, summary: memory }];
+    }
+    assertModelBoundContent({
+      filters,
+      submittedMessages,
+      agents: [{ instructions, model_parameters: llmConfig }],
+      memories,
+    });
+
     const memoryTool = createMemoryTool({
       userId,
       agentId,
@@ -732,6 +892,10 @@ export async function processMemory({
       setMemory,
       validKeys,
       totalTokens,
+      tokenCountsByKey,
+      filters,
+      // Deloitte Custom Change: Retention Update
+      retentionHours,
     });
     const deleteMemoryTool = createDeleteMemoryTool({
       userId,
@@ -745,7 +909,7 @@ export async function processMemory({
     let memoryStatus = `# Existing memory:\n${memory ?? 'No existing memories'}`;
 
     if (tokenLimit) {
-      const remainingTokens = tokenLimit - currentMemoryTokens;
+      const remainingTokens = Math.max(tokenLimit - currentMemoryTokens, 0);
       memoryStatus = `# Memory Status:
 Current memory usage: ${currentMemoryTokens} tokens
 Token limit: ${tokenLimit} tokens
@@ -825,6 +989,7 @@ ${memory ?? 'No existing memories'}`;
     resolveConfigHeaders({
       llmConfig: finalLLMConfig as unknown as RunLLMConfig,
       user: user ? createSafeUser(user) : undefined,
+      tenantId,
       body: { conversationId, messageId },
     });
 
@@ -920,7 +1085,7 @@ ${memory ?? 'No existing memories'}`;
   } catch (error) {
     logger.error(
       `[MemoryAgent] Failed to process memory | userId: ${userId} | conversationId: ${conversationId} | messageId: ${messageId}`,
-      { error },
+      getSafeErrorMetadata(error),
     );
   }
 }
@@ -932,10 +1097,13 @@ export async function createMemoryProcessor({
   messageId,
   memoryMethods,
   conversationId,
+  req,
   config = {},
+  filters,
   streamId = null,
   jobCreatedAt,
   user,
+  tenantId,
 }: {
   res: ServerResponse;
   messageId: string;
@@ -944,28 +1112,71 @@ export async function createMemoryProcessor({
   /** Agent partition; omit for the shared personal pool */
   agentId?: string;
   memoryMethods: RequiredMemoryMethods;
+  /** Reuses the request-scoped formatted snapshot for the chat context. */
+  req?: object;
   config?: MemoryConfig;
+  filters?: FiltersConfig;
   streamId?: string | null;
   jobCreatedAt?: number;
   user?: IUser;
-}): Promise<[string, (messages: BaseMessage[]) => Promise<(TAttachment | null)[] | undefined>]> {
+  tenantId?: string;
+}): Promise<
+  | [undefined, undefined]
+  | [
+      string,
+      (
+        messages: BaseMessage[],
+        inspectionMessages?: BaseMessage[],
+      ) => Promise<(TAttachment | null)[] | undefined>,
+    ]
+> {
   const { validKeys, instructions, llmConfig, tokenLimit } = config;
   const finalInstructions = instructions || getDefaultInstructions(validKeys, tokenLimit);
+  // Deloitte Custom Change: Retention Update
+  const retentionHours = getMemoryRetentionHours(
+    (req as ServerRequest | undefined)?.config?.interfaceConfig,
+  );
 
-  const { withKeys, withoutKeys, totalTokens } = await memoryMethods.getFormattedMemories({
-    userId,
-    agentId,
-  });
+  const [formatted, memoryEntries] = await Promise.all([
+    (req
+      ? getRequestMemories({
+          req,
+          userId,
+          agentId,
+          getFormattedMemories: memoryMethods.getFormattedMemories,
+          // Deloitte Custom Change: Retention Update
+          touchMemoriesLastActivity: memoryMethods.touchMemoriesLastActivity,
+          retentionHours,
+        })
+      : memoryMethods.getFormattedMemories({ userId, agentId })
+    ).catch((error) => {
+      logger.error('[memory] Error loading automatic memory context', getSafeErrorMetadata(error));
+      return undefined;
+    }),
+    hasActivePiiPatterns(filters?.memories?.pii)
+      ? memoryMethods.getUserMemories({ userId, agentId })
+      : Promise.resolve(undefined),
+  ]);
+  /** Without the current memory snapshot we cannot safely seed token limits
+   *  or assert that no previous memories exist. Skip extraction for this turn. */
+  if (!formatted || formatted.readFailed) {
+    return [undefined, undefined];
+  }
+  const { withKeys, withoutKeys, totalTokens, tokenCountsByKey } = formatted;
 
   return [
     withoutKeys,
-    async function (messages: BaseMessage[]): Promise<(TAttachment | null)[] | undefined> {
+    async function (
+      messages: BaseMessage[],
+      inspectionMessages?: BaseMessage[],
+    ): Promise<(TAttachment | null)[] | undefined> {
       try {
         return await processMemory({
           res,
           userId,
           agentId,
           messages,
+          inspectionMessages,
           validKeys,
           llmConfig,
           messageId,
@@ -974,14 +1185,20 @@ export async function createMemoryProcessor({
           jobCreatedAt,
           conversationId,
           memory: withKeys,
+          memoryEntries,
           totalTokens: totalTokens || 0,
+          tokenCountsByKey,
+          filters,
           instructions: finalInstructions,
           setMemory: memoryMethods.setMemory,
           deleteMemory: memoryMethods.deleteMemory,
           user,
+          tenantId,
+          // Deloitte Custom Change: Retention Update
+          retentionHours,
         });
       } catch (error) {
-        logger.error('Memory Agent failed to process memory', error);
+        logger.error('Memory Agent failed to process memory', getSafeErrorMetadata(error));
       }
     },
   ];
@@ -1064,7 +1281,7 @@ export function createMemoryCallback({
     }
     artifactPromises.push(
       handleMemoryArtifact({ res, data, metadata, streamId, jobCreatedAt }).catch((error) => {
-        logger.error('Error processing memory artifact content:', error);
+        logger.error('Error processing memory artifact content:', getSafeErrorMetadata(error));
         return null;
       }),
     );

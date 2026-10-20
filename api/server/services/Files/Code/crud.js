@@ -1,8 +1,10 @@
 const FormData = require('form-data');
 const { logger } = require('@librechat/data-schemas');
 const { getCodeBaseURL } = require('@librechat/agents');
+const { EModelEndpoint, getCodeEnvRefs } = require('librechat-data-provider');
 const {
   logAxiosError,
+  wrapCodeApiUploadError,
   appendCodeEnvFile,
   createAxiosInstance,
   codeServerHttpAgent,
@@ -10,11 +12,43 @@ const {
   appendCodeEnvFileIdentity,
   buildCodeEnvDownloadQuery,
   getCodeApiAuthHeaders,
+  getCodeExecutionBaseUrl,
+  createCodeExecutionRouteKey,
+  codeExecutionHeaders,
 } = require('@librechat/api');
 
 const axios = createAxiosInstance();
 
 const MAX_FILE_SIZE = 150 * 1024 * 1024;
+
+/**
+ * Deloitte Custom Change: extracts only the allowlisted Code Runtime failure
+ * metadata that is safe to use in the MCP attachment status.
+ *
+ * @param {unknown} error - Upload error returned by Axios.
+ * @returns {{ code: 'upload_timeout'; timeoutSeconds: number } | { code: 'upload_size_limit'; maxFileSizeBytes: number } | undefined}
+ */
+function getCodeRuntimeUploadFailure(error) {
+  const response = error?.response;
+  const data = response?.data;
+  if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+    return undefined;
+  }
+
+  if (response?.status === 504 && data.code === 'upload_timeout') {
+    const timeoutSeconds = data.timeout_seconds;
+    if (Number.isSafeInteger(timeoutSeconds) && timeoutSeconds > 0) {
+      return { code: 'upload_timeout', timeoutSeconds };
+    }
+  }
+
+  if (response?.status === 413 && data.code === 'upload_size_limit') {
+    const maxFileSizeBytes = data.max_file_size_bytes;
+    if (Number.isSafeInteger(maxFileSizeBytes) && maxFileSizeBytes > 0) {
+      return { code: 'upload_size_limit', maxFileSizeBytes };
+    }
+  }
+}
 
 /**
  * Retrieves a download stream for a specified file.
@@ -24,14 +58,17 @@ const MAX_FILE_SIZE = 150 * 1024 * 1024;
  *   matching sessionKey. For code-output downloads this is always
  *   `kind: 'user', id: <userId>`; for skill/agent re-downloads pass
  *   the kind+id (+version for skill) from the file's `metadata.codeEnvRef`.
+ * @param {ServerRequest} req - Current authenticated request.
+ * @param {{baseUrl?: string, executionProfile?: 'default'|'stateful', bridgeWorkerId?: string}} [route]
+ *   Trusted host-selected Code API route.
  * @returns {Promise<AxiosResponse>} A promise that resolves to a readable stream of the file content.
  * @throws {Error} If there's an error during the download process.
  */
-async function getCodeOutputDownloadStream(fileIdentifier, identity, req) {
+async function getCodeOutputDownloadStream(fileIdentifier, identity, req, route = {}) {
   try {
-    const baseURL = getCodeBaseURL();
+    const baseURL = route.baseUrl ?? getCodeBaseURL();
     const query = buildCodeEnvDownloadQuery(identity);
-    const authHeaders = await getCodeApiAuthHeaders(req);
+    const authHeaders = await getCodeApiAuthHeaders(req, route.bridgeWorkerId);
     /** @type {import('axios').AxiosRequestConfig} */
     const options = {
       method: 'get',
@@ -40,6 +77,12 @@ async function getCodeOutputDownloadStream(fileIdentifier, identity, req) {
       headers: {
         'User-Agent': 'LibreChat/1.0',
         ...authHeaders,
+        ...(route.executionProfile
+          ? codeExecutionHeaders({
+              executionProfile: route.executionProfile,
+              bridgeWorkerId: route.bridgeWorkerId,
+            })
+          : {}),
       },
       httpAgent: codeServerHttpAgent,
       httpsAgent: codeServerHttpsAgent,
@@ -66,60 +109,95 @@ async function getCodeOutputDownloadStream(fileIdentifier, identity, req) {
  * @returns {Promise<void>}
  */
 async function deleteCodeEnvFile(req, file) {
-  const ref = file?.metadata?.codeEnvRef;
-  if (!ref) {
+  const refs = getCodeEnvRefs(file?.metadata);
+  if (refs.length === 0) {
     return;
   }
 
-  let lastError;
-  const missingOrUnsupportedStatuses = new Set([404, 405]);
-  try {
-    const baseURL = getCodeBaseURL();
+  for (const [executionRouteKey, ref] of refs) {
+    const executionProfile = ref.executionProfile ?? 'default';
+    const environments =
+      req.config?.endpoints?.[EModelEndpoint.agents]?.statefulCodeSessions?.environments;
+    const configuredEnvironment = environments?.find(
+      (environment) =>
+        createCodeExecutionRouteKey(executionProfile, environment) === executionRouteKey,
+    );
+    if (
+      executionProfile === 'stateful' &&
+      executionRouteKey !== executionProfile &&
+      !configuredEnvironment
+    ) {
+      logger.warn(
+        `[deleteCodeEnvFile] Skipping remote cleanup for unmapped historical route ${executionRouteKey}`,
+      );
+      continue;
+    }
+    let baseURL;
+    try {
+      baseURL = getCodeExecutionBaseUrl(executionProfile, configuredEnvironment);
+    } catch (error) {
+      if (
+        executionProfile === 'stateful' &&
+        executionRouteKey === executionProfile &&
+        !configuredEnvironment
+      ) {
+        logger.warn(
+          '[deleteCodeEnvFile] Skipping remote cleanup for retired legacy stateful route',
+        );
+        continue;
+      }
+      throw error;
+    }
     const query = buildCodeEnvDownloadQuery({
       kind: ref.kind,
       id: ref.id,
       ...(ref.kind === 'skill' ? { version: ref.version } : {}),
     });
-    const authHeaders = await getCodeApiAuthHeaders(req);
-    const baseRequest = {
-      method: 'delete',
-      headers: {
-        'User-Agent': 'LibreChat/1.0',
-        ...authHeaders,
-      },
-      httpAgent: codeServerHttpAgent,
-      httpsAgent: codeServerHttpsAgent,
-      timeout: 15000,
-    };
-    const urls = [
-      `${baseURL}/sessions/${ref.storage_session_id}/objects/${ref.file_id}${query}`,
-      `${baseURL}/files/${ref.storage_session_id}/${ref.file_id}${query}`,
-    ];
-
-    for (const url of urls) {
-      try {
-        await axios({ ...baseRequest, url });
-        return;
-      } catch (error) {
-        lastError = error;
-        if (!missingOrUnsupportedStatuses.has(error.response?.status)) {
-          throw error;
-        }
+    const bridgeWorkerId =
+      configuredEnvironment?.workerId ?? configuredEnvironment?.pairing?.workerId;
+    const authHeaders = await getCodeApiAuthHeaders(req, bridgeWorkerId);
+    /* codeapi has mounted DELETE at `/files/:session_id/:fileId` since its
+     * first release. The file-server's own `/sessions/:id/objects/:fileId`
+     * only gained DELETE in LibreChat-AI/code-interpreter#85, so trying it
+     * first cost a guaranteed 404 against every older deployment. */
+    try {
+      await axios({
+        method: 'delete',
+        url: `${baseURL}/files/${ref.storage_session_id}/${ref.file_id}${query}`,
+        headers: {
+          'User-Agent': 'LibreChat/1.0',
+          ...authHeaders,
+          ...codeExecutionHeaders({
+            executionProfile,
+            bridgeWorkerId,
+          }),
+        },
+        httpAgent: codeServerHttpAgent,
+        httpsAgent: codeServerHttpsAgent,
+        timeout: 15000,
+      });
+    } catch (error) {
+      // Deloitte Custom Change: Retention Update
+      const status = error.response?.status;
+      if (status !== 404 && status !== 403) {
+        throw error;
       }
+      // Deloitte Custom Change: Retention Update
+      /* Already gone. Logged rather than swallowed: a 404 (or a 403 from
+       * codeapi's sessionAuth, which answers "this sandbox session no
+       * longer exists" the same way for every caller, not just this one)
+       * is indistinguishable from a misconfigured base URL, and this
+       * branch drops the file's record either way. Sandbox sessions are
+       * short-lived (hours) while file records now outlive them by design
+       * (RET-03's 60-day file retention), so a stale codeEnvRef pointing
+       * at an expired session is an expected, routine case, not a
+       * one-off. */
+      logAxiosError({
+        error,
+        // Deloitte Custom Change: Retention Update
+        message: `Code environment object already absent or session expired: ${error.message}`,
+      });
     }
-  } catch (error) {
-    lastError = error;
-  }
-
-  if (lastError) {
-    logAxiosError({
-      error: lastError,
-      message: `Error deleting code environment file: ${lastError.message}`,
-    });
-    if (lastError.response?.status === 404) {
-      return;
-    }
-    throw new Error(lastError.message || 'An error occurred during file deletion.');
   }
 }
 
@@ -142,18 +220,33 @@ async function deleteCodeEnvFile(req, file) {
  *   ignores this for `kind: 'user'` (auth context provides userId), but it's
  *   sent uniformly for shape symmetry with the discriminated union.
  * @param {number} [params.version] - Required when `kind === 'skill'`; absent otherwise.
- * @returns {Promise<{ storage_session_id: string; file_id: string }>}
+ * @param {string} [params.codeApiBaseUrl] - Trusted per-agent Code API endpoint.
+ * @param {'default'|'stateful'} [params.executionProfile] - Trusted execution profile.
+ * @param {string} [params.bridgeWorkerId] - Trusted worker selected for this execution.
+ * @param {AbortSignal} [params.signal] - Effective cancellation signal.
+ * @returns {Promise<{ storage_session_id: string; file_id: string; filename: string }>}
  *   The codeapi storage location of the uploaded file.
  * @throws {Error} If there's an error during the upload process.
  */
-async function uploadCodeEnvFile({ req, stream, filename, kind, id, version }) {
+async function uploadCodeEnvFile({
+  req,
+  stream,
+  filename,
+  kind,
+  id,
+  version,
+  codeApiBaseUrl,
+  executionProfile,
+  bridgeWorkerId,
+  signal,
+}) {
   try {
     const form = new FormData();
     appendCodeEnvFileIdentity(form, { kind, id, version });
     appendCodeEnvFile(form, stream, filename);
 
-    const baseURL = getCodeBaseURL();
-    const authHeaders = await getCodeApiAuthHeaders(req);
+    const baseURL = codeApiBaseUrl ?? getCodeBaseURL();
+    const authHeaders = await getCodeApiAuthHeaders(req, bridgeWorkerId);
     /** @type {import('axios').AxiosRequestConfig} */
     const options = {
       headers: {
@@ -162,12 +255,14 @@ async function uploadCodeEnvFile({ req, stream, filename, kind, id, version }) {
         'User-Agent': 'LibreChat/1.0',
         'User-Id': req.user.id,
         ...authHeaders,
+        ...(executionProfile ? codeExecutionHeaders({ executionProfile, bridgeWorkerId }) : {}),
       },
       httpAgent: codeServerHttpAgent,
       httpsAgent: codeServerHttpsAgent,
       timeout: 120000,
       maxContentLength: MAX_FILE_SIZE,
       maxBodyLength: MAX_FILE_SIZE,
+      ...(signal ? { signal } : {}),
     };
 
     const response = await axios.post(`${baseURL}/upload`, form, options);
@@ -181,14 +276,23 @@ async function uploadCodeEnvFile({ req, stream, filename, kind, id, version }) {
     return {
       storage_session_id: result.storage_session_id,
       file_id: result.files[0].fileId,
+      filename: result.files[0].filename,
     };
   } catch (error) {
-    throw new Error(
-      logAxiosError({
-        message: `Error uploading code environment file: ${error.message}`,
-        error,
-      }),
+    const uploadError = wrapCodeApiUploadError(
+      error,
+      `Error uploading code environment file: ${error.message}`,
     );
+    // Deloitte Custom Change: distinguish HTTP upload failures from source-download failures.
+    if (error?.response || error?.request) {
+      uploadError.codeRuntimeUploadError = true;
+    }
+    // Deloitte Custom Change: retain only the safe response contract for MCP feedback.
+    const failure = getCodeRuntimeUploadFailure(error);
+    if (failure) {
+      uploadError.codeRuntimeUploadFailure = failure;
+    }
+    throw uploadError;
   }
 }
 
@@ -211,10 +315,24 @@ async function uploadCodeEnvFile({ req, stream, filename, kind, id, version }) {
  *   through subsequent download/walk passes — sandboxed-code modifications
  *   are dropped on the floor and the original ref is echoed back as
  *   `inherited: true`, never as a generated artifact.
+ * @param {string} [params.codeApiBaseUrl] - Trusted per-agent Code API endpoint.
+ * @param {'default'|'stateful'} [params.executionProfile] - Trusted execution profile.
+ * @param {string} [params.bridgeWorkerId] - Trusted worker selected for this execution.
  * @returns {Promise<{ storage_session_id: string; files: Array<{ fileId: string; filename: string }> }>}
  * @throws {Error} If the batch upload fails entirely.
  */
-async function batchUploadCodeEnvFiles({ req, files, kind, id, version, read_only = false }) {
+async function batchUploadCodeEnvFiles({
+  req,
+  files,
+  kind,
+  id,
+  version,
+  read_only = false,
+  codeApiBaseUrl,
+  executionProfile,
+  bridgeWorkerId,
+  signal,
+}) {
   const form = new FormData();
   appendCodeEnvFileIdentity(form, { kind, id, version });
   if (read_only) {
@@ -224,8 +342,8 @@ async function batchUploadCodeEnvFiles({ req, files, kind, id, version, read_onl
     appendCodeEnvFile(form, file.stream, file.filename);
   }
 
-  const baseURL = getCodeBaseURL();
-  const authHeaders = await getCodeApiAuthHeaders(req);
+  const baseURL = codeApiBaseUrl ?? getCodeBaseURL();
+  const authHeaders = await getCodeApiAuthHeaders(req, bridgeWorkerId);
   /** @type {import('axios').AxiosRequestConfig} */
   const options = {
     headers: {
@@ -234,12 +352,14 @@ async function batchUploadCodeEnvFiles({ req, files, kind, id, version, read_onl
       'User-Agent': 'LibreChat/1.0',
       'User-Id': req.user.id,
       ...authHeaders,
+      ...(executionProfile ? codeExecutionHeaders({ executionProfile, bridgeWorkerId }) : {}),
     },
     httpAgent: codeServerHttpAgent,
     httpsAgent: codeServerHttpsAgent,
     timeout: 120000,
     maxContentLength: MAX_FILE_SIZE,
     maxBodyLength: MAX_FILE_SIZE,
+    signal,
   };
 
   const response = await axios.post(`${baseURL}/upload/batch`, form, options);

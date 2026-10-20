@@ -55,15 +55,15 @@ body:
       label: Relevant log output
       description: |
         Please paste relevant logs that were created when reproducing the error.
-        
+
         Log locations:
         - Docker: Project root directory ./logs
         - npm: ./api/logs
-        
+
         There are two types of logs that can help diagnose the issue:
         - debug logs (debug-YYYY-MM-DD.log)
         - error logs (error-YYYY-MM-DD.log)
-        
+
         Error logs contain exact stack traces and are especially helpful, but both can provide valuable information.
         Please only include the relevant portions of logs that correspond to when you reproduced the error.
 
@@ -80,7 +80,7 @@ body:
     id: terms
     attributes:
       label: Code of Conduct
-      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/danny-avila/LibreChat/blob/main/.github/CODE_OF_CONDUCT.md)
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/LibreChat-AI/LibreChat/blob/main/.github/CODE_OF_CONDUCT.md)
       options:
         - label: I agree to follow this project's Code of Conduct
           required: true

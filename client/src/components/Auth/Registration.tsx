@@ -4,7 +4,7 @@ import { loginPage } from 'librechat-data-provider';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { useNavigate, useOutletContext, useLocation } from 'react-router-dom';
 import { useRegisterUserMutation } from 'librechat-data-provider/react-query';
-import { ThemeContext, SecretInput, Spinner, Button, isDark } from '@librechat/client';
+import { ThemeContext, SecretInput, Spinner, Button, Input, isDark } from '@librechat/client';
 import type { TRegisterUser, TError } from 'librechat-data-provider';
 import type { TLoginLayoutContext } from '~/common';
 import { useLocalize, TranslationKeys } from '~/hooks';
@@ -36,6 +36,7 @@ const Registration: React.FC = () => {
 
   // only require captcha if we have a siteKey
   const requireCaptcha = Boolean(startupConfig?.turnstile?.siteKey);
+  // Deloitte Custom Change: GEL design system input styling (PR #138)
   const authInputClassName =
     'peer h-12 w-full rounded-lg border border-border-light bg-surface-primary px-4 text-text-primary transition-colors duration-200 hover:border-border-medium focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus-visible:border-primary';
   const authSecretInputClassName = `${authInputClassName} pr-12`;
@@ -98,7 +99,7 @@ const Registration: React.FC = () => {
             />
           ) : (
             <>
-              <input
+              <Input
                 id={id}
                 type={type}
                 autoComplete={id}
@@ -116,7 +117,7 @@ const Registration: React.FC = () => {
           )}
         </div>
         {errors[id] && (
-          <span role="alert" className="mt-1 text-sm text-red-500">
+          <span role="alert" className="mt-1 text-sm text-text-destructive">
             {String(errors[id]?.message) ?? ''}
           </span>
         )}
@@ -133,6 +134,7 @@ const Registration: React.FC = () => {
       )}
       {registerUser.isSuccess && countdown > 0 && (
         <div
+          // Deloitte Custom Change: GEL design system styling (PR #138)
           className="rounded-md border border-primary bg-primary/10 px-3 py-2 text-sm text-gray-600 dark:text-gray-200"
           role="alert"
         >
@@ -239,11 +241,12 @@ const Registration: React.FC = () => {
             </div>
           </form>
 
-          <p className="my-4 text-center text-sm font-light text-gray-700 dark:text-white">
+          <p className="my-4 text-center text-sm font-light text-text-secondary">
             {localize('com_auth_already_have_account')}{' '}
             <a
               href={loginPage()}
               aria-label="Login"
+              // Deloitte Custom Change: GEL design system color tokens (PR #138)
               className="inline-flex p-1 text-sm font-medium text-primary transition-colors hover:text-primary-hover"
             >
               {localize('com_auth_login')}

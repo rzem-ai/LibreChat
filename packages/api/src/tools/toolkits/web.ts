@@ -7,22 +7,22 @@ Use this tool when the user's request calls for it, whether directly, indirectly
 
 Use the conversation date/time from the dynamic runtime context when recency matters.
 
-**CITATION FORMAT - UNICODE ESCAPE SEQUENCES ONLY:**
-Use these EXACT escape sequences (copy verbatim): \\ue202 (before each anchor), \\ue200 (group start), \\ue201 (group end), \\ue203 (highlight start), \\ue204 (highlight end)
+Citations for search results and news articles are added automatically after your response — do not add your own anchors, footnotes, or markdown links for them.
 
-Anchor pattern: \\ue202turn{N}{type}{index} where N=turn number, type=search|news|image|ref, index=0,1,2...
+**IMAGE/VIDEO CITATION FORMAT - UNICODE ESCAPE SEQUENCES ONLY:**
+When referencing a specific image or video result, use these EXACT escape sequences (copy verbatim): \\ue202 (before each anchor), \\ue200 (group start), \\ue201 (group end)
+
+Anchor pattern: \\ue202turn{N}{type}{index} where N=turn number, type=image|video, index=0,1,2...
 
 **Examples (copy these exactly):**
-- Single: "Statement.\\ue202turn0search0"
-- Multiple: "Statement.\\ue202turn0search0\\ue202turn0news1"
-- Group: "Statement. \\ue200\\ue202turn0search0\\ue202turn0news1\\ue201"
-- Highlight: "\\ue203Cited text.\\ue204\\ue202turn0search0"
-- Image: "See photo\\ue202turn0image0."
+- Single: "See photo\\ue202turn0image0."
+- Multiple: "See photo\\ue202turn0image0\\ue202turn0video1."
+- Group: "See these\\ue200\\ue202turn0image0\\ue202turn0image1\\ue201."
 
-**CRITICAL:** Output escape sequences EXACTLY as shown. Do NOT substitute with † or other symbols. Place anchors AFTER punctuation. Cite every non-obvious fact/quote. NEVER use markdown links, [1], footnotes, or HTML tags.`.trim();
+**CRITICAL:** Output escape sequences EXACTLY as shown. Do NOT substitute with † or other symbols. Place anchors AFTER punctuation. NEVER use markdown links, [1], footnotes, or HTML tags for any citation, including images/videos.`.trim();
 }
 
-/** Builds dynamic web search context scoped to the conversation anchor time. */
+/** Builds dynamic web search context scoped to the logical turn start time. */
 export function buildWebSearchDynamicContext(now?: string | number | Date): string {
   return `# \`${Tools.web_search}\` Runtime Context
 Conversation Date & Time: ${replaceSpecialVars({ text: '{{iso_datetime}}', now })}`.trim();

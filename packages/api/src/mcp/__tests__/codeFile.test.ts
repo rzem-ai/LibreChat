@@ -1,5 +1,6 @@
 // Deloitte Custom Change: covers secure MCP download handoff to Code Interpreter.
 import type { AxiosRequestConfig } from 'axios';
+import { PassThrough, Readable } from 'node:stream';
 
 jest.mock(
   '@librechat/data-schemas',
@@ -64,6 +65,11 @@ const { __mockAxiosInstance: mockAxiosInstance } = jest.requireMock('~/utils/axi
 };
 const mockGet = mockAxiosInstance.get;
 
+/** Deloitte Custom Change: creates valid gateway grants without a fixed-date test expiry. */
+function futureExpiry(): string {
+  return new Date(Date.now() + 60_000).toISOString();
+}
+
 describe('fetchAllowedCodeFileStream', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -95,6 +101,89 @@ describe('fetchAllowedCodeFileStream', () => {
       ['internal.example:443'],
       '443',
     );
+  });
+
+  it('rejects an expired gateway grant before making a request', async () => {
+    await expect(
+      fetchAllowedCodeFileStream('https://gateway.example/download/grant', null, null, {
+        size: 42,
+        expiresAt: '2020-01-01T00:00:00Z',
+      }),
+    ).rejects.toThrow('invalid or expired');
+    expect(mockGet).not.toHaveBeenCalled();
+  });
+
+  it('rejects a mismatched content length and closes the gateway response stream', async () => {
+    const upstream = new PassThrough();
+    mockGet.mockResolvedValue({
+      status: 200,
+      headers: { 'content-length': '4' },
+      data: upstream,
+    });
+
+    await expect(
+      fetchAllowedCodeFileStream('https://gateway.example/download/grant', null, null, {
+        size: 42,
+        expiresAt: futureExpiry(),
+      }),
+    ).rejects.toThrow('does not match the gateway-declared size');
+
+    expect(upstream.destroyed).toBe(true);
+  });
+
+  it('rejects a response stream that exceeds the gateway-declared size', async () => {
+    mockGet.mockResolvedValue({ status: 200, headers: {}, data: Readable.from(['oversized']) });
+
+    const response = await fetchAllowedCodeFileStream(
+      'https://gateway.example/download/grant',
+      null,
+      null,
+      { size: 4, expiresAt: futureExpiry() },
+    );
+
+    const consume = async () => {
+      for await (const _chunk of response.data) {
+        // Consume the limiter so it can enforce the byte budget.
+      }
+    };
+    await expect(consume()).rejects.toThrow('exceeds the gateway-declared size');
+  });
+
+  it('rejects a truncated response stream', async () => {
+    mockGet.mockResolvedValue({ status: 200, headers: {}, data: Readable.from(['short']) });
+
+    const response = await fetchAllowedCodeFileStream(
+      'https://gateway.example/download/grant',
+      null,
+      null,
+      { size: 6, expiresAt: futureExpiry() },
+    );
+
+    const consume = async () => {
+      for await (const _chunk of response.data) {
+        // Consume the limiter so it can enforce the byte budget.
+      }
+    };
+    await expect(consume()).rejects.toThrow('does not match the gateway-declared size');
+  });
+
+  // Deloitte Custom Change: downstream rejection must release the upstream gateway response stream.
+  it('closes the upstream stream when the gateway limiter is destroyed', async () => {
+    const upstream = new PassThrough();
+    mockGet.mockResolvedValue({ status: 200, headers: {}, data: upstream });
+
+    const response = await fetchAllowedCodeFileStream(
+      'https://gateway.example/download/grant',
+      null,
+      null,
+      { size: 42, expiresAt: futureExpiry() },
+    );
+
+    const upstreamClosed = new Promise<void>((resolve) => upstream.once('close', resolve));
+    response.data.destroy();
+    await upstreamClosed;
+
+    expect(upstream.destroyed).toBe(true);
   });
 
   it('rejects a proxied hostname when allowedAddresses does not match the effective port', async () => {
