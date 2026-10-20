@@ -295,7 +295,7 @@ export default function GenericGrantAccessDialog({
         0: config?.getShareMessage(resourceName),
       })}
       type="button"
-      id="share-resource-button"
+      data-tour="share-resource-button"
       disabled={disabled}
       className={cn('h-9', buttonClassName)}
     >
@@ -472,7 +472,7 @@ export default function GenericGrantAccessDialog({
             }
             className="w-full sm:w-auto"
             aria-label={localize('com_ui_save')}
-            id="share-save-button"
+            data-tour="share-save-button"
             aria-describedby={hasChanges && !hasAtLeastOneOwner ? ownerErrorId : undefined}
           >
             {updatePermissionsMutation.isLoading ? (

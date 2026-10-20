@@ -303,7 +303,7 @@ export default function CreateSkillDialog({
             <Button
               type="submit"
               variant="submit"
-              id="create-skill-submit"
+              data-tour="create-skill-submit"
               disabled={submitDisabled}
               aria-busy={createSkill.isLoading || undefined}
               className={cn('gap-2', submitDisabled && 'opacity-50')}

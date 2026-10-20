@@ -72,7 +72,7 @@ function SkillListSection({
           onClick={() => onOpenChange(!open)}
           className="flex cursor-pointer items-center gap-1.5"
           aria-expanded={open}
-          id={`skills-section-${group}`}
+          data-tour={`skills-section-${group}`}
         >
           <ChevronRight
             className={cn(

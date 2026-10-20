@@ -85,7 +85,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
       )}
       onClick={() => setIsOpen(!isOpen)}
       aria-label={t('com_ui_prompt_category_selector_aria')}
-      id="prompt-category-select"
+      data-tour="prompt-category-select"
     >
       <div className="flex items-center space-x-2">
         {'icon' in displayCategory && displayCategory.icon != null && (

@@ -278,37 +278,38 @@ function AgentSelect({
       name="agent"
       control={control}
       render={({ field }) => (
-        <ControlCombobox
-          selectId="agent-select"
-          containerClassName="px-0"
-          selectedValue={(field?.value?.value ?? '') + ''}
-          displayValue={field?.value?.label ?? ''}
-          selectPlaceholder={field?.value?.value ?? createAgent}
-          iconSide="right"
-          searchPlaceholder={localize('com_agents_search_name')}
-          popoverMaxHeight={SELECTOR_MAX_HEIGHT}
-          unsearchedLimit={selectorLimit}
-          SelectIcon={field?.value?.icon}
-          setValue={onSelect}
-          items={
-            agents?.map((agent) => ({
-              label: agent.name ?? '',
-              value: agent.id ?? '',
-              icon: agent.icon,
-            })) ?? [
-              {
-                label: 'Loading...',
-                value: '',
-              },
-            ]
-          }
-          className={cn(
-            'z-50 flex h-9 w-full flex-none items-center justify-center truncate rounded-md bg-transparent font-bold',
-          )}
-          ariaLabel={localize('com_ui_agent')}
-          isCollapsed={false}
-          showCarat={true}
-        />
+        <div data-tour="agent-select">
+          <ControlCombobox
+            containerClassName="px-0"
+            selectedValue={(field?.value?.value ?? '') + ''}
+            displayValue={field?.value?.label ?? ''}
+            selectPlaceholder={field?.value?.value ?? createAgent}
+            iconSide="right"
+            searchPlaceholder={localize('com_agents_search_name')}
+            popoverMaxHeight={SELECTOR_MAX_HEIGHT}
+            unsearchedLimit={selectorLimit}
+            SelectIcon={field?.value?.icon}
+            setValue={onSelect}
+            items={
+              agents?.map((agent) => ({
+                label: agent.name ?? '',
+                value: agent.id ?? '',
+                icon: agent.icon,
+              })) ?? [
+                {
+                  label: 'Loading...',
+                  value: '',
+                },
+              ]
+            }
+            className={cn(
+              'z-50 flex h-9 w-full flex-none items-center justify-center truncate rounded-md bg-transparent font-bold',
+            )}
+            ariaLabel={localize('com_ui_agent')}
+            isCollapsed={false}
+            showCarat={true}
+          />
+        </div>
       )}
     />
   );

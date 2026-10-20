@@ -249,7 +249,7 @@ export default function UploadSkillDialog({ isOpen, setIsOpen }: UploadSkillDial
           <div className="flex flex-col gap-3">
             <button
               type="button"
-              id="upload-skill-dropzone"
+              data-tour="upload-skill-dropzone"
               onClick={() => fileInputRef.current?.click()}
               onDragOver={(e) => {
                 e.preventDefault();
