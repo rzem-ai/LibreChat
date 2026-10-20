@@ -70,13 +70,13 @@ jest.mock('../PeoplePicker', () => ({
   SelectedPrincipalsList: () => <div data-testid="principals-list" />,
 }));
 
-const renderDialog = () =>
+const renderDialog = (resourceType: ResourceType = ResourceType.AGENT) =>
   render(
     <GenericGrantAccessDialog
       resourceDbId="agent-db-1"
       resourceId="agent-1"
       resourceName="Test Agent"
-      resourceType={ResourceType.AGENT}
+      resourceType={resourceType}
     />,
   );
 
@@ -152,6 +152,11 @@ describe('GenericGrantAccessDialog - permissions load failure', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('com_ui_share_access_description')).toHaveClass('sr-only');
     expect(screen.getByTestId('unified-people-search').closest('section')).toHaveClass('w-full');
+    // Deloitte Custom Change: verify the firm-wide capability publication prompt and form link.
+    expect(screen.getByText('com_ui_share_publish_capability_prompt')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'com_ui_share_publish_capability_link' }),
+    ).toHaveAttribute('href', 'https://forms.cloud.microsoft/e/r5Q2gGYGQJ');
     expect(screen.getByTestId('public-toggle').parentElement).toHaveClass('border-t');
     expect(screen.getByTestId('admin-settings')).toBeInTheDocument();
     expect(dialog.firstElementChild).not.toHaveClass('border-b');
@@ -162,6 +167,30 @@ describe('GenericGrantAccessDialog - permissions load failure', () => {
     expect(saveButton).toHaveClass('sm:w-auto');
     expect(saveButton).not.toHaveClass('min-w-[140px]');
     expect(screen.queryByRole('button', { name: 'com_ui_cancel' })).not.toBeInTheDocument();
+  });
+
+  it('shows the capability publication prompt and form link for skills', () => {
+    mockUseResourcePermissionState.mockReturnValue(baseState());
+
+    renderDialog(ResourceType.SKILL);
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_share_var' }));
+
+    expect(screen.getByText('com_ui_share_publish_capability_prompt')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'com_ui_share_publish_capability_link' }),
+    ).toHaveAttribute('href', 'https://forms.cloud.microsoft/e/r5Q2gGYGQJ');
+  });
+
+  it('does not show the capability publication prompt for other resource types', () => {
+    mockUseResourcePermissionState.mockReturnValue(baseState());
+
+    renderDialog(ResourceType.REMOTE_AGENT);
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_share_var' }));
+
+    expect(screen.queryByText('com_ui_share_publish_capability_prompt')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'com_ui_share_publish_capability_link' }),
+    ).not.toBeInTheDocument();
   });
 
   it('lets an admin manage agent principals without people picker or public sharing permissions', () => {

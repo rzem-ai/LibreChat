@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, CopyCheck } from 'lucide';
-import { Share2Icon, Users, UserCheck, AlertCircle } from 'lucide-react';
 import { AccessRoleIds, ResourceType, SystemRoles } from 'librechat-data-provider';
+import { Share2Icon, Users, UserCheck, AlertCircle, ExternalLink } from 'lucide-react';
 import {
   Alert,
   Label,
@@ -62,6 +62,9 @@ export default function GenericGrantAccessDialog({
   const peopleSectionId = React.useId();
   const ownerErrorId = React.useId();
   const canSharePublic = useCanSharePublic(resourceType);
+  // Deloitte Custom Change: firm-wide capability publication applies only to agents and skills.
+  const canPublishCapability =
+    resourceType === ResourceType.AGENT || resourceType === ResourceType.SKILL;
   const canEditAgentInsights =
     resourceType === ResourceType.AGENT && user?.role === SystemRoles.ADMIN;
   const { hasPeoplePickerAccess, peoplePickerTypeFilter } = usePeoplePickerPermissions();
@@ -370,7 +373,6 @@ export default function GenericGrantAccessDialog({
                       typeFilter={peoplePickerTypeFilter}
                       excludeIds={allShares.map((s) => s.idOnTheSource)}
                     />
-
                     {!hasAtLeastOneOwner && hasChanges && (
                       <Alert id={ownerErrorId} variant="error">
                         {localize('com_ui_at_least_one_owner_required')}
@@ -398,6 +400,21 @@ export default function GenericGrantAccessDialog({
                         showInsightsAccess={canEditAgentInsights}
                         onInsightsAccessChange={handleInsightsChange}
                       />
+                    )}
+                    {canPublishCapability && (
+                      <p className="px-1 text-sm text-text-primary">
+                        {/* Deloitte Custom Change: invite users to publish shared capabilities firm-wide. */}
+                        {localize('com_ui_share_publish_capability_prompt')}{' '}
+                        <a
+                          href="https://forms.cloud.microsoft/e/r5Q2gGYGQJ"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-text-secondary underline underline-offset-2 hover:text-text-primary"
+                        >
+                          {localize('com_ui_share_publish_capability_link')}
+                          <ExternalLink className="size-3.5" aria-hidden="true" />
+                        </a>
+                      </p>
                     )}
                   </>
                 )}
