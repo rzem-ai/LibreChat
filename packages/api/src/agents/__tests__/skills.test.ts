@@ -58,6 +58,7 @@ import {
   scopeSkillIds,
   resolveSkillActive,
   resolveAgentScopedSkillIds,
+  resolveAgentExplicitSkillIds,
   resolveModelSpecSkillIds,
   injectSkillCatalog,
   buildSkillPrimeMessage,
@@ -571,6 +572,62 @@ describe('resolveAgentScopedSkillIds', () => {
         }),
       ).toEqual([]);
     });
+  });
+});
+
+describe('resolveAgentExplicitSkillIds', () => {
+  const persistedAgent = (
+    skills?: string[],
+    skills_enabled?: boolean,
+    skills_scope?: SkillsScope,
+  ) => ({
+    id: 'agent_persisted_1',
+    skills,
+    skills_enabled,
+    skills_scope,
+  });
+
+  it('returns no explicit assignments for ephemeral agents', () => {
+    const skillId = new Types.ObjectId();
+    expect(
+      resolveAgentExplicitSkillIds({
+        agent: { id: 'ephemeral_convo_xyz', skills: [skillId.toString()], skills_enabled: true },
+        accessibleSkillIds: [skillId],
+      }),
+    ).toBeUndefined();
+  });
+
+  it('returns no explicit assignments for all and none scopes', () => {
+    const skillId = new Types.ObjectId();
+    for (const skills_scope of [SkillsScope.all, SkillsScope.none]) {
+      expect(
+        resolveAgentExplicitSkillIds({
+          agent: persistedAgent([skillId.toString()], true, skills_scope),
+          accessibleSkillIds: [skillId],
+        }),
+      ).toBeUndefined();
+    }
+  });
+
+  it('returns an empty allowlist for selected scope with no assigned skills', () => {
+    expect(
+      resolveAgentExplicitSkillIds({
+        agent: persistedAgent([], true, SkillsScope.selected),
+        accessibleSkillIds: [new Types.ObjectId()],
+      }),
+    ).toEqual([]);
+  });
+
+  it('returns only selected skills that remain accessible', () => {
+    const assigned = new Types.ObjectId();
+    const stale = new Types.ObjectId();
+    const accessible = new Types.ObjectId();
+    expect(
+      resolveAgentExplicitSkillIds({
+        agent: persistedAgent([assigned.toString(), stale.toString()], true, SkillsScope.selected),
+        accessibleSkillIds: [assigned, accessible],
+      }),
+    ).toEqual([assigned]);
   });
 });
 
@@ -1808,6 +1865,50 @@ describe('resolveManualSkills', () => {
       accessibleSkillIds: [owned._id],
       userId,
       skillStates: { [owned._id.toString()]: false },
+    });
+    expect(result).toEqual([]);
+  });
+
+  it('resolves a personally deactivated skill when explicitly assigned to the agent', async () => {
+    const owned = mkSkill('assigned-off', userOid);
+    const result = await resolveManualSkills({
+      names: ['assigned-off'],
+      getSkillByName: buildGetSkillByName({ 'assigned-off': owned }),
+      accessibleSkillIds: [owned._id],
+      agentExplicitSkillIds: [owned._id],
+      userId,
+      skillStates: { [owned._id.toString()]: false },
+    });
+    expect(result).toEqual([
+      { _id: owned._id, name: 'assigned-off', body: 'body of assigned-off' },
+    ]);
+  });
+
+  it('does not let explicit assignment override user-invocation restrictions', async () => {
+    const modelOnly: SkillDoc = {
+      ...mkSkill('assigned-model-only', userOid),
+      userInvocable: false,
+    };
+    const result = await resolveManualSkills({
+      names: ['assigned-model-only'],
+      getSkillByName: buildGetSkillByName({ 'assigned-model-only': modelOnly }),
+      accessibleSkillIds: [modelOnly._id],
+      agentExplicitSkillIds: [modelOnly._id],
+      userId,
+      skillStates: { [modelOnly._id.toString()]: false },
+    });
+    expect(result).toEqual([]);
+  });
+
+  it('does not let explicit assignment override an empty skill body', async () => {
+    const empty = mkSkill('assigned-empty', userOid, '');
+    const result = await resolveManualSkills({
+      names: ['assigned-empty'],
+      getSkillByName: buildGetSkillByName({ 'assigned-empty': empty }),
+      accessibleSkillIds: [empty._id],
+      agentExplicitSkillIds: [empty._id],
+      userId,
+      skillStates: { [empty._id.toString()]: false },
     });
     expect(result).toEqual([]);
   });

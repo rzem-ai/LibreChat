@@ -387,6 +387,41 @@ export function resolveAgentScopedSkillIds(
   return scopeSkillIds(accessibleSkillIds, agent.skills);
 }
 
+export interface ResolveAgentExplicitSkillIdsParams {
+  /** Agent being initialized. Reads its persisted skill catalog scope. */
+  agent: Pick<Agent, 'id' | 'skills' | 'skills_enabled' | 'skills_scope'>;
+  /** Skill IDs the user can access, already constrained by ACL. */
+  accessibleSkillIds: Types.ObjectId[];
+}
+
+/**
+ * Returns the explicitly selected skill IDs for a persisted agent. These
+ * assignments bypass the user's personal active-state preference during
+ * manual invocation, but not ACL or author invocation restrictions.
+ *
+ * `undefined` means no assignment exception applies (ephemeral agents and
+ * `all`/`none` scopes). An empty array means `selected` scope has no skills.
+ * The result is intersected with accessible IDs to preserve current ACL.
+ */
+export function resolveAgentExplicitSkillIds(
+  params: ResolveAgentExplicitSkillIdsParams,
+): Types.ObjectId[] | undefined {
+  const { agent, accessibleSkillIds } = params;
+  if (isEphemeralAgentId(agent.id)) {
+    return undefined;
+  }
+
+  const scope = resolveAgentSkillsScope(agent.skills, agent.skills_enabled, agent.skills_scope);
+  if (scope !== SkillsScope.selected) {
+    return undefined;
+  }
+  if (!Array.isArray(agent.skills) || agent.skills.length === 0) {
+    return [];
+  }
+
+  return scopeSkillIds(accessibleSkillIds, agent.skills);
+}
+
 export interface ResolveSkillActiveParams {
   /** Skill being evaluated. Only `_id` and `author` matter for resolution. */
   skill: { _id: Types.ObjectId | string; author: Types.ObjectId | string; deployment?: boolean };
@@ -965,6 +1000,8 @@ export interface ResolveManualSkillsParams {
   } | null>;
   /** ACL-accessible skill IDs for this user (already scoped by `scopeSkillIds`). */
   accessibleSkillIds: Types.ObjectId[];
+  /** Explicit persisted-agent selections that bypass the personal active-state check. */
+  agentExplicitSkillIds?: Types.ObjectId[];
   /** Current user ID — required for ownership-based active-state defaults. */
   userId?: string;
   /** Per-user skill active/inactive overrides. */
@@ -1044,8 +1081,15 @@ export type ResolvedAlwaysApplySkill = ResolvedSkillPrime;
 export async function resolveManualSkills(
   params: ResolveManualSkillsParams,
 ): Promise<ResolvedManualSkill[]> {
-  const { names, getSkillByName, accessibleSkillIds, userId, skillStates, defaultActiveOnShare } =
-    params;
+  const {
+    names,
+    getSkillByName,
+    accessibleSkillIds,
+    agentExplicitSkillIds,
+    userId,
+    skillStates,
+    defaultActiveOnShare,
+  } = params;
 
   if (!names.length || accessibleSkillIds.length === 0) {
     return [];
@@ -1115,12 +1159,16 @@ export async function resolveManualSkills(
           logger.warn('[resolveManualSkills] Requested skill has empty body — skipping');
           return null;
         }
-        const active = resolveSkillActive({
-          skill: { _id: skill._id, author: skill.author, deployment: skill.deployment },
-          skillStates,
-          userId,
-          defaultActiveOnShare,
-        });
+        const explicitlyAssigned =
+          agentExplicitSkillIds?.some((id) => id.equals(skill._id)) ?? false;
+        const active =
+          explicitlyAssigned ||
+          resolveSkillActive({
+            skill: { _id: skill._id, author: skill.author, deployment: skill.deployment },
+            skillStates,
+            userId,
+            defaultActiveOnShare,
+          });
         if (!active) {
           logger.warn('[resolveManualSkills] Requested skill is inactive for this user — skipping');
           return null;

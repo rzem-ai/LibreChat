@@ -68,6 +68,7 @@ import {
   resolveSkillCatalog,
   resolveManualSkills,
   resolveAlwaysApplySkills,
+  resolveAgentExplicitSkillIds,
   selectSkillPrimesForTurn,
   unionPrimeAllowedTools,
   MAX_PRIMED_SKILLS_PER_TURN,
@@ -1230,6 +1231,10 @@ export async function initializeAgent(
             names: params.manualSkills,
             getSkillByName: db.getSkillByName,
             accessibleSkillIds: params.accessibleSkillIds!,
+            agentExplicitSkillIds: resolveAgentExplicitSkillIds({
+              agent,
+              accessibleSkillIds: params.accessibleSkillIds!,
+            }),
             userId: user?.id,
             skillStates: params.skillStates,
             defaultActiveOnShare: params.defaultActiveOnShare,
