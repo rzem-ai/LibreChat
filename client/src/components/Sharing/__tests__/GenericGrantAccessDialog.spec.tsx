@@ -169,6 +169,18 @@ describe('GenericGrantAccessDialog - permissions load failure', () => {
     expect(screen.queryByRole('button', { name: 'com_ui_cancel' })).not.toBeInTheDocument();
   });
 
+  it('shows the capability publication prompt and form link for skills', () => {
+    mockUseResourcePermissionState.mockReturnValue(baseState());
+
+    renderDialog(ResourceType.SKILL);
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_share_var' }));
+
+    expect(screen.getByText('com_ui_share_publish_capability_prompt')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'com_ui_share_publish_capability_link' }),
+    ).toHaveAttribute('href', 'https://forms.cloud.microsoft/e/r5Q2gGYGQJ');
+  });
+
   it('does not show the capability publication prompt for other resource types', () => {
     mockUseResourcePermissionState.mockReturnValue(baseState());
 
