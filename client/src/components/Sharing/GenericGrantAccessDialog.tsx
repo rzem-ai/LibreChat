@@ -268,9 +268,9 @@ export default function GenericGrantAccessDialog({
         share.id === user?.id &&
         share.accessRoleId === config?.defaultOwnerRoleId,
     );
-  const hasEditorInDraft = allShares.some(
-    (share) => share.accessRoleId === config?.defaultEditorRoleId,
-  );
+  const hasEditorInDraft =
+    allShares.some((share) => share.accessRoleId === config?.defaultEditorRoleId) ||
+    (isPublic && publicRole === config?.defaultEditorRoleId);
   const showEditorAccessWarning = isCurrentUserSkillOwner && hasEditorInDraft;
 
   // Check if there are any changes to save
