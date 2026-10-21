@@ -32,9 +32,16 @@ export function useSettingsContext(): SettingsContextValue {
     permissionType: PermissionTypes.PROMPTS,
     permission: Permissions.USE,
   });
+  // Deloitte Custom Change: use the existing role permission to gate temporary-chat settings.
+  const temporaryChatEnabled = useHasAccess({
+    permissionType: PermissionTypes.TEMPORARY_CHAT,
+    permission: Permissions.USE,
+  });
 
   const balanceEnabled = startupConfig?.balance?.enabled === true;
   const langfuseConnectionAccess = startupConfig?.langfuseConnectionAccess === true;
+  // Deloitte Custom Change: hide sharing-dependent settings when the deployment disables sharing.
+  const sharedLinksEnabled = startupConfig?.sharedLinksEnabled === true;
   const adminPanelURL = startupConfig?.adminPanelURL ?? '';
   const isLocalProvider = user?.provider === 'local';
   const twoFactorEnabled = user?.twoFactorEnabled === true;
@@ -81,6 +88,8 @@ export function useSettingsContext(): SettingsContextValue {
       usernameDisplaySettingEnabled,
       engineTTS,
       langfuseConnectionAccess,
+      sharedLinksEnabled,
+      temporaryChatEnabled,
       adminPanelURL,
     }),
     [
@@ -104,6 +113,8 @@ export function useSettingsContext(): SettingsContextValue {
       usernameDisplaySettingEnabled,
       engineTTS,
       langfuseConnectionAccess,
+      sharedLinksEnabled,
+      temporaryChatEnabled,
       adminPanelURL,
     ],
   );

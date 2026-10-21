@@ -27,6 +27,9 @@ const ctx: SettingsContextValue = {
   usernameDisplaySettingEnabled: true,
   engineTTS: 'browser',
   langfuseConnectionAccess: false,
+  // Deloitte Custom Change: default feature visibility states for settings tests.
+  sharedLinksEnabled: false,
+  temporaryChatEnabled: false,
   adminPanelURL: '',
 };
 
@@ -56,13 +59,14 @@ describe('Sidebar', () => {
     expect(screen.getByText('About')).toBeInTheDocument();
   });
 
+  // Deloitte Custom Change: Langfuse settings are visible to authorized administrators only.
   it('shows the Langfuse tab when Langfuse is available to the user', () => {
-    setup({ langfuseConnectionAccess: true });
+    setup({ langfuseConnectionAccess: true, isAdmin: true });
     expect(screen.getByText('Langfuse')).toBeInTheDocument();
   });
 
-  it('hides the Langfuse tab without Langfuse connection access', () => {
-    setup({ langfuseConnectionAccess: false });
+  it('hides the Langfuse tab for non-admins', () => {
+    setup({ langfuseConnectionAccess: true, isAdmin: false });
     expect(screen.queryByText('Langfuse')).not.toBeInTheDocument();
   });
 

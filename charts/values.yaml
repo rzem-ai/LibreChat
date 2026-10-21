@@ -112,6 +112,10 @@ pods:
           # Retry forever (0 = no cap) with 20s max backoff -- survives slow Valkey restarts after node updates.
           REDIS_RETRY_MAX_ATTEMPTS: '0'
           REDIS_RETRY_MAX_DELAY: '20000'
+          # Shared Links
+          ALLOW_SHARED_LINKS: 'false'
+          ALLOW_SHARED_LINKS_PUBLIC: 'false'
+          SHARED_LINKS_SNAPSHOT_FILES: 'false'
         service:
           enabled: true
           type: ClusterIP
