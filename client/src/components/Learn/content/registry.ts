@@ -1,18 +1,9 @@
 import type { CourseContent, TourStep } from './schema';
-import savedPrompts from './tours/saved-prompts-and-prompt-library.json';
-import sharing from './tours/sharing-skills-and-agents.json';
 import gettingStarted from './tours/getting-started.json';
-import connectors from './tours/using-connectors.json';
-import buildSkill from './tours/build-a-skill.json';
 import { CourseContentSchema } from './schema';
 
-export const TOURS: CourseContent[] = [
-  gettingStarted,
-  connectors,
-  savedPrompts,
-  buildSkill,
-  sharing,
-].map((raw) => CourseContentSchema.parse(raw));
+/** The using-connectors tour is hidden; re-add its import here to restore. */
+export const TOURS: CourseContent[] = [gettingStarted].map((raw) => CourseContentSchema.parse(raw));
 const stepsByCourseId = new Map(TOURS.map((tour) => [tour.id, tour.steps]));
 
 /** Sourced from the tour flagged `isGettingStartedTour` in content/tours. */
