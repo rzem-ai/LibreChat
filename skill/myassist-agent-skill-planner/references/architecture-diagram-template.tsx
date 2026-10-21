@@ -748,7 +748,6 @@ export function AgentOnlyLayout() {
   // User:         cx=120, cy=290, w=72,  h=78  → left=84,  right=156, top=251, bottom=329
   // Query:        cx=270, cy=290, w=88,  h=52  → left=226, right=314, top=264, bottom=316
   // RefFiles:     cx=270, cy=180, w=120, h=52  → left=210, right=330, top=154, bottom=206
-  // FileSearch:   cx=400, cy=180, w=130, h=52  → left=335, right=465, top=154, bottom=206
   // Agent:        cx=540, cy=290, w=180, h=110 → left=450, right=630, top=235, bottom=345
   // Connector:    cx=540, cy=440, w=150, h=52  → left=465, right=615, top=414, bottom=466
   // Output:       cx=850, cy=290, w=140, h=52  → left=780, right=920, top=264, bottom=316
@@ -756,11 +755,10 @@ export function AgentOnlyLayout() {
   const edges = [
     'M156,270 H196 V180 H210', // 1  User → Reference Files (upper branch)
     'M156,310 H196 V290 H226', // 2  User → Query (lower branch)
-    'M330,180 H335', // 3  Reference Files → File Search
-    'M465,180 H500 V235 H540', // 4  File Search → Agent
-    'M314,290 H450', // 5  Query → Agent
-    'M540,414 V345', // 6  Connector → Agent (bottom)
-    'M630,290 H780', // 7  Agent → Output
+    'M330,180 H400 V215 H540 V235', // 3  Reference Files → Agent
+    'M314,290 H450', // 4  Query → Agent
+    'M540,414 V345', // 5  Connector → Agent (bottom)
+    'M630,290 H780', // 6  Agent → Output
   ];
 
   const legendItems = [
@@ -853,15 +851,6 @@ export function AgentOnlyLayout() {
           pal={PAL.file}
         />
         <Node
-          cx={400}
-          cy={180}
-          w={130}
-          h={52}
-          label="File Search"
-          Icon={FileSearch}
-          pal={PAL.tool}
-        />
-        <Node
           cx={540}
           cy={290}
           w={180}
@@ -871,6 +860,7 @@ export function AgentOnlyLayout() {
           pal={PAL.agent}
           large
           typeLabel="AGENT"
+          sublabel="File Search: Upload files to File Search"
         />
         <Node
           cx={540}
