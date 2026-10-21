@@ -61,7 +61,7 @@ describe('Resources', () => {
     const input = screen.getByLabelText('com_learning_search_resources');
 
     fireEvent.change(input, { target: { value: 'agentic' } });
-    expect(screen.getByText('What is the agentic ecosystem')).toBeInTheDocument();
+    expect(screen.getByText('What is the Agentic Ecosystem?')).toBeInTheDocument();
     expect(screen.queryByText('Getting Started Tour')).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: 'zzz-no-match' } });
@@ -73,7 +73,7 @@ describe('Resources', () => {
     render(<Resources onOpenArticle={onOpenArticle} />);
 
     fireEvent.click(
-      screen.getByLabelText('com_learning_action_read:What is the agentic ecosystem'),
+      screen.getByLabelText('com_learning_action_read:What is the Agentic Ecosystem?'),
     );
     expect(onOpenArticle).toHaveBeenCalledWith('agentic-ecosystem');
 
@@ -81,7 +81,7 @@ describe('Resources', () => {
     expect(mockStartTour).toHaveBeenCalledWith(GETTING_STARTED_COURSE_ID);
 
     const external = screen.getByLabelText(
-      'com_learning_action_external:Book in with a MyAssist Team Member',
+      'com_learning_action_external:Book in with a MyAssist team member',
     );
     expect(external).toHaveAttribute('target', '_blank');
     expect(external).toHaveAttribute('rel', expect.stringContaining('noopener'));
@@ -90,13 +90,22 @@ describe('Resources', () => {
 
 describe('Faq', () => {
   it('filters questions and highlights matches', () => {
-    const { container } = render(<Faq />);
+    const { container } = render(
+      <MemoryRouter>
+        <Faq />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: 'What should I use?' })).toHaveAttribute(
+      'href',
+      '/learn/articles/what-should-i-use',
+    );
+    expect(screen.getByRole('link', { name: 'Q&R or BSO' })).toHaveAttribute('target', '_blank');
     fireEvent.change(screen.getByLabelText('com_learning_search_faq'), {
-      target: { value: 'calendar' },
+      target: { value: 'connector' },
     });
-    expect(screen.getByText(/How do I connect my files/)).toBeInTheDocument();
-    expect(screen.queryByText(/Which AI model/)).not.toBeInTheDocument();
-    expect(container.querySelector('mark')).toHaveTextContent(/calendar/i);
+    expect(screen.getByText(/Is MyAssist connected/)).toBeInTheDocument();
+    expect(screen.queryByText(/Which model/)).not.toBeInTheDocument();
+    expect(container.querySelector('mark')).toHaveTextContent(/connector/i);
   });
 });
 

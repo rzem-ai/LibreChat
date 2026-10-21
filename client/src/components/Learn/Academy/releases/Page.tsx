@@ -5,6 +5,14 @@ import { loadReleases } from '../../content/loader';
 import { useLocalize } from '~/hooks';
 import Failure from '../Failure';
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const formatDate = (isoDate: string): string => {
+  const [year, month, day] = isoDate.split('-');
+  const monthName = MONTHS[Number(month) - 1];
+  return monthName && day ? `${day} ${monthName} ${year}` : isoDate;
+};
+
 export default function Releases(): JSX.Element | null {
   const localize = useLocalize();
   const {
@@ -31,10 +39,10 @@ export default function Releases(): JSX.Element | null {
       {releases.map(({ id, frontmatter, Content }) => (
         <article key={id}>
           <p className="text-sm text-text-secondary">
-            {frontmatter.date} · {frontmatter.version}
+            {formatDate(frontmatter.date)} · {frontmatter.version}
           </p>
           <h2 className="mt-1 text-xl font-medium">{frontmatter.title}</h2>
-          <GEL.Typeset>
+          <GEL.Typeset className="[&_h3]:mt-5 [&_p]:mt-1">
             <Content />
           </GEL.Typeset>
         </article>

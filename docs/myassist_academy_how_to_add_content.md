@@ -19,7 +19,7 @@ Files starting with `_` are placeholders. Delete or replace them before launch.
 
    ```mdx
    ---
-   title: What is the agentic ecosystem
+   title: What is the Agentic Ecosystem?
    updated: 2 September 2026
    durationLabel: 6 min read
    ---
@@ -34,8 +34,8 @@ Files starting with `_` are placeholders. Delete or replace them before launch.
    ```json
    {
      "id": "agentic-ecosystem",
-     "title": "What is the agentic ecosystem",
-     "description": "One line shown on the card.",
+     "title": "What is the Agentic Ecosystem?",
+     "description": "Learn how the Agentic Ecosystem powers enterprise AI agents",
      "type": "article",
      "tags": ["Getting started"],
      "durationLabel": "6 min read",
@@ -65,9 +65,18 @@ The tab is only visible when `interface.customDeloitteFeatureFlags.learningRelea
 
 Append `{ "question": "...", "answer": "..." }` to `faqs.json`. The tab is only visible when `learningCommonQuestions` is `true`.
 
+`answer` can contain Markdown links: `[link text](href)`. An `href` starting with `/` is an in-app route (e.g. `/learn/articles/<slug>`); anything else opens in a new tab.
+
 ## Resource card
 
-Add an object to `resources.json`. `type` decides what a click does:
+Add an object to `resources.json`. The same rules apply to the `description` of articles, external links and tours (including the `description` in a tour's own JSON file):
+
+- At most 70 characters.
+- Start with a user-facing action verb, e.g. "Learn how to write clear prompts", "Book a training session with the MyAssist team", "Take a tour of chats, projects and the context panel" or "Access the Lumo Agent in Microsoft Teams". Not "Teach users how to...", because the user isn't doing the teaching!
+- No full stop at the end.
+- Don't refer to users in third person in the description ("Teach users", "people"); describe what the resource covers or lets you do.
+
+`type` decides what a click does:
 
 - `article`: opens the article. `id` must match the `.mdx` file name.
 - `external`: opens `externalHref` in a new tab. Needs `externalHref`.
@@ -81,7 +90,7 @@ Add an object to `resources.json`. `type` decides what a click does:
    {
      "id": "connectors-guide",
      "title": "Connectors",
-     "description": "One line shown on the card.",
+     "description": "Take a tour of connecting to approved sources",
      "estimatedMinutes": 3,
      "steps": [
        {
@@ -98,7 +107,12 @@ Add an object to `resources.json`. `type` decides what a click does:
 
    `element` is a CSS selector for the thing to highlight. `side` is `top`, `right`, `bottom` or `left`. Add `"comingSoon": true` (with `"steps": []`) to show a disabled card.
 
+   Write the `description` following the [resource card rules](#resource-card): at most 70 characters, starting with an action verb, with no full stop and no mention of users.
+
 2. Import it in `registry.ts` and add it to the `TOURS` array. Exactly one tour must have `"isGettingStartedTour": true`; it is shown first as the hero card.
+3. Add a matching `"type": "tour"` entry to `resources.json` (its `id` must match the tour `id`) so it also appears under All resources.
+
+**Hiding a tour:** remove its import and its entry in the `TOURS` array in `registry.ts`, and remove its `"type": "tour"` entry from `resources.json` (a tour resource whose `id` is not in `TOURS` fails the content tests). Keep the JSON file so the tour can be restored. Only the Getting Started tour is currently registered; `using-connectors` is hidden. `build-a-skill`, `sharing-skills-and-agents` and `saved-prompts-and-prompt-library` were converted to articles (`how-to-build-a-skill`, `sharing-skills-and-agents`, `save-and-share-prompts`); their tour JSON is in git history.
 
 **Limitation:** every tour card currently launches the Getting Started tour. `LearningTourContext` only knows how to start that one, so a new tour will display with its own title and progress chip but will not run its own steps until the context is generalised to start a tour by id.
 

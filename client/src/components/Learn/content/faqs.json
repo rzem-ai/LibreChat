@@ -1,18 +1,22 @@
 [
   {
-    "question": "_Which AI model should I use?",
-    "answer": "Start with the default model. Switch to a more capable one from the model picker for long documents or multi-step reasoning."
+    "question": "Is MyAssist connected to Deloitte data?",
+    "answer": "No, not unless you're using a connector."
   },
   {
-    "question": "_How do I connect my files and calendar?",
-    "answer": "Open Connectors from the sidebar and sign in to each source. Once connected, chats can reference them automatically."
+    "question": "What is the Agentic Ecosystem and how does MyAssist fit within it?",
+    "answer": "Read the [What is the Agentic Ecosystem?](/learn/articles/agentic-ecosystem) article to find out."
   },
   {
-    "question": "_Can I share a chat with a teammate?",
-    "answer": "Yes — use the share icon in any chat to send a read-only link or invite someone to continue the conversation with you."
+    "question": "What is the difference between a saved prompt, a skill and an agent?",
+    "answer": "Learn more in the [What should I use?](/learn/articles/what-should-i-use) article."
   },
   {
-    "question": "_How do I reset or delete a conversation?",
-    "answer": "Open the chat's menu and choose Delete. This can't be undone, so export anything you want to keep first."
+    "question": "Which model should I use?",
+    "answer": "Hover over a model in the model picker to see a tooltip with its cost, speed and intelligence."
+  },
+  {
+    "question": "Can I use client data in MyAssist?",
+    "answer": "Don't use GPS or Defence data. For other client data, we always recommend starting with public, synthetic, non-client or Deloitte information first while you familiarise yourself with the platform. Once you're familiar, you may use client data for exploration, hypothesis testing and identifying potential use cases, in line with Deloitte's responsible AI guidance. Use appropriate judgement and caution in active client engagements. Existing guardrails and accountability continue to apply, including client-specific AI requirements and restrictions. If you need further clarification, reach out to your engagement lead or the [Q&R or BSO](https://ausdeloitte.sharepoint.com/sites/DAISQandR/SitePages/My-Q-and-R.aspx) team."
   }
 ]

@@ -41,7 +41,10 @@ export const ResourceSchema = z.object({
   externalHref: z.string().url().optional(),
 });
 
-export const FaqSchema = z.object({ question: z.string(), answer: z.string() });
+export const FaqSchema = z.object({
+  question: z.string(),
+  answer: z.string(),
+});
 
 export const ArticleFrontmatterSchema = z.object({
   title: z.string(),

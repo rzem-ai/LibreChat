@@ -68,7 +68,7 @@ export default function Resources({ onOpenArticle }: ResourcesProps): JSX.Elemen
       renderEmpty={(query) => localize('com_learning_no_resources', { 0: query })}
     >
       {(visible) => (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map(renderResource)}
         </div>
       )}
