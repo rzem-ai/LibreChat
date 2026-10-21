@@ -32,9 +32,15 @@ export function getModelCost(
 
 type ModelPricingEntry = TModelPricing[string];
 
-/** A model is free when neither input nor output tokens are billed. */
+/** A model is free only when every billed token rate (input, output, cache read/write) is zero. */
 export function isFreePricing(pricing?: ModelPricingEntry): boolean {
-  return pricing != null && pricing.inputPer1M === 0 && pricing.outputPer1M === 0;
+  return (
+    pricing != null &&
+    pricing.inputPer1M === 0 &&
+    pricing.outputPer1M === 0 &&
+    (pricing.cacheReadPer1M ?? 0) === 0 &&
+    (pricing.cacheWritePer1M ?? 0) === 0
+  );
 }
 
 export function isFreeSpec(spec: TModelSpec, modelPricing: TModelPricing = {}): boolean {

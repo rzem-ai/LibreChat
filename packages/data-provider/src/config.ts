@@ -2698,6 +2698,10 @@ export type TModelPricing = Record<
   {
     inputPer1M: number;
     outputPer1M: number;
+    /** Resolved cache-read rate; absent when the model has no cache pricing. */
+    cacheReadPer1M?: number;
+    /** Resolved cache-write rate; absent when the model has no cache pricing. */
+    cacheWritePer1M?: number;
     provider?: string;
     /** 1-5 relative price tier, shown as `$` to `$$$$$` in the model selector. */
     tier: number;
