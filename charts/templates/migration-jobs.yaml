@@ -4,10 +4,9 @@
 # normal sync -- three of the five underlying scripts scan unindexed fields,
 # so they must never run as always-on, every-deploy automation. An operator
 # deliberately selects and syncs a single `<release>-migrate-<name>` resource
-# from the ArgoCD UI. Replace=true (same precedent as templates/valkey.yaml)
-# lets that re-sync force-recreate the (otherwise immutable) completed Job,
-# so flipping `dryRun` and re-syncing produces a fresh run with no
-# name-bumping trick and no kubectl required.
+# from the ArgoCD UI. Force=true,Replace=true deletes and recreates the
+# otherwise immutable completed Job, so flipping `dryRun` and re-syncing
+# produces a fresh run with no name-bumping trick and no kubectl required.
 {{- range $name, $job := .Values.migrationJobs }}
 {{- with $ }}
 apiVersion: batch/v1
@@ -18,11 +17,16 @@ metadata:
     {{- include "helm.labels" . | nindent 4 }}
     component: migrate-{{ $name }}
   annotations:
-    argocd.argoproj.io/sync-options: Skip=true,Replace=true
+    argocd.argoproj.io/sync-options: Skip=true,Force=true,Replace=true
     argocd.argoproj.io/hook-weight: {{ $job.hookWeight | quote }}
 spec:
   backoffLimit: 3
   ttlSecondsAfterFinished: 86400
+  manualSelector: true
+  selector:
+    matchLabels:
+      {{- include "helm.selectorLabels" . | nindent 6 }}
+      component: migrate-{{ $name }}
   template:
     metadata:
       labels:
