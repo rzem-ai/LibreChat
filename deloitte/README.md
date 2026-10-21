@@ -199,10 +199,20 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 40. `MCP_GATEWAY_URL=https://mcp-gw-dev.ctk.au.deloitte.com/mcp`
 41. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims,sharepoint`
 42. `MCP_GATEWAY_OBO_SCOPE=api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user`
-    > The **ClearTrack MCP Gateway** connection (`mcpServers` block in `librechat.yaml` at repo root and `charts/config/librechat.yaml` for Helm) uses On-Behalf-Of (OBO) auth, not a dedicated OAuth client — it reuses `OPENID_CLIENT_ID`/`OPENID_CLIENT_SECRET` from item 8–9 to exchange the user's login token for one scoped to the gateway. There are no gateway-specific client credentials to set; the only requirement is that `OPENID_SCOPE` (item 12) includes the gateway's audience scope.
-43. `ALLOW_SHARED_LINKS=false`
-44. `ALLOW_SHARED_LINKS_PUBLIC=false`
-45. `SHARED_LINKS_SNAPSHOT_FILES=false`
+43. `USE_ENTRA_ID_FOR_PEOPLE_SEARCH=true` to synchronize Entra group memberships used by restricted MCP servers such as SharePoint.
+44. `OPENID_GRAPH_SCOPES=User.Read,GroupMember.Read.All`. `GroupMember.Read.All` must have delegated tenant-admin consent on the LibreChat/MyAssist app registration. Add `People.Read` only when Entra people search is needed and that permission has also been granted.
+
+After changing either Entra setting, rebuild/restart the API container and sign out and back in. Group-restricted MCP servers fail closed: SharePoint stays hidden until the signed-in user's memberships have synchronized successfully.
+
+> The **ClearTrack MCP Gateway** connection (`mcpServers` block in `librechat.yaml` at repo root and `charts/config/librechat.yaml` for Helm) uses On-Behalf-Of (OBO) auth, not a dedicated OAuth client — it reuses `OPENID_CLIENT_ID`/`OPENID_CLIENT_SECRET` from item 8–9 to exchange the user's login token for one scoped to the gateway. There are no gateway-specific client credentials to set; the only requirement is that `OPENID_SCOPE` (item 12) includes the gateway's audience scope.
+
+## Sharing Chats .env vars
+
+```env
+ALLOW_SHARED_LINKS=false
+ALLOW_SHARED_LINKS_PUBLIC=false
+SHARED_LINKS_SNAPSHOT_FILES=false
+```
 
 ### Balance .env vars
 
@@ -586,12 +596,13 @@ For LOCAL development, we need to add each user's hostname to the Redirect URIs 
 1. Setup Method: WebAPI/OIDC
 2. Authentication Tab: Configured Identifier URI and Redirect URIs
 3. Secrets Tab: Generated a client secret, used for local `.env` configuration and, where applicable, the relevant Helm `values*.yaml` under `charts/`
-4. Permissions Tab: Enable the 6 following permissions: User.ReadBasic.All, email, openid, profile, offline_access, User.Read
+4. Permissions Tab: Enable the following permissions: User.ReadBasic.All, email, openid, profile, offline_access, User.Read, and delegated Microsoft Graph GroupMember.Read.All. GroupMember.Read.All requires tenant admin consent and is used to synchronize memberships for group-restricted MCP servers such as SharePoint.
 5. Offered API(s) Tab: Add the access_user suffix to "Scopes defined by this api". Copy from DEV configuration.
 6. Users and Groups: Set "Assignment Required" to "Enabled" and choose access group.
 
 - DEV: Linked to the MyAssist DEV user group (AU_App_MyGenAI_Dev, request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb))
 - UAT: Linked to the MyAssist UAT user Group (AU_App_MyGenAI_Stg, request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb))
+- PRD: Linked to the MyAssist UAT user Group (AU_App_MyGenAI_Stg, request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb))
 
 # 🔐 Security
 

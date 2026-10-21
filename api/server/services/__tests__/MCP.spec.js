@@ -67,6 +67,7 @@ jest.mock('~/models', () => ({
   getFiles: jest.fn(),
   getMessages: jest.fn(),
   getCodeGeneratedFiles: jest.fn(),
+  findGroupsByMemberId: jest.fn(),
 }));
 jest.mock('~/server/services/GraphTokenService', () => ({
   getGraphApiToken: jest.fn(),
@@ -101,16 +102,17 @@ const {
 } = require('~/server/services/Config');
 const { reinitMCPServer } = require('~/server/services/Tools/mcp');
 const { getUserMCPAuthMap } = require('@librechat/api');
-const { getFiles } = require('~/models');
-const { getMessages, getCodeGeneratedFiles } = require('~/models');
+const { getFiles, getMessages, getCodeGeneratedFiles, findGroupsByMemberId } = require('~/models');
 const { getOpenAIClient } = require('~/server/controllers/assistants/helpers');
 const {
   createMCPTool,
+  createMCPTools,
   healMcpToolNames,
   getAssistantToolDefinitions,
   resolveConfigServers,
   resolveMcpConfigNames,
   resolveAllMcpConfigs,
+  getAccessibleMCPServers,
   resolveMcpServerContext,
   resolveCollisionAuditNames,
   supportsAttachmentUpload,
@@ -406,6 +408,83 @@ describe('resolveAllMcpConfigs', () => {
     getAppConfig.mockRejectedValue(new Error('mongo down'));
 
     await expect(resolveAllMcpConfigs('u1', { id: 'u1' })).rejects.toThrow('mongo down');
+  });
+
+  it('keeps protected servers for members of the configured Entra group', async () => {
+    getAppConfig.mockResolvedValue({
+      mcpConfig: {
+        sharepoint: {
+          allowedEntraGroupIds: ['00c0efc7-e8a7-448c-9480-834cbf1ebd60'],
+        },
+      },
+    });
+    findGroupsByMemberId.mockResolvedValue([
+      { source: 'entra', idOnTheSource: '00c0efc7-e8a7-448c-9480-834cbf1ebd60' },
+    ]);
+    mockRegistry.ensureConfigServers.mockResolvedValue({ sharepoint: { name: 'sharepoint' } });
+    mockRegistry.getAllServerConfigs.mockResolvedValue({ sharepoint: { name: 'sharepoint' } });
+
+    const result = await resolveAllMcpConfigs('u1', { id: 'u1', role: 'user' });
+
+    expect(findGroupsByMemberId).toHaveBeenCalledWith('u1');
+    expect(mockRegistry.ensureConfigServers).toHaveBeenCalledWith({
+      sharepoint: { allowedEntraGroupIds: ['00c0efc7-e8a7-448c-9480-834cbf1ebd60'] },
+    });
+    expect(result).toEqual({ sharepoint: { name: 'sharepoint' } });
+  });
+
+  it('hides protected servers from users outside the configured Entra group', async () => {
+    getAppConfig.mockResolvedValue({
+      mcpConfig: {
+        sharepoint: {
+          allowedEntraGroupIds: ['00c0efc7-e8a7-448c-9480-834cbf1ebd60'],
+        },
+      },
+    });
+    findGroupsByMemberId.mockResolvedValue([{ source: 'entra', idOnTheSource: 'different-group' }]);
+    mockRegistry.ensureConfigServers.mockResolvedValue({});
+    // The registry re-merges YAML servers after config overrides. The final access filter must
+    // still remove SharePoint for a non-member.
+    mockRegistry.getAllServerConfigs.mockResolvedValue({
+      sharepoint: { allowedEntraGroupIds: ['00c0efc7-e8a7-448c-9480-834cbf1ebd60'] },
+    });
+
+    await expect(resolveAllMcpConfigs('u1', { id: 'u1' })).resolves.toEqual({});
+
+    expect(mockRegistry.ensureConfigServers).toHaveBeenCalledWith({});
+  });
+
+  it('passes the user ID when resolving accessible protected servers', async () => {
+    getAppConfig.mockResolvedValue({ mcpConfig: {} });
+    mockRegistry.ensureConfigServers.mockResolvedValue({});
+    mockRegistry.getAllServerConfigs.mockResolvedValue({});
+
+    await getAccessibleMCPServers('u1', 'user');
+
+    expect(getAppConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'u1', role: 'user' }),
+    );
+  });
+});
+
+describe('createMCPTools group access', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('does not construct tools for a user outside the required Entra group', async () => {
+    findGroupsByMemberId.mockResolvedValue([]);
+
+    const result = await createMCPTools({
+      user: { id: 'u1' },
+      serverName: 'cleartrack-mcp-gateway-sharepoint',
+      config: {
+        type: 'streamable-http',
+        url: 'https://sharepoint.example.com/mcp',
+        allowedEntraGroupIds: ['00c0efc7-e8a7-448c-9480-834cbf1ebd60'],
+      },
+    });
+
+    expect(result).toEqual([]);
+    expect(findGroupsByMemberId).toHaveBeenCalledWith('u1');
   });
 });
 

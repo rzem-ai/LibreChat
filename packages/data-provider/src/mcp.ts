@@ -212,6 +212,8 @@ const BaseOptionsSchema = z.object({
   description: z.string().optional(),
   /** Deloitte Custom Change: parent brand/grouping name shown as `${title} - ${parentGroup}` in the Tool Library. */
   parentGroup: z.string().optional(),
+  /** Deloitte Custom Change: Entra security groups allowed to discover and invoke this server. */
+  allowedEntraGroupIds: z.array(z.string().uuid()).min(1).optional(),
   /**
    * Controls whether the MCP server is initialized during application startup.
    * - true (default): Server is initialized during app startup and included in app-level connections
@@ -537,6 +539,7 @@ const omitServerManagedFields = <T extends z.ZodObject<z.ZodRawShape>>(schema: T
     serverInstructions: true,
     requiresOAuth: true,
     limitedAccess: true,
+    allowedEntraGroupIds: true,
     attachmentUploadTools: true,
     trustedToolClassification: true,
     customUserVars: true,
