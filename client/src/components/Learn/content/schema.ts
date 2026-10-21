@@ -28,7 +28,7 @@ export type CourseContent = z.infer<typeof CourseContentSchema>;
 
 export type TourStatus = 'complete' | 'in-progress' | 'not-started';
 
-export type TourProgress = { step: number; total: number; completed: boolean };
+// Deloitte Custom Change: tour progress stored in MongoDB: TourProgress removed; use TTourProgress from librechat-data-provider
 
 export const ResourceSchema = z.object({
   id: z.string(),

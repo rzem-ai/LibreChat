@@ -11,10 +11,15 @@ import { useRecoilState } from 'recoil';
 import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { TourStep } from './content/schema';
+// Deloitte Custom Change: tour progress stored in MongoDB
+import useTourProgress, {
+  resolveResumeIndex,
+  toStepSnapshot,
+  useMigrateLegacyProgress,
+} from './progress';
 import { GETTING_STARTED_COURSE_ID, getCourse, getCourseSteps } from './content/registry';
 import { TRANSITION_MS } from '~/components/UnifiedSidebar/constants';
 import useTutorialPrompt from '~/hooks/Learning/useTutorialPrompt';
-import useTourProgress, { resolveResumeIndex } from './progress';
 import { hasAvailableTarget } from '~/utils/elements';
 import useCourseTour from './Courses/useCourseTour';
 import { DESKTOP_START_DELAY_MS } from './timing';
@@ -55,6 +60,8 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
   const { markPromptSeen } = useTutorialPrompt();
   const showMarketplace = useShowMarketplace();
   const { recordStep, recordComplete } = useTourProgress();
+  // Deloitte Custom Change: tour progress stored in MongoDB: one-time upload of legacy browser progress
+  useMigrateLegacyProgress();
 
   // Capture the user's sidebar state before the tour starts so we can restore
   // it when the tour ends or is cancelled.
@@ -87,8 +94,11 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
     {
       onStep: (index) => {
         const courseId = activeCourseIdRef.current;
-        const fullSteps = getCourseSteps(courseId);
-        recordStep(courseId, fullSteps.indexOf(activeStepsRef.current[index]), fullSteps.length);
+        // Deloitte Custom Change: tour progress stored in MongoDB: save step id and title, not just the index
+        recordStep(
+          courseId,
+          toStepSnapshot(getCourseSteps(courseId), activeStepsRef.current[index]),
+        );
       },
       // Restore sidebar to its pre-tour state when the tour ends/is cancelled.
       onEnd: () => setSidebarExpanded(preTourSidebarExpandedRef.current),

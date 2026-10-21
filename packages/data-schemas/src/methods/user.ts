@@ -5,7 +5,14 @@ import {
   type RefillIntervalUnit,
   type StatefulCodeEnvironment,
 } from 'librechat-data-provider';
-import type { IUser, BalanceConfig, CreateUserRequest, UserDeleteResult } from '~/types';
+import type {
+  IUser,
+  // Deloitte Custom Change: tour progress stored in MongoDB
+  TourProgress,
+  BalanceConfig,
+  CreateUserRequest,
+  UserDeleteResult,
+} from '~/types';
 import type { CacheStore } from '~/types';
 import { escapeRegExp } from '~/utils/string';
 import { signPayload } from '~/crypto';
@@ -24,6 +31,13 @@ const MAX_SUBAGENT_ADMISSION_FENCES = 32;
  * this is the single source of truth for the limit.
  */
 export const MAX_TUTORIAL_RATINGS = 50;
+
+// Deloitte Custom Change: tour progress stored in MongoDB
+/** Client-reported tour progress; the server owns the timestamps. */
+export type TourProgressInput = Pick<
+  TourProgress,
+  'step' | 'total' | 'stepId' | 'stepTitle' | 'completed'
+>;
 
 interface UserMethodDeps {
   getCache?: (key: string) => CacheStore | undefined;
@@ -171,6 +185,12 @@ export function createUserMethods(
     ratings: Record<string, number>,
     updateData?: TutorialStateMergeUpdate,
   ) => Promise<{ user: IUser | null; capExceeded: boolean; conflict: boolean }>;
+  // Deloitte Custom Change: tour progress stored in MongoDB
+  setTutorialProgress: (
+    userId: string,
+    courseId: string,
+    progress: TourProgressInput,
+  ) => Promise<{ user: IUser | null; capExceeded: boolean }>;
 } {
   /**
    * Normalizes email fields in search criteria to lowercase and trimmed.
@@ -924,6 +944,55 @@ export function createUserMethods(
     };
   }
 
+  // Deloitte Custom Change: tour progress stored in MongoDB
+  /**
+   * Upserts progress for a single tour, leaving other tours untouched.
+   *
+   * Timestamps are server-assigned: `startedAt` is kept while a tour is in progress and
+   * reset when a completed tour is restarted; `completedAt` survives a restart so the
+   * last completion is still known. The tour count is capped at MAX_TUTORIAL_RATINGS
+   * with a read-then-write check; concurrent first writes for distinct new tours can
+   * overshoot by at most the number of in-flight requests.
+   */
+  async function setTutorialProgress(
+    userId: string,
+    courseId: string,
+    progress: TourProgressInput,
+  ): Promise<{ user: IUser | null; capExceeded: boolean }> {
+    const User = mongoose.models.User;
+    const current = await User.findById(userId).select('tutorialProgress').lean<IUser | null>();
+    if (!current) {
+      return { user: null, capExceeded: false };
+    }
+
+    const existingProgress = current.tutorialProgress ?? {};
+    const existing = existingProgress[courseId];
+    if (!existing && Object.keys(existingProgress).length >= MAX_TUTORIAL_RATINGS) {
+      return { user: current, capExceeded: true };
+    }
+
+    const now = new Date();
+    const isRestart = existing?.completed === true && !progress.completed;
+    const startedAt = existing?.startedAt && !isRestart ? existing.startedAt : now;
+    const completedAt = progress.completed ? now : existing?.completedAt;
+    const next: TourProgress = {
+      ...progress,
+      startedAt,
+      updatedAt: now,
+      ...(completedAt ? { completedAt } : {}),
+    };
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: { [`tutorialProgress.${courseId}`]: next } },
+      { new: true, runValidators: true },
+    ).lean<IUser | null>();
+    if (user) {
+      await invalidateAuthUserDocCache(userId);
+    }
+    return { user, capExceeded: false };
+  }
+
   return {
     findUser,
     findUsers,
@@ -949,6 +1018,8 @@ export function createUserMethods(
     updateUserStatefulCodeEnvironment,
     // Deloitte Custom Change: tutorial ratings/feedback merge for MyAssist Academy
     mergeTutorialRatings,
+    // Deloitte Custom Change: tour progress stored in MongoDB
+    setTutorialProgress,
   };
 }
 

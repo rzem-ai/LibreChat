@@ -570,6 +570,8 @@ export const addTagToConversation = (conversationId: string) =>
 export const userTerms = () => `${BASE_URL}/api/user/terms`;
 export const acceptUserTerms = () => `${BASE_URL}/api/user/terms/accept`;
 export const userTutorialState = () => `${BASE_URL}/api/user/tutorial`;
+// Deloitte Custom Change: tour progress stored in MongoDB
+export const userTutorialProgress = () => `${BASE_URL}/api/user/tutorial/progress`;
 export const banner = () => `${BASE_URL}/api/banner`;
 
 // Message Feedback

@@ -9,6 +9,8 @@ const mockSetActive = jest.fn();
 const mockSetSidebarExpanded = jest.fn();
 const mockStartTour = jest.fn();
 const mockMarkPromptSeen = jest.fn();
+const mockSaveProgress = jest.fn();
+let capturedOnStep: ((index: number) => void) | undefined;
 let capturedOnComplete: (() => void) | undefined;
 let capturedGetSteps: (() => TourStep[]) | undefined;
 let mockShowMarketplace = true;
@@ -72,11 +74,25 @@ jest.mock('../content/registry', () => ({
   getCourseSteps: () => FIXTURE_STEPS,
 }));
 
+jest.mock('~/data-provider', () => ({
+  useTutorialStateQuery: () => ({ data: { tutorialProgress: {} }, isSuccess: true }),
+  useUpdateTourProgressMutation: () => ({ mutate: mockSaveProgress, mutateAsync: jest.fn() }),
+}));
+
+jest.mock('~/hooks/AuthContext', () => ({
+  useAuthContext: () => ({ isAuthenticated: true }),
+}));
+
 jest.mock('../Courses/useCourseTour', () => ({
   __esModule: true,
-  default: (getSteps: () => TourStep[], onComplete?: () => void) => {
+  default: (
+    getSteps: () => TourStep[],
+    onComplete?: () => void,
+    options?: { onStep?: (index: number) => void },
+  ) => {
     capturedGetSteps = getSteps;
     capturedOnComplete = onComplete;
+    capturedOnStep = options?.onStep;
     return { startTour: mockStartTour };
   },
 }));
@@ -193,6 +209,37 @@ describe('LearningTourContext', () => {
       result.current.dismissCompletion();
     });
     expect(result.current.completedCourseId).toBeNull();
+  });
+
+  describe('progress tracking', () => {
+    it('saves the step id, title and full-list position, not the filtered index', () => {
+      mockShowMarketplace = false;
+      renderHook(() => useLearningTour(), { wrapper });
+      capturedGetSteps?.();
+
+      act(() => capturedOnStep?.(1));
+
+      expect(mockSaveProgress).toHaveBeenCalledWith({
+        courseId: 'getting-started-guide',
+        progress: {
+          step: 3,
+          total: FIXTURE_STEPS.length,
+          stepTitle: 'Account Menu',
+          completed: false,
+        },
+      });
+    });
+
+    it('saves completion', () => {
+      renderHook(() => useLearningTour(), { wrapper });
+
+      act(() => capturedOnComplete?.());
+
+      expect(mockSaveProgress).toHaveBeenCalledWith({
+        courseId: 'getting-started-guide',
+        progress: { step: FIXTURE_STEPS.length, total: FIXTURE_STEPS.length, completed: true },
+      });
+    });
   });
 
   describe('agent-selection step filtering', () => {
