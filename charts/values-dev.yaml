@@ -147,6 +147,10 @@ pods:
           REDIS_KEY_PREFIX: 'librechat'
           REDIS_PING_INTERVAL: '300'
           STREAM_DELTA_COALESCE_MS: '25'
+          # Balance — token limit per 1-day refill cycle
+          CHECK_BALANCE: 'true'
+          START_BALANCE: '15000000' # 15 million tokens per 1 day = $15
+          BALANCE_REFILL_AMOUNT: '15000000' # 15 million tokens per 1 day = $15
         secrets:
           # AZURE_API_KEY: librechat-azure-api-key
           MONGO_URI: librechat-dev-mdb-connection-string

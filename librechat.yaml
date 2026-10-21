@@ -1,6 +1,19 @@
 version: 1.3.17 # Copy from librechat.example.yaml
 cache: true
 
+# ========================================
+# Balance Configuration
+# Deloitte Custom Change: per-user token balance with daily auto-refill; ${VAR} values are resolved from the environment.
+# https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/balance
+# ========================================
+balance:
+  enabled: '${CHECK_BALANCE}' # Enable token balance tracking for users (true/false)
+  startBalance: '${START_BALANCE}' # Starting token balance for new users
+  autoRefillEnabled: true # Automatically refill balances on a schedule
+  refillIntervalValue: 1 # Number of interval units between each refill
+  refillIntervalUnit: "days" # Unit for the refill interval: "seconds", "minutes", "hours", "days"
+  refillAmount: '${BALANCE_REFILL_AMOUNT}' # Tokens added per refill cycle
+
 # 'includedTools' restricts the list of tools available in the Agent Builder.
 includedTools:
   - 'file_search'
@@ -24,6 +37,9 @@ interface:
 
   buildInfo: false # Set to false to hide the About section in settings
 
+  contextUsage: true # Users see the context window and token usage gauge.
+  contextCost: true # users see cost values in the usage details (USD)
+  
   # Deloitte Custom Change: Retention Update
   fileRetentionHours: 1440 # Independent per-file retention deadline in hours (60 days)
 
@@ -173,7 +189,10 @@ interface:
     # the five $-$$$$$ tiers: costs below 2 are $, then 2, 5, 8, and 15 start the next tiers.
     modelPricingTierBreakpoints: [ 2, 5, 8, 15 ]
     highCostAlertTiers: [ 5 ] # Which of the 5 price tiers will show the High Cost alert chip.
-
+    # Deloitte Custom Change: balance display flags (see docs/balance_and_cost_controls.md).
+    showBalanceAsCurrency: true # Show the user's balance in USD rather than tokens
+    showBalanceGauge: true # Show a balance gauge above the account avatar (hover for details)
+    showBalanceHelperText: true # Show refill and cost-saving guidance in the gauge hover card
 fileConfig:
   endpoints:
     default:
