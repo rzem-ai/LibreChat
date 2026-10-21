@@ -80,7 +80,16 @@ describe('Resources', () => {
 
 describe('Faq', () => {
   it('filters questions and highlights matches', () => {
-    const { container } = render(<Faq />);
+    const { container } = render(
+      <MemoryRouter>
+        <Faq />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: 'What should I use?' })).toHaveAttribute(
+      'href',
+      '/learn/articles/what-should-i-use',
+    );
+    expect(screen.getByRole('link', { name: 'Q&R or BSO' })).toHaveAttribute('target', '_blank');
     fireEvent.change(screen.getByLabelText('com_learning_search_faq'), {
       target: { value: 'connector' },
     });

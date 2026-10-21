@@ -1,30 +1,46 @@
 import { Link } from 'react-router-dom';
 import { GEL } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
-import type { Faq, FaqLink as FaqLinkType } from '../../content/schema';
+import type { Faq } from '../../content/schema';
 import { FAQS } from '../../content/data';
 import Searchable from '../Searchable';
 import { useLocalize } from '~/hooks';
 
 const linkClass = 'text-text-primary underline';
+const LINK_PATTERN = /\[([^\]]+)\]\(([^)]+)\)/g;
 
-const getFields = (faq: Faq): string[] => [
-  faq.question,
-  faq.answer,
-  ...(faq.steps ?? []),
-  faq.note ?? '',
-];
+const stripLinks = (text: string): string => text.replace(LINK_PATTERN, '$1');
 
-const FaqLink = ({ link }: { link: FaqLinkType }): JSX.Element =>
-  link.href.startsWith('/') ? (
-    <Link to={link.href} className={linkClass}>
-      {link.text}
+const getFields = (faq: Faq): string[] => [faq.question, stripLinks(faq.answer)];
+
+const FaqLink = ({ text, href }: { text: string; href: string }): JSX.Element =>
+  href.startsWith('/') ? (
+    <Link to={href} className={linkClass}>
+      {text}
     </Link>
   ) : (
-    <a href={link.href} target="_blank" rel="noopener noreferrer" className={linkClass}>
-      {link.text}
+    <a href={href} target="_blank" rel="noopener noreferrer" className={linkClass}>
+      {text}
     </a>
   );
+
+const RichText = ({ text, query }: { text: string; query: string }): JSX.Element => {
+  const parts = text.split(LINK_PATTERN);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const slot = i % 3;
+        if (slot === 2) {
+          return null;
+        }
+        if (slot === 1) {
+          return <FaqLink key={i} text={part} href={parts[i + 1]} />;
+        }
+        return <GEL.HighlightedText key={i} text={part} query={query} />;
+      })}
+    </>
+  );
+};
 
 export default function Faq(): JSX.Element {
   const localize = useLocalize();
@@ -44,26 +60,9 @@ export default function Faq(): JSX.Element {
               <p className="text-base font-semibold">
                 <GEL.HighlightedText text={faq.question} query={query} />
               </p>
-              <div className="mt-1 flex flex-col gap-2 text-text-secondary">
-                <p>
-                  <GEL.HighlightedText text={faq.answer} query={query} />
-                </p>
-                {faq.steps && (
-                  <ol className="list-decimal space-y-1 pl-6">
-                    {faq.steps.map((step) => (
-                      <li key={step}>
-                        <GEL.HighlightedText text={step} query={query} />
-                      </li>
-                    ))}
-                  </ol>
-                )}
-                {faq.note && (
-                  <p>
-                    <GEL.HighlightedText text={faq.note} query={query} />
-                  </p>
-                )}
-                {faq.link && <FaqLink link={faq.link} />}
-              </div>
+              <p className="mt-1 text-text-secondary">
+                <RichText text={faq.answer} query={query} />
+              </p>
             </li>
           ))}
         </ul>

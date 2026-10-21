@@ -65,7 +65,7 @@ The tab is only visible when `interface.customDeloitteFeatureFlags.learningRelea
 
 Append `{ "question": "...", "answer": "..." }` to `faqs.json`. The tab is only visible when `learningCommonQuestions` is `true`.
 
-Optional fields, shown in this order after `answer`: `steps` (array of strings, shown as a numbered list), `note` (a closing paragraph) and `link` (`{ "text": "...", "href": "..." }`). An `href` starting with `/` is an in-app route (e.g. `/learn/articles/<slug>`); anything else opens in a new tab.
+`answer` can contain Markdown links: `[link text](href)`. An `href` starting with `/` is an in-app route (e.g. `/learn/articles/<slug>`); anything else opens in a new tab.
 
 ## Resource card
 
