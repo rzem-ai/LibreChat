@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { randomUUID } from 'crypto';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import { createMethods, createModels } from '@librechat/data-schemas';
+import { createMethods, createModels, DEFAULT_RETENTION_HOURS } from '@librechat/data-schemas';
 import type { ConversationMethods, MessageMethods } from '@librechat/data-schemas';
 import type { TurnConversationRequest } from './save';
 import {
@@ -13,7 +13,10 @@ import {
 } from './save';
 
 type Store = Pick<ConversationMethods, 'getConvo' | 'saveConvo' | 'appendConvoMessageReference'> &
-  Pick<MessageMethods, 'saveMessage'>;
+  Pick<MessageMethods, 'saveMessage'> & {
+    // Deloitte Custom Change: Retention Update
+    touchConversationLastActivity?: ConversationMethods['touchConversationLastActivity'];
+  };
 
 let mongoServer: MongoMemoryServer;
 let store: Store;
@@ -50,6 +53,7 @@ beforeAll(async () => {
     saveConvo: methods.saveConvo,
     appendConvoMessageReference: methods.appendConvoMessageReference,
     saveMessage: methods.saveMessage,
+    touchConversationLastActivity: methods.touchConversationLastActivity,
   };
 });
 
@@ -349,6 +353,68 @@ describe('recoverTurnMessageReference', () => {
         context: 'save.spec recovery',
       }),
     ).resolves.toBe(false);
+  });
+});
+
+// Deloitte Custom Change: Retention Update
+describe('touchConversationLastActivity wiring', () => {
+  it('touches activity once with the conversation id and resolved retention hours', async () => {
+    const userId = new mongoose.Types.ObjectId().toString();
+    const conversationId = randomUUID();
+    const req = createRequest(userId);
+    const touch = jest.spyOn(store, 'touchConversationLastActivity').mockResolvedValue(undefined);
+
+    await seedTurnConversation(store, seedFields(req, conversationId));
+
+    const row = await store.getConvo(userId, conversationId);
+    expect(touch).toHaveBeenCalledTimes(1);
+    expect(touch).toHaveBeenCalledWith(row?._id, DEFAULT_RETENTION_HOURS);
+  });
+
+  it('skips the touch for a temporary conversation', async () => {
+    const userId = new mongoose.Types.ObjectId().toString();
+    const conversationId = randomUUID();
+    const req = { ...createRequest(userId), body: { isTemporary: true } };
+    const touch = jest.spyOn(store, 'touchConversationLastActivity').mockResolvedValue(undefined);
+
+    await seedTurnConversation(store, seedFields(req, conversationId));
+
+    expect(touch).not.toHaveBeenCalled();
+  });
+
+  it('skips the touch for a retention-exempt conversation', async () => {
+    const userId = new mongoose.Types.ObjectId().toString();
+    const conversationId = randomUUID();
+    await store.saveConvo(
+      { userId, retentionException: { exempt: true } },
+      { conversationId, endpoint: 'openAI', model: 'gpt-4o' },
+    );
+    const touch = jest.spyOn(store, 'touchConversationLastActivity').mockResolvedValue(undefined);
+    const req = createRequest(userId);
+
+    await saveTurnConversation(store, {
+      ...seedFields(req, conversationId),
+      ctx: getConversationWriteContext(req),
+    });
+
+    expect(touch).not.toHaveBeenCalled();
+  });
+
+  it('is skipped without throwing when the dependency is not provided', async () => {
+    const storeWithoutTouch: Store = {
+      getConvo: store.getConvo,
+      saveConvo: store.saveConvo,
+      appendConvoMessageReference: store.appendConvoMessageReference,
+      saveMessage: store.saveMessage,
+    };
+    const userId = new mongoose.Types.ObjectId().toString();
+    const conversationId = randomUUID();
+
+    await expect(
+      seedTurnConversation(storeWithoutTouch, seedFields(createRequest(userId), conversationId)),
+    ).resolves.toBeUndefined();
+
+    await expect(store.getConvo(userId, conversationId)).resolves.toMatchObject({ conversationId });
   });
 });
 

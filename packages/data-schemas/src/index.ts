@@ -116,6 +116,7 @@ export {
   backfillFileRetention,
   backfillAgentRetention,
   backfillSkillRetention,
+  backfillMemoryRetention,
 } from './migrations';
 export type {
   RetentionBackfillResult,
@@ -126,4 +127,6 @@ export type {
   AgentRetentionBackfillOptions,
   SkillRetentionBackfillResult,
   SkillRetentionBackfillOptions,
+  MemoryRetentionBackfillResult,
+  MemoryRetentionBackfillOptions,
 } from './migrations';

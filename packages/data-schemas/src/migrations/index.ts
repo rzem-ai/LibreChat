@@ -21,3 +21,8 @@ export type {
   SkillRetentionBackfillResult,
   SkillRetentionBackfillOptions,
 } from './skillRetentionBackfill';
+export { backfillMemoryRetention } from './memoryRetentionBackfill';
+export type {
+  MemoryRetentionBackfillResult,
+  MemoryRetentionBackfillOptions,
+} from './memoryRetentionBackfill';

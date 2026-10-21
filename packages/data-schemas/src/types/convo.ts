@@ -349,6 +349,9 @@ export interface IConversation extends Document {
   files?: string[];
   expiredAt?: Date;
   // Deloitte Custom Change: Retention Update
+  /** Explicit activity anchor for retention; stamped by touchConversationLastActivity. */
+  lastActivityAt?: Date;
+  // Deloitte Custom Change: Retention Update
   retentionException?: IRetentionException;
   /** Lease holder for the in-flight purge sweep claiming this conversation. */
   purgeClaimId?: string;

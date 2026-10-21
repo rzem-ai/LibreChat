@@ -373,6 +373,11 @@ const convoSchema: Schema<IConversation> = new Schema(
       type: Date,
     },
     // Deloitte Custom Change: Retention Update
+    /** Explicit activity anchor for retention; stamped by touchConversationLastActivity. */
+    lastActivityAt: {
+      type: Date,
+    },
+    // Deloitte Custom Change: Retention Update
     /** Explicit, auditable carve-out from default retention. Only a narrow,
      * permissioned caller should ever set `exempt: true`. */
     retentionException: {

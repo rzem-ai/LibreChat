@@ -111,6 +111,10 @@ export const excludedKeys = new Set([
   'updatedAt',
   'expiredAt',
   'isTemporary',
+  // Deloitte Custom Change: Retention Update
+  'lastActivityAt',
+  // Deloitte Custom Change: Retention Update
+  'retentionException',
   'messages',
   'isArchived',
   'pinned',
