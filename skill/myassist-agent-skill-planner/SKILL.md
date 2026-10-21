@@ -387,16 +387,12 @@ The main diagram template exports an `AVAILABLE_ICONS` catalogue containing thes
 
 **File Search visual pattern:**
 
-When the Agent uses File Search and users must upload reference material, show:
-
-```text
-User -> Reference Files -> File Search -> Agent
-```
+When the Agent uses File Search and users upload reference material, show the uploaded reference files as a file input into the Agent and add `File Search: Upload files to File Search` to the bottom Agent tool note.
 
 Use:
 - `FileText` icon with `PAL.file` for Reference Files
-- `FileSearch` icon with `PAL.tool` for File Search
-- Clear edges showing the flow
+- A clear edge from Reference Files to the Agent
+- No separate File Search flow node
 
 Do not show File Search for:
 - A normal one-off user input file processed directly
