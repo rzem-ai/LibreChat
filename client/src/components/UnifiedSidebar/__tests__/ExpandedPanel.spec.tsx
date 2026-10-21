@@ -116,6 +116,11 @@ jest.mock('~/components/Nav/AccountSettings', () => ({
   default: () => <div data-testid="account-settings" />,
 }));
 
+jest.mock('~/components/Nav/BalanceGauge', () => ({
+  __esModule: true,
+  default: () => <div data-testid="balance-gauge" />,
+}));
+
 import ExpandedPanel from '../ExpandedPanel';
 import store from '~/store';
 

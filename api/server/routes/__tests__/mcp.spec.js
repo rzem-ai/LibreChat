@@ -38,6 +38,7 @@ const mockRegistryInstance = {
   }),
 };
 let mockMCPUseAllowed = true;
+const mockGetMCPToolsetsHandler = jest.fn();
 let mockRequestConfig = {};
 const mockLoadMCPServerCatalogs = jest.fn().mockResolvedValue({
   serverTools: new Map(),
@@ -81,6 +82,8 @@ jest.mock('@librechat/api', () => {
       clearCooldown: jest.fn(),
     },
     getUserMCPAuthMap: jest.fn(),
+    // Deloitte Custom Change: MCP Gateway toolset metadata for connector tooltips.
+    createGetMCPToolsets: jest.fn(() => (req, res) => mockGetMCPToolsetsHandler(req, res)),
     generateCheckAccess: jest.fn(({ permissionType, permissions }) => (req, res, next) => {
       const { PermissionTypes, Permissions } = require('librechat-data-provider');
       const isMCPUseCheck =
@@ -328,6 +331,15 @@ describe('MCP Routes', () => {
     cacheService.getMCPToolsCacheGeneration.mockReset().mockResolvedValue('test-generation');
     cacheService.cacheMCPServerTools.mockReset().mockResolvedValue(undefined);
     cacheService.invalidateCachedTools.mockReset().mockResolvedValue(undefined);
+    // Deloitte Custom Change: MCP Gateway toolset metadata for connector tooltips.
+    mockGetMCPToolsetsHandler.mockReset();
+    mockRegistryInstance.resolveAllowlists.mockReset().mockResolvedValue({
+      allowedDomains: null,
+      allowedAddresses: null,
+      useSSRFProtection: true,
+    });
+    delete process.env.MCP_GATEWAY_URL;
+    delete process.env.MCP_GATEWAY_OBO_SCOPE;
   });
 
   describe('GET /:serverName/oauth/initiate', () => {
@@ -3772,6 +3784,32 @@ describe('MCP Routes', () => {
 
       expect(response.status).toBe(503);
       expect(response.body).toEqual({ message: 'MCP catalog capacity is temporarily exhausted' });
+    });
+  });
+
+  // Deloitte Custom Change: MCP Gateway toolset metadata for connector tooltips. The handler
+  // itself is covered in packages/api; this checks the route wiring and permission gate.
+  describe('GET /toolsets', () => {
+    it('should deny MCP toolsets when user lacks MCP server use permission', async () => {
+      mockMCPUseAllowed = false;
+
+      const response = await request(app).get('/api/mcp/toolsets');
+
+      expect(response.status).toBe(403);
+      expect(response.body).toEqual({ message: 'Forbidden: Insufficient permissions' });
+      expect(mockGetMCPToolsetsHandler).not.toHaveBeenCalled();
+    });
+
+    it('delegates to the toolsets handler for permitted users', async () => {
+      mockGetMCPToolsetsHandler.mockImplementation((req, res) =>
+        res.status(200).json({ toolsets: [] }),
+      );
+
+      const response = await request(app).get('/api/mcp/toolsets');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ toolsets: [] });
+      expect(mockGetMCPToolsetsHandler).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -455,6 +455,40 @@ describe('redactServerSecrets', () => {
     expect(redacted.url).toBe('https://infra.internal/mcp');
   });
 
+  // Deloitte Custom Change: toolsetName resolution for the connector tooltip.
+  it('should resolve toolsetName from the url even when the url itself is redacted', () => {
+    const config: ParsedServerConfig = {
+      type: 'streamable-http',
+      url: 'https://infra.internal/mcp?toolsets=sharepoint',
+      source: 'yaml',
+    };
+    const redacted = redactServerSecrets(config);
+    expect(redacted.url).toBeUndefined();
+    expect(redacted.toolsetName).toBe('sharepoint');
+  });
+
+  it('should resolve toolsetName to null when the url has no toolsets param', () => {
+    const config: ParsedServerConfig = {
+      type: 'streamable-http',
+      url: 'https://infra.internal/mcp',
+      source: 'yaml',
+    };
+    expect(redactServerSecrets(config).toolsetName).toBeNull();
+  });
+
+  it('should resolve toolsetName to null for a comma-separated toolsets list', () => {
+    const config = {
+      type: 'streamable-http',
+      url: 'https://gateway.example.com/mcp?toolsets=sharepoint,kx',
+    } as ParsedServerConfig;
+    expect(redactServerSecrets(config).toolsetName).toBeNull();
+  });
+
+  it('should resolve toolsetName to null when there is no url at all', () => {
+    const config: ParsedServerConfig = { type: 'stdio', command: 'node' };
+    expect(redactServerSecrets(config).toolsetName).toBeNull();
+  });
+
   it('should strip url and oauth flow URLs for non-user-sourced configs without edit authority', () => {
     const config: ParsedServerConfig = {
       type: 'sse',

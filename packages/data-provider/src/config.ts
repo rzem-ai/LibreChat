@@ -43,6 +43,8 @@ import { specsConfigSchema, TSpecsConfig } from './models';
 import { fileConfigSchema } from './file-config';
 import { isActionTool } from './types/tools';
 import { apiBaseUrl } from './api-endpoints';
+// Deloitte Custom Change: resolves ${VAR} placeholders in the balance schema
+import { extractEnvVariable } from './utils';
 import { FileSources } from './types/files';
 import { MCPServersSchema } from './mcp';
 export {
@@ -2415,6 +2417,12 @@ export const interfaceSchema = z
          * callout in the model selector tooltip. Defaults to `[5]` (top tier only) when unset.
          */
         highCostAlertTiers: z.array(z.number().int().min(1).max(5)).optional(),
+        /** Deloitte Custom Change: show the user's balance as currency (1,000,000 credits = 1 USD) instead of raw credits. */
+        showBalanceAsCurrency: z.boolean().optional(),
+        /** Deloitte Custom Change: show a small balance gauge above the account avatar. */
+        showBalanceGauge: z.boolean().optional(),
+        /** Deloitte Custom Change: show refill and cost-saving guidance in the balance gauge hover card. */
+        showBalanceHelperText: z.boolean().optional(),
       })
       .optional(),
     prompts: z
@@ -3017,13 +3025,35 @@ export const ocrSchema = z.object({
   strategy: z.nativeEnum(OCRStrategy).default(OCRStrategy.MISTRAL_OCR),
 });
 
+/** Deloitte Custom Change: resolves `${VAR}` strings from the environment into numbers; unresolved placeholders are left for validation to reject. */
+const envNumber = (value: unknown): unknown => {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const resolved = extractEnvVariable(value);
+  return resolved.trim() !== '' && !Number.isNaN(Number(resolved)) ? Number(resolved) : resolved;
+};
+
+/** Deloitte Custom Change: resolves `${VAR}` strings from the environment into booleans (`true`/`false`, case-insensitive). */
+const envBoolean = (value: unknown): unknown => {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const resolved = extractEnvVariable(value).trim().toLowerCase();
+  if (resolved === 'true' || resolved === 'false') {
+    return resolved === 'true';
+  }
+  return resolved;
+};
+
+// Deloitte Custom Change: enabled, startBalance and refillAmount accept ${VAR} placeholders from librechat.yaml
 export const balanceSchema = z.object({
-  enabled: z.boolean().optional().default(false),
-  startBalance: z.number().optional().default(20000),
+  enabled: z.preprocess(envBoolean, z.boolean().optional().default(false)),
+  startBalance: z.preprocess(envNumber, z.number().optional().default(20000)),
   autoRefillEnabled: z.boolean().optional().default(false),
   refillIntervalValue: z.number().optional().default(30),
   refillIntervalUnit: z.enum(REFILL_INTERVAL_UNITS).optional().default('days'),
-  refillAmount: z.number().optional().default(10000),
+  refillAmount: z.preprocess(envNumber, z.number().optional().default(10000)),
   reservationTtlMs: z
     .number()
     .int()
@@ -4008,6 +4038,10 @@ export enum CacheKeys {
    * Key for admin panel OAuth exchange codes (one-time-use, short TTL).
    */
   ADMIN_OAUTH_EXCHANGE = 'ADMIN_OAUTH_EXCHANGE',
+  /**
+   * Key for cached MCP Gateway toolset metadata (RBAC-filtered per user).
+   */
+  MCP_GATEWAY_TOOLSETS = 'MCP_GATEWAY_TOOLSETS',
 }
 
 export const AUTH_USER_DOC_BY_ID_PREFIX = 'auth-user-doc-byid';

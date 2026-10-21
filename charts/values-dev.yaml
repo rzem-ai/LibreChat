@@ -49,7 +49,7 @@ pods:
     containers:
       librechat:
         image:
-          tag: 'develop@sha256:c504198104bb43e2c6b10b5a9d1cd0fd964dfdddc1ada9d51e22ae35b33252c9'
+          tag: 'develop@sha256:df8cd419aabf3c9a818d6711ec385cb4509e09fd061b90049a1fb6a756826065'
         resources:
           requests:
             memory: "2Gi"
@@ -147,6 +147,10 @@ pods:
           REDIS_KEY_PREFIX: 'librechat'
           REDIS_PING_INTERVAL: '300'
           STREAM_DELTA_COALESCE_MS: '25'
+          # Balance — token limit per 1-day refill cycle
+          CHECK_BALANCE: 'true'
+          START_BALANCE: '15000000' # 15 million tokens per 1 day = $15
+          BALANCE_REFILL_AMOUNT: '15000000' # 15 million tokens per 1 day = $15
         secrets:
           # AZURE_API_KEY: librechat-azure-api-key
           MONGO_URI: librechat-dev-mdb-connection-string
@@ -168,7 +172,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:a81e95896456ffba178e0673c5ac1fa0e52b0cf42b34aab4cc6308e5df14f325'
+          tag: 'develop@sha256:75ae6537238d878a14527e46fcc73fb3c0f7546cf3d8291d926e9db11b660885'
         resources:
           requests:
             memory: "1Gi"
@@ -232,7 +236,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:86cd8967bd4fc13ec66459bcf71719d91f37c8d0aa0562901c7278f7db81d104'
+          tag: 'develop@sha256:0b6e9a7cc6a691a6a33e87706d2c2c73da0f48fea6450480f85a20ea75a5f171'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'

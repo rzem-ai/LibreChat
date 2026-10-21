@@ -23,7 +23,7 @@ describe('getCourseSteps', () => {
     });
 
     it('defines 24 steps, unconditionally including the agent-selection steps', () => {
-      expect(steps).toHaveLength(24);
+      expect(steps).toHaveLength(25);
       expect(steps.slice(13, 16).map((step) => step.title)).toEqual([
         'Agent Builder',
         'Agent Marketplace',
@@ -52,7 +52,7 @@ describe('getCourseSteps', () => {
       ]);
     });
 
-    it('ends with the individual library/connector/panel steps, MyAssist Academy, Account Menu', () => {
+    it('ends with the individual library/connector/panel steps, MyAssist Academy, Balance, Account Menu', () => {
       expect(steps.slice(16).map((step) => step.title)).toEqual([
         'Skill Library',
         'Prompt Library',
@@ -61,6 +61,7 @@ describe('getCourseSteps', () => {
         'Parameters',
         'Connectors',
         'MyAssist Academy',
+        'Balance',
         'Account Menu',
       ]);
     });
