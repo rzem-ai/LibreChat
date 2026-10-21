@@ -1350,6 +1350,70 @@ describe('injectSkillCatalog', () => {
     expect(result.activeSkillIds.map((id) => id.toString())).toEqual([ownedHidden._id.toString()]);
   });
 
+  describe('empty active catalog with an accepted skill prime', () => {
+    /* A SELECT agent's explicitly assigned skill can be manually primed even when
+       the user personally disabled it, so the active catalog is empty while the
+       skill body is already in context. Its `references/*` files still need
+       `read_file`, without widening what the model may invoke. */
+    it('keeps read_file but registers no skill tool or catalog text when hasSkillPrimes is true', async () => {
+      const disabledForUser = makeSkill('personally-disabled', userObjectId);
+      const listSkillsByAccess = buildPager([[disabledForUser]]);
+      const agent = makeAgent();
+      const result = await injectSkillCatalog(
+        baseParams({
+          listSkillsByAccess,
+          agent,
+          skillStates: { [disabledForUser._id.toString()]: false },
+          hasSkillPrimes: true,
+        }),
+      );
+
+      const definedNames = (result.toolDefinitions ?? []).map((d) => d.name);
+      expect(definedNames).toContain('read_file');
+      expect(definedNames).not.toContain('skill');
+      expect(definedNames).not.toContain('bash_tool');
+      expect(result.toolNames).toEqual(['read_file']);
+      expect(result.skillCount).toBe(0);
+      expect(agent.additional_instructions).toBeUndefined();
+      /* The model still cannot resolve or invoke the disabled skill by name. */
+      expect(result.activeSkillIds).toEqual([]);
+      expect(result.activeSkillNames.size).toBe(0);
+    });
+
+    it('still skips registration entirely when hasSkillPrimes is not set', async () => {
+      const disabledForUser = makeSkill('personally-disabled', userObjectId);
+      const listSkillsByAccess = buildPager([[disabledForUser]]);
+      const result = await injectSkillCatalog(
+        baseParams({
+          listSkillsByAccess,
+          skillStates: { [disabledForUser._id.toString()]: false },
+        }),
+      );
+
+      expect(result.toolDefinitions).toBeUndefined();
+      expect(result.toolNames).toEqual([]);
+      expect(result.skillCount).toBe(0);
+    });
+
+    it('registers bash_tool alongside read_file when codeEnvAvailable', async () => {
+      const disabledForUser = makeSkill('personally-disabled', userObjectId);
+      const listSkillsByAccess = buildPager([[disabledForUser]]);
+      const result = await injectSkillCatalog(
+        baseParams({
+          listSkillsByAccess,
+          skillStates: { [disabledForUser._id.toString()]: false },
+          hasSkillPrimes: true,
+          codeEnvAvailable: true,
+        }),
+      );
+
+      const definedNames = (result.toolDefinitions ?? []).map((d) => d.name);
+      expect(definedNames).toContain('read_file');
+      expect(definedNames).toContain('bash_tool');
+      expect(definedNames).not.toContain('skill');
+    });
+  });
+
   it('registers bash_tool alongside read_file when codeEnvAvailable, even with no catalog', async () => {
     /* Same edge case as above but with code env on — manually-primed
        skills can use bash_tool too. */

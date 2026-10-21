@@ -2225,6 +2225,71 @@ describe('initializeAgent — manual skill priming (Phase 3)', () => {
     });
   });
 
+  it('keeps read_file for a manually primed SELECT-agent skill the user personally disabled', async () => {
+    const { agent, req, res, loadTools, db } = createMocks();
+    const { Types } = await import('mongoose');
+    const skillId = new Types.ObjectId();
+    const ownerAuthor = {
+      toString: () => req.user?.id,
+    } as unknown as import('mongoose').Types.ObjectId;
+
+    /* Persisted agent (`agent_` prefix) scoped to exactly one skill. */
+    Object.assign(agent, {
+      id: 'agent_select',
+      skills_enabled: true,
+      skills_scope: 'selected',
+      skills: [skillId.toString()],
+    });
+
+    const getSkillByName: InitializeAgentDbMethods['getSkillByName'] = jest.fn().mockResolvedValue({
+      _id: skillId,
+      name: 'assigned-but-disabled',
+      body: '# Instructions\nSee references/guide.md',
+      author: ownerAuthor,
+    });
+    /* The catalog row exists, but the user's personal toggle removes it from the
+       active catalog, so nothing is left for the model to invoke. */
+    const listSkillsByAccess: InitializeAgentDbMethods['listSkillsByAccess'] = async () => ({
+      skills: [
+        {
+          _id: skillId,
+          name: 'assigned-but-disabled',
+          description: 'Assigned to the agent but disabled for this user',
+          author: ownerAuthor,
+        },
+      ],
+      has_more: false,
+      after: null,
+    });
+
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.OPENAI]),
+        isInitialAgent: true,
+        accessibleSkillIds: [skillId],
+        manualSkills: ['assigned-but-disabled'],
+        skillStates: { [skillId.toString()]: false },
+      },
+      { ...db, listSkillsByAccess, getSkillByName },
+    );
+
+    expect(result.manualSkillPrimes).toEqual([
+      expect.objectContaining({ name: 'assigned-but-disabled' }),
+    ]);
+    const definedNames = (result.toolDefinitions ?? []).map((def) => def.name);
+    expect(definedNames).toContain('read_file');
+    expect(definedNames).not.toContain('skill');
+    /* No catalog is advertised and the model still cannot resolve the skill by name. */
+    expect(result.skillCount).toBe(0);
+    expect(agent.additional_instructions ?? '').not.toContain('assigned-but-disabled');
+    expect(result.accessibleSkillIds).toEqual([]);
+  });
+
   it('leaves manualSkillPrimes undefined when no manualSkills are provided', async () => {
     const { agent, req, res, loadTools, db } = createMocks();
     const { Types } = await import('mongoose');

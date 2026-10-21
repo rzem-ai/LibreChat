@@ -2343,6 +2343,8 @@ export async function initializeAgent(
       toolRegistry,
       accessibleSkillIds: accessibleSkillIds ?? [],
       skillAuthoringAvailable,
+      /* Deloitte Custom Change: keeps `read_file` for a primed skill the user disabled. */
+      hasSkillPrimes: (manualSkillPrimes?.length ?? 0) + (alwaysApplySkillPrimes?.length ?? 0) > 0,
       contextWindowTokens: Number(agentMaxContextTokens) || 200_000,
       listSkillsByAccess: db?.listSkillsByAccess,
       codeEnvAvailable: effectiveCodeEnvAvailable,

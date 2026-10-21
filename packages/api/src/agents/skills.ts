@@ -492,6 +492,15 @@ export interface InjectSkillCatalogParams {
    * model creates mid-run. See `isSkillToolAvailable`.
    */
   skillAuthoringAvailable?: boolean;
+  /**
+   * Deloitte Custom Change: true when a manual or always-apply prime was
+   * accepted this turn. A persisted agent's explicitly assigned skill can be
+   * primed while personally disabled, so the active catalog is empty even
+   * though the skill body is already in context. Keeps `read_file` registered
+   * for its bundled files without adding catalog text, the `skill` tool, or
+   * any model-invocable skill.
+   */
+  hasSkillPrimes?: boolean;
   /** Read-only catalog snapshot preloaded for current-policy inspection. */
   resolvedCatalog?: ResolvedSkillCatalog;
 }
@@ -721,6 +730,7 @@ export async function injectSkillCatalog(
     maxCatalogSkills,
     resolvedCatalog,
     skillAuthoringAvailable = false,
+    hasSkillPrimes = false,
   } = params;
   const { activeSkills, catalogLimit, visibleCount, reachedEnd } =
     resolvedCatalog ??
@@ -734,13 +744,17 @@ export async function injectSkillCatalog(
     }));
 
   /**
-   * Nothing to catalog and nothing the model could author: skip registration
-   * entirely rather than spend description tokens on tools with no targets.
-   * Authoring runs fall through — the `skill` tool still registers below so a
-   * skill created mid-run is invocable, and `read_file` stays available for
-   * its bundled files.
+   * Nothing to catalog, nothing the model could author, and no primed skill
+   * whose files it may read: skip registration entirely rather than spend
+   * description tokens on tools with no targets. Authoring runs fall through —
+   * the `skill` tool still registers below so a skill created mid-run is
+   * invocable, and `read_file` stays available for its bundled files.
+   *
+   * Deloitte Custom Change: runs with an accepted prime also fall through.
+   * With an empty catalog, `catalogVisibleSkills` stays empty, so only
+   * `read_file` (and `bash_tool` when code execution is on) registers.
    */
-  if (activeSkills.length === 0 && !skillAuthoringAvailable) {
+  if (activeSkills.length === 0 && !skillAuthoringAvailable && !hasSkillPrimes) {
     return {
       toolDefinitions: inputDefs,
       skillCount: 0,
