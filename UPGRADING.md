@@ -87,6 +87,8 @@ resolve a failure.
 
 ## Data retention migration/backfill scripts
 
+> ⚠️ Deloitte Custom Change: Resource-specific data retention is a custom change. 
+
 Six offline scripts back the data-retention program, each with a `--dry-run`
 mode and a corresponding `npm run migrate:<name>[:dry-run]` script:
 
