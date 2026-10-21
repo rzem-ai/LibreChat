@@ -78,6 +78,27 @@ export function createTempChatExpirationDate(interfaceConfig?: AppConfig['interf
 
 // Deloitte Custom Change: Retention Update
 /**
+ * Resolves the retention period for general (non-temporary) chats in hours,
+ * applying `generalChatRetention` when configured and falling back to the same
+ * 30-day default temp chats use otherwise. Shared by `createChatExpirationDate`
+ * and the live `touchConversationLastActivity` path so both resolve hours
+ * identically.
+ */
+export function getGeneralChatRetentionHours(
+  interfaceConfig?: AppConfig['interfaceConfig'] | null,
+): number {
+  if (interfaceConfig?.generalChatRetention === undefined) {
+    return getTempChatRetentionHours(interfaceConfig);
+  }
+
+  return getTempChatRetentionHours({
+    ...interfaceConfig,
+    temporaryChatRetention: interfaceConfig.generalChatRetention,
+  });
+}
+
+// Deloitte Custom Change: Retention Update
+/**
  * Default eligibility policy for every non-exempt, non-temporary chat: applies
  * `generalChatRetention` when configured, otherwise the same 30-day default temp
  * chats use. This always runs — `retentionMode` no longer gates whether an expiry is
@@ -88,12 +109,10 @@ export function createChatExpirationDate(
   isTemporary: boolean = false,
 ): Date {
   // Deloitte Custom Change: Retention Update
-  if (isTemporary || interfaceConfig?.generalChatRetention === undefined) {
+  if (isTemporary) {
     return createTempChatExpirationDate(interfaceConfig);
   }
 
-  return createTempChatExpirationDate({
-    ...interfaceConfig,
-    temporaryChatRetention: interfaceConfig.generalChatRetention,
-  });
+  const retentionHours = getGeneralChatRetentionHours(interfaceConfig);
+  return new Date(Date.now() + retentionHours * 60 * 60 * 1000);
 }

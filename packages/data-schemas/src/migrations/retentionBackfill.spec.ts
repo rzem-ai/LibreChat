@@ -145,4 +145,81 @@ describe('backfillConversationRetention', () => {
     const remaining = await conversations.countDocuments({ expiredAt: expectedDeadline });
     expect(remaining).toBe(5);
   });
+
+  describe('conversation anchor chain: lastActivityAt ?? createdAt ?? now', () => {
+    test('anchors expiredAt to lastActivityAt when present, not run time', async () => {
+      const conversations = mongoose.connection.db!.collection('conversations');
+      const lastActivityAt = new Date('2026-01-15T00:00:00.000Z');
+      const createdAt = new Date('2026-01-01T00:00:00.000Z');
+
+      await conversations.insertOne({
+        conversationId: 'active',
+        expiredAt: null,
+        lastActivityAt,
+        createdAt,
+      });
+
+      const result = await backfillConversationRetention(mongoose.connection, {
+        now: new Date('2026-06-01T00:00:00.000Z'),
+      });
+      expect(result.conversations).toEqual({ scanned: 1, updated: 1 });
+
+      const backfilled = await conversations.findOne({ conversationId: 'active' });
+      expect(backfilled?.expiredAt).toEqual(
+        new Date(lastActivityAt.getTime() + 30 * 24 * 60 * 60 * 1000),
+      );
+    });
+
+    test('falls back to createdAt when lastActivityAt is missing', async () => {
+      const conversations = mongoose.connection.db!.collection('conversations');
+      const createdAt = new Date('2025-12-01T00:00:00.000Z');
+
+      await conversations.insertOne({ conversationId: 'no-activity', expiredAt: null, createdAt });
+
+      const result = await backfillConversationRetention(mongoose.connection, {
+        now: new Date('2026-06-01T00:00:00.000Z'),
+      });
+      expect(result.conversations).toEqual({ scanned: 1, updated: 1 });
+
+      const backfilled = await conversations.findOne({ conversationId: 'no-activity' });
+      expect(backfilled?.expiredAt).toEqual(
+        new Date(createdAt.getTime() + 30 * 24 * 60 * 60 * 1000),
+      );
+    });
+
+    test('falls back to the migration run time when neither field is present, so a dormant row becomes immediately purge-eligible', async () => {
+      const conversations = mongoose.connection.db!.collection('conversations');
+      const migrationRunTime = new Date('2026-06-01T00:00:00.000Z');
+
+      await conversations.insertOne({ conversationId: 'no-anchor', expiredAt: null });
+
+      const result = await backfillConversationRetention(mongoose.connection, {
+        now: migrationRunTime,
+      });
+      expect(result.conversations).toEqual({ scanned: 1, updated: 1 });
+
+      const backfilled = await conversations.findOne({ conversationId: 'no-anchor' });
+      expect(backfilled?.expiredAt).toEqual(
+        new Date(migrationRunTime.getTime() + 30 * 24 * 60 * 60 * 1000),
+      );
+    });
+
+    test('a conversation dormant longer than the retention window gets an expiredAt already in the past', async () => {
+      const conversations = mongoose.connection.db!.collection('conversations');
+      const longDormantActivity = new Date('2020-01-01T00:00:00.000Z');
+
+      await conversations.insertOne({
+        conversationId: 'long-dormant',
+        expiredAt: null,
+        lastActivityAt: longDormantActivity,
+      });
+
+      const migrationRunTime = new Date('2026-06-01T00:00:00.000Z');
+      await backfillConversationRetention(mongoose.connection, { now: migrationRunTime });
+
+      const backfilled = await conversations.findOne({ conversationId: 'long-dormant' });
+      expect(backfilled?.expiredAt).toBeInstanceOf(Date);
+      expect(backfilled!.expiredAt!.getTime()).toBeLessThan(migrationRunTime.getTime());
+    });
+  });
 });

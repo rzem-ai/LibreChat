@@ -313,6 +313,12 @@ describe('excludedKeys', () => {
     'agentEventActorSuspension',
     'agentEventActorReconciliations',
     '__v',
+    'expiredAt',
+    'isTemporary',
+    // Deloitte Custom Change: Retention Update
+    'lastActivityAt',
+    // Deloitte Custom Change: Retention Update
+    'retentionException',
   ])('excludes system field "%s"', (field) => {
     expect(excludedKeys.has(field)).toBe(true);
   });

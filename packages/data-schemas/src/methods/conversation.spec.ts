@@ -7962,3 +7962,66 @@ describe('Conversation Operations', () => {
     });
   });
 });
+
+// Deloitte Custom Change: Retention Update
+describe('touchConversationLastActivity', () => {
+  it('stamps lastActivityAt/expiredAt for a conversation outside the throttle window', async () => {
+    const convo = await Conversation.create({
+      conversationId: uuidv4(),
+      endpoint: EModelEndpoint.openAI,
+      lastActivityAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+    });
+
+    const beforeTouch = Date.now();
+    await methods.touchConversationLastActivity(convo._id, 24, 60 * 60 * 1000);
+
+    const after = await Conversation.findById(convo._id).lean();
+    expect(after?.lastActivityAt).toBeInstanceOf(Date);
+    expect(after!.lastActivityAt!.getTime()).toBeGreaterThanOrEqual(beforeTouch);
+    expect(after?.expiredAt).toBeInstanceOf(Date);
+    expect(after!.expiredAt!.getTime()).toBeGreaterThanOrEqual(beforeTouch + 24 * 60 * 60 * 1000);
+  });
+
+  it('stamps a conversation that has never been touched before', async () => {
+    const convo = await Conversation.create({
+      conversationId: uuidv4(),
+      endpoint: EModelEndpoint.openAI,
+    });
+
+    await methods.touchConversationLastActivity(convo._id, 24, 60 * 60 * 1000);
+
+    const after = await Conversation.findById(convo._id).lean();
+    expect(after?.lastActivityAt).toBeInstanceOf(Date);
+    expect(after?.expiredAt).toBeInstanceOf(Date);
+  });
+
+  it('is a no-op within the throttle window', async () => {
+    const priorActivity = new Date(Date.now() - 60 * 1000);
+    const priorExpiredAt = new Date(Date.now() + 1000);
+    const convo = await Conversation.create({
+      conversationId: uuidv4(),
+      endpoint: EModelEndpoint.openAI,
+      lastActivityAt: priorActivity,
+      expiredAt: priorExpiredAt,
+    });
+
+    await methods.touchConversationLastActivity(convo._id, 24, 60 * 60 * 1000);
+
+    const after = await Conversation.findById(convo._id).lean();
+    expect(after?.lastActivityAt).toEqual(priorActivity);
+    expect(after?.expiredAt).toEqual(priorExpiredAt);
+  });
+
+  it('does not bump updatedAt, so an activity ping never reorders the sidebar', async () => {
+    const convo = await Conversation.create({
+      conversationId: uuidv4(),
+      endpoint: EModelEndpoint.openAI,
+    });
+    const updatedAtBefore = (await Conversation.findById(convo._id).lean())?.updatedAt;
+
+    await methods.touchConversationLastActivity(convo._id, 24, 60 * 60 * 1000);
+
+    const after = await Conversation.findById(convo._id).lean();
+    expect(after?.updatedAt).toEqual(updatedAtBefore);
+  });
+});

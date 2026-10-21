@@ -533,6 +533,12 @@ export interface ConversationMethods {
     conversationId: string,
   ): Promise<Pick<IConversation, 'expiredAt' | 'isTemporary'> | null>;
   getConvoTitle(user: string, conversationId: string): Promise<string | null>;
+  // Deloitte Custom Change: Retention Update
+  touchConversationLastActivity(
+    conversationObjectId: Types.ObjectId | string,
+    retentionHours: number,
+    minIntervalMs?: number,
+  ): Promise<void>;
   deleteConvos(
     user: string,
     filter: FilterQuery<IConversation>,
@@ -2174,6 +2180,40 @@ export function createConversationMethods(
       logger.error('[getConvoRetention] Error getting conversation retention fields', error);
       throw new Error('Error getting conversation retention fields');
     }
+  }
+
+  // Deloitte Custom Change: Retention Update
+  /**
+   * Fire-and-forget activity touch for the hot per-turn conversation-save path.
+   * Throttled to a single write per `minIntervalMs` window (default 1 hour) via a
+   * guard on the update filter, so repeat activity on the same conversation within
+   * the window is a no-op write rather than one write per turn. Mirrors
+   * `touchAgentLastActivity`/`touchSkillsLastActivity`, with one divergence:
+   * `{ timestamps: false }` so this background ping never bumps `updatedAt` — the
+   * sidebar sorts by `updatedAt`, and an activity ping must not hoist an otherwise
+   * untouched chat to the top.
+   */
+  async function touchConversationLastActivity(
+    conversationObjectId: Types.ObjectId | string,
+    retentionHours: number,
+    minIntervalMs: number = 60 * 60 * 1000,
+  ): Promise<void> {
+    const Conversation = mongoose.models.Conversation as Model<IConversation>;
+    const now = new Date();
+    const throttleWindow = new Date(now.getTime() - minIntervalMs);
+    await Conversation.updateOne(
+      {
+        _id: conversationObjectId,
+        $or: [{ lastActivityAt: { $exists: false } }, { lastActivityAt: { $lte: throttleWindow } }],
+      },
+      {
+        $set: {
+          lastActivityAt: now,
+          expiredAt: new Date(now.getTime() + retentionHours * 60 * 60 * 1000),
+        },
+      },
+      { timestamps: false },
+    );
   }
 
   /**
@@ -3861,6 +3901,8 @@ export function createConversationMethods(
     getConvoOwnership,
     getConvoRetention,
     getConvoTitle,
+    // Deloitte Custom Change: Retention Update
+    touchConversationLastActivity,
     deleteConvos,
     archiveAllConvos,
   };
