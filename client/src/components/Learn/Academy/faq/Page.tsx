@@ -6,7 +6,7 @@ import { FAQS } from '../../content/data';
 import Searchable from '../Searchable';
 import { useLocalize } from '~/hooks';
 
-const linkClass = 'text-text-primary underline';
+const linkClass = 'font-normal underline';
 const LINK_PATTERN = /\[([^\]]+)\]\(([^)]+)\)/g;
 
 const stripLinks = (text: string): string => text.replace(LINK_PATTERN, '$1');
