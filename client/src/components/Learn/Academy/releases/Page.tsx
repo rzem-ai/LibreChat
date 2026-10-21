@@ -42,7 +42,7 @@ export default function Releases(): JSX.Element | null {
             {formatDate(frontmatter.date)} · {frontmatter.version}
           </p>
           <h2 className="mt-1 text-xl font-medium">{frontmatter.title}</h2>
-          <GEL.Typeset>
+          <GEL.Typeset className="[&_h3]:mt-5 [&_p]:mt-1">
             <Content />
           </GEL.Typeset>
         </article>
