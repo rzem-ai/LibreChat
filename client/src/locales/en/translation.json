@@ -2525,7 +2525,6 @@
   "com_ui_skills_mode_all": "All",
   "com_ui_skills_mode_off": "Off",
   "com_ui_skills_mode_selected": "Selected",
-  "com_ui_skills_none_for_chat": "This agent doesn't support skills. Start a chat with a base model to use all your skills.",
   "com_ui_skills_queued": "Skills queued for next submission",
   "com_ui_skills_remove": "Remove {{name}}",
   "com_ui_skills_view_mine": "Created by me",

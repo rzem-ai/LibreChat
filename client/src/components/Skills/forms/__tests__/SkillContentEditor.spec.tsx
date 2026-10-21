@@ -7,9 +7,10 @@ jest.mock(
   () => {
     const React = jest.requireActual<typeof import('react')>('react');
     return {
-      TextareaAutosize: React.forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
-        (props, ref) => React.createElement('textarea', { ...props, ref }),
-      ),
+      TextareaAutosize: React.forwardRef<
+        HTMLTextAreaElement,
+        React.TextareaHTMLAttributes<HTMLTextAreaElement>
+      >((props, ref) => React.createElement('textarea', { ...props, ref })),
       Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) =>
         React.createElement('button', props, children),
       TooltipAnchor: ({ render: element }: { render: React.ReactNode }) => element,
