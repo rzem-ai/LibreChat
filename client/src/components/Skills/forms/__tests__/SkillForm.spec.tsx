@@ -1,5 +1,6 @@
 import { InvocationMode } from 'librechat-data-provider';
 import { act, render, screen } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { ButtonHTMLAttributes, TextareaHTMLAttributes } from 'react';
 import type { TSkill } from 'librechat-data-provider';
 import SkillForm from '../SkillForm';
@@ -18,6 +19,7 @@ interface MutationOptions {
 // Deloitte Custom Change: Store the active skill and callbacks exercised by scanner error tests.
 let capturedMutationOptions: MutationOptions | undefined;
 let mockCurrentSkill: TSkill;
+let mockPermissions: { isLoading: boolean; isError: boolean; isSuccess: boolean; canEdit: boolean };
 
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
@@ -86,10 +88,9 @@ jest.mock('~/hooks', () => ({
       return translations[key] ?? key;
     },
   useSkillPermissions: () => ({
-    isLoading: false,
+    ...mockPermissions,
     isOwner: true,
     isAdmin: false,
-    canEdit: true,
     canDelete: false,
     canShare: false,
   }),
@@ -105,10 +106,16 @@ jest.mock('../SkillContentEditor', () => ({
   default: () => null,
 }));
 
-jest.mock('../CategorySelector', () => ({
-  __esModule: true,
-  default: () => null,
-}));
+// Deloitte Custom Change: Observe the readOnly prop so the permission-failure test can
+// confirm the category control is disabled, matching the rest of the read-only form.
+jest.mock('../CategorySelector', () => {
+  const React = jest.requireActual<typeof import('react')>('react');
+  return {
+    __esModule: true,
+    default: ({ readOnly }: { readOnly?: boolean }) =>
+      React.createElement('button', { 'aria-label': 'Category', disabled: readOnly }),
+  };
+});
 
 jest.mock('../../dialogs/DeleteSkill', () => ({
   __esModule: true,
@@ -162,6 +169,7 @@ describe('SkillForm', () => {
     capturedMutationOptions = undefined;
     mockCurrentSkill = makeSkill();
     mockIsLoading = false;
+    mockPermissions = { isLoading: false, isError: false, isSuccess: true, canEdit: true };
   });
 
   it('shows a busy save button while pending', async () => {
@@ -223,5 +231,37 @@ describe('SkillForm', () => {
     await act(async () => {});
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('redirects a viewer from the direct edit route after permissions resolve', async () => {
+    mockPermissions = { isLoading: false, isError: false, isSuccess: true, canEdit: false };
+    render(
+      <MemoryRouter initialEntries={['/skills/skill-1/edit']}>
+        <Routes>
+          <Route path="/skills/:skillId/edit" element={<SkillForm skillId="skill-1" />} />
+          <Route path="/skills/:skillId" element={<p>{'Skill detail'}</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await act(async () => {});
+    expect(screen.getByText('Skill detail')).toBeInTheDocument();
+  });
+
+  it('keeps the form read-only without redirecting when the permission query fails', async () => {
+    mockPermissions = { isLoading: false, isError: true, isSuccess: false, canEdit: false };
+    render(
+      <MemoryRouter initialEntries={['/skills/skill-1/edit']}>
+        <Routes>
+          <Route path="/skills/:skillId/edit" element={<SkillForm skillId="skill-1" />} />
+          <Route path="/skills/:skillId" element={<p>{'Skill detail'}</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await act(async () => {});
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveAttribute('readonly');
+    // Deloitte Custom Change: The category control must also be locked during the
+    // read-only fallback, not just the name/description/body fields.
+    expect(screen.getByRole('button', { name: 'Category' })).toBeDisabled();
+    expect(screen.queryByText('Skill detail')).not.toBeInTheDocument();
   });
 });

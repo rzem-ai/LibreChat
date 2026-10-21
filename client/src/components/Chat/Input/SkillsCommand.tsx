@@ -22,7 +22,7 @@ const ROW_HEIGHT = 44;
 const skillIcon = <ScrollText className="icon-md text-status-info" />;
 
 /**
- * Determines whether a skill should appear in the `$` command popover.
+ * Deloitte Custom Change: determines whether a skill should appear in the `$` command popover.
  * Reads the persisted `userInvocable` field (mirrors the `user-invocable`
  * frontmatter). Defaults to visible when the field is absent so older
  * skills authored before Phase 6 stay user-invocable without a migration;
