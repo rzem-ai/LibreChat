@@ -467,7 +467,7 @@ export default function GenericGrantAccessDialog({
           )}
         </div>
 
-        <OGDialogFooter className="flex shrink-0 flex-col gap-3 bg-transparent px-4 py-4 sm:px-6">
+        <OGDialogFooter className="flex shrink-0 flex-col gap-3 bg-transparent px-4 py-4 sm:flex-col sm:space-x-0 sm:px-6">
           {showEditorAccessWarning && (
             <Alert variant="warning" className="w-full">
               {localize('com_ui_skill_editor_access_warning')}
