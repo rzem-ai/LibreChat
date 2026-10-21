@@ -1,11 +1,30 @@
+import { Link } from 'react-router-dom';
 import { GEL } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
-import type { Faq } from '../../content/schema';
+import type { Faq, FaqLink as FaqLinkType } from '../../content/schema';
 import { FAQS } from '../../content/data';
 import Searchable from '../Searchable';
 import { useLocalize } from '~/hooks';
 
-const getFields = (faq: Faq): string[] => [faq.question, faq.answer];
+const linkClass = 'text-text-primary underline';
+
+const getFields = (faq: Faq): string[] => [
+  faq.question,
+  faq.answer,
+  ...(faq.steps ?? []),
+  faq.note ?? '',
+];
+
+const FaqLink = ({ link }: { link: FaqLinkType }): JSX.Element =>
+  link.href.startsWith('/') ? (
+    <Link to={link.href} className={linkClass}>
+      {link.text}
+    </Link>
+  ) : (
+    <a href={link.href} target="_blank" rel="noopener noreferrer" className={linkClass}>
+      {link.text}
+    </a>
+  );
 
 export default function Faq(): JSX.Element {
   const localize = useLocalize();
@@ -25,9 +44,26 @@ export default function Faq(): JSX.Element {
               <p className="text-base font-semibold">
                 <GEL.HighlightedText text={faq.question} query={query} />
               </p>
-              <p className="mt-1 text-text-secondary">
-                <GEL.HighlightedText text={faq.answer} query={query} />
-              </p>
+              <div className="mt-1 flex flex-col gap-2 text-text-secondary">
+                <p>
+                  <GEL.HighlightedText text={faq.answer} query={query} />
+                </p>
+                {faq.steps && (
+                  <ol className="list-decimal space-y-1 pl-6">
+                    {faq.steps.map((step) => (
+                      <li key={step}>
+                        <GEL.HighlightedText text={step} query={query} />
+                      </li>
+                    ))}
+                  </ol>
+                )}
+                {faq.note && (
+                  <p>
+                    <GEL.HighlightedText text={faq.note} query={query} />
+                  </p>
+                )}
+                {faq.link && <FaqLink link={faq.link} />}
+              </div>
             </li>
           ))}
         </ul>

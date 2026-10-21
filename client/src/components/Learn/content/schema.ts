@@ -41,7 +41,15 @@ export const ResourceSchema = z.object({
   externalHref: z.string().url().optional(),
 });
 
-export const FaqSchema = z.object({ question: z.string(), answer: z.string() });
+export const FaqLinkSchema = z.object({ text: z.string(), href: z.string() });
+
+export const FaqSchema = z.object({
+  question: z.string(),
+  answer: z.string(),
+  steps: z.array(z.string()).optional(),
+  note: z.string().optional(),
+  link: FaqLinkSchema.optional(),
+});
 
 export const ArticleFrontmatterSchema = z.object({
   title: z.string(),
@@ -57,5 +65,6 @@ export const ReleaseFrontmatterSchema = z.object({
 
 export type Resource = z.infer<typeof ResourceSchema>;
 export type Faq = z.infer<typeof FaqSchema>;
+export type FaqLink = z.infer<typeof FaqLinkSchema>;
 export type ArticleFrontmatter = z.infer<typeof ArticleFrontmatterSchema>;
 export type ReleaseFrontmatter = z.infer<typeof ReleaseFrontmatterSchema>;

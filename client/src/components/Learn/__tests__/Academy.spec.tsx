@@ -82,11 +82,11 @@ describe('Faq', () => {
   it('filters questions and highlights matches', () => {
     const { container } = render(<Faq />);
     fireEvent.change(screen.getByLabelText('com_learning_search_faq'), {
-      target: { value: 'calendar' },
+      target: { value: 'connector' },
     });
-    expect(screen.getByText(/How do I connect my files/)).toBeInTheDocument();
-    expect(screen.queryByText(/Which AI model/)).not.toBeInTheDocument();
-    expect(container.querySelector('mark')).toHaveTextContent(/calendar/i);
+    expect(screen.getByText(/Is MyAssist connected/)).toBeInTheDocument();
+    expect(screen.queryByText(/Which model/)).not.toBeInTheDocument();
+    expect(container.querySelector('mark')).toHaveTextContent(/connector/i);
   });
 });
 

@@ -1,18 +1,32 @@
 [
   {
-    "question": "_Which AI model should I use?",
-    "answer": "Start with the default model. Switch to a more capable one from the model picker for long documents or multi-step reasoning."
+    "question": "Is MyAssist connected to Deloitte data?",
+    "answer": "No, not unless you're using a connector."
   },
   {
-    "question": "_How do I connect my files and calendar?",
-    "answer": "Open Connectors from the sidebar and sign in to each source. Once connected, chats can reference them automatically."
+    "question": "What is the agentic ecosystem and how does MyAssist fit within it?",
+    "answer": "Read the article to find out.",
+    "link": { "text": "What is the agentic ecosystem", "href": "/learn/articles/agentic-ecosystem" }
   },
   {
-    "question": "_Can I share a chat with a teammate?",
-    "answer": "Yes — use the share icon in any chat to send a read-only link or invite someone to continue the conversation with you."
+    "question": "What is the difference between a saved prompt, a skill and an agent?",
+    "answer": "Learn more in this article.",
+    "link": { "text": "What should I use?", "href": "/learn/articles/what-should-i-use" }
   },
   {
-    "question": "_How do I reset or delete a conversation?",
-    "answer": "Open the chat's menu and choose Delete. This can't be undone, so export anything you want to keep first."
+    "question": "Which model should I use?",
+    "answer": "Hover over a model in the model picker to see a tooltip with its cost, speed and intelligence."
+  },
+  {
+    "question": "Can I use client data in MyAssist?",
+    "answer": "Don't use GPS or Defence data. For other client data, follow this guidance:",
+    "steps": [
+      "Familiarise yourself with MyAssist NextGen first, using Deloitte information, public information, synthetic data and non-client scenarios.",
+      "Once you're familiar, you may use client data for exploration, hypothesis testing and identifying potential use cases, in line with Deloitte's responsible AI guidance. Use appropriate judgement and caution in active client engagements.",
+      "Existing guardrails and accountability continue to apply, including client-specific AI requirements and restrictions.",
+      "BSO oversight focuses on exceptions and higher-risk scenarios, rather than routine exploratory use of client data."
+    ],
+    "note": "If you're unsure, check with your engagement lead and Q&R/BSO.",
+    "link": { "text": "DAIS", "href": "https://ausdeloitte.sharepoint.com/sites/DAIS" }
   }
 ]
