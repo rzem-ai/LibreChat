@@ -5,13 +5,14 @@ import { ChevronDown, ChevronUp, ShieldQuestion, TriangleAlert } from 'lucide-re
 import type { Agents } from 'librechat-data-provider';
 import type { TranslationKeys } from '~/hooks';
 import {
+  approvalPanelOpenFamily,
+  isMemoryApprovalAction,
+  pendingApprovalActionFamily,
+} from '~/components/Chat/approval/state';
+import {
   useApprovalContext,
   useResumeSubmit,
 } from '~/components/Chat/Messages/Content/ApprovalContext';
-import {
-  approvalPanelOpenFamily,
-  pendingApprovalActionFamily,
-} from '~/components/Chat/approval/state';
 import { buildApprovalPreview, buildApprovalPreviews } from '~/components/Chat/approval/preview';
 import ToolApproval from '~/components/Chat/Messages/Content/ToolApproval';
 import { useComposerOverlay } from '~/components/Chat/Input/overlay';
@@ -31,6 +32,8 @@ const KIND_LABELS: Record<ReturnType<typeof buildApprovalPreview>['kind'], Trans
   create: 'com_ui_proposed_contents',
   edit: 'com_ui_proposed_replacements',
   generic: 'com_ui_proposed_arguments',
+  memory_update: 'com_ui_proposed_arguments',
+  memory_delete: 'com_ui_proposed_arguments',
 };
 
 function previewTitle(
@@ -62,14 +65,15 @@ export const PendingToolApprovalPanel = memo(function PendingToolApprovalPanel({
   const { getDecisions, getStatus, isReady } = useApprovalContext();
   const { submitToolApproval } = useResumeSubmit();
   const actionId = pendingAction?.actionId;
+  const memoryAction = isMemoryApprovalAction(pendingAction);
 
   useEffect(() => {
     if (actionId != null) {
-      setOpen(true);
+      setOpen(!memoryAction);
     }
-  }, [actionId, setOpen]);
+  }, [actionId, memoryAction, setOpen]);
 
-  useComposerOverlay(conversationId, open && pendingAction != null);
+  useComposerOverlay(conversationId, open && pendingAction != null && !memoryAction);
 
   const reviews = useMemo(() => {
     if (pendingAction == null) return [];
@@ -84,13 +88,16 @@ export const PendingToolApprovalPanel = memo(function PendingToolApprovalPanel({
     }));
   }, [pendingAction]);
 
-  if (!open || pendingAction == null) {
+  if (!open || pendingAction == null || memoryAction) {
     return null;
   }
 
   const decisions = getDecisions(pendingAction.actionId);
   const status = getStatus(pendingAction.actionId);
   const locked = status === 'submitting' || status === 'submitted' || status === 'expired';
+  const hasMemoryAction = reviews.some(
+    ({ request }) => request.name === 'set_memory' || request.name === 'delete_memory',
+  );
 
   return (
     <div
@@ -130,24 +137,40 @@ export const PendingToolApprovalPanel = memo(function PendingToolApprovalPanel({
               key={request.tool_call_id}
               aria-labelledby={`approval-${request.tool_call_id}`}
             >
-              <div className="mb-2">
-                <h3
-                  id={`approval-${request.tool_call_id}`}
-                  className="text-sm font-medium text-text-primary [overflow-wrap:anywhere]"
-                >
-                  {reviews.length > 1
-                    ? `${index + 1}. ${previewTitle(preview, localize)}`
-                    : previewTitle(preview, localize)}
+              {/* Deloitte Custom Change: Keep memory requests readable in mixed approval batches. */}
+              {(request.name === 'set_memory' || request.name === 'delete_memory') && (
+                <h3 id={`approval-${request.tool_call_id}`} className="sr-only">
+                  {localize(
+                    request.name === 'delete_memory'
+                      ? 'com_ui_memory_approval_delete_title'
+                      : 'com_ui_memory_approval_set_title',
+                  )}
                 </h3>
-                <p className="text-xs text-text-secondary">{localize(KIND_LABELS[preview.kind])}</p>
-              </div>
-              <pre className="max-h-52 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border-light bg-surface-tertiary p-3 font-mono text-xs text-text-primary">
-                {preview.body || localize('com_ui_no_arguments')}
-              </pre>
-              {preview.truncated && (
-                <p className="mt-1 text-xs text-text-secondary">
-                  {localize('com_ui_preview_truncated')}
-                </p>
+              )}
+              {request.name !== 'set_memory' && request.name !== 'delete_memory' && (
+                <>
+                  <div className="mb-2">
+                    <h3
+                      id={`approval-${request.tool_call_id}`}
+                      className="text-sm font-medium text-text-primary [overflow-wrap:anywhere]"
+                    >
+                      {reviews.length > 1
+                        ? `${index + 1}. ${previewTitle(preview, localize)}`
+                        : previewTitle(preview, localize)}
+                    </h3>
+                    <p className="text-xs text-text-secondary">
+                      {localize(KIND_LABELS[preview.kind])}
+                    </p>
+                  </div>
+                  <pre className="max-h-52 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-border-light bg-surface-tertiary p-3 font-mono text-xs text-text-primary">
+                    {preview.body || localize('com_ui_no_arguments')}
+                  </pre>
+                  {preview.truncated && (
+                    <p className="mt-1 text-xs text-text-secondary">
+                      {localize('com_ui_preview_truncated')}
+                    </p>
+                  )}
+                </>
               )}
               {config != null ? (
                 <ToolApproval
@@ -158,6 +181,7 @@ export const PendingToolApprovalPanel = memo(function PendingToolApprovalPanel({
                   }}
                   toolCallId={request.tool_call_id}
                   args={request.arguments}
+                  toolName={request.name}
                   surface="composer"
                 />
               ) : (
@@ -192,12 +216,21 @@ export const PendingToolApprovalPanel = memo(function PendingToolApprovalPanel({
               disabled={!isReady(pendingAction.actionId) || locked}
               onClick={() => submitToolApproval(pendingAction.actionId)}
             >
-              {status === 'submitting'
-                ? localize('com_ui_submitting')
-                : localize('com_ui_submit_decisions_progress', {
-                    0: decisions.length,
-                    1: reviews.length,
-                  })}
+              {(() => {
+                if (status === 'submitting') {
+                  return localize('com_ui_submitting');
+                }
+                if (reviews.length > 1 && hasMemoryAction) {
+                  return localize('com_ui_confirm_changes');
+                }
+                if (reviews.length === 1) {
+                  return localize('com_ui_submit');
+                }
+                return localize('com_ui_submit_decisions_progress', {
+                  0: decisions.length,
+                  1: reviews.length,
+                });
+              })()}
             </Button>
           </div>
         </div>
@@ -215,7 +248,7 @@ export const PendingToolApprovalButton = memo(function PendingToolApprovalButton
   const pendingAction = usePendingToolApproval(conversationId);
   const [open, setOpen] = useAtom(approvalPanelOpenFamily(conversationId));
 
-  if (pendingAction == null) {
+  if (pendingAction == null || isMemoryApprovalAction(pendingAction)) {
     return null;
   }
 

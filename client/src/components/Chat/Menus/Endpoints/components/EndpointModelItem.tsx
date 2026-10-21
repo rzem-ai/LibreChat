@@ -7,6 +7,7 @@ import { isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider'
 import type { Endpoint } from '~/common';
 import { useModelSelectorContext } from '../ModelSelectorContext';
 import { CustomMenuItem as MenuItem } from '../CustomMenu';
+import { URLIcon } from '~/components/Endpoints/URLIcon';
 import useActiveItem from '../useActiveItem';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
@@ -79,7 +80,15 @@ function EndpointModelItemComponent({
 
     const getContent = () => {
       if (avatarUrl) {
-        return <img src={avatarUrl} alt={modelName ?? ''} className="h-full w-full object-cover" />;
+        // Deloitte Custom Change: load private Azure agent avatars with authentication.
+        return (
+          <URLIcon
+            iconURL={avatarUrl}
+            altName={modelName ?? ''}
+            containerStyle={{ width: 20, height: 20 }}
+            className="h-full w-full overflow-hidden rounded-full"
+          />
+        );
       }
       if (showEndpointIcon) {
         return endpoint.icon;

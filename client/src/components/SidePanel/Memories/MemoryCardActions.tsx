@@ -24,6 +24,8 @@ interface MemoryCardActionsProps {
 }
 
 export default function MemoryCardActions({ memory }: MemoryCardActionsProps) {
+  // Deloitte Custom Change: Memory HITL approval UX integration.
+
   const localize = useLocalize();
   const { showToast } = useToastContext();
   const [editOpen, setEditOpen] = useState(false);
@@ -120,13 +122,18 @@ export default function MemoryCardActions({ memory }: MemoryCardActionsProps) {
           title={localize('com_ui_delete_memory')}
           className="w-11/12 max-w-lg"
           main={
-            <Label className="text-left text-sm font-medium">
-              <Trans
-                i18nKey="com_ui_delete_confirm_strong"
-                values={{ title: memory.key || localize('com_ui_memory') }}
-                components={{ strong: <strong /> }}
-              />
-            </Label>
+            <div className="space-y-2">
+              <Label className="text-left text-sm font-medium">
+                <Trans
+                  i18nKey="com_ui_delete_confirm_strong"
+                  values={{ title: memory.key || localize('com_ui_memory') }}
+                  components={{ strong: <strong /> }}
+                />
+              </Label>
+              <p className="text-sm text-text-secondary">
+                {localize('com_ui_memory_delete_description')}
+              </p>
+            </div>
           }
           selection={{
             selectHandler: confirmDelete,

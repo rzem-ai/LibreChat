@@ -11,6 +11,24 @@ describe('buildApprovalPreview', () => {
     expect(preview.kind).toBe('generic');
     expect(JSON.parse(preview.body)).toEqual({ environmentAction: 'typecheck', timeoutMs: 120000 });
   });
+
+  test.each([
+    ['set_memory', 'memory_update'],
+    ['delete_memory', 'memory_delete'],
+  ] as const)('identifies the %s memory mutation and its key', (name, kind) => {
+    const preview = buildApprovalPreview({
+      name,
+      tool_call_id: 'memory-action',
+      arguments: { key: 'quote_17_don_quixote', value: 'Proposed memory value' },
+    });
+
+    expect(preview).toMatchObject({
+      kind,
+      target: 'quote_17_don_quixote',
+      body: expect.stringContaining('Proposed memory value'),
+    });
+  });
+
   test('shows the exact effective command and reveals bidi control characters', () => {
     const preview = buildApprovalPreview({
       name: 'bash_tool',

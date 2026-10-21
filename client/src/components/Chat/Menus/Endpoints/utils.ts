@@ -9,6 +9,7 @@ import type {
 } from 'librechat-data-provider';
 import type { useLocalize } from '~/hooks';
 import SpecIcon from '~/components/Chat/Menus/Endpoints/components/SpecIcon';
+import { URLIcon } from '~/components/Endpoints/URLIcon';
 import { Endpoint, SelectedValues } from '~/common';
 import { getSpecAgentAvatarURL } from '~/utils';
 
@@ -159,15 +160,13 @@ export function getSelectedIcon({
 
     if (selectedEndpoint.modelIcons?.[model]) {
       const iconUrl = selectedEndpoint.modelIcons[model];
-      return React.createElement(
-        'div',
-        { className: 'h-5 w-5 overflow-hidden rounded-full' },
-        React.createElement('img', {
-          src: iconUrl,
-          alt: model,
-          className: 'h-full w-full object-cover',
-        }),
-      );
+      // Deloitte Custom Change: authenticate private avatar URLs in the selected model header.
+      return React.createElement(URLIcon, {
+        iconURL: iconUrl,
+        altName: model,
+        containerStyle: { width: 20, height: 20 },
+        className: 'h-5 w-5 overflow-hidden rounded-full',
+      });
     }
 
     return (

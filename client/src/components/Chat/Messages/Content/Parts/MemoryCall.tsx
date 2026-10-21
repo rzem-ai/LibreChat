@@ -1,15 +1,19 @@
-import { useMemo } from 'react';
+import { useContext, useMemo } from 'react';
 import { Brain } from 'lucide-react';
-import { Tools } from 'librechat-data-provider';
+import { MemoryScope, Tools, stripAgentIdSuffix } from 'librechat-data-provider';
 import type { PartMetadata, TAttachment, MemoryArtifact } from 'librechat-data-provider';
 import ProgressText from '~/components/Chat/Messages/Content/ProgressText';
+import { useAgentsMapContext } from '~/Providers/AgentsMapContext';
 import { toolPanelSpacingClassName } from '../disclosure';
+import { ChatContext } from '~/Providers/ChatContext';
+import { useMemoriesQuery } from '~/data-provider';
 import useToolCallState from './useToolCallState';
 import { AttachmentGroup } from './Attachment';
 import parseJsonField from './parseJsonField';
 import MemoryInfo from '../MemoryInfo';
 import { useLocalize } from '~/hooks';
 import { cn } from '~/utils';
+// Deloitte Custom Change: Memory HITL approval UX integration.
 
 type MemoryToolName = 'set_memory' | 'delete_memory';
 
@@ -50,6 +54,42 @@ export default function MemoryCall({
   const isSave = toolName === 'set_memory';
   const memoryKey = useMemo(() => parseJsonField(args, 'key'), [args]);
   const memoryValue = useMemo(() => parseJsonField(args, 'value'), [args]);
+  const conversationAgentId = useContext(ChatContext)?.conversation?.agent_id;
+  const memoryAgentId =
+    conversationAgentId == null ? undefined : stripAgentIdSuffix(conversationAgentId);
+  const agentsMap = useAgentsMapContext();
+  const agent = memoryAgentId == null ? undefined : agentsMap?.[memoryAgentId];
+  // Deloitte Custom Change: Track memory partition state for HITL create/update classification.
+  const memoryPartitionKnown = conversationAgentId == null || agent != null;
+  const memoryPartitionAgentId =
+    agent?.memory_scope === MemoryScope.agent ? memoryAgentId : undefined;
+  const {
+    data: memoriesData,
+    isFetchedAfterMount,
+    isError,
+  } = useMemoriesQuery({
+    enabled: isSave,
+    refetchOnMount: 'always',
+  });
+  // Deloitte Custom Change: Find existing memory to determine update vs create for HITL.
+  const existingMemory =
+    isSave && isFetchedAfterMount && !isError && memoryPartitionKnown && memoryKey != null
+      ? memoriesData?.memories.find(
+          (memory) =>
+            memory.key === memoryKey && (memory.agentId ?? '') === (memoryPartitionAgentId ?? ''),
+        )
+      : undefined;
+  // Deloitte Custom Change: Differentiate update vs create in progress text for memory HITL.
+  let inProgressText: string;
+  if (isSave) {
+    if (existingMemory) {
+      inProgressText = localize('com_ui_memory_approval_update_title');
+    } else {
+      inProgressText = localize('com_ui_memory_saving');
+    }
+  } else {
+    inProgressText = localize('com_ui_memory_approval_delete_title');
+  }
   const hasPanel = !!memoryKey || !!memoryValue;
   const memoryErrors = useMemo(() => {
     const errors: MemoryArtifact[] = [];
@@ -85,7 +125,7 @@ export default function MemoryCall({
         <ProgressText
           phase={phase}
           onClick={toggleCode}
-          inProgressText={localize(isSave ? 'com_ui_memory_saving' : 'com_ui_memory_deleting')}
+          inProgressText={inProgressText}
           finishedText={finishedText}
           durationMs={runStepDurationMs}
           subtitle={memoryKey || undefined}

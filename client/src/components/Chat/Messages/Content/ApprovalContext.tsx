@@ -23,6 +23,7 @@ import { resolveAskUserQuestionPart } from '~/utils/approval';
 import { ChatContext } from '~/Providers/ChatContext';
 import { useGetEphemeralAgent } from '~/store/agents';
 import store from '~/store';
+// Deloitte Custom Change: Memory HITL approval UX integration.
 
 /** Shared read/write for the ask-answer submit status. */
 export function useAskSubmitStatus(): {
@@ -43,6 +44,8 @@ export function useAskSubmitStatus(): {
 }
 
 interface ApprovalContextValue {
+  /** Server-owned requests for the action, used to describe inline approval batches. */
+  pendingAction: Agents.PendingAction | null;
   /**
    * Bumped whenever registrations or decisions change. Decisions live in refs
    * (synchronous reads), so this is what makes the context value a NEW reference
@@ -110,6 +113,7 @@ export const useApprovalContext = (): ApprovalContextValue => {
 };
 
 const FALLBACK: ApprovalContextValue = {
+  pendingAction: null,
   version: 0,
   setDecision: () => undefined,
   getDecision: () => undefined,
@@ -369,6 +373,7 @@ function ApprovalStateProvider({
 
   const value = useMemo<ApprovalContextValue>(
     () => ({
+      pendingAction: pendingAction ?? null,
       version,
       setDecision,
       getDecision,
@@ -388,6 +393,7 @@ function ApprovalStateProvider({
       setAskAnswerDraft,
     }),
     [
+      pendingAction,
       version,
       setDecision,
       getDecision,

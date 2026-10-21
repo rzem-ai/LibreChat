@@ -9,8 +9,10 @@ jest.mock('~/hooks', () => ({
     () =>
     (key: string, params?: { tokens?: number }): string => {
       const translations: Record<string, string> = {
-        com_ui_memory_saving: 'Saving memory',
-        com_ui_memory_saved: 'Saved memory',
+        com_ui_memory_saving: 'Save memory',
+        com_ui_memory_approval_update_title: 'Update memory',
+        com_ui_memory_approval_delete_title: 'Delete memory',
+        com_ui_memory_saved: 'Memory saved or updated',
         com_ui_memory_deleting: 'Deleting memory',
         com_ui_memory_removed: 'Deleted memory',
         com_ui_memory_deleted: 'Memory deleted',
@@ -25,6 +27,10 @@ jest.mock('~/hooks', () => ({
 
 jest.mock('~/utils', () => ({
   cn: (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' '),
+}));
+
+jest.mock('~/data-provider', () => ({
+  useMemoriesQuery: () => ({ data: { memories: [] }, isFetchedAfterMount: false, isError: false }),
 }));
 
 jest.mock('~/components/Chat/Messages/Content/ProgressText', () => ({
@@ -94,7 +100,9 @@ describe('MemoryCall', () => {
       />,
     );
 
-    expect(screen.getByTestId('progress-text')).toHaveTextContent('Saved memory preferences');
+    expect(screen.getByTestId('progress-text')).toHaveTextContent(
+      'Memory saved or updated preferences',
+    );
     expect(screen.getByText('preferences')).toHaveClass('font-bold', 'uppercase');
     expect(screen.getByText('Prefers dark mode.')).toBeInTheDocument();
     expect(screen.queryByText(/Memory set for key/)).not.toBeInTheDocument();
@@ -111,7 +119,7 @@ describe('MemoryCall', () => {
       />,
     );
 
-    expect(screen.getByTestId('progress-text')).toHaveTextContent('Saving memory');
+    expect(screen.getByTestId('progress-text')).toHaveTextContent('Save memory');
     expect(screen.getByTestId('progress-text')).toHaveAttribute('data-has-input', 'false');
   });
 

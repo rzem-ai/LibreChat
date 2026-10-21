@@ -8,7 +8,7 @@ const MAX_DESCRIPTION_CHARS = 1024;
 const MAX_TOOL_NAME_CHARS = 256;
 
 export interface ApprovalPreview {
-  kind: 'command' | 'create' | 'edit' | 'generic';
+  kind: 'command' | 'create' | 'edit' | 'generic' | 'memory_update' | 'memory_delete';
   toolName: string;
   description?: string;
   target?: string;
@@ -116,7 +116,19 @@ export function buildApprovalPreview(
   let target: string | undefined;
   let rawBody = stringifyArguments(request.arguments);
 
-  if (
+  if (request.name === 'set_memory' && parsed) {
+    const key = stringField(parsed, 'key');
+    if (key) {
+      kind = 'memory_update';
+      target = key;
+    }
+  } else if (request.name === 'delete_memory' && parsed) {
+    const key = stringField(parsed, 'key');
+    if (key) {
+      kind = 'memory_delete';
+      target = key;
+    }
+  } else if (
     request.source === 'librechat_code' &&
     request.name === 'bash_tool' &&
     parsed &&
@@ -167,6 +179,8 @@ export function buildApprovalPreview(
 
 /** Keep a large approval batch from multiplying per-action preview work in the composer. */
 export function buildApprovalPreviews(requests: Agents.ToolApprovalRequest[]): ApprovalPreview[] {
+  // Deloitte Custom Change: Memory HITL approval UX integration.
+
   let remainingChars = MAX_BATCH_PREVIEW_CHARS;
   return requests.map((request) => {
     const preview = buildApprovalPreview(request, Math.min(MAX_PREVIEW_CHARS, remainingChars));

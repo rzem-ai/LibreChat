@@ -16,6 +16,7 @@ import { getMemoryKeyError, getMemoryValueError, getMemoryApiErrorMessage } from
 import { useUpdateMemoryMutation, useMemoriesQuery } from '~/data-provider';
 import { getMemoryAddress, getMemoryUpdateAddress } from './address';
 import { useLocalize, useHasAccess, useClockFormat } from '~/hooks';
+import MemorySensitiveDataNotice from './MemorySensitiveDataNotice';
 import MemoryUsageBadge from './MemoryUsageBadge';
 
 interface MemoryEditDialogProps {
@@ -38,6 +39,8 @@ const formatDateTime = (dateString: string, hour12?: boolean): string => {
 };
 
 export default function MemoryEditDialog({
+  // Deloitte Custom Change: Memory HITL approval UX integration.
+
   memory,
   open,
   onOpenChange,
@@ -155,6 +158,7 @@ export default function MemoryEditDialog({
         className="w-11/12 md:max-w-lg"
         main={
           <div className="space-y-4">
+            {hasUpdateAccess && <MemorySensitiveDataNotice />}
             {/* Memory metadata */}
             {memory && (
               <div className="flex items-center justify-between rounded-lg border border-border-light bg-surface-secondary px-3 py-2">
