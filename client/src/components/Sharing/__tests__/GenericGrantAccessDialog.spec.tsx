@@ -287,12 +287,19 @@ describe('GenericGrantAccessDialog - skill editor access warning', () => {
     name: 'Viewer Person',
     accessRoleId: 'viewer',
   } as unknown as TPrincipal;
+  const secondOwner = {
+    type: 'user',
+    id: 'user-4',
+    name: 'Second Owner',
+    accessRoleId: 'owner',
+  } as unknown as TPrincipal;
 
-  const renderSkillDialog = (principals: TPrincipal[]) => {
+  const renderSkillDialog = (principals: TPrincipal[], overrides: Record<string, unknown> = {}) => {
     mockUseResourcePermissionState.mockReturnValue(
       baseState({
         permissionsData: { principals, public: false },
         currentShares: principals,
+        ...overrides,
       }),
     );
     renderDialog({
@@ -374,5 +381,38 @@ describe('GenericGrantAccessDialog - skill editor access warning', () => {
     fireEvent.click(screen.getByText(`make-editor-${viewer.id}`));
 
     expect(screen.getByText('com_ui_skill_editor_access_warning')).toBeInTheDocument();
+  });
+
+  // Deloitte Custom Change: With two persisted owners, the current user removing their
+  // own owner entry from the draft must not hide the warning — they are still a
+  // persisted owner of the Skill until the draft is saved.
+  it('still shows the warning when the owner removes their own entry from the draft', () => {
+    renderSkillDialog([owner, secondOwner, viewer]);
+
+    fireEvent.click(screen.getByText(`remove-${owner.id}`));
+    fireEvent.click(screen.getByText(`make-editor-${viewer.id}`));
+
+    expect(screen.getByText('com_ui_skill_editor_access_warning')).toBeInTheDocument();
+  });
+
+  // Deloitte Custom Change: Granting Editor access to everyone via the public toggle
+  // is the broadest form of the Editor grant this warning exists for, so it must
+  // surface the warning the same as an individual Editor share.
+  it('shows the warning when public access is enabled with the Editor role', () => {
+    renderSkillDialog([owner], { isPublic: true, publicRole: 'editor' });
+
+    expect(screen.getByText('com_ui_skill_editor_access_warning')).toBeInTheDocument();
+  });
+
+  it('does not show the warning when public access is off, even with the Editor role set', () => {
+    renderSkillDialog([owner], { isPublic: false, publicRole: 'editor' });
+
+    expect(screen.queryByText('com_ui_skill_editor_access_warning')).not.toBeInTheDocument();
+  });
+
+  it('does not show the warning when public access is enabled with the Viewer role', () => {
+    renderSkillDialog([owner], { isPublic: true, publicRole: 'viewer' });
+
+    expect(screen.queryByText('com_ui_skill_editor_access_warning')).not.toBeInTheDocument();
   });
 });

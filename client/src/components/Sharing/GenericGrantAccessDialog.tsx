@@ -255,14 +255,13 @@ export default function GenericGrantAccessDialog({
 
   // Deloitte Custom Change: Warn a Skill owner, before saving, that the unsaved
   // sharing draft grants Editor access to someone else. Editors can make
-  // irreversible changes with no version history or undo, so the owner should see
-  // this while they can still change the role or remove the person — not only
-  // after the share is persisted. `GenericGrantAccessDialog` is reachable by
-  // non-owners too (admins, ACL SHARE grantees), so ownership is derived from the
-  // draft itself rather than assumed from the caller.
+  // irreversible changes with no version history or undo, so the owner should
+  // see this while they can still change the role or remove the person — not
+  // only after the share is persisted. Ownership is checked against persisted
+  // shares, not the draft, so it can't be changed by editing one's own entry.
   const isCurrentUserSkillOwner =
     resourceType === ResourceType.SKILL &&
-    allShares.some(
+    currentShares.some(
       (share) =>
         share.type === PrincipalType.USER &&
         share.id === user?.id &&
