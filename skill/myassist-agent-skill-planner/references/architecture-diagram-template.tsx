@@ -519,8 +519,8 @@ export function ParallelLayout() {
   const edges = [
     'M101,290 H124', // 1  User → Input Files
     'M212,290 H275', // 2  Input Files → Agent
-    'M350,184 V251', // 3  Connectors → Agent (top)
-    'M350,388 V329', // 4  Tools → Agent (bottom)
+    'M350,184 V245', // 3  Connectors → Agent (top)
+    'M350,388 V335', // 4  Tools → Agent (bottom)
     'M425,270 H463 V200 H502', // 5  Agent → Skill A (upper branch)
     'M425,310 H463 V380 H502', // 6  Agent → Skill B (lower branch)
     'M617,200 H644 V290 H677', // 7  Skill A → Skill C (fan in, top arc)
