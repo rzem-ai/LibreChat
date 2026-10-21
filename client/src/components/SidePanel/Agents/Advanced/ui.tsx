@@ -1,7 +1,7 @@
+import { Lock } from 'lucide-react';
 import {
   Button,
   Switch,
-  Tag,
   HoverCard,
   CircleHelpIcon,
   HoverCardPortal,
@@ -42,26 +42,17 @@ export function BetaPill() {
 }
 
 // Deloitte Custom Change: SharePoint MCP is limited to a subset of users.
-/** "Limited Access" accent pill. `wrap` breaks the label onto two lines for narrow layouts. */
-export function LimitedAccessPill({ wrap = false }: { wrap?: boolean }) {
+/**
+ * "Limited Access" warning icon, using the semantic `status-warning` token so it follows
+ * custom and high-contrast themes.
+ */
+export function LimitedAccessIcon() {
   const localize = useLocalize();
-  const label = localize('com_ui_limited_access');
-
-  if (wrap) {
-    return (
-      <span className="inline-flex w-[68px] flex-shrink-0 items-center justify-center rounded-3xl border border-amber-600/40 bg-amber-500/10 px-1.5 py-0.5 text-amber-700 dark:text-amber-400">
-        <span className="w-full text-center text-[9px] font-medium uppercase leading-tight tracking-wide">
-          {label}
-        </span>
-      </span>
-    );
-  }
-
   return (
-    <Tag
-      label={label}
-      className="flex-shrink-0 border border-amber-600/40 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-      labelClassName="!ml-0 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide whitespace-nowrap"
+    <Lock
+      role="img"
+      aria-label={localize('com_ui_limited_access')}
+      className="size-3.5 flex-shrink-0 text-status-warning"
     />
   );
 }

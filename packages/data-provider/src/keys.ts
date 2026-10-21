@@ -39,6 +39,7 @@ export enum QueryKeys {
   mcpTools = 'mcpTools',
   mcpConnectionStatus = 'mcpConnectionStatus',
   mcpAuthValues = 'mcpAuthValues',
+  mcpToolsets = 'mcpToolsets',
   agentTools = 'agentTools',
   actions = 'actions',
   assistantDocs = 'assistantDocs',

@@ -27,6 +27,8 @@ const {
   getMCPErrorResponse,
   prepareMCPServerOAuthDeletion,
   cleanupDeletedMCPServerOAuthUsers,
+  // Deloitte Custom Change: MCP Gateway toolset metadata for connector tooltips.
+  createGetMCPToolsets,
 } = require('@librechat/api');
 const {
   Constants,
@@ -44,6 +46,7 @@ const {
 } = require('~/server/services/MCP');
 const { loadMCPServerCatalogs } = require('~/server/services/Tools/mcp');
 const { createOpenIDSessionTokenProvider } = require('~/server/services/OpenIDSessionRefresh');
+const { exchangeOboToken } = require('~/server/services/OboTokenService');
 const {
   cacheMCPServerTools,
   getMCPServerTools,
@@ -335,6 +338,27 @@ const getMCPTools = async (req, res) => {
     res.status(status).json({ message: error.message });
   }
 };
+
+/**
+ * Deloitte Custom Change: get MCP Gateway toolset metadata (user-friendly
+ * descriptions, use cases, access, limitations) for the connector tooltip.
+ * Logic lives in `@librechat/api`; this only wires request-scoped dependencies.
+ * @route GET /api/mcp/toolsets
+ */
+const getMCPToolsets = createGetMCPToolsets({
+  getTenantId,
+  exchangeOboToken,
+  createUpstreamTokenProvider: ({ req, res, identityContext }) =>
+    createOpenIDSessionTokenProvider({
+      req,
+      res,
+      user: req.user,
+      identityContext,
+      tokenPreference: 'access_token',
+    }),
+  resolveAllowlists: (args) => getMCPServersRegistry().resolveAllowlists(args),
+});
+
 /**
  * Mirrors canAccessResource's capability bypass plus per-resource ACL EDIT check.
  * `skipCapabilityWithoutDbIds` lets the list path skip the MANAGE_MCP_SERVERS probe
@@ -736,6 +760,7 @@ const deleteMCPServerController = async (req, res, uninstallOAuthMCP) => {
 
 module.exports = {
   getMCPTools,
+  getMCPToolsets,
   getMCPServersList,
   createMCPServerController,
   getMCPServerById,

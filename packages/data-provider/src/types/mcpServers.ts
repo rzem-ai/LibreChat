@@ -46,6 +46,9 @@ export type MCPServerDBObjectResponse = {
   consumeOnly?: boolean;
   /** True when chat request fields are required before the server can connect. */
   requestScoped?: boolean;
+  /** Deloitte Custom Change: MCP Gateway toolset name for the connector tooltip, resolved
+   *  server-side since `url` itself is redacted for non-editable servers. */
+  toolsetName?: string | null;
 } & MCPOptions;
 
 export type MCPServersListResponse = Record<string, MCPServerDBObjectResponse>;

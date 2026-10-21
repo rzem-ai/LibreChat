@@ -712,7 +712,27 @@ export function resolveServerInstructions(config: ParsedServerConfig): string | 
 export type RedactedServerConfig = Partial<ParsedServerConfig> & {
   /** True when this config needs chat request fields before it can connect. */
   requestScoped?: boolean;
+  /** Deloitte Custom Change: MCP Gateway toolset name for the connector tooltip. */
+  toolsetName?: string | null;
 };
+
+/**
+ * Deloitte Custom Change: extracts the MCP Gateway toolset name a server is configured for,
+ * parsed from its `url`'s `toolsets` query param (e.g. `?toolsets=sharepoint`). The name alone
+ * is not sensitive (it's the same identifier the gateway's public `/toolsets` list exposes), so
+ * it is resolved here — server-side, where the real `url` is still available — and exposed
+ * unconditionally, even when `url` itself is redacted below. Each row maps to exactly one toolset
+ * and one tooltip, so a comma-separated `toolsets` list resolves to no name (minimal tooltip).
+ */
+function parseToolsetNameFromUrl(url: string | undefined): string | null {
+  if (!url) return null;
+  try {
+    const toolsets = new URL(url).searchParams.get('toolsets');
+    return toolsets && !toolsets.includes(',') ? toolsets : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Allowlist-based sanitization for API responses. Only explicitly listed fields are included;
@@ -734,6 +754,7 @@ export function redactServerSecrets(
   const safe: RedactedServerConfig = {
     type: config.type,
     url: config.url,
+    toolsetName: parseToolsetNameFromUrl(config.url), // Deloitte Custom Change: toolset name for tooltip
     title: config.title,
     parentGroup: config.parentGroup, // Deloitte Custom Change: parent group
     description: config.description,
