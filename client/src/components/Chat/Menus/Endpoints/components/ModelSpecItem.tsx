@@ -9,8 +9,8 @@ import { useModelSelectorContext } from '../ModelSelectorContext';
 import { CustomMenuItem as MenuItem } from '../CustomMenu';
 import { cn, getSpecAgentAvatarURL } from '~/utils';
 import ModelInfoTooltip from './ModelInfoTooltip';
-import { isFreeSpec } from './cost';
 import SpecDescription from './SpecDescription';
+import { isFreeSpec } from './cost';
 import SpecIcon from './SpecIcon';
 
 interface ModelSpecItemProps {
