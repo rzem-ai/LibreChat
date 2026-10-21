@@ -138,6 +138,8 @@ const mockUploadCodeEnvFile = require('~/server/services/Files/Code/crud').uploa
 
 jest.mock('./OboTokenService', () => ({
   exchangeOboToken: jest.fn(),
+  // Deloitte Custom Change: OpenID strategy registers its config getter during module initialization.
+  registerOpenIdConfigGetter: jest.fn(),
 }));
 
 jest.mock('./OboPolicyService', () => ({
@@ -3074,7 +3076,7 @@ describe('User parameter passing tests', () => {
         expect.stringContaining('Code Interpreter is not enabled'),
       );
       expect(result).toBe(
-        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. Code Interpreter is not enabled for this endpoint.',
       );
       if (originalDownloadToolName === undefined) {
         delete process.env.SHAREPOINT_MCP_DOWNLOAD_TOOL;
@@ -3140,7 +3142,7 @@ describe('User parameter passing tests', () => {
         expect.objectContaining({ message: 'transient config load failure' }),
       );
       expect(result).toBe(
-        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. Code Interpreter availability could not be confirmed for this request.',
       );
     });
 
@@ -3197,7 +3199,7 @@ describe('User parameter passing tests', () => {
       expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(result).toBe(
-        'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
+        'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. Code Interpreter is not enabled for this endpoint.',
       );
     });
 
@@ -3259,7 +3261,7 @@ describe('User parameter passing tests', () => {
         expect.stringContaining('does not have Code Interpreter (execute_code) available'),
       );
       expect(result).toBe(
-        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. This agent does not have Code Interpreter enabled.',
       );
     });
 
@@ -3315,7 +3317,7 @@ describe('User parameter passing tests', () => {
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Dropped codeFile'));
       expect(result).toBe(
-        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
+        'downloaded report.pdf\nFile "report.pdf" could not be attached to this conversation for use in Code Interpreter. Code Interpreter is unavailable for this request.',
       );
     });
 
@@ -3441,7 +3443,7 @@ describe('User parameter passing tests', () => {
         );
       });
 
-      it('keeps a source-download 504 generic', async () => {
+      it('identifies a SharePoint download timeout without attributing it to Code Interpreter upload', async () => {
         const user = { id: 'gateway-download-timeout-user', role: 'USER' };
         const req = requestWithAgentFileConfig(user, {});
         mockCodeFileDownloadGet.mockRejectedValue(
@@ -3458,8 +3460,82 @@ describe('User parameter passing tests', () => {
         });
 
         expect(result).toBe(
-          'File "report.xlsx" could not be attached to this conversation for use in Code Interpreter. The file transfer to Code Interpreter failed.',
+          'File "report.xlsx" could not be attached to this conversation for use in Code Interpreter. The SharePoint file download timed out (HTTP 504). Try again later.',
         );
+      });
+
+      it.each([
+        [
+          401,
+          'SharePoint did not accept the download credentials. Reconnect the SharePoint account and retry.',
+        ],
+        [403, 'SharePoint denied permission to this file. Check your file permissions.'],
+        [
+          404,
+          'The SharePoint file or download link could not be found. Check that the file still exists, then retry.',
+        ],
+        [429, 'SharePoint is temporarily rate-limiting file downloads. Try again shortly.'],
+        [
+          503,
+          'The SharePoint file-download request failed with a server error (HTTP 503). Try again later.',
+        ],
+      ])('explains SharePoint HTTP %i download failures', async (status, reason) => {
+        const user = { id: `gateway-download-http-${status}`, role: 'USER' };
+        const req = requestWithAgentFileConfig(user, {});
+        const error = Object.assign(new Error(`Request failed with status code ${status}`), {
+          response: { status },
+        });
+        mockCodeFileDownloadGet.mockRejectedValue(error);
+
+        const result = await invokeWithArtifact({ user, req, artifacts: gatewayArtifact() });
+
+        expect(result).toContain(reason);
+      });
+
+      it('identifies an expired gateway download link', async () => {
+        const user = { id: 'gateway-expired-link-user', role: 'USER' };
+        const req = requestWithAgentFileConfig(user, {});
+
+        const result = await invokeWithArtifact({
+          user,
+          req,
+          artifacts: gatewayArtifact({ expiresAt: '2020-01-01T00:00:00Z' }),
+        });
+
+        expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
+        expect(result).toContain(
+          'The SharePoint download link has expired or is invalid. Download the file again and retry.',
+        );
+      });
+
+      it('identifies a SharePoint download blocked by the configured domain allowlist', async () => {
+        const user = { id: 'gateway-download-domain-user', role: 'USER' };
+        const req = requestWithAgentFileConfig(user, {});
+        mockGetAppConfig.mockResolvedValue({
+          mcpSettings: { codeFileAllowedDomains: ['https://allowed.example'] },
+        });
+        mockIsMCPDomainAllowed.mockResolvedValue(false);
+
+        const result = await invokeWithArtifact({ user, req, artifacts: gatewayArtifact() });
+
+        expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
+        expect(result).toContain(
+          'The SharePoint download URL is not permitted by the configured domain policy. Contact your administrator.',
+        );
+      });
+
+      it('identifies when download configuration could not be loaded', async () => {
+        const user = { id: 'gateway-download-config-user', role: 'USER' };
+        const req = requestWithAgentFileConfig(user, {});
+        mockGetAppConfig.mockRejectedValue(new Error('private configuration details'));
+
+        const result = await invokeWithArtifact({ user, req, artifacts: gatewayArtifact() });
+
+        expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
+        expect(result).toContain(
+          'The file download settings could not be loaded, so the SharePoint file was not retrieved. Contact your administrator.',
+        );
+        expect(result).not.toContain('private configuration details');
       });
 
       it('uses allowlisted Code Runtime timeout details in the attachment explanation', async () => {
@@ -4171,7 +4247,7 @@ describe('User parameter passing tests', () => {
       expect(mockCodeFileDownloadGet).not.toHaveBeenCalled();
       expect(mockUploadCodeEnvFile).not.toHaveBeenCalled();
       expect(result).toBe(
-        'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. The file upload timed out. Please try again with a smaller file (under 1MB). We\'re actively working to increase the size limit.',
+        'File "report.pdf" could not be attached to this conversation for use in Code Interpreter. Code Interpreter is unavailable for this request.',
       );
     });
 
