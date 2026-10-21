@@ -30,7 +30,7 @@ import {
  * Overrides: LIVE_ENDPOINT, LIVE_MODEL, LIVE_SKILL_USAGE.
  */
 const ENDPOINT = process.env.LIVE_ENDPOINT?.trim() || 'Azure Global';
-const MODEL = process.env.LIVE_MODEL?.trim() || 'gpt-56-luna';
+const MODEL = process.env.LIVE_MODEL?.trim() || 'gpt-6-luna';
 const SKILL = process.env.LIVE_SKILL_USAGE?.trim() || 'capability-builder';
 
 const EDITED_CANARY = 'MANGO';

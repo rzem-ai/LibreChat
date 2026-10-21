@@ -158,6 +158,7 @@ function createMocks(overrides?: {
   maxContextTokens?: number;
   modelDefault?: number;
   maxOutputTokens?: number;
+  llmConfig?: Record<string, unknown>;
   endpointTokenConfig?: EndpointTokenConfig;
   useRealTokenLookup?: boolean;
   providerTools?: unknown[];
@@ -175,6 +176,7 @@ function createMocks(overrides?: {
     maxContextTokens,
     modelDefault = 200000,
     maxOutputTokens = 4096,
+    llmConfig = { model, maxTokens: maxOutputTokens },
     endpointTokenConfig,
     useRealTokenLookup = false,
     providerTools,
@@ -200,7 +202,7 @@ function createMocks(overrides?: {
   const res = {} as unknown as import('express').Response;
 
   const mockGetOptions = jest.fn().mockResolvedValue({
-    llmConfig: { model, maxTokens: maxOutputTokens },
+    llmConfig,
     endpointTokenConfig,
     ...(providerTools !== undefined ? { tools: providerTools } : {}),
   } satisfies InitializeResultBase);
@@ -2080,6 +2082,34 @@ describe('initializeAgent — maxContextTokens', () => {
 
     const expected = Math.round((modelDefault - maxOutputTokens) * 0.95);
     expect(result.maxContextTokens).toBe(expected);
+  });
+
+  it.each([
+    ['Responses', 'max_output_tokens'],
+    ['Chat Completions', 'max_completion_tokens'],
+  ])('reserves the output cap moved into modelKwargs for %s', async (_route, param) => {
+    const modelDefault = 1050000;
+    const outputCap = 128000;
+    const { agent, req, res, loadTools, db } = createMocks({
+      maxContextTokens: undefined,
+      modelDefault,
+      llmConfig: { model: 'gpt-56-terra', modelKwargs: { [param]: outputCap } },
+    });
+
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.OPENAI]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    expect(result.maxContextTokens).toBe(Math.round((modelDefault - outputCap) * 0.95));
   });
 
   it('falls back to formula when maxContextTokens is 0', async () => {

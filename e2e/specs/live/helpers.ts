@@ -154,16 +154,13 @@ export async function selectModel(page: Page, endpoint: string, model: string) {
   const search = page.locator('#model-search');
 
   // A modelSpec-backed option renders with its display label as the option's
-  // accessible name (e.g. "gpt-56-luna" renders as "GPT 5.6 Luna" — see
+  // accessible name (e.g. "gpt-6-luna" renders as "GPT 6 Luna" — see
   // SearchResults.tsx), never the raw model id. Search and match on that
   // label when the endpoint/model pair is behind a spec; otherwise (a bare
   // endpoint/model with no spec) the option's name is the raw model id.
   const spec = loadModelSpecs().find((s) => s.endpoint === endpoint && s.model === model);
-  const searchTerm = spec
-    ? spec.label
-    : model.includes('/')
-      ? model.split('/').pop()!
-      : model;
+  const bareModel = model.includes('/') ? model.split('/').pop()! : model;
+  const searchTerm = spec ? spec.label : bareModel;
   await search.fill(searchTerm);
   const escapedSearch = escapeRegExp(searchTerm);
   const namePattern = spec
