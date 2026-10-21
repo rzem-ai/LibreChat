@@ -68,7 +68,7 @@ export default function SkillDetail({ skill, onEdit, onDelete }: SkillDetailProp
                 side="top"
                 render={
                   <Pin
-                    className="size-5 shrink-0 text-cyan-500"
+                    className="size-5 shrink-0 text-status-info"
                     aria-label={localize('com_ui_skills_always_apply_pin_title')}
                   />
                 }
