@@ -19,10 +19,9 @@ export const approvalPanelOpenFamily = atomFamily((_conversationId: string) => a
 
 /**
  * True while the composer's review panel is open on this tool-approval action.
- * The panel then owns the decisions and the batch submit, and it overlays the
- * tail of the thread where the live approval card sits, so the thread card
- * steps back to a record of the request until the panel is collapsed.
- * Without a conversation there is no composer, so nothing is presented there.
+ * @param conversationId - Conversation owning the pending approval, if any.
+ * @param actionId - Server action ID displayed by the composer panel.
+ * @returns Whether the expanded composer panel presents this action.
  */
 export function useComposerPresentsApproval(
   conversationId: string | null | undefined,

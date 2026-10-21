@@ -3,6 +3,7 @@ const fs = require('fs').promises;
 const FormData = require('form-data');
 const { Readable } = require('stream');
 const { logger } = require('@librechat/data-schemas');
+const { getUploadTempPath } = require('~/server/routes/files/multer');
 const {
   inspectContent,
   extractFileContent,
@@ -370,7 +371,12 @@ class STTService {
 
       let text;
       try {
-        const audioBuffer = await fs.readFile(req.file.path);
+        // Deloitte Custom Change: OSS Vulnerabilities 8.8
+        const tempPath = getUploadTempPath(req);
+        if (!tempPath) {
+          throw new Error('Invalid staged audio upload path');
+        }
+        const audioBuffer = await fs.readFile(tempPath);
         const audioFile = {
           originalname: req.file.originalname,
           mimetype: req.file.mimetype,
@@ -419,8 +425,12 @@ class STTService {
       res.sendStatus(500);
     } finally {
       try {
-        await fs.unlink(req.file.path);
-        logger.debug('[/speech/stt] Temp. audio upload file deleted');
+        // Deloitte Custom Change: OSS Vulnerabilities 8.8
+        const tempPath = getUploadTempPath(req);
+        if (tempPath) {
+          await fs.unlink(tempPath);
+          logger.debug('[/speech/stt] Temp. audio upload file deleted');
+        }
       } catch {
         logger.debug('[/speech/stt] Temp. audio upload file already deleted');
       }

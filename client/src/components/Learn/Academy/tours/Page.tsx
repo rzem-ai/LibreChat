@@ -8,7 +8,7 @@ import { useLocalize } from '~/hooks';
 
 export default function Tours(): JSX.Element {
   const localize = useLocalize();
-  const { resumeGettingStartedTour } = useLearningTour();
+  const { resumeCourseTour } = useLearningTour();
   const { progressById } = useTourProgress();
   const hero = TOURS.find((tour) => tour.isGettingStartedTour);
   const rest = TOURS.filter((tour) => tour !== hero);
@@ -38,7 +38,7 @@ export default function Tours(): JSX.Element {
         statusLabel={tour.comingSoon ? localize('com_learning_coming_soon') : statusLabel}
         ctaLabel={tour.comingSoon ? localize('com_learning_coming_soon') : ctaLabel}
         disabled={tour.comingSoon}
-        onStart={() => resumeGettingStartedTour(resumeStep)}
+        onStart={() => resumeCourseTour(tour.id, resumeStep)}
       />
     );
   };

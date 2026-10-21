@@ -49,6 +49,23 @@ const createStorage = ({ uniqueTempPath = false } = {}) =>
 
 const storage = createStorage();
 
+/** Deloitte Custom Change: OSS Vulnerabilities 8.8
+ * Reconstructs the staged path from Multer's validated filename rather than req.file.path. */
+const getUploadTempPath = (req) => {
+  const filename = req.file?.filename;
+  const uploadsPath = req.config?.paths?.uploads;
+  const userId = req.user?.id;
+  if (typeof filename !== 'string' || !uploadsPath || !userId) {
+    return;
+  }
+
+  if (!filename || filename === '.' || filename === '..' || path.basename(filename) !== filename) {
+    return;
+  }
+
+  return path.join(uploadsPath, 'temp', String(userId), filename);
+};
+
 const importFileFilter = (req, file, cb) => {
   if (file.mimetype === 'application/json') {
     cb(null, true);
@@ -148,6 +165,7 @@ const createMulterInstance = async (options = {}) => {
 module.exports = {
   createMulterInstance,
   createStorage,
+  getUploadTempPath,
   storage,
   importFileFilter,
   createFileFilter,

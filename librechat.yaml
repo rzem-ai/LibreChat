@@ -1,6 +1,19 @@
 version: 1.3.17 # Copy from librechat.example.yaml
 cache: true
 
+# ========================================
+# Balance Configuration
+# Deloitte Custom Change: per-user token balance with daily auto-refill; ${VAR} values are resolved from the environment.
+# https://www.librechat.ai/docs/configuration/librechat_yaml/object_structure/balance
+# ========================================
+balance:
+  enabled: '${CHECK_BALANCE}' # Enable token balance tracking for users (true/false)
+  startBalance: '${START_BALANCE}' # Starting token balance for new users
+  autoRefillEnabled: true # Automatically refill balances on a schedule
+  refillIntervalValue: 1 # Number of interval units between each refill
+  refillIntervalUnit: "days" # Unit for the refill interval: "seconds", "minutes", "hours", "days"
+  refillAmount: '${BALANCE_REFILL_AMOUNT}' # Tokens added per refill cycle
+
 # 'includedTools' restricts the list of tools available in the Agent Builder.
 includedTools:
   - 'file_search'
@@ -23,6 +36,9 @@ interface:
   bookmarks: false # Set to false to disable saving conversations as bookmarks
 
   buildInfo: false # Set to false to hide the About section in settings
+
+  contextUsage: true # Users see the context window and token usage gauge.
+  contextCost: true # users see cost values in the usage details (USD)
 
   # Deloitte Custom Change: Retention Update
   fileRetentionHours: 1440 # Independent per-file retention deadline in hours (60 days)
@@ -173,7 +189,10 @@ interface:
     # the five $-$$$$$ tiers: costs below 2 are $, then 2, 5, 8, and 15 start the next tiers.
     modelPricingTierBreakpoints: [ 2, 5, 8, 15 ]
     highCostAlertTiers: [ 5 ] # Which of the 5 price tiers will show the High Cost alert chip.
-
+    # Deloitte Custom Change: balance display flags (see docs/balance_and_cost_controls.md).
+    showBalanceAsCurrency: true # Show the user's balance in USD rather than tokens
+    showBalanceGauge: true # Show a balance gauge above the account avatar (hover for details)
+    showBalanceHelperText: true # Show refill and cost-saving guidance in the gauge hover card
 fileConfig:
   endpoints:
     default:
@@ -504,8 +523,8 @@ modelSpecs:
       # Deloitte Custom Change: editorial metadata for the model info tooltip — 1-5 ratings
       # and capability flags shown to users, separate from the tool-enablement flags below.
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
-        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -530,8 +549,8 @@ modelSpecs:
         supports:
           webSearch: true
           imageGeneration: false
-        speed: 1 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
-        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        speed: 1 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
 
     - name: 'azure-global-gpt-61-sol'
       label: 'GPT 6.1 Sol'
@@ -547,8 +566,8 @@ modelSpecs:
         supports:
           webSearch: true
           imageGeneration: false
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
-        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
 
     - name: 'anthropic-claude-haiku-4-5'
       label: 'Claude Haiku 4.5'
@@ -562,8 +581,8 @@ modelSpecs:
         model: 'claude-haiku-4-5'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
-        intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -580,8 +599,8 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-haiku-5-5'
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
-        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -597,8 +616,8 @@ modelSpecs:
         model: 'claude-sonnet-5'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
-        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -616,8 +635,8 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-sonnet-5-5'
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
-        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -633,8 +652,8 @@ modelSpecs:
         model: 'claude-sonnet-4-6'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
-        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -650,8 +669,8 @@ modelSpecs:
         model: 'claude-opus-4-6'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
-        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -667,8 +686,8 @@ modelSpecs:
         model: 'claude-opus-4-8'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 3 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
-        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        speed: 3 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -684,8 +703,8 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-opus-5-5'
       details:
-        speed: 4 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
-        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        speed: 4 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -702,8 +721,8 @@ modelSpecs:
         model: 'au.anthropic.claude-sonnet-4-6'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
-        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
         supports:
           webSearch: false
           imageGeneration: false
@@ -719,8 +738,8 @@ modelSpecs:
         model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
         promptPrefix: *deloitteSystemPrompt
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
-        intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
         supports:
           webSearch: false
           imageGeneration: false
@@ -737,8 +756,8 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-haiku-5-5'
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
-        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -754,8 +773,8 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-sonnet-5-5'
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
-        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -771,8 +790,8 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-opus-5-5'
       details:
-        speed: 4 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
-        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 20 October 2026
+        speed: 4 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -782,20 +801,29 @@ modelSpecs:
 # See documentation: https://github.com/Deloitte-Australia/ea-mcp-gateway/blob/feature/prototype/docs/MCP_Gateway_Wiki.md
 mcpServers:
   # https://www.librechat.ai/docs/features/mcp
+  # Deloitte Custom Change: do NOT rename the `-research` (IBISWorld) and `-news` (AFR) keys to
+  # match their `toolsets` values. The key is the stable server ID baked into saved agent tool IDs
+  # (`<tool>_mcp_<serverKey>`), agents' `mcpServerNames`, and users' persisted connector selections.
+  # Renaming makes handleTools skip those tools and useMCPSelect prune the selections, silently
+  # breaking existing agents. Change only the `toolsets` query param, unless stored references are migrated.
   cleartrack-mcp-gateway-research:
     title: 'IBISWorld'
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=research'
+    # Trust classifications from operator-managed ClearTrack gateways.
+    trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     iconPath: '/assets/mcp/ibisworld.png' # same logo in both themes
 
   cleartrack-mcp-gateway-news:
+    # see the note above: keep this key stable
     title: 'AFR News'
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=news'
+    trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     iconPath: '/assets/mcp/afr.png' # same logo in both themes
@@ -805,6 +833,7 @@ mcpServers:
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=kx'
+    trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     iconPathLight: '/assets/mcp/kx-light.png'
@@ -815,6 +844,7 @@ mcpServers:
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=desc'
+    trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     iconPathLight: '/assets/mcp/deloitte-light.png' # placeholder: no dedicated DESC logo yet
@@ -825,6 +855,7 @@ mcpServers:
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=gims'
+    trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     iconPathLight: '/assets/mcp/deloitte-light.png' # placeholder: no dedicated GIMS logo yet
@@ -835,6 +866,7 @@ mcpServers:
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
     url: '${MCP_GATEWAY_URL}?toolsets=sharepoint'
+    trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
     # Deloitte Custom Change: Only this trusted tool may receive current-request attachment bytes.

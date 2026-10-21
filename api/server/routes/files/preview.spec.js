@@ -111,6 +111,17 @@ describe('GET /files/:file_id/preview', () => {
     mockGetAgents.mockResolvedValue([]);
   });
 
+  it('returns the authenticated user files as JSON', async () => {
+    mockGetFiles.mockResolvedValueOnce([{ file_id: 'file-123', filename: 'report.txt' }]);
+
+    const res = await request(buildApp()).get('/files');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/json');
+    expect(res.body).toEqual([{ file_id: 'file-123', filename: 'report.txt' }]);
+    expect(mockGetFiles).toHaveBeenCalledWith({ user: OWNER_USER_ID });
+  });
+
   it('returns 404 when the file does not exist (auth check fails first via fileAccess)', async () => {
     /* `fileAccess` middleware does its own getFiles lookup and returns
      * 404 before our handler ever runs. This test asserts the boundary

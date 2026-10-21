@@ -371,6 +371,11 @@ export const getMCPAuthValues = (serverName: string): Promise<q.MCPAuthValuesRes
   return request.get(endpoints.mcpAuthValues(serverName));
 };
 
+/** Deloitte Custom Change: MCP Gateway toolset metadata for the connector tooltip. */
+export const getMCPToolsets = (): Promise<q.MCPToolsetsResponse> => {
+  return request.get(endpoints.mcpToolsets());
+};
+
 export function cancelMCPOAuth(serverName: string): Promise<m.CancelMCPOAuthResponse> {
   return request.post(endpoints.cancelMCPOAuth(serverName), {});
 }

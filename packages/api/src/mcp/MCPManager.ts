@@ -613,12 +613,24 @@ export class MCPManager extends UserConnectionManager {
   }> {
     try {
       const signal = createDeadlineAbortSignal(options?.deadlineMs, options?.signal);
-      const readToolCatalog = (connection: MCPConnection) =>
-        options == null
-          ? MCPServerInspector.getToolCatalog(serverName, connection)
-          : MCPServerInspector.getToolCatalog(serverName, connection, options.deadlineMs, signal);
       const registry = MCPServersRegistry.getInstance();
       const effectiveConfig = serverConfig ?? (await registry.getServerConfig(serverName, userId));
+      const readToolCatalog = (connection: MCPConnection) =>
+        options == null
+          ? MCPServerInspector.getToolCatalog(
+              serverName,
+              connection,
+              undefined,
+              undefined,
+              effectiveConfig,
+            )
+          : MCPServerInspector.getToolCatalog(
+              serverName,
+              connection,
+              options.deadlineMs,
+              signal,
+              effectiveConfig,
+            );
       const useAppConnection =
         effectiveConfig != null &&
         canUseAppConnection(effectiveConfig) &&

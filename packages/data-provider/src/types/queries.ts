@@ -166,6 +166,20 @@ export type MCPServersResponse = {
   servers: Record<string, MCPServer>;
 };
 
+/** Deloitte Custom Change: MCP Gateway toolset metadata for the connector tooltip. */
+export type MCPToolsetDetails = {
+  name: string;
+  description: string;
+  userFriendlyDescription: string;
+  useCases: string[];
+  access: string[];
+  limitations: string[];
+};
+
+export type MCPToolsetsResponse = {
+  toolsets: MCPToolsetDetails[];
+};
+
 export type VerifyToolAuthParams = { toolId: string };
 export type VerifyToolAuthResponse = {
   authenticated: boolean;

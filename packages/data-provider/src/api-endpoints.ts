@@ -257,6 +257,8 @@ export const mcpReinitialize = (serverName: string) =>
 export const mcpConnectionStatus = () => `${BASE_URL}/api/mcp/connection/status`;
 export const mcpServerConnectionStatus = (serverName: string) =>
   `${BASE_URL}/api/mcp/connection/status/${serverName}`;
+/** Deloitte Custom Change: MCP Gateway toolset metadata for the connector tooltip. */
+export const mcpToolsets = () => `${BASE_URL}/api/mcp/toolsets`;
 export const mcpAuthValues = (serverName: string) => {
   return `${BASE_URL}/api/mcp/${serverName}/auth-values`;
 };

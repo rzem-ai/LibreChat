@@ -9,7 +9,7 @@ import {
   validateVideo,
   validateAudio,
   evaluateContent,
-  withTimeout,
+  withTimeoutOrUndefined,
   validateFileContent,
 } from './validation';
 
@@ -946,7 +946,7 @@ describe('evaluateContent', () => {
   });
 });
 
-describe('withTimeout', () => {
+describe('withTimeoutOrUndefined', () => {
   beforeEach(() => {
     jest.useFakeTimers();
   });
@@ -956,14 +956,14 @@ describe('withTimeout', () => {
   });
 
   it('resolves with the value when the promise settles before the timeout', async () => {
-    const result = withTimeout(Promise.resolve('done'), 4000);
+    const result = withTimeoutOrUndefined(Promise.resolve('done'), 4000);
     await Promise.resolve(); // flush the microtask queue so the .then handler runs
     await expect(result).resolves.toBe('done');
   });
 
   it('resolves with undefined once the timeout elapses without the promise settling', async () => {
     const neverSettles = new Promise(() => {});
-    const result = withTimeout(neverSettles, 4000);
+    const result = withTimeoutOrUndefined(neverSettles, 4000);
 
     jest.advanceTimersByTime(4000);
 

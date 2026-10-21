@@ -1,6 +1,8 @@
+// Deloitte Custom Change: balanceSchema parses the balance block so ${VAR} placeholders resolve
 import {
   AgentCapabilities,
   EModelEndpoint,
+  balanceSchema,
   filtersConfigSchema,
   hasActiveFiltersConfig,
   getConfigDefaults,
@@ -24,6 +26,22 @@ import { processModelSpecs } from './specs';
 import { loadEndpoints } from './endpoints';
 import { loadOCRConfig } from './ocr';
 import logger from '~/config/winston';
+
+/** Deloitte Custom Change: Resolves `${VAR}` placeholders in the `balance` block; falls back to legacy env vars when absent or invalid. */
+export function loadBalanceConfig(config: DeepPartial<TCustomConfig>): AppConfig['balance'] {
+  const parsed = config.balance ? balanceSchema.safeParse(config.balance) : undefined;
+  if (parsed?.success) {
+    return parsed.data;
+  }
+  if (parsed) {
+    logger.warn(`Invalid balance config, falling back to env vars: ${parsed.error.message}`);
+  }
+  const startBalance = process.env.START_BALANCE;
+  return {
+    enabled: process.env.CHECK_BALANCE?.toLowerCase().trim() === 'true',
+    startBalance: startBalance ? parseInt(startBalance, 10) : undefined,
+  };
+}
 
 export function loadSummarizationConfig(
   config: DeepPartial<TCustomConfig>,
@@ -147,11 +165,9 @@ export const AppService = async (params?: {
     | FileSources.firebase
     | FileSources.azure_blob
     | FileSources.cloudfront;
-  const startBalance = process.env.START_BALANCE;
-  const balance = config.balance ?? {
-    enabled: process.env.CHECK_BALANCE?.toLowerCase().trim() === 'true',
-    startBalance: startBalance ? parseInt(startBalance, 10) : undefined,
-  };
+
+  // Deloitte Custom Change: balance config is parsed so ${VAR} placeholders become numbers/booleans (see loadBalanceConfig)
+  const balance = loadBalanceConfig(config);
   const transactions = config.transactions ?? configDefaults.transactions;
   const imageOutputType = config?.imageOutputType ?? configDefaults.imageOutputType;
 

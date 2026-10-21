@@ -494,6 +494,7 @@ describe('share routes', () => {
     );
 
     expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toContain('application/json');
     expect(getSharedLinks).toHaveBeenCalledWith(
       'user-123',
       cursor,
@@ -1834,7 +1835,9 @@ describe('share-scoped file routes', () => {
   });
 
   it('downloads stored text for a snapshotted text-source file', async () => {
-    getFiles.mockResolvedValue([{ status: 'ready', text: 'Shared extracted text' }]);
+    getFiles.mockResolvedValue([
+      { status: 'ready', text: '<script>alert("untrusted content")</script>' },
+    ]);
     getSharedLinkFile.mockResolvedValue({
       file: {
         file_id: 'file-1',
@@ -1851,7 +1854,9 @@ describe('share-scoped file routes', () => {
     expect(response.status).toBe(200);
     expect(response.headers['content-type']).toContain('text/plain');
     expect(response.headers['content-disposition']).toContain('attachment; report.pdf.txt');
-    expect(response.text).toBe('Shared extracted text');
+    expect(response.headers['x-content-type-options']).toBe('nosniff');
+    expect(response.headers['content-security-policy']).toBe('sandbox');
+    expect(response.text).toBe('<script>alert("untrusted content")</script>');
     expect(mockGetStrategyFunctions).not.toHaveBeenCalled();
   });
 
