@@ -39,7 +39,7 @@ interface:
 
   contextUsage: true # Users see the context window and token usage gauge.
   contextCost: true # users see cost values in the usage details (USD)
-  
+
   # Deloitte Custom Change: Retention Update
   fileRetentionHours: 1440 # Independent per-file retention deadline in hours (60 days)
 
