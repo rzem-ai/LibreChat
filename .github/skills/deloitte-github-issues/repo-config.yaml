@@ -1,0 +1,229 @@
+repository:
+  owner: Deloitte-Australia
+  name: tt-librechat
+
+github:
+  account: Deloitte-Australia
+
+labels:
+  bug: "🐛 bug"
+  enhancement: "✨ enhancement"
+
+assignees:
+  Alleena: alwaseem_deloitte
+  Ally: afulton_deloitte
+  Carlton: cmapundu_deloitte
+  Connor: cforsyth_deloitte
+  Emmanuel: emchu_deloitte
+  Indi: iabeywickrama_deloitte
+  Isabelle: istran_deloitte
+  Ish: iarifin_deloitte
+  Ishaq: iarifin_deloitte
+  Jack: jwalkinshaw_deloitte
+  Jyotin: jyotarora_deloitte
+  Kiel: kbustamante_deloitte
+  Kosi: kakaeze_deloitte
+  Mark Sturtz: msturtz_deloitte
+  Nik: niwright_deloitte
+  Raman: rasangra_deloitte
+  Sunny: suntrinh_deloitte
+  Venkat: venramamurthi_deloitte
+
+expertise:
+  Ally:
+    - security
+    - governance
+    - platform architecture
+    - ways of working
+    - release management
+
+  Sunny:
+    - agents
+    - agent builder
+    - agent marketplace
+    - prompts
+    - skills
+    - training
+    - communications
+
+  Jack:
+    - strategy
+    - roadmap
+    - prioritisation
+
+  Isabelle:
+    - MCP
+    - connectors
+    - integrations
+    - tool calling
+    - SharePoint
+    - AFR
+    - IBISWorld
+    - GIMS
+    - DESC
+    - DPN
+    - KX
+
+  Ishaq:
+    - file handling
+    - uploads
+    - document processing
+
+  Jyotin:
+    - testing
+    - QA
+    - validation
+
+  Kiel:
+    - redis
+    - valkey
+    - caching
+    - code interpreter
+    - run code
+
+  Kosi:
+    - evaluation
+    - benchmarking
+    - metrics
+
+  Alleena:
+    - skill uploads
+
+epics:
+  - id: "agents"
+    title: "Epic: Agents"
+    description: "Anything related to Agent Builder and Agent Marketplace"
+    number: 468
+    default_assignee: "Sunny"
+    keywords:
+      - agent
+      - agents
+      - agent builder
+      - marketplace
+      - multi-agent
+    url: "https://github.com/Deloitte-Australia/tt-librechat/issues/468"
+
+  - id: "strategy"
+    title: "Epic: Strategy Work"
+    description: "Strategic initiatives, planning and roadmap work"
+    number: 359
+    default_assignee: "Jack"
+    keywords:
+      - strategy
+      - roadmap
+      - planning
+      - prioritisation
+    url: "https://github.com/Deloitte-Australia/tt-librechat/issues/359"
+
+  - id: "change-comms-training"
+    title: "Epic: Change, Comms and Training"
+    number: 357
+    default_assignee: "Sunny"
+    keywords:
+      - change
+      - comms
+      - communications
+      - training
+      - adoption
+    url: "https://github.com/Deloitte-Australia/tt-librechat/issues/357"
+
+  - id: "security"
+    title: "Epic: Security"
+    number: 297
+    default_assignee: "Ally"
+    keywords:
+      - security
+      - authentication
+      - authorisation
+      - permissions
+      - governance
+    url: "https://github.com/Deloitte-Australia/tt-librechat/issues/297"
+
+  - id: "ways-of-working"
+    title: "Epic: Ways of Working"
+    number: 253
+    default_assignee: "Ally"
+    keywords:
+      - workflow
+      - process
+      - governance
+      - standards
+    url: "https://github.com/Deloitte-Australia/tt-librechat/issues/253"
+
+  - id: "testing"
+    title: "Epic: Testing"
+    number: 251
+    default_assignee: "Jyotin"
+    keywords:
+      - testing
+      - qa
+      - regression
+      - validation
+      - defect
+    url: "https://github.com/Deloitte-Australia/tt-librechat/issues/251"
+
+  - id: "evaluation"
+    title: "Epic: Evaluation"
+    number: 250
+    default_assignee: "Kosi"
+    keywords:
+      - evaluation
+      - benchmark
+      - scoring
+      - metrics
+    url: "https://github.com/Deloitte-Australia/tt-librechat/issues/250"
+
+  - id: "file-handling"
+    title: "Epic: File Handling"
+    number: 249
+    default_assignee: "Ishaq"
+    keywords:
+      - file
+      - files
+      - upload
+      - download
+      - attachment
+      - document
+    url: "https://github.com/Deloitte-Australia/tt-librechat/issues/249"
+
+  - id: "mcps"
+    title: "Epic: MCPs"
+    number: 248
+    default_assignee: "Isabelle"
+    keywords:
+      - mcp
+      - integration
+      - connector
+      - sharepoint
+      - ibisworld
+      - gims
+      - desc
+      - afr
+      - dpn
+      - kx
+    url: "https://github.com/Deloitte-Australia/tt-librechat/issues/248"
+
+  - id: "skills"
+    title: "Epic: Skills"
+    description: "Skills, skill invocation, skill development and skill uploads"
+    number: 247
+    default_assignee: "Alleena (upload/creation errors) or Sunny (support)"
+    keywords:
+      - skill
+      - skills
+      - skill upload
+      - skill invocation
+      - skill creation
+    url: "https://github.com/Deloitte-Australia/tt-librechat/issues/247"
+
+  - id: "core-platform"
+    title: "Epic: Core Platform"
+    number: 231
+    default_assignee: "Ally"
+    keywords:
+      - platform
+      - infrastructure
+      - frontend
+      - backend
+      - core
+    url: "https://github.com/Deloitte-Australia/tt-librechat/issues/231"

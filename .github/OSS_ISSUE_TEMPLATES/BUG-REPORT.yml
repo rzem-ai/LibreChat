@@ -7,13 +7,6 @@ body:
     attributes:
       value: |
         Thanks for taking the time to fill out this bug report!
-
-        Before submitting, please:
-        - Search existing [Issues and Discussions](https://github.com/LibreChat-AI/LibreChat/discussions) to see if your bug has already been reported
-        - Use [Discussions](https://github.com/LibreChat-AI/LibreChat/discussions) instead of Issues for:
-          - General inquiries
-          - Help with setup
-          - Questions about whether you're experiencing a bug
   - type: textarea
     id: what-happened
     attributes:
