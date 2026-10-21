@@ -3083,7 +3083,7 @@
   "com_learning_status_complete": "Complete",
   "com_learning_status_in_progress": "{{0}}% complete",
   "com_learning_status_not_started": "Not started",
-  "com_learning_tour_restart": "Watch again",
+  "com_learning_tour_restart": "Restart tour",
   "com_learning_tour_continue": "Continue",
   "com_learning_coming_soon": "Coming soon",
   "com_learning_search_resources": "Search learning resources",
