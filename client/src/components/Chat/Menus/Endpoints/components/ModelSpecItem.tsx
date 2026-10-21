@@ -10,6 +10,7 @@ import { CustomMenuItem as MenuItem } from '../CustomMenu';
 import { cn, getSpecAgentAvatarURL } from '~/utils';
 import ModelInfoTooltip from './ModelInfoTooltip';
 import SpecDescription from './SpecDescription';
+import { isFreeSpec } from './cost';
 import SpecIcon from './SpecIcon';
 
 interface ModelSpecItemProps {
@@ -22,7 +23,8 @@ interface ModelSpecItemProps {
 
 export function ModelSpecItem({ spec, isSelected, posInSet, setSize }: ModelSpecItemProps) {
   const localize = useLocalize();
-  const { handleSelectSpec, endpointsConfig, agentsMap } = useModelSelectorContext();
+  const { handleSelectSpec, endpointsConfig, agentsMap, modelPricing } = useModelSelectorContext();
+  const isFree = isFreeSpec(spec, modelPricing);
   const { isFavoriteSpec, toggleFavoriteSpec } = useFavorites();
   const { showIconInMenu = true } = spec;
   const agentAvatarURL = getSpecAgentAvatarURL(spec, agentsMap);
@@ -67,7 +69,14 @@ export function ModelSpecItem({ spec, isSelected, posInSet, setSize }: ModelSpec
               </div>
             )}
             <div className="flex min-w-0 flex-col gap-1">
-              <span className="truncate text-left">{spec.label}</span>
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="truncate text-left">{spec.label}</span>
+                {isFree && (
+                  <span className="inline-flex h-[18px] shrink-0 items-center justify-center rounded-full border border-surface-submit bg-surface-submit/20 px-2 pb-[2px] text-[11px] font-medium leading-none text-surface-submit dark:text-white">
+                    {localize('com_ui_free')}
+                  </span>
+                )}
+              </div>
               <SpecDescription description={spec.description} />
             </div>
           </div>

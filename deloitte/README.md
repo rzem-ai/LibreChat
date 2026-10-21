@@ -184,7 +184,7 @@ Tip: ask your AI coding assistant to create (for new) or update (for existing) .
 25. BASE_URL_AZURE_AU=https://au-openai-exp.ctk.au.deloitte.com/openai/v1
 26. BASE_URL_AZURE_US=https://us-openai-exp.ctk.au.deloitte.com/openai/v1
 27. BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com
-28. `BASE_URL_AZURE_GLOBAL=https://us-openai-exp.ctk.au.deloitte.com/openai/v1`
+28. `BASE_URL_AZURE_GLOBAL=https://us-foundry-exp.ctk.au.deloitte.com/openai/v1`
 29. `BASE_URL_AZURE_FOUNDRY_AU=https://au-foundry-exp.ctk.au.deloitte.com/openai/v1`
 30. `AZURE_OPENAI_GLOBAL_HOST=https://us-openai-exp.ctk.au.deloitte.com/openai/v1`
 31. `RAG_OPENAI_REGIONAL_BASEURL=http://gateway-proxy:8081/azure-au`

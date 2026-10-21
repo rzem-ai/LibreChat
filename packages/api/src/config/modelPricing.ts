@@ -42,7 +42,7 @@ function getPriceTier(blendedCost: number, breakpoints: number[]): number {
 
 /**
  * Flattens every configured model's resolved rate into the `{ inputPer1M, outputPer1M,
- * provider, tier, isHighCost }` shape, keyed by endpoint and model. Returns an empty map
+ * cacheReadPer1M, cacheWritePer1M, provider, tier, isHighCost }` shape, keyed by endpoint and model. Returns an empty map
  * only when no `modelsConfig` is available.
  */
 export async function getModelPricing(
@@ -71,7 +71,7 @@ export async function getModelPricing(
   const pricing: TModelPricing = {};
 
   for (const [endpoint, models] of Object.entries(tokenConfigMap)) {
-    for (const [model, { prompt, completion }] of Object.entries(models)) {
+    for (const [model, { prompt, completion, cacheRead, cacheWrite }] of Object.entries(models)) {
       if (prompt == null || completion == null) {
         continue;
       }
@@ -79,6 +79,8 @@ export async function getModelPricing(
       pricing[`${endpoint}:${model}`] = {
         inputPer1M: prompt,
         outputPer1M: completion,
+        ...(cacheRead != null && { cacheReadPer1M: cacheRead }),
+        ...(cacheWrite != null && { cacheWritePer1M: cacheWrite }),
         provider: endpoint,
         tier,
         isHighCost: highCostTiers.has(tier),

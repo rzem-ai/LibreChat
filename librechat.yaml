@@ -393,6 +393,8 @@ endpoints:
         gpt-6-luna:
           prompt: 0
           completion: 0
+          cacheRead: 0
+          cacheWrite: 0
           context: 1050000
         gpt-61-sol:
           prompt: 2
