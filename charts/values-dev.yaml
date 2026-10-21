@@ -1,6 +1,5 @@
 imageRegistry: 'dttaitsdev.azurecr.io'
 branch: 'develop'
-
 llmGateway:
   namespace: 'llm-gateway-ctnp'
 
@@ -13,7 +12,6 @@ codeInterpreter:
 
 serviceAccount:
   name: sa-librechat-dev
-
 ingress:
   className: cilium
   host: 'librechat-dev.ctk.au.deloitte.com'
@@ -26,7 +24,6 @@ ingress:
       secretStoreName: external-secret-store
       hosts:
         - 'librechat-dev.ctk.au.deloitte.com'
-
 pods:
   librechat:
     replicas: 3
@@ -259,7 +256,6 @@ pods:
           paths:
             - path: /admin
               pathType: Prefix
-
 valkey:
   image:
     tag: 'develop@sha256:4fdf384b8cad080df2e9429b4aa512c090cb9d83368488ba0aa9d58e7c2e1d0e'
