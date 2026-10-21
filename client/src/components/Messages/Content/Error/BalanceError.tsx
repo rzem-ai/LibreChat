@@ -7,6 +7,8 @@ import {
   readNumber,
   readString,
 } from './parts';
+import { getFreeSpecs } from '~/components/Chat/Menus/Endpoints/components/cost';
+import { useGetStartupConfig } from '~/data-provider';
 import { useLocalize } from '~/hooks';
 
 type GenerationRow = {
@@ -42,6 +44,10 @@ function readGeneration(generation: JsonValue): GenerationRow | null {
 
 export default function BalanceError({ json }: ErrorRendererProps) {
   const localize = useLocalize();
+  const { data: startupConfig } = useGetStartupConfig();
+  const freeModels = getFreeSpecs(startupConfig?.modelSpecs?.list, startupConfig?.modelPricing)
+    .map((spec) => spec.label)
+    .join(', ');
   const balance = readNumber(json, 'balance');
   const tokenCost = readNumber(json, 'tokenCost');
   const promptTokens = readNumber(json, 'promptTokens');
@@ -60,6 +66,9 @@ export default function BalanceError({ json }: ErrorRendererProps) {
   return (
     <ErrorBody>
       <p>{summary}</p>
+      {freeModels ? (
+        <p>{localize('com_error_token_balance_free_models', { 0: freeModels })}</p>
+      ) : null}
       {promptTokens != null ? (
         <p className="text-text-secondary">
           {localize('com_error_token_balance_prompt', { 0: formatNumber(promptTokens) })}
