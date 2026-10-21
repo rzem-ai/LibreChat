@@ -274,9 +274,11 @@ describe('STT transcript content filtering', () => {
   });
 
   const createRequest = (config) => ({
-    config,
+    config: { ...config, paths: { ...config?.paths, uploads: '/tmp' } },
+    user: { id: 'test-user' },
     file: {
-      path: '/tmp/audio.webm',
+      filename: 'audio.webm',
+      path: '/tmp/temp/test-user/audio.webm',
       originalname: 'audio.webm',
       mimetype: 'audio/webm',
       size: 5,
@@ -322,7 +324,7 @@ describe('STT transcript content filtering', () => {
       source: 'file',
       field: 'transcript',
     });
-    expect(unlinkSpy).toHaveBeenCalledWith('/tmp/audio.webm');
+    expect(unlinkSpy).toHaveBeenCalledWith('/tmp/temp/test-user/audio.webm');
   });
 
   it('blocks a configured filename before reading or sending the audio', async () => {
@@ -345,7 +347,7 @@ describe('STT transcript content filtering', () => {
     expect(readFileSpy).not.toHaveBeenCalled();
     expect(service.getProviderSchema).not.toHaveBeenCalled();
     expect(service.sttRequest).not.toHaveBeenCalled();
-    expect(unlinkSpy).toHaveBeenCalledWith('/tmp/audio.webm');
+    expect(unlinkSpy).toHaveBeenCalledWith('/tmp/temp/test-user/audio.webm');
   });
 
   it('blocks uninspectable audio before sending it to the speech provider', async () => {
@@ -374,7 +376,7 @@ describe('STT transcript content filtering', () => {
     expect(readFileSpy).not.toHaveBeenCalled();
     expect(service.getProviderSchema).not.toHaveBeenCalled();
     expect(service.sttRequest).not.toHaveBeenCalled();
-    expect(unlinkSpy).toHaveBeenCalledWith('/tmp/audio.webm');
+    expect(unlinkSpy).toHaveBeenCalledWith('/tmp/temp/test-user/audio.webm');
   });
 
   it('transcribes and inspects audio when only transcript fail-close is configured', async () => {

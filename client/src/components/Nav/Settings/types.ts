@@ -61,6 +61,10 @@ export interface SettingsContextValue {
   usernameDisplaySettingEnabled: boolean;
   engineTTS: string;
   langfuseConnectionAccess: boolean;
+  // Deloitte Custom Change: mirrors the deployment-level shared-links feature gate.
+  sharedLinksEnabled: boolean;
+  // Deloitte Custom Change: reflects the user's temporary-chat permission.
+  temporaryChatEnabled: boolean;
   adminPanelURL: string;
 }
 
@@ -144,7 +148,8 @@ export const TABS: TabMeta[] = [
         icon: createLangfuseIcon('h-3.5 w-3.5'),
       },
     ],
-    show: (ctx) => ctx.langfuseConnectionAccess,
+    // Deloitte Custom Change: Langfuse settings are restricted to administrators.
+    show: (ctx) => ctx.isAdmin && ctx.langfuseConnectionAccess,
   },
   {
     id: SettingsTabValues.DATA,

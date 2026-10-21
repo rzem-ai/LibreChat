@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Info, AlertTriangle } from 'lucide-react';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useForm, Controller, FormProvider } from 'react-hook-form';
 import {
   Label,
@@ -168,6 +168,11 @@ export default function SkillForm({ skillId }: SkillFormProps) {
     );
   }
 
+  // Deloitte Custom Change: After permissions load, redirect viewers from the edit route to the read-only skill detail page.
+  if (permissions.isSuccess && !permissions.canEdit) {
+    return <Navigate to={`/skills/${skillId}`} replace />;
+  }
+
   const readOnly = !permissions.canEdit;
   const saveDisabled = !isDirty || !isValid || isSubmitting || updateSkill.isLoading;
   // Deloitte Custom Change: Render scanner failures inline near warning messages for readability.
@@ -239,7 +244,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
               )}
             />
             <div className="flex shrink-0 items-center gap-2">
-              <CategorySelector />
+              <CategorySelector readOnly={readOnly} />
               <ShareSkill skill={skill} />
               {permissions.canDelete && (
                 <DeleteSkill
@@ -338,6 +343,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
 
           <SkillContentEditor
             name="body"
+            readOnly={readOnly}
             isEditing={isEditingContent}
             setIsEditing={setIsEditingContent}
           />

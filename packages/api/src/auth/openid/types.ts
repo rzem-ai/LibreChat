@@ -65,6 +65,7 @@ export interface SessionOpenIDTokens {
   tenantId?: string;
   openidIssuer?: string;
   accessTokenExpiresAt?: number;
+  idTokenExpiresAt?: number;
   /** Durable coordination generation that authorized this session publication. */
   publicationFlightKey?: string;
   publicationFlightOwnerId?: string;

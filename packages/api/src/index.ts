@@ -21,6 +21,8 @@ export * from './auth';
 export * from './apiKeys';
 /* MCP */
 export * from './mcp/mcpConfig';
+/* Deloitte Custom Change: Entra group-based MCP server authorization. */
+export * from './mcp/access';
 export * from './mcp/authority';
 export * from './mcp/registry/MCPServersRegistry';
 export * from './mcp/MCPManager';
@@ -48,10 +50,13 @@ export * from './mcp/icons';
 export * from './mcp/utils';
 // Deloitte Custom Change: expose the MCP Code Interpreter download bridge.
 export * from './mcp/codeFile';
+export * from './mcp/codeFileFailure';
 export * from './mcp/domainValidation';
 // Deloitte Custom Change: expose trusted-tool attachment upload helpers.
 export * from './mcp/attachmentUpload';
 export * from './mcp/context';
+// Deloitte Custom Change: expose MCP Gateway toolset metadata for connector tooltips
+export * from './mcp/toolsets';
 export * from './utils';
 export { default as Tokenizer, countTokens } from './utils/tokenizer';
 export type { EncodingName } from './utils/tokenizer';
@@ -105,6 +110,9 @@ export * from './plugins';
 export * from './endpoints';
 /* Files */
 export * from './files';
+// Deloitte Custom Change: Retention Update
+/* Retention */
+export * from './retention';
 /* Images */
 export * from './images';
 /* Storage */

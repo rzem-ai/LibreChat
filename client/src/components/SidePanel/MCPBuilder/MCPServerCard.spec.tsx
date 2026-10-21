@@ -17,8 +17,15 @@ jest.mock('~/hooks', () => ({
   }),
 }));
 
+jest.mock('~/data-provider', () => ({
+  useMCPToolsetsQuery: () => ({ data: undefined }),
+}));
+
 jest.mock('@librechat/client', () => ({
   MCPIcon: () => <span />,
+  Tag: () => <span />,
+  MCPServerHoverGroup: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  MCPServerHoverTarget: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 jest.mock('./MCPCardActions', () => ({

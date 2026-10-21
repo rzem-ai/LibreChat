@@ -372,6 +372,37 @@ const convoSchema: Schema<IConversation> = new Schema(
     expiredAt: {
       type: Date,
     },
+    // Deloitte Custom Change: Retention Update
+    /** Explicit activity anchor for retention; stamped by touchConversationLastActivity. */
+    lastActivityAt: {
+      type: Date,
+    },
+    // Deloitte Custom Change: Retention Update
+    /** Explicit, auditable carve-out from default retention. Only a narrow,
+     * permissioned caller should ever set `exempt: true`. */
+    retentionException: {
+      exempt: { type: Boolean, default: false },
+      reason: { type: String },
+      setBy: { type: String },
+      setAt: { type: Date },
+    },
+    /** Lease holder for the in-flight purge sweep claiming this conversation, so two
+     * sweep ticks (or replicas) never cascade-delete the same expired conversation twice. */
+    purgeClaimId: {
+      type: String,
+    },
+    purgeClaimedAt: {
+      type: Date,
+    },
+    purgeAttempts: {
+      type: Number,
+      default: 0,
+    },
+    /** Earliest time a sweep tick may claim this conversation again, set on release to
+     * back off a failed attempt or to let an expired lease be reclaimed. */
+    purgeNotBefore: {
+      type: Date,
+    },
     tenantId: {
       type: String,
       index: true,
@@ -390,7 +421,11 @@ const convoSchema: Schema<IConversation> = new Schema(
   { timestamps: true },
 );
 
-convoSchema.index({ expiredAt: 1 }, { expireAfterSeconds: 0 });
+// Deloitte Custom Change: Retention Update
+/** Deletion is app-owned by the purge sweep worker, not MongoDB's TTL monitor: a native
+ * TTL index deletes directly and bypasses the cascade (tool calls, shared links, agent
+ * generations, checkpoints) that only the sweep's `purgeConversationCascade` call runs. */
+convoSchema.index({ expiredAt: 1, purgeNotBefore: 1 });
 convoSchema.index({ createdAt: 1, updatedAt: 1 });
 convoSchema.index({ conversationId: 1, user: 1, tenantId: 1 }, { unique: true });
 convoSchema.index({ tenantId: 1, isTemporary: 1, createdAt: -1, _id: -1 });

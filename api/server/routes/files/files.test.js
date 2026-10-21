@@ -1278,15 +1278,18 @@ describe('File Routes - Delete with Agent Access', () => {
         bytes: 70,
         type: 'text/plain',
         source: FileSources.text,
-        text: 'Extracted OCR text',
+        text: '<script>alert("untrusted content")</script>',
       });
 
       const response = await request(app).get(`/files/download/${otherUserId}/${userFileId}`);
 
       expect(response.status).toBe(200);
       expect(response.headers['content-type']).toContain('text/plain');
+      expect(response.headers['content-disposition']).toContain('attachment');
       expect(response.headers['content-disposition']).toContain('screenshot.png.txt');
-      expect(response.text).toBe('Extracted OCR text');
+      expect(response.headers['x-content-type-options']).toBe('nosniff');
+      expect(response.headers['content-security-policy']).toBe('sandbox');
+      expect(response.text).toBe('<script>alert("untrusted content")</script>');
       const metadata = JSON.parse(decodeURIComponent(response.headers['x-file-metadata']));
       expect(metadata).toMatchObject({ file_id: userFileId, source: FileSources.text });
       expect(metadata).not.toHaveProperty('text');

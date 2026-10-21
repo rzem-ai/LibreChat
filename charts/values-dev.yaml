@@ -48,17 +48,8 @@ pods:
           TOKEN_PROXY_MCP_URL: 'https://mcp-gw-dev.ctk.au.deloitte.com/mcp'
     containers:
       librechat:
-        command:
-          - /bin/sh
-          - -c
-          - >-
-            mkdir -p /app/client/dist/assets && if [ -d /app/deloitte/assets ]; then
-              cp -a /app/deloitte/assets/. /app/client/dist/assets/;
-            elif [ -d /app/deloitte-assets ]; then
-              cp -a /app/deloitte-assets/. /app/client/dist/assets/;
-            fi && exec npm run backend
         image:
-          tag: 'develop@sha256:2ed9e69836b1873f40da56d1ad84b3a2c798429835a1922ee6c981591131bfc5'
+          tag: 'develop@sha256:e4fd910ee106210b5eeafb014db56421c4f8e53b35a96ee660ffba19d7f0bf5f'
         resources:
           requests:
             memory: "2Gi"
@@ -69,7 +60,8 @@ pods:
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
-          ANTHROPIC_MODELS: 'claude-haiku-4-5,claude-sonnet-4-6,claude-opus-4-6,claude-sonnet-5,claude-opus-4-8'
+          # Deloitte Custom Change: Agent Builder catalog restricted to the Claude 5.5 models.
+          ANTHROPIC_MODELS: 'claude-haiku-5-5,claude-sonnet-5-5,claude-opus-5-5'
           ANTHROPIC_REVERSE_PROXY: 'http://127.0.0.1:8081/anthropic'
           APP_TITLE: 'MyAssist (DEV)'
           BASE_URL_AZURE_AU: 'http://127.0.0.1:8081/azure-au'
@@ -78,7 +70,8 @@ pods:
           BEDROCK_AWS_ACCESS_KEY_ID: 'unused'
           BEDROCK_AWS_DEFAULT_REGION: 'ap-southeast-2'
           BEDROCK_AWS_SECRET_ACCESS_KEY: 'unused'
-          BEDROCK_AWS_MODELS: 'au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0'
+          # Deloitte Custom Change: Agent Builder catalog restricted to the Claude 5.5 models.
+          BEDROCK_AWS_MODELS: 'au.anthropic.claude-haiku-5-5,au.anthropic.claude-sonnet-5-5,au.anthropic.claude-opus-5-5'
           BEDROCK_GATEWAY_URL: 'http://127.0.0.1:8081/bedrock'
           CUSTOM_FOOTER: '⚠️ WARNING: This is a development environment. Do not upload client or confidential data.'
           DOMAIN_CLIENT: 'https://librechat-dev.ctk.au.deloitte.com'
@@ -156,6 +149,10 @@ pods:
           REDIS_KEY_PREFIX: 'librechat'
           REDIS_PING_INTERVAL: '300'
           STREAM_DELTA_COALESCE_MS: '25'
+          # Balance — token limit per 1-day refill cycle
+          CHECK_BALANCE: 'true'
+          START_BALANCE: '15000000' # 15 million tokens per 1 day = $15
+          BALANCE_REFILL_AMOUNT: '15000000' # 15 million tokens per 1 day = $15
         secrets:
           # AZURE_API_KEY: librechat-azure-api-key
           MONGO_URI: librechat-dev-mdb-connection-string
@@ -177,7 +174,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:32b798da70a9b53c2384f9e368e7691295858df84271d6bbdd56f54d1916a700'
+          tag: 'develop@sha256:427b30d13dbce6876b9888fa2e292fb1d0f10269348f225110727cd288fc7e22'
         resources:
           requests:
             memory: "1Gi"
@@ -241,7 +238,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:a62e3941cdbd05dcb2cbd09442940d8d4a9e11fbf5cfa3715c7c8b98ddca8e06'
+          tag: 'develop@sha256:faed5a33f2f95c752e6e31a86ab9ef642e27411ffa0a2ed58ef53ede8ab4de80'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'

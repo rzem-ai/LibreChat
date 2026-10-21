@@ -1,4 +1,4 @@
-import { ContentTypes } from 'librechat-data-provider';
+import { ContentTypes, ToolCallTypes } from 'librechat-data-provider';
 import type { SubagentUpdateEvent } from 'librechat-data-provider';
 import { aggregateSubagentContent, buildSubagentTickerLines } from '../subagentContent';
 
@@ -158,6 +158,51 @@ describe('aggregateSubagentContent', () => {
       'web_search',
     );
     expect((parts[0] as { tool_call: { progress: number } }).tool_call.progress).toBe(0.1);
+  });
+
+  it('handles prototype-like streamed step and tool-call IDs without inherited properties', () => {
+    const parts = aggregateSubagentContent([
+      makeEvent({
+        phase: 'run_step',
+        data: {
+          id: '__proto__',
+          stepDetails: {
+            type: 'message_creation',
+            message_creation: { phase: 'commentary' },
+          },
+        },
+      }),
+      makeEvent({
+        phase: 'message_delta',
+        data: {
+          id: '__proto__',
+          delta: { content: [{ type: 'text', text: 'Safe text.' }] },
+        },
+      }),
+      makeEvent({
+        phase: 'run_step',
+        data: {
+          stepDetails: {
+            type: 'tool_calls',
+            tool_calls: [{ id: '__proto__', name: 'safe_tool', args: '{}' }],
+          },
+        },
+      }),
+    ]);
+
+    expect(parts).toEqual([
+      { type: ContentTypes.TEXT, text: 'Safe text.', phase: 'commentary' },
+      {
+        type: ContentTypes.TOOL_CALL,
+        tool_call: {
+          id: '__proto__',
+          name: 'safe_tool',
+          args: '{}',
+          progress: 0.1,
+          type: ToolCallTypes.TOOL_CALL,
+        },
+      },
+    ]);
   });
 
   it('folds a child handoff into its own running tool card and measured call time', () => {

@@ -638,23 +638,55 @@ describe('MCPServerInspector', () => {
 
     /** Deloitte Custom Change: the discovered tool keeps only the validated gateway class. */
     it('preserves only validated tool-class metadata', async () => {
-      mockConnection.fetchTools = jest.fn().mockResolvedValue([
-        {
-          name: 'write',
-          inputSchema: { type: 'object', properties: {} },
-          _meta: { 'tool-class': 'W1' },
-        },
-        {
-          name: 'unknown',
-          inputSchema: { type: 'object', properties: {} },
-          _meta: { 'tool-class': 'unsafe' },
-        },
-      ]);
+      mockConnection.fetchOrderedToolsSnapshot = jest.fn().mockResolvedValue({
+        complete: true,
+        tools: [
+          {
+            name: 'write',
+            inputSchema: { type: 'object', properties: {} },
+            _meta: { 'tool-class': 'W1' },
+          },
+          {
+            name: 'unknown',
+            inputSchema: { type: 'object', properties: {} },
+            _meta: { 'tool-class': 'unsafe' },
+          },
+        ],
+      });
 
-      const result = await MCPServerInspector.getToolFunctions('gateway', mockConnection);
+      const { tools: result } = await MCPServerInspector.getToolCatalog(
+        'gateway',
+        mockConnection,
+        undefined,
+        undefined,
+        {
+          source: 'yaml',
+          type: 'streamable-http',
+          url: 'https://gateway.example.test',
+          trustedToolClassification: true,
+        } satisfies t.ParsedServerConfig,
+      );
 
       expect(result.write_mcp_gateway['function'].toolClass).toBe('W1');
       expect(result.unknown_mcp_gateway['function'].toolClass).toBeUndefined();
+    });
+
+    // Deloitte Custom Change: Enforce classification provenance on direct catalog refreshes.
+    it('drops valid-looking classes when catalog config is not trusted', async () => {
+      mockConnection.fetchOrderedToolsSnapshot = jest.fn().mockResolvedValue({
+        complete: true,
+        tools: [
+          {
+            name: 'write',
+            inputSchema: { type: 'object', properties: {} },
+            _meta: { 'tool-class': 'W1' },
+          },
+        ],
+      });
+
+      const { tools } = await MCPServerInspector.getToolCatalog('gateway', mockConnection);
+
+      expect(tools.write_mcp_gateway['function'].toolClass).toBeUndefined();
     });
 
     it('builds keys with the normalized server name (model-facing contract)', async () => {

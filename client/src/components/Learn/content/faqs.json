@@ -1,0 +1,22 @@
+[
+  {
+    "question": "Is MyAssist connected to Deloitte data?",
+    "answer": "No, not unless you're using a connector."
+  },
+  {
+    "question": "What is the Agentic Ecosystem and how does MyAssist fit within it?",
+    "answer": "Read the [What is the Agentic Ecosystem?](/learn/articles/agentic-ecosystem) article to find out."
+  },
+  {
+    "question": "What is the difference between a saved prompt, a skill and an agent?",
+    "answer": "Learn more in the [What should I use?](/learn/articles/what-should-i-use) article."
+  },
+  {
+    "question": "Which model should I use?",
+    "answer": "Hover over a model in the model picker to see a tooltip with its cost, speed and intelligence."
+  },
+  {
+    "question": "Can I use client data in MyAssist?",
+    "answer": "Don't use GPS or Defence data. For other client data, we always recommend starting with public, synthetic, non-client or Deloitte information first while you familiarise yourself with the platform. Once you're familiar, you may use client data for exploration, hypothesis testing and identifying potential use cases, in line with Deloitte's responsible AI guidance. Use appropriate judgement and caution in active client engagements. Existing guardrails and accountability continue to apply, including client-specific AI requirements and restrictions. If you need further clarification, reach out to your engagement lead or the [Q&R or BSO](https://ausdeloitte.sharepoint.com/sites/DAISQandR/SitePages/My-Q-and-R.aspx) team."
+  }
+]

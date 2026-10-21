@@ -59,6 +59,7 @@ const { hasCapability } = require('~/server/middleware/roles/capabilities');
 const { getRoleByName } = require('~/models');
 const { checkPermission } = require('~/server/services/PermissionService');
 const { cleanFileName, getContentDisposition, SAFE_INLINE_TYPES } = require('~/server/utils/files');
+const { getUploadTempPath } = require('./multer');
 const { getLogStores } = require('~/cache');
 const { Readable } = require('stream');
 const db = require('~/models');
@@ -102,7 +103,8 @@ router.get('/', async (req, res) => {
       }
       return file;
     });
-    res.status(200).send(rewritten);
+    // Deloitte Custom Change: OSS Vulnerabilities 8.8
+    res.status(200).json(rewritten);
   } catch (error) {
     logger.error('[/files] Error getting files:', error);
     res.status(400).json({ message: 'Error in request', error: error.message });
@@ -693,11 +695,15 @@ router.get('/download/:userId/:file_id', fileAccess, async (req, res) => {
         : `${file.filename || file_id}.txt`;
       res.setHeader('Content-Disposition', getContentDisposition(textFilename));
       res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      // Deloitte Custom Change: OSS Vulnerabilities 8.8
+      // Stored extraction text is untrusted, so never allow it to become an active document.
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Content-Security-Policy', 'sandbox');
       res.setHeader(
         'X-File-Metadata',
         encodeURIComponent(JSON.stringify(getDownloadFileMetadata(file))),
       );
-      return res.send(textFile.text);
+      return res.end(Buffer.from(textFile.text, 'utf8'));
     }
 
     if (checkOpenAIStorage(file.source) && !file.model) {
@@ -998,7 +1004,11 @@ const handleFileUpload = async (req, res) => {
     logger.error('[/files] Error processing file:', getSafeErrorMetadata(error));
 
     try {
-      await fs.unlink(req.file.path);
+      // Deloitte Custom Change: OSS Vulnerabilities 8.8
+      const tempPath = getUploadTempPath(req);
+      if (tempPath) {
+        await fs.unlink(tempPath);
+      }
       cleanup = false;
     } catch (cleanupError) {
       logger.error('[/files] Error deleting file:', getSafeErrorMetadata(cleanupError));
@@ -1026,7 +1036,11 @@ const handleFileUpload = async (req, res) => {
   } finally {
     if (cleanup) {
       try {
-        await fs.unlink(req.file.path);
+        // Deloitte Custom Change: OSS Vulnerabilities 8.8
+        const tempPath = getUploadTempPath(req);
+        if (tempPath) {
+          await fs.unlink(tempPath);
+        }
       } catch (error) {
         logger.error(
           '[/files] Error deleting file after file processing:',

@@ -7,6 +7,8 @@ const {
   acceptTermsController,
   getTutorialStateController,
   updateTutorialStateController,
+  // Deloitte Custom Change: tour progress stored in MongoDB
+  updateTourProgressController,
   verifyEmailController,
   deleteUserController,
   getUserController,
@@ -35,6 +37,8 @@ router.get('/terms', requireJwtAuth, getTermsStatusController);
 router.post('/terms/accept', requireJwtAuth, acceptTermsController);
 router.get('/tutorial', requireJwtAuth, getTutorialStateController);
 router.post('/tutorial', requireJwtAuth, updateTutorialStateController);
+// Deloitte Custom Change: tour progress stored in MongoDB
+router.post('/tutorial/progress', requireJwtAuth, updateTourProgressController);
 router.post('/plugins', requireJwtAuth, updateUserPluginsController);
 router.delete('/delete', requireJwtAuth, canDeleteAccount, configMiddleware, deleteUserController);
 router.post('/verify', verifyEmailSubmissionLimiter, verifyEmailController);

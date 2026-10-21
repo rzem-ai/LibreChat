@@ -10,6 +10,12 @@ The Helm chart uses three values files:
 - **`values-uat.yaml`** - for UAT deployments
 - **`values-dev.yaml`** - for development deployments
 
+### Model availability
+
+`ANTHROPIC_MODELS` and `BEDROCK_AWS_MODELS` define the models provisioned for each deployment environment. Claude Haiku 5.5, Claude Sonnet 5.5, and Claude Opus 5.5 are enabled in all environments (development, UAT and production).
+
+The Agent Builder's model catalog is independent of `modelSpecs` in `librechat.yaml`. For this deployment, the global Anthropic catalog comes from `ANTHROPIC_MODELS`, while `endpoints.bedrock.models` in `librechat.yaml` overrides `BEDROCK_AWS_MODELS` for Australia. Existing deployments with an older local `.env` or custom Helm values must set `ANTHROPIC_MODELS` to `claude-haiku-5-5,claude-sonnet-5-5,claude-opus-5-5`. Update any custom `endpoints.bedrock.models` list to `au.anthropic.claude-haiku-5-5`, `au.anthropic.claude-sonnet-5-5`, and `au.anthropic.claude-opus-5-5`; if that YAML list is absent, set `BEDROCK_AWS_MODELS` to those three comma-separated IDs instead.
+
 ### 📋 Example Usage
 
 #### Install External Secrets operator locally:

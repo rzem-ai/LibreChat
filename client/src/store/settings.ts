@@ -126,7 +126,8 @@ const localStorageAtoms = {
   conversationMode: atomWithLocalStorage('conversationMode', false),
   advancedMode: atomWithLocalStorage('advancedMode', false),
 
-  speechToText: atomWithLocalStorage('speechToText', true),
+  // Deloitte Custom Change: default speech features to off, matching librechat.yaml.
+  speechToText: atomWithLocalStorage('speechToText', false),
   engineSTT: atomWithLocalStorage('engineSTT', 'browser', (engine) =>
     normalizeSavedSpeechEngine(engine, LEGACY_EXTERNAL_STT_ENGINES),
   ),
@@ -135,7 +136,8 @@ const localStorageAtoms = {
   decibelValue: atomWithLocalStorage('decibelValue', -45),
   autoSendText: atomWithLocalStorage('autoSendText', -1),
 
-  textToSpeech: atomWithLocalStorage('textToSpeech', true),
+  // Deloitte Custom Change: default speech features to off, matching librechat.yaml.
+  textToSpeech: atomWithLocalStorage('textToSpeech', false),
   engineTTS: atomWithLocalStorage('engineTTS', 'browser', (engine) =>
     normalizeSavedSpeechEngine(engine, LEGACY_EXTERNAL_TTS_ENGINES),
   ),

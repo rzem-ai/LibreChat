@@ -1066,7 +1066,7 @@ export function getOpenAILLMConfig({
 
   if (
     llmConfig.model &&
-    /\bgpt-[5-9](?:\.\d+)?\b/i.test(llmConfig.model) &&
+    /\bgpt-[5-9](?:\.\d+|[1-9])?\b/i.test(llmConfig.model) &&
     llmConfig.maxTokens != null
   ) {
     const paramName =

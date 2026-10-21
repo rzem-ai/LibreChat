@@ -1,4 +1,3 @@
-import { RetentionMode } from 'librechat-data-provider';
 import type { AppConfig } from '~/types';
 import logger from '~/config/winston';
 
@@ -77,21 +76,43 @@ export function createTempChatExpirationDate(interfaceConfig?: AppConfig['interf
   return new Date(Date.now() + retentionHours * 60 * 60 * 1000);
 }
 
-/** Regular chats fall back to the temporary retention policy for existing configurations. */
+// Deloitte Custom Change: Retention Update
+/**
+ * Resolves the retention period for general (non-temporary) chats in hours,
+ * applying `generalChatRetention` when configured and falling back to the same
+ * 30-day default temp chats use otherwise. Shared by `createChatExpirationDate`
+ * and the live `touchConversationLastActivity` path so both resolve hours
+ * identically.
+ */
+export function getGeneralChatRetentionHours(
+  interfaceConfig?: AppConfig['interfaceConfig'] | null,
+): number {
+  if (interfaceConfig?.generalChatRetention === undefined) {
+    return getTempChatRetentionHours(interfaceConfig);
+  }
+
+  return getTempChatRetentionHours({
+    ...interfaceConfig,
+    temporaryChatRetention: interfaceConfig.generalChatRetention,
+  });
+}
+
+// Deloitte Custom Change: Retention Update
+/**
+ * Default eligibility policy for every non-exempt, non-temporary chat: applies
+ * `generalChatRetention` when configured, otherwise the same 30-day default temp
+ * chats use. This always runs — `retentionMode` no longer gates whether an expiry is
+ * set at all, only (via `generalChatRetention`) what number is used.
+ */
 export function createChatExpirationDate(
   interfaceConfig?: AppConfig['interfaceConfig'],
   isTemporary: boolean = false,
 ): Date {
-  if (
-    isTemporary ||
-    interfaceConfig?.retentionMode !== RetentionMode.ALL ||
-    interfaceConfig.generalChatRetention === undefined
-  ) {
+  // Deloitte Custom Change: Retention Update
+  if (isTemporary) {
     return createTempChatExpirationDate(interfaceConfig);
   }
 
-  return createTempChatExpirationDate({
-    ...interfaceConfig,
-    temporaryChatRetention: interfaceConfig.generalChatRetention,
-  });
+  const retentionHours = getGeneralChatRetentionHours(interfaceConfig);
+  return new Date(Date.now() + retentionHours * 60 * 60 * 1000);
 }

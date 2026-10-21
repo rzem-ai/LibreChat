@@ -8,6 +8,7 @@ import {
   hasLimitedAccess,
   resolveThemedIconPaths,
   shouldShowActionButton,
+  getConfiguredToolsetName,
 } from '../mcpServerUtils';
 
 const makeServer = (
@@ -116,6 +117,18 @@ describe('hasLimitedAccess', () => {
   it('returns true only for servers configured with limited access', () => {
     expect(hasLimitedAccess(makeServer('sharepoint', { limitedAccess: true }))).toBe(true);
     expect(hasLimitedAccess(makeServer('other-server'))).toBe(false);
+  });
+});
+
+// Deloitte Custom Change: tests for the connector tooltip's toolset-name resolution.
+describe('getConfiguredToolsetName', () => {
+  it('returns the server-resolved toolset name when present', () => {
+    expect(getConfiguredToolsetName({ toolsetName: 'sharepoint' })).toBe('sharepoint');
+  });
+
+  it('returns null when the server has no toolset name', () => {
+    expect(getConfiguredToolsetName({ toolsetName: null })).toBeNull();
+    expect(getConfiguredToolsetName({ toolsetName: undefined })).toBeNull();
   });
 });
 

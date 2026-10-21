@@ -158,6 +158,7 @@ function createMocks(overrides?: {
   maxContextTokens?: number;
   modelDefault?: number;
   maxOutputTokens?: number;
+  llmConfig?: Record<string, unknown>;
   endpointTokenConfig?: EndpointTokenConfig;
   useRealTokenLookup?: boolean;
   providerTools?: unknown[];
@@ -175,6 +176,7 @@ function createMocks(overrides?: {
     maxContextTokens,
     modelDefault = 200000,
     maxOutputTokens = 4096,
+    llmConfig = { model, maxTokens: maxOutputTokens },
     endpointTokenConfig,
     useRealTokenLookup = false,
     providerTools,
@@ -200,7 +202,7 @@ function createMocks(overrides?: {
   const res = {} as unknown as import('express').Response;
 
   const mockGetOptions = jest.fn().mockResolvedValue({
-    llmConfig: { model, maxTokens: maxOutputTokens },
+    llmConfig,
     endpointTokenConfig,
     ...(providerTools !== undefined ? { tools: providerTools } : {}),
   } satisfies InitializeResultBase);
@@ -1863,6 +1865,65 @@ describe('initializeAgent — attachment scoping', () => {
     ]);
   });
 
+  // Deloitte Custom Change: Retention Update
+  it('stamps agent-resource files with the agent-file clock and message files with the general clock', async () => {
+    const { filterFilesByEndpointRuntimeConfig } = jest.requireMock('~/files') as {
+      filterFilesByEndpointRuntimeConfig: jest.Mock;
+    };
+    const requestFile = { file_id: 'request-file', filename: 'request.txt' } as IMongoFile;
+    const toolFile = {
+      file_id: 'tool-file',
+      filename: 'kb.txt',
+      context: FileContext.agents,
+    } as IMongoFile;
+    const { agent, req, res, loadTools, db } = createMocks();
+
+    req.config = {
+      interfaceConfig: { fileRetentionHours: 24, agentFileRetentionHours: 48 },
+    } as never;
+    agent.tools = [EToolResources.file_search];
+    mockExtractLibreChatParams.mockReturnValueOnce({
+      resendFiles: true,
+      maxContextTokens: undefined,
+      modelOptions: { model: agent.model },
+    });
+    (db.getFiles as jest.Mock).mockResolvedValueOnce([requestFile, toolFile]);
+    (db.getConvoFiles as jest.Mock).mockResolvedValueOnce([toolFile.file_id]);
+    (db.getToolFilesByIds as jest.Mock).mockResolvedValueOnce([toolFile]);
+    (db.updateFilesUsage as jest.Mock)
+      .mockResolvedValueOnce([requestFile])
+      .mockResolvedValueOnce([toolFile]);
+    filterFilesByEndpointRuntimeConfig.mockImplementationOnce(
+      (_req: ServerRequest, { files }: { files: IMongoFile[] }) => files,
+    );
+
+    await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        requestFiles: [requestFile],
+        conversationId: 'conversation-1',
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.OPENAI]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    expect(db.updateFilesUsage).toHaveBeenNthCalledWith(1, [requestFile], undefined, {
+      user: 'user-1',
+      tenantId: undefined,
+      fileRetentionHours: 24,
+    });
+    expect(db.updateFilesUsage).toHaveBeenNthCalledWith(2, [toolFile], undefined, {
+      user: 'user-1',
+      tenantId: undefined,
+      fileRetentionHours: 48,
+    });
+  });
+
   it('rejects blocked resent file content before usage mutation or resource priming', async () => {
     const { primeResources } = jest.requireMock('../resources') as {
       primeResources: jest.Mock;
@@ -2021,6 +2082,34 @@ describe('initializeAgent — maxContextTokens', () => {
 
     const expected = Math.round((modelDefault - maxOutputTokens) * 0.95);
     expect(result.maxContextTokens).toBe(expected);
+  });
+
+  it.each([
+    ['Responses', 'max_output_tokens'],
+    ['Chat Completions', 'max_completion_tokens'],
+  ])('reserves the output cap moved into modelKwargs for %s', async (_route, param) => {
+    const modelDefault = 1050000;
+    const outputCap = 128000;
+    const { agent, req, res, loadTools, db } = createMocks({
+      maxContextTokens: undefined,
+      modelDefault,
+      llmConfig: { model: 'gpt-56-terra', modelKwargs: { [param]: outputCap } },
+    });
+
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.OPENAI]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    expect(result.maxContextTokens).toBe(Math.round((modelDefault - outputCap) * 0.95));
   });
 
   it('falls back to formula when maxContextTokens is 0', async () => {

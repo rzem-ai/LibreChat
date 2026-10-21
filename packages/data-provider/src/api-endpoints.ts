@@ -257,6 +257,8 @@ export const mcpReinitialize = (serverName: string) =>
 export const mcpConnectionStatus = () => `${BASE_URL}/api/mcp/connection/status`;
 export const mcpServerConnectionStatus = (serverName: string) =>
   `${BASE_URL}/api/mcp/connection/status/${serverName}`;
+/** Deloitte Custom Change: MCP Gateway toolset metadata for the connector tooltip. */
+export const mcpToolsets = () => `${BASE_URL}/api/mcp/toolsets`;
 export const mcpAuthValues = (serverName: string) => {
   return `${BASE_URL}/api/mcp/${serverName}/auth-values`;
 };
@@ -568,6 +570,8 @@ export const addTagToConversation = (conversationId: string) =>
 export const userTerms = () => `${BASE_URL}/api/user/terms`;
 export const acceptUserTerms = () => `${BASE_URL}/api/user/terms/accept`;
 export const userTutorialState = () => `${BASE_URL}/api/user/tutorial`;
+// Deloitte Custom Change: tour progress stored in MongoDB
+export const userTutorialProgress = () => `${BASE_URL}/api/user/tutorial/progress`;
 export const banner = () => `${BASE_URL}/api/banner`;
 
 // Message Feedback

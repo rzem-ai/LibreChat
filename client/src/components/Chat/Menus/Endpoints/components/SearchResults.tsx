@@ -1,6 +1,7 @@
 import React, { Fragment, useCallback, useMemo } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { VisuallyHidden } from '@ariakit/react';
+import { ModelInfoHoverGroup } from '@librechat/client';
 import { isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider';
 import type { TModelSpec } from 'librechat-data-provider';
 import type { Endpoint, LocalizeFunction } from '~/common';
@@ -11,10 +12,9 @@ import { CustomMenuItem as MenuItem } from '../CustomMenu';
 import VirtualizedModelList from './VirtualizedModelList';
 import { shouldRenderEndpointOption } from '../utils';
 import { cn, getSpecAgentAvatarURL } from '~/utils';
+import ModelInfoTooltip from './ModelInfoTooltip';
 import SpecDescription from './SpecDescription';
 import { useFavorites } from '~/hooks';
-// Deloitte Custom Change: PR #156 - endpoint cost-multiplier badge in search results
-import ModelCost from './ModelCost';
 import SpecIcon from './SpecIcon';
 
 type SearchModel = { name: string; isGlobal?: boolean };
@@ -212,124 +212,132 @@ export function SearchResults({ results, localize, searchValue }: SearchResultsP
           ? localize('com_files_result_found', { count: results.length })
           : localize('com_files_results_found', { count: results.length })}
       </div>
-      {preparedResults.map((result) => {
-        const resultOffset = precedingOptionCount;
-        const resultOptionCount = searchResultOptionCount(result);
-        precedingOptionCount += resultOptionCount;
+      {/* Deloitte Custom Change: one shared hover card for all spec rows, as in ModelSpecItem. */}
+      <ModelInfoHoverGroup>
+        {preparedResults.map((result) => {
+          const resultOffset = precedingOptionCount;
+          const resultOptionCount = searchResultOptionCount(result);
+          precedingOptionCount += resultOptionCount;
 
-        if (result.kind === 'spec') {
-          const { spec } = result;
+          if (result.kind === 'spec') {
+            const { spec } = result;
+            return (
+              <ModelInfoTooltip
+                key={spec.name}
+                spec={spec}
+                endpointsConfig={endpointsConfig}
+                agentAvatarURL={getSpecAgentAvatarURL(spec, agentsMap)}
+              >
+                <MenuItem
+                  onClick={() => handleSelectSpec(spec)}
+                  aria-selected={selectedSpec === spec.name || undefined}
+                  aria-posinset={resultOffset + 1}
+                  aria-setsize={listboxSetSize}
+                  className={cn(
+                    'flex w-full cursor-pointer justify-between rounded-lg px-2 text-sm',
+                    spec.description ? 'items-start' : 'items-center',
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'flex w-full min-w-0 gap-2 px-1 py-1',
+                      spec.description ? 'items-start' : 'items-center',
+                    )}
+                  >
+                    {(spec.showIconInMenu ?? true) && (
+                      <div className="flex-shrink-0">
+                        <SpecIcon
+                          currentSpec={spec}
+                          endpointsConfig={endpointsConfig}
+                          agentAvatarURL={getSpecAgentAvatarURL(spec, agentsMap)}
+                        />
+                      </div>
+                    )}
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <span className="truncate text-left">{spec.label}</span>
+                      <SpecDescription description={spec.description} />
+                    </div>
+                  </div>
+                  {selectedSpec === spec.name && (
+                    <>
+                      <CheckCircle2
+                        className={cn(
+                          'size-4 shrink-0 text-text-primary',
+                          spec.description ? 'mt-1' : '',
+                        )}
+                        aria-hidden="true"
+                      />
+                      <VisuallyHidden>{localize('com_a11y_selected')}</VisuallyHidden>
+                    </>
+                  )}
+                </MenuItem>
+              </ModelInfoTooltip>
+            );
+          }
+
+          if (result.kind === 'models') {
+            const { endpoint, filteredModels, showMarketplace } = result;
+            return (
+              <Fragment key={`endpoint-${endpoint.value}-search`}>
+                <div className="flex items-center gap-2 px-3 py-1 text-sm font-medium">
+                  {endpoint.icon && (
+                    <div className="flex items-center justify-center overflow-hidden rounded-full p-1">
+                      {endpoint.icon}
+                    </div>
+                  )}
+                  {endpoint.label}
+                </div>
+                {showMarketplace && (
+                  <MarketplaceItem
+                    className="px-3 py-2 pl-6"
+                    label={localize('com_agents_marketplace')}
+                    posInSet={resultOffset + 1}
+                    setSize={listboxSetSize}
+                  />
+                )}
+                <SearchModelRows
+                  endpoint={endpoint}
+                  filteredModels={filteredModels}
+                  precedingOptionCount={resultOffset + (showMarketplace ? 1 : 0)}
+                  listboxSetSize={listboxSetSize}
+                  searchValue={searchValue}
+                />
+              </Fragment>
+            );
+          }
+
+          const { endpoint } = result;
+          const isEndpointSelected = !selectedSpec && selectedEndpoint === endpoint.value;
           return (
             <MenuItem
-              key={spec.name}
-              onClick={() => handleSelectSpec(spec)}
-              aria-selected={selectedSpec === spec.name || undefined}
+              key={`endpoint-${endpoint.value}-search-item`}
+              onClick={() => handleSelectEndpoint(endpoint)}
+              aria-selected={isEndpointSelected || undefined}
               aria-posinset={resultOffset + 1}
               aria-setsize={listboxSetSize}
-              className={cn(
-                'flex w-full cursor-pointer justify-between rounded-lg px-2 text-sm',
-                spec.description ? 'items-start' : 'items-center',
-              )}
+              className="flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-sm"
             >
-              <div
-                className={cn(
-                  'flex w-full min-w-0 gap-2 px-1 py-1',
-                  spec.description ? 'items-start' : 'items-center',
-                )}
-              >
-                {(spec.showIconInMenu ?? true) && (
-                  <div className="flex-shrink-0">
-                    <SpecIcon
-                      currentSpec={spec}
-                      endpointsConfig={endpointsConfig}
-                      agentAvatarURL={getSpecAgentAvatarURL(spec, agentsMap)}
-                    />
+              <div className="flex items-center gap-2">
+                {endpoint.icon && (
+                  <div
+                    className="flex items-center justify-center overflow-hidden rounded-full border border-border-light p-1"
+                    style={{ borderRadius: '50%' }}
+                  >
+                    {endpoint.icon}
                   </div>
                 )}
-                <div className="flex min-w-0 flex-col gap-1">
-                  <span className="truncate text-left">{spec.label}</span>
-                  <SpecDescription description={spec.description} />
-                </div>
+                <span>{endpoint.label}</span>
               </div>
-              <ModelCost modelId={spec.preset.model} endpoint={spec.preset.endpoint} />
-              {selectedSpec === spec.name && (
+              {isEndpointSelected && (
                 <>
-                  <CheckCircle2
-                    className={cn(
-                      'size-4 shrink-0 text-text-primary',
-                      spec.description ? 'mt-1' : '',
-                    )}
-                    aria-hidden="true"
-                  />
+                  <CheckCircle2 className="size-4 shrink-0 text-text-primary" aria-hidden="true" />
                   <VisuallyHidden>{localize('com_a11y_selected')}</VisuallyHidden>
                 </>
               )}
             </MenuItem>
           );
-        }
-
-        if (result.kind === 'models') {
-          const { endpoint, filteredModels, showMarketplace } = result;
-          return (
-            <Fragment key={`endpoint-${endpoint.value}-search`}>
-              <div className="flex items-center gap-2 px-3 py-1 text-sm font-medium">
-                {endpoint.icon && (
-                  <div className="flex items-center justify-center overflow-hidden rounded-full p-1">
-                    {endpoint.icon}
-                  </div>
-                )}
-                {endpoint.label}
-              </div>
-              {showMarketplace && (
-                <MarketplaceItem
-                  className="px-3 py-2 pl-6"
-                  label={localize('com_agents_marketplace')}
-                  posInSet={resultOffset + 1}
-                  setSize={listboxSetSize}
-                />
-              )}
-              <SearchModelRows
-                endpoint={endpoint}
-                filteredModels={filteredModels}
-                precedingOptionCount={resultOffset + (showMarketplace ? 1 : 0)}
-                listboxSetSize={listboxSetSize}
-                searchValue={searchValue}
-              />
-            </Fragment>
-          );
-        }
-
-        const { endpoint } = result;
-        const isEndpointSelected = !selectedSpec && selectedEndpoint === endpoint.value;
-        return (
-          <MenuItem
-            key={`endpoint-${endpoint.value}-search-item`}
-            onClick={() => handleSelectEndpoint(endpoint)}
-            aria-selected={isEndpointSelected || undefined}
-            aria-posinset={resultOffset + 1}
-            aria-setsize={listboxSetSize}
-            className="flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-sm"
-          >
-            <div className="flex items-center gap-2">
-              {endpoint.icon && (
-                <div
-                  className="flex items-center justify-center overflow-hidden rounded-full border border-border-light p-1"
-                  style={{ borderRadius: '50%' }}
-                >
-                  {endpoint.icon}
-                </div>
-              )}
-              <span>{endpoint.label}</span>
-            </div>
-            {isEndpointSelected && (
-              <>
-                <CheckCircle2 className="size-4 shrink-0 text-text-primary" aria-hidden="true" />
-                <VisuallyHidden>{localize('com_a11y_selected')}</VisuallyHidden>
-              </>
-            )}
-          </MenuItem>
-        );
-      })}
+        })}
+      </ModelInfoHoverGroup>
     </>
   );
 }

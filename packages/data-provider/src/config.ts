@@ -43,6 +43,8 @@ import { specsConfigSchema, TSpecsConfig } from './models';
 import { fileConfigSchema } from './file-config';
 import { isActionTool } from './types/tools';
 import { apiBaseUrl } from './api-endpoints';
+// Deloitte Custom Change: resolves ${VAR} placeholders in the balance schema
+import { extractEnvVariable } from './utils';
 import { FileSources } from './types/files';
 import { MCPServersSchema } from './mcp';
 export {
@@ -109,6 +111,10 @@ export const excludedKeys = new Set([
   'updatedAt',
   'expiredAt',
   'isTemporary',
+  // Deloitte Custom Change: Retention Update
+  'lastActivityAt',
+  // Deloitte Custom Change: Retention Update
+  'retentionException',
   'messages',
   'isArchived',
   'pinned',
@@ -2354,6 +2360,27 @@ export const interfaceSchema = z
         simplifyFork: z.boolean().optional(),
         editChat: z.boolean().optional(),
         showToolsDropdown: z.boolean().optional(),
+        /** Deloitte Custom Change: tool keys (`skills`, `execute_code`, `artifacts`) switched on by default for users with no stored toggle. */
+        defaultEnabledTools: z.array(z.string()).optional(),
+        /** Deloitte Custom Change: which rows the tools dropdown lists (all when `items` is unset) and whether users get pin buttons. */
+        toolsDropdown: z
+          .object({
+            items: z
+              .array(
+                z.enum([
+                  'file_search',
+                  'web_search',
+                  'skills',
+                  'memory',
+                  'execute_code',
+                  'artifacts',
+                  'mcp',
+                ]),
+              )
+              .optional(),
+            showPinButtons: z.boolean().optional(),
+          })
+          .optional(),
         alwaysEnableFileSearch: z.boolean().optional(), // Deloitte Custom Change
         hideFileSearchToggle: z.boolean().optional(), // Deloitte Custom Change
         createActions: z.boolean().optional(),
@@ -2361,6 +2388,10 @@ export const interfaceSchema = z
         conversationIcon: z.boolean().optional(),
         /** Enable/disable the in-app Learning Hub tutorials (first-run prompt, guided tours). */
         isTutorialEnabled: z.boolean().optional(),
+        /** Show the Learning Center "Common Questions" page (opt-in). */
+        learningCommonQuestions: z.boolean().optional(),
+        /** Show the Learning Center "Release Notes" page (opt-in). */
+        learningReleaseNotes: z.boolean().optional(),
         accountsTab: z.boolean().optional(),
         dataApiKeys: z.boolean().optional(),
         adminAgentApiKeys: z.boolean().optional(), // Deloitte Custom Change: admin-only service account API key management.
@@ -2368,8 +2399,6 @@ export const interfaceSchema = z
         externalVoiceProvider: z.boolean().optional(),
         artifactsShadcnOnly: z.boolean().optional(),
         showConversationTitleInHeader: z.boolean().optional(),
-        /** Set to true to show the 1-5 `$` price-tier badge in the model selector. */
-        showModelPricingIndicator: z.boolean().optional(),
         /**
          * 4 strictly ascending $/1M blended-cost breakpoints that split models into the
          * 5 price tiers (`$` to `$$$$$`) shown in the model selector. A model's blended
@@ -2387,6 +2416,17 @@ export const interfaceSchema = z
             },
           )
           .optional(),
+        /**
+         * Which 1-5 price tiers (see `modelPricingTierBreakpoints`) get the "High Cost"
+         * callout in the model selector tooltip. Defaults to `[5]` (top tier only) when unset.
+         */
+        highCostAlertTiers: z.array(z.number().int().min(1).max(5)).optional(),
+        /** Deloitte Custom Change: show the user's balance as currency (1,000,000 credits = 1 USD) instead of raw credits. */
+        showBalanceAsCurrency: z.boolean().optional(),
+        /** Deloitte Custom Change: show a small balance gauge above the account avatar. */
+        showBalanceGauge: z.boolean().optional(),
+        /** Deloitte Custom Change: show refill and cost-saving guidance in the balance gauge hover card. */
+        showBalanceHelperText: z.boolean().optional(),
       })
       .optional(),
     prompts: z
@@ -2417,6 +2457,13 @@ export const interfaceSchema = z
     autoSubmitFromUrl: z.boolean().optional(),
     retentionMode: z.nativeEnum(RetentionMode).default(RetentionMode.TEMPORARY),
     retainAgentFiles: z.boolean().optional(),
+    // Deloitte Custom Change: Retention Update
+    fileRetentionHours: z.number().min(1).max(8760).optional(),
+    fileRetentionWarningHours: z.number().min(1).max(8760).optional(),
+    agentRetentionHours: z.number().min(1).max(8760).optional(),
+    agentRetentionWarningHours: z.number().min(1).max(8760).optional(),
+    memoryRetentionHours: z.number().min(1).max(8760).optional(),
+    agentFileRetentionHours: z.number().min(1).max(8760).optional(),
     runCode: z.boolean().optional(),
     webSearch: z.boolean().optional(),
     contextUsage: z.boolean().optional(),
@@ -2655,9 +2702,15 @@ export type TModelPricing = Record<
   {
     inputPer1M: number;
     outputPer1M: number;
+    /** Resolved cache-read rate; absent when the model has no cache pricing. */
+    cacheReadPer1M?: number;
+    /** Resolved cache-write rate; absent when the model has no cache pricing. */
+    cacheWritePer1M?: number;
     provider?: string;
     /** 1-5 relative price tier, shown as `$` to `$$$$$` in the model selector. */
     tier: number;
+    /** Whether this tier is configured (via `highCostAlertTiers`) to show the "High Cost" callout. */
+    isHighCost: boolean;
   }
 >;
 
@@ -2980,13 +3033,35 @@ export const ocrSchema = z.object({
   strategy: z.nativeEnum(OCRStrategy).default(OCRStrategy.MISTRAL_OCR),
 });
 
+/** Deloitte Custom Change: resolves `${VAR}` strings from the environment into numbers; unresolved placeholders are left for validation to reject. */
+const envNumber = (value: unknown): unknown => {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const resolved = extractEnvVariable(value);
+  return resolved.trim() !== '' && !Number.isNaN(Number(resolved)) ? Number(resolved) : resolved;
+};
+
+/** Deloitte Custom Change: resolves `${VAR}` strings from the environment into booleans (`true`/`false`, case-insensitive). */
+const envBoolean = (value: unknown): unknown => {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const resolved = extractEnvVariable(value).trim().toLowerCase();
+  if (resolved === 'true' || resolved === 'false') {
+    return resolved === 'true';
+  }
+  return resolved;
+};
+
+// Deloitte Custom Change: enabled, startBalance and refillAmount accept ${VAR} placeholders from librechat.yaml
 export const balanceSchema = z.object({
-  enabled: z.boolean().optional().default(false),
-  startBalance: z.number().optional().default(20000),
+  enabled: z.preprocess(envBoolean, z.boolean().optional().default(false)),
+  startBalance: z.preprocess(envNumber, z.number().optional().default(20000)),
   autoRefillEnabled: z.boolean().optional().default(false),
   refillIntervalValue: z.number().optional().default(30),
   refillIntervalUnit: z.enum(REFILL_INTERVAL_UNITS).optional().default('days'),
-  refillAmount: z.number().optional().default(10000),
+  refillAmount: z.preprocess(envNumber, z.number().optional().default(10000)),
   reservationTtlMs: z
     .number()
     .int()
@@ -3518,9 +3593,11 @@ export const alternateName = {
   [EModelEndpoint.azureAssistants]: 'Azure Assistants',
   [EModelEndpoint.azureOpenAI]: 'Azure OpenAI',
   [EModelEndpoint.google]: 'Google',
-  [EModelEndpoint.anthropic]: 'Anthropic',
+  // Deloitte Custom Change: provider names aligned with the model picker groups.
+  [EModelEndpoint.anthropic]: 'Anthropic Global',
   [EModelEndpoint.custom]: 'Custom',
-  [EModelEndpoint.bedrock]: 'AWS Bedrock',
+  [EModelEndpoint.bedrock]: 'Anthropic Australia',
+  'Azure Global': 'OpenAI Global',
   [KnownEndpoints.lemonade]: 'AMD Lemonade',
   [KnownEndpoints.ollama]: 'Ollama',
   [KnownEndpoints.deepseek]: 'DeepSeek',
@@ -3577,6 +3654,8 @@ const sharedOpenAIModels = [
 const sharedAnthropicModels = [
   'claude-fable-5-1',
   'claude-fable-5',
+  // Deloitte Custom Change: Claude Haiku 5.5 gateway model.
+  'claude-haiku-5-5',
   'claude-opus-5-5',
   'claude-opus-5',
   'claude-sonnet-5-5',
@@ -3615,6 +3694,8 @@ const sharedAnthropicModels = [
 export const bedrockModels = [
   'global.anthropic.claude-fable-5-1',
   'global.anthropic.claude-fable-5',
+  // Deloitte Custom Change: Claude Haiku 5.5 gateway model (Bedrock global profile).
+  'global.anthropic.claude-haiku-5-5',
   'global.anthropic.claude-opus-5-5',
   'global.anthropic.claude-opus-5',
   'global.anthropic.claude-sonnet-5-5',
@@ -3967,6 +4048,10 @@ export enum CacheKeys {
    * Key for admin panel OAuth exchange codes (one-time-use, short TTL).
    */
   ADMIN_OAUTH_EXCHANGE = 'ADMIN_OAUTH_EXCHANGE',
+  /**
+   * Key for cached MCP Gateway toolset metadata (RBAC-filtered per user).
+   */
+  MCP_GATEWAY_TOOLSETS = 'MCP_GATEWAY_TOOLSETS',
 }
 
 export const AUTH_USER_DOC_BY_ID_PREFIX = 'auth-user-doc-byid';

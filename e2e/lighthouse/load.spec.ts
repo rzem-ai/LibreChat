@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { seedConversations, seedMessages } from '../specs/mock/db';
+import { seedConversations, seedMessages, withMongo } from '../specs/mock/db';
 import { getE2EUser } from '../setup/user';
 import { auditPage, lcpElement } from './audit';
 
@@ -26,6 +26,13 @@ test('serial database latency stays within web-vitals budgets', async ({ page, b
       sender: 'Assistant',
     },
   ]);
+  // Deloitte Custom Change: keep the first-run tutorial overlay out of this populated-conversation audit.
+  await withMongo(async (db) => {
+    const result = await db
+      .collection('users')
+      .updateOne({ email }, { $set: { tutorialPromptSeen: true } });
+    expect(result.matchedCount, 'The Lighthouse test user must already exist').toBe(1);
+  });
   const url = `${baseURL}/c/${conversationId}`;
   await page.goto(url);
   await expect(page.locator('.message-render').filter({ hasText: transcriptMarker })).toBeVisible();

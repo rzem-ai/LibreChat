@@ -2,6 +2,7 @@ import { MCPIcon } from '@librechat/client';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import type { MCPServerStatusIconProps } from '~/components/MCP/MCPServerStatusIcon';
 import type { MCPServerDefinition } from '~/hooks';
+import { MCPServerHoverGroup } from '~/components/MCP/MCPServerTooltip';
 import { useLocalize, useHasAccess } from '~/hooks';
 import MCPServerCard from './MCPServerCard';
 
@@ -52,18 +53,20 @@ export default function MCPServerList({
   }
 
   return (
-    <div className="space-y-2" role="list" aria-label={localize('com_ui_mcp_servers')}>
-      {servers.map((server) => (
-        <div key={`card_${server.serverName}`} role="listitem">
-          <MCPServerCard
-            server={server}
-            getServerStatusIconProps={getServerStatusIconProps}
-            connectOrConfigureServer={connectOrConfigureServer}
-            revokeOAuthForServer={revokeOAuthForServer}
-            canCreateEditMCPs={canCreateEditMCPs}
-          />
-        </div>
-      ))}
-    </div>
+    <MCPServerHoverGroup>
+      <div className="w-full space-y-2" role="list" aria-label={localize('com_ui_mcp_servers')}>
+        {servers.map((server) => (
+          <div key={`card_${server.serverName}`} role="listitem">
+            <MCPServerCard
+              server={server}
+              getServerStatusIconProps={getServerStatusIconProps}
+              connectOrConfigureServer={connectOrConfigureServer}
+              revokeOAuthForServer={revokeOAuthForServer}
+              canCreateEditMCPs={canCreateEditMCPs}
+            />
+          </div>
+        ))}
+      </div>
+    </MCPServerHoverGroup>
   );
 }

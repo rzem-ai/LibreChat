@@ -1,4 +1,4 @@
-import { logger } from '@librechat/data-schemas';
+import { logger, getGeneralChatRetentionHours } from '@librechat/data-schemas';
 import { excludedKeys, isAgentsEndpoint, isEphemeralAgentId } from 'librechat-data-provider';
 import type { AppConfig, ConversationMethods, IConversation } from '@librechat/data-schemas';
 import type { TConversation } from 'librechat-data-provider';
@@ -6,7 +6,11 @@ import type { TConversation } from 'librechat-data-provider';
 type SaveConvo = ConversationMethods['saveConvo'];
 type SaveConvoOptions = NonNullable<Parameters<SaveConvo>[2]>;
 type SavedMessageId = NonNullable<SaveConvoOptions['appendMessageIds']>[number];
-type ConversationStore = Pick<ConversationMethods, 'getConvo' | 'saveConvo'>;
+type ConversationStore = Pick<ConversationMethods, 'getConvo' | 'saveConvo'> & {
+  // Deloitte Custom Change: Retention Update
+  /** Throttled fire-and-forget activity stamp; omitted, the touch is skipped. */
+  touchConversationLastActivity?: ConversationMethods['touchConversationLastActivity'];
+};
 
 /** Retention context a message or conversation write runs under. */
 export type ConversationWriteContext = Parameters<SaveConvo>[0];
@@ -163,6 +167,19 @@ async function writeConversation(
   );
   if (req != null && conversation != null && 'conversationId' in conversation) {
     req.resolvedConversation = conversation;
+  }
+  // Deloitte Custom Change: Retention Update
+  if (conversation != null && 'isTemporary' in conversation) {
+    if (conversation.isTemporary !== true && conversation.retentionException?.exempt !== true) {
+      deps
+        .touchConversationLastActivity?.(
+          conversation._id,
+          getGeneralChatRetentionHours(ctx.interfaceConfig),
+        )
+        .catch((error: unknown) => {
+          logger.error('[writeConversation] Failed to touch conversation retention', error);
+        });
+    }
   }
   return { conversation, initialized: existing != null };
 }

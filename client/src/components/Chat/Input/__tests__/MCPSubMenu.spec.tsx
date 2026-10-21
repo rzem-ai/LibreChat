@@ -8,6 +8,11 @@ const mockToggleServerSelection = jest.fn();
 const mockSetIsPinned = jest.fn();
 const mockMCPRefresh = jest.fn();
 
+// Deloitte Custom Change: stub the dropdown config hook (the spec renders without providers).
+jest.mock('~/hooks/Plugins/useToolsDropdownConfig', () => ({
+  useToolsDropdownConfig: () => ({ showPinButtons: true, isItemVisible: () => true }),
+}));
+
 jest.mock('~/hooks/MCP/useMCPRefresh', () => ({
   useMCPRefresh: (options: { enabled: boolean }) => mockMCPRefresh(options),
 }));
@@ -42,6 +47,10 @@ jest.mock('~/hooks', () => ({
   useHasAccess: () => true,
 }));
 
+jest.mock('~/data-provider', () => ({
+  useMCPToolsetsQuery: () => ({ data: undefined }),
+}));
+
 jest.mock('@librechat/client', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const R = require('react');
@@ -49,6 +58,10 @@ jest.mock('@librechat/client', () => {
     MCPIcon: ({ className }: { className?: string }) => R.createElement('span', { className }),
     PinIcon: ({ unpin }: { unpin?: boolean }) =>
       R.createElement('span', { 'data-testid': unpin ? 'unpin-icon' : 'pin-icon' }),
+    Tag: ({ label }: { label: string }) => R.createElement('span', null, label),
+    MCPServerHoverGroup: ({ children }: { children: React.ReactNode }) =>
+      R.createElement(R.Fragment, null, children),
+    MCPServerHoverTarget: ({ children }: { children: React.ReactNode }) => children,
     Spinner: ({ className }: { className?: string }) => R.createElement('span', { className }),
   };
 });

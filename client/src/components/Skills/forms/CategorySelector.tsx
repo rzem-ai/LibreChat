@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import * as Ariakit from '@ariakit/react';
 import { DropdownPopup } from '@librechat/client';
 import { useFormContext, Controller } from 'react-hook-form';
@@ -9,9 +9,15 @@ import { cn } from '~/utils';
 
 interface CategorySelectorProps {
   className?: string;
+  // Deloitte Custom Change: Disables the trigger and menu items for viewers; this is a
+  // button/menu, not a text input, so it is enforced via Ariakit's `disabled`, not native `readOnly`.
+  readOnly?: boolean;
 }
 
-const CategorySelector: React.FC<CategorySelectorProps> = ({ className = '' }) => {
+const CategorySelector: React.FC<CategorySelectorProps> = ({
+  className = '',
+  readOnly = false,
+}) => {
   const localize = useLocalize();
   const { control, watch, setValue } = useFormContext();
   const [isOpen, setIsOpen] = useState(false);
@@ -24,6 +30,14 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({ className = '' }) =
     [categories, watchedCategory, emptyCategory],
   );
 
+  // Deloitte Custom Change: Close an already-open menu if it becomes read-only mid-session,
+  // e.g. a permissions refetch while the menu is open.
+  useEffect(() => {
+    if (readOnly) {
+      setIsOpen(false);
+    }
+  }, [readOnly]);
+
   const menuItems: MenuItemProps[] = useMemo(() => {
     if (!categories) {
       return [];
@@ -32,12 +46,13 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({ className = '' }) =
       id: category.value,
       label: category.label,
       icon: category.icon,
+      disabled: readOnly,
       onClick: () => {
         setValue('category', category.value || '', { shouldDirty: true });
         setIsOpen(false);
       },
     }));
-  }, [categories, setValue]);
+  }, [categories, setValue, readOnly]);
 
   const trigger = (
     <Ariakit.MenuButton
@@ -46,6 +61,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({ className = '' }) =
         'gap-2 sm:w-fit',
         className,
       )}
+      disabled={readOnly}
       onClick={() => setIsOpen(!isOpen)}
       aria-label={localize('com_ui_category')}
     >

@@ -195,6 +195,20 @@ describe('getOpenAILLMConfig', () => {
       expect(result.llmConfig).not.toHaveProperty('temperature');
     });
 
+    it.each(['gpt-6.1-sol', 'gpt-61-sol'])(
+      'should move maxTokens into modelKwargs for %s',
+      (model) => {
+        const result = getOpenAILLMConfig({
+          apiKey: 'test-api-key',
+          streaming: true,
+          modelOptions: { model, max_tokens: 4096 },
+        });
+
+        expect(result.llmConfig).not.toHaveProperty('maxTokens');
+        expect(result.llmConfig.modelKwargs).toMatchObject({ max_completion_tokens: 4096 });
+      },
+    );
+
     it('should preserve other valid parameters for reasoning models', () => {
       const result = getOpenAILLMConfig({
         apiKey: 'test-api-key',

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { format } from 'date-fns';
 import { Button, TooltipAnchor } from '@librechat/client';
-import { User, Pencil, Calendar, EarthIcon } from 'lucide-react';
+import { formatDisplayDate } from 'librechat-data-provider';
+import { Pin, User, Pencil, Calendar, EarthIcon } from 'lucide-react';
 import type { TSkill } from 'librechat-data-provider';
 import { useLocalize, useAuthContext, useSkillPermissions, useSkillActiveState } from '~/hooks';
 import SkillMarkdownRenderer from './SkillMarkdownRenderer';
@@ -29,9 +29,8 @@ export default function SkillDetail({ skill, onEdit, onDelete }: SkillDetailProp
   const isPublic = skill.isPublic === true;
   const isShared = skill.author !== user?.id && Boolean(skill.authorName);
   const addedBy = isShared ? skill.authorName : localize('com_ui_you');
-  const updatedDate = skill.updatedAt
-    ? format(new Date(skill.updatedAt), 'MMM d, yyyy')
-    : undefined;
+  // Deloitte Custom Change: use the shared date format for consistent skill metadata dates.
+  const updatedDate = formatDisplayDate(skill.updatedAt);
 
   const { fields: frontmatterFields, body: cleanBody } = useMemo(
     () => parseFrontmatter(skill.body ?? '', SKIP_KEYS),
@@ -58,6 +57,19 @@ export default function SkillDetail({ skill, onEdit, onDelete }: SkillDetailProp
                   <EarthIcon
                     className="size-5 shrink-0 text-accent-primary"
                     aria-label={localize('com_ui_skill_sr_public')}
+                  />
+                }
+              />
+            )}
+            {/* Deloitte Custom Change: Show the always-apply indicator in the active SkillDetail header. */}
+            {skill.alwaysApply === true && (
+              <TooltipAnchor
+                description={localize('com_ui_skills_always_apply_pin_title')}
+                side="top"
+                render={
+                  <Pin
+                    className="size-5 shrink-0 text-status-info"
+                    aria-label={localize('com_ui_skills_always_apply_pin_title')}
                   />
                 }
               />

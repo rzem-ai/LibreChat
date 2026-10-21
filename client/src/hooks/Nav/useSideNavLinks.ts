@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MCPIcon, AttachmentIcon, OpenAIMinimalIcon } from '@librechat/client';
 import {
   Bot,
@@ -33,7 +34,6 @@ import BookmarkPanel from '~/components/SidePanel/Bookmarks/BookmarkPanel';
 import PanelSwitch from '~/components/SidePanel/Builder/PanelSwitch';
 import { SchedulePanel } from '~/components/SidePanel/Schedules';
 import Parameters from '~/components/SidePanel/Parameters/Panel';
-import LearningPanel from '~/components/Learning/LearningPanel';
 import { MemoryPanel } from '~/components/SidePanel/Memories';
 import FilesPanel from '~/components/SidePanel/Files/Panel';
 import { PromptsAccordion } from '~/components/Prompts';
@@ -97,6 +97,7 @@ export default function useSideNavLinks({
     permission: Permissions.USE,
   });
   const { availableMCPServers } = useMCPServerManager();
+  const navigate = useNavigate();
 
   const { agentsConfig } = useGetAgentsConfig({ endpointsConfig });
   const { skillsEnabled } = useAgentCapabilities(agentsConfig?.capabilities);
@@ -246,7 +247,7 @@ export default function useSideNavLinks({
         label: '',
         icon: GraduationCap,
         id: 'learning',
-        Component: LearningPanel,
+        onClick: () => navigate('/learn'),
       });
     }
 
@@ -284,6 +285,7 @@ export default function useSideNavLinks({
     interfaceConfig.isTutorialEnabled,
     includeHidePanel,
     hidePanel,
+    navigate,
   ]);
 
   return Links;

@@ -24,7 +24,7 @@ jest.mock('librechat-data-provider', () => {
   };
 });
 
-jest.mock('~/components/Learning/LearningTourContext', () => ({
+jest.mock('~/components/Learn/LearningTourContext', () => ({
   useLearningTour: () => ({ startGettingStartedTour: mockStartGettingStartedTour }),
 }));
 
@@ -114,6 +114,11 @@ jest.mock('~/components/Chat/Menus/OpenSidebar', () => ({
 jest.mock('~/components/Nav/AccountSettings', () => ({
   __esModule: true,
   default: () => <div data-testid="account-settings" />,
+}));
+
+jest.mock('~/components/Nav/BalanceGauge', () => ({
+  __esModule: true,
+  default: () => <div data-testid="balance-gauge" />,
 }));
 
 import ExpandedPanel from '../ExpandedPanel';

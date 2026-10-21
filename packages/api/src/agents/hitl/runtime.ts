@@ -41,6 +41,12 @@ export interface HITLRunWiring {
     aliases: readonly MCPToolAlias[],
     policy: TToolApprovalPolicy | undefined,
   ) => void;
+  /**
+   * [Deloitte: Register classified tools discovered while a lazy subagent resolves.]
+   * @param names - Runtime names of newly resolved classified tools.
+   * @returns Nothing.
+   */
+  addClassifiedToolNames: (names: readonly string[]) => void;
 }
 
 /**
@@ -62,6 +68,8 @@ export function buildHITLRunWiring(
   mcpToolAliases: readonly MCPToolAlias[] = [],
   resolvedProgrammaticHooks?: readonly ResolvedToolApprovalHook[],
   nativeEditFileAgentIds: ReadonlySet<string> = new Set(),
+  classifiedToolNames: readonly string[] = [],
+  mayResolveClassifiedTools = false,
 ): HITLRunWiring | undefined {
   if (!isHITLEnabled(policy)) {
     return undefined;
@@ -102,6 +110,7 @@ export function buildHITLRunWiring(
     };
   const registry = new HookRegistry();
   let activePolicy: TToolApprovalPolicy | undefined = policy;
+  const classifiedNames = new Set(classifiedToolNames);
   const aliases = [...mcpToolAliases];
   const registeredAliases = new Set(
     aliases.map(({ name, aliasName }) => `${name}\u0000${aliasName}`),
@@ -114,6 +123,14 @@ export function buildHITLRunWiring(
       ),
     ],
   });
+
+  if (classifiedToolNames.length > 0 || mayResolveClassifiedTools) {
+    // This later hook wins over bypass/allow but a configured deny still wins
+    // when the SDK folds policy decisions.
+    registry.register('PreToolUse', {
+      hooks: [async (input) => (classifiedNames.has(input.toolName) ? { decision: 'ask' } : {})],
+    });
+  }
 
   // Host-registered programmatic hooks — context-aware, layered after the static-policy hook.
   const programmaticHooks = resolvedProgrammaticHooks ?? buildToolApprovalHooks(context);
@@ -167,6 +184,16 @@ export function buildHITLRunWiring(
       }
       aliases.push(...newAliases);
       activePolicy = updatedPolicy;
+    },
+    /**
+     * [Deloitte: Add trusted classifications discovered during lazy resolution.]
+     * @param names - Runtime names of classified tools.
+     * @returns Nothing.
+     */
+    addClassifiedToolNames(names: readonly string[]): void {
+      for (const name of names) {
+        classifiedNames.add(name);
+      }
     },
   };
 }

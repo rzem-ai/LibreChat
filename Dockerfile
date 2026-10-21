@@ -42,6 +42,14 @@ RUN uv --version
 ARG NODE_MAX_OLD_SPACE_SIZE=6144
 ARG NPM_CI_TIMEOUT_SECONDS=1500
 ARG NPM_CI_ATTEMPTS=2
+# Per-environment PWA manifest title. The Helm-provided APP_TITLE only reaches
+# the container at runtime, which is too late for Vite's build-time manifest
+# generation — CI must pass this as a build-arg per environment (e.g.
+# "MyAssist (DEV)") for the deployed manifest to match. Empty by default so
+# client/vite.config.ts falls through to its 'MyAssist' default. Declared as
+# ARG only: an ENV would bake an empty APP_TITLE into the runtime image, and
+# dotenv never overrides an existing variable, so .env's value would be ignored.
+ARG APP_TITLE=
 
 RUN mkdir -p /app && chown node:node /app
 WORKDIR /app

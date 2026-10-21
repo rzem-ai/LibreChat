@@ -308,10 +308,10 @@ describe('Error — reader-facing provider and fallback copy', () => {
     );
 
     expect(
-      screen.getByText(localized('com_error_provider_failed', 'Anthropic')),
+      screen.getByText(localized('com_error_provider_failed', 'Anthropic Global')),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText(localized('com_error_invalid_request_error', 'Anthropic')),
+      screen.queryByText(localized('com_error_invalid_request_error', 'Anthropic Global')),
     ).not.toBeInTheDocument();
     expect(screen.getByText('prompt is too long')).toBeInTheDocument();
   });
@@ -330,7 +330,7 @@ describe('Error — reader-facing provider and fallback copy', () => {
     } as TMessage);
 
     expect(
-      screen.getByText(localized('com_error_provider_failed', 'Anthropic')),
+      screen.getByText(localized('com_error_provider_failed', 'Anthropic Global')),
     ).toBeInTheDocument();
     expect(
       screen.getByText(`An error occurred while processing the request: 400 ${reason}`),
@@ -406,7 +406,7 @@ describe('Error — provider and model identity', () => {
     );
 
     expect(
-      screen.getByText(localized('com_error_endpoint_models_not_loaded', 'Anthropic')),
+      screen.getByText(localized('com_error_endpoint_models_not_loaded', 'Anthropic Global')),
     ).toBeInTheDocument();
     expectReadable();
   });
@@ -1105,7 +1105,7 @@ describe('Error — agent provider guidance', () => {
     renderError(payload, agentRow, { agents: { [opsAgent.id]: opsAgent } });
 
     expect(
-      screen.getByText(localized('com_error_invalid_agent_provider', 'AWS Bedrock')),
+      screen.getByText(localized('com_error_invalid_agent_provider', 'Anthropic Australia')),
     ).toBeInTheDocument();
     expect(screen.getByText(catalog.com_error_invalid_agent_provider_editable)).toBeInTheDocument();
   });
@@ -1187,7 +1187,9 @@ describe('Error — agent handoffs within a row', () => {
       agents: { [rootAgent.id]: rootAgent, [writerAgent.id]: writerAgent },
     });
 
-    expect(screen.getByText(localized('com_error_no_user_key', 'Anthropic'))).toBeInTheDocument();
+    expect(
+      screen.getByText(localized('com_error_no_user_key', 'Anthropic Global')),
+    ).toBeInTheDocument();
     expect(document.body.textContent).not.toContain('Google');
   });
 
@@ -1219,7 +1221,9 @@ describe('Error — agent handoffs within a row', () => {
       agents: { [rootAgent.id]: rootAgent },
     });
 
-    expect(screen.getByText(localized('com_error_no_user_key', 'Anthropic'))).toBeInTheDocument();
+    expect(
+      screen.getByText(localized('com_error_no_user_key', 'Anthropic Global')),
+    ).toBeInTheDocument();
   });
 
   /** A parallel run stamps each part with its lane's agent, whatever handoff preceded it. */

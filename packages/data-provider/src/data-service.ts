@@ -371,6 +371,11 @@ export const getMCPAuthValues = (serverName: string): Promise<q.MCPAuthValuesRes
   return request.get(endpoints.mcpAuthValues(serverName));
 };
 
+/** Deloitte Custom Change: MCP Gateway toolset metadata for the connector tooltip. */
+export const getMCPToolsets = (): Promise<q.MCPToolsetsResponse> => {
+  return request.get(endpoints.mcpToolsets());
+};
+
 export function cancelMCPOAuth(serverName: string): Promise<m.CancelMCPOAuthResponse> {
   return request.post(endpoints.cancelMCPOAuth(serverName), {});
 }
@@ -1567,6 +1572,13 @@ export function updateUserTutorialState(
   update: Partial<t.TTutorialStateResponse>,
 ): Promise<t.TTutorialStateResponse> {
   return request.post(endpoints.userTutorialState(), update);
+}
+
+// Deloitte Custom Change: tour progress stored in MongoDB
+export function updateUserTourProgress(
+  payload: t.TUpdateTourProgressRequest,
+): Promise<t.TTutorialStateResponse> {
+  return request.post(endpoints.userTutorialProgress(), payload);
 }
 
 export function getBanner(): Promise<t.TBannerResponse> {

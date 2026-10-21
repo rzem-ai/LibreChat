@@ -1,5 +1,6 @@
 import {
   Constants,
+  ArtifactModes,
   EModelEndpoint,
   defaultEndpoints,
   modularEndpoints,
@@ -333,11 +334,31 @@ export function getModelSpec({
   return startupConfig.modelSpecs?.list?.find((spec) => spec.name === specName);
 }
 
+/** Deloitte Custom Change: ephemeral-agent values seeded by `defaultEnabledTools`. */
+export type DefaultEnabledValues = Pick<t.TEphemeralAgent, 'execute_code' | 'skills' | 'artifacts'>;
+
+/** Deloitte Custom Change: builds the seeded values for tools listed in `defaultEnabledTools`. */
+export function getDefaultEnabledToolValues(
+  flags?: t.TInterfaceConfig['customDeloitteFeatureFlags'],
+): DefaultEnabledValues {
+  const enabled = new Set(flags?.defaultEnabledTools);
+  const artifactsMode =
+    flags?.artifactsShadcnOnly === true ? ArtifactModes.SHADCNUI : ArtifactModes.DEFAULT;
+  return {
+    ...(enabled.has('execute_code') && { execute_code: true }),
+    ...(enabled.has('skills') && { skills: true }),
+    ...(enabled.has('artifacts') && { artifacts: artifactsMode }),
+  };
+}
+
 export function applyModelSpecEphemeralAgent({
   convoId,
   modelSpec,
   updateEphemeralAgent,
+  // Deloitte Custom Change: admin-enabled tools apply where the spec sets nothing.
+  defaultEnabledValues = {},
 }: {
+  defaultEnabledValues?: DefaultEnabledValues;
   convoId?: string | null;
   modelSpec?: t.TModelSpec;
   updateEphemeralAgent: ((convoId: string, agent: t.TEphemeralAgent | null) => void) | undefined;
@@ -346,14 +367,20 @@ export function applyModelSpecEphemeralAgent({
     return;
   }
   const key = (convoId ?? Constants.NEW_CONVO) || Constants.NEW_CONVO;
+  const specArtifacts = modelSpec.artifacts === true ? 'default' : modelSpec.artifacts || '';
   const agent: t.TEphemeralAgent = {
     mcp: modelSpec.mcpServers ?? [],
     web_search: modelSpec.webSearch ?? false,
     file_search: modelSpec.fileSearch ?? false,
-    execute_code: modelSpec.executeCode ?? false,
+    execute_code: modelSpec.executeCode ?? defaultEnabledValues.execute_code ?? false,
     memory: modelSpec.memory ?? false,
-    artifacts: modelSpec.artifacts === true ? 'default' : modelSpec.artifacts || '',
+    artifacts: modelSpec.artifacts == null ? (defaultEnabledValues.artifacts ?? '') : specArtifacts,
   };
+  if (modelSpec.skills != null) {
+    agent.skills = Array.isArray(modelSpec.skills) ? modelSpec.skills.length > 0 : modelSpec.skills;
+  } else if (defaultEnabledValues.skills != null) {
+    agent.skills = defaultEnabledValues.skills;
+  }
 
   // For existing conversations, layer per-conversation localStorage overrides
   // on top of spec defaults so user modifications persist across navigation.
@@ -364,6 +391,8 @@ export function applyModelSpecEphemeralAgent({
       ['web_search', LocalStorageKeys.LAST_WEB_SEARCH_TOGGLE_],
       ['file_search', LocalStorageKeys.LAST_FILE_SEARCH_TOGGLE_],
       ['artifacts', LocalStorageKeys.LAST_ARTIFACTS_TOGGLE_],
+      // Deloitte Custom Change: persist the Skills toggle per conversation like the other tools.
+      ['skills', LocalStorageKeys.LAST_SKILLS_TOGGLE_],
       ['memory', LocalStorageKeys.LAST_MEMORY_TOGGLE_],
     ];
 

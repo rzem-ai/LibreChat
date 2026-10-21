@@ -83,7 +83,10 @@ pods:
           REFRESH_TOKEN_EXPIRY: '86400000'
           OPENID_USE_END_SESSION_ENDPOINT: 'true'
           OPENID_BUTTON_LABEL: 'Continue with SSO'
-          OPENID_IMAGE_URL: '/assets/favicon.svg'
+          OPENID_IMAGE_URL: '/assets/icon-192x192.png'
+          MODEL_PRICING_MIN_MULTIPLIER: '0.1'
+          MODEL_PRICING_MULTIPLIER_ROUNDING_INCREMENT: '0.1'
+          MODEL_PRICING_REFERENCE_MODEL_ID: 'gpt-56-luna'
           RAG_API_URL: 'http://127.0.0.1:8000'
           RAG_USE_FULL_CONTEXT: 'false'
           # Deloitte Custom Change: bounds memory use for the trusted-tool attachment
@@ -106,6 +109,13 @@ pods:
           SEARCH: 'false'
           # MEILI_NO_ANALYTICS: 'true'
           # MEILI_HOST: 'http://127.0.0.1:7700'
+          # Retry forever (0 = no cap) with 20s max backoff -- survives slow Valkey restarts after node updates.
+          REDIS_RETRY_MAX_ATTEMPTS: '0'
+          REDIS_RETRY_MAX_DELAY: '20000'
+          # Shared Links
+          ALLOW_SHARED_LINKS: 'false'
+          ALLOW_SHARED_LINKS_PUBLIC: 'false'
+          SHARED_LINKS_SNAPSHOT_FILES: 'false'
         service:
           enabled: true
           type: ClusterIP
@@ -157,3 +167,34 @@ valkey:
     size: 5Gi
     storageClass: ''
   passwordSecretName: 'librechat-valkey-password-prd'
+
+# Data retention migration/backfill scripts, run as one-off Kubernetes Jobs via
+# charts/templates/migration-jobs.yaml. ArgoCD never auto-syncs these
+# (argocd.argoproj.io/sync-options: Skip=true) -- an operator triggers each one
+# deliberately from the ArgoCD UI. `dryRun: true` is the safe default in every
+# environment; flip it to `false` per job, per environment, to do a real run.
+migrationJobs:
+  drop-retention-ttl:
+    npmScript: migrate:drop-retention-ttl
+    dryRun: true
+    hookWeight: "0"
+  conversation-retention:
+    npmScript: migrate:conversation-retention
+    dryRun: true
+    hookWeight: "1"
+  file-retention:
+    npmScript: migrate:file-retention
+    dryRun: true
+    hookWeight: "1"
+  agent-retention:
+    npmScript: migrate:agent-retention
+    dryRun: true
+    hookWeight: "1"
+  skill-retention:
+    npmScript: migrate:skill-retention
+    dryRun: true
+    hookWeight: "1"
+  memory-retention:
+    npmScript: migrate:memory-retention
+    dryRun: true
+    hookWeight: "1"

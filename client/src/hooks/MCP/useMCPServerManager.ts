@@ -57,6 +57,8 @@ export interface MCPServerDefinition {
   consumeOnly?: boolean;
   /** True when chat request fields are required before the server can connect. */
   requestScoped?: boolean;
+  /** Deloitte Custom Change: MCP Gateway toolset name backing the connector tooltip. */
+  toolsetName?: string | null;
 }
 
 /**
@@ -154,7 +156,8 @@ export function useMCPServerManager({
     const definitions: MCPServerDefinition[] = [];
     if (loadedServers) {
       for (const [serverName, metadata] of Object.entries(loadedServers)) {
-        const { dbId, consumeOnly, requestScoped, ...config } = metadata;
+        // Deloitte Custom Change: toolsetName for the connector tooltip.
+        const { dbId, consumeOnly, requestScoped, toolsetName, ...config } = metadata;
 
         // Get effective permissions from the permissions map using _id
         // Fall back to 1 (VIEW) for YAML-based servers without _id
@@ -166,6 +169,7 @@ export function useMCPServerManager({
           effectivePermissions,
           consumeOnly,
           requestScoped,
+          toolsetName, // Deloitte Custom Change: connector tooltip
           config,
         });
       }

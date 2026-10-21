@@ -87,6 +87,50 @@ describe('buildHITLRunWiring', () => {
     expect(wiring?.hooks.getMatchers('PreToolUse')).toHaveLength(1);
   });
 
+  test('asks only exact classified tool names', async () => {
+    const wiring = buildHITLRunWiring(
+      { enabled: true, mode: 'bypass' },
+      {},
+      [],
+      undefined,
+      undefined,
+      ['write_mcp_gateway'],
+    );
+    const classifiedHook = wiring?.hooks.getMatchers('PreToolUse')[1].hooks[0];
+    expect(
+      await classifiedHook?.(
+        { toolName: 'write_mcp_gateway_extra' } as never,
+        new AbortController().signal,
+      ),
+    ).toEqual({});
+    expect(
+      await classifiedHook?.(
+        { toolName: 'write_mcp_gateway' } as never,
+        new AbortController().signal,
+      ),
+    ).toEqual({ decision: 'ask' });
+  });
+
+  test('adds classifications discovered by a lazy subagent', async () => {
+    const wiring = buildHITLRunWiring(
+      { enabled: true, mode: 'bypass' },
+      {},
+      [],
+      undefined,
+      undefined,
+      [],
+      true,
+    );
+    const classifiedHook = wiring?.hooks.getMatchers('PreToolUse')[1].hooks[0];
+    wiring?.addClassifiedToolNames(['write_mcp_gateway']);
+    expect(
+      await classifiedHook?.(
+        { toolName: 'write_mcp_gateway' } as never,
+        new AbortController().signal,
+      ),
+    ).toEqual({ decision: 'ask' });
+  });
+
   test('updates the baseline policy for aliases learned after run creation', async () => {
     const wiring = buildHITLRunWiring({ enabled: true, mode: 'dontAsk', allow: ['legacy_tool'] });
     const policyHook = wiring?.hooks.getMatchers('PreToolUse')[0].hooks[0];

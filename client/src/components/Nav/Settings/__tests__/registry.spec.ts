@@ -29,6 +29,9 @@ const settingsContext: SettingsContextValue = {
   usernameDisplaySettingEnabled: true,
   engineTTS: 'browser',
   langfuseConnectionAccess: false,
+  // Deloitte Custom Change: default feature visibility states for settings tests.
+  sharedLinksEnabled: false,
+  temporaryChatEnabled: false,
   adminPanelURL: '',
 };
 
@@ -58,6 +61,7 @@ describe('settings registry', () => {
     }
   });
 
+  // Deloitte Custom Change: verify admin-only Langfuse visibility.
   describe('Langfuse connection visibility', () => {
     const langfuseEntry = registry.find((entry) => entry.id === 'langfuseConnection');
 
@@ -73,6 +77,7 @@ describe('settings registry', () => {
         langfuseEntry?.show?.({
           ...settingsContext,
           langfuseConnectionAccess: true,
+          isAdmin: true,
         }),
       ).toBe(true);
     });
@@ -82,6 +87,17 @@ describe('settings registry', () => {
         langfuseEntry?.show?.({
           ...settingsContext,
           langfuseConnectionAccess: false,
+          isAdmin: true,
+        }),
+      ).toBe(false);
+    });
+
+    it('hides the connection from non-admins', () => {
+      expect(
+        langfuseEntry?.show?.({
+          ...settingsContext,
+          langfuseConnectionAccess: true,
+          isAdmin: false,
         }),
       ).toBe(false);
     });
@@ -90,9 +106,39 @@ describe('settings registry', () => {
       expect(
         langfuseEntry?.show?.({
           ...settingsContext,
+          isAdmin: true,
           langfuseConnectionAccess: true,
         }),
       ).toBe(true);
+    });
+  });
+
+  // Deloitte Custom Change: cover deployment and permission-driven settings visibility.
+  describe('conditional setting visibility', () => {
+    it.each(['importConversations', 'sharedLinks'])(
+      'hides %s when chat sharing is disabled',
+      (id) => {
+        const entry = registry.find((setting) => setting.id === id);
+        expect(entry?.show?.({ ...settingsContext, sharedLinksEnabled: false })).toBe(false);
+      },
+    );
+
+    it.each(['importConversations', 'sharedLinks'])(
+      'shows %s when chat sharing is enabled',
+      (id) => {
+        const entry = registry.find((setting) => setting.id === id);
+        expect(entry?.show?.({ ...settingsContext, sharedLinksEnabled: true })).toBe(true);
+      },
+    );
+
+    it('shows the default temporary chat setting when temporary chat is enabled', () => {
+      const entry = registry.find((setting) => setting.id === 'defaultTemporaryChat');
+      expect(entry?.show?.({ ...settingsContext, temporaryChatEnabled: true })).toBe(true);
+    });
+
+    it('hides the default temporary chat setting when temporary chat is disabled', () => {
+      const entry = registry.find((setting) => setting.id === 'defaultTemporaryChat');
+      expect(entry?.show?.({ ...settingsContext, temporaryChatEnabled: false })).toBe(false);
     });
   });
 

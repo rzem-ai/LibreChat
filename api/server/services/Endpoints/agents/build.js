@@ -8,6 +8,8 @@ const db = require('~/models');
 const loadAgent = (params) =>
   loadAgentFn(params, {
     getAgent: db.getAgentWithVersionCount,
+    // Deloitte Custom Change: Retention Update
+    touchAgentLastActivity: db.touchAgentLastActivity,
     getMCPServerTools,
     getAccessibleMCPServers,
   });

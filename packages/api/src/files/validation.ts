@@ -84,8 +84,11 @@ type FileTypeModule = typeof import('file-type');
 // otherwise rewrite it to `require()` and fail against the ESM-only `file-type` package.
 const importFileType = new Function('return import("file-type")') as () => Promise<FileTypeModule>;
 
-/** Exported for testing the timeout behavior in isolation from the `file-type` module. */
-export const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T | undefined> =>
+/** Deloitte Custom Change: Exported for testing the timeout behavior in isolation from the `file-type` module. */
+export const withTimeoutOrUndefined = <T>(
+  promise: Promise<T>,
+  ms: number,
+): Promise<T | undefined> =>
   new Promise((resolve) => {
     const timer = setTimeout(() => resolve(undefined), ms);
     promise.then(
@@ -114,7 +117,7 @@ export async function validateFileContent(
   }
 
   // The actual check: read the file's real magic bytes, bounded by a timeout so it can't hang.
-  const detected = await withTimeout(
+  const detected = await withTimeoutOrUndefined(
     importFileType().then(({ fileTypeFromFile }) => fileTypeFromFile(filePath)),
     DETECTION_TIMEOUT_MS,
   );

@@ -1827,22 +1827,28 @@ describe('Conversation Operations', () => {
       expect(result?.expiredAt).toEqual(inheritedExpiration);
     });
 
-    it('should save a conversation without expiredAt when isTemporary is false', async () => {
+    // Deloitte Custom Change: Retention Update
+    it('should set a default 30-day expiredAt when isTemporary is false', async () => {
       mockCtx.isTemporary = false;
 
       const result = await saveConvo(mockCtx, mockConversationData);
 
       expect(result?.conversationId).toBe(mockConversationData.conversationId);
-      expect(result?.expiredAt).toBeNull();
+      // Deloitte Custom Change: Retention Update
+      expect(result?.expiredAt).toBeInstanceOf(Date);
+      expect(result?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
     });
 
-    it('should save a conversation without expiredAt when isTemporary is not provided', async () => {
+    // Deloitte Custom Change: Retention Update
+    it('should set a default 30-day expiredAt when isTemporary is not provided', async () => {
       mockCtx.isTemporary = undefined;
 
       const result = await saveConvo(mockCtx, mockConversationData);
 
       expect(result?.conversationId).toBe(mockConversationData.conversationId);
-      expect(result?.expiredAt).toBeUndefined();
+      // Deloitte Custom Change: Retention Update
+      expect(result?.expiredAt).toBeInstanceOf(Date);
+      expect(result?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
     });
 
     it('should use custom retention period from config', async () => {
@@ -1980,11 +1986,13 @@ describe('Conversation Operations', () => {
       );
     });
 
-    it('should preserve temporary retention when saving without isTemporary', async () => {
+    // Deloitte Custom Change: Retention Update
+    it('recomputes a fresh default deadline when saving without isTemporary and no generalChatRetention override', async () => {
       mockCtx.interfaceConfig = { temporaryChatRetention: 24 };
       mockCtx.isTemporary = true;
       const firstSave = await saveConvo(mockCtx, mockConversationData);
-      const originalExpiredAt = firstSave?.expiredAt;
+      // Deloitte Custom Change: Retention Update
+      const originalExpiredAt = firstSave?.expiredAt ?? new Date(0);
 
       mockCtx.isTemporary = undefined;
       const updatedData = { ...mockConversationData, title: 'Updated Title' };
@@ -1992,14 +2000,17 @@ describe('Conversation Operations', () => {
 
       expect(secondSave?.title).toBe('Updated Title');
       expect(secondSave?.isTemporary).toBe(true);
-      expect(secondSave?.expiredAt).toEqual(originalExpiredAt);
+      // Deloitte Custom Change: Retention Update
+      expect(secondSave?.expiredAt?.getTime()).toBeGreaterThanOrEqual(originalExpiredAt.getTime());
     });
 
-    it('should not set expiredAt when updating non-temporary conversation', async () => {
+    // Deloitte Custom Change: Retention Update
+    it('sets a default 30-day expiredAt when updating a non-temporary conversation without isTemporary', async () => {
       // First save a non-temporary conversation
       mockCtx.isTemporary = false;
       const firstSave = await saveConvo(mockCtx, mockConversationData);
-      expect(firstSave?.expiredAt).toBeNull();
+      // Deloitte Custom Change: Retention Update
+      expect(firstSave?.expiredAt).toBeInstanceOf(Date);
 
       // Update without isTemporary flag
       mockCtx.isTemporary = undefined;
@@ -2007,7 +2018,9 @@ describe('Conversation Operations', () => {
       const secondSave = await saveConvo(mockCtx, updatedData);
 
       expect(secondSave?.title).toBe('Updated Title');
-      expect(secondSave?.expiredAt).toBeNull();
+      // Deloitte Custom Change: Retention Update
+      expect(secondSave?.expiredAt).toBeInstanceOf(Date);
+      expect(secondSave?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
     });
 
     it.each([true, false, undefined])(
@@ -2122,14 +2135,17 @@ describe('Conversation Operations', () => {
       expect(secondSave?.expiredAt).toBeDefined();
     });
 
-    it('should not set expiredAt when retentionMode is temporary and not isTemporary', async () => {
+    // Deloitte Custom Change: Retention Update
+    it('sets a default expiredAt for a non-temporary chat even when retentionMode is temporary', async () => {
       mockCtx.isTemporary = false;
       mockCtx.interfaceConfig = {
         temporaryChatRetention: 24,
         retentionMode: RetentionMode.TEMPORARY,
       };
       const result = await saveConvo(mockCtx, mockConversationData);
-      expect(result?.expiredAt).toBeNull();
+      // Deloitte Custom Change: Retention Update
+      expect(result?.expiredAt).toBeInstanceOf(Date);
+      expect(result?.expiredAt?.getTime()).toBeGreaterThan(Date.now());
       expect(result?.isTemporary).toBe(false);
     });
 
@@ -7793,5 +7809,219 @@ describe('Conversation Operations', () => {
         titleMatch.conversationId,
       ]);
     });
+  });
+  // Deloitte Custom Change: Retention Update
+
+  describe('claimExpiredConversations / releaseConversationPurgeClaim', () => {
+    const leaseMs = 10 * 60 * 1000;
+
+    const createExpired = (overrides: Partial<IConversation> = {}) =>
+      Conversation.create({
+        conversationId: uuidv4(),
+        user: 'purge-user',
+        endpoint: EModelEndpoint.openAI,
+        expiredAt: new Date(Date.now() - 1000),
+        ...overrides,
+      });
+
+    it('claims an expired, unclaimed conversation and increments purgeAttempts', async () => {
+      const convo = await createExpired();
+
+      const claimed = await methods.claimExpiredConversations(10, { leaseMs });
+
+      expect(claimed).toHaveLength(1);
+      expect(claimed[0]).toMatchObject({
+        conversationId: convo.conversationId,
+        user: 'purge-user',
+        purgeAttempts: 1,
+      });
+      expect(claimed[0].purgeClaimId).toEqual(expect.any(String));
+
+      const stored = await Conversation.findOne({ conversationId: convo.conversationId }).lean();
+      expect(stored?.purgeClaimId).toBe(claimed[0].purgeClaimId);
+      expect(stored?.purgeClaimedAt).toBeInstanceOf(Date);
+    });
+
+    it('does not claim a conversation that is not yet expired', async () => {
+      await createExpired({ expiredAt: new Date(Date.now() + 60 * 60 * 1000) });
+
+      const claimed = await methods.claimExpiredConversations(10, { leaseMs });
+
+      expect(claimed).toHaveLength(0);
+    });
+
+    it('does not claim a conversation with an exempt retention exception', async () => {
+      await createExpired({
+        retentionException: {
+          exempt: true,
+          reason: 'legal hold',
+          setBy: 'admin',
+          setAt: new Date(),
+        },
+      });
+
+      const claimed = await methods.claimExpiredConversations(10, { leaseMs });
+
+      expect(claimed).toHaveLength(0);
+    });
+
+    it('does not re-claim a conversation whose lease is still live', async () => {
+      await createExpired();
+      await methods.claimExpiredConversations(10, { leaseMs });
+
+      const second = await methods.claimExpiredConversations(10, { leaseMs });
+
+      expect(second).toHaveLength(0);
+    });
+
+    it('reclaims a conversation whose lease has expired', async () => {
+      const convo = await createExpired();
+      const firstClaim = await methods.claimExpiredConversations(10, { leaseMs });
+      expect(firstClaim).toHaveLength(1);
+
+      const reclaimNow = new Date(Date.now() + leaseMs + 1000);
+      const secondClaim = await methods.claimExpiredConversations(10, {
+        leaseMs,
+        now: reclaimNow,
+      });
+
+      expect(secondClaim).toHaveLength(1);
+      expect(secondClaim[0].conversationId).toBe(convo.conversationId);
+      expect(secondClaim[0].purgeAttempts).toBe(2);
+      expect(secondClaim[0].purgeClaimId).not.toBe(firstClaim[0].purgeClaimId);
+    });
+
+    it('does not claim a conversation parked behind purgeNotBefore', async () => {
+      await createExpired({ purgeNotBefore: new Date(Date.now() + 60 * 60 * 1000) });
+
+      const claimed = await methods.claimExpiredConversations(10, { leaseMs });
+
+      expect(claimed).toHaveLength(0);
+    });
+
+    it('claims a conversation once its purgeNotBefore has passed', async () => {
+      const convo = await createExpired({ purgeNotBefore: new Date(Date.now() - 1000) });
+
+      const claimed = await methods.claimExpiredConversations(10, { leaseMs });
+
+      expect(claimed).toHaveLength(1);
+      expect(claimed[0].conversationId).toBe(convo.conversationId);
+    });
+
+    it('never double-claims the same batch of candidates under concurrent sweep ticks', async () => {
+      await Promise.all(Array.from({ length: 5 }, () => createExpired()));
+
+      const [first, second] = await Promise.all([
+        methods.claimExpiredConversations(10, { leaseMs }),
+        methods.claimExpiredConversations(10, { leaseMs }),
+      ]);
+
+      const claimedIds = [...first, ...second].map((c) => c.conversationId);
+      expect(new Set(claimedIds).size).toBe(claimedIds.length);
+      expect(claimedIds).toHaveLength(5);
+    });
+
+    it('releases a claim on success, clearing claim state without parking the row', async () => {
+      const convo = await createExpired();
+      const [claim] = await methods.claimExpiredConversations(10, { leaseMs });
+
+      await methods.releaseConversationPurgeClaim(convo.conversationId, {
+        success: true,
+        purgeClaimId: claim.purgeClaimId,
+      });
+
+      const stored = await Conversation.findOne({ conversationId: convo.conversationId }).lean();
+      expect(stored?.purgeClaimId).toBeUndefined();
+      expect(stored?.purgeClaimedAt).toBeUndefined();
+      expect(stored?.purgeNotBefore).toBeUndefined();
+      expect(claim.conversationId).toBe(convo.conversationId);
+    });
+
+    it('releases a claim on failure, parking the row behind purgeNotBefore', async () => {
+      const convo = await createExpired();
+      const [claim] = await methods.claimExpiredConversations(10, { leaseMs });
+
+      const retryDelayMs = 5 * 60 * 1000;
+      const beforeRelease = Date.now();
+      await methods.releaseConversationPurgeClaim(convo.conversationId, {
+        success: false,
+        retryDelayMs,
+        purgeClaimId: claim.purgeClaimId,
+      });
+
+      const stored = await Conversation.findOne({ conversationId: convo.conversationId }).lean();
+      expect(stored?.purgeClaimId).toBeUndefined();
+      expect(stored?.purgeClaimedAt).toBeUndefined();
+      expect(stored?.purgeNotBefore).toBeInstanceOf(Date);
+      expect(stored!.purgeNotBefore!.getTime()).toBeGreaterThanOrEqual(
+        beforeRelease + retryDelayMs,
+      );
+
+      const claimed = await methods.claimExpiredConversations(10, { leaseMs });
+      expect(claimed).toHaveLength(0);
+    });
+  });
+});
+
+// Deloitte Custom Change: Retention Update
+describe('touchConversationLastActivity', () => {
+  it('stamps lastActivityAt/expiredAt for a conversation outside the throttle window', async () => {
+    const convo = await Conversation.create({
+      conversationId: uuidv4(),
+      endpoint: EModelEndpoint.openAI,
+      lastActivityAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
+    });
+
+    const beforeTouch = Date.now();
+    await methods.touchConversationLastActivity(convo._id, 24, 60 * 60 * 1000);
+
+    const after = await Conversation.findById(convo._id).lean();
+    expect(after?.lastActivityAt).toBeInstanceOf(Date);
+    expect(after!.lastActivityAt!.getTime()).toBeGreaterThanOrEqual(beforeTouch);
+    expect(after?.expiredAt).toBeInstanceOf(Date);
+    expect(after!.expiredAt!.getTime()).toBeGreaterThanOrEqual(beforeTouch + 24 * 60 * 60 * 1000);
+  });
+
+  it('stamps a conversation that has never been touched before', async () => {
+    const convo = await Conversation.create({
+      conversationId: uuidv4(),
+      endpoint: EModelEndpoint.openAI,
+    });
+
+    await methods.touchConversationLastActivity(convo._id, 24, 60 * 60 * 1000);
+
+    const after = await Conversation.findById(convo._id).lean();
+    expect(after?.lastActivityAt).toBeInstanceOf(Date);
+    expect(after?.expiredAt).toBeInstanceOf(Date);
+  });
+
+  it('is a no-op within the throttle window', async () => {
+    const priorActivity = new Date(Date.now() - 60 * 1000);
+    const priorExpiredAt = new Date(Date.now() + 1000);
+    const convo = await Conversation.create({
+      conversationId: uuidv4(),
+      endpoint: EModelEndpoint.openAI,
+      lastActivityAt: priorActivity,
+      expiredAt: priorExpiredAt,
+    });
+
+    await methods.touchConversationLastActivity(convo._id, 24, 60 * 60 * 1000);
+
+    const after = await Conversation.findById(convo._id).lean();
+    expect(after?.lastActivityAt).toEqual(priorActivity);
+    expect(after?.expiredAt).toEqual(priorExpiredAt);
+  });
+
+  it('does not bump updatedAt, so an activity ping never reorders the sidebar', async () => {
+    const convo = await Conversation.create({
+      conversationId: uuidv4(),
+      endpoint: EModelEndpoint.openAI,
+    });
+    const updatedAtBefore = (await Conversation.findById(convo._id).lean())?.updatedAt;
+
+    await methods.touchConversationLastActivity(convo._id, 24, 60 * 60 * 1000);
+
+    const after = await Conversation.findById(convo._id).lean();
+    expect(after?.updatedAt).toEqual(updatedAtBefore);
   });
 });

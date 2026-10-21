@@ -1,0 +1,66 @@
+# Deloitte Custom Change: Retention Update
+# One-off Kubernetes Jobs for the data-retention migration/backfill scripts
+# (see UPGRADING.md). Skip=true keeps ArgoCD from auto-running these on a
+# normal sync -- three of the five underlying scripts scan unindexed fields,
+# so they must never run as always-on, every-deploy automation. An operator
+# deliberately selects and syncs a single `<release>-migrate-<name>` resource
+# from the ArgoCD UI. Replace=true (same precedent as templates/valkey.yaml)
+# lets that re-sync force-recreate the (otherwise immutable) completed Job,
+# so flipping `dryRun` and re-syncing produces a fresh run with no
+# name-bumping trick and no kubectl required.
+{{- range $name, $job := .Values.migrationJobs }}
+{{- with $ }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "helm.fullname" . }}-migrate-{{ $name }}
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+    component: migrate-{{ $name }}
+  annotations:
+    argocd.argoproj.io/sync-options: Skip=true,Replace=true
+    argocd.argoproj.io/hook-weight: {{ $job.hookWeight | quote }}
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        {{- include "helm.selectorLabels" . | nindent 8 }}
+        component: migrate-{{ $name }}
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: migrate-{{ $name }}
+          image: "{{ .Values.imageRegistry }}/{{ .Values.pods.librechat.containers.librechat.image.repository }}:{{ .Values.pods.librechat.containers.librechat.image.tag }}"
+          imagePullPolicy: {{ .Values.pods.librechat.containers.librechat.image.pullPolicy }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - "npm run {{ $job.npmScript }}{{ if $job.dryRun }}:dry-run{{ end }}"
+          env:
+            {{- with .Values.pods.librechat.containers.librechat.env.MONGO_DB }}
+            - name: MONGO_DB
+              value: {{ . | quote }}
+            {{- end }}
+          envFrom:
+            - secretRef:
+                name: {{ include "helm.fullname" . }}-app-store-secrets-librechat
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+---
+{{- end }}
+{{- end }}

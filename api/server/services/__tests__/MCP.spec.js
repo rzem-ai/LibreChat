@@ -67,6 +67,7 @@ jest.mock('~/models', () => ({
   getFiles: jest.fn(),
   getMessages: jest.fn(),
   getCodeGeneratedFiles: jest.fn(),
+  findGroupsByMemberId: jest.fn(),
 }));
 jest.mock('~/server/services/GraphTokenService', () => ({
   getGraphApiToken: jest.fn(),
@@ -101,16 +102,17 @@ const {
 } = require('~/server/services/Config');
 const { reinitMCPServer } = require('~/server/services/Tools/mcp');
 const { getUserMCPAuthMap } = require('@librechat/api');
-const { getFiles } = require('~/models');
-const { getMessages, getCodeGeneratedFiles } = require('~/models');
+const { getFiles, getMessages, getCodeGeneratedFiles, findGroupsByMemberId } = require('~/models');
 const { getOpenAIClient } = require('~/server/controllers/assistants/helpers');
 const {
   createMCPTool,
+  createMCPTools,
   healMcpToolNames,
   getAssistantToolDefinitions,
   resolveConfigServers,
   resolveMcpConfigNames,
   resolveAllMcpConfigs,
+  getAccessibleMCPServers,
   resolveMcpServerContext,
   resolveCollisionAuditNames,
   supportsAttachmentUpload,
@@ -406,6 +408,83 @@ describe('resolveAllMcpConfigs', () => {
     getAppConfig.mockRejectedValue(new Error('mongo down'));
 
     await expect(resolveAllMcpConfigs('u1', { id: 'u1' })).rejects.toThrow('mongo down');
+  });
+
+  it('keeps protected servers for members of the configured Entra group', async () => {
+    getAppConfig.mockResolvedValue({
+      mcpConfig: {
+        sharepoint: {
+          allowedEntraGroupIds: ['00c0efc7-e8a7-448c-9480-834cbf1ebd60'],
+        },
+      },
+    });
+    findGroupsByMemberId.mockResolvedValue([
+      { source: 'entra', idOnTheSource: '00c0efc7-e8a7-448c-9480-834cbf1ebd60' },
+    ]);
+    mockRegistry.ensureConfigServers.mockResolvedValue({ sharepoint: { name: 'sharepoint' } });
+    mockRegistry.getAllServerConfigs.mockResolvedValue({ sharepoint: { name: 'sharepoint' } });
+
+    const result = await resolveAllMcpConfigs('u1', { id: 'u1', role: 'user' });
+
+    expect(findGroupsByMemberId).toHaveBeenCalledWith('u1');
+    expect(mockRegistry.ensureConfigServers).toHaveBeenCalledWith({
+      sharepoint: { allowedEntraGroupIds: ['00c0efc7-e8a7-448c-9480-834cbf1ebd60'] },
+    });
+    expect(result).toEqual({ sharepoint: { name: 'sharepoint' } });
+  });
+
+  it('hides protected servers from users outside the configured Entra group', async () => {
+    getAppConfig.mockResolvedValue({
+      mcpConfig: {
+        sharepoint: {
+          allowedEntraGroupIds: ['00c0efc7-e8a7-448c-9480-834cbf1ebd60'],
+        },
+      },
+    });
+    findGroupsByMemberId.mockResolvedValue([{ source: 'entra', idOnTheSource: 'different-group' }]);
+    mockRegistry.ensureConfigServers.mockResolvedValue({});
+    // The registry re-merges YAML servers after config overrides. The final access filter must
+    // still remove SharePoint for a non-member.
+    mockRegistry.getAllServerConfigs.mockResolvedValue({
+      sharepoint: { allowedEntraGroupIds: ['00c0efc7-e8a7-448c-9480-834cbf1ebd60'] },
+    });
+
+    await expect(resolveAllMcpConfigs('u1', { id: 'u1' })).resolves.toEqual({});
+
+    expect(mockRegistry.ensureConfigServers).toHaveBeenCalledWith({});
+  });
+
+  it('passes the user ID when resolving accessible protected servers', async () => {
+    getAppConfig.mockResolvedValue({ mcpConfig: {} });
+    mockRegistry.ensureConfigServers.mockResolvedValue({});
+    mockRegistry.getAllServerConfigs.mockResolvedValue({});
+
+    await getAccessibleMCPServers('u1', 'user');
+
+    expect(getAppConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'u1', role: 'user' }),
+    );
+  });
+});
+
+describe('createMCPTools group access', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('does not construct tools for a user outside the required Entra group', async () => {
+    findGroupsByMemberId.mockResolvedValue([]);
+
+    const result = await createMCPTools({
+      user: { id: 'u1' },
+      serverName: 'cleartrack-mcp-gateway-sharepoint',
+      config: {
+        type: 'streamable-http',
+        url: 'https://sharepoint.example.com/mcp',
+        allowedEntraGroupIds: ['00c0efc7-e8a7-448c-9480-834cbf1ebd60'],
+      },
+    });
+
+    expect(result).toEqual([]);
+    expect(findGroupsByMemberId).toHaveBeenCalledWith('u1');
   });
 });
 
@@ -806,6 +885,17 @@ describe('createMCPTool', () => {
         properties: { fileName: { type: 'string' }, content: { type: 'string' } },
         required: ['fileName', 'content'],
         oneOf: [{ required: ['fileName'] }],
+        // Deloitte Custom Change: preserve arguments declared by root allOf members.
+        allOf: [
+          {
+            properties: {
+              driveId: { type: 'string' },
+              content: { type: 'string' },
+              encoding: { type: 'string' },
+            },
+            required: ['driveId', 'content', 'encoding'],
+          },
+        ],
       },
     };
     getAppConfig.mockResolvedValue({
@@ -824,7 +914,9 @@ describe('createMCPTool', () => {
 
     expect(toolInstance.name).toBe(uploadKey);
     expect(toolInstance.mcpJsonSchema.properties.content).toBeUndefined();
+    expect(toolInstance.mcpJsonSchema.properties.driveId).toEqual({ type: 'string' });
     expect(toolInstance.mcpJsonSchema.properties.sourceFileName).toBeDefined();
+    expect(toolInstance.mcpJsonSchema.required).toEqual(['fileName', 'driveId']);
     expect(toolInstance.mcpJsonSchema.oneOf).toEqual([{ required: ['fileName'] }]);
     // Strict function-calling providers (e.g. OpenAI) reject oneOf/anyOf/allOf
     // at the schema root, so the upload tools must not add one here.
@@ -1041,13 +1133,63 @@ describe('resolveAttachmentUpload', () => {
     ).rejects.toThrow('Specify exactly one attachment source reference');
   });
 
+  // Deloitte Custom Change: require upload sources to be attached to the active request.
   it('rejects a sourceFileId that is not attached to the current request', async () => {
     await expect(
       resolveAttachmentUpload({
         toolArguments: { sourceFileId: 'other-user-file' },
         requestBody: { files: [{ file_id: 'file-1' }] },
       }),
-    ).rejects.toThrow('Attachment source must identify a file available to the current user');
+    ).rejects.toThrow('This file is not available for this upload. Attach it to this message');
+  });
+
+  // Deloitte Custom Change: explain when a failed generation leaves no uploadable artifact.
+  it('explains when a generated filename was not persisted in the active conversation', async () => {
+    getMessages.mockResolvedValue([]);
+    getCodeGeneratedFiles.mockResolvedValue([]);
+
+    await expect(
+      resolveAttachmentUpload({
+        toolArguments: { sourceFileName: 'AFR_Latest_News_v2.pptx' },
+        requestBody: { conversationId: 'conversation-1', parentMessageId: 'parent-1' },
+        user: { id: 'user-1' },
+      }),
+    ).rejects.toThrow('The generated file is unavailable');
+  });
+
+  // Deloitte Custom Change: keep duplicate filenames fail-closed rather than choosing an artifact.
+  it('rejects ambiguous generated filenames without selecting either file', async () => {
+    getMessages.mockResolvedValue([]);
+    getCodeGeneratedFiles.mockResolvedValue([
+      { file_id: 'file-1', filename: 'report.pptx' },
+      { file_id: 'file-2', filename: 'report.pptx' },
+    ]);
+
+    await expect(
+      resolveAttachmentUpload({
+        toolArguments: { sourceFileName: 'report.pptx' },
+        requestBody: { conversationId: 'conversation-1', parentMessageId: 'parent-1' },
+        user: { id: 'user-1' },
+      }),
+    ).rejects.toThrow('More than one file matches this name');
+  });
+
+  // Deloitte Custom Change: provide a recovery message for Gemini's combined file reference.
+  it('explains when a Gemini sourceFile matches neither an attachment nor a generated file', async () => {
+    await expect(
+      resolveAttachmentUpload({ toolArguments: { sourceFile: 'missing-file' } }),
+    ).rejects.toThrow('The requested file could not be found');
+  });
+
+  // Deloitte Custom Change: do not search outside the active conversation for generated files.
+  it('explains when a generated file is unavailable without active conversation context', async () => {
+    await expect(
+      resolveAttachmentUpload({
+        toolArguments: { sourceFileName: 'missing-context.pptx' },
+        user: { id: 'user-1' },
+      }),
+    ).rejects.toThrow('The generated file is unavailable');
+    expect(getMessages).not.toHaveBeenCalled();
   });
 
   it('rejects an empty sourceFileId instead of forwarding an incomplete upload', async () => {
