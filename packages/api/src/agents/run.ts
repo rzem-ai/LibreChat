@@ -12,6 +12,7 @@ import {
   extractEnvVariable,
   providerEndpointMap,
   normalizeEndpointName,
+  requiresToolApproval,
   Constants as DataProviderConstants, // Deloitte Custom Change: MCP delimiter lookup for tool-class resolution below
   mapModelToAzureConfig,
   resolveUseResponsesApi,
@@ -56,13 +57,13 @@ import type { Callbacks } from '@langchain/core/callbacks/manager';
 import type { LCAvailableTools } from '~/mcp/types'; // Deloitte Custom Change: MCP gateway tool-class typing
 import type { ModelBoundChatModelCallback } from '~/middleware/modelBoundContent';
 import type { ModelErrorTrackerCallback } from '~/agents/failures/tracker';
+import type { MCPToolAlias, ToolWithClass } from '~/tools/classification';
 import type { ToolInputValidationError } from '~/agents/toolValidation';
 import type { ResolvedToolApprovalHook } from '~/agents/hitl/hooks';
 import type { TerminalSteerHook } from '~/agents/steering/runtime';
 import type { LangfuseTraceContext } from '~/langfuse/identity';
 import type { ResolvedAlwaysApplySkill } from '~/agents/skills';
 import type { CodeExecutionContext } from '~/agents/execution';
-import type { MCPToolAlias } from '~/tools/classification';
 import type { SubagentUsageEvent } from '~/agents/usage';
 import type { RunFileSession } from './files/session';
 import type { RunFadingTiers } from './fading';
@@ -82,6 +83,12 @@ import {
   stripBackgroundFromToolDefinitions,
 } from '~/agents/background';
 import {
+  resolveToolApprovalPolicy,
+  healToolApprovalPolicy,
+  exemptAskUserQuestionFromApproval,
+  withClassifiedToolApproval,
+} from '~/agents/hitl/policy';
+import {
   createSubagentWakeupHandleHook,
   agentUsesSubagentCompletionWakeups,
   usesSubagentCompletionWakeups,
@@ -98,11 +105,6 @@ import {
   isSteerTerminalContinuationSupported,
 } from '~/agents/steering/runtime';
 import { normalizeServerName, splitMCPToolKey } from '~/mcp/utils'; // Deloitte Custom Change: MCP server-name/tool-key helpers
-import {
-  resolveToolApprovalPolicy,
-  healToolApprovalPolicy,
-  exemptAskUserQuestionFromApproval,
-} from '~/agents/hitl/policy';
 import {
   ASK_USER_QUESTION_TOOL_NAME,
   createAskUserQuestionTool,
@@ -1849,18 +1851,52 @@ export function anyAgentReplaysReasoningContent(
  * without its own code environment is still walked for its children, since a
  * deeper nested subagent may have `codeEnvAvailable` even when its parent
  * doesn't.
+ * @param agents - Initialized and lazy agents that can be reached in this run.
+ * @param visit - Callback invoked once for each initialized agent.
+ * @returns Nothing.
  */
-function collectMCPToolNames(agents: Array<RunAgent | null | undefined>): string[] {
-  const visited = new Set<string>();
-  const pending = [...agents];
-  const mcpToolNames: string[] = [];
+function forEachReachableAgent(
+  agents: Array<RunAgent | null | undefined>,
+  visit: (agent: RunAgent) => void,
+): void {
+  const visited = new Set<RunAgent | LazySubagentAgent>();
+  const pending: Array<RunAgent | LazySubagentAgent | null | undefined> = [...agents];
 
   for (let index = 0; index < pending.length; index++) {
     const agent = pending[index];
-    if (agent == null || visited.has(agent.id)) {
+    if (agent == null || visited.has(agent)) {
       continue;
     }
-    visited.add(agent.id);
+    visited.add(agent);
+    if (!('resolve' in agent)) {
+      visit(agent);
+    }
+    pending.push(...(agent.subagentAgentConfigs ?? []));
+    pending.push(...(agent.lazySubagentConfigs ?? []));
+    if ('subagentGraphConfigs' in agent) {
+      for (const graph of agent.subagentGraphConfigs ?? []) {
+        pending.push(...graph.memberConfigs);
+      }
+    }
+  }
+}
+
+/** [Deloitte: Detect lazy descendants that may reveal classified tools at runtime.]
+ * @param agents - Initialized agents whose reachable graph is inspected.
+ * @returns Whether any reachable agent has unresolved lazy subagents.
+ */
+function hasLazySubagents(agents: Array<RunAgent | null | undefined>): boolean {
+  let hasLazy = false;
+  forEachReachableAgent(agents, (agent) => {
+    hasLazy ||= (agent.lazySubagentConfigs?.length ?? 0) > 0;
+  });
+  return hasLazy;
+}
+
+function collectMCPToolNames(agents: Array<RunAgent | null | undefined>): string[] {
+  const mcpToolNames: string[] = [];
+
+  forEachReachableAgent(agents, (agent) => {
     if (agent.codeEnvAvailable === true) {
       const mcpServerNames = Object.keys(agent.mcpAvailableTools ?? {}).map(normalizeServerName);
       for (const name of agent.toolRegistry?.keys() ?? []) {
@@ -1876,13 +1912,27 @@ function collectMCPToolNames(agents: Array<RunAgent | null | undefined>): string
         }
       }
     }
-    for (const child of agent.subagentAgentConfigs ?? []) {
-      if (child != null && !visited.has(child.id)) {
-        pending.push(child);
+  });
+  return mcpToolNames;
+}
+
+/** [Deloitte: Collect classified approval names from every initialized run agent.]
+ * @param agents - Root agents for the run graph traversal.
+ * @returns Unique names of gateway-classified write and destructive tools.
+ */
+export function collectClassifiedApprovalToolNames(
+  agents: Array<RunAgent | null | undefined>,
+): string[] {
+  const names = new Set<string>();
+  forEachReachableAgent(agents, (agent) => {
+    for (const [name, definition] of agent.toolRegistry ?? []) {
+      // [Deloitte: Read approval classification through the shared MCP tool type.]
+      if (requiresToolApproval((definition as ToolWithClass).toolClass)) {
+        names.add(name);
       }
     }
-  }
-  return mcpToolNames;
+  });
+  return [...names];
 }
 
 /**
@@ -2755,12 +2805,17 @@ export async function createRun({
    * enable real HITL interrupts and a durable checkpointer; on headless runs
    * the SDK blocks both `deny` and `ask` before executing the tool.
    */
+  const classifiedApprovalToolNames = collectClassifiedApprovalToolNames(agents);
+  const mayResolveClassifiedTools = hasLazySubagents(agents);
   // Resolve the effective policy through the single seam so BYOM defaults and
   // future persisted per-agent / per-skill sources do not leak into this call site.
-  const toolApprovalPolicy = resolveToolApprovalPolicy({
-    endpoint: agentsEndpointConfig?.toolApproval,
-    attachedCodeEnvironment: attachedCodeEnvironmentAgentIds.size > 0,
-  });
+  const toolApprovalPolicy = withClassifiedToolApproval(
+    resolveToolApprovalPolicy({
+      endpoint: agentsEndpointConfig?.toolApproval,
+      attachedCodeEnvironment: attachedCodeEnvironmentAgentIds.size > 0,
+    }),
+    classifiedApprovalToolNames.length > 0 || mayResolveClassifiedTools,
+  );
   // Every caller needs the policy hooks, including API-key ingresses. Only
   // AgentClient supports pause/resume; the SDK blocks `ask` without HITL enabled.
   // Keep the checkpointer and humanInTheLoop switch exclusive to those callers.
@@ -2814,6 +2869,8 @@ export async function createRun({
         : []),
     ],
     nativeEditFileAgentIds,
+    classifiedApprovalToolNames,
+    mayResolveClassifiedTools,
   );
   const hitl = hitlCapable ? approvalWiring : undefined;
   registerResolvedMCPToolAliases = (resolvedAgent) => {
@@ -2831,6 +2888,7 @@ export async function createRun({
         skillAuthoringAvailable: resolvedAgent.skillAuthoringAvailable === true,
       });
     }
+    approvalWiring?.addClassifiedToolNames(collectClassifiedApprovalToolNames([resolvedAgent]));
     const discoveredAliases = collectRunMCPToolAliases([resolvedAgent]).filter(
       ({ name, aliasName }) => {
         const key = `${name}\u0000${aliasName}`;

@@ -73,6 +73,7 @@ jest.mock('~/Providers', () => ({
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string) => key,
   useHasAccess: () => true,
+  useModelLabel: jest.requireActual('~/hooks/Agents/useModelLabel').default,
 }));
 
 jest.mock('~/utils', () => ({

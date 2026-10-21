@@ -39,6 +39,18 @@ export function hasLimitedAccess(server: Pick<MCPServerDefinition, 'config'>): b
   return server.config?.limitedAccess === true;
 }
 
+/**
+ * Deloitte Custom Change: the MCP Gateway toolset name a server is configured for.
+ * Resolved server-side (from the `url`'s `toolsets` query param) since `url` itself is
+ * redacted here for servers the caller can't edit. Returns null when absent, so callers
+ * can fall back to a minimal tooltip.
+ */
+export function getConfiguredToolsetName(
+  server: Pick<MCPServerDefinition, 'toolsetName'>,
+): string | null {
+  return server.toolsetName ?? null;
+}
+
 // Deloitte Custom Change: light/dark themed MCP server icons.
 /**
  * Resolves the icon path to show in each theme, given a server's configured icon fields.

@@ -17,11 +17,13 @@ export default function CreateSkillMenu() {
   const items: MenuItemProps[] = useMemo(
     () => [
       {
+        id: 'create-skill-write',
         label: localize('com_ui_skill_write_instructions'),
         onClick: () => setWriteOpen(true),
         icon: <PenLine className="icon-md" aria-hidden="true" />,
       },
       {
+        id: 'create-skill-upload',
         label: localize('com_ui_skill_upload'),
         onClick: () => setUploadOpen(true),
         icon: <Upload className="icon-md" aria-hidden="true" />,
@@ -45,6 +47,7 @@ export default function CreateSkillMenu() {
             render={
               <Ariakit.MenuButton
                 aria-label={createLabel}
+                id="create-skill-button"
                 className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border-light bg-transparent text-text-primary transition-colors hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary"
               >
                 <Plus className="size-4" aria-hidden="true" />

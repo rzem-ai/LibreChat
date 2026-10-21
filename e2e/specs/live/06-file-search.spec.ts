@@ -37,7 +37,7 @@ import {
  * LIVE_RAG_FIXTURE_<TYPE> (e.g. LIVE_RAG_FIXTURE_PDF, LIVE_RAG_FIXTURE_XLSX).
  */
 const ENDPOINT = process.env.LIVE_ENDPOINT?.trim() || 'Azure Global';
-const MODEL = process.env.LIVE_MODEL?.trim() || 'gpt-56-luna';
+const MODEL = process.env.LIVE_MODEL?.trim() || 'gpt-6-luna';
 const NEEDLE = 'ORCHID-7749';
 const QUESTION =
   'According to the attached charter, what is the internal codename for the ' +

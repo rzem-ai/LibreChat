@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import {
   Button,
   GelDialog as OGDialog,
@@ -38,6 +38,7 @@ const TermsAndConditionsModal = ({
   triggerRef?: RefObject<HTMLButtonElement | null>;
 }) => {
   const localize = useLocalize();
+  const acceptRef = useRef<HTMLButtonElement>(null);
   const { showToast } = useToastContext();
   // Deloitte Custom Change: omitting onAccept/onDecline means the modal is being reopened
   // read-only from the avatar menu (terms already accepted) — no separate prop needed.
@@ -88,6 +89,15 @@ const TermsAndConditionsModal = ({
     <OGDialog open={open} onOpenChange={handleOpenChange} triggerRef={triggerRef}>
       <OGDialogContent
         className="w-11/12 max-w-2xl"
+        // Deloitte Custom Change: without a header X, the focusable scroll region would take
+        // initial focus and show its focus ring on open; focus Accept instead.
+        onOpenAutoFocus={(event) => {
+          if (acceptRef.current == null) {
+            return;
+          }
+          event.preventDefault();
+          acceptRef.current.focus();
+        }}
         // Deloitte Custom Change: the footer Close button below calls onOpenChange
         // on the parent's setter directly rather than through Radix's own dismiss
         // path, so triggerRef alone won't restore focus for it — onCloseAutoFocus
@@ -126,7 +136,9 @@ const TermsAndConditionsModal = ({
               <Button variant="outline" onClick={handleDecline}>
                 {localize('com_ui_decline')}
               </Button>
-              <Button onClick={handleAccept}>{localize('com_ui_accept')}</Button>
+              <Button ref={acceptRef} onClick={handleAccept}>
+                {localize('com_ui_accept')}
+              </Button>
             </>
           )}
         </OGDialogFooter>

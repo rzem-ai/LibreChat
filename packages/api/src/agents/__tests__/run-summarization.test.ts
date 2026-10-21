@@ -4554,6 +4554,37 @@ describe('HITL wiring is gated on hitlCapable', () => {
     }
   });
 
+  // [Deloitte: Keep headless lazy classified tools fail-closed without persistence wiring.]
+  it('does not attach HITL or a checkpointer for headless runs with unresolved lazy tools', async () => {
+    const resolvedChild = makeAgent({ id: 'lazy-child' });
+    const lazyChild = {
+      ...makeAgent({ id: 'lazy-child' }),
+      configId: 'lazy-child:v1',
+      resolve: jest.fn().mockResolvedValue(resolvedChild),
+    };
+    const parent = makeAgent({
+      subagents: { enabled: true, allowSelf: false },
+      lazySubagentConfigs: [lazyChild],
+    });
+    const appConfig = {
+      ...hitlAppConfig,
+      endpoints: { [EModelEndpoint.agents]: {} },
+    } as unknown as AppConfig;
+
+    const config = await runAndGetConfig({
+      hitlCapable: false,
+      agents: [parent] as never,
+      appConfig,
+    });
+
+    expect(config).not.toHaveProperty('humanInTheLoop');
+    expect(
+      (config.graphConfig as { compileOptions?: { checkpointer?: unknown } }).compileOptions
+        ?.checkpointer,
+    ).toBeUndefined();
+    expect((config.hooks as HookRegistry).hasHookFor('PreToolUse')).toBe(true);
+  });
+
   it('keeps approval fully off when the endpoint disables it', async () => {
     const config = await runAndGetConfig({
       appConfig: {
@@ -4622,12 +4653,13 @@ describe('HITL wiring is gated on hitlCapable', () => {
             matchQuery: alias.name,
           })
         ).decision;
-      expect(hooks.getMatchers('PreToolUse')).toHaveLength(1);
+      // Deloitte Custom Change: Lazy classification installs its exact-name hook before resolution.
+      expect(hooks.getMatchers('PreToolUse')).toHaveLength(2);
       expect(await decisionForAlias()).toBe('allow');
       await (lazyConfig?.resolveAgentInputs as (context: never) => Promise<unknown>)({
         signal: new AbortController().signal,
       } as never);
-      expect(hooks.getMatchers('PreToolUse')).toHaveLength(1);
+      expect(hooks.getMatchers('PreToolUse')).toHaveLength(2);
       expect(await decisionForAlias()).toBe('deny');
     },
   );

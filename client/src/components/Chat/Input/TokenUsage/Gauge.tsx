@@ -12,18 +12,27 @@ interface GaugeProps {
   indeterminate: boolean;
 }
 
-function getStrokeClass(percent: number, indeterminate: boolean): string {
+// Deloitte Custom Change: warning/error thresholds are exported so the balance gauge text matches the ring colour
+export type GaugeTone = 'neutral' | 'warning' | 'error';
+
+export function getGaugeTone(percent: number, indeterminate: boolean): GaugeTone {
   if (indeterminate) {
-    return 'stroke-text-secondary';
+    return 'neutral';
   }
   if (percent > 90) {
-    return 'stroke-status-error';
+    return 'error';
   }
   if (percent > 75) {
-    return 'stroke-status-warning';
+    return 'warning';
   }
-  return 'stroke-text-secondary';
+  return 'neutral';
 }
+
+const STROKE_CLASSES: Record<GaugeTone, string> = {
+  neutral: 'stroke-text-secondary',
+  warning: 'stroke-status-warning',
+  error: 'stroke-status-error',
+};
 
 export default function Gauge({ percent, indeterminate }: GaugeProps) {
   const offset = CIRCUMFERENCE - (percent / 100) * CIRCUMFERENCE;
@@ -55,7 +64,10 @@ export default function Gauge({ percent, indeterminate }: GaugeProps) {
         strokeDasharray={CIRCUMFERENCE}
         strokeDashoffset={indeterminate ? CIRCUMFERENCE : offset}
         strokeLinecap="round"
-        className={cn('transition-all duration-300', getStrokeClass(percent, indeterminate))}
+        className={cn(
+          'transition-all duration-300',
+          STROKE_CLASSES[getGaugeTone(percent, indeterminate)],
+        )}
       />
     </svg>
   );

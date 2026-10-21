@@ -160,7 +160,7 @@ describe('useResumeSubmit', () => {
     });
 
     expect(result.current.getRegisteredCount('action-1')).toBe(2);
-    expect(result.current.getLeadToolCallId('action-1')).toBe('call-1');
+    expect(result.current.getSubmitToolCallId('action-1')).toBe('call-2');
 
     act(() => {
       result.current.setDecision('action-1', 'call-1', {

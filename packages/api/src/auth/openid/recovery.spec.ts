@@ -70,6 +70,22 @@ describe('OpenID authentication publication settlement', () => {
     expect(deps.failOpenIDRefreshFlight).not.toHaveBeenCalled();
   });
 
+  it('passes the saved ID token expiry to the prepared token selection', async () => {
+    const { deps, service, input } = setup();
+    const idTokenExpiresAt = Math.floor(Date.now() / 1000) - 60;
+
+    await service.sendOpenIDAuthResponse({
+      ...input,
+      req: { session: { openidTokens: { idToken: 'saved-id', idTokenExpiresAt } } },
+    });
+
+    expect(deps.getOpenIDAppAuthToken).toHaveBeenCalledWith(
+      expect.objectContaining({ access_token: 'access' }),
+      'saved-id',
+      idTokenExpiresAt,
+    );
+  });
+
   /**
    * Tolerating an absent record leaves the durable revoked publication flight as the only fence
    * against resurrecting a logged-out session, so both of its checks are pinned here: the

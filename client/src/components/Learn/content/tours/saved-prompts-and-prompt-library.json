@@ -1,0 +1,100 @@
+{
+  "id": "saved-prompts-and-prompt-library",
+  "title": "Saved Prompts and Prompt Library",
+  "description": "Explains how to create, save and reuse prompts.",
+  "startPanel": "prompts",
+  "steps": [
+    {
+      "element": "#nav-panel-prompts",
+      "title": "Open Prompts",
+      "description": "Select Prompts from the side menu to open your prompt library and view the prompts available to you.",
+      "side": "right",
+      "expandSidebarBefore": true
+    },
+    {
+      "element": "#create-prompt-button",
+      "title": "Create prompt",
+      "description": "Select Create prompt to open the fields for a new reusable prompt.",
+      "side": "right",
+      "clickOnNext": ["#create-prompt-button"]
+    },
+    {
+      "element": "#prompt-name",
+      "title": "Add a prompt name",
+      "description": "Enter a short name that makes the prompt easy to find later.<br/><br/>Example: Monthly project update",
+      "side": "bottom"
+    },
+    {
+      "element": "#prompt-text",
+      "title": "Enter the prompt instructions",
+      "description": "Describe when the prompt should be used so you can recognise its purpose.<br/><br/>Example: Create a concise leadership update for senior leaders using the current project information provided. Highlight progress, decisions, risks and next step",
+      "side": "bottom"
+    },
+    {
+      "element": "#prompt-text",
+      "title": "Prompt Instructions - add custom variable content",
+      "description": "Type {{variable_name}} to create a placeholder anywhere in the Prompt Input field to create a placeholder for information that will change each time you run the prompt. When you run the prompt, you’ll be asked to enter a value for the variable content.<br/><br/>Example: When generating the Monthly project update, you will be prompted to add a reporting period.",
+      "side": "bottom"
+    },
+    {
+      "element": "[data-tour=\"special-variables\"]",
+      "title": "Add special variables",
+      "description": "Select Special variables to insert dynamic details that update automatically when the prompt is used, such as the current date, current user, UTC date and time, or local date and time.",
+      "side": "bottom"
+    },
+    {
+      "element": "[data-tour=\"prompt-description\"]",
+      "title": "Add a description",
+      "description": "Enter an optional description to explain what the prompt does and help users recognise when to use it.<br/><br/>Example: Creates a concise monthly project update for senior leaders, covering progress, decisions, risks and next steps.",
+      "side": "bottom"
+    },
+    {
+      "element": "[data-tour=\"prompt-command\"]",
+      "title": "Add a command",
+      "description": "Enter an optional short command to quickly find and launch the prompt.<br/><br/>Example: Monthly Project Update",
+      "side": "bottom"
+    },
+    {
+      "element": "#prompt-category-select",
+      "title": "Select a category",
+      "description": "Choose the category that best matches the prompt’s purpose. This helps organise the prompt and makes it easier for users to find.<br/><br/>Example: Communications &amp; Stakeholders for the Monthly Project Update prompt.",
+      "side": "bottom"
+    },
+    {
+      "element": "#create-prompt-submit",
+      "title": "Create the prompt",
+      "description": "Select Create Prompt to save the prompt and add it to the prompt library, ready to find and use in MyAssist.",
+      "side": "top"
+    },
+    {
+      "element": "#auto-send-prompts-toggle",
+      "title": "Use your saved prompt",
+      "description": "Turn on Send prompts on select and select the prompt you wish to use in Chat. The prompt will now be sent to Chat for you to use.",
+      "side": "right"
+    },
+    {
+      "element": "#share-prompt-button",
+      "title": "Share a prompt",
+      "description": "Select Share to share a prompt.",
+      "side": "bottom"
+    },
+    {
+      "element": "#share-search",
+      "title": "Search for people or groups",
+      "description": "Search for people or groups you wish to share the prompt with.",
+      "side": "bottom"
+    },
+    {
+      "element": "#share-role-picker",
+      "title": "Assign permission level",
+      "description": "Assign the appropriate permission level – Viewer, Editor or Owner before saving your changes. Shared users can access and use the prompt based on the permissions you grant.",
+      "side": "bottom"
+    },
+    {
+      "element": "#share-save-button",
+      "title": "Save Changes",
+      "description": "Select Save Changes to apply your changes and make the prompt available to the selected user or group.",
+      "side": "top"
+    }
+  ]
+}

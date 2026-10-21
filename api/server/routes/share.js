@@ -249,6 +249,9 @@ const streamSharedFile = async (req, res, file, requestedDisposition) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Content-Disposition', getContentDisposition(textFilename, disposition));
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    // Deloitte Custom Change: OSS Vulnerabilities 8.8
+    // Shared extraction text is untrusted, so never allow it to become an active document.
+    res.setHeader('Content-Security-Policy', 'sandbox');
     return res.send(req.liveFile.text);
   }
 
@@ -588,7 +591,8 @@ router.get('/', requireJwtAuth, async (req, res) => {
       params.search,
     );
 
-    res.status(200).send({
+    // Deloitte Custom Change: OSS Vulnerabilities 8.8
+    res.status(200).json({
       links: result.links,
       nextCursor: result.nextCursor,
       hasNextPage: result.hasNextPage,

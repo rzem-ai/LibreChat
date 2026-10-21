@@ -79,6 +79,33 @@ export function resolveToolApprovalPolicy(
   return layers.endpoint;
 }
 
+/** [Deloitte: Enable approval wiring for trusted gateway-classified tools.]
+ * Gateway-classified write and destructive tools enable HITL without requiring
+ * an administrator to name every tool in endpoint configuration.
+ * @param policy - Effective endpoint approval policy, if configured.
+ * @param hasClassifiedTools - Whether the reachable run graph has classified tools.
+ * @returns The effective policy with classified-tool approval enabled, or the original policy.
+ */
+export function withClassifiedToolApproval(
+  policy: TToolApprovalPolicy | undefined,
+  hasClassifiedTools: boolean,
+): TToolApprovalPolicy | undefined {
+  if (!hasClassifiedTools) {
+    return policy;
+  }
+  // The endpoint owns the emergency kill switch; gateway metadata cannot override it.
+  if (policy?.enabled === false) {
+    return policy;
+  }
+  return {
+    ...policy,
+    enabled: true,
+    // Preserve configured behavior for unrelated tools; classified names are
+    // gated by the later exact-name runtime hook.
+    mode: policy?.enabled === true ? policy.mode : 'bypass',
+  };
+}
+
 /**
  * Whether the HITL machinery should run for this policy.
  *

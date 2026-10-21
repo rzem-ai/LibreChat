@@ -29,6 +29,7 @@ describe('gpt6Tier', () => {
   it.each([
     ['gpt-6-sol', 'sol'],
     ['gpt-6.1-sol', 'sol'],
+    ['gpt-61-sol', 'sol'],
     ['GPT-6.1-SOL-2026-10-01', 'sol'],
     ['gpt-6-luna-2026-09-22', 'luna'],
     ['gpt-6.2-astra', 'astra'],

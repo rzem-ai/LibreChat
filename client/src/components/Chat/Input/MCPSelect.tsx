@@ -5,6 +5,7 @@ import { Check, ChevronDown, Minus } from 'lucide-react';
 import { PermissionTypes, Permissions } from 'librechat-data-provider';
 import { TooltipAnchor, composerControlClasses } from '@librechat/client';
 import MCPServerMenuItem from '~/components/MCP/MCPServerMenuItem';
+import { MCPServerHoverGroup } from '~/components/MCP/MCPServerTooltip';
 import MCPConfigDialog from '~/components/MCP/MCPConfigDialog';
 import StackedMCPIcons from '~/components/MCP/StackedMCPIcons';
 import { useMCPRefresh } from '~/hooks/MCP/useMCPRefresh';
@@ -175,19 +176,21 @@ function MCPSelectContent() {
               {someConnectorsSelected && <Minus className="h-4 w-4" />}
             </span>
           </Ariakit.MenuItemCheckbox>
-          <div className="flex max-h-[320px] flex-col gap-1 overflow-y-auto">
-            {selectableServers.map((server) => (
-              <MCPServerMenuItem
-                key={server.serverName}
-                server={server}
-                isSelected={mcpValues?.includes(server.serverName) ?? false}
-                connectionStatus={connectionStatus}
-                isInitializing={isInitializing}
-                statusIconProps={getServerStatusIconProps(server.serverName)}
-                onToggle={toggleServerSelection}
-              />
-            ))}
-          </div>
+          <MCPServerHoverGroup>
+            <div className="flex max-h-[320px] flex-col gap-1 overflow-y-auto">
+              {selectableServers.map((server) => (
+                <MCPServerMenuItem
+                  key={server.serverName}
+                  server={server}
+                  isSelected={mcpValues?.includes(server.serverName) ?? false}
+                  connectionStatus={connectionStatus}
+                  isInitializing={isInitializing}
+                  statusIconProps={getServerStatusIconProps(server.serverName)}
+                  onToggle={toggleServerSelection}
+                />
+              ))}
+            </div>
+          </MCPServerHoverGroup>
         </Ariakit.Menu>
       </Ariakit.MenuProvider>
       {configDialogProps && (

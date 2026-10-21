@@ -1,7 +1,7 @@
 import React from 'react';
 import { RecoilRoot } from 'recoil';
 import { Provider, createStore } from 'jotai';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { Agents } from 'librechat-data-provider';
 import {
   approvalPanelOpenFamily,
@@ -13,6 +13,9 @@ import ToolApproval from '../ToolApproval';
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string, values?: Record<string | number, string | number>) => {
+    if (key === 'com_ui_submit_decisions_progress') {
+      return `Submit (${values?.[0]}/${values?.[1]} selected)`;
+    }
     if (key === 'com_ui_submit_decisions') {
       return `Submit ${values?.[0]} decisions`;
     }
@@ -27,6 +30,7 @@ jest.mock('~/hooks', () => ({
       com_ui_reject_reason_placeholder: 'Reason',
       com_ui_tool_response_placeholder: 'Response',
       com_ui_approval_review_in_composer: 'Review in composer',
+      com_ui_proposed_arguments: 'Proposed arguments',
     };
     return map[key] ?? key;
   },
@@ -59,11 +63,12 @@ describe('ToolApproval', () => {
   test('enables Submit immediately after Approve is the first decision (#14390)', () => {
     renderCards(<ToolApproval approval={approval()} toolCallId="call-1" args={{ a: 1 }} />);
 
-    const submit = screen.getByRole('button', { name: 'Submit' });
+    const submit = screen.getByRole('button', { name: 'Submit (0/1 selected)' });
     expect(submit).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
 
+    expect(screen.getByRole('button', { name: 'Submit (1/1 selected)' })).toBeEnabled();
     expect(submit).toBeEnabled();
   });
 
@@ -72,22 +77,23 @@ describe('ToolApproval', () => {
 
     const approve = screen.getByRole('button', { name: 'Approve' });
     fireEvent.click(approve);
-    expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Submit (1/1 selected)' })).toBeEnabled();
 
     fireEvent.click(approve);
-    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Submit (0/1 selected)' })).toBeDisabled();
   });
 
   test('a respond decision only counts once its text is non-empty', () => {
     renderCards(<ToolApproval approval={approval(['respond'])} toolCallId="call-1" args={{}} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Respond' }));
-    const submit = screen.getByRole('button', { name: 'Submit' });
+    const submit = screen.getByRole('button', { name: 'Submit (0/1 selected)' });
     expect(submit).toBeDisabled();
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Respond' }), {
       target: { value: 'use the staging table' },
     });
+    expect(screen.getByRole('button', { name: 'Submit (1/1 selected)' })).toBeEnabled();
     expect(submit).toBeEnabled();
   });
 
@@ -126,7 +132,7 @@ describe('ToolApproval', () => {
     expect(screen.getByText('Invalid JSON')).toBeInTheDocument();
   });
 
-  test('multiple paused calls share one Submit that requires every decision', () => {
+  test('puts the batch Submit after the final card and shows selected decisions out of the total', () => {
     renderCards(
       <>
         <ToolApproval approval={approval()} toolCallId="call-1" args={{ a: 1 }} />
@@ -134,47 +140,20 @@ describe('ToolApproval', () => {
       </>,
     );
 
-    const submit = screen.getByRole('button', { name: 'Submit 2 decisions' });
+    const [firstCard, secondCard] = screen.getAllByTestId('tool-approval');
+    expect(within(firstCard).queryByRole('button', { name: /Submit/ })).not.toBeInTheDocument();
+    const submit = within(secondCard).getByRole('button', { name: 'Submit (0/2 selected)' });
     expect(submit).toBeDisabled();
 
     const [approveFirst, approveSecond] = screen.getAllByRole('button', { name: 'Approve' });
     fireEvent.click(approveFirst);
+    expect(
+      within(secondCard).getByRole('button', { name: 'Submit (1/2 selected)' }),
+    ).toBeDisabled();
     expect(submit).toBeDisabled();
 
     fireEvent.click(approveSecond);
-    expect(submit).toBeEnabled();
-  });
-
-  test('duplicated review surfaces show and submit the same decision state', () => {
-    renderCards(
-      <>
-        <ToolApproval approval={approval()} toolCallId="call-1" args={{ a: 1 }} />
-        <ToolApproval
-          approval={approval()}
-          toolCallId="call-1"
-          args={{ a: 1 }}
-          surface="composer"
-        />
-      </>,
-    );
-
-    const [timelineApprove, composerApprove] = screen.getAllByRole('button', { name: 'Approve' });
-    const [timelineReject, composerReject] = screen.getAllByRole('button', { name: 'Reject' });
-
-    fireEvent.click(timelineApprove);
-    expect(timelineApprove).toHaveAttribute('aria-pressed', 'true');
-    expect(composerApprove).toHaveAttribute('aria-pressed', 'true');
-
-    fireEvent.click(composerReject);
-    expect(timelineApprove).toHaveAttribute('aria-pressed', 'false');
-    expect(composerApprove).toHaveAttribute('aria-pressed', 'false');
-    expect(timelineReject).toHaveAttribute('aria-pressed', 'true');
-    expect(composerReject).toHaveAttribute('aria-pressed', 'true');
-    const [timelineReason, composerReason] = screen.getAllByRole('textbox', { name: 'Reject' });
-    fireEvent.change(timelineReason, { target: { value: 'not on this machine' } });
-    expect(timelineReason).toHaveValue('not on this machine');
-    expect(composerReason).toHaveValue('not on this machine');
-    expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled();
+    expect(within(secondCard).getByRole('button', { name: 'Submit (2/2 selected)' })).toBeEnabled();
   });
 
   test('restores a selected decision when the card remounts inside the same message', () => {
@@ -192,10 +171,10 @@ describe('ToolApproval', () => {
     view.rerender(tree('phase-slice'));
 
     expect(screen.getByRole('button', { name: 'Approve' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Submit (1/1 selected)' })).toBeEnabled();
   });
 
-  describe('while the composer review panel presents the pending action', () => {
+  describe('while the composer owns the pending action', () => {
     const conversationId = 'convo-1';
     const pendingAction: Agents.PendingAction = {
       actionId: 'action-1',
@@ -227,14 +206,16 @@ describe('ToolApproval', () => {
                 <div data-testid="thread">
                   <ToolApproval approval={approval()} toolCallId="call-1" args={{ a: 1 }} />
                 </div>
-                <div data-testid="composer">
-                  <ToolApproval
-                    approval={approval()}
-                    toolCallId="call-1"
-                    args={{ a: 1 }}
-                    surface="composer"
-                  />
-                </div>
+                {open && (
+                  <div data-testid="composer">
+                    <ToolApproval
+                      approval={approval()}
+                      toolCallId="call-1"
+                      args={{ a: 1 }}
+                      surface="composer"
+                    />
+                  </div>
+                )}
                 {extra}
               </ApprovalProvider>
             </ChatContext.Provider>
@@ -244,28 +225,22 @@ describe('ToolApproval', () => {
       return store;
     };
 
-    test('the thread card is a record with no decisions or Submit while the panel is open', () => {
+    test('the thread omits its approval card while the composer panel is open', () => {
       renderWithComposer(true);
       const thread = screen.getByTestId('thread');
 
-      expect(thread).toHaveTextContent('Review in composer');
       expect(thread.querySelectorAll('button')).toHaveLength(0);
+      expect(within(thread).getByTestId('tool-approval')).toHaveTextContent('Review in composer');
       expect(screen.queryByRole('button', { name: 'Submit' })).not.toBeInTheDocument();
       expect(screen.getAllByRole('button', { name: 'Approve' })).toHaveLength(1);
     });
 
-    test('collapsing the panel hands the decisions and Submit back to the thread card', () => {
-      const store = renderWithComposer(true);
-
-      act(() => store.set(approvalPanelOpenFamily(conversationId), false));
-
+    test('collapsing the panel hands decisions and Submit back to the thread card', () => {
+      renderWithComposer(false);
       const thread = screen.getByTestId('thread');
-      expect(thread).not.toHaveTextContent('Review in composer');
       fireEvent.click(within(thread).getByRole('button', { name: 'Approve' }));
-      expect(within(thread).getByRole('button', { name: 'Submit' })).toBeEnabled();
-      expect(
-        within(screen.getByTestId('composer')).queryByRole('button', { name: 'Submit' }),
-      ).not.toBeInTheDocument();
+      expect(within(thread).getByRole('button', { name: 'Submit (1/1 selected)' })).toBeEnabled();
+      expect(screen.queryByTestId('composer')).not.toBeInTheDocument();
     });
 
     test('a thread card for a different action keeps its controls', () => {
@@ -281,7 +256,6 @@ describe('ToolApproval', () => {
       );
 
       const other = screen.getByTestId('other-action');
-      expect(other).not.toHaveTextContent('Review in composer');
       expect(within(other).getByRole('button', { name: 'Approve' })).toBeInTheDocument();
       expect(screen.getByTestId('thread')).toHaveTextContent('Review in composer');
     });

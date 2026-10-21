@@ -243,6 +243,8 @@ const BaseOptionsSchema = z.object({
    * receiving attachment contents.
    */
   attachmentUploadTools: z.array(z.string().min(1)).optional(),
+  /** Deloitte Custom Change: Only an operator-managed MCP gateway may supply authorization-relevant tool classes. */
+  trustedToolClassification: z.boolean().optional(),
   timeout: z.number().int().nonnegative().optional(),
   /** Timeout (ms) for the long-lived SSE GET stream body before undici aborts it. Default: 300_000 (5 min). */
   sseReadTimeout: z.number().int().positive().optional(),
@@ -539,6 +541,7 @@ const omitServerManagedFields = <T extends z.ZodObject<z.ZodRawShape>>(schema: T
     limitedAccess: true,
     allowedEntraGroupIds: true,
     attachmentUploadTools: true,
+    trustedToolClassification: true,
     customUserVars: true,
     oauth_headers: true,
   });

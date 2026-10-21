@@ -41,6 +41,7 @@ const {
   getMCPServersList,
   getMCPServerById,
   getMCPTools,
+  getMCPToolsets,
 } = require('~/server/controllers/mcp');
 const {
   getOAuthReconnectionManager,
@@ -113,6 +114,19 @@ const checkMCPCreate = generateCheckAccess({
 router.get('/tools', requireJwtAuth, configMiddleware, checkMCPUsePermissions, async (req, res) => {
   return getMCPTools(req, res);
 });
+
+/**
+ * Deloitte Custom Change: get MCP Gateway toolset metadata for connector tooltips.
+ */
+router.get(
+  '/toolsets',
+  requireJwtAuth,
+  configMiddleware,
+  checkMCPUsePermissions,
+  async (req, res) => {
+    return getMCPToolsets(req, res);
+  },
+);
 
 /**
  * Initiate OAuth flow

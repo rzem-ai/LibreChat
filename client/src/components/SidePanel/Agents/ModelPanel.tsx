@@ -15,7 +15,7 @@ import type { AgentForm, AgentModelPanelProps, StringOption } from '~/common';
 import { pruneAgentModelParameters, resolveAgentParameterSettings } from './parameters';
 import { componentMapping } from '~/components/SidePanel/Parameters/components';
 import { useGetEndpointsQuery, useGetStartupConfig } from '~/data-provider';
-import { useLocalize, useHasAccess } from '~/hooks';
+import { useLocalize, useHasAccess, useModelLabel } from '~/hooks';
 import { useLiveAnnouncer } from '~/Providers';
 import { Panel } from '~/common';
 import { cn } from '~/utils';
@@ -65,6 +65,9 @@ export default function ModelPanel({
 
   const { data: endpointsConfig = {} } = useGetEndpointsQuery();
   const { data: startupConfig } = useGetStartupConfig();
+
+  // Deloitte Custom Change: show the model spec label instead of the raw model ID.
+  const getModelLabel = useModelLabel(provider);
 
   const bedrockRegions = useMemo(() => {
     return endpointsConfig?.[provider]?.availableRegions ?? [];
@@ -252,6 +255,7 @@ export default function ModelPanel({
                   <ControlCombobox
                     selectId="model"
                     selectedValue={field.value || ''}
+                    displayValue={field.value ? getModelLabel(field.value) : ''}
                     selectPlaceholder={localize(getModelPlaceholderKey(modelsPending, provider))}
                     searchPlaceholder={localize('com_ui_select_model')}
                     setValue={(value) => {
@@ -264,7 +268,7 @@ export default function ModelPanel({
                       }
                     }}
                     items={models.map((model) => ({
-                      label: model,
+                      label: getModelLabel(model),
                       value: model,
                     }))}
                     disabled={!provider || selectionDisabled}

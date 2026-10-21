@@ -11,6 +11,7 @@ const mockStartTour = jest.fn();
 const mockResumeTour = jest.fn();
 let mockFlags: Record<string, boolean> = {};
 let mockConfigStatus: 'loading' | 'error' | 'success' = 'success';
+let mockTutorialProgress: Record<string, { step: number; total: number; completed: boolean }> = {};
 
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string, values?: Record<number, string | number>) =>
@@ -25,6 +26,15 @@ jest.mock('~/data-provider', () => ({
         : { interface: { customDeloitteFeatureFlags: mockFlags } },
     isLoading: mockConfigStatus === 'loading',
   }),
+  useTutorialStateQuery: () => ({
+    data: { tutorialProgress: mockTutorialProgress },
+    isSuccess: true,
+  }),
+  useUpdateTourProgressMutation: () => ({ mutate: jest.fn(), mutateAsync: jest.fn() }),
+}));
+
+jest.mock('~/hooks/AuthContext', () => ({
+  useAuthContext: () => ({ isAuthenticated: true }),
 }));
 
 jest.mock('~/hooks/Learning', () => ({
@@ -33,8 +43,8 @@ jest.mock('~/hooks/Learning', () => ({
 
 jest.mock('../LearningTourContext', () => ({
   useLearningTour: () => ({
-    startGettingStartedTour: mockStartTour,
-    resumeGettingStartedTour: mockResumeTour,
+    startCourseTour: mockStartTour,
+    resumeCourseTour: mockResumeTour,
   }),
 }));
 
@@ -68,10 +78,10 @@ describe('Resources', () => {
     expect(onOpenArticle).toHaveBeenCalledWith('agentic-ecosystem');
 
     fireEvent.click(screen.getByLabelText('com_learning_action_start_tour:Getting Started Tour'));
-    expect(mockStartTour).toHaveBeenCalledTimes(1);
+    expect(mockStartTour).toHaveBeenCalledWith(GETTING_STARTED_COURSE_ID);
 
     const external = screen.getByLabelText(
-      'com_learning_action_external:Book training sessions with the MyAssist team',
+      'com_learning_action_external:Book in with a MyAssist Team Member',
     );
     expect(external).toHaveAttribute('target', '_blank');
     expect(external).toHaveAttribute('rel', expect.stringContaining('noopener'));
@@ -103,7 +113,7 @@ describe('Academy', () => {
   afterEach(() => {
     mockFlags = {};
     mockConfigStatus = 'success';
-    window.localStorage.clear();
+    mockTutorialProgress = {};
   });
 
   it('shows the Getting Started hero first and hides flagged tabs by default', () => {
@@ -151,12 +161,11 @@ describe('Academy', () => {
   });
 
   it('resumes an in-progress tour from its saved step', () => {
-    window.localStorage.setItem(
-      'learningTourProgress',
-      JSON.stringify({ [GETTING_STARTED_COURSE_ID]: { step: 3, total: 9, completed: false } }),
-    );
+    mockTutorialProgress = {
+      [GETTING_STARTED_COURSE_ID]: { step: 3, total: 9, completed: false },
+    };
     renderAt('/learn/tours');
     fireEvent.click(screen.getByRole('button', { name: 'com_learning_tour_continue' }));
-    expect(mockResumeTour).toHaveBeenCalledWith(3);
+    expect(mockResumeTour).toHaveBeenCalledWith(GETTING_STARTED_COURSE_ID, 3);
   });
 });

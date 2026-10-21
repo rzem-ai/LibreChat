@@ -30,9 +30,9 @@
       "side": "top"
     },
     {
-      "element": "#attach-file-menu-button",
+      "element": "#attach-file-menu-button, #attach-file-button, #attach-file",
       "title": "Attach Files",
-      "description": "Click to choose how to attach your file — each option changes how the model uses it:<br/><br/><strong>Upload as Text</strong> — extracts all text from a document and adds it directly to your message. Best for short documents where you want the full content visible.<br/><br/><strong>Upload for File Search</strong> — the recommended option for most documents. Breaks the file into sections the model can search and retrieve as needed, without overwhelming your message.<br/><br/><strong>Upload to Code Environment</strong> — use this when you need the model to open, read, or transform the file itself, such as reformatting a spreadsheet or extracting data.",
+      "description": "Click to attach a file for the model to use.",
       "side": "top"
     },
     {
@@ -44,7 +44,7 @@
     {
       "element": "#toolbar-toggle-skills, #tools-dropdown-button",
       "title": "Skills",
-      "description": "Skills are automatically enabled by default.<br/><br/>Skills are instruction files which give the AI access to repeatable patterns. If a skill is enabled, the AI will auto-select it when you send a relevant query.<br/><br/>For example, if you ask the AI to summarise a meeting, you may see the meeting-summariser skill get called.",
+      "description": "Skills are automatically enabled by default.<br/><br/>Skills are specialised instruction files that provide the AI with expertise for specific tasks and actions. If a skill is enabled, MyAssist will automatically use it when it can help with your request or the action you want to complete.<br/><br/>For example, if you ask the AI to summarise a meeting, you may see the meeting-summariser skill appear while your response or action is being generated.",
       "side": "top"
     },
     {
@@ -107,7 +107,7 @@
     {
       "element": "#nav-panel-skills",
       "title": "Skill Library",
-      "description": "This is where you can create, edit and share skills. Skills are reusable instruction files that help the AI follow repeatable patterns.",
+      "description": "This is where you can create, edit and share skills. Skills are specialised instruction files that provide the AI with expertise for specific tasks and actions.",
       "side": "right"
     },
     {
@@ -144,6 +144,12 @@
       "element": "#nav-panel-learning",
       "title": "MyAssist Academy",
       "description": "You're here right now! Come back any time to revisit this tour or check for new learning content.",
+      "side": "right"
+    },
+    {
+      "element": "#balance-gauge",
+      "title": "Balance",
+      "description": "This gauge shows how much of your daily MyAssist usage balance you have left. Hover over it for more details.<br/><br/>To conserve your balance, choose a lower-cost model — you can compare model costs in the model selector.",
       "side": "right"
     },
     {

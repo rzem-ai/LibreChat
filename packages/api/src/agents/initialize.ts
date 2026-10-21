@@ -1396,9 +1396,15 @@ export async function initializeAgent(
   }
   const tokensModel =
     agent.provider === EModelEndpoint.azureOpenAI ? agent.model : (llmConfig?.model as string);
+  // Deloitte Custom Change: GPT-5.6+/GPT-6 move the output cap from maxTokens into modelKwargs
+  const outputCapKwargs = llmConfig?.modelKwargs as
+    | { max_output_tokens?: number; max_completion_tokens?: number }
+    | undefined;
   const maxOutputTokens = optionalChainWithEmptyCheck(
     llmConfig?.maxOutputTokens as number | undefined,
     llmConfig?.maxTokens as number | undefined,
+    outputCapKwargs?.max_output_tokens,
+    outputCapKwargs?.max_completion_tokens,
     0,
   );
   const agentMaxContextTokens = optionalChainWithEmptyCheck(

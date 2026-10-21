@@ -11,10 +11,15 @@ import { useRecoilState } from 'recoil';
 import { useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { TourStep } from './content/schema';
-import { GETTING_STARTED_COURSE_ID, getCourseSteps } from './content/registry';
+// Deloitte Custom Change: tour progress stored in MongoDB
+import useTourProgress, {
+  resolveResumeIndex,
+  toStepSnapshot,
+  useMigrateLegacyProgress,
+} from './progress';
+import { GETTING_STARTED_COURSE_ID, getCourse, getCourseSteps } from './content/registry';
 import { TRANSITION_MS } from '~/components/UnifiedSidebar/constants';
 import useTutorialPrompt from '~/hooks/Learning/useTutorialPrompt';
-import useTourProgress, { resolveResumeIndex } from './progress';
 import { hasAvailableTarget } from '~/utils/elements';
 import useCourseTour from './Courses/useCourseTour';
 import { DESKTOP_START_DELAY_MS } from './timing';
@@ -23,6 +28,9 @@ import { useShowMarketplace } from '~/hooks';
 import store from '~/store';
 
 interface LearningTourContextType {
+  startCourseTour: (courseId: string) => void;
+  /** Starts a tour at a saved zero-based step. */
+  resumeCourseTour: (courseId: string, savedStep: number) => void;
   startGettingStartedTour: () => void;
   /** Starts the Getting Started tour at a saved zero-based step. */
   resumeGettingStartedTour: (savedStep: number) => void;
@@ -52,6 +60,8 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
   const { markPromptSeen } = useTutorialPrompt();
   const showMarketplace = useShowMarketplace();
   const { recordStep, recordComplete } = useTourProgress();
+  // Deloitte Custom Change: tour progress stored in MongoDB: one-time upload of legacy browser progress
+  useMigrateLegacyProgress();
 
   // Capture the user's sidebar state before the tour starts so we can restore
   // it when the tour ends or is cancelled.
@@ -62,12 +72,13 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
   // fresh each time the tour starts, not at render time, since DOM targets
   // may not exist yet on an earlier render.
   const activeStepsRef = useRef<TourStep[]>([]);
+  const activeCourseIdRef = useRef(GETTING_STARTED_COURSE_ID);
   const getSteps = useCallback(() => {
     const canShowAgentSelectionSteps =
       showMarketplace &&
       hasAvailableTarget('#nav-panel-conversations') &&
       hasAvailableTarget('#nav-agents-marketplace-button');
-    activeStepsRef.current = getCourseSteps(GETTING_STARTED_COURSE_ID).filter(
+    activeStepsRef.current = getCourseSteps(activeCourseIdRef.current).filter(
       (step) => !CONDITIONAL_AGENT_STEP_IDS.has(step.id ?? '') || canShowAgentSelectionSteps,
     );
     return activeStepsRef.current;
@@ -76,16 +87,17 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
   const { startTour } = useCourseTour(
     getSteps,
     () => {
-      recordComplete(GETTING_STARTED_COURSE_ID, getCourseSteps(GETTING_STARTED_COURSE_ID).length);
-      setCompletedCourseId(GETTING_STARTED_COURSE_ID);
+      const courseId = activeCourseIdRef.current;
+      recordComplete(courseId, getCourseSteps(courseId).length);
+      setCompletedCourseId(courseId);
     },
     {
       onStep: (index) => {
-        const fullSteps = getCourseSteps(GETTING_STARTED_COURSE_ID);
+        const courseId = activeCourseIdRef.current;
+        // Deloitte Custom Change: tour progress stored in MongoDB: save step id and title, not just the index
         recordStep(
-          GETTING_STARTED_COURSE_ID,
-          fullSteps.indexOf(activeStepsRef.current[index]),
-          fullSteps.length,
+          courseId,
+          toStepSnapshot(getCourseSteps(courseId), activeStepsRef.current[index]),
         );
       },
       // Restore sidebar to its pre-tour state when the tour ends/is cancelled.
@@ -108,19 +120,18 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const resumeGettingStartedTour = useCallback(
-    (savedStep: number) => {
+  const resumeCourseTour = useCallback(
+    (courseId: string, savedStep: number) => {
+      activeCourseIdRef.current = courseId;
       markPromptSeen();
       // Capture the user's current sidebar state so it can be restored when the
       // tour finishes or is cancelled — preTourSidebarExpanded is read by
       // useCourseTour's onDestroyStarted callback via the ref.
       preTourSidebarExpandedRef.current = sidebarExpanded;
 
-      // The tour highlights elements that only exist on the main chat route
-      // (textarea, send button, header buttons) and inside the "conversations"
-      // sidebar panel (search, projects) — switch to both before driving.
+      const course = getCourse(courseId);
       navigate('/c/new');
-      setActive('conversations');
+      setActive(course?.startPanel ?? 'conversations');
 
       const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
       if (isSmallScreen) {
@@ -135,11 +146,7 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
       startTimeoutRef.current = window.setTimeout(
         () => {
           const activeSteps = getSteps();
-          const resumeIndex = resolveResumeIndex(
-            getCourseSteps(GETTING_STARTED_COURSE_ID),
-            activeSteps,
-            savedStep,
-          );
+          const resumeIndex = resolveResumeIndex(getCourseSteps(courseId), activeSteps, savedStep);
           const needsExpandedSidebar = activeSteps
             .slice(0, resumeIndex)
             .some((step) => step.expandSidebarBefore);
@@ -162,21 +169,40 @@ export function LearningTourProvider({ children }: { children: ReactNode }) {
     [markPromptSeen, navigate, setActive, setSidebarExpanded, sidebarExpanded, startTour, getSteps],
   );
 
+  const startCourseTour = useCallback(
+    (courseId: string) => resumeCourseTour(courseId, 0),
+    [resumeCourseTour],
+  );
+
+  const resumeGettingStartedTour = useCallback(
+    (savedStep: number) => resumeCourseTour(GETTING_STARTED_COURSE_ID, savedStep),
+    [resumeCourseTour],
+  );
+
   const startGettingStartedTour = useCallback(
-    () => resumeGettingStartedTour(0),
-    [resumeGettingStartedTour],
+    () => resumeCourseTour(GETTING_STARTED_COURSE_ID, 0),
+    [resumeCourseTour],
   );
 
   const dismissCompletion = useCallback(() => setCompletedCourseId(null), []);
 
   const value = useMemo(
     () => ({
+      startCourseTour,
+      resumeCourseTour,
       startGettingStartedTour,
       resumeGettingStartedTour,
       completedCourseId,
       dismissCompletion,
     }),
-    [startGettingStartedTour, resumeGettingStartedTour, completedCourseId, dismissCompletion],
+    [
+      startCourseTour,
+      resumeCourseTour,
+      startGettingStartedTour,
+      resumeGettingStartedTour,
+      completedCourseId,
+      dismissCompletion,
+    ],
   );
 
   return <LearningTourContext.Provider value={value}>{children}</LearningTourContext.Provider>;

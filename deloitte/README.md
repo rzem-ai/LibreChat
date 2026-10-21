@@ -206,6 +206,26 @@ After changing either Entra setting, rebuild/restart the API container and sign 
 
 > The **ClearTrack MCP Gateway** connection (`mcpServers` block in `librechat.yaml` at repo root and `charts/config/librechat.yaml` for Helm) uses On-Behalf-Of (OBO) auth, not a dedicated OAuth client — it reuses `OPENID_CLIENT_ID`/`OPENID_CLIENT_SECRET` from item 8–9 to exchange the user's login token for one scoped to the gateway. There are no gateway-specific client credentials to set; the only requirement is that `OPENID_SCOPE` (item 12) includes the gateway's audience scope.
 
+## Sharing Chats .env vars
+
+```env
+ALLOW_SHARED_LINKS=false
+ALLOW_SHARED_LINKS_PUBLIC=false
+SHARED_LINKS_SNAPSHOT_FILES=false
+```
+
+### Balance .env vars
+
+The `balance` block in `librechat.yaml` enables token balance tracking with a daily auto-refill. It reads these values from `.env`:
+
+```env
+START_BALANCE=15000000
+BALANCE_REFILL_AMOUNT=15000000
+CHECK_BALANCE=true
+```
+
+`CHECK_BALANCE` (`true`/`false`) turns balance tracking on or off. `START_BALANCE` is the starting token balance for new users; `BALANCE_REFILL_AMOUNT` is the number of tokens added per refill cycle (1 day). The Helm charts set both in `values-uat.yaml` and `values-prd.yaml` (10 million tokens = $10 per day).
+
 ### Code API / Code Interpreter .env vars
 
 Add the following values to `.env` to enable the Run Code button for code execution:
