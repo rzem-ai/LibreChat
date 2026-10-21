@@ -3,8 +3,8 @@ import { Constants } from 'librechat-data-provider';
 import { Controller, useWatch, useFormContext } from 'react-hook-form';
 import type { AgentForm } from '~/common';
 import { ResolvedProviderIcon } from '~/components/Endpoints/ResolvedProviderIcon';
+import { useLocalize, useAgentCapabilities, useModelLabel } from '~/hooks';
 import AgentCategorySelector from './AgentCategorySelector';
-import { useLocalize, useAgentCapabilities } from '~/hooks';
 import { useAgentFileEntries } from './Tools/hooks';
 import { useAgentPanelContext } from '~/Providers';
 import { useProviderIcon } from '~/hooks/Endpoint';
@@ -34,6 +34,8 @@ export default function AgentConfig() {
   const { contextFiles } = useAgentFileEntries();
 
   const providerValue = typeof provider === 'string' ? provider : provider?.value;
+  // Deloitte Custom Change: show the model spec label instead of the raw model ID.
+  const getModelLabel = useModelLabel(providerValue as string);
   const { provider: providerId, imageURL } = useProviderIcon({
     endpoint: providerValue as string,
     endpointsConfig,
@@ -135,7 +137,7 @@ export default function AgentConfig() {
             id="provider"
             type="button"
             onClick={() => setActivePanel(Panel.model)}
-            title={model || undefined}
+            title={model ? getModelLabel(model) : undefined}
             className={cn(
               'relative flex h-9 w-full min-w-0 items-center overflow-hidden rounded-lg border border-border-light bg-surface-secondary text-sm font-medium text-text-primary transition-colors hover:bg-surface-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring-primary',
               model != null && model ? 'px-1' : 'px-3',
@@ -153,7 +155,7 @@ export default function AgentConfig() {
                 </div>
               )}
               <span className="truncate">
-                {model != null && model ? model : localize('com_ui_select_model')}
+                {model != null && model ? getModelLabel(model) : localize('com_ui_select_model')}
               </span>
             </div>
           </button>

@@ -279,13 +279,8 @@ endpoints:
       # Deloitte Custom Change: permit native web search for the Claude 5.5 models
       # provisioned on the CTNP LLM Gateway.
       supportedModels:
-        - 'claude-haiku-4-5'
         - 'claude-haiku-5-5'
-        - 'claude-sonnet-5'
         - 'claude-sonnet-5-5'
-        - 'claude-sonnet-4-6'
-        - 'claude-opus-4-6'
-        - 'claude-opus-4-8'
         - 'claude-opus-5-5'
     # Deloitte Custom Change: reference pricing only, left commented out — `anthropicEndpointSchema`
     # doesn't define `tokenConfig` (it's only wired up for `endpoints.custom[]`), so built-in
@@ -441,8 +436,6 @@ endpoints:
     activityLabel: true
     activityModel: 'au.anthropic.claude-haiku-5-5'
     models:
-      - 'au.anthropic.claude-sonnet-4-6'
-      - 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
       # Deloitte Custom Change: Australian Bedrock inference profiles provisioned on CTNP.
       - 'au.anthropic.claude-haiku-5-5'
       - 'au.anthropic.claude-sonnet-5-5'
@@ -563,26 +556,8 @@ modelSpecs:
         promptPrefix: *deloitteSystemPrompt
         useResponsesApi: true
       details:
-        supports:
-          webSearch: true
-          imageGeneration: false
         speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
         intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-
-    - name: 'anthropic-claude-haiku-4-5'
-      label: 'Claude Haiku 4.5'
-      group: 'Anthropic Global'
-      groupIcon: 'anthropic'
-      iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
-      artificialAnalysisBenchmarkModelName: 'claude-4-5-haiku'
-      preset:
-        endpoint: 'anthropic'
-        model: 'claude-haiku-4-5'
-        promptPrefix: *deloitteSystemPrompt
-      details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -591,6 +566,8 @@ modelSpecs:
     - name: 'anthropic-claude-haiku-5-5'
       label: 'Claude Haiku 5.5'
       group: 'Anthropic Global'
+      # Deloitte Custom Change: group icon moved here from the removed Haiku 4.5 entry.
+      groupIcon: 'anthropic'
       iconURL: 'anthropic'
       preset:
         endpoint: 'anthropic'
@@ -601,23 +578,6 @@ modelSpecs:
       details:
         speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
         intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        supports:
-          webSearch: true
-          imageGeneration: false
-
-    - name: 'anthropic-claude-sonnet-5'
-      label: 'Claude Sonnet 5'
-      group: 'Anthropic Global'
-      iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
-      artificialAnalysisBenchmarkModelName: 'claude-sonnet-5'
-      preset:
-        endpoint: 'anthropic'
-        model: 'claude-sonnet-5'
-        promptPrefix: *deloitteSystemPrompt
-      details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -641,57 +601,6 @@ modelSpecs:
           webSearch: true
           imageGeneration: false
 
-    - name: 'anthropic-claude-sonnet-4-6'
-      label: 'Claude Sonnet 4.6'
-      group: 'Anthropic Global'
-      iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
-      artificialAnalysisBenchmarkModelName: 'claude-sonnet-4-6'
-      preset:
-        endpoint: 'anthropic'
-        model: 'claude-sonnet-4-6'
-        promptPrefix: *deloitteSystemPrompt
-      details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        supports:
-          webSearch: true
-          imageGeneration: false
-
-    - name: 'anthropic-claude-opus-4-6'
-      label: 'Claude Opus 4.6'
-      group: 'Anthropic Global'
-      iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
-      artificialAnalysisBenchmarkModelName: 'claude-opus-4-6'
-      preset:
-        endpoint: 'anthropic'
-        model: 'claude-opus-4-6'
-        promptPrefix: *deloitteSystemPrompt
-      details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        supports:
-          webSearch: true
-          imageGeneration: false
-
-    - name: 'anthropic-claude-opus-4-8'
-      label: 'Claude Opus 4.8'
-      group: 'Anthropic Global'
-      iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
-      artificialAnalysisBenchmarkModelName: 'claude-opus-4-8'
-      preset:
-        endpoint: 'anthropic'
-        model: 'claude-opus-4-8'
-        promptPrefix: *deloitteSystemPrompt
-      details:
-        speed: 3 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        supports:
-          webSearch: true
-          imageGeneration: false
-
     - name: 'anthropic-claude-opus-5-5'
       label: 'Claude Opus 5.5'
       group: 'Anthropic Global'
@@ -709,45 +618,13 @@ modelSpecs:
           webSearch: true
           imageGeneration: false
 
-    - name: 'anthropic-au-claude-sonnet-4-6'
-      label: 'Claude Sonnet 4.6'
-      group: 'Anthropic Australia'
-      groupIcon: 'anthropic'
-      iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
-      artificialAnalysisBenchmarkModelName: 'claude-sonnet-4-6'
-      preset:
-        endpoint: 'bedrock'
-        model: 'au.anthropic.claude-sonnet-4-6'
-        promptPrefix: *deloitteSystemPrompt
-      details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        supports:
-          webSearch: false
-          imageGeneration: false
-
-    - name: 'anthropic-au-claude-haiku-4-5'
-      label: 'Claude Haiku 4.5'
-      group: 'Anthropic Australia'
-      iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
-      artificialAnalysisBenchmarkModelName: 'claude-4-5-haiku'
-      preset:
-        endpoint: 'bedrock'
-        model: 'au.anthropic.claude-haiku-4-5-20251001-v1:0'
-        promptPrefix: *deloitteSystemPrompt
-      details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        supports:
-          webSearch: false
-          imageGeneration: false
-
     # Deloitte Custom Change: expose the CTNP-provisioned Australian Bedrock variants.
     - name: 'anthropic-au-claude-haiku-5-5'
-      label: 'Claude Haiku 5.5'
+      # Deloitte Custom Change: (AU) suffix distinguishes the Australian models in the selector.
+      label: 'Claude Haiku 5.5 (AU)'
       group: 'Anthropic Australia'
+      # Deloitte Custom Change: group icon moved here from the removed Haiku 4.5 entry.
+      groupIcon: 'anthropic'
       iconURL: 'anthropic'
       preset:
         endpoint: 'bedrock'
@@ -763,7 +640,8 @@ modelSpecs:
           imageGeneration: false
 
     - name: 'anthropic-au-claude-sonnet-5-5'
-      label: 'Claude Sonnet 5.5'
+      # Deloitte Custom Change: (AU) suffix distinguishes the Australian models in the selector.
+      label: 'Claude Sonnet 5.5 (AU)'
       group: 'Anthropic Australia'
       iconURL: 'anthropic'
       preset:
@@ -780,7 +658,8 @@ modelSpecs:
           imageGeneration: false
 
     - name: 'anthropic-au-claude-opus-5-5'
-      label: 'Claude Opus 5.5'
+      # Deloitte Custom Change: (AU) suffix distinguishes the Australian models in the selector.
+      label: 'Claude Opus 5.5 (AU)'
       group: 'Anthropic Australia'
       iconURL: 'anthropic'
       preset:

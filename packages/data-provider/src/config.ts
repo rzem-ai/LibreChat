@@ -3585,9 +3585,11 @@ export const alternateName = {
   [EModelEndpoint.azureAssistants]: 'Azure Assistants',
   [EModelEndpoint.azureOpenAI]: 'Azure OpenAI',
   [EModelEndpoint.google]: 'Google',
-  [EModelEndpoint.anthropic]: 'Anthropic',
+  // Deloitte Custom Change: provider names aligned with the model picker groups.
+  [EModelEndpoint.anthropic]: 'Anthropic Global',
   [EModelEndpoint.custom]: 'Custom',
-  [EModelEndpoint.bedrock]: 'AWS Bedrock',
+  [EModelEndpoint.bedrock]: 'Anthropic Australia',
+  'Azure Global': 'OpenAI Global',
   [KnownEndpoints.lemonade]: 'AMD Lemonade',
   [KnownEndpoints.ollama]: 'Ollama',
   [KnownEndpoints.deepseek]: 'DeepSeek',
