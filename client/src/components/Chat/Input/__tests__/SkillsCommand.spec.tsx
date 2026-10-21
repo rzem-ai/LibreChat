@@ -13,7 +13,7 @@ import React from 'react';
 import { act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SkillsScope } from 'librechat-data-provider';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import type { TSkillSummary } from 'librechat-data-provider';
 
 const CONVO_ID = 'convo-1';
@@ -729,6 +729,74 @@ describe('SkillsCommand', () => {
   });
 
   describe('Manage Skills CTA', () => {
+    describe('keyboard navigation', () => {
+      const BLUR_DELAY_MS = 250;
+      const wait = () => act(() => new Promise((resolve) => setTimeout(resolve, BLUR_DELAY_MS)));
+
+      beforeEach(() => {
+        mockUseSkillsInfiniteQuery.mockReturnValue({
+          data: { pages: [{ skills: [], has_more: false, after: null }] },
+          isLoading: false,
+          isError: false,
+          fetchNextPage: jest.fn(),
+          hasNextPage: false,
+          isFetchingNextPage: false,
+        });
+      });
+
+      it('moves focus from the search input into the empty-state action and keeps the picker open', async () => {
+        const user = userEvent.setup();
+        const textAreaRef = makeTextarea('$');
+        render(<SkillsCommand index={0} textAreaRef={textAreaRef} conversationId={CONVO_ID} />);
+
+        const input = screen.getByPlaceholderText('com_ui_skills_command_placeholder');
+        const manageButton = screen.getByRole('button', { name: /com_ui_skills_manage_cta/i });
+        expect(input).toHaveFocus();
+
+        await user.tab();
+        await wait();
+
+        expect(manageButton).toHaveFocus();
+        expect(mockSetShowSkillsPopover).not.toHaveBeenCalled();
+
+        await user.keyboard('{Enter}');
+
+        expect(mockSetActive).toHaveBeenCalledWith('skills');
+        expect(mockSetShowSkillsPopover).toHaveBeenCalledWith(false);
+      });
+
+      it('dismisses the picker only once focus leaves the whole popover', async () => {
+        const user = userEvent.setup();
+        const textAreaRef = makeTextarea('$');
+        render(<SkillsCommand index={0} textAreaRef={textAreaRef} conversationId={CONVO_ID} />);
+        const outsideButton = document.createElement('button');
+        document.body.append(outsideButton);
+
+        await user.tab();
+        await wait();
+        expect(screen.getByRole('button', { name: /com_ui_skills_manage_cta/i })).toHaveFocus();
+        expect(mockSetShowSkillsPopover).not.toHaveBeenCalled();
+
+        await user.tab();
+
+        expect(outsideButton).toHaveFocus();
+        await waitFor(() => expect(mockSetShowSkillsPopover).toHaveBeenCalledWith(false));
+      });
+
+      it('does not move focus into the action on Shift+Tab from the search input', async () => {
+        const user = userEvent.setup();
+        const textAreaRef = makeTextarea('$');
+        render(<SkillsCommand index={0} textAreaRef={textAreaRef} conversationId={CONVO_ID} />);
+
+        const manageButton = screen.getByRole('button', { name: /com_ui_skills_manage_cta/i });
+
+        await user.tab({ shift: true });
+
+        expect(manageButton).not.toHaveFocus();
+        expect(mockSetShowSkillsPopover).toHaveBeenCalledWith(false);
+      });
+    });
+
     it('calls setActive("skills") and closes the popover when Manage Skills is clicked', async () => {
       const user = userEvent.setup();
       /* No skills in catalog → catalog-empty state → Manage Skills button. */

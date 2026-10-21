@@ -295,6 +295,7 @@ function SkillsCommandContent({
   const [activeIndex, setActiveIndex] = useState(0);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
 
   const { open, setOpen, searchValue, setSearchValue, matches } = useCombobox({
     value: '',
@@ -445,10 +446,32 @@ function SkillsCommandContent({
   const catalogLoading = isLoading || isFetchingNextPage || hasNextPage || statesLoading;
   /* Error from either the catalog fetch or the active-state fetch. */
   const catalogError = isError || statesError;
+  const hasEmptyStateActions = open && !catalogLoading && !catalogError && matches.length === 0;
 
   return (
     <div className="absolute bottom-28 z-10 w-full space-y-2">
-      <div className="popover border-token-border-light rounded-2xl border bg-surface-tertiary-alt p-2 shadow-lg">
+      <div
+        ref={popoverRef}
+        className="popover border-token-border-light rounded-2xl border bg-surface-tertiary-alt p-2 shadow-lg"
+        onBlur={(e) => {
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+          }
+          if (e.currentTarget.contains(e.relatedTarget)) {
+            timeoutRef.current = null;
+            return;
+          }
+          timeoutRef.current = setTimeout(() => {
+            if (popoverRef.current?.contains(document.activeElement)) {
+              timeoutRef.current = null;
+              return;
+            }
+            setOpen(false);
+            setShowSkillsPopover(false);
+            timeoutRef.current = null;
+          }, 150);
+        }}
+      >
         <Input
           ref={initInputRef}
           placeholder={localize('com_ui_skills_command_placeholder')}
@@ -474,6 +497,11 @@ function SkillsCommandContent({
               setActiveIndex((prevIndex) => (prevIndex - 1 + matches.length) % matches.length);
             } else if (e.key === 'Enter' || e.key === 'Tab') {
               if (matches.length === 0) {
+                /* Forward Tab moves focus into the empty-state actions; the
+                   popover-level blur handler dismisses once focus leaves. */
+                if (e.key === 'Tab' && !e.shiftKey && hasEmptyStateActions) {
+                  return;
+                }
                 if (e.key === 'Enter') {
                   e.preventDefault();
                 }
@@ -492,12 +520,6 @@ function SkillsCommandContent({
           }}
           onChange={(e) => setSearchValue(e.target.value)}
           onFocus={() => setOpen(true)}
-          onBlur={() => {
-            timeoutRef.current = setTimeout(() => {
-              setOpen(false);
-              setShowSkillsPopover(false);
-            }, 150);
-          }}
         />
         {open && !catalogError && catalogLoading && matches.length === 0 && (
           <div className="flex h-32 items-center justify-center text-text-primary">
