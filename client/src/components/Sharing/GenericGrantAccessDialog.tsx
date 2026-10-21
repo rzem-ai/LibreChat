@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, CopyCheck } from 'lucide';
-import { AccessRoleIds, ResourceType, SystemRoles } from 'librechat-data-provider';
 import { Share2Icon, Users, UserCheck, AlertCircle, ExternalLink } from 'lucide-react';
+import { AccessRoleIds, PrincipalType, ResourceType, SystemRoles } from 'librechat-data-provider';
 import {
   Alert,
   Label,
@@ -253,6 +253,26 @@ export default function GenericGrantAccessDialog({
     allShares.some((share) => share.accessRoleId === config?.defaultOwnerRoleId) ||
     (isPublic && publicRole === config?.defaultOwnerRoleId);
 
+  // Deloitte Custom Change: Warn a Skill owner, before saving, that the unsaved
+  // sharing draft grants Editor access to someone else. Editors can make
+  // irreversible changes with no version history or undo, so the owner should see
+  // this while they can still change the role or remove the person — not only
+  // after the share is persisted. `GenericGrantAccessDialog` is reachable by
+  // non-owners too (admins, ACL SHARE grantees), so ownership is derived from the
+  // draft itself rather than assumed from the caller.
+  const isCurrentUserSkillOwner =
+    resourceType === ResourceType.SKILL &&
+    allShares.some(
+      (share) =>
+        share.type === PrincipalType.USER &&
+        share.id === user?.id &&
+        share.accessRoleId === config?.defaultOwnerRoleId,
+    );
+  const hasEditorInDraft = allShares.some(
+    (share) => share.accessRoleId === config?.defaultEditorRoleId,
+  );
+  const showEditorAccessWarning = isCurrentUserSkillOwner && hasEditorInDraft;
+
   // Check if there are any changes to save
   const hasPublicChanges = isPublic !== currentIsPublic || publicRole !== currentPublicRole;
   const submitButtonActive = hasChanges || hasPublicChanges;
@@ -447,60 +467,69 @@ export default function GenericGrantAccessDialog({
           )}
         </div>
 
-        <OGDialogFooter className="shrink-0 gap-3 bg-transparent px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:space-x-0 sm:px-6">
-          <div className="flex flex-col-reverse gap-2 sm:flex-row">
-            <PeoplePickerAdminSettings />
-            {resourceId && resourceUrl && (
-              <TooltipAnchor
-                description={
-                  isCopying ? config?.getCopyUrlMessage() : localize('com_ui_copy_url_to_clipboard')
-                }
-                render={
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      if (isCopying) return;
-                      if (!copyResourceUrl(setIsCopying)) return;
-                      showToast({
-                        message: localize('com_ui_agent_url_copied'),
-                        status: 'success',
-                      });
-                    }}
-                    disabled={isCopying}
-                    className={cn('shrink-0 gap-2', isCopying ? 'cursor-default' : '')}
-                    aria-label={localize('com_ui_copy_url_to_clipboard')}
-                  >
-                    <MorphIcon icon={isCopying ? CopyCheck : Link} className="size-4" />
-                    {isCopying
+        <OGDialogFooter className="flex shrink-0 flex-col gap-3 bg-transparent px-4 py-4 sm:px-6">
+          {showEditorAccessWarning && (
+            <Alert variant="warning" className="w-full">
+              {localize('com_ui_skill_editor_access_warning')}
+            </Alert>
+          )}
+          <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between sm:space-x-0">
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+              <PeoplePickerAdminSettings />
+              {resourceId && resourceUrl && (
+                <TooltipAnchor
+                  description={
+                    isCopying
                       ? config?.getCopyUrlMessage()
-                      : localize('com_ui_copy_url_to_clipboard')}
-                  </Button>
-                }
-              />
-            )}
+                      : localize('com_ui_copy_url_to_clipboard')
+                  }
+                  render={
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        if (isCopying) return;
+                        if (!copyResourceUrl(setIsCopying)) return;
+                        showToast({
+                          message: localize('com_ui_agent_url_copied'),
+                          status: 'success',
+                        });
+                      }}
+                      disabled={isCopying}
+                      className={cn('shrink-0 gap-2', isCopying ? 'cursor-default' : '')}
+                      aria-label={localize('com_ui_copy_url_to_clipboard')}
+                    >
+                      <MorphIcon icon={isCopying ? CopyCheck : Link} className="size-4" />
+                      {isCopying
+                        ? config?.getCopyUrlMessage()
+                        : localize('com_ui_copy_url_to_clipboard')}
+                    </Button>
+                  }
+                />
+              )}
+            </div>
+            <Button
+              variant="submit"
+              onClick={handleSave}
+              disabled={
+                updatePermissionsMutation.isLoading ||
+                !submitButtonActive ||
+                (hasChanges && !hasAtLeastOneOwner)
+              }
+              className="w-full sm:w-auto"
+              aria-label={localize('com_ui_save')}
+              id="share-save-button"
+              aria-describedby={hasChanges && !hasAtLeastOneOwner ? ownerErrorId : undefined}
+            >
+              {updatePermissionsMutation.isLoading ? (
+                <div className="flex items-center gap-2">
+                  <Spinner className="size-4" />
+                  {localize('com_ui_saving')}
+                </div>
+              ) : (
+                localize('com_ui_save')
+              )}
+            </Button>
           </div>
-          <Button
-            variant="submit"
-            onClick={handleSave}
-            disabled={
-              updatePermissionsMutation.isLoading ||
-              !submitButtonActive ||
-              (hasChanges && !hasAtLeastOneOwner)
-            }
-            className="w-full sm:w-auto"
-            aria-label={localize('com_ui_save')}
-            id="share-save-button"
-            aria-describedby={hasChanges && !hasAtLeastOneOwner ? ownerErrorId : undefined}
-          >
-            {updatePermissionsMutation.isLoading ? (
-              <div className="flex items-center gap-2">
-                <Spinner className="size-4" />
-                {localize('com_ui_saving')}
-              </div>
-            ) : (
-              localize('com_ui_save')
-            )}
-          </Button>
         </OGDialogFooter>
       </OGDialogContent>
     </OGDialog>

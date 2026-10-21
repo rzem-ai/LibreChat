@@ -106,10 +106,16 @@ jest.mock('../SkillContentEditor', () => ({
   default: () => null,
 }));
 
-jest.mock('../CategorySelector', () => ({
-  __esModule: true,
-  default: () => null,
-}));
+// Deloitte Custom Change: Observe the readOnly prop so the permission-failure test can
+// confirm the category control is disabled, matching the rest of the read-only form.
+jest.mock('../CategorySelector', () => {
+  const React = jest.requireActual<typeof import('react')>('react');
+  return {
+    __esModule: true,
+    default: ({ readOnly }: { readOnly?: boolean }) =>
+      React.createElement('button', { 'aria-label': 'Category', disabled: readOnly }),
+  };
+});
 
 jest.mock('../../dialogs/DeleteSkill', () => ({
   __esModule: true,
@@ -233,7 +239,7 @@ describe('SkillForm', () => {
       <MemoryRouter initialEntries={['/skills/skill-1/edit']}>
         <Routes>
           <Route path="/skills/:skillId/edit" element={<SkillForm skillId="skill-1" />} />
-          <Route path="/skills/:skillId" element={<p>Skill detail</p>} />
+          <Route path="/skills/:skillId" element={<p>{'Skill detail'}</p>} />
         </Routes>
       </MemoryRouter>,
     );
@@ -247,12 +253,15 @@ describe('SkillForm', () => {
       <MemoryRouter initialEntries={['/skills/skill-1/edit']}>
         <Routes>
           <Route path="/skills/:skillId/edit" element={<SkillForm skillId="skill-1" />} />
-          <Route path="/skills/:skillId" element={<p>Skill detail</p>} />
+          <Route path="/skills/:skillId" element={<p>{'Skill detail'}</p>} />
         </Routes>
       </MemoryRouter>,
     );
     await act(async () => {});
     expect(screen.getByRole('textbox', { name: 'Name' })).toHaveAttribute('readonly');
+    // Deloitte Custom Change: The category control must also be locked during the
+    // read-only fallback, not just the name/description/body fields.
+    expect(screen.getByRole('button', { name: 'Category' })).toBeDisabled();
     expect(screen.queryByText('Skill detail')).not.toBeInTheDocument();
   });
 });

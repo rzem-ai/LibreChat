@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
 import { Info, AlertTriangle } from 'lucide-react';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useForm, Controller, FormProvider } from 'react-hook-form';
 import {
   Label,
@@ -244,7 +244,7 @@ export default function SkillForm({ skillId }: SkillFormProps) {
               )}
             />
             <div className="flex shrink-0 items-center gap-2">
-              <CategorySelector />
+              <CategorySelector readOnly={readOnly} />
               <ShareSkill skill={skill} />
               {permissions.canDelete && (
                 <DeleteSkill

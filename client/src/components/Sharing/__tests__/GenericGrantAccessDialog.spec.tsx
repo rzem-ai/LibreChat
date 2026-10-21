@@ -1,12 +1,13 @@
 import React from 'react';
 import { ResourceType } from 'librechat-data-provider';
 import { render, screen, fireEvent } from '@testing-library/react';
+import type { TPrincipal } from 'librechat-data-provider';
 import '@testing-library/jest-dom/extend-expect';
 import GenericGrantAccessDialog from '../GenericGrantAccessDialog';
 
 const mockRefetchPermissions = jest.fn();
 const mockUseResourcePermissionState = jest.fn();
-const mockUseAuthContext = jest.fn(() => ({ user: { role: 'ADMIN' } }));
+const mockUseAuthContext = jest.fn(() => ({ user: { role: 'ADMIN', id: 'user-1' } }));
 const mockUsePeoplePickerPermissions = jest.fn(() => ({
   hasPeoplePickerAccess: true,
   peoplePickerTypeFilter: '' as string | null,
@@ -15,6 +16,7 @@ const mockUseCanSharePublic = jest.fn(() => true);
 
 const config = {
   defaultViewerRoleId: 'viewer',
+  defaultEditorRoleId: 'editor',
   defaultOwnerRoleId: 'owner',
   getShareMessage: () => 'Share Agent',
   getResourceUrl: () => 'http://localhost/agent/1',
@@ -65,18 +67,50 @@ jest.mock('../PublicSharingToggle', () => ({
   __esModule: true,
   default: () => <div data-testid="public-toggle" />,
 }));
+// Deloitte Custom Change: Exposes `onRoleChange`/`onRemoveHandler` as clickable
+// controls (instead of an inert stub) so tests can drive the Skill
+// editor-access-warning logic in GenericGrantAccessDialog without re-testing
+// AccessRolesPicker's own dropdown interaction, which is covered elsewhere.
 jest.mock('../PeoplePicker', () => ({
   __esModule: true,
-  SelectedPrincipalsList: () => <div data-testid="principals-list" />,
+  SelectedPrincipalsList: ({
+    principles,
+    onRoleChange,
+    onRemoveHandler,
+  }: {
+    principles: TPrincipal[];
+    onRoleChange?: (shareKey: string, newRole: string) => void;
+    onRemoveHandler: (shareKey: string) => void;
+  }) => (
+    <div data-testid="principals-list">
+      {principles.map((principal) => {
+        // Mirrors `principalKey` from `../shareChanges`, inlined because jest.mock's
+        // factory may not reference out-of-scope, non-`mock`-prefixed identifiers.
+        const shareKey = `${principal.type}-${principal.id ?? principal.idOnTheSource}`;
+        return (
+          <div key={shareKey} data-testid={`principal-${principal.id}`}>
+            <button onClick={() => onRoleChange?.(shareKey, 'viewer')}>
+              {`make-viewer-${principal.id}`}
+            </button>
+            <button onClick={() => onRoleChange?.(shareKey, 'editor')}>
+              {`make-editor-${principal.id}`}
+            </button>
+            <button onClick={() => onRemoveHandler(shareKey)}>{`remove-${principal.id}`}</button>
+          </div>
+        );
+      })}
+    </div>
+  ),
 }));
 
-const renderDialog = (resourceType: ResourceType = ResourceType.AGENT) =>
+const renderDialog = (overrides: Record<string, unknown> = {}) =>
   render(
     <GenericGrantAccessDialog
       resourceDbId="agent-db-1"
       resourceId="agent-1"
       resourceName="Test Agent"
-      resourceType={resourceType}
+      resourceType={ResourceType.AGENT}
+      {...overrides}
     />,
   );
 
@@ -84,7 +118,7 @@ describe('GenericGrantAccessDialog - permissions load failure', () => {
   beforeEach(() => {
     mockUseResourcePermissionState.mockReset();
     mockRefetchPermissions.mockReset();
-    mockUseAuthContext.mockReturnValue({ user: { role: 'ADMIN' } });
+    mockUseAuthContext.mockReturnValue({ user: { role: 'ADMIN', id: 'user-1' } });
     mockUsePeoplePickerPermissions.mockReturnValue({
       hasPeoplePickerAccess: true,
       peoplePickerTypeFilter: '',
@@ -161,7 +195,10 @@ describe('GenericGrantAccessDialog - permissions load failure', () => {
     expect(screen.getByTestId('admin-settings')).toBeInTheDocument();
     expect(dialog.firstElementChild).not.toHaveClass('border-b');
     const saveButton = screen.getByRole('button', { name: 'com_ui_save' });
-    const footer = saveButton.parentElement;
+    // Save's direct parent is the action row; `bg-transparent`/`border-t` live one
+    // level up, on the dialog footer itself (the warning row renders as a sibling
+    // above this action row when `showEditorAccessWarning` is true).
+    const footer = saveButton.parentElement?.parentElement;
     expect(footer).toHaveClass('bg-transparent');
     expect(footer).not.toHaveClass('border-t');
     expect(saveButton).toHaveClass('sm:w-auto');
@@ -172,7 +209,7 @@ describe('GenericGrantAccessDialog - permissions load failure', () => {
   it('shows the capability publication prompt and form link for skills', () => {
     mockUseResourcePermissionState.mockReturnValue(baseState());
 
-    renderDialog(ResourceType.SKILL);
+    renderDialog({ resourceType: ResourceType.SKILL });
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_share_var' }));
 
     expect(screen.getByText('com_ui_share_publish_capability_prompt')).toBeInTheDocument();
@@ -184,7 +221,7 @@ describe('GenericGrantAccessDialog - permissions load failure', () => {
   it('does not show the capability publication prompt for other resource types', () => {
     mockUseResourcePermissionState.mockReturnValue(baseState());
 
-    renderDialog(ResourceType.REMOTE_AGENT);
+    renderDialog({ resourceType: ResourceType.REMOTE_AGENT });
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_share_var' }));
 
     expect(screen.queryByText('com_ui_share_publish_capability_prompt')).not.toBeInTheDocument();
@@ -223,5 +260,119 @@ describe('GenericGrantAccessDialog - permissions load failure', () => {
 
     expect(setIsPublic).toHaveBeenCalledWith(false);
     expect(setPublicRole).toHaveBeenCalledWith('viewer');
+  });
+});
+
+// Deloitte Custom Change: Warn a Skill owner, before saving, when the unsaved
+// sharing draft grants Editor access to someone else.
+describe('GenericGrantAccessDialog - skill editor access warning', () => {
+  // `type`/`accessRoleId` are plain strings here (matching the plain-string
+  // `config` mock above) rather than the real `PrincipalType`/`AccessRoleIds`
+  // enums, so these fixtures go through `unknown` before `TPrincipal`.
+  const owner = {
+    type: 'user',
+    id: 'user-1',
+    name: 'Owner',
+    accessRoleId: 'owner',
+  } as unknown as TPrincipal;
+  const editor = {
+    type: 'user',
+    id: 'user-2',
+    name: 'Editor Person',
+    accessRoleId: 'editor',
+  } as unknown as TPrincipal;
+  const viewer = {
+    type: 'user',
+    id: 'user-3',
+    name: 'Viewer Person',
+    accessRoleId: 'viewer',
+  } as unknown as TPrincipal;
+
+  const renderSkillDialog = (principals: TPrincipal[]) => {
+    mockUseResourcePermissionState.mockReturnValue(
+      baseState({
+        permissionsData: { principals, public: false },
+        currentShares: principals,
+      }),
+    );
+    renderDialog({
+      resourceDbId: 'skill-db-1',
+      resourceId: 'skill-1',
+      resourceName: 'Test Skill',
+      resourceType: ResourceType.SKILL,
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_share_var' }));
+  };
+
+  beforeEach(() => {
+    mockUseResourcePermissionState.mockReset();
+    mockUseAuthContext.mockReturnValue({ user: { role: 'USER', id: 'user-1' } });
+    mockUsePeoplePickerPermissions.mockReturnValue({
+      hasPeoplePickerAccess: true,
+      peoplePickerTypeFilter: '',
+    });
+    mockUseCanSharePublic.mockReturnValue(true);
+  });
+
+  it('shows the warning when the owner has an Editor in the unsaved draft', () => {
+    renderSkillDialog([owner, editor]);
+
+    expect(screen.getByText('com_ui_skill_editor_access_warning')).toBeInTheDocument();
+  });
+
+  it('does not show the warning when the draft only has Viewers', () => {
+    renderSkillDialog([owner, viewer]);
+
+    expect(screen.queryByText('com_ui_skill_editor_access_warning')).not.toBeInTheDocument();
+  });
+
+  it('does not show the warning for a non-owner viewing the same draft', () => {
+    mockUseAuthContext.mockReturnValue({ user: { role: 'USER', id: 'user-2' } });
+    renderSkillDialog([owner, editor]);
+
+    expect(screen.queryByText('com_ui_skill_editor_access_warning')).not.toBeInTheDocument();
+  });
+
+  it('does not show the warning for a non-Skill resource even with an Editor in the draft', () => {
+    mockUseResourcePermissionState.mockReturnValue(
+      baseState({
+        permissionsData: { principals: [owner, editor], public: false },
+        currentShares: [owner, editor],
+      }),
+    );
+    renderDialog({ resourceType: ResourceType.AGENT });
+    fireEvent.click(screen.getByRole('button', { name: 'com_ui_share_var' }));
+
+    expect(screen.queryByText('com_ui_skill_editor_access_warning')).not.toBeInTheDocument();
+  });
+
+  it('disappears once the only Editor is downgraded to Viewer, before saving', () => {
+    renderSkillDialog([owner, editor]);
+
+    expect(screen.getByText('com_ui_skill_editor_access_warning')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(`make-viewer-${editor.id}`));
+
+    expect(screen.queryByText('com_ui_skill_editor_access_warning')).not.toBeInTheDocument();
+  });
+
+  it('disappears once the only Editor is removed from the draft, before saving', () => {
+    renderSkillDialog([owner, editor]);
+
+    expect(screen.getByText('com_ui_skill_editor_access_warning')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(`remove-${editor.id}`));
+
+    expect(screen.queryByText('com_ui_skill_editor_access_warning')).not.toBeInTheDocument();
+  });
+
+  it('appears once a Viewer is promoted to Editor in the draft, before saving', () => {
+    renderSkillDialog([owner, viewer]);
+
+    expect(screen.queryByText('com_ui_skill_editor_access_warning')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(`make-editor-${viewer.id}`));
+
+    expect(screen.getByText('com_ui_skill_editor_access_warning')).toBeInTheDocument();
   });
 });
