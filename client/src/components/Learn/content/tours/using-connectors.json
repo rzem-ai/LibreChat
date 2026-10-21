@@ -1,0 +1,40 @@
+{
+  "id": "using-connectors",
+  "title": "Using Connectors",
+  "description": "Explains when approved external information or systems are needed.",
+  "startPanel": "conversations",
+  "steps": [
+    {
+      "element": "#nav-panel-mcp-builder",
+      "title": "View available Connectors",
+      "description": "Select the Connectors icon from the side menu to view all available Connectors.",
+      "side": "right",
+      "expandSidebarBefore": true
+    },
+    {
+      "element": "#toolbar-toggle-mcp-servers",
+      "title": "Open Connectors",
+      "description": "Select Connectors from the toolbar beneath the chat box.",
+      "side": "top",
+      "clickOnNext": ["#toolbar-toggle-mcp-servers"]
+    },
+    {
+      "element": "[role=\"menuitemcheckbox\"][name=\"mcp-servers\"]",
+      "title": "Choose an approved source",
+      "description": "Select the checkbox beside the Connector you want MyAssist to use. Choose only sources relevant to your task.",
+      "side": "right"
+    },
+    {
+      "element": "#prompt-textarea",
+      "title": "Ask your question",
+      "description": "Write your request as normal and name the source you want MyAssist to use.",
+      "side": "top"
+    },
+    {
+      "element": "#chat-messages",
+      "title": "Review the request",
+      "description": "Check that MyAssist used the selected Connector and that the response meets your needs.",
+      "side": "left"
+    }
+  ]
+}

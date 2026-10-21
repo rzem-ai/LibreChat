@@ -33,8 +33,8 @@ jest.mock('~/hooks/Learning', () => ({
 
 jest.mock('../LearningTourContext', () => ({
   useLearningTour: () => ({
-    startGettingStartedTour: mockStartTour,
-    resumeGettingStartedTour: mockResumeTour,
+    startCourseTour: mockStartTour,
+    resumeCourseTour: mockResumeTour,
   }),
 }));
 
@@ -68,10 +68,10 @@ describe('Resources', () => {
     expect(onOpenArticle).toHaveBeenCalledWith('agentic-ecosystem');
 
     fireEvent.click(screen.getByLabelText('com_learning_action_start_tour:Getting Started Tour'));
-    expect(mockStartTour).toHaveBeenCalledTimes(1);
+    expect(mockStartTour).toHaveBeenCalledWith(GETTING_STARTED_COURSE_ID);
 
     const external = screen.getByLabelText(
-      'com_learning_action_external:Book training sessions with the MyAssist team',
+      'com_learning_action_external:Book in with a MyAssist Team Member',
     );
     expect(external).toHaveAttribute('target', '_blank');
     expect(external).toHaveAttribute('rel', expect.stringContaining('noopener'));
@@ -157,6 +157,6 @@ describe('Academy', () => {
     );
     renderAt('/learn/tours');
     fireEvent.click(screen.getByRole('button', { name: 'com_learning_tour_continue' }));
-    expect(mockResumeTour).toHaveBeenCalledWith(3);
+    expect(mockResumeTour).toHaveBeenCalledWith(GETTING_STARTED_COURSE_ID, 3);
   });
 });

@@ -1352,6 +1352,46 @@ describe('useStepHandler', () => {
       expect(mockSetMessages).not.toHaveBeenCalled();
     });
 
+    it('ignores a malformed content index without changing the content array prototype', () => {
+      const responseMessage = createResponseMessage();
+      mockGetMessages.mockReturnValue([responseMessage]);
+      const { result } = renderHook(() => useStepHandler(createHookParams()));
+      const submission = createSubmission();
+      const runStep = createRunStep({ index: '__proto__' as unknown as number });
+
+      act(() => {
+        result.current.stepHandler({ event: StepEvents.ON_RUN_STEP, data: runStep }, submission);
+        result.current.stepHandler(
+          { event: StepEvents.ON_MESSAGE_DELTA, data: createMessageDelta('step-1', 'Ignored') },
+          submission,
+        );
+      });
+
+      expect(Object.getPrototypeOf(responseMessage.content)).toBe(Array.prototype);
+      const lastCall = mockSetMessages.mock.calls[mockSetMessages.mock.calls.length - 1][0];
+      expect(lastCall[lastCall.length - 1].content).toEqual([]);
+    });
+
+    it('ignores a malformed reasoning index without changing the content array prototype', () => {
+      const responseMessage = createResponseMessage();
+      mockGetMessages.mockReturnValue([responseMessage]);
+      const { result } = renderHook(() => useStepHandler(createHookParams()));
+      const submission = createSubmission();
+      const runStep = createRunStep({ index: '__proto__' as unknown as number });
+
+      act(() => {
+        result.current.stepHandler({ event: StepEvents.ON_RUN_STEP, data: runStep }, submission);
+        result.current.stepHandler(
+          { event: StepEvents.ON_REASONING_DELTA, data: createReasoningDelta('step-1', 'Ignored') },
+          submission,
+        );
+      });
+
+      expect(Object.getPrototypeOf(responseMessage.content)).toBe(Array.prototype);
+      const lastCall = mockSetMessages.mock.calls[mockSetMessages.mock.calls.length - 1][0];
+      expect(lastCall[lastCall.length - 1].content).toEqual([]);
+    });
+
     it('should concatenate multiple text deltas', () => {
       const responseMessage = createResponseMessage();
       mockGetMessages.mockReturnValue([responseMessage]);

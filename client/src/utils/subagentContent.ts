@@ -106,6 +106,17 @@ type ToolCallPart = {
  *  matches the subset of `TMessageContentParts` a subagent run emits. */
 export type SubagentContentPart = TextPart | ThinkPart | ToolCallPart;
 
+// Deloitte Custom Change: OSS Vulnerabilities 8.8
+const createStringMap = <T>(): Record<string, T> => Object.create(null) as Record<string, T>;
+
+const copyStringMap = <T>(source: Record<string, T>): Record<string, T> =>
+  Object.assign(createStringMap<T>(), source);
+
+const setStringMapEntry = <T>(map: Record<string, T>, key: string, value: T): Record<string, T> => {
+  Object.defineProperty(map, key, { configurable: true, enumerable: true, value, writable: true });
+  return map;
+};
+
 const extractTextChunk = (
   data: MessageDeltaData | undefined,
 ): { text: string; phase?: AssistantTextPhase } => {
@@ -142,9 +153,9 @@ const updateMessagePhase = (
   stepId: string,
   phase: AssistantTextPhase | undefined,
 ): Record<string, AssistantTextPhase> => {
-  const next = { ...phases };
+  const next = copyStringMap(phases);
   if (phase == null) delete next[stepId];
-  else next[stepId] = phase;
+  else setStringMapEntry(next, stepId, phase);
   return next;
 };
 
@@ -176,8 +187,8 @@ export function initSubagentAggregatorState(): SubagentAggregatorState {
   return {
     openTextIdx: null,
     openThinkIdx: null,
-    messagePhaseByStepId: {},
-    toolCallIndexById: {},
+    messagePhaseByStepId: createStringMap(),
+    toolCallIndexById: createStringMap(),
   };
 }
 
@@ -278,11 +289,11 @@ export function foldSubagentEvent(
     if (details?.type !== 'tool_calls') return { parts, state };
     const toolCalls = details.tool_calls ?? [];
     let next = parts;
-    const toolCallIndexById = { ...state.toolCallIndexById };
+    const toolCallIndexById = copyStringMap(state.toolCallIndexById);
     for (const tc of toolCalls) {
       if (typeof tc?.id !== 'string' || !tc.id || tc.id in toolCallIndexById) continue;
       if (next === parts) next = parts.slice();
-      toolCallIndexById[tc.id] = next.length;
+      setStringMapEntry(toolCallIndexById, tc.id, next.length);
       next.push({
         type: ContentTypes.TOOL_CALL,
         tool_call: {
@@ -415,7 +426,7 @@ export function foldSubagentEvent(
         openTextIdx: null,
         openThinkIdx: null,
         idlessTextPhase: undefined,
-        toolCallIndexById: { ...state.toolCallIndexById, [tc.id]: newIdx },
+        toolCallIndexById: setStringMapEntry(copyStringMap(state.toolCallIndexById), tc.id, newIdx),
       },
     };
   }

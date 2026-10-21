@@ -21,6 +21,7 @@ import {
   exemptAskUserQuestionFromApproval,
   isToolApprovalPauseCapable,
   isToolDeniedByApprovalPolicy,
+  withClassifiedToolApproval,
 } from './policy';
 
 describe('isToolApprovalPauseCapable', () => {
@@ -151,6 +152,22 @@ describe('isHITLEnabled', () => {
 
   test('explicit true is on', () => {
     expect(isHITLEnabled({ enabled: true })).toBe(true);
+  });
+});
+
+describe('withClassifiedToolApproval', () => {
+  test('enables bypass HITL when a classified tool is present', () => {
+    expect(withClassifiedToolApproval(undefined, true)).toEqual({ enabled: true, mode: 'bypass' });
+  });
+
+  test('preserves an explicit endpoint disable', () => {
+    const policy: TToolApprovalPolicy = { enabled: false, ask: ['review'] };
+    expect(withClassifiedToolApproval(policy, true)).toBe(policy);
+  });
+
+  test('preserves unclassified behavior by returning the original policy', () => {
+    const policy: TToolApprovalPolicy = { enabled: false };
+    expect(withClassifiedToolApproval(policy, false)).toBe(policy);
   });
 });
 

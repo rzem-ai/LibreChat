@@ -44,7 +44,7 @@ describe('canAgentGraphPause', () => {
     ).toBe(true);
   });
 
-  test('fails closed for an unresolved lazy tool surface that could pause', () => {
+  test('keeps the durable approval path for an unresolved lazy tool surface', () => {
     expect(
       canAgentGraphPause({
         policy: { enabled: true, mode: 'bypass', ask: ['write_*'] },
@@ -56,7 +56,26 @@ describe('canAgentGraphPause', () => {
         policy: { enabled: true, mode: 'bypass' },
         agents: [{ lazySubagentConfigs: [{}] }],
       }),
+    ).toBe(true);
+  });
+
+  test('does not enable the durable approval path when a lazy tool surface is denied', () => {
+    expect(
+      canAgentGraphPause({
+        policy: { enabled: true, deny: ['*'] },
+        agents: [{ lazySubagentConfigs: [{}] }],
+      }),
     ).toBe(false);
+  });
+
+  // [Deloitte: Ensure lazy-agent admission retains the independent question pause capability.]
+  test('preserves ask-user pause admission when approval is disabled and a lazy child exists', () => {
+    expect(
+      canAgentGraphPause({
+        policy: { enabled: false },
+        agents: [{ tools: ['ask_user_question'], lazySubagentConfigs: [{}] }],
+      }),
+    ).toBe(true);
   });
 
   test('does not match an approval rule outside the reachable tool surface', () => {
@@ -139,6 +158,31 @@ describe('canAgentGraphPause', () => {
       }),
     ).toBe(false);
   });
+
+  test('admits gateway-classified writes without endpoint approval config', () => {
+    expect(
+      canAgentGraphPause({
+        policy: undefined,
+        agents: [
+          {
+            toolRegistry: new Map([
+              ['write_mcp_gateway', { toolClass: 'W2' as const }],
+              ['read_mcp_gateway', { toolClass: 'R1' as const }],
+            ]),
+          },
+        ],
+      }),
+    ).toBe(true);
+  });
+
+  test('honors explicit denies for gateway-classified writes', () => {
+    expect(
+      canAgentGraphPause({
+        policy: { deny: ['delete_mcp_gateway'] },
+        agents: [{ toolRegistry: new Map([['delete_mcp_gateway', { toolClass: 'D' as const }]]) }],
+      }),
+    ).toBe(false);
+  });
 });
 
 describe('agentRunUsesCheckpointer', () => {
@@ -159,5 +203,17 @@ describe('agentRunUsesCheckpointer', () => {
         askUserQuestionAdminDisabled: true,
       }),
     ).toBe(false);
+  });
+
+  test('attaches a checkpointer for classified and unresolved lazy tool surfaces', () => {
+    expect(
+      agentRunUsesCheckpointer({
+        policy: undefined,
+        agents: [{ toolRegistry: new Map([['delete_mcp_gateway', { toolClass: 'D' as const }]]) }],
+      }),
+    ).toBe(true);
+    expect(
+      agentRunUsesCheckpointer({ policy: undefined, agents: [{ lazySubagentConfigs: [{}] }] }),
+    ).toBe(true);
   });
 });

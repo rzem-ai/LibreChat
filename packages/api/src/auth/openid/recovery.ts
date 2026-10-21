@@ -171,7 +171,11 @@ export interface OpenIDRefreshRecoveryDeps {
       openidIssuer?: string;
     },
   ) => string | undefined;
-  getOpenIDAppAuthToken: (tokens: OpenIDTokenSet, sessionIdToken?: string) => string | undefined;
+  getOpenIDAppAuthToken: (
+    tokens: OpenIDTokenSet,
+    sessionIdToken?: string,
+    sessionIdTokenExpiresAt?: number,
+  ) => string | undefined;
   clearOpenIDAuthTokens: (
     req: OpenIDRequest,
     res: OpenIDResponse,
@@ -905,6 +909,7 @@ export function createOpenIDRefreshRecoveryService(
     const preparedAppAuthToken = getOpenIDAppAuthToken(
       authTokenset,
       req.session?.openidTokens?.idToken,
+      req.session?.openidTokens?.idTokenExpiresAt,
     );
     if (!preparedAppAuthToken) {
       throw new Error('OpenID refresh returned no application authentication token');

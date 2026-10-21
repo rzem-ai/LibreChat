@@ -8,6 +8,7 @@ import {
   isDeepSeekReasoningProvider,
   shouldReplayReasoningContent,
   anyAgentReplaysReasoningContent,
+  collectClassifiedApprovalToolNames,
   collectRunMCPToolAliases,
 } from './run';
 
@@ -469,5 +470,26 @@ describe('collectRunMCPToolAliases', () => {
     };
 
     expect(collectRunMCPToolAliases([root] as never)).toEqual([graphAlias]);
+  });
+});
+
+describe('collectClassifiedApprovalToolNames', () => {
+  it('keeps an initialized graph member that shares an ID with a lazy descriptor', () => {
+    const root = {
+      id: 'root',
+      lazySubagentConfigs: [{ id: 'shared-agent' }],
+      subagentGraphConfigs: [
+        {
+          memberConfigs: [
+            {
+              id: 'shared-agent',
+              toolRegistry: new Map([['delete_mcp_gateway', { toolClass: 'D' }]]),
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(collectClassifiedApprovalToolNames([root] as never)).toEqual(['delete_mcp_gateway']);
   });
 });

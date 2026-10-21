@@ -29,8 +29,8 @@ import { sanitizeGeminiSchema } from '~/mcp/zod';
 
 export type { LCTool, LCToolRegistry, AllowedCaller, JsonSchemaType };
 
-/** Deloitte Custom Change: An SDK tool-definition that also carries the gateway classification. */
-type ToolWithClass = LCTool & { toolClass?: MCPToolClass };
+/** [Deloitte: Share the gateway-classified SDK tool shape across approval consumers.] */
+export type ToolWithClass = LCTool & { toolClass?: MCPToolClass };
 
 export interface ToolDefinition {
   name: string;

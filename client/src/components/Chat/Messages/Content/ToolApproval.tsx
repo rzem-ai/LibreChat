@@ -70,11 +70,10 @@ function seedArgs(args: string | Record<string, unknown> | undefined): string {
 /**
  * Renders approve / reject / edit / respond controls for a paused tool call,
  * scoped to the decisions the server allows. Records its decision in the
- * batch {@link useApprovalContext}; the lead card additionally renders the
+ * batch {@link useApprovalContext}; the final card additionally renders the
  * single submit button covering every paused call in the action. While the
  * composer's review panel is open on the same action, a thread card renders
- * only the record of the request: the panel owns the decisions and the submit,
- * and it overlays the tail of the thread where this card sits.
+ * only the request summary and the panel owns the decisions and submit.
  */
 export default function ToolApproval({
   approval,
@@ -85,7 +84,7 @@ export default function ToolApproval({
   approval: NonNullable<Agents.ToolCall['approval']>;
   toolCallId: string;
   args: string | Record<string, unknown> | undefined;
-  /** The composer panel owns one batch submit; thread cards keep the lead button. */
+  /** The composer panel owns one batch submit; the final thread card owns its button. */
   surface?: 'thread' | 'composer';
 }) {
   const localize = useLocalize();
@@ -102,7 +101,8 @@ export default function ToolApproval({
     setDecisionDraft,
     isReady,
     getStatus,
-    getLeadToolCallId,
+    getDecisions,
+    getSubmitToolCallId,
     getRegisteredCount,
   } = useApprovalContext();
   const { submitToolApproval } = useResumeSubmit();
@@ -199,19 +199,17 @@ export default function ToolApproval({
     }
   }, [active, editText]);
 
-  const isLead = getLeadToolCallId(actionId) === toolCallId;
+  const isSubmitCard = getSubmitToolCallId(actionId) === toolCallId;
   const count = getRegisteredCount(actionId);
+  const selectedCount = getDecisions(actionId).length;
   const ready = isReady(actionId);
 
   const submitLabel = useMemo(() => {
     if (status === 'submitting') {
       return localize('com_ui_submitting');
     }
-    if (count > 1) {
-      return localize('com_ui_submit_decisions', { 0: count });
-    }
-    return localize('com_ui_submit');
-  }, [status, count, localize]);
+    return localize('com_ui_submit_decisions_progress', { 0: selectedCount, 1: count });
+  }, [status, selectedCount, count, localize]);
 
   if (status === 'submitted') {
     return null;
@@ -307,7 +305,7 @@ export default function ToolApproval({
         />
       )}
 
-      {surface === 'thread' && isLead && (
+      {surface === 'thread' && isSubmitCard && (
         <div className="mt-1 flex items-center gap-3">
           <Button
             size="sm"

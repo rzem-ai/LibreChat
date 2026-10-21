@@ -279,6 +279,7 @@ function AgentSelect({
       control={control}
       render={({ field }) => (
         <ControlCombobox
+          selectId="agent-select"
           containerClassName="px-0"
           selectedValue={(field?.value?.value ?? '') + ''}
           displayValue={field?.value?.label ?? ''}

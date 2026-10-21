@@ -627,6 +627,7 @@ describe('refreshController – OpenID path', () => {
     res = {
       status: jest.fn().mockReturnThis(),
       send: jest.fn().mockReturnThis(),
+      json: jest.fn().mockReturnThis(),
       redirect: jest.fn(),
     };
   });
@@ -952,7 +953,7 @@ describe('refreshController – OpenID path', () => {
     expect(mockRunAsSystem).toHaveBeenCalledTimes(1);
     expect(setCloudFrontAuthCookies).toHaveBeenCalledWith(req, res, user);
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.send).toHaveBeenCalledWith({
+    expect(res.json).toHaveBeenCalledWith({
       token: reusableIdToken,
       user: expect.objectContaining({
         _id: 'user-db-id',
@@ -961,7 +962,7 @@ describe('refreshController – OpenID path', () => {
       }),
     });
 
-    const sentPayload = res.send.mock.calls[0][0];
+    const sentPayload = res.json.mock.calls[0][0];
     expect(sentPayload.user).not.toHaveProperty('password');
     expect(sentPayload.user).not.toHaveProperty('totpSecret');
     expect(sentPayload.user).not.toHaveProperty('backupCodes');
@@ -1263,7 +1264,7 @@ describe('refreshController – OpenID path', () => {
 
     await refreshController(req, res);
 
-    const sentPayload = res.send.mock.calls[0][0];
+    const sentPayload = res.json.mock.calls[0][0];
     expect(setCloudFrontAuthCookies).toHaveBeenCalledWith(req, res, userDocument);
     expect(sentPayload).toEqual({
       token: reusableIdToken,
@@ -1732,7 +1733,7 @@ describe('refreshController – OpenID path', () => {
       }),
     );
     expect(storeOpenIDSession).not.toHaveBeenCalled();
-    expect(res.send).toHaveBeenCalledWith(expect.objectContaining({ token: 'shared-app-token' }));
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ token: 'shared-app-token' }));
     expect(res.status).toHaveBeenCalledWith(200);
   });
 

@@ -1,4 +1,5 @@
-import type { TToolApprovalPolicy } from 'librechat-data-provider';
+import { requiresToolApproval } from 'librechat-data-provider';
+import type { MCPToolClass, TToolApprovalPolicy } from 'librechat-data-provider';
 import type { PluginHookSource } from '~/agents/hooks/source';
 import type { MCPToolAlias } from '~/tools/classification';
 import type { ResolvedToolApprovalHook } from './hooks';
@@ -7,6 +8,7 @@ import {
   isHITLEnabled,
   isToolApprovalPauseCapable,
   isToolDeniedByApprovalPolicy,
+  withClassifiedToolApproval,
 } from './policy';
 import { ASK_USER_QUESTION_TOOL_NAME } from './askUserQuestionTool';
 import { resolvedToolApprovalHooksCanMatch } from './hooks';
@@ -18,6 +20,7 @@ interface ApprovalToolReference {
 interface ApprovalToolRegistry {
   keys(): Iterable<string>;
   has(name: string): boolean;
+  entries(): Iterable<[string, { toolClass?: MCPToolClass }]>;
 }
 
 interface ApprovalSubagentGraph {
@@ -86,6 +89,24 @@ function collectApprovalAgents(roots: readonly (ToolApprovalAdmissionAgent | nul
   return { agents, lazyAgentIds };
 }
 
+/** [Deloitte: Collect gateway-classified tools that require the durable approval path.]
+ * @param agents - Reachable initialized agents in the run graph.
+ * @returns Unique runtime tool names classified as writes or destructive operations.
+ */
+function collectClassifiedApprovalToolNames(
+  agents: readonly ToolApprovalAdmissionAgent[],
+): string[] {
+  const names = new Set<string>();
+  for (const agent of agents) {
+    for (const [name, definition] of agent.toolRegistry?.entries() ?? []) {
+      if (requiresToolApproval(definition.toolClass)) {
+        names.add(name);
+      }
+    }
+  }
+  return [...names];
+}
+
 /**
  * Whether an initialized run can pause through tool approval or a top-level
  * `ask_user_question`. Eager tools are matched exactly across every subagent
@@ -104,11 +125,21 @@ export function canAgentGraphPause({
     !askUserQuestionAdminDisabled &&
     !isToolDeniedByApprovalPolicy(policy, ASK_USER_QUESTION_TOOL_NAME) &&
     agents.some((agent) => agent != null && agentHasTool(agent, ASK_USER_QUESTION_TOOL_NAME));
-  if (!isHITLEnabled(policy)) {
+  const approvalGraph = collectApprovalAgents(agents);
+  const classifiedToolNames = collectClassifiedApprovalToolNames(approvalGraph.agents);
+  const classifiedPolicy = withClassifiedToolApproval(
+    policy,
+    classifiedToolNames.length > 0 || approvalGraph.lazyAgentIds.size > 0,
+  );
+  // A lazy child can expose a classified tool only after it resolves. Keep the
+  // durable pause path available before that exact name is registered.
+  if (approvalGraph.lazyAgentIds.size > 0) {
+    // [Deloitte: Preserve independent ask-user pause admission for lazy graphs.]
+    return asksUserQuestion || isToolApprovalPauseCapable(classifiedPolicy, true);
+  }
+  if (!isHITLEnabled(classifiedPolicy)) {
     return asksUserQuestion;
   }
-
-  const approvalGraph = collectApprovalAgents(agents);
   const toolOwners = new Map<string, Set<string | undefined>>();
   const aliases: MCPToolAlias[] = [];
   const aliasesByToolName = new Map<string, string[]>();
@@ -144,7 +175,12 @@ export function canAgentGraphPause({
     }
   }
 
-  const effectivePolicy = healToolApprovalPolicy(policy, aliases);
+  const effectivePolicy = healToolApprovalPolicy(classifiedPolicy, aliases);
+  if (
+    classifiedToolNames.some((toolName) => !isToolDeniedByApprovalPolicy(effectivePolicy, toolName))
+  ) {
+    return true;
+  }
   const knownToolCanPause = Array.from(toolOwners).some(([toolName, agentIds]) => {
     const matcherNames = [toolName, ...(aliasesByToolName.get(toolName) ?? [])];
     const pluginHookCanAsk = pluginHookSource?.hasToolApprovalHooks?.([toolName]) === true;
@@ -162,19 +198,6 @@ export function canAgentGraphPause({
   if (knownToolCanPause) {
     return true;
   }
-  if (approvalGraph.lazyAgentIds.size > 0) {
-    const pluginHookCanAsk = pluginHookSource?.hasToolApprovalHooks?.() === true;
-    const unresolvedHookCanAsk = Array.from(approvalGraph.lazyAgentIds).some(
-      (agentId) =>
-        resolvedProgrammaticHooks.some(
-          ({ agentIds }) => agentIds == null || (agentId != null && agentIds.has(agentId)),
-        ) || pluginHookCanAsk,
-    );
-    const staticPolicyCanAsk = isToolApprovalPauseCapable(effectivePolicy);
-    if (staticPolicyCanAsk || unresolvedHookCanAsk) {
-      return true;
-    }
-  }
   return asksUserQuestion;
 }
 
@@ -191,8 +214,14 @@ export function agentRunUsesCheckpointer({
   ToolApprovalAdmissionInput,
   'policy' | 'agents' | 'askUserQuestionAdminDisabled'
 >): boolean {
+  const approvalGraph = collectApprovalAgents(agents);
+  const classifiedPolicy = withClassifiedToolApproval(
+    policy,
+    collectClassifiedApprovalToolNames(approvalGraph.agents).length > 0 ||
+      approvalGraph.lazyAgentIds.size > 0,
+  );
   return (
-    isHITLEnabled(policy) ||
+    isHITLEnabled(classifiedPolicy) ||
     (!askUserQuestionAdminDisabled &&
       agents.some((agent) => agent != null && agentHasTool(agent, ASK_USER_QUESTION_TOOL_NAME)))
   );
