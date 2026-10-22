@@ -49,11 +49,11 @@ pods:
           tag: 'develop@sha256:b368da5dbcbc94113707abc15347d3ead073f236d0058671b53ccb8dafc315b9'
         resources:
           requests:
-            memory: "2Gi"
-            cpu: "1000m"
+            memory: "1Gi"
+            cpu: "500m"
           limits:
-            memory: "32Gi"
-            cpu: "6000m"
+            memory: "16Gi"
+            cpu: "3000m"
         env:
           ADMIN_PANEL_URL: 'https://librechat-dev.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy

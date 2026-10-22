@@ -41,11 +41,11 @@ pods:
           tag: 'uat@sha256:350ada413ac417447a0a725ae8f5ef97dc5ea7832304938206d971192d0e0baa'
         resources:
           requests:
-            memory: "2Gi"
-            cpu: "1000m"
+            memory: "1Gi"
+            cpu: "500m"
           limits:
-            memory: "32Gi"
-            cpu: "6000m"
+            memory: "16Gi"
+            cpu: "3000m"
         env:
           ADMIN_PANEL_URL: 'https://myassist-uat.ctk.au.deloitte.com/admin'
           ANTHROPIC_API_KEY: 'dummy' #anthropic API key set to dummy due to proxy
@@ -162,11 +162,11 @@ pods:
           tag: 'uat@sha256:6a47a1600115576584cee20be9fcc8c5f019dbab25b2a978bdcca79d0a61de08'
         resources:
           requests:
-            memory: "2Gi"
-            cpu: "1000m"
+            memory: "1Gi"
+            cpu: "500m"
           limits:
-            memory: "32Gi"
-            cpu: "6000m"
+            memory: "16Gi"
+            cpu: "3000m"
         env:
           PGVECTOR_CREATE_EXTENSION: 'False'
           VECTOR_DB_TYPE: 'pgvector'
