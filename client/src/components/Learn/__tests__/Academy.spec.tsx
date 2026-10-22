@@ -96,7 +96,7 @@ describe('Faq', () => {
       </MemoryRouter>,
     );
     expect(
-      screen.getByRole('link', { name: 'How to capture your team’s knowledge' }),
+      screen.getByRole('link', { name: 'Make your team’s knowledge reusable' }),
     ).toHaveAttribute(
       'href',
       '/learn/articles/capture-team-knowledge#match-the-knowledge-to-the-surface',

@@ -13,7 +13,7 @@
     "type": "article",
     "tags": ["Getting started", "Introduction"],
     "durationLabel": "2 min read",
-    "updated": "22 October 2026"
+    "updated": "23 October 2026"
   },
   {
     "id": "write-an-effective-prompt",
@@ -22,7 +22,7 @@
     "type": "article",
     "tags": ["Getting started", "Prompts"],
     "durationLabel": "3 min read",
-    "updated": "22 October 2026"
+    "updated": "23 October 2026"
   },
   {
     "id": "guides/prompts",
@@ -31,7 +31,7 @@
     "type": "article",
     "tags": ["Prompts"],
     "durationLabel": "3 min read",
-    "updated": "22 October 2026"
+    "updated": "23 October 2026"
   },
   {
     "id": "guides/skills",
@@ -40,16 +40,16 @@
     "type": "article",
     "tags": ["Skills"],
     "durationLabel": "8 min read",
-    "updated": "22 October 2026"
+    "updated": "23 October 2026"
   },
   {
     "id": "guides/agents",
     "title": "Guide to agents",
-    "description": "Find, use, create and share agents built for a job",
+    "description": "Find, use, create and share agents for multi-step work",
     "type": "article",
     "tags": ["Agents"],
     "durationLabel": "5 min read",
-    "updated": "22 October 2026"
+    "updated": "23 October 2026"
   },
   {
     "id": "guides/connectors",
@@ -58,7 +58,7 @@
     "type": "article",
     "tags": ["Connectors"],
     "durationLabel": "3 min read",
-    "updated": "22 October 2026"
+    "updated": "23 October 2026"
   },
   {
     "id": "guides/artifacts",
@@ -67,16 +67,16 @@
     "type": "article",
     "tags": ["Artifacts"],
     "durationLabel": "3 min read",
-    "updated": "22 October 2026"
+    "updated": "23 October 2026"
   },
   {
     "id": "capture-team-knowledge",
-    "title": "How to capture your team’s knowledge",
+    "title": "Make your team’s knowledge reusable",
     "description": "Turn how your team works into shared skills",
     "type": "article",
     "tags": ["Skills", "Prompts", "Agents", "Teams"],
     "durationLabel": "5 min read",
-    "updated": "22 October 2026"
+    "updated": "23 October 2026"
   },
   {
     "id": "agentic-ecosystem",
@@ -85,7 +85,7 @@
     "type": "article",
     "tags": ["Getting started"],
     "durationLabel": "2 min read",
-    "updated": "22 October 2026"
+    "updated": "23 October 2026"
   },
   {
     "id": "glossary",
@@ -94,7 +94,7 @@
     "type": "article",
     "tags": ["Glossary", "Getting started"],
     "durationLabel": "4 min read",
-    "updated": "22 October 2026"
+    "updated": "23 October 2026"
   },
   {
     "id": "lumo-ms-teams",

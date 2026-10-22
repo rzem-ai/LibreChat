@@ -2,7 +2,7 @@
 
 Rules for every article, card blurb and glossary entry in the Academy. Read this before you write. For where files go and how to register them, see [how to add content](myassist_academy_how_to_add_content.md).
 
-Readers are busy, not technical, and want to get something done. Each page does one job, every element earns its place, and pages hand off to each other instead of repeating.
+Readers are busy, not technical, and want to get something done. Each page has one purpose, every element earns its place, and pages hand off to each other instead of repeating.
 
 ## Contents
 
@@ -23,7 +23,7 @@ Readers are busy, not technical, and want to get something done. Each page does 
 ## Principles
 
 1. **Start from the reader's situation.** The opening paragraph says what the reader is trying to do, then what the page covers.
-2. **One job per page.** A page teaches a task, explains a thing or answers a lookup. It does not do all three.
+2. **One purpose per page.** A page teaches a task, explains a thing or answers a lookup. It does not do all three.
 3. **Show, don't just tell.** Every page except the introduction ends with a **Try this now** cue the reader can copy into MyAssist.
 4. **Hand off, don't repeat.** If another page owns a topic, link to its section. Cross topics only where one page genuinely depends on another, such as sharing a skill an agent uses.
 5. **Start with the business problem, then add technology.**
@@ -36,7 +36,7 @@ Readers are busy, not technical, and want to get something done. Each page does 
   - a UI label, in bold and exactly as shown: **Skills**, **Prompts**, **Agent Builder**, **Created by me**
   - a named thing: Skill Builder, Agentic Ecosystem, GCSE, SKILL.md
   - the first word of a sentence or heading
-- Use "artifact" as the interface does, and write en-GB: summarise, organise, behaviour. Write "per cent" in prose and "%" in tables.
+- Match the interface label exactly: **Agent Library**, **Invocation Mode**, **Agent Builder**. Use "artifact" as the interface does, and write en-GB: summarise, organise, behaviour. Write "per cent" in prose and "%" in tables.
 
 | Don't | Do |
 |---|---|
@@ -129,7 +129,8 @@ Used in the glossary and in "What it is" sections.
 
 - One plain sentence says what the thing is. A second says how it relates to its neighbours.
 - Build upward. Define foundations first (model, prompt, file), then terms made from them (skill, connector), then terms made from those (agent, Agentic Ecosystem).
-- Write relationships as formulas where they hold: `agent = model + instructions + skills + connectors + files`.
+- Write relationships as formulas where they hold, read as "built from": `agent = model + instructions + skills + connectors + files`. An agent uses a model. It isn't one.
+- Don't call an agent's work a "job". Say work, task, workflow or process.
 - Close with an example that shows a difference, not a restatement: "Two agents can use the same model and still behave differently, because their skills and connectors differ."
 - No analogy inside a definition. Analogies go in a `<Callout type="analogy">`, once per page.
 - Define a term once, in the glossary. The glossary links to guides. Guides don't link back into the glossary.

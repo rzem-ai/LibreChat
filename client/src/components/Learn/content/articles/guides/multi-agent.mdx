@@ -1,0 +1,77 @@
+---
+title: Guide to multi-agent workflows
+updated: 23 October 2026
+durationLabel: 5 min read
+type: guide
+summary: "Some workflows are too big for one agent to do well. Multi-agent workflows split the work across specialist agents. This page covers the options, when to use them and how to choose."
+---
+
+[TO BE CONFIRMED: draft only. Subagents and chain are off in the base configuration. Confirm they are on in each environment before listing or linking this page.]
+
+## What it is
+
+A multi-agent workflow divides work between agents instead of asking one agent to do everything. In Agent Builder, **Advanced** has a **Multi-agent orchestration** section with three options:
+
+- **Handoffs**: transfer the conversation to a specialist agent
+- **Subagents**: spin up helper agents to handle subtasks
+- **Chain**: run a fixed sequence of agents, one after another
+
+## Why it matters
+
+One agent with many skills works for straightforward, linear tasks. As a workflow grows, a single agent’s instructions get long and it can lose track of them. Specialist agents each work with a focused set of instructions.
+
+## Handoffs
+
+A handoff transfers the conversation from one agent to a specialist agent when a task needs different expertise. Each handoff includes a description of when to transfer and the content to pass on.
+
+To set one up, open **Advanced** in Agent Builder, then add a handoff agent and describe when to use it.
+
+## Subagents
+
+[TO BE CONFIRMED: only if enabled in this environment]
+
+A subagent is a smaller, specialist agent that the main agent calls on to complete one part of the work. The main agent receives your request, decides how to handle it and passes subtasks to subagents. Subagents run in their own focused context, and only a summary comes back to the main agent. You only talk to the main agent.
+
+Take the request “Summarise this contract and flag any unusual payment terms”:
+
+1. The main agent passes the contract to a document reading subagent, which extracts and structures the text.
+2. It passes that output to a risk analysis subagent, which identifies unusual payment terms.
+3. The main agent combines both outputs and returns a summary to you.
+
+An agent can also delegate focused subtasks to a fresh copy of itself, using the **Allow self-spawn** option.
+
+## Chain
+
+[TO BE CONFIRMED: only if enabled in this environment]
+
+A chain runs agents in a fixed order. Each agent can see the outputs of the agents before it. Use a chain when the steps are always the same and always in the same order.
+
+## One agent or several
+
+Both approaches work. They suit different situations.
+
+| | One agent with many skills | Main agent with subagents |
+|---|---|---|
+| Best for | Straightforward, linear tasks | Complex, multi-step workflows |
+| Context | All skills share one context, so quality can drop as the task grows | Each subagent works in its own focused context |
+| Specialisation | One set of instructions covers everything | Each subagent has a dedicated purpose and tailored instructions |
+| Reliability | The model can lose track of instructions in a long workflow | Clear task boundaries reduce errors |
+| Maintenance | Changing one part can affect the whole agent | You can update subagents independently |
+| Reuse | The agent is self-contained and hard to repurpose | A subagent built for one workflow can serve others |
+
+Use one agent with several skills when the task is straightforward and follows a clear sequence. Consider subagents when:
+
+- The workflow has distinct phases that need different expertise
+- Output quality matters and you want each step handled with focus
+- You want to reuse parts of the workflow in other agents
+- The task is likely to grow more complex over time
+
+Long instructions that try to make one agent do many things well are a sign to split the work.
+
+## Try this now
+
+<TryThis
+  closing
+  action="List the phases of a workflow you run, and decide which need a specialist"
+  prompt="I run this workflow: [describe it]. Break it into phases, tell me which phases need different expertise, and suggest where a handoff to a specialist agent would help."
+/>

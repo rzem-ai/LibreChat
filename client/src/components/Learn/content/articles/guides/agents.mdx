@@ -1,14 +1,14 @@
 ---
 title: Guide to agents
-updated: 22 October 2026
+updated: 23 October 2026
 durationLabel: 5 min read
 type: guide
-summary: "When a job needs several steps, an agent coordinates them so you can describe the outcome instead of managing each task. This page covers finding agents, chatting with one, combining skills and sharing."
+summary: "An agent plans tasks, makes decisions, uses tools and completes multi-step workflows on its own. This page covers finding agents, chatting with one, creating your own, combining skills and sharing."
 ---
 
 ## What it is
 
-An agent is a model set up for one job: `agent = model + instructions + skills + connectors + files`. Two agents can use the same model and still behave differently, because their skills and connectors differ.
+An agent uses a model, plus instructions, skills, connectors and files, to carry out a workflow: `agent = model + instructions + skills + connectors + files`. Two agents can use the same model and still behave differently, because their skills and connectors differ.
 
 ## Why it matters
 
@@ -16,21 +16,31 @@ A skill handles one task well. An agent coordinates several skills and tools, so
 
 ## Find an agent
 
-Browse ready-made agents in the Agent Marketplace, or build your own in **Agent Builder**. Both are in the side menu.
-
-[TO BE CONFIRMED: the app label reads “Agent Library”, the tour says “Agent Marketplace”]
+Browse ready-made agents in the **Agent Library**, or build your own in **Agent Builder**. Both are in the side menu.
 
 ## Start a chat with an agent
 
 Open the model selector and choose an agent instead of a model. To go back to a general model, open the same selector and choose a standard model.
 
-[TO BE CONFIRMED: other ways to start a chat with an agent, such as from the Agent Marketplace]
+[TO BE CONFIRMED: other ways to start a chat with an agent, such as from the Agent Library]
 
 ## Create an agent
 
-In **Agent Builder**, you group instructions, skills, connectors and files for a specific job.
+In **Agent Builder**, you group instructions, skills, connectors and files for a specific workflow.
 
-[TO BE CONFIRMED: step-by-step instructions for creating an agent, content needed from the MyAssist team]
+<Steps>
+
+1. Select **Agent Builder** from the side menu.
+2. Enter an agent name and a description of what the agent does.
+3. Write the instructions: what the agent should do and how it should behave.
+4. Select a model. Choose an AU-hosted model if your data must stay onshore in Australia.
+5. Add the skills, connectors and files the agent needs.
+6. Test the agent with realistic requests and adjust the instructions where the results are off.
+7. Share the agent with your colleagues.
+
+</Steps>
+
+[TO BE CONFIRMED: the exact field labels and order in Agent Builder]
 
 ## Combine skills and agents
 
@@ -45,10 +55,6 @@ The agent then works through three skills:
 - Create the briefing pack: combine the research and internal context into a structured, executive-ready briefing
 
 The outcome is a briefing pack with key insights, discussion points, questions, risks and opportunities. Each skill is one task. Read [the guide to skills](/learn/articles/guides/skills#what-it-is) to see how one is built.
-
-## Work with sub-agents
-
-[TO BE CONFIRMED: content needed on what sub-agents are, when an agent uses one and how to set one up]
 
 ## Share an agent
 

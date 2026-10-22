@@ -26,7 +26,7 @@ describe('getCourseSteps', () => {
       expect(steps).toHaveLength(25);
       expect(steps.slice(13, 16).map((step) => step.title)).toEqual([
         'Agent Builder',
-        'Agent Marketplace',
+        'Agent Library',
         'Switch Back to a Model',
       ]);
       expect(steps[15]).toEqual({

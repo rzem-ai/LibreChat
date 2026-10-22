@@ -1,6 +1,6 @@
 ---
 title: Guide to skills
-updated: 22 October 2026
+updated: 23 October 2026
 durationLabel: 8 min read
 type: guide
 summary: "When a task follows a proven method, a skill lets MyAssist apply it the same way every time. This page covers finding skills, triggering them in a chat, creating your own and sharing them."
@@ -8,35 +8,35 @@ summary: "When a task follows a proven method, a skill lets MyAssist apply it th
 
 ## What it is
 
-A skill is a set of written instructions for doing one task the same way every time. It packages instructions, reference material and optional supporting files so MyAssist can complete a repeatable task consistently. A skill tells the model how to work. It doesn’t change which model runs.
+A skill packages written instructions, reference material and optional supporting files. MyAssist then completes a specific task the same way every time. It tells the model how to work, not which model to use.
 
 ## Why it matters
 
-A skill moves a proven method out of one person’s head and into MyAssist. Anyone who uses the skill gets the same approach. The result depends less on who is asking.
+A skill moves a proven method out of one person’s head and into MyAssist. Anyone on the team can use it and get the same result, however they phrase the request.
 
 ## Understand your skills library
 
-Select **Skills** from the side menu to open the library. It has three views:
+Select **Skills** from the side menu to open your skills library. You’ll see three tabs:
 
-- **Created by me**: skills you’ve created
+- **Created by me**: skills you’ve built
 - **Shared**: skills other people have shared with you
 - **Public**: skills shared publicly
 
-Each skill has an **Active** toggle. Turn a skill on to make it available in your chats.
+Each skill has an **Active** toggle. Switch it on to make the skill available in your chats.
 
-## Trigger a skill in a chat
+## Use a skill in a chat
 
-A skill’s **Invocation Mode** decides how it runs:
+Each skill has an **Invocation Mode** that controls when it runs:
 
 - **Auto**: MyAssist applies the skill when it’s relevant to your request
 - **Manual**: the skill runs only when you invoke it
 - **Both**: MyAssist can apply it automatically, and you can invoke it yourself
 
-To invoke a skill, type `$` in the message box and select the skill by name. Only active skills appear in the list.
+To use a skill manually, type `$` in the message box and select the skill by name. Only skills you’ve switched on appear in the list.
 
 ## Create a skill
 
-Creating a skill involves four decisions: which route to use, what the skill does, how to write it down and how to test it.
+Creating a skill has four stages: choose how to build it, plan what it does, write the instructions, then test it.
 
 ### Choose a creation route
 
@@ -46,9 +46,14 @@ Creating a skill involves four decisions: which route to use, what the skill doe
   <Card href="/learn/articles/capture-team-knowledge#turn-a-sharepoint-page-into-a-skill" title="Use MyAssist to help">Draft or strengthen a skill with the Skill Builder and Skill Refiner</Card>
 </CardGrid>
 
-Write skill instructions suits a straightforward skill that needs no supporting files. Upload a skill suits one that relies on references, templates, assets or scripts.
+**Write skill instructions** suits a skill that needs no extra files. **Upload a skill** suits a skill that relies on reference documents, templates or other supporting files.
 
-The Skill Builder skill (`myassist-skill-builder`) drafts a first version, including the SKILL.md file. The Skill Refiner skill (`myassist-skill-refiner`) reviews and strengthens an existing skill. Check and tailor the result before you create or upload it.
+MyAssist has two built-in skills to help you:
+
+- **Skill Builder** (`myassist-skill-builder`): drafts a first version of your skill, including the SKILL.md file
+- **Skill Refiner** (`myassist-skill-refiner`): reviews and improves a skill you’ve already written
+
+Check and adjust the output before you save or upload it.
 
 ### Plan before you create
 
@@ -56,27 +61,27 @@ Answer these six questions before you write anything:
 
 <Steps>
 
-1. Define the outcome: state the task the skill should complete and the value it provides.
-2. Set the trigger: explain when to use the skill and, where useful, when not to.
-3. Identify the inputs: list what the user must provide, such as an audience, topic, source file or format.
-4. Design the workflow: break the task into clear steps and decision points. Tell the skill to ask for missing information instead of guessing.
-5. Describe the output: specify the structure, tone, level of detail and any mandatory sections or templates.
-6. Add guardrails: include source boundaries, quality checks, privacy considerations and constraints that keep the response fit for purpose.
+1. **Outcome**: what does the skill do, and why is it useful?
+2. **Trigger**: when should the skill run, and is there anything it shouldn’t be used for?
+3. **Inputs**: what does the user need to provide, such as an audience, topic, file or format?
+4. **Workflow**: what are the steps, and what should happen if information is missing? Tell the skill to ask rather than guess.
+5. **Output**: what should the result look like, including structure, tone, level of detail and any required sections or templates?
+6. **Guardrails**: what limits should the skill respect, such as privacy, source boundaries and quality checks?
 
 </Steps>
 
 ### Write instructions in Markdown
 
-Markdown is a lightweight way to structure plain text. Use headings to separate ideas, numbered lists for ordered workflows and bullet lists for options or checks. Keep each instruction specific and testable. The [GCSE method](/learn/articles/write-an-effective-prompt#the-gcse-method) helps here too.
+Markdown is a lightweight way to format plain text with headings, numbered lists and bullet points. Use headings to separate ideas, numbered lists for step-by-step workflows and bullet points for options or checks. Write each instruction as you would a prompt: specific, testable and grounded in the [GCSE method](/learn/articles/write-an-effective-prompt#the-gcse-method) helps here too.
 
 A SKILL.md file works best with these sections:
 
-- Purpose and when to use it
-- Required inputs
-- A two-step workflow
-- Expected outputs
-- Response guidelines
-- Ground rules and constraints
+- What the skill does and when to use it
+- What the user needs to provide
+- A step-by-step workflow
+- What the output should look like
+- How to write the response
+- Rules and limits the skill must follow
 
 [TO BE CONFIRMED: SKILL.md template needed from the MyAssist team]
 
@@ -88,7 +93,7 @@ A SKILL.md file works best with these sections:
 2. Select **Create**, then choose **Write skill instructions**.
 3. Enter a short, descriptive skill name in lowercase words separated by hyphens. Example: `brand-guidelines`.
 4. Enter a skill description that says what the skill does and where to use it. Example: Apply brand guidelines to presentations and documents.
-5. Write the instructions in Markdown. Complete each section of the template, replace all placeholder text and remove guidance you don’t need. Ask MyAssist to refine the draft if you want a second pair of eyes.
+5. Write the instructions in Markdown. Complete each section of the template, replace all placeholder text and remove guidance you don’t need. Use the Skill Refiner skill (`myassist-skill-refiner`) to review and strengthen the draft before you save it.
 6. Select **Create**.
 
 </Steps>
@@ -104,14 +109,14 @@ Create the skill as a folder with a required SKILL.md file and any supporting fo
 1. Open the root folder and confirm that SKILL.md sits directly inside it.
 2. Check that file and folder names exactly match any paths used in SKILL.md.
 3. Remove drafts, duplicate files and anything the skill doesn’t need.
-4. Compress the root folder into a single `.zip` file. Opened, the ZIP contains one skill folder with SKILL.md and any supporting folders inside it.
+4. Compress the root folder into a single `.zip` file. When you open the ZIP, it should contain one folder with SKILL.md and any supporting files inside it.
 5. In MyAssist, open **Skills** and choose **Upload a Skill**. Select the ZIP file, then follow the prompts to validate and create the skill.
 
 </Steps>
 
 ### Test and refine
 
-Try realistic scenarios, including incomplete or ambiguous requests. Adjust the instructions wherever the results vary, and test again.
+Test with realistic examples, including ones where the input is incomplete, unclear or at the edge of what the skill covers. Where the output isn’t right, adjust the instructions and test again.
 
 ## Share a skill
 
@@ -123,12 +128,12 @@ Try realistic scenarios, including incomplete or ambiguous requests. Adjust the 
 2. Select **Created by me** and open the skill you want to share.
 3. Select **Share**.
 4. Search for the people you want to share with, then select them.
-5. Assign a permission level: **Viewer**, **Editor** or **Owner**. People can use the skill based on the permission you grant.
+5. Choose a permission level: **Viewer**, **Editor** or **Owner**.
 6. Select **Save Changes**.
 
 </Steps>
 
-People you share with find the skill under **Shared** in **Skills**. They may need to turn it on by setting the **Active** toggle.
+People you share with find the skill under **Shared** in their skills library. They may need to switch it on with the **Active** toggle before they can use it.
 
 ## Try this now
 
