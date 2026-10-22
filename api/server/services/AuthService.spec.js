@@ -445,6 +445,7 @@ describe('setOpenIDAuthTokens', () => {
       expect(req.session.openidTokens).not.toHaveProperty('accessTokenExpiresAt');
     });
 
+    // Deloitte Custom Change: A legacy session without expiry metadata must not return a stale ID token.
     it('falls back to access_token when a saved id_token has no trusted expiry metadata', () => {
       const existingIdToken = jwt.sign(
         { sub: 'user-123', exp: Math.floor(Date.now() / 1000) + 3600 },

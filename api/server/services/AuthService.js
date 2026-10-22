@@ -171,6 +171,7 @@ const getOpenIDAppAuthToken = (
   if (tokenset?.id_token && isCurrentOpenIDIdToken(idTokenExpiresAt)) {
     return tokenset.id_token;
   }
+  // Deloitte Custom Change: Never reuse a saved ID token without trusted expiry metadata.
   if (
     sessionIdToken &&
     Number.isFinite(sessionIdTokenExpiresAt) &&
