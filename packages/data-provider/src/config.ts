@@ -2360,7 +2360,7 @@ export const interfaceSchema = z
         simplifyFork: z.boolean().optional(),
         editChat: z.boolean().optional(),
         showToolsDropdown: z.boolean().optional(),
-        /** Deloitte Custom Change: tool keys (`skills`, `execute_code`, `artifacts`) switched on by default for users with no stored toggle. */
+        /** Deloitte Custom Change: tool keys (`skills`, `execute_code`, `artifacts`, `memory`) switched on by default for users with no stored toggle. */
         defaultEnabledTools: z.array(z.string()).optional(),
         /** Deloitte Custom Change: which rows the tools dropdown lists (all when `items` is unset) and whether users get pin buttons. */
         toolsDropdown: z

@@ -159,9 +159,9 @@ interface:
   #   alwaysEnableFileSearch: true # Force-enable file_search for authorized users/capable endpoints.
   #   hideFileSearchToggle: true # Hide the file search pill without changing the underlying tool state.
   #   toolsDropdown:
-  #     items: ['skills', 'execute_code', 'artifacts'] # Rows in the tools dropdown: file_search, web_search, skills, memory, execute_code, artifacts, mcp. Omit to list all.
+  #     items: ['skills', 'execute_code', 'artifacts', 'memory']
   #     showPinButtons: false # false: pin state follows interface.defaultPinnedTools and rows show an on/off checkbox instead of a pin.
-  #   defaultEnabledTools: ['skills', 'execute_code', 'artifacts'] # Tools switched on by default; users can still toggle them off.
+  #   defaultEnabledTools: ['skills', 'execute_code', 'artifacts', 'memory']
   # Privacy policy settings
   privacyPolicy:
     externalUrl: 'https://librechat.ai/privacy-policy'
@@ -1420,8 +1420,8 @@ endpoints:
 #   # (optional) Memory agent configuration for automatic memory updates from chat messages.
 #   # If omitted, users can still create, edit, delete, and reference memories manually.
 #   agent:
-#     # Explicitly enables automatic memory updates from chat messages.
-#     enabled: true
+#     # Deloitte Custom Change: keep automatic writes off so explicit memory-tool writes use HITL.
+#     enabled: false
 #     # Option 1: Use existing agent by ID
 #     id: "your-memory-agent-id"
 #     # Option 2: Define agent inline

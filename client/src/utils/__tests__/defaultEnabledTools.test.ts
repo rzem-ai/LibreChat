@@ -6,10 +6,11 @@ describe('getDefaultEnabledToolValues', () => {
     expect(getDefaultEnabledToolValues(undefined)).toEqual({});
   });
 
+  // Deloitte Custom Change: memory participates in the same default-enabled tool list.
   it('seeds only the listed tools', () => {
     expect(
-      getDefaultEnabledToolValues({ defaultEnabledTools: ['skills', 'execute_code'] }),
-    ).toEqual({ skills: true, execute_code: true });
+      getDefaultEnabledToolValues({ defaultEnabledTools: ['skills', 'execute_code', 'memory'] }),
+    ).toEqual({ skills: true, execute_code: true, memory: true });
   });
 
   it('uses the shadcn artifacts mode when configured', () => {

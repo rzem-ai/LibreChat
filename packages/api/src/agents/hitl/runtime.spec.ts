@@ -1,8 +1,12 @@
-import { HookRegistry, executeHooks } from '@librechat/agents';
+import { z } from 'zod';
+import { AIMessage } from '@langchain/core/messages';
+import { DynamicStructuredTool } from '@langchain/core/tools';
+import { HookRegistry, executeHooks, ToolNode } from '@librechat/agents';
 import { buildHITLRunWiring, buildToolApprovalExecutionConfig } from './runtime';
 import { registerToolApprovalHook, clearToolApprovalHooks } from './hooks';
 import { createAttachedCodeEnvironmentPolicyHook } from './byom';
 import { resolveToolApprovalPolicy } from './policy';
+import { getMemoryToolDefinitions } from '../memory';
 
 describe('buildHITLRunWiring', () => {
   test.each([
@@ -110,6 +114,91 @@ describe('buildHITLRunWiring', () => {
       ),
     ).toEqual({ decision: 'ask' });
   });
+
+  // Deloitte Custom Change: both inline memory mutations must pause even under a bypass policy.
+  test('requires HITL for the actual set_memory and delete_memory tools', async () => {
+    const memoryToolNames = getMemoryToolDefinitions().map((definition) => definition.name);
+    const wiring = buildHITLRunWiring(
+      { enabled: true, mode: 'bypass' },
+      {},
+      [],
+      undefined,
+      undefined,
+      memoryToolNames,
+    );
+    const classifiedHook = wiring?.hooks.getMatchers('PreToolUse')[1].hooks[0];
+    const signal = new AbortController().signal;
+
+    for (const toolName of memoryToolNames) {
+      expect(await classifiedHook?.({ toolName } as never, signal)).toEqual({ decision: 'ask' });
+    }
+  });
+
+  // Deloitte Custom Change: HITL deny/reject of memory writes must block execution and be observable.
+  test.each(getMemoryToolDefinitions().map((definition) => [definition.name] as const))(
+    'blocks %s before it runs when the policy denies it, and keeps the reason visible',
+    async (toolName) => {
+      const memoryToolNames = getMemoryToolDefinitions().map((definition) => definition.name);
+      const reason = 'Memory writes are disabled for this deployment';
+      const wiring = buildHITLRunWiring(
+        {
+          enabled: true,
+          mode: 'bypass',
+          deny: memoryToolNames,
+          reason,
+        },
+        {},
+        [],
+        undefined,
+        undefined,
+        memoryToolNames,
+      );
+
+      const decision = await executeHooks({
+        registry: wiring!.hooks,
+        matchQuery: toolName,
+        input: {
+          hook_event_name: 'PreToolUse',
+          runId: 'deny-memory',
+          toolName,
+          toolInput: {},
+          toolUseId: `tool-${toolName}`,
+          executingAgentId: 'agent-memory',
+        },
+      });
+      expect(decision.decision).toBe('deny');
+      expect(decision.reason).toBe(reason);
+
+      const body = jest.fn(async () => 'should-not-run');
+      const tool = new DynamicStructuredTool({
+        name: toolName,
+        description: 'A test-only memory tool',
+        schema: z.object({}),
+        func: body,
+      });
+      const node = new ToolNode({
+        tools: [tool],
+        agentId: 'agent_memory',
+        hookRegistry: wiring!.hooks,
+      });
+      const result = await node.invoke(
+        {
+          messages: [
+            new AIMessage({
+              content: '',
+              tool_calls: [{ id: `call-${toolName}`, name: toolName, args: {} }],
+            }),
+          ],
+        },
+        { configurable: { run_id: `hitl-${toolName}`, thread_id: 'thread-memory' } },
+      );
+
+      expect(body).not.toHaveBeenCalled();
+      const serialized = JSON.stringify(result);
+      expect(serialized).toContain('Blocked:');
+      expect(serialized).toContain(reason);
+    },
+  );
 
   test('adds classifications discovered by a lazy subagent', async () => {
     const wiring = buildHITLRunWiring(

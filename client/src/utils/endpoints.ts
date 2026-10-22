@@ -335,7 +335,10 @@ export function getModelSpec({
 }
 
 /** Deloitte Custom Change: ephemeral-agent values seeded by `defaultEnabledTools`. */
-export type DefaultEnabledValues = Pick<t.TEphemeralAgent, 'execute_code' | 'skills' | 'artifacts'>;
+export type DefaultEnabledValues = Pick<
+  t.TEphemeralAgent,
+  'execute_code' | 'skills' | 'artifacts' | 'memory'
+>;
 
 /** Deloitte Custom Change: builds the seeded values for tools listed in `defaultEnabledTools`. */
 export function getDefaultEnabledToolValues(
@@ -348,6 +351,7 @@ export function getDefaultEnabledToolValues(
     ...(enabled.has('execute_code') && { execute_code: true }),
     ...(enabled.has('skills') && { skills: true }),
     ...(enabled.has('artifacts') && { artifacts: artifactsMode }),
+    ...(enabled.has('memory') && { memory: true }),
   };
 }
 
@@ -373,7 +377,7 @@ export function applyModelSpecEphemeralAgent({
     web_search: modelSpec.webSearch ?? false,
     file_search: modelSpec.fileSearch ?? false,
     execute_code: modelSpec.executeCode ?? defaultEnabledValues.execute_code ?? false,
-    memory: modelSpec.memory ?? false,
+    memory: modelSpec.memory ?? defaultEnabledValues.memory ?? false,
     artifacts: modelSpec.artifacts == null ? (defaultEnabledValues.artifacts ?? '') : specArtifacts,
   };
   if (modelSpec.skills != null) {

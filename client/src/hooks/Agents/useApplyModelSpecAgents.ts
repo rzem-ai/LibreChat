@@ -106,6 +106,13 @@ export function useApplyAgentTemplate() {
         web_search: ephemeralAgent?.web_search ?? modelSpec.webSearch ?? false,
         file_search: ephemeralAgent?.file_search ?? modelSpec.fileSearch ?? false,
         execute_code: ephemeralAgent?.execute_code ?? modelSpec.executeCode ?? false,
+        // Deloitte Custom Change: inherit the deployment memory default unless explicitly overridden.
+        memory:
+          ephemeralAgent?.memory ??
+          modelSpec.memory ??
+          getDefaultEnabledToolValues(startupConfig?.interface?.customDeloitteFeatureFlags)
+            .memory ??
+          false,
         artifacts:
           ephemeralAgent?.artifacts ??
           (modelSpec.artifacts === true ? 'default' : modelSpec.artifacts || ''),

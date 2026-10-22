@@ -14,6 +14,7 @@ import {
 import type { TAgentsEndpoint, TEphemeralAgent } from 'librechat-data-provider';
 import {
   useHasAccess,
+  useHasMemoryAccess,
   useAgentCapabilities,
   useMCPServerManager,
   useSearchApiKeyForm,
@@ -369,9 +370,12 @@ export default function BadgeRowProvider({
     permissionType: PermissionTypes.RUN_CODE,
     permission: Permissions.USE,
   });
-  const { skillsEnabled, codeEnabled, artifactsEnabled } = useAgentCapabilities(
+  // Deloitte Custom Change: default memory only for users and endpoints allowed to use it.
+  const canUseMemory = useHasMemoryAccess();
+  const { skillsEnabled, codeEnabled, artifactsEnabled, memoryEnabled } = useAgentCapabilities(
     agentsConfig?.capabilities ?? defaultAgentCapabilities,
   );
+  const hasOptedOutOfMemory = authContext?.user?.personalization?.memories === false;
   // Deloitte Custom Change: watch the current values so the cleanup re-runs after a model-spec switch re-seeds them.
   const {
     skills: skillsValue,
@@ -390,6 +394,8 @@ export default function BadgeRowProvider({
       ...(!(canUseSkills && skillsEnabled) && { skills: false }),
       ...(!(canRunCode && codeEnabled) && { execute_code: false }),
       ...(!artifactsEnabled && { artifacts: '' }),
+      // Deloitte Custom Change: fail closed when the memory default is not authorized.
+      ...(!(canUseMemory && memoryEnabled && !hasOptedOutOfMemory) && { memory: false }),
     };
     const keys = Object.keys(disabledOff).filter((key) => defaultEnabledTools.includes(key));
     setEphemeralAgent((prev) => {
@@ -407,6 +413,9 @@ export default function BadgeRowProvider({
     canRunCode,
     codeEnabled,
     artifactsEnabled,
+    canUseMemory,
+    memoryEnabled,
+    hasOptedOutOfMemory,
     skillsValue,
     codeValue,
     artifactsValue,
