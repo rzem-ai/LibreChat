@@ -7,13 +7,94 @@
     "tags": ["Getting started"]
   },
   {
+    "id": "myassist-introduction",
+    "title": "Introduction to MyAssist",
+    "description": "Start with the problem, then see how MyAssist helps",
+    "type": "article",
+    "tags": ["Getting started", "Introduction"],
+    "durationLabel": "2 min read",
+    "updated": "22 October 2026"
+  },
+  {
+    "id": "write-an-effective-prompt",
+    "title": "How to write an effective prompt",
+    "description": "Write clearer prompts with the GCSE method",
+    "type": "article",
+    "tags": ["Getting started", "Prompts"],
+    "durationLabel": "3 min read",
+    "updated": "22 October 2026"
+  },
+  {
+    "id": "guides/prompts",
+    "title": "Guide to prompts",
+    "description": "Save short prompts and add them to any chat",
+    "type": "article",
+    "tags": ["Prompts"],
+    "durationLabel": "3 min read",
+    "updated": "22 October 2026"
+  },
+  {
+    "id": "guides/skills",
+    "title": "Guide to skills",
+    "description": "Find, trigger, create and share skills for repeatable tasks",
+    "type": "article",
+    "tags": ["Skills"],
+    "durationLabel": "8 min read",
+    "updated": "22 October 2026"
+  },
+  {
+    "id": "guides/agents",
+    "title": "Guide to agents",
+    "description": "Find, use, create and share agents built for a job",
+    "type": "article",
+    "tags": ["Agents"],
+    "durationLabel": "5 min read",
+    "updated": "22 October 2026"
+  },
+  {
+    "id": "guides/connectors",
+    "title": "Guide to connectors",
+    "description": "See which approved sources MyAssist can draw on",
+    "type": "article",
+    "tags": ["Connectors"],
+    "durationLabel": "3 min read",
+    "updated": "22 October 2026"
+  },
+  {
+    "id": "guides/artifacts",
+    "title": "Guide to artifacts",
+    "description": "Turn a request into a dashboard, diagram or tool",
+    "type": "article",
+    "tags": ["Artifacts"],
+    "durationLabel": "3 min read",
+    "updated": "22 October 2026"
+  },
+  {
+    "id": "capture-team-knowledge",
+    "title": "How to capture your team’s knowledge",
+    "description": "Turn how your team works into shared skills",
+    "type": "article",
+    "tags": ["Skills", "Prompts", "Agents", "Teams"],
+    "durationLabel": "5 min read",
+    "updated": "22 October 2026"
+  },
+  {
     "id": "agentic-ecosystem",
-    "title": "What is the Agentic Ecosystem?",
+    "title": "What is the Agentic Ecosystem",
     "description": "Learn how the Agentic Ecosystem powers enterprise AI agents",
     "type": "article",
-    "tags": ["Getting started", "Skills"],
-    "durationLabel": "1 min read",
-    "updated": "16 October 2026"
+    "tags": ["Getting started"],
+    "durationLabel": "2 min read",
+    "updated": "22 October 2026"
+  },
+  {
+    "id": "glossary",
+    "title": "Glossary",
+    "description": "Look up plain-language definitions of MyAssist terms",
+    "type": "article",
+    "tags": ["Glossary", "Getting started"],
+    "durationLabel": "4 min read",
+    "updated": "22 October 2026"
   },
   {
     "id": "lumo-ms-teams",
@@ -30,53 +111,5 @@
     "type": "external",
     "tags": ["Getting started"],
     "externalHref": "https://bookings.cloud.microsoft/book/Deloitte_MyAssistGeniusBar_Bookings@deloitte.onmicrosoft.com/?ismsaljsauthenabled"
-  },
-  {
-    "id": "what-should-i-use",
-    "title": "What should I use?",
-    "description": "Learn which capability to use, from Chat to Agents",
-    "type": "article",
-    "tags": ["Getting started", "Skills", "Agents"],
-    "updated": "16 October 2026"
-  },
-  {
-    "id": "write-an-effective-prompt",
-    "title": "Write an effective prompt",
-    "description": "Learn how to write clear prompts using the GCSE framework",
-    "type": "article",
-    "tags": ["Getting started", "Prompts"],
-    "updated": "16 October 2026"
-  },
-  {
-    "id": "how-to-build-a-skill",
-    "title": "How to build a skill",
-    "description": "Learn how to build, package and upload a reusable skill",
-    "type": "article",
-    "tags": ["Skills"],
-    "updated": "16 October 2026"
-  },
-  {
-    "id": "sharing-skills-and-agents",
-    "title": "Sharing skills and agents",
-    "description": "Learn how to share skills and agents with others",
-    "type": "article",
-    "tags": ["Skills", "Agents"],
-    "updated": "21 October 2026"
-  },
-  {
-    "id": "save-and-share-prompts",
-    "title": "Save and share prompts",
-    "description": "Learn how to create, reuse and share prompts",
-    "type": "article",
-    "tags": ["Getting started", "Prompts"],
-    "updated": "21 October 2026"
-  },
-  {
-    "id": "connectors",
-    "title": "Use connectors",
-    "description": "Learn when to use Connectors to draw on approved sources",
-    "type": "article",
-    "tags": ["Connectors"],
-    "updated": "16 October 2026"
   }
 ]

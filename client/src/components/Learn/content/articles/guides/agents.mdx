@@ -1,0 +1,84 @@
+---
+title: Guide to agents
+updated: 22 October 2026
+durationLabel: 5 min read
+type: guide
+summary: "When a job needs several steps, an agent coordinates them so you can describe the outcome instead of managing each task. This page covers finding agents, chatting with one, combining skills and sharing."
+---
+
+## What it is
+
+An agent is a model set up for one job: `agent = model + instructions + skills + connectors + files`. Two agents can use the same model and still behave differently, because their skills and connectors differ.
+
+## Why it matters
+
+A skill handles one task well. An agent coordinates several skills and tools, so you describe the end result and the agent works out the steps.
+
+## Find an agent
+
+Browse ready-made agents in the Agent Marketplace, or build your own in **Agent Builder**. Both are in the side menu.
+
+[TO BE CONFIRMED: the app label reads “Agent Library”, the tour says “Agent Marketplace”]
+
+## Start a chat with an agent
+
+Open the model selector and choose an agent instead of a model. To go back to a general model, open the same selector and choose a standard model.
+
+[TO BE CONFIRMED: other ways to start a chat with an agent, such as from the Agent Marketplace]
+
+## Create an agent
+
+In **Agent Builder**, you group instructions, skills, connectors and files for a specific job.
+
+[TO BE CONFIRMED: step-by-step instructions for creating an agent, content needed from the MyAssist team]
+
+## Combine skills and agents
+
+An agent coordinates the sequence and brings the outputs together. Take a client meeting briefing as an example. You ask:
+
+> Research the client and prepare a briefing pack for tomorrow’s meeting.
+
+The agent then works through three skills:
+
+- Research the client: use approved sources, such as IBISWorld and the AFR, to gather company, industry and market insights
+- Review what we know: use internal documents, previous meeting notes and other available information to add context
+- Create the briefing pack: combine the research and internal context into a structured, executive-ready briefing
+
+The outcome is a briefing pack with key insights, discussion points, questions, risks and opportunities. Each skill is one task. Read [the guide to skills](/learn/articles/guides/skills#what-it-is) to see how one is built.
+
+## Work with sub-agents
+
+[TO BE CONFIRMED: content needed on what sub-agents are, when an agent uses one and how to set one up]
+
+## Share an agent
+
+<SharingNote />
+
+<Steps>
+
+1. Select **Agent Builder** from the side menu to open Agents.
+2. Open the drop-down menu, then search for and select the agent you want to share.
+3. Scroll to the bottom of the form and select **Share**.
+4. Search for the people you want to share with, then select them.
+5. Assign a permission level: **Viewer**, **Editor** or **Owner**. People can use the agent based on the permission you grant.
+6. Select **Save Changes**.
+
+</Steps>
+
+<Callout type="warning">
+
+Share every skill the agent uses with the same people, following the steps in [share a skill](/learn/articles/guides/skills#share-a-skill).
+
+</Callout>
+
+## Try this now
+
+<TryThis
+  closing
+  action="Ask an agent to prepare you for a meeting you have coming up"
+  prompt="Research [client] and prepare a briefing pack for my meeting on [date]. Use approved sources, and include key insights, discussion points, questions, risks and opportunities."
+/>
+
+<CardGrid>
+  <Card href="/learn/articles/guides/connectors" title="Next: Guide to connectors">Bring approved sources into your work</Card>
+</CardGrid>

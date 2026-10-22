@@ -61,7 +61,7 @@ describe('Resources', () => {
     const input = screen.getByLabelText('com_learning_search_resources');
 
     fireEvent.change(input, { target: { value: 'agentic' } });
-    expect(screen.getByText('What is the Agentic Ecosystem?')).toBeInTheDocument();
+    expect(screen.getByText('What is the Agentic Ecosystem')).toBeInTheDocument();
     expect(screen.queryByText('Getting Started Tour')).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: 'zzz-no-match' } });
@@ -73,7 +73,7 @@ describe('Resources', () => {
     render(<Resources onOpenArticle={onOpenArticle} />);
 
     fireEvent.click(
-      screen.getByLabelText('com_learning_action_read:What is the Agentic Ecosystem?'),
+      screen.getByLabelText('com_learning_action_read:What is the Agentic Ecosystem'),
     );
     expect(onOpenArticle).toHaveBeenCalledWith('agentic-ecosystem');
 
@@ -95,9 +95,11 @@ describe('Faq', () => {
         <Faq />
       </MemoryRouter>,
     );
-    expect(screen.getByRole('link', { name: 'What should I use?' })).toHaveAttribute(
+    expect(
+      screen.getByRole('link', { name: 'How to capture your team’s knowledge' }),
+    ).toHaveAttribute(
       'href',
-      '/learn/articles/what-should-i-use',
+      '/learn/articles/capture-team-knowledge#match-the-knowledge-to-the-surface',
     );
     expect(screen.getByRole('link', { name: 'Q&R or BSO' })).toHaveAttribute('target', '_blank');
     fireEvent.change(screen.getByLabelText('com_learning_search_faq'), {
