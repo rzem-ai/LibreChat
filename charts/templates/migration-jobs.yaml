@@ -15,6 +15,7 @@ metadata:
   labels:
     {{- include "helm.labels" . | nindent 4 }}
     component: migrate-{{ $name }}
+    migration-job: "true"
   annotations:
     argocd.argoproj.io/sync-options: Force=true,Replace=true
     argocd.argoproj.io/sync-wave: {{ $job.syncWave | quote }}
@@ -27,6 +28,7 @@ spec:
     matchLabels:
       {{- include "helm.selectorLabels" . | nindent 6 }}
       component: migrate-{{ $name }}
+      migration-job: "true"
   template:
     metadata:
       labels:
