@@ -67,6 +67,73 @@ describe('Agent Utilities', () => {
       expect(getAgentAvatarUrl(agent)).toBe(`/api/files/images/avatar?file=${encodedPath}`);
     });
 
+    // Deloitte Custom Change: cover the sovereign Azure clouds the platform deploys to.
+    it('proxies Azure Blob avatar URLs from sovereign cloud hosts', () => {
+      const agent = {
+        id: 'agent-123',
+        name: 'Test Agent',
+        avatar: {
+          filepath:
+            'https://storage.blob.core.usgovcloudapi.net/files/images/0123456789abcdef01234567/agent-agent-123-avatar-1730000000000.png',
+        },
+      } as t.Agent;
+      const blobPath = 'images/0123456789abcdef01234567/agent-agent-123-avatar-1730000000000.png';
+      const encodedPath = btoa(blobPath).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+      expect(getAgentAvatarUrl(agent)).toBe(`/api/files/images/avatar?file=${encodedPath}`);
+    });
+
+    // Deloitte Custom Change: drop the SAS query string, the proxy authenticates on its own.
+    it('proxies Azure Blob avatar URLs that carry a SAS query string', () => {
+      const agent = {
+        id: 'agent-123',
+        name: 'Test Agent',
+        avatar: {
+          filepath:
+            'https://storage.blob.core.windows.net/files/images/0123456789abcdef01234567/agent-agent-123-avatar-1730000000000.png?sv=2021-08-06&sig=secret',
+        },
+      } as t.Agent;
+      const blobPath = 'images/0123456789abcdef01234567/agent-agent-123-avatar-1730000000000.png';
+
+      expect(getAgentAvatarUrl(agent)).toBe(
+        `/api/files/images/avatar?file=${Buffer.from(blobPath).toString('base64url')}`,
+      );
+    });
+
+    // Deloitte Custom Change: encode the blob path from its UTF-8 bytes, as the server decodes it.
+    it('encodes blob paths that contain characters outside Latin-1', () => {
+      const blobPath = 'images/0123456789abcdef01234567/agent-agent-ü-avatar-1730000000000.png';
+      const agent = {
+        id: 'agent-123',
+        name: 'Test Agent',
+        avatar: {
+          filepath: `https://storage.blob.core.windows.net/files/${blobPath}`,
+        },
+      } as t.Agent;
+      const proxied = getAgentAvatarUrl(agent);
+
+      expect(proxied).not.toBeNull();
+      const encodedPath = new URL(proxied as string, 'http://localhost').searchParams.get('file');
+      expect(encodedPath).not.toBeNull();
+      expect(Buffer.from(encodedPath as string, 'base64url').toString('utf8')).toBe(blobPath);
+    });
+
+    // Deloitte Custom Change: only avatar blobs are proxied, other Azure files keep their URL.
+    it('leaves Azure Blob URLs that are not agent avatars unchanged', () => {
+      const agent = {
+        id: 'agent-123',
+        name: 'Test Agent',
+        avatar: {
+          filepath:
+            'https://storage.blob.core.windows.net/files/documents/0123456789abcdef01234567/report.pdf',
+        },
+      } as t.Agent;
+
+      expect(getAgentAvatarUrl(agent)).toBe(
+        'https://storage.blob.core.windows.net/files/documents/0123456789abcdef01234567/report.pdf',
+      );
+    });
+
     // Deloitte Custom Change: preserve CDN URLs and prevent double-proxying.
     it('leaves non-Azure URLs and already proxied avatars unchanged', () => {
       const cdnAgent = {

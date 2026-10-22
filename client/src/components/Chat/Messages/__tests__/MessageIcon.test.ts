@@ -9,20 +9,13 @@ jest.mock('librechat-data-provider', () => ({
 jest.mock('~/components/Endpoints/ConvoIconURL', () => jest.fn());
 jest.mock('~/data-provider', () => ({ useGetEndpointsQuery: jest.fn(() => ({ data: {} })) }));
 jest.mock('~/utils', () => ({ getIconEndpoint: jest.fn(), logger: { log: jest.fn() } }));
-// Deloitte Custom Change: model both supported agent-avatar representations without loading UI dependencies.
-jest.mock('~/utils/agents', () => ({
-  getAgentAvatarUrl: (agent: Agent | undefined) => {
-    const avatar = agent?.avatar;
-    if (typeof avatar === 'string') {
-      return avatar;
-    }
-    if (avatar && 'filepath' in avatar) {
-      return avatar.filepath;
-    }
-    return null;
-  },
-}));
 jest.mock('~/components/Endpoints/Icon', () => jest.fn());
+// Deloitte Custom Change: stub the shared UI primitives so the real agent avatar helpers load.
+jest.mock('lucide-react', () => ({ Feather: () => null }));
+jest.mock('@librechat/client', () => ({
+  Skeleton: () => null,
+  useAuthenticatedImageSrc: () => ({ src: '', isLoading: false, isError: false }),
+}));
 
 import { arePropsEqual } from '../MessageIcon';
 

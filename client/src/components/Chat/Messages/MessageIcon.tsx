@@ -2,9 +2,9 @@ import { useMemo, memo } from 'react';
 import { getEndpointField } from 'librechat-data-provider';
 import type { Assistant, Agent } from 'librechat-data-provider';
 import type { TMessageIcon } from '~/common';
+import { getAgentAvatarUrl, getAgentAvatarFilepath } from '~/utils/agents';
 import ConvoIconURL from '~/components/Endpoints/ConvoIconURL';
 import { useGetEndpointsQuery } from '~/data-provider';
-import { getAgentAvatarUrl } from '~/utils/agents';
 import Icon from '~/components/Endpoints/Icon';
 import { isImageURL } from '~/utils/icons';
 import { getIconEndpoint } from '~/utils';
@@ -29,10 +29,7 @@ export function arePropsEqual(prev: MessageIconProps, next: MessageIconProps): b
     [prev.iconData?.isCreatedByUser, next.iconData?.isCreatedByUser],
     [prev.agent?.name, next.agent?.name],
     // Deloitte Custom Change: compare both supported avatar representations without decoding URLs here.
-    [
-      typeof prev.agent?.avatar === 'string' ? prev.agent.avatar : prev.agent?.avatar?.filepath,
-      typeof next.agent?.avatar === 'string' ? next.agent.avatar : next.agent?.avatar?.filepath,
-    ],
+    [getAgentAvatarFilepath(prev.agent), getAgentAvatarFilepath(next.agent)],
     [prev.assistant?.name, next.assistant?.name],
     [prev.assistant?.metadata?.avatar, next.assistant?.metadata?.avatar],
   ];

@@ -29,16 +29,23 @@ function AgentAvatar({
   const { src, isLoading, isError } = useAuthenticatedImageSrc(avatar);
 
   if (agentName && avatar) {
-    if (isLoading) {
-      return <div className={className} aria-hidden="true" />;
-    }
-
     if (isError) {
       return <Feather className={cn(agentName === '' ? 'icon-2xl' : '', className)} size={size} />;
     }
 
+    /**
+     * Deloitte Custom Change: keep the image element mounted while the authenticated
+     * request is in flight so the reserved space stays stable and no broken image is shown.
+     */
     return (
-      <img src={src} className={entityAvatarClassName} alt={agentName} width="80" height="80" />
+      <img
+        src={src || undefined}
+        className={entityAvatarClassName}
+        alt={agentName}
+        width="80"
+        height="80"
+        style={isLoading ? { visibility: 'hidden' } : undefined}
+      />
     );
   }
 

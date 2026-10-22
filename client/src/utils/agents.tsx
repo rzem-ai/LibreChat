@@ -4,21 +4,113 @@ import { Skeleton, useAuthenticatedImageSrc } from '@librechat/client';
 import type t from 'librechat-data-provider';
 
 /**
- * Extracts the avatar URL from an agent's avatar property
- * Handles both string and object formats
+ * Azure Blob Storage host suffixes for the clouds in scope: global, US Government and China.
  */
-export const getAgentAvatarUrl = (agent: t.Agent | null | undefined): string | null => {
-  if (!agent?.avatar) {
+const AZURE_BLOB_HOST_SUFFIXES = ['windows.net', 'usgovcloudapi.net', 'chinacloudapi.cn'] as const;
+
+/**
+ * Shape of an agent avatar blob inside Azure Blob Storage.
+ * Mirrors the agent branch of the server-side pattern in `api/server/routes/files/avatar.js`,
+ * so only avatars the authenticated route is able to serve are proxied.
+ */
+const AGENT_AVATAR_BLOB_PATTERN =
+  /^images\/[a-f\d]{24}\/agent-[^/]+-avatar-\d+\.(png|gif|jpe?g|webp)$/i;
+
+/**
+ * Determines whether a hostname belongs to Azure Blob Storage.
+ *
+ * @param hostname - Hostname taken from a parsed URL
+ * @returns `true` when the host is an Azure Blob Storage endpoint
+ */
+const isAzureBlobHost = (hostname: string): boolean =>
+  hostname.includes('.blob.') &&
+  AZURE_BLOB_HOST_SUFFIXES.some((suffix) => hostname.endsWith(suffix));
+
+/**
+ * Encodes a blob path as base64url.
+ *
+ * The server decodes the `file` query parameter with `Buffer.from(value, 'base64url')`,
+ * so the client encodes the same way. The path is encoded from its UTF-8 bytes because
+ * `btoa` alone only accepts Latin-1 characters and would throw on other paths.
+ *
+ * @param value - Blob path to encode
+ * @returns Base64url representation of the UTF-8 encoded path
+ */
+const encodeBase64Url = (value: string): string => {
+  const bytes = new TextEncoder().encode(value);
+  let binary = '';
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+};
+
+/**
+ * Extracts the Azure blob path of an agent avatar from a blob URL pathname.
+ *
+ * Blob URLs include the container name before the `images` folder, so the path is
+ * anchored on that folder instead of dropping a fixed number of segments.
+ *
+ * @param pathname - Pathname of the blob URL
+ * @returns The blob path when it is an agent avatar, otherwise `null`
+ */
+const getAgentAvatarBlobPath = (pathname: string): string | null => {
+  const segments = pathname
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => {
+      try {
+        return decodeURIComponent(segment);
+      } catch {
+        return segment;
+      }
+    });
+
+  const imagesIndex = segments.indexOf('images');
+  if (imagesIndex === -1) {
     return null;
   }
 
-  let avatarUrl: string | null = null;
-  if (typeof agent.avatar === 'string') {
-    avatarUrl = agent.avatar;
-  } else if (typeof agent.avatar === 'object' && 'filepath' in agent.avatar) {
-    avatarUrl = agent.avatar.filepath;
+  const blobPath = segments.slice(imagesIndex).join('/');
+  return AGENT_AVATAR_BLOB_PATTERN.test(blobPath) ? blobPath : null;
+};
+
+/**
+ * Resolves the stored avatar filepath of an agent.
+ *
+ * Handles the legacy string representation and the current object representation.
+ *
+ * @param agent - Agent to read the avatar from
+ * @returns The stored avatar filepath, or `null` when the agent has no avatar
+ */
+export const getAgentAvatarFilepath = (agent: t.Agent | null | undefined): string | null => {
+  const avatar = agent?.avatar;
+  if (!avatar) {
+    return null;
   }
 
+  if (typeof avatar === 'string') {
+    return avatar;
+  }
+
+  return avatar.filepath ?? null;
+};
+
+/**
+ * Extracts the avatar URL from an agent's avatar property
+ * Handles both string and object formats
+ *
+ * Agent avatars stored in a private Azure Blob Storage container are recorded as direct
+ * blob URLs, which a browser cannot read because the container denies anonymous access.
+ * Those URLs are rewritten to the authenticated avatar route, which authorizes the
+ * viewer against the agent before streaming the blob. Every other avatar location,
+ * including already proxied paths and locally served files, is returned unchanged.
+ *
+ * @param agent - Agent to read the avatar from
+ * @returns The avatar URL to render, or `null` when the agent has no avatar
+ */
+export const getAgentAvatarUrl = (agent: t.Agent | null | undefined): string | null => {
+  const avatarUrl = getAgentAvatarFilepath(agent);
   if (!avatarUrl) {
     return null;
   }
@@ -26,18 +118,16 @@ export const getAgentAvatarUrl = (agent: t.Agent | null | undefined): string | n
   // Deloitte Custom Change: proxy legacy private Azure agent avatars through the authenticated image route.
   try {
     const url = new URL(avatarUrl);
-    if (!url.hostname.endsWith('.blob.core.windows.net')) {
+    if (!isAzureBlobHost(url.hostname)) {
       return avatarUrl;
     }
 
-    const [, ...blobPathSegments] = url.pathname.split('/').filter(Boolean);
-    const blobPath = decodeURIComponent(blobPathSegments.join('/'));
-    if (!blobPath.startsWith('images/')) {
+    const blobPath = getAgentAvatarBlobPath(url.pathname);
+    if (!blobPath) {
       return avatarUrl;
     }
 
-    const encodedPath = btoa(blobPath).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    return `/api/files/images/avatar?file=${encodedPath}`;
+    return `/api/files/images/avatar?file=${encodeBase64Url(blobPath)}`;
   } catch {
     return avatarUrl;
   }
