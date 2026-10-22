@@ -603,57 +603,6 @@ modelSpecs:
           webSearch: true
           imageGeneration: false
 
-    - name: 'anthropic-claude-sonnet-4-6'
-      label: 'Claude Sonnet 4.6'
-      group: 'Anthropic Global'
-      iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
-      artificialAnalysisBenchmarkModelName: 'claude-sonnet-4-6'
-      preset:
-        endpoint: 'anthropic'
-        model: 'claude-sonnet-4-6'
-        promptPrefix: *deloitteSystemPrompt
-      details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        supports:
-          webSearch: true
-          imageGeneration: false
-
-    - name: 'anthropic-claude-opus-4-6'
-      label: 'Claude Opus 4.6'
-      group: 'Anthropic Global'
-      iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
-      artificialAnalysisBenchmarkModelName: 'claude-opus-4-6'
-      preset:
-        endpoint: 'anthropic'
-        model: 'claude-opus-4-6'
-        promptPrefix: *deloitteSystemPrompt
-      details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        supports:
-          webSearch: true
-          imageGeneration: false
-
-    - name: 'anthropic-claude-opus-4-8'
-      label: 'Claude Opus 4.8'
-      group: 'Anthropic Global'
-      iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
-      artificialAnalysisBenchmarkModelName: 'claude-opus-4-8'
-      preset:
-        endpoint: 'anthropic'
-        model: 'claude-opus-4-8'
-        promptPrefix: *deloitteSystemPrompt
-      details:
-        speed: 3 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        supports:
-          webSearch: true
-          imageGeneration: false
-
     - name: 'anthropic-claude-opus-5-5'
       label: 'Claude Opus 5.5'
       group: 'Anthropic Global'
