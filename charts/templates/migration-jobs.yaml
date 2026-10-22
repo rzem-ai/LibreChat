@@ -1,13 +1,12 @@
 # Deloitte Custom Change: Retention Update
 # One-off Kubernetes Jobs for the data-retention migration/backfill scripts
-# (see UPGRADING.md). Skip=true keeps ArgoCD from auto-running these on a
-# normal sync -- three of the five underlying scripts scan unindexed fields,
-# so they must never run as always-on, every-deploy automation. An operator
-# deliberately selects and syncs a single `<release>-migrate-<name>` resource
-# from the ArgoCD UI. Force=true,Replace=true deletes and recreates the
-# otherwise immutable completed Job, so flipping `dryRun` and re-syncing
-# produces a fresh run with no name-bumping trick and no kubectl required.
+# (see UPGRADING.md). Jobs render only when explicitly enabled in the
+# environment values and remain inactive while suspended. Several scripts scan
+# unindexed fields, so they must never run as always-on, every-deploy
+# automation. Force=true,Replace=true deletes and recreates the otherwise
+# immutable Job for the deliberate run.
 {{- range $name, $job := .Values.migrationJobs }}
+{{- if $job.enabled }}
 {{- with $ }}
 apiVersion: batch/v1
 kind: Job
@@ -17,11 +16,12 @@ metadata:
     {{- include "helm.labels" . | nindent 4 }}
     component: migrate-{{ $name }}
   annotations:
-    argocd.argoproj.io/sync-options: Skip=true,Force=true,Replace=true
-    argocd.argoproj.io/hook-weight: {{ $job.hookWeight | quote }}
+    argocd.argoproj.io/sync-options: Force=true,Replace=true
+    argocd.argoproj.io/sync-wave: {{ $job.syncWave | quote }}
 spec:
   backoffLimit: 3
   ttlSecondsAfterFinished: 86400
+  suspend: {{ $job.suspend }}
   manualSelector: true
   selector:
     matchLabels:
@@ -66,5 +66,6 @@ spec:
               memory: "1Gi"
               cpu: "500m"
 ---
+{{- end }}
 {{- end }}
 {{- end }}
