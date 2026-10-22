@@ -30,10 +30,23 @@ export type TourStatus = 'complete' | 'in-progress' | 'not-started';
 
 // Deloitte Custom Change: tour progress stored in MongoDB: TourProgress removed; use TTourProgress from librechat-data-provider
 
+export const BLURB_MAX_LENGTH = 70;
+
+const THIRD_PERSON_PATTERN = /\b(users?|people|learners?)\b/i;
+
+export const BlurbSchema = z
+  .string()
+  .max(BLURB_MAX_LENGTH, `Use at most ${BLURB_MAX_LENGTH} characters`)
+  .refine((blurb) => !blurb.endsWith('.'), 'Do not end with a full stop')
+  .refine(
+    (blurb) => !THIRD_PERSON_PATTERN.test(blurb),
+    'Describe what the resource covers or lets you do, not what users or people do',
+  );
+
 export const ResourceSchema = z.object({
   id: z.string(),
   title: z.string(),
-  description: z.string(),
+  description: BlurbSchema,
   type: z.enum(['tour', 'article', 'external']),
   tags: z.array(z.string()),
   durationLabel: z.string().optional(),
@@ -46,10 +59,15 @@ export const FaqSchema = z.object({
   answer: z.string(),
 });
 
+export const ARTICLE_TYPES = ['concept', 'how-to', 'guide', 'reference'] as const;
+
 export const ArticleFrontmatterSchema = z.object({
   title: z.string(),
   updated: z.string(),
   durationLabel: z.string().optional(),
+  type: z.enum(ARTICLE_TYPES).optional(),
+  /** One-paragraph TL;DR rendered as the lede under the title. */
+  summary: z.string().optional(),
 });
 
 export const ReleaseFrontmatterSchema = z.object({

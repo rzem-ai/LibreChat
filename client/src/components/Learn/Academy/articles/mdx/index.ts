@@ -1,0 +1,29 @@
+import type { MDXComponents } from 'mdx/types';
+import { Compare, Before, After } from './compare';
+import { FeedbackLink } from './feedback';
+import { CardGrid, Card } from './cards';
+import { SharingNote } from './sharing';
+import { Terms, Term } from './terms';
+import { ArticleLink } from './link';
+import { Callout } from './callout';
+import { H2, H3 } from './heading';
+import { TryThis } from './cue';
+import { Steps } from './steps';
+
+export const mdxComponents: MDXComponents = {
+  h2: H2,
+  h3: H3,
+  a: ArticleLink,
+  TryThis,
+  Callout,
+  Compare,
+  Before,
+  After,
+  CardGrid,
+  Card,
+  Steps,
+  Terms,
+  Term,
+  FeedbackLink,
+  SharingNote,
+};

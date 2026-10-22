@@ -4,7 +4,7 @@ All Academy content lives in `client/src/components/Learn/content/`. It is bundl
 
 | To add a... | Put it in | Then |
 |---|---|---|
-| Article | `articles/<slug>.mdx` | Add an entry to `resources.json` |
+| Article | `articles/<slug>.mdx`, or `articles/<folder>/<name>.mdx` | Add an entry to `resources.json` |
 | Release note | `releases/<name>.mdx` | Nothing else |
 | FAQ | `faqs.json` | Nothing else |
 | Resource card | `resources.json` | Nothing else |
@@ -12,38 +12,115 @@ All Academy content lives in `client/src/components/Learn/content/`. It is bundl
 
 Files starting with `_` are placeholders. Delete or replace them before launch.
 
+Write to the [style guide](myassist_academy_style_guide.md). It covers voice, naming, page frames, definitions and card blurbs.
+
 ## Article
 
-1. Create `articles/<slug>.mdx`. The file name is the slug (`/learning/articles/<slug>`).
-2. Start it with frontmatter, then write the body in Markdown. Each `##` heading appears in the "On this page" list.
+1. Create `articles/<slug>.mdx`. The path under `articles/`, without the extension, is the slug and the URL: `articles/guides/skills.mdx` is `/learn/articles/guides/skills`. Folders are allowed and a slug may contain `/`.
+2. Start it with frontmatter, then write the body in Markdown. Each `##` heading appears in the "On this page" list, and each `###` nests under the `##` above it.
 
    ```mdx
    ---
-   title: What is the Agentic Ecosystem?
-   updated: 2 September 2026
+   title: Guide to skills
+   updated: 22 October 2026
    durationLabel: 6 min read
+   type: guide
+   summary: One-paragraph TL;DR that leads with the reader's situation and says what the page covers.
    ---
 
-   Intro paragraph.
+   ## What it is
 
-   ## First section
+   Body text.
    ```
+
+   `type` is `concept`, `how-to`, `guide` or `reference`. `summary` is shown as the lede under the title. Both are optional in the schema but the style guide expects them. The card `description` in `resources.json` is separate, because it has a 70-character limit.
 
 3. Add a card for it to `resources.json` so it shows under All resources:
 
    ```json
    {
-     "id": "agentic-ecosystem",
-     "title": "What is the Agentic Ecosystem?",
-     "description": "Learn how the Agentic Ecosystem powers enterprise AI agents",
+     "id": "guides/skills",
+     "title": "Guide to skills",
+     "description": "Find, trigger, create and share skills for repeatable tasks",
      "type": "article",
-     "tags": ["Getting started"],
+     "tags": ["Skills"],
      "durationLabel": "6 min read",
-     "updated": "2 September 2026"
+     "updated": "22 October 2026"
    }
    ```
 
-   For articles, `id` must match the `.mdx` file name (it is also the URL slug). `tags` are searchable but not displayed.
+   For articles, `id` must match the path of the `.mdx` file under `articles/`, without the extension (it is also the URL slug). `tags` are searchable but not displayed.
+
+### Anchors
+
+A heading's anchor is its text in lowercase with other characters turned into dashes, so `## Share a skill` is `#share-a-skill`. Headings that hold a code span or link get no anchor, so keep them plain text. Link to a section with `/learn/articles/<slug>#<anchor>`. Renaming a heading breaks links to it. The content tests fail on a link to a missing article or heading, and on duplicate heading ids within an article.
+
+### Components
+
+These are available in every article with no import. Write child text on the same line as the tags for single-line components (`Card`, `Before`, `After`, `Term`). Leave blank lines inside `Callout` and `Steps` so Markdown inside them renders.
+
+`TryThis` is the try-this cue. `prompt` is the text readers copy. Add `closing` for the last cue on a page:
+
+```mdx
+<TryThis
+  action="Rewrite a prompt you've used recently with GCSE"
+  prompt={`Goal: Summarise the risks in this proposal.
+Context: I'm presenting tomorrow.`}
+/>
+```
+
+`Callout` takes `type` of `note` (default), `analogy` or `warning`:
+
+```mdx
+<Callout type="warning">
+
+Share every skill the agent uses with the same people.
+
+</Callout>
+```
+
+`Compare` shows a weaker and stronger version side by side:
+
+```mdx
+<Compare>
+  <Before>Summarise this report.</Before>
+  <After>Help me prepare for a client meeting. Use the attached report only.</After>
+</Compare>
+```
+
+`CardGrid` and `Card` link to other articles (`/learn/...` stays in the app and opens in a new tab on Cmd or middle click) or to external pages (opens in a new tab):
+
+```mdx
+<CardGrid>
+  <Card href="/learn/articles/guides/prompts" title="Guide to prompts">Save quick prompts for any chat</Card>
+  <Card href="https://example.com" title="Read the full article" />
+</CardGrid>
+```
+
+`Steps` wraps a numbered list and numbers it as a procedure:
+
+```mdx
+<Steps>
+
+1. Select **Prompts** from the side menu.
+2. Select **Create prompt**.
+
+</Steps>
+```
+
+`Terms` and `Term` build glossary entries. Each `Term` gets an anchor from its name (`#connector-mcp`), and `href` adds a "Read the guide" link:
+
+```mdx
+<Terms>
+  <Term name="Skill" href="/learn/articles/guides/skills#what-it-is">Written instructions for doing one task the same way every time.</Term>
+</Terms>
+```
+
+`FeedbackLink` links to the feedback form from `interface.learningCenter.feedbackUrl` in `librechat.yaml` and renders nothing when it is unset: `<FeedbackLink>Share feedback about MyAssist</FeedbackLink>`.
+
+`SharingNote` renders the standard sharing statement: `<SharingNote />`.
+
+Plain Markdown links work too. Paths starting with `/` stay in the app; full URLs open in a new tab.
 
 ## Release note
 
@@ -71,14 +148,14 @@ Append `{ "question": "...", "answer": "..." }` to `faqs.json`. The tab is only 
 
 Add an object to `resources.json`. The same rules apply to the `description` of articles, external links and tours (including the `description` in a tour's own JSON file):
 
-- At most 70 characters.
+- At most 70 characters. The schema rejects longer descriptions.
 - Start with a user-facing action verb, e.g. "Learn how to write clear prompts", "Book a training session with the MyAssist team", "Take a tour of chats, projects and the context panel" or "Access the Lumo Agent in Microsoft Teams". Not "Teach users how to...", because the user isn't doing the teaching!
-- No full stop at the end.
-- Don't refer to users in third person in the description ("Teach users", "people"); describe what the resource covers or lets you do.
+- No full stop at the end. The schema rejects it.
+- Don't refer to users in third person in the description ("Teach users", "people", "learners"); describe what the resource covers or lets you do. The schema rejects those words.
 
 `type` decides what a click does:
 
-- `article`: opens the article. `id` must match the `.mdx` file name.
+- `article`: opens the article. `id` must match the `.mdx` path under `articles/`, without the extension.
 - `external`: opens `externalHref` in a new tab. Needs `externalHref`.
 - `tour`: starts the tour. `id` must match a tour `id`.
 
@@ -118,7 +195,7 @@ Add an object to `resources.json`. The same rules apply to the `description` of 
 
 ## Checks
 
-The content tests validate the files above (valid frontmatter, every article `id` has an MDX file, one Getting Started tour, unique tour ids):
+The content tests validate the files above (valid frontmatter, every article `id` has an MDX file, one Getting Started tour, unique tour ids, resolvable article links and anchors, unique heading ids):
 
 ```
 cd client && npx jest src/components/Learn/content

@@ -1,0 +1,226 @@
+/* eslint-disable i18next/no-literal-string */
+import React from 'react';
+import '@testing-library/jest-dom';
+import copy from 'copy-to-clipboard';
+import { MemoryRouter } from 'react-router-dom';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { mdxComponents } from '../Academy/articles/mdx';
+
+const { TryThis, Callout, Compare, Before, After, CardGrid, Card, Steps, Terms, Term } =
+  mdxComponents as Record<string, React.ElementType>;
+const {
+  FeedbackLink,
+  SharingNote,
+  a: Anchor,
+  h2: H2,
+  h3: H3,
+} = mdxComponents as Record<string, React.ElementType>;
+
+let mockFeedbackUrl: string | undefined;
+
+jest.mock('copy-to-clipboard', () => jest.fn());
+
+jest.mock('~/hooks', () => ({
+  useLocalize: () => (key: string) => key,
+}));
+
+jest.mock('~/hooks/Learning', () => ({
+  useLearningCenterConfig: () => ({ feedbackUrl: mockFeedbackUrl }),
+}));
+
+const renderInRouter = (ui: React.ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>);
+
+describe('TryThis', () => {
+  it('shows the action and the prompt in quotation marks', () => {
+    renderInRouter(<TryThis action="Rewrite a recent prompt" prompt="Summarise this report" />);
+
+    expect(screen.getByText('com_learning_try_this')).toBeInTheDocument();
+    expect(screen.getByText(/Rewrite a recent prompt/)).toBeInTheDocument();
+    expect(screen.getByText('“Summarise this report”')).toBeInTheDocument();
+  });
+
+  it('uses the closing label when closing', () => {
+    renderInRouter(<TryThis closing action="Apply it" prompt="Do the thing" />);
+
+    expect(screen.getByText('com_learning_try_this_now')).toBeInTheDocument();
+  });
+
+  it('copies the prompt text without the quotation marks and confirms it', () => {
+    renderInRouter(<TryThis action="Copy it" prompt="Goal: Summarise the risks" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'com_learning_copy_prompt' }));
+
+    expect(copy).toHaveBeenCalledWith('Goal: Summarise the risks');
+    expect(screen.getByRole('status')).toHaveTextContent('com_learning_copied');
+  });
+});
+
+describe('Callout', () => {
+  it.each([
+    ['analogy', 'com_learning_callout_analogy'],
+    ['note', 'com_learning_callout_note'],
+    ['warning', 'com_learning_callout_warning'],
+  ])('labels a %s callout', (type, label) => {
+    renderInRouter(<Callout type={type}>Body text</Callout>);
+
+    expect(screen.getByRole('note')).toHaveTextContent(label);
+    expect(screen.getByText('Body text')).toBeInTheDocument();
+  });
+
+  it('defaults to a note', () => {
+    renderInRouter(<Callout>Body text</Callout>);
+
+    expect(screen.getByRole('note')).toHaveTextContent('com_learning_callout_note');
+  });
+});
+
+describe('Compare', () => {
+  it('labels the before and after panels', () => {
+    renderInRouter(
+      <Compare>
+        <Before>Summarise this report</Before>
+        <After>Goal, context, source, expectations</After>
+      </Compare>,
+    );
+
+    expect(screen.getByText('com_learning_compare_before')).toBeInTheDocument();
+    expect(screen.getByText('com_learning_compare_after')).toBeInTheDocument();
+    expect(screen.getByText('Summarise this report')).toBeInTheDocument();
+  });
+});
+
+describe('Card', () => {
+  it('renders an internal card as a link that can open in a new tab', () => {
+    renderInRouter(
+      <CardGrid>
+        <Card href="/learn/articles/guides/skills" title="Guide to skills">
+          Find, create and share skills
+        </Card>
+      </CardGrid>,
+    );
+
+    const link = screen.getByRole('link', { name: /Guide to skills/ });
+    expect(link).toHaveAttribute('href', '/learn/articles/guides/skills');
+    expect(link).not.toHaveAttribute('target');
+    expect(link).toHaveTextContent('Find, create and share skills');
+  });
+
+  it('opens an external card in a new tab with noopener', () => {
+    renderInRouter(<Card href="https://example.test/page" title="Read the article" />);
+
+    const link = screen.getByRole('link', { name: 'Read the article' });
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+  });
+});
+
+describe('Anchor', () => {
+  it('renders internal links through the router', () => {
+    renderInRouter(<Anchor href="/learn/articles/glossary#skill">Glossary</Anchor>);
+
+    expect(screen.getByRole('link', { name: 'Glossary' })).toHaveAttribute(
+      'href',
+      '/learn/articles/glossary#skill',
+    );
+  });
+
+  it('opens external links in a new tab', () => {
+    renderInRouter(<Anchor href="https://example.test">Example</Anchor>);
+
+    expect(screen.getByRole('link', { name: 'Example' })).toHaveAttribute('target', '_blank');
+  });
+
+  it('leaves in-page hash links alone', () => {
+    renderInRouter(<Anchor href="#section">Jump</Anchor>);
+
+    expect(screen.getByRole('link', { name: 'Jump' })).not.toHaveAttribute('target');
+  });
+});
+
+describe('headings', () => {
+  it('gives plain-text h2 and h3 headings a slug id', () => {
+    renderInRouter(
+      <>
+        <H2>Create a skill</H2>
+        <H3>Plan before you create</H3>
+      </>,
+    );
+
+    expect(screen.getByRole('heading', { level: 2 })).toHaveAttribute('id', 'create-a-skill');
+    expect(screen.getByRole('heading', { level: 3 })).toHaveAttribute(
+      'id',
+      'plan-before-you-create',
+    );
+  });
+
+  it('adds no id when the heading holds more than plain text', () => {
+    renderInRouter(
+      <H2>
+        Use <code>/</code> commands
+      </H2>,
+    );
+
+    expect(screen.getByRole('heading', { level: 2 })).not.toHaveAttribute('id');
+  });
+});
+
+describe('Steps', () => {
+  it('wraps an ordered list', () => {
+    renderInRouter(
+      <Steps>
+        <ol>
+          <li>Open Prompts</li>
+          <li>Select Create</li>
+        </ol>
+      </Steps>,
+    );
+
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+  });
+});
+
+describe('Terms', () => {
+  it('gives each term an anchor and a guide link only when one is provided', () => {
+    renderInRouter(
+      <Terms>
+        <Term name="Connector (MCP)" href="/learn/articles/guides/connectors#what-it-is">
+          A secure link to an approved source.
+        </Term>
+        <Term name="Memory">What MyAssist remembers about you.</Term>
+      </Terms>,
+    );
+
+    expect(document.getElementById('connector-mcp')).toHaveTextContent('Connector (MCP)');
+    expect(document.getElementById('memory')).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'com_learning_read_the_guide' })).toHaveLength(1);
+  });
+});
+
+describe('FeedbackLink', () => {
+  afterEach(() => {
+    mockFeedbackUrl = undefined;
+  });
+
+  it('links to the configured feedback form in a new tab', () => {
+    mockFeedbackUrl = 'https://forms.example.test/feedback';
+    renderInRouter(<FeedbackLink>Share feedback</FeedbackLink>);
+
+    const link = screen.getByRole('link', { name: 'Share feedback' });
+    expect(link).toHaveAttribute('href', 'https://forms.example.test/feedback');
+    expect(link).toHaveAttribute('target', '_blank');
+  });
+
+  it('renders nothing when no feedback url is configured', () => {
+    renderInRouter(<FeedbackLink>Share feedback</FeedbackLink>);
+
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+});
+
+describe('SharingNote', () => {
+  it('renders the shared sharing statement', () => {
+    renderInRouter(<SharingNote />);
+
+    expect(screen.getByText('com_learning_sharing_note')).toBeInTheDocument();
+  });
+});

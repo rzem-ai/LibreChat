@@ -2,27 +2,16 @@ import { Button, GEL } from '@librechat/client';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { JSX } from 'react/jsx-runtime';
-import type { ComponentProps } from 'react';
 import { loadArticle } from '../../content/loader';
-import { slugify } from '../../content/headings';
 import { useLocalize } from '~/hooks';
+import { mdxComponents } from './mdx';
 import Failure from '../Failure';
-
-const mdxComponents = {
-  h2: function SectionHeading({ children, ...props }: ComponentProps<'h2'>): JSX.Element {
-    const id = typeof children === 'string' ? slugify(children) : undefined;
-    return (
-      <h2 id={id} {...props}>
-        {children}
-      </h2>
-    );
-  },
-};
+import { cn } from '~/utils';
 
 export default function Article(): JSX.Element {
   const localize = useLocalize();
   const navigate = useNavigate();
-  const { slug = '' } = useParams<{ slug: string }>();
+  const { '*': slug = '' } = useParams<{ '*': string }>();
   const {
     data: article,
     isLoading,
@@ -73,6 +62,11 @@ export default function Article(): JSX.Element {
       {backButton}
       <div>
         <h1 className="text-3xl font-medium tracking-tight">{article.frontmatter.title}</h1>
+        {article.frontmatter.summary && (
+          <p className="mt-3 max-w-2xl text-lg leading-relaxed text-text-secondary">
+            {article.frontmatter.summary}
+          </p>
+        )}
         <p className="mt-2 text-xs text-text-secondary">
           {localize('com_learning_updated', { 0: article.frontmatter.updated })}
         </p>
@@ -89,11 +83,14 @@ export default function Article(): JSX.Element {
             className="sticky top-6 hidden w-52 shrink-0 flex-col gap-1 lg:flex"
           >
             <p className="text-xs text-text-secondary">{localize('com_learning_on_this_page')}</p>
-            {article.headings.map(({ id, text }) => (
+            {article.headings.map(({ id, text, level }) => (
               <a
                 key={id}
                 href={`#${id}`}
-                className="text-sm text-text-primary underline-offset-4 hover:underline"
+                className={cn(
+                  'text-sm text-text-primary underline-offset-4 hover:underline',
+                  level === 3 && 'pl-3 text-text-secondary',
+                )}
                 onClick={(event) => {
                   event.preventDefault();
                   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });

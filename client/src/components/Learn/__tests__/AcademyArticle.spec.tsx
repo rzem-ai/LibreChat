@@ -8,10 +8,11 @@ import Article from '../Academy/articles/Page';
 
 const mockArticle = {
   id: 'sample',
-  frontmatter: { title: 'Sample article', updated: '2026-01-01' },
+  frontmatter: { title: 'Sample article', updated: '2026-01-01', summary: 'A short lede.' },
   headings: [
-    { id: 'getting-started', text: 'Getting started' },
-    { id: 'advanced-setup', text: 'Advanced setup' },
+    { id: 'getting-started', text: 'Getting started', level: 2 },
+    { id: 'advanced-setup', text: 'Advanced setup', level: 2 },
+    { id: 'tuning', text: 'Tuning', level: 3 },
   ],
   Content: ({ components }: { components?: { h2?: React.ElementType } }) => {
     const Heading = components?.h2 ?? 'h2';
@@ -35,7 +36,7 @@ jest.mock('../content/loader', () => ({
     if (slug === 'broken') {
       return Promise.reject(new Error('chunk failed'));
     }
-    return Promise.resolve(slug === 'sample' ? mockArticle : null);
+    return Promise.resolve(slug === 'sample' || slug === 'guides/sample' ? mockArticle : null);
   },
 }));
 
@@ -64,7 +65,7 @@ describe('Academy article', () => {
       >
         <MemoryRouter initialEntries={[path]}>
           <Routes>
-            <Route path="/learn/articles/:slug" element={<Article />} />
+            <Route path="/learn/articles/*" element={<Article />} />
             <Route path="/learn/resources" element={<p>resources list</p>} />
           </Routes>
         </MemoryRouter>
@@ -84,6 +85,26 @@ describe('Academy article', () => {
       '#advanced-setup',
     );
     expect(document.getElementById('advanced-setup')).toHaveTextContent('Advanced setup');
+  });
+
+  it('renders the summary as a lede under the title', async () => {
+    renderAt('/learn/articles/sample');
+
+    expect(await screen.findByText('A short lede.')).toBeInTheDocument();
+  });
+
+  it('loads an article from a nested path', async () => {
+    renderAt('/learn/articles/guides/sample');
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Sample article' }),
+    ).toBeInTheDocument();
+  });
+
+  it('lists sub-section headings in the on-this-page nav', async () => {
+    renderAt('/learn/articles/sample');
+
+    expect(await screen.findByRole('link', { name: 'Tuning' })).toHaveAttribute('href', '#tuning');
   });
 
   it('scrolls the matching section into view when its link is clicked', async () => {

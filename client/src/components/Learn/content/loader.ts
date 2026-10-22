@@ -26,15 +26,18 @@ const idFromPath = (path: string): string =>
     .pop()
     ?.replace(/\.mdx$/, '') ?? path;
 
-const articleModules = import.meta.glob<MdxModule>('./articles/*.mdx');
-const articleSources = import.meta.glob<string>('./articles/*.mdx', {
+const articleModules = import.meta.glob<MdxModule>('./articles/**/*.mdx');
+const articleSources = import.meta.glob<string>('./articles/**/*.mdx', {
   query: '?raw',
   import: 'default',
 });
 const releaseModules = import.meta.glob<MdxModule>('./releases/*.mdx');
 
-/** Loads one article (compiled body plus raw source for its headings) on demand. */
-/** Resolves `null` for an unknown slug; load or validation failures reject. */
+/**
+ * Loads one article (compiled body plus raw source for its headings) on demand. The slug is the
+ * path under `articles/` without the extension, so nested files use `guides/skills`.
+ * Resolves `null` for an unknown slug; load or validation failures reject.
+ */
 export async function loadArticle(slug: string): Promise<ArticleEntry | null> {
   const path = `./articles/${slug}.mdx`;
   const loadModule = articleModules[path];

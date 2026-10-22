@@ -185,7 +185,7 @@ export const router = createBrowserRouter(
                   element: <Navigate to="tours" replace={true} />,
                 },
                 {
-                  path: 'articles/:slug',
+                  path: 'articles/*',
                   lazy: loadAcademyArticle,
                 },
                 {
