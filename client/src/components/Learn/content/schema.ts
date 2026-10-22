@@ -43,11 +43,14 @@ export const BlurbSchema = z
     'Describe what the resource covers or lets you do, not what users or people do',
   );
 
+export const RESOURCE_SECTIONS = ['start', 'guides', 'further', 'reference', 'external'] as const;
+
 export const ResourceSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: BlurbSchema,
   type: z.enum(['tour', 'article', 'external']),
+  section: z.enum(RESOURCE_SECTIONS),
   tags: z.array(z.string()),
   durationLabel: z.string().optional(),
   updated: z.string().optional(),
@@ -76,6 +79,7 @@ export const ReleaseFrontmatterSchema = z.object({
   date: z.string(),
 });
 
+export type ResourceSection = (typeof RESOURCE_SECTIONS)[number];
 export type Resource = z.infer<typeof ResourceSchema>;
 export type Faq = z.infer<typeof FaqSchema>;
 export type ArticleFrontmatter = z.infer<typeof ArticleFrontmatterSchema>;

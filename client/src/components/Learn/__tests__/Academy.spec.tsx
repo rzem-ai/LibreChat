@@ -56,29 +56,51 @@ jest.mock('../content/loader', () => ({
 describe('Resources', () => {
   afterEach(() => jest.clearAllMocks());
 
-  it('filters by title, description and tags', () => {
-    render(<Resources onOpenArticle={jest.fn()} />);
+  const renderResources = () =>
+    render(
+      <MemoryRouter>
+        <Resources />
+      </MemoryRouter>,
+    );
+
+  it('groups resources under labelled sections in a fixed order', () => {
+    renderResources();
+
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
+    expect(headings).toEqual([
+      'com_learning_section_start',
+      'com_learning_section_guides',
+      'com_learning_section_further',
+      'com_learning_section_reference',
+      'com_learning_section_external',
+    ]);
+  });
+
+  it('does not list the Getting Started tour', () => {
+    renderResources();
+
+    expect(screen.queryByText('Getting Started Tour')).not.toBeInTheDocument();
+  });
+
+  it('filters by title, description and tags and hides empty sections', () => {
+    renderResources();
     const input = screen.getByLabelText('com_learning_search_resources');
 
     fireEvent.change(input, { target: { value: 'agentic' } });
     expect(screen.getByText('What is the Agentic Ecosystem')).toBeInTheDocument();
-    expect(screen.queryByText('Getting Started Tour')).not.toBeInTheDocument();
+    expect(screen.queryByText('Guide to skills')).not.toBeInTheDocument();
+    expect(screen.queryByText('com_learning_section_guides')).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: 'zzz-no-match' } });
     expect(screen.getByText('com_learning_no_resources:zzz-no-match')).toBeInTheDocument();
   });
 
-  it('behaves per resource type on click', () => {
-    const onOpenArticle = jest.fn();
-    render(<Resources onOpenArticle={onOpenArticle} />);
+  it('renders articles as links and externals as new-tab links', () => {
+    renderResources();
 
-    fireEvent.click(
-      screen.getByLabelText('com_learning_action_read:What is the Agentic Ecosystem'),
-    );
-    expect(onOpenArticle).toHaveBeenCalledWith('agentic-ecosystem');
-
-    fireEvent.click(screen.getByLabelText('com_learning_action_start_tour:Getting Started Tour'));
-    expect(mockStartTour).toHaveBeenCalledWith(GETTING_STARTED_COURSE_ID);
+    expect(
+      screen.getByRole('link', { name: 'com_learning_action_read:Guide to skills' }),
+    ).toHaveAttribute('href', '/learn/articles/guides/skills');
 
     const external = screen.getByLabelText(
       'com_learning_action_external:Book in with a MyAssist team member',

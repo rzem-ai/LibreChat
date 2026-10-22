@@ -43,6 +43,7 @@ Write to the [style guide](myassist_academy_style_guide.md). It covers voice, na
      "title": "Guide to skills",
      "description": "Find, trigger, create and share skills for repeatable tasks",
      "type": "article",
+     "section": "guides",
      "tags": ["Skills"],
      "durationLabel": "6 min read",
      "updated": "22 October 2026"
@@ -153,6 +154,8 @@ Add an object to `resources.json`. The same rules apply to the `description` of 
 - No full stop at the end. The schema rejects it.
 - Don't refer to users in third person in the description ("Teach users", "people", "learners"); describe what the resource covers or lets you do. The schema rejects those words.
 
+`section` groups the card on the All resources page: `start`, `guides`, `further`, `reference` or `external`. Sections show in that order, and each card follows file order within its section. It is required.
+
 `type` decides what a click does:
 
 - `article`: opens the article. `id` must match the `.mdx` path under `articles/`, without the extension.
@@ -187,7 +190,7 @@ Add an object to `resources.json`. The same rules apply to the `description` of 
    Write the `description` following the [resource card rules](#resource-card): at most 70 characters, starting with an action verb, with no full stop and no mention of users.
 
 2. Import it in `registry.ts` and add it to the `TOURS` array. Exactly one tour must have `"isGettingStartedTour": true`; it is shown first as the hero card.
-3. Add a matching `"type": "tour"` entry to `resources.json` (its `id` must match the tour `id`) so it also appears under All resources.
+3. Optionally add a `"type": "tour"` entry to `resources.json` (its `id` must match the tour `id`) to list it under All resources. The Getting Started tour is not listed there because it has its own tab.
 
 **Hiding a tour:** remove its import and its entry in the `TOURS` array in `registry.ts`, and remove its `"type": "tour"` entry from `resources.json` (a tour resource whose `id` is not in `TOURS` fails the content tests). Keep the JSON file so the tour can be restored. Only the Getting Started tour is currently registered; `using-connectors` is hidden. `build-a-skill`, `sharing-skills-and-agents` and `saved-prompts-and-prompt-library` were converted to articles, now `guides/skills`, `guides/agents` and `guides/prompts`; their tour JSON is in git history.
 

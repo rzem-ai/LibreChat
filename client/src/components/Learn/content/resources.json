@@ -1,55 +1,53 @@
 [
   {
-    "id": "getting-started-guide",
-    "title": "Getting Started Tour",
-    "description": "Take a tour of chats, projects and the context panel",
-    "type": "tour",
-    "tags": ["Getting started"]
-  },
-  {
     "id": "myassist-introduction",
     "title": "Introduction to MyAssist",
     "description": "Start with the problem, then see how MyAssist helps",
     "type": "article",
-    "tags": ["Getting started", "Introduction"],
     "durationLabel": "2 min read",
-    "updated": "23 October 2026"
+    "updated": "23 October 2026",
+    "section": "start",
+    "tags": ["Getting started", "Introduction"]
   },
   {
     "id": "write-an-effective-prompt",
     "title": "How to write an effective prompt",
     "description": "Write clearer prompts with the GCSE method",
     "type": "article",
-    "tags": ["Getting started", "Prompts"],
     "durationLabel": "3 min read",
-    "updated": "23 October 2026"
+    "updated": "23 October 2026",
+    "section": "start",
+    "tags": ["Getting started", "Prompts"]
   },
   {
     "id": "guides/prompts",
     "title": "Guide to prompts",
     "description": "Save short prompts and add them to any chat",
     "type": "article",
-    "tags": ["Prompts"],
     "durationLabel": "3 min read",
-    "updated": "23 October 2026"
+    "updated": "23 October 2026",
+    "section": "guides",
+    "tags": ["Prompts"]
   },
   {
     "id": "guides/skills",
     "title": "Guide to skills",
     "description": "Find, trigger, create and share skills for repeatable tasks",
     "type": "article",
-    "tags": ["Skills"],
     "durationLabel": "8 min read",
-    "updated": "23 October 2026"
+    "updated": "23 October 2026",
+    "section": "guides",
+    "tags": ["Skills"]
   },
   {
     "id": "guides/agents",
     "title": "Guide to agents",
     "description": "Find, use, create and share agents for multi-step work",
     "type": "article",
-    "tags": ["Agents"],
     "durationLabel": "5 min read",
-    "updated": "23 October 2026"
+    "updated": "23 October 2026",
+    "section": "guides",
+    "tags": ["Agents"]
   },
   {
     "id": "guides/multi-agent",
@@ -65,60 +63,67 @@
     "title": "Guide to connectors",
     "description": "See which approved sources MyAssist can draw on",
     "type": "article",
-    "tags": ["Connectors"],
     "durationLabel": "3 min read",
-    "updated": "23 October 2026"
+    "updated": "23 October 2026",
+    "section": "guides",
+    "tags": ["Connectors"]
   },
   {
     "id": "guides/artifacts",
     "title": "Guide to artifacts",
     "description": "Turn a request into a dashboard, diagram or tool",
     "type": "article",
-    "tags": ["Artifacts"],
     "durationLabel": "3 min read",
-    "updated": "23 October 2026"
+    "updated": "23 October 2026",
+    "section": "guides",
+    "tags": ["Artifacts"]
   },
   {
     "id": "capture-team-knowledge",
     "title": "Make your team’s knowledge reusable",
     "description": "Turn how your team works into shared skills",
     "type": "article",
-    "tags": ["Skills", "Prompts", "Agents", "Teams"],
     "durationLabel": "5 min read",
-    "updated": "23 October 2026"
+    "updated": "23 October 2026",
+    "section": "further",
+    "tags": ["Skills", "Prompts", "Agents", "Teams"]
   },
   {
     "id": "agentic-ecosystem",
     "title": "What is the Agentic Ecosystem",
     "description": "Learn how the Agentic Ecosystem powers enterprise AI agents",
     "type": "article",
-    "tags": ["Getting started"],
     "durationLabel": "2 min read",
-    "updated": "23 October 2026"
+    "updated": "23 October 2026",
+    "section": "further",
+    "tags": ["Getting started"]
   },
   {
     "id": "glossary",
     "title": "Glossary",
     "description": "Look up plain-language definitions of MyAssist terms",
     "type": "article",
-    "tags": ["Glossary", "Getting started"],
     "durationLabel": "4 min read",
-    "updated": "23 October 2026"
+    "updated": "23 October 2026",
+    "section": "reference",
+    "tags": ["Glossary", "Getting started"]
   },
   {
     "id": "lumo-ms-teams",
     "title": "Lumo Agent — MS Teams",
     "description": "Access the Lumo Agent in Microsoft Teams",
     "type": "external",
-    "tags": ["Agents"],
-    "externalHref": "https://teams.microsoft.com/l/app/?source=app-bar-share-entrypoint&titleId=T_58ce1182-293d-2351-2d1d-89d7c421103d"
+    "externalHref": "https://teams.microsoft.com/l/app/?source=app-bar-share-entrypoint&titleId=T_58ce1182-293d-2351-2d1d-89d7c421103d",
+    "section": "external",
+    "tags": ["Agents"]
   },
   {
     "id": "book-myassist-team",
     "title": "Book in with a MyAssist team member",
     "description": "Book a training session with the MyAssist team",
     "type": "external",
-    "tags": ["Getting started"],
-    "externalHref": "https://bookings.cloud.microsoft/book/Deloitte_MyAssistGeniusBar_Bookings@deloitte.onmicrosoft.com/?ismsaljsauthenabled"
+    "externalHref": "https://bookings.cloud.microsoft/book/Deloitte_MyAssistGeniusBar_Bookings@deloitte.onmicrosoft.com/?ismsaljsauthenabled",
+    "section": "external",
+    "tags": ["Getting started"]
   }
 ]

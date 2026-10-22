@@ -79,7 +79,7 @@ export default function Page(): JSX.Element {
           <Tours />
         </GEL.TabsContent>
         <GEL.TabsContent value="resources" className={contentClass}>
-          <Resources onOpenArticle={(slug) => navigate(`/learn/articles/${slug}`)} />
+          <Resources />
         </GEL.TabsContent>
         <GEL.TabsContent value="faq" className={contentClass}>
           <Faq />
