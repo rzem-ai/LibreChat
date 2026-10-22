@@ -186,8 +186,8 @@ interface:
     showConversationTitleInHeader: false # Set to true to show the conversation title in the chat header
     # Deloitte Custom Change: the model tooltip calculates blended cost as
     # (input USD/1M + output USD/1M) / 2. These ascending breakpoints split it into
-    # the five $-$$$$$ tiers: costs below 2 are $, then 2, 5, 8, and 15 start the next tiers.
-    modelPricingTierBreakpoints: [2, 5, 8, 15]
+    # the five $-$$$$$ tiers: costs below 2 are $, then 2, 5, 8, and 12 start the next tiers.
+    modelPricingTierBreakpoints: [2, 5, 8, 12]
     highCostAlertTiers: [5] # Which of the 5 price tiers will show the High Cost alert chip.
     # Deloitte Custom Change: balance display flags (see docs/balance_and_cost_controls.md).
     showBalanceAsCurrency: true # Show the user's balance in USD rather than tokens
@@ -742,7 +742,7 @@ mcpServers:
     title: 'IBISWorld'
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
-    url: '${MCP_GATEWAY_URL}?toolsets=research'
+    url: '${MCP_GATEWAY_URL}?toolsets=ibis'
     # Trust classifications from operator-managed ClearTrack gateways.
     trustedToolClassification: true
     obo:
@@ -754,7 +754,7 @@ mcpServers:
     title: 'AFR News'
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
-    url: '${MCP_GATEWAY_URL}?toolsets=news'
+    url: '${MCP_GATEWAY_URL}?toolsets=afr'
     trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
