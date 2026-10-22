@@ -12,15 +12,35 @@ export const getAgentAvatarUrl = (agent: t.Agent | null | undefined): string | n
     return null;
   }
 
+  let avatarUrl: string | null = null;
   if (typeof agent.avatar === 'string') {
-    return agent.avatar;
+    avatarUrl = agent.avatar;
+  } else if (typeof agent.avatar === 'object' && 'filepath' in agent.avatar) {
+    avatarUrl = agent.avatar.filepath;
   }
 
-  if (agent.avatar && typeof agent.avatar === 'object' && 'filepath' in agent.avatar) {
-    return agent.avatar.filepath;
+  if (!avatarUrl) {
+    return null;
   }
 
-  return null;
+  // Deloitte Custom Change: proxy legacy private Azure agent avatars through the authenticated image route.
+  try {
+    const url = new URL(avatarUrl);
+    if (!url.hostname.endsWith('.blob.core.windows.net')) {
+      return avatarUrl;
+    }
+
+    const [, ...blobPathSegments] = url.pathname.split('/').filter(Boolean);
+    const blobPath = decodeURIComponent(blobPathSegments.join('/'));
+    if (!blobPath.startsWith('images/')) {
+      return avatarUrl;
+    }
+
+    const encodedPath = btoa(blobPath).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return `/api/files/images/avatar?file=${encodedPath}`;
+  } catch {
+    return avatarUrl;
+  }
 };
 
 const LazyAgentAvatar = ({
@@ -97,14 +117,6 @@ export const renderAgentAvatar = (
     md: 'h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10',
     lg: 'h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12',
     xl: 'h-10 w-10',
-  };
-
-  const placeholderSizeClasses = {
-    icon: 'h-5 w-5',
-    sm: 'h-10 w-10 sm:h-12 sm:w-12',
-    md: 'h-12 w-12 sm:h-16 sm:w-16 md:h-20 md:w-20',
-    lg: 'h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24',
-    xl: 'h-20 w-20',
   };
 
   const borderClasses = showBorder ? 'border-1 border-border-medium' : '';

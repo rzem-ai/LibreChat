@@ -1,8 +1,8 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { getAgentAvatarUrl, renderAgentAvatar, getContactDisplayName } from '../agents';
 import type t from 'librechat-data-provider';
+import { getAgentAvatarUrl, renderAgentAvatar, getContactDisplayName } from '../agents';
 
 // Mock the Feather icon from lucide-react
 jest.mock('lucide-react', () => ({
@@ -49,6 +49,39 @@ describe('Agent Utilities', () => {
         avatar: { filepath: '/path/to/object-avatar.png' },
       } as t.Agent;
       expect(getAgentAvatarUrl(agent)).toBe('/path/to/object-avatar.png');
+    });
+
+    // Deloitte Custom Change: keep legacy private Azure avatar URLs on the authenticated route.
+    it('proxies private Azure Blob avatar URLs through the authenticated avatar route', () => {
+      const agent = {
+        id: 'agent-123',
+        name: 'Test Agent',
+        avatar: {
+          filepath:
+            'https://storage.blob.core.windows.net/private-container/images/0123456789abcdef01234567/agent-agent-123-avatar-1730000000000.png',
+        },
+      } as t.Agent;
+      const blobPath = 'images/0123456789abcdef01234567/agent-agent-123-avatar-1730000000000.png';
+      const encodedPath = btoa(blobPath).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+      expect(getAgentAvatarUrl(agent)).toBe(`/api/files/images/avatar?file=${encodedPath}`);
+    });
+
+    // Deloitte Custom Change: preserve CDN URLs and prevent double-proxying.
+    it('leaves non-Azure URLs and already proxied avatars unchanged', () => {
+      const cdnAgent = {
+        id: '1',
+        name: 'CDN Agent',
+        avatar: { filepath: 'https://cdn.example.com/avatar.png' },
+      } as t.Agent;
+      const proxiedAgent = {
+        id: '2',
+        name: 'Proxied Agent',
+        avatar: { filepath: '/api/files/images/avatar?file=YWJj' },
+      } as t.Agent;
+
+      expect(getAgentAvatarUrl(cdnAgent)).toBe('https://cdn.example.com/avatar.png');
+      expect(getAgentAvatarUrl(proxiedAgent)).toBe('/api/files/images/avatar?file=YWJj');
     });
 
     it('should return null for object avatar without filepath', () => {

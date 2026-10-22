@@ -4,6 +4,7 @@ import type { Assistant, Agent } from 'librechat-data-provider';
 import type { TMessageIcon } from '~/common';
 import ConvoIconURL from '~/components/Endpoints/ConvoIconURL';
 import { useGetEndpointsQuery } from '~/data-provider';
+import { getAgentAvatarUrl } from '~/utils/agents';
 import Icon from '~/components/Endpoints/Icon';
 import { isImageURL } from '~/utils/icons';
 import { getIconEndpoint } from '~/utils';
@@ -27,7 +28,11 @@ export function arePropsEqual(prev: MessageIconProps, next: MessageIconProps): b
     [prev.iconData?.modelLabel, next.iconData?.modelLabel],
     [prev.iconData?.isCreatedByUser, next.iconData?.isCreatedByUser],
     [prev.agent?.name, next.agent?.name],
-    [prev.agent?.avatar?.filepath, next.agent?.avatar?.filepath],
+    // Deloitte Custom Change: compare both supported avatar representations without decoding URLs here.
+    [
+      typeof prev.agent?.avatar === 'string' ? prev.agent.avatar : prev.agent?.avatar?.filepath,
+      typeof next.agent?.avatar === 'string' ? next.agent.avatar : next.agent?.avatar?.filepath,
+    ],
     [prev.assistant?.name, next.assistant?.name],
     [prev.assistant?.metadata?.avatar, next.assistant?.metadata?.avatar],
   ];
@@ -44,7 +49,8 @@ const MessageIcon = memo(({ iconData, assistant, agent }: MessageIconProps) => {
   const { data: endpointsConfig } = useGetEndpointsQuery();
 
   const agentName = agent?.name ?? '';
-  const agentAvatar = agent?.avatar?.filepath ?? '';
+  // Deloitte Custom Change: use an authenticated proxy URL for legacy private Azure agent avatars.
+  const agentAvatar = getAgentAvatarUrl(agent) ?? '';
   const assistantName = assistant?.name ?? '';
   const assistantAvatar = assistant?.metadata?.avatar ?? '';
   let avatarURL = '';

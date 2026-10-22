@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
 import { Feather } from 'lucide-react';
 import { ProviderId } from 'librechat-data-provider';
-import { Sparkles, AssistantIcon, ProviderIcon } from '@librechat/client';
+import { Sparkles, AssistantIcon, ProviderIcon, useAuthenticatedImageSrc } from '@librechat/client';
 import type * as t from 'librechat-data-provider';
+import { getAgentAvatarUrl, cn, getEntity, getIconEndpoint } from '~/utils';
 import ConvoIconURL from '~/components/Endpoints/ConvoIconURL';
-import { cn, getEntity, getIconEndpoint } from '~/utils';
 import { useProviderIcon } from '~/hooks/Endpoint';
 import { isImageURL } from '~/utils/icons';
 
@@ -25,9 +25,20 @@ function AgentAvatar({
   className: string;
   size?: number;
 }) {
+  // Deloitte Custom Change: fetch private Azure agent avatars through the authenticated image hook.
+  const { src, isLoading, isError } = useAuthenticatedImageSrc(avatar);
+
   if (agentName && avatar) {
+    if (isLoading) {
+      return <div className={className} aria-hidden="true" />;
+    }
+
+    if (isError) {
+      return <Feather className={cn(agentName === '' ? 'icon-2xl' : '', className)} size={size} />;
+    }
+
     return (
-      <img src={avatar} className={entityAvatarClassName} alt={agentName} width="80" height="80" />
+      <img src={src} className={entityAvatarClassName} alt={agentName} width="80" height="80" />
     );
   }
 
@@ -102,8 +113,9 @@ export default function ConvoIcon({
   );
 
   const name = entity?.name ?? '';
+  // Deloitte Custom Change: normalize legacy direct Azure links before rendering the agent avatar.
   const avatar = isAgent
-    ? (entity as t.Agent | undefined)?.avatar?.filepath
+    ? (getAgentAvatarUrl(entity as t.Agent | undefined) ?? undefined)
     : ((entity as t.Assistant | undefined)?.metadata?.avatar as string);
 
   const { provider, imageURL } = useProviderIcon({ endpoint, endpointsConfig, iconURL });
