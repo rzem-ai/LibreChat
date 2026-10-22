@@ -747,8 +747,15 @@ describe('canToolResourceConsume', () => {
     ).toBe(true);
   });
 
-  it('still accepts spreadsheet formats for file search, which the retrieval set omits', () => {
-    expect(canToolResourceConsume('file_search', 'application/vnd.ms-excel')).toBe(true);
+  it('rejects spreadsheet formats for file search (Deloitte Custom Change: tabular data fits code interpreter better)', () => {
+    expect(canToolResourceConsume('file_search', 'application/vnd.ms-excel')).toBe(false);
+    expect(
+      canToolResourceConsume(
+        'file_search',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ),
+    ).toBe(false);
+    expect(canToolResourceConsume('execute_code', 'application/vnd.ms-excel')).toBe(true);
   });
 
   it('rejects csv for file search (Deloitte Custom Change: code interpreter fits tabular data better)', () => {
@@ -768,6 +775,16 @@ describe('canToolResourceConsume', () => {
      * aliases the way isCsvMimeType does — a pre-existing, broader gap affecting every mime
      * type, not just csv. Covering only what this helper controls. */
     expect(canToolResourceConsume('execute_code', 'text/csv')).toBe(true);
+  });
+
+  it('rejects every excel mime variant for file search, case-insensitively and with params', () => {
+    expect(canToolResourceConsume('file_search', 'APPLICATION/VND.MS-EXCEL')).toBe(false);
+    expect(canToolResourceConsume('file_search', 'application/vnd.ms-excel; charset=binary')).toBe(
+      false,
+    );
+    expect(canToolResourceConsume('file_search', 'application/msexcel')).toBe(false);
+    expect(canToolResourceConsume('file_search', 'application/x-xls')).toBe(false);
+    expect(canToolResourceConsume('execute_code', 'application/msexcel')).toBe(true);
   });
 
   it('judges each tool by the list the client offers it from', () => {
