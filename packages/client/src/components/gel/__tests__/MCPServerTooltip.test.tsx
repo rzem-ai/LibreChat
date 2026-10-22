@@ -52,6 +52,30 @@ describe('MCPServerTooltipCard', () => {
     expect(screen.queryByText('Limited access')).not.toBeInTheDocument();
     expect(screen.queryByText('Use cases')).not.toBeInTheDocument();
   });
+
+  it('omits only the sections whose lists are empty', () => {
+    render(
+      <MCPServerTooltipCard
+        {...content}
+        details={{ useCases: ['Find files'], access: [], limitations: [] }}
+      />,
+    );
+
+    expect(screen.getByText('Use cases')).toBeInTheDocument();
+    expect(screen.queryByText('Access')).not.toBeInTheDocument();
+    expect(screen.queryByText('Limitation')).not.toBeInTheDocument();
+  });
+
+  it('shows only the title block when every section is empty', () => {
+    render(
+      <MCPServerTooltipCard {...content} details={{ useCases: [], access: [], limitations: [] }} />,
+    );
+
+    expect(screen.getByText('SharePoint')).toBeInTheDocument();
+    expect(screen.queryByText('Use cases')).not.toBeInTheDocument();
+    expect(screen.queryByText('Access')).not.toBeInTheDocument();
+    expect(screen.queryByText('Limitation')).not.toBeInTheDocument();
+  });
 });
 
 describe('MCPServerHoverTarget', () => {

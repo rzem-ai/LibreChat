@@ -754,7 +754,7 @@ mcpServers:
     title: 'AFR News'
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
-    url: '${MCP_GATEWAY_URL}?toolsets=news'
+    url: '${MCP_GATEWAY_URL}?toolsets=research'
     trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'
