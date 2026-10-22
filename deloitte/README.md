@@ -604,6 +604,10 @@ For LOCAL development, we need to add each user's hostname to the Redirect URIs 
 - UAT: Linked to the MyAssist UAT user Group (AU_App_MyGenAI_Stg, request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb))
 - PRD: Linked to the MyAssist UAT user Group (AU_App_MyGenAI_Stg, request access [here](https://deloitteapac.service-now.com/mysupport?id=sc_cat_item&sys_id=a3c4ad4e332c9e146a61cad24d5c7bcb))
 
+# 🔗 MCP Access
+
+The SharePoint MCP is restricted in all environments to this Azure Entra group: [AU_MA_MCP_SHAREPOINT_USERS](https://portal.azure.com/?ocid=AIDcmmpi82d2sl_SEM__k_CjwKCAjwxeHWBhBPEiwAiqtQ-Vj1ZoC2y5NW7jluDLaotXWgX7TXwOzxklNMQ7s0ZQ-SPn5OEQv0KRoC7XYQAvD_BwE_k_#view/Microsoft_AAD_IAM/GroupDetailsMenuBlade/~/Members/groupId/00c0efc7-e8a7-448c-9480-834cbf1ebd60/menuId/). Jack Walkinshaw and Alex Rabbetts can add members to the group.
+
 # 🔐 Security
 
 Security reviews are performed by **PrismaScan** and **Checkmarx**. You'll see high level results within the PR comments.
