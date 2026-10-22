@@ -368,7 +368,7 @@ endpoints:
       activityLabel: true
       activityModel: 'gpt-6-luna'
       modelDisplayLabel: 'OpenAI'
-      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
+      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty', 'temperature', 'top_p']
       addParams:
         useResponsesApi: true
       headers:
