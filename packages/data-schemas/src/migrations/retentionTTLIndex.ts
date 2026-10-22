@@ -77,6 +77,8 @@ export async function dropRetentionTTLIndexes(
     }
 
     if (dryRun) {
+      result.dropped.push(`${collectionName}.${TTL_INDEX_NAME}`);
+      result.created.push(`${collectionName}.${replacement.name}`);
       logger.info(`[RetentionTTLMigration] Would drop: ${collectionName}.${TTL_INDEX_NAME}`);
       logger.info(
         `[RetentionTTLMigration] Would create: ${collectionName}.${replacement.name} ${JSON.stringify(replacement.keys)}`,

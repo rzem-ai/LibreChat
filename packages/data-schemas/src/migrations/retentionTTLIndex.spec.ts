@@ -115,16 +115,17 @@ describe('dropRetentionTTLIndexes', () => {
         .createIndex({ expiredAt: 1 }, { name: 'expiredAt_1', expireAfterSeconds: 0 });
     });
 
-    it('plans the drop without changing any index', async () => {
+    it('reports the planned drop/create without changing any index', async () => {
       const result = await dropRetentionTTLIndexes(mongoose.connection, { dryRun: true });
 
       expect(result.errors).toHaveLength(0);
-      expect(result.dropped).toHaveLength(0);
-      expect(result.created).toHaveLength(0);
+      expect(result.dropped).toEqual(['conversations.expiredAt_1']);
+      expect(result.created).toEqual(['conversations.expiredAt_1_purgeNotBefore_1']);
 
       const indexes = await mongoose.connection.db!.collection('conversations').indexes();
       const ttlIndex = indexes.find((idx) => idx.name === 'expiredAt_1');
       expect(ttlIndex?.expireAfterSeconds).toBe(0);
+      expect(indexes.find((idx) => idx.name === 'expiredAt_1_purgeNotBefore_1')).toBeUndefined();
     });
   });
 });
