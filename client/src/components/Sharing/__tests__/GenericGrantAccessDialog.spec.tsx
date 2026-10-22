@@ -43,7 +43,13 @@ const baseState = (overrides: Record<string, unknown> = {}) => ({
 
 jest.mock('~/hooks', () => ({
   useAuthContext: () => mockUseAuthContext(),
-  useLocalize: () => (key: string) => key,
+  // Deloitte Custom Change: echoes the interpolated principal list for the heading/placeholder keys.
+  useLocalize: () => (key: string, args?: Record<string, string>) =>
+    key.endsWith('principals_permissions') || key.endsWith('principals_placeholder')
+      ? `${key}:${args?.[0]}`
+      : key,
+  // Deloitte Custom Change: stubbed so the dialog test asserts wiring, not label building.
+  usePrincipalLabel: (conjunction: string, form: string) => `${conjunction}-${form}`,
   useResourcePermissionState: () => mockUseResourcePermissionState(),
   usePeoplePickerPermissions: () => mockUsePeoplePickerPermissions(),
   useCanSharePublic: () => mockUseCanSharePublic(),
@@ -57,7 +63,10 @@ jest.mock('@librechat/client', () => ({
 
 jest.mock('../PeoplePicker/UnifiedPeopleSearch', () => ({
   __esModule: true,
-  default: () => <div data-testid="unified-people-search" />,
+  // Deloitte Custom Change: renders the placeholder so the dialog's copy can be asserted.
+  default: ({ placeholder }: { placeholder?: string }) => (
+    <div data-testid="unified-people-search">{placeholder}</div>
+  ),
 }));
 jest.mock('../PeoplePickerAdminSettings', () => ({
   __esModule: true,
@@ -181,11 +190,16 @@ describe('GenericGrantAccessDialog - permissions load failure', () => {
     const dialog = screen.getByRole('dialog');
 
     expect(dialog).toHaveClass('max-w-5xl', 'overflow-hidden', 'p-0');
+    // Deloitte Custom Change: heading lists enabled principal types.
     expect(
-      screen.getByRole('heading', { level: 3, name: 'com_ui_user_group_permissions' }),
+      screen.getByRole('heading', { level: 3, name: 'com_ui_principals_permissions:and-singular' }),
     ).toBeInTheDocument();
     expect(screen.getByText('com_ui_share_access_description')).toHaveClass('sr-only');
     expect(screen.getByTestId('unified-people-search').closest('section')).toHaveClass('w-full');
+    // Deloitte Custom Change: placeholder lists enabled principal types.
+    expect(screen.getByTestId('unified-people-search')).toHaveTextContent(
+      'com_ui_search_principals_placeholder:or-plural',
+    );
     // Deloitte Custom Change: verify the firm-wide capability publication prompt and form link.
     expect(screen.getByText('com_ui_share_publish_capability_prompt')).toBeInTheDocument();
     expect(
@@ -242,8 +256,9 @@ describe('GenericGrantAccessDialog - permissions load failure', () => {
     fireEvent.click(screen.getByRole('button', { name: 'com_ui_share_var' }));
 
     expect(screen.getByTestId('unified-people-search')).toBeInTheDocument();
+    // Deloitte Custom Change: heading lists enabled principal types.
     expect(
-      screen.getByRole('heading', { level: 3, name: 'com_ui_user_group_permissions' }),
+      screen.getByRole('heading', { level: 3, name: 'com_ui_principals_permissions:and-singular' }),
     ).toBeInTheDocument();
     expect(screen.queryByTestId('public-toggle')).not.toBeInTheDocument();
   });
