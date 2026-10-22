@@ -164,7 +164,7 @@ interface:
     # Deloitte Custom Change: choose which tools the dropdown lists and whether users can pin them
     toolsDropdown:
       # Rows listed in the tools dropdown. Any of: file_search, web_search, skills, memory, execute_code, artifacts, mcp (omit to list all)
-      items: [ 'skills', 'execute_code', 'artifacts' ]
+      items: ['skills', 'execute_code', 'artifacts']
       showPinButtons: false # false: pinning follows defaultPinnedTools and rows show an on/off checkbox instead
     # Deloitte Custom Change: tools that start switched on
     defaultEnabledTools:
@@ -187,8 +187,8 @@ interface:
     # Deloitte Custom Change: the model tooltip calculates blended cost as
     # (input USD/1M + output USD/1M) / 2. These ascending breakpoints split it into
     # the five $-$$$$$ tiers: costs below 2 are $, then 2, 5, 8, and 15 start the next tiers.
-    modelPricingTierBreakpoints: [ 2, 5, 8, 15 ]
-    highCostAlertTiers: [ 5 ] # Which of the 5 price tiers will show the High Cost alert chip.
+    modelPricingTierBreakpoints: [2, 5, 8, 15]
+    highCostAlertTiers: [5] # Which of the 5 price tiers will show the High Cost alert chip.
     # Deloitte Custom Change: balance display flags (see docs/balance_and_cost_controls.md).
     showBalanceAsCurrency: true # Show the user's balance in USD rather than tokens
     showBalanceGauge: true # Show a balance gauge above the account avatar (hover for details)
@@ -250,7 +250,7 @@ endpoints:
         'file_search',
         'memory',
         'skills',
-        'tools'
+        'tools',
       ]
     minRelevanceScore: 0.6
     # Restrict Agent Builder to the providers supported by the curated model catalog.
@@ -341,7 +341,7 @@ endpoints:
       titleConvo: true
       titleModel: 'gpt-4o-mini'
       modelDisplayLabel: 'Azure Australia'
-      dropParams: [ 'stop', 'user', 'frequency_penalty', 'presence_penalty' ]
+      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       headers:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
@@ -368,7 +368,7 @@ endpoints:
       activityLabel: true
       activityModel: 'gpt-6-luna'
       modelDisplayLabel: 'OpenAI'
-      dropParams: [ 'stop', 'user', 'frequency_penalty', 'presence_penalty' ]
+      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
       addParams:
         useResponsesApi: true
       headers:
