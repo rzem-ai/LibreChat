@@ -269,4 +269,40 @@ spec:
             - port: "53"
               protocol: TCP
 ---
+# =====================================================================
+# 5. Migration Jobs — Egress
+# =====================================================================
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ include "helm.fullname" . }}-migration-jobs-egress
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+    migration-job: "true"
+spec:
+  endpointSelector:
+    matchLabels:
+      migration-job: "true"
+  egress:
+    # ── DNS ────────────────────────────────────────────────────────
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s:k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+
+    # ── MongoDB ───────────
+    - toFQDNs:
+        - matchPattern: "mongodb.net"
+        - matchPattern: "*.mongodb.net"
+      toPorts:
+        - ports:
+            - port: "27017"
+              protocol: TCP
+---
 {{- end }}
