@@ -1,5 +1,28 @@
 imageRegistry: 'dttaitsdev.azurecr.io'
 branch: 'develop'
+
+# Deploy retention migration Jobs for operator visibility, but do not create
+# Pods until the selected Job is deliberately resumed.
+migrationJobs:
+  drop-retention-ttl:
+    enabled: true
+    suspend: false
+  conversation-retention:
+    enabled: true
+    suspend: true
+  file-retention:
+    enabled: true
+    suspend: true
+  agent-retention:
+    enabled: true
+    suspend: true
+  skill-retention:
+    enabled: true
+    suspend: true
+  memory-retention:
+    enabled: true
+    suspend: true
+
 llmGateway:
   namespace: 'llm-gateway-ctnp'
 
