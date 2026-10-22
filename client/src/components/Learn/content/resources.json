@@ -52,6 +52,15 @@
     "updated": "23 October 2026"
   },
   {
+    "id": "guides/multi-agent",
+    "title": "Guide to multi-agent workflows",
+    "description": "Split big workflows across specialist agents",
+    "type": "article",
+    "tags": ["Agents"],
+    "durationLabel": "5 min read",
+    "updated": "23 October 2026"
+  },
+  {
     "id": "guides/connectors",
     "title": "Guide to connectors",
     "description": "See which approved sources MyAssist can draw on",

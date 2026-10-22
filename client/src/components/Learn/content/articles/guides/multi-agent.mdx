@@ -3,18 +3,15 @@ title: Guide to multi-agent workflows
 updated: 23 October 2026
 durationLabel: 5 min read
 type: guide
-summary: "Some workflows are too big for one agent to do well. Multi-agent workflows split the work across specialist agents. This page covers the options, when to use them and how to choose."
+summary: "Some workflows are too big for one agent to do well. Multi-agent workflows split the work across specialist agents. This page covers handoffs and subagents, and how to choose between them and a single agent."
 ---
-
-[TO BE CONFIRMED: draft only. Subagents and chain are off in the base configuration. Confirm they are on in each environment before listing or linking this page.]
 
 ## What it is
 
-A multi-agent workflow divides work between agents instead of asking one agent to do everything. In Agent Builder, **Advanced** has a **Multi-agent orchestration** section with three options:
+A multi-agent workflow divides work between agents instead of asking one agent to do everything. In Agent Builder, **Advanced** has a **Multi-agent orchestration** section with these options:
 
 - **Handoffs**: transfer the conversation to a specialist agent
 - **Subagents**: spin up helper agents to handle subtasks
-- **Chain**: run a fixed sequence of agents, one after another
 
 ## Why it matters
 
@@ -24,11 +21,9 @@ One agent with many skills works for straightforward, linear tasks. As a workflo
 
 A handoff transfers the conversation from one agent to a specialist agent when a task needs different expertise. Each handoff includes a description of when to transfer and the content to pass on.
 
-To set one up, open **Advanced** in Agent Builder, then add a handoff agent and describe when to use it.
+To set one up, open **Advanced** in Agent Builder, select **Add handoff agent** and describe when to use it.
 
 ## Subagents
-
-[TO BE CONFIRMED: only if enabled in this environment]
 
 A subagent is a smaller, specialist agent that the main agent calls on to complete one part of the work. The main agent receives your request, decides how to handle it and passes subtasks to subagents. Subagents run in their own focused context, and only a summary comes back to the main agent. You only talk to the main agent.
 
@@ -38,13 +33,7 @@ Take the request â€œSummarise this contract and flag any unusual payment termsâ€
 2. It passes that output to a risk analysis subagent, which identifies unusual payment terms.
 3. The main agent combines both outputs and returns a summary to you.
 
-An agent can also delegate focused subtasks to a fresh copy of itself, using the **Allow self-spawn** option.
-
-## Chain
-
-[TO BE CONFIRMED: only if enabled in this environment]
-
-A chain runs agents in a fixed order. Each agent can see the outputs of the agents before it. Use a chain when the steps are always the same and always in the same order.
+An agent can also delegate focused subtasks to a fresh copy of itself, using the **Allow self-spawn** option. **Enable subagents** in **Advanced** turns the feature on for an agent.
 
 ## One agent or several
 
