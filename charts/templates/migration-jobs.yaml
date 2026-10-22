@@ -54,9 +54,11 @@ spec:
           args:
             - "npm run {{ $job.npmScript }}{{ if $job.dryRun }}:dry-run{{ end }}"
           env:
-            {{- with .Values.pods.librechat.containers.librechat.env.MONGO_DB }}
-            - name: MONGO_DB
-              value: {{ . | quote }}
+            {{- range $envName, $envValue := .Values.pods.librechat.containers.librechat.env }}
+            {{- if or (hasPrefix "MONGO_" $envName) (eq $envName "NODE_TLS_REJECT_UNAUTHORIZED") }}
+            - name: {{ $envName | quote }}
+              value: {{ $envValue | quote }}
+            {{- end }}
             {{- end }}
           envFrom:
             - secretRef:
