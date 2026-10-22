@@ -32,6 +32,7 @@ spec:
       labels:
         {{- include "helm.selectorLabels" . | nindent 8 }}
         component: migrate-{{ $name }}
+        migration-job: "true"
     spec:
       restartPolicy: OnFailure
       serviceAccountName: {{ .Values.serviceAccount.name }}
