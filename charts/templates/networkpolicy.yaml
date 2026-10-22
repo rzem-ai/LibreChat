@@ -304,5 +304,16 @@ spec:
         - ports:
             - port: "27017"
               protocol: TCP
+
+    # ── Azure AD / Entra ID (for workload identity OIDC) ────────────
+    - toFQDNs:
+        - matchPattern: "login.microsoftonline.com"
+        - matchPattern: "*.login.microsoftonline.com"
+        - matchPattern: "sts.windows.net"
+        - matchPattern: "*.sts.windows.net"
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
 ---
 {{- end }}

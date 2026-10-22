@@ -33,6 +33,8 @@ spec:
     metadata:
       labels:
         {{- include "helm.selectorLabels" . | nindent 8 }}
+        azure.workload.identity/use: "true"
+        app: workload
         component: migrate-{{ $name }}
         migration-job: "true"
     spec:
