@@ -56,7 +56,8 @@
     "type": "article",
     "tags": ["Agents"],
     "durationLabel": "5 min read",
-    "updated": "23 October 2026"
+    "updated": "23 October 2026",
+    "section": "guides"
   },
   {
     "id": "guides/connectors",
