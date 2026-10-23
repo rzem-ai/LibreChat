@@ -155,6 +155,18 @@ describe('Releases', () => {
 });
 
 describe('Faq', () => {
+  it('splits a long answer into paragraphs without changing its words', () => {
+    render(
+      <MemoryRouter>
+        <Faq />
+      </MemoryRouter>,
+    );
+
+    const item = screen.getByText(/Can I use client data/).closest('li') as HTMLElement;
+    expect(item.querySelectorAll('p').length).toBe(4);
+    expect(item).toHaveTextContent(/Don't use GPS or Defence data\./);
+  });
+
   it('lists the questions in alphabetical order', () => {
     render(
       <MemoryRouter>
