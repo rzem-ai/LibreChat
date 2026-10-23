@@ -13,7 +13,7 @@
   },
   {
     "question": "Which model should I use?",
-    "answer": "As of October 2026, we suggest GPT 6 Luna for most use cases, for its balance of speed, intelligence and cost. To learn more, the model picker in MyAssist shows details on each model and its tradeoffs to help you choose."
+    "answer": "As of October 2026, we suggest GPT 6 Luna for most use cases, for its balance of speed, intelligence and cost. To learn more, select a model in the model picker to see its features and how it compares to others."
   },
   {
     "question": "Can I use client data in MyAssist?",
