@@ -46,19 +46,14 @@ export function TryThis({
         {/[.:!?]$/.test(action) ? action : `${action}:`}
       </p>
       <div className="relative mt-3 rounded-lg border border-border-light bg-surface-primary">
-        <div
-          className={cn(
-            'whitespace-pre-wrap p-4 font-mono text-sm text-text-primary',
-            chat ? 'pr-36' : 'pr-12',
-          )}
-        >
+        <div className={cn('whitespace-pre-wrap p-4 pb-14 font-mono text-sm text-text-primary')}>
           {prompt}
         </div>
         {chat ? (
           <ArticleLink
             bare
             href={`/c/new?prompt=${encodeURIComponent(prompt)}`}
-            className="absolute right-2 top-2 inline-flex items-center gap-2 rounded-md border border-border-light bg-surface-primary px-2.5 py-1.5 text-sm font-medium !text-text-primary !no-underline transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-heavy"
+            className="absolute bottom-2 right-2 inline-flex items-center gap-2 rounded-md border border-border-light bg-surface-primary px-2.5 py-1.5 text-sm font-medium !text-text-primary !no-underline transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-heavy"
           >
             <MessageSquare className="size-4" aria-hidden="true" />
             {localize('com_learning_try_in_chat')}
@@ -68,7 +63,7 @@ export function TryThis({
             type="button"
             onClick={onCopy}
             aria-label={localize('com_learning_copy_prompt')}
-            className="absolute right-2 top-2 rounded-md p-1.5 text-text-secondary hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-heavy"
+            className="absolute bottom-2 right-2 rounded-md p-1.5 text-text-secondary hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-heavy"
           >
             {copied ? (
               <Check className="size-4" aria-hidden="true" />
