@@ -7,6 +7,7 @@ import { useLocalize } from '~/hooks';
 interface TryThisProps {
   action: string;
   prompt: string;
+  /** Set when a "Try this now" heading already sits above the cue, so the label isn't repeated. */
   closing?: boolean;
 }
 
@@ -30,22 +31,20 @@ export function TryThis({ action, prompt, closing = false }: TryThisProps): JSX.
   };
 
   return (
-    <aside className="mt-6 rounded-xl border border-border-heavy bg-surface-secondary p-4">
-      <div className="text-sm">
-        <span className="font-medium">
-          {localize(closing ? 'com_learning_try_this_now' : 'com_learning_try_this')}
-        </span>{' '}
+    <div className="mt-4">
+      <p className="!mt-0">
+        {!closing && <span className="font-medium">{localize('com_learning_try_this')} </span>}
         {action}
-      </div>
-      <div className="mt-3 flex items-start gap-3 rounded-lg bg-surface-primary p-3">
-        <span className="flex-1 whitespace-pre-line text-sm italic text-text-primary">
-          {`“${prompt}”`}
-        </span>
+      </p>
+      <div className="relative mt-3 rounded-lg bg-surface-tertiary">
+        <div className="whitespace-pre-wrap p-4 pr-12 font-mono text-sm text-text-primary">
+          {prompt}
+        </div>
         <button
           type="button"
           onClick={onCopy}
           aria-label={localize('com_learning_copy_prompt')}
-          className="shrink-0 rounded-md p-1.5 text-text-secondary hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-heavy"
+          className="absolute right-2 top-2 rounded-md p-1.5 text-text-secondary hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-heavy"
         >
           {copied ? (
             <Check className="size-4" aria-hidden="true" />
@@ -57,6 +56,6 @@ export function TryThis({ action, prompt, closing = false }: TryThisProps): JSX.
       <span className="sr-only" role="status">
         {copied ? localize('com_learning_copied') : ''}
       </span>
-    </aside>
+    </div>
   );
 }

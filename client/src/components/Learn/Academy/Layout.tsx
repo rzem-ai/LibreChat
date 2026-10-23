@@ -13,7 +13,7 @@ export default function Layout(): JSX.Element {
           <OpenSidebar className="size-9 shrink-0 bg-surface-secondary" />
         </GEL.Header>
       )}
-      <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 pb-10 pt-8 sm:px-10 md:pt-14">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 pb-10 pt-8 sm:px-10 md:pt-14">
         <Outlet />
       </div>
     </main>

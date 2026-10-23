@@ -80,7 +80,7 @@ Headings:
 
 ## Page types and frame
 
-Declare the type in frontmatter: `concept`, `how-to`, `guide` or `reference`. Add a `summary`: the one-paragraph TL;DR rendered under the title. It leads with the reader's situation, then says what the page covers.
+Declare the type in frontmatter: `concept`, `how-to`, `guide` or `reference`. Add a `summary`: one plain sentence, shown as the first paragraph of the body under the date. State the substance. Don't describe the page ("This page covers…").
 
 **Guide** (one per capability), in this order:
 
@@ -132,7 +132,7 @@ Used in the glossary and in "What it is" sections.
 - Write relationships as formulas where they hold, read as "built from": `agent = model + instructions + skills + connectors + files`. An agent uses a model. It isn't one.
 - Don't call an agent's work a "job". Say work, task, workflow or process.
 - Close with an example that shows a difference, not a restatement: "Two agents can use the same model and still behave differently, because their skills and connectors differ."
-- No analogy inside a definition. Analogies go in a `<Callout type="analogy">`, once per page.
+- No analogy inside a definition. Analogies go in an `<Analogy>`, once per page.
 - Define a term once, in the glossary. The glossary links to guides. Guides don't link back into the glossary.
 
 ## Card blurbs
@@ -152,7 +152,7 @@ Say it the same way everywhere. Use `<SharingNote />`, which renders:
 
 ## Formatting and punctuation
 
-- **Bold** is for a UI element or a critical fact. Never for emphasis. If a sentence needs bold to land, rewrite it.
+- Bold is rare. Use it only for the control a reader clicks in a numbered step, such as Select **Save Changes**. Don't bold list labels, tab names, option names or terms. If a sentence needs bold to land, rewrite it. Bold renders at medium weight.
 - `Code` for paths, file names, identifiers and short snippets. If it would look wrong without a monospace font, use it.
 - Never use em dashes or hyphens as punctuation. Use a colon, comma or full stop, or rephrase.
 - Curly quotes, `…` rather than three dots, and a non-breaking space in `10 MB`.
@@ -170,7 +170,7 @@ All are available in any article without an import. See [how to add content](mya
 | Component | Use it for |
 |---|---|
 | `<TryThis>` | The try-this cue |
-| `<Callout type="analogy" \| "note" \| "warning">` | One analogy, a caution, a warning |
+| `<Analogy>` | The one analogy a page may have |
 | `<Compare>` with `<Before>` and `<After>` | A weaker and stronger version side by side |
 | `<CardGrid>` and `<Card>` | Hand-offs, options, what you can build |
 | `<Steps>` | A numbered procedure |
@@ -189,7 +189,7 @@ All are available in any article without an import. See [how to add content](mya
 ## Checklist
 
 - [ ] Frontmatter has `title`, `updated`, `type` and `summary`
-- [ ] The summary leads with the reader's situation
+- [ ] The summary is one sentence that states the substance
 - [ ] Title follows a pattern, sentence case, eight words or fewer
 - [ ] Every section opens with a one-sentence summary
 - [ ] "MyAssist" only, and generic nouns are lowercase

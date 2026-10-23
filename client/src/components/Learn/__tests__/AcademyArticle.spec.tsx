@@ -107,6 +107,18 @@ describe('Academy article', () => {
     expect(await screen.findByRole('link', { name: 'Tuning' })).toHaveAttribute('href', '#tuning');
   });
 
+  it('marks the first section current, then the clicked one', async () => {
+    renderAt('/learn/articles/sample');
+
+    const first = await screen.findByRole('link', { name: 'Getting started' });
+    expect(first).toHaveAttribute('aria-current', 'location');
+
+    const second = screen.getByRole('link', { name: 'Advanced setup' });
+    fireEvent.click(second);
+    expect(second).toHaveAttribute('aria-current', 'location');
+    expect(first).not.toHaveAttribute('aria-current');
+  });
+
   it('scrolls the matching section into view when its link is clicked', async () => {
     renderAt('/learn/articles/sample');
 

@@ -20,6 +20,7 @@ export function CardGrid({ children }: CardGridProps): JSX.Element {
 export function Card({ href, title, children }: CardProps): JSX.Element {
   return (
     <ArticleLink
+      bare
       href={href}
       className="flex h-full flex-col gap-1 rounded-xl border border-border-light bg-surface-chat p-5 !text-text-primary !no-underline transition-colors hover:border-border-heavy focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-heavy"
     >

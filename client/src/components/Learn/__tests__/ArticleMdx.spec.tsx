@@ -6,7 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { mdxComponents } from '../Academy/articles/mdx';
 
-const { TryThis, Callout, Compare, Before, After, CardGrid, Card, Steps, Terms, Term } =
+const { TryThis, Analogy, Compare, Before, After, CardGrid, Card, Steps, Terms, Term } =
   mdxComponents as Record<string, React.ElementType>;
 const {
   FeedbackLink,
@@ -31,21 +31,22 @@ jest.mock('~/hooks/Learning', () => ({
 const renderInRouter = (ui: React.ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>);
 
 describe('TryThis', () => {
-  it('shows the action and the prompt in quotation marks', () => {
+  it('shows the label, the action and the prompt as plain text', () => {
     renderInRouter(<TryThis action="Rewrite a recent prompt" prompt="Summarise this report" />);
 
     expect(screen.getByText('com_learning_try_this')).toBeInTheDocument();
     expect(screen.getByText(/Rewrite a recent prompt/)).toBeInTheDocument();
-    expect(screen.getByText('“Summarise this report”')).toBeInTheDocument();
+    expect(screen.getByText('Summarise this report')).toBeInTheDocument();
   });
 
-  it('uses the closing label when closing', () => {
+  it('drops the label when a heading above already says it', () => {
     renderInRouter(<TryThis closing action="Apply it" prompt="Do the thing" />);
 
-    expect(screen.getByText('com_learning_try_this_now')).toBeInTheDocument();
+    expect(screen.queryByText('com_learning_try_this')).not.toBeInTheDocument();
+    expect(screen.getByText('Apply it')).toBeInTheDocument();
   });
 
-  it('copies the prompt text without the quotation marks and confirms it', () => {
+  it('copies the prompt text and confirms it', () => {
     renderInRouter(<TryThis action="Copy it" prompt="Goal: Summarise the risks" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'com_learning_copy_prompt' }));
@@ -55,22 +56,12 @@ describe('TryThis', () => {
   });
 });
 
-describe('Callout', () => {
-  it.each([
-    ['analogy', 'com_learning_callout_analogy'],
-    ['note', 'com_learning_callout_note'],
-    ['warning', 'com_learning_callout_warning'],
-  ])('labels a %s callout', (type, label) => {
-    renderInRouter(<Callout type={type}>Body text</Callout>);
+describe('Analogy', () => {
+  it('labels the analogy and renders its body', () => {
+    renderInRouter(<Analogy>Body text</Analogy>);
 
-    expect(screen.getByRole('note')).toHaveTextContent(label);
+    expect(screen.getByText('com_learning_callout_analogy')).toBeInTheDocument();
     expect(screen.getByText('Body text')).toBeInTheDocument();
-  });
-
-  it('defaults to a note', () => {
-    renderInRouter(<Callout>Body text</Callout>);
-
-    expect(screen.getByRole('note')).toHaveTextContent('com_learning_callout_note');
   });
 });
 
@@ -124,10 +115,17 @@ describe('Anchor', () => {
     );
   });
 
-  it('opens external links in a new tab', () => {
-    renderInRouter(<Anchor href="https://example.test">Example</Anchor>);
+  it('opens external links in a new tab with an external icon', () => {
+    const { container } = renderInRouter(<Anchor href="https://example.test">Example</Anchor>);
 
     expect(screen.getByRole('link', { name: 'Example' })).toHaveAttribute('target', '_blank');
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('shows no icon on internal links', () => {
+    const { container } = renderInRouter(<Anchor href="/learn/articles/glossary">Glossary</Anchor>);
+
+    expect(container.querySelector('svg')).not.toBeInTheDocument();
   });
 
   it('leaves in-page hash links alone', () => {
@@ -180,7 +178,7 @@ describe('Steps', () => {
 });
 
 describe('Terms', () => {
-  it('gives each term an anchor and a guide link only when one is provided', () => {
+  it('gives each term an anchor and links the term name only when a guide is provided', () => {
     renderInRouter(
       <Terms>
         <Term name="Connector (MCP)" href="/learn/articles/guides/connectors#what-it-is">
@@ -192,7 +190,8 @@ describe('Terms', () => {
 
     expect(document.getElementById('connector-mcp')).toHaveTextContent('Connector (MCP)');
     expect(document.getElementById('memory')).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: 'com_learning_read_the_guide' })).toHaveLength(1);
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+    expect(screen.getByRole('link', { name: 'Connector (MCP)' })).toBeInTheDocument();
   });
 });
 

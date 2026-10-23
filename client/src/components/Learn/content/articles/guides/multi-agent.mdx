@@ -3,15 +3,15 @@ title: Guide to multi-agent workflows
 updated: 23 October 2026
 durationLabel: 5 min read
 type: guide
-summary: "Some workflows are too big for one agent to do well. Multi-agent workflows split the work across specialist agents. This page covers handoffs and subagents, and how to choose between them and a single agent."
+summary: "Split large workflows across specialist agents instead of asking one agent to do everything."
 ---
 
 ## What it is
 
-A multi-agent workflow divides work between agents instead of asking one agent to do everything. In Agent Builder, **Advanced** has a **Multi-agent orchestration** section with these options:
+A multi-agent workflow divides work between agents instead of asking one agent to do everything. In Agent Builder, Advanced has a Multi-agent orchestration section with these options:
 
-- **Handoffs**: transfer the conversation to a specialist agent
-- **Subagents**: spin up helper agents to handle subtasks
+- Handoffs: transfer the conversation to a specialist agent
+- Subagents: spin up helper agents to handle subtasks
 
 ## Why it matters
 
@@ -21,7 +21,7 @@ One agent with many skills works for straightforward, linear tasks. As a workflo
 
 A handoff transfers the conversation from one agent to a specialist agent when a task needs different expertise. Each handoff includes a description of when to transfer and the content to pass on.
 
-To set one up, open **Advanced** in Agent Builder, select **Add handoff agent** and describe when to use it.
+To set one up, open Advanced in Agent Builder, select Add handoff agent and describe when to use it.
 
 ## Subagents
 
@@ -33,7 +33,7 @@ Take the request â€œSummarise this contract and flag any unusual payment termsâ€
 2. It passes that output to a risk analysis subagent, which identifies unusual payment terms.
 3. The main agent combines both outputs and returns a summary to you.
 
-An agent can also delegate focused subtasks to a fresh copy of itself, using the **Allow self-spawn** option. **Enable subagents** in **Advanced** turns the feature on for an agent.
+An agent can also delegate focused subtasks to a fresh copy of itself, using the Allow self-spawn option. Enable subagents in Advanced turns the feature on for an agent.
 
 ## One agent or several
 

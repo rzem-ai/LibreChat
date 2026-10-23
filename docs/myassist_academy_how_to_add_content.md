@@ -58,9 +58,9 @@ A heading's anchor is its text in lowercase with other characters turned into da
 
 ### Components
 
-These are available in every article with no import. Write child text on the same line as the tags for single-line components (`Card`, `Before`, `After`, `Term`). Leave blank lines inside `Callout` and `Steps` so Markdown inside them renders.
+These are available in every article with no import. Write child text on the same line as the tags for single-line components (`Card`, `Before`, `After`, `Term`). Leave blank lines inside `Analogy` and `Steps` so Markdown inside them renders. GitHub-style tables (`| a | b |`) work in articles.
 
-`TryThis` is the try-this cue. `prompt` is the text readers copy. Add `closing` for the last cue on a page:
+`TryThis` is the try-this cue: the action as plain text, then the prompt in a monospace block with a copy button. `prompt` is the text readers copy, shown without quotation marks. Add `closing` when a **Try this now** heading sits above it, so the label isn't repeated:
 
 ```mdx
 <TryThis
@@ -70,14 +70,14 @@ Context: I'm presenting tomorrow.`}
 />
 ```
 
-`Callout` takes `type` of `note` (default), `analogy` or `warning`:
+`Analogy` wraps the one analogy a page may have, in a soft box with a label:
 
 ```mdx
-<Callout type="warning">
+<Analogy>
 
-Share every skill the agent uses with the same people.
+Build your prompt like a layered cake.
 
-</Callout>
+</Analogy>
 ```
 
 `Compare` shows a weaker and stronger version side by side:
