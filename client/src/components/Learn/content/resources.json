@@ -111,7 +111,7 @@
   },
   {
     "id": "lumo-ms-teams",
-    "title": "Lumo Agent — MS Teams",
+    "title": "Lumo Agent in MS Teams",
     "description": "Access guided learning pathways in Microsoft Teams",
     "type": "external",
     "externalHref": "https://teams.microsoft.com/l/app/?source=app-bar-share-entrypoint&titleId=T_58ce1182-293d-2351-2d1d-89d7c421103d",
