@@ -64,7 +64,7 @@ describe('TryThis', () => {
   });
 
   it('copies the prompt text and confirms it', () => {
-    renderInRouter(<TryThis action="Copy it" prompt="Goal: Summarise the risks" />);
+    renderInRouter(<TryThis chat={false} action="Copy it" prompt="Goal: Summarise the risks" />);
 
     fireEvent.click(screen.getByRole('button', { name: 'com_learning_copy_prompt' }));
 
@@ -83,10 +83,19 @@ describe('TryThis in chat', () => {
     );
   });
 
-  it('hides the link when the cue opts out', () => {
+  it('replaces the copy button with the link', () => {
+    renderInRouter(<TryThis action="Try it" prompt="Summarise this" />);
+
+    expect(
+      screen.queryByRole('button', { name: 'com_learning_copy_prompt' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('keeps the copy button instead when the cue opts out of chat', () => {
     renderInRouter(<TryThis chat={false} action="Try it" prompt="Needs an attachment" />);
 
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'com_learning_copy_prompt' })).toBeInTheDocument();
   });
 });
 

@@ -4,6 +4,7 @@ import { Check, Copy, MessageSquare } from 'lucide-react';
 import type { JSX } from 'react/jsx-runtime';
 import { useLocalize } from '~/hooks';
 import { ArticleLink } from './link';
+import { cn } from '~/utils';
 
 interface TryThisProps {
   action: string;
@@ -45,32 +46,38 @@ export function TryThis({
         {/[.:!?]$/.test(action) ? action : `${action}:`}
       </p>
       <div className="relative mt-3 rounded-lg border border-border-light bg-surface-primary">
-        <div className="whitespace-pre-wrap p-4 pr-12 font-mono text-sm text-text-primary">
+        <div
+          className={cn(
+            'whitespace-pre-wrap p-4 font-mono text-sm text-text-primary',
+            chat ? 'pr-36' : 'pr-12',
+          )}
+        >
           {prompt}
         </div>
-        <button
-          type="button"
-          onClick={onCopy}
-          aria-label={localize('com_learning_copy_prompt')}
-          className="absolute right-2 top-2 rounded-md p-1.5 text-text-secondary hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-heavy"
-        >
-          {copied ? (
-            <Check className="size-4" aria-hidden="true" />
-          ) : (
-            <Copy className="size-4" aria-hidden="true" />
-          )}
-        </button>
+        {chat ? (
+          <ArticleLink
+            bare
+            href={`/c/new?prompt=${encodeURIComponent(prompt)}`}
+            className="absolute right-2 top-2 inline-flex items-center gap-2 rounded-md border border-border-light bg-surface-primary px-2.5 py-1.5 text-sm font-medium !text-text-primary !no-underline transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-heavy"
+          >
+            <MessageSquare className="size-4" aria-hidden="true" />
+            {localize('com_learning_try_in_chat')}
+          </ArticleLink>
+        ) : (
+          <button
+            type="button"
+            onClick={onCopy}
+            aria-label={localize('com_learning_copy_prompt')}
+            className="absolute right-2 top-2 rounded-md p-1.5 text-text-secondary hover:bg-surface-hover hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-heavy"
+          >
+            {copied ? (
+              <Check className="size-4" aria-hidden="true" />
+            ) : (
+              <Copy className="size-4" aria-hidden="true" />
+            )}
+          </button>
+        )}
       </div>
-      {chat && (
-        <ArticleLink
-          bare
-          href={`/c/new?prompt=${encodeURIComponent(prompt)}`}
-          className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border-light bg-surface-primary px-3 py-1.5 text-sm font-medium !text-text-primary !no-underline transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-heavy"
-        >
-          <MessageSquare className="size-4" aria-hidden="true" />
-          {localize('com_learning_try_in_chat')}
-        </ArticleLink>
-      )}
       <span className="sr-only" role="status">
         {copied ? localize('com_learning_copied') : ''}
       </span>
