@@ -18,8 +18,10 @@ let mockMemoryOptOut = false;
 let mockDefaultEnabledTools: string[] = [];
 let mockInitialMemory = false;
 let mockRolesLoaded = false;
+let mockUpdateMemoryPreferences = jest.fn();
 
 jest.mock('~/data-provider', () => ({
+  useUpdateMemoryPreferencesMutation: jest.fn(() => ({ mutate: mockUpdateMemoryPreferences })),
   useGetStartupConfig: jest.fn(() => ({
     data: {
       interface: {
@@ -120,6 +122,7 @@ describe('BadgeRowProvider file search force-enable', () => {
     mockDefaultEnabledTools = [];
     mockInitialMemory = false;
     mockRolesLoaded = false;
+    mockUpdateMemoryPreferences = jest.fn();
   });
 
   it('force-enables file_search when the feature flag is enabled for authorized users', async () => {
@@ -177,6 +180,36 @@ describe('BadgeRowProvider file search force-enable', () => {
 
     await waitFor(() => {
       expect(result.current?.[Tools.memory]).toBe(false);
+    });
+  });
+
+  describe('memory sidebar preference sync', () => {
+    it('ticks the chat memory tool when the sidebar switch is on', async () => {
+      mockMemoryOptOut = false;
+      mockInitialMemory = false;
+      mockDefaultEnabledTools = [];
+
+      const { result } = renderHook(() => useRecoilValue(ephemeralAgentByConvoId(conversationId)), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current?.[Tools.memory]).toBe(true);
+      });
+    });
+
+    it('unticks the chat memory tool when the sidebar switch is off', async () => {
+      mockMemoryOptOut = true;
+      mockInitialMemory = true;
+      mockDefaultEnabledTools = [];
+
+      const { result } = renderHook(() => useRecoilValue(ephemeralAgentByConvoId(conversationId)), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current?.[Tools.memory]).toBe(false);
+      });
     });
   });
 });
