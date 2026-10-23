@@ -163,7 +163,7 @@ describe('Faq', () => {
     );
 
     const item = screen.getByText(/Can I use client data/).closest('li') as HTMLElement;
-    expect(item.querySelectorAll('p').length).toBe(4);
+    expect(item.querySelectorAll('p').length).toBe(5);
     expect(item).toHaveTextContent(
       /Don't use Government and Public Services \(GPS\) or Defence data in MyAssist\./,
     );
