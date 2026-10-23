@@ -11,6 +11,10 @@ const LINK_PATTERN = /\[([^\]]+)\]\(([^)]+)\)/g;
 
 const stripLinks = (text: string): string => text.replace(LINK_PATTERN, '$1');
 
+const SORTED_FAQS: Faq[] = [...FAQS].sort((a, b) =>
+  a.question.localeCompare(b.question, 'en', { sensitivity: 'base' }),
+);
+
 const getFields = (faq: Faq): string[] => [faq.question, stripLinks(faq.answer)];
 
 const RichText = ({ text, query }: { text: string; query: string }): JSX.Element => {
@@ -46,7 +50,7 @@ export default function Faq(): JSX.Element {
       <h2 className="text-2xl font-medium">{localize('com_learning_tab_faq')}</h2>
       <Searchable
         showSearch={FAQ_SEARCH}
-        items={FAQS}
+        items={SORTED_FAQS}
         getFields={getFields}
         searchLabel={localize('com_learning_search_faq')}
         renderEmpty={(query) => localize('com_learning_no_faq', { 0: query })}

@@ -155,6 +155,22 @@ describe('Releases', () => {
 });
 
 describe('Faq', () => {
+  it('lists the questions in alphabetical order', () => {
+    render(
+      <MemoryRouter>
+        <Faq />
+      </MemoryRouter>,
+    );
+
+    const questions = screen
+      .getAllByRole('listitem')
+      .map((item) => item.querySelector('p')?.textContent ?? '');
+    expect(questions).toEqual(
+      [...questions].sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' })),
+    );
+    expect(questions.length).toBeGreaterThan(1);
+  });
+
   it('lists every question with working links while search is hidden', () => {
     render(
       <MemoryRouter>
