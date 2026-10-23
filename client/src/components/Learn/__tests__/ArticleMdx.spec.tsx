@@ -136,6 +136,7 @@ describe('Card', () => {
     const link = screen.getByRole('link', { name: /Guide to skills/ });
     expect(link).toHaveAttribute('href', '/learn/articles/guides/skills');
     expect(link).not.toHaveAttribute('target');
+    expect(link.querySelector('svg')).not.toBeInTheDocument();
     expect(link).toHaveTextContent('Find, create and share skills');
   });
 
