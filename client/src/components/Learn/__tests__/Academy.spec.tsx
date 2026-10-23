@@ -161,10 +161,12 @@ describe('Faq', () => {
         <Faq />
       </MemoryRouter>,
     );
-    expect(screen.getByRole('link', { name: 'Glossary' })).toHaveAttribute(
-      'href',
-      '/learn/articles/glossary',
-    );
+    const hrefFor = (name: string): string | null =>
+      screen.getByRole('link', { name }).getAttribute('href');
+    expect(hrefFor('skills')).toBe('/learn/articles/guides/skills');
+    expect(hrefFor('prompts')).toBe('/learn/articles/guides/prompts');
+    expect(hrefFor('agents')).toBe('/learn/articles/guides/agents');
+    expect(hrefFor('glossary')).toBe('/learn/articles/glossary');
     expect(screen.getByRole('link', { name: 'Q&R or BSO' })).toHaveAttribute('target', '_blank');
     expect(screen.getByRole('heading', { name: 'com_learning_tab_faq' })).toBeInTheDocument();
     expect(screen.getByText(/Is MyAssist connected/)).toBeInTheDocument();
