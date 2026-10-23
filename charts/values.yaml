@@ -191,22 +191,22 @@ migrationJobs:
     suspend: true
     npmScript: migrate:file-retention
     dryRun: true
-    syncWave: "1"
+    syncWave: "4"
   agent-retention:
     enabled: false
     suspend: true
     npmScript: migrate:agent-retention
     dryRun: true
-    syncWave: "1"
+    syncWave: "4"
   skill-retention:
     enabled: false
     suspend: true
     npmScript: migrate:skill-retention
     dryRun: true
-    syncWave: "1"
+    syncWave: "3"
   memory-retention:
     enabled: false
     suspend: true
     npmScript: migrate:memory-retention
     dryRun: true
-    syncWave: "1"
+    syncWave: "2"
