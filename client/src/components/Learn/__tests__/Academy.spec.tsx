@@ -161,11 +161,9 @@ describe('Faq', () => {
         <Faq />
       </MemoryRouter>,
     );
-    expect(
-      screen.getByRole('link', { name: 'Make your team’s knowledge reusable' }),
-    ).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Glossary' })).toHaveAttribute(
       'href',
-      '/learn/articles/capture-team-knowledge#match-the-knowledge-to-the-surface',
+      '/learn/articles/glossary',
     );
     expect(screen.getByRole('link', { name: 'Q&R or BSO' })).toHaveAttribute('target', '_blank');
     expect(screen.getByRole('heading', { name: 'com_learning_tab_faq' })).toBeInTheDocument();
