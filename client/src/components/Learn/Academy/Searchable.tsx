@@ -8,6 +8,7 @@ interface SearchableProps<T> {
   items: T[];
   getFields: (item: T) => string[];
   searchLabel: string;
+  searchPlaceholder: string;
   renderEmpty: (query: string) => string;
   children: (visible: T[], query: string) => ReactNode;
   className?: string;
@@ -19,6 +20,7 @@ export default function Searchable<T>({
   items,
   getFields,
   searchLabel,
+  searchPlaceholder,
   renderEmpty,
   children,
   className = '',
@@ -34,7 +36,9 @@ export default function Searchable<T>({
           label={searchLabel}
           clearLabel={localize('com_ui_clear')}
           onClear={() => setQuery('')}
-          containerClassName="max-w-sm"
+          placeholder={searchPlaceholder}
+          containerClassName="h-10 w-full max-w-md border-border-medium bg-surface-primary focus-within:border-surface-submit focus-within:ring-2 focus-within:ring-surface-submit/30"
+          className="text-base placeholder:text-text-tertiary"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />

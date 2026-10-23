@@ -3102,6 +3102,8 @@
   "com_learning_tour_restart": "Restart tour",
   "com_learning_tour_continue": "Continue",
   "com_learning_coming_soon": "Coming soon",
+  "com_learning_search_resources_placeholder": "Search guides and resources",
+  "com_learning_search_faq_placeholder": "Search common questions",
   "com_learning_search_resources": "Search learning resources",
   "com_learning_search_faq": "Search common questions",
   "com_learning_no_resources": "No resources match \"{{0}}\".",

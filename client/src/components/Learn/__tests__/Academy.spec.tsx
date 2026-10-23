@@ -76,6 +76,14 @@ describe('Resources', () => {
     ]);
   });
 
+  it('shows a visible placeholder in the search input', () => {
+    renderResources();
+
+    expect(
+      screen.getByPlaceholderText('com_learning_search_resources_placeholder'),
+    ).toBeInTheDocument();
+  });
+
   it('shows the Getting Started tour once, above the search', () => {
     renderResources();
 
