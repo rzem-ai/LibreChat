@@ -109,6 +109,7 @@ export default function ConvoIcon({
   );
 
   const name = entity?.name ?? '';
+  // Deloitte Custom Change: resolve agent avatar strings and stored filepath objects through the shared helper.
   const avatar = isAgent
     ? (getAgentAvatarUrl(entity as t.Agent | undefined) ?? undefined)
     : ((entity as t.Assistant | undefined)?.metadata?.avatar as string);
