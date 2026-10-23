@@ -17,7 +17,7 @@ export const isExternalHref = (href: string): boolean =>
 
 /** `!` beats the `text-link` colour the shared Typeset sets on every descendant anchor. */
 const linkClass =
-  'font-normal !text-text-primary underline decoration-text-tertiary underline-offset-4 transition-colors hover:!text-surface-submit hover:decoration-surface-submit';
+  'font-medium !text-text-primary underline decoration-text-tertiary underline-offset-4 transition-colors hover:!text-surface-submit hover:decoration-surface-submit';
 
 /** Keeps the icon on the same line as the last word, so it never wraps away on its own. */
 function WithExternalIcon({ children }: { children: ReactNode }): JSX.Element {
