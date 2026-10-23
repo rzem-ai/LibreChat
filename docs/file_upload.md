@@ -9,7 +9,7 @@
 - Plain text/JSON/CSV/etc. hit a 15MB cap, but only when content-filter policy is active.
 - PowerPoint has no text extractor, so it's never sent to the model directly — only reachable via file_search/code interpreter.
 - Same goes for Word/Excel/PDF, all default to file_search/code_interpreter.
-- CSV defaults to Code Interpreter only — excluded from File Search since vector search is a poor fit for tabular data (slow, and not built for row/column lookups).
+- CSV and Excel default to Code Interpreter only — both excluded from File Search since vector search is a poor fit for tabular data (slow, and not built for row/column lookups).
 - If no active tool this turn can read an uploaded file, the model is told so explicitly, rather than silently dropping the file or claiming none exist.
 
 `Default route` key — **Provider**: sent directly to the model (native multimodal input). **Text**: content extracted and pasted into the prompt. **None**: not sent to the model at all; left for File Search/Code Interpreter to fetch only when actually called.
@@ -20,7 +20,8 @@
 | PDF | None | 512 MB | Yes | Yes |
 | Text / code | Text | 15MB (if content-filter policy active) / 512MB otherwise | Yes | Yes |
 | JSON/XML | Text | 15MB (if content-filter policy active) / 512MB otherwise | Mixed | Yes |
-| Word / Excel | None | 512MB | Yes | Yes |
+| Word | None | 512MB | Yes | Yes |
+| Excel | None | 512MB | No | Yes |
 | PowerPoint | None | 512MB | Yes | Yes |
 | CSV | None | 512MB | No | Yes |
 |||||
