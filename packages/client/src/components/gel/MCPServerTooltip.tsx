@@ -53,6 +53,14 @@ export interface MCPServerTooltipContent {
   labels: MCPServerTooltipLabels;
 }
 
+interface TooltipSection {
+  label: string;
+  items: string[];
+  icon: ReactNode;
+}
+
+type MaybeTooltipSection = Omit<TooltipSection, 'items'> & { items?: string[] };
+
 const CHECK_ICON = <Check className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />;
 const X_ICON = <X className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />;
 
@@ -66,9 +74,20 @@ export function MCPServerTooltipCard({
   details,
   labels,
 }: MCPServerTooltipContent & { id?: string }): ReactElement {
+  const candidates: MaybeTooltipSection[] = [
+    { label: labels.useCases, items: details?.useCases, icon: CHECK_ICON },
+    { label: labels.access, items: details?.access, icon: CHECK_ICON },
+    { label: labels.limitation, items: details?.limitations, icon: X_ICON },
+  ];
+  const sections = candidates.filter(
+    (section): section is TooltipSection => !!section.items?.length,
+  );
+
   return (
     <div id={id} role="region" aria-label={name}>
-      <div className="flex flex-col gap-4 border-b border-border p-6">
+      <div
+        className={`flex flex-col gap-4 p-6 ${sections.length > 0 ? 'border-b border-border' : ''}`}
+      >
         <div className="flex items-start gap-2">
           {icon}
           <div className="flex h-8 min-w-0 flex-col justify-between">
@@ -96,29 +115,17 @@ export function MCPServerTooltipCard({
           </p>
         )}
       </div>
-      {details && (
+      {sections.length > 0 && (
         <div className="flex flex-col gap-6 p-6 pt-4">
-          <TooltipRow label={labels.useCases}>
-            {details.useCases.map((useCase) => (
-              <TooltipListItem key={useCase} icon={CHECK_ICON}>
-                {useCase}
-              </TooltipListItem>
-            ))}
-          </TooltipRow>
-          <TooltipRow label={labels.access}>
-            {details.access.map((access) => (
-              <TooltipListItem key={access} icon={CHECK_ICON}>
-                {access}
-              </TooltipListItem>
-            ))}
-          </TooltipRow>
-          <TooltipRow label={labels.limitation}>
-            {details.limitations.map((limitation) => (
-              <TooltipListItem key={limitation} icon={X_ICON}>
-                {limitation}
-              </TooltipListItem>
-            ))}
-          </TooltipRow>
+          {sections.map(({ label, items, icon }) => (
+            <TooltipRow key={label} label={label}>
+              {items.map((item) => (
+                <TooltipListItem key={item} icon={icon}>
+                  {item}
+                </TooltipListItem>
+              ))}
+            </TooltipRow>
+          ))}
         </div>
       )}
     </div>
