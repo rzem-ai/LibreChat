@@ -2,6 +2,7 @@ import { GEL } from '@librechat/client';
 import { useQuery } from '@tanstack/react-query';
 import type { JSX } from 'react/jsx-runtime';
 import { loadReleases } from '../../content/loader';
+import { READING_COLUMN } from '../column';
 import { useLocalize } from '~/hooks';
 import Failure from '../Failure';
 
@@ -35,7 +36,7 @@ export default function Releases(): JSX.Element | null {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-12">
+    <div className={`${READING_COLUMN} flex flex-col gap-12`}>
       {releases.map(({ id, frontmatter, Content }) => (
         <article key={id}>
           <p className="text-sm text-text-secondary">

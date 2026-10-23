@@ -127,6 +127,7 @@ describe('Faq', () => {
       '/learn/articles/capture-team-knowledge#match-the-knowledge-to-the-surface',
     );
     expect(screen.getByRole('link', { name: 'Q&R or BSO' })).toHaveAttribute('target', '_blank');
+    expect(screen.getByRole('heading', { name: 'com_learning_tab_faq' })).toBeInTheDocument();
     expect(screen.getByText(/Is MyAssist connected/)).toBeInTheDocument();
     expect(screen.getByText(/Which model should I use/)).toBeInTheDocument();
     expect(screen.queryByLabelText('com_learning_search_faq')).not.toBeInTheDocument();
