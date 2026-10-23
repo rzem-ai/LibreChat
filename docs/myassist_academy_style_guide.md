@@ -91,7 +91,7 @@ Declare the type in frontmatter: `concept`, `how-to`, `guide` or `reference`. Ad
 5. The real content: steps, patterns, examples, combining with other capabilities
 6. **Share a [thing]**: prompts, skills and agents only
 7. **Try this now**
-8. A next-step card
+8. A `<NextArticle>` hand-off
 
 **How-to**: summary, why this matters, the method, a worked example, try this now, next step.
 
@@ -172,7 +172,8 @@ All are available in any article without an import. See [how to add content](mya
 | `<TryThis>` | The try-this cue |
 | `<Analogy>` | The one analogy a page may have |
 | `<Compare>` with `<Before>` and `<After>` | A weaker and stronger version side by side |
-| `<CardGrid>` and `<Card>` | Hand-offs, options, what you can build |
+| `<CardGrid>` and `<Card>` | Options and what you can build |
+| `<NextArticle>` | The full-width hand-off that ends a page |
 | `<Steps>` | A numbered procedure |
 | `<Terms>` and `<Term>` | Glossary entries |
 | `<FeedbackLink>` | A link to the feedback form |

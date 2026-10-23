@@ -98,6 +98,12 @@ Build your prompt like a layered cake.
 </CardGrid>
 ```
 
+`NextArticle` ends a page with a full-width hand-off to the next article. Put it last, outside any `CardGrid`:
+
+```mdx
+<NextArticle href="/learn/articles/guides/skills" title="Guide to skills">Find, create and share skills</NextArticle>
+```
+
 `Steps` wraps a numbered list and numbers it as a procedure:
 
 ```mdx

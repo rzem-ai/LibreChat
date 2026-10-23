@@ -6,8 +6,19 @@ import { MemoryRouter } from 'react-router-dom';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { mdxComponents } from '../Academy/articles/mdx';
 
-const { TryThis, Analogy, Compare, Before, After, CardGrid, Card, Steps, Terms, Term } =
-  mdxComponents as Record<string, React.ElementType>;
+const {
+  NextArticle,
+  TryThis,
+  Analogy,
+  Compare,
+  Before,
+  After,
+  CardGrid,
+  Card,
+  Steps,
+  Terms,
+  Term,
+} = mdxComponents as Record<string, React.ElementType>;
 const {
   FeedbackLink,
   SharingNote,
@@ -102,6 +113,21 @@ describe('Card', () => {
     const link = screen.getByRole('link', { name: 'Read the article' });
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+  });
+});
+
+describe('NextArticle', () => {
+  it('links to the next article with a label, title and description', () => {
+    renderInRouter(
+      <NextArticle href="/learn/articles/guides/skills" title="Guide to skills">
+        Find, create and share skills
+      </NextArticle>,
+    );
+
+    const link = screen.getByRole('link', { name: /Guide to skills/ });
+    expect(link).toHaveAttribute('href', '/learn/articles/guides/skills');
+    expect(link).toHaveTextContent('com_learning_next_article');
+    expect(link).toHaveTextContent('Find, create and share skills');
   });
 });
 

@@ -4,6 +4,7 @@ import { FeedbackLink } from './feedback';
 import { CardGrid, Card } from './cards';
 import { SharingNote } from './sharing';
 import { Terms, Term } from './terms';
+import { NextArticle } from './next';
 import { ArticleLink } from './link';
 import { Analogy } from './analogy';
 import { H2, H3 } from './heading';
@@ -21,6 +22,7 @@ export const mdxComponents: MDXComponents = {
   After,
   CardGrid,
   Card,
+  NextArticle,
   Steps,
   Terms,
   Term,
