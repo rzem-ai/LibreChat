@@ -1,22 +1,22 @@
 [
   {
     "question": "Is MyAssist connected to Deloitte data?",
-    "answer": "No, not unless you're using a connector."
+    "answer": "Not by default, however by using [connectors](/learn/articles/guides/connectors), MyAssist can connect to Deloitte tools such as SharePoint, GIMS and DPN."
   },
   {
     "question": "What is the Agentic Ecosystem and how does MyAssist fit within it?",
-    "answer": "Read the [What is the Agentic Ecosystem?](/learn/articles/agentic-ecosystem) article to find out."
+    "answer": "The Agentic Ecosystem is the shared foundation behind MyAssist that connects Deloitte’s AI technology, data and governance. Read [What is the Agentic Ecosystem](/learn/articles/agentic-ecosystem) for more."
   },
   {
     "question": "What is the difference between a saved prompt, a skill and an agent?",
-    "answer": "Learn more in the [What should I use?](/learn/articles/what-should-i-use) article."
+    "answer": "We have feature walkthroughs for [skills](/learn/articles/guides/skills), [prompts](/learn/articles/guides/prompts) and [agents](/learn/articles/guides/agents) that you can read, and a comparison of the terms can be found in the [glossary](/learn/articles/glossary)."
   },
   {
     "question": "Which model should I use?",
-    "answer": "Hover over a model in the model picker to see a tooltip with its cost, speed and intelligence."
+    "answer": "As of October 2026, we suggest defaulting to low-cost yet capable models such as GPT 6 Luna or Claude Haiku 5.5, and increasing the capability of the model as desired per the needs of the task. For guidance, use the model picker to compare each model’s cost, intelligence and speed."
   },
   {
     "question": "Can I use client data in MyAssist?",
-    "answer": "Don't use GPS or Defence data. For other client data, we always recommend starting with public, synthetic, non-client or Deloitte information first while you familiarise yourself with the platform. Once you're familiar, you may use client data for exploration, hypothesis testing and identifying potential use cases, in line with Deloitte's responsible AI guidance. Use appropriate judgement and caution in active client engagements. Existing guardrails and accountability continue to apply, including client-specific AI requirements and restrictions. If you need further clarification, reach out to your engagement lead or the [Q&R or BSO](https://ausdeloitte.sharepoint.com/sites/DAISQandR/SitePages/My-Q-and-R.aspx) team."
+    "answer": "Don't use Government and Public Services (GPS) or Defence data in MyAssist.\n\nFor other client data, we always recommend starting with public, synthetic, non-client or Deloitte information first while you familiarise yourself with the platform.\n\nOnce you're familiar, you may use client data for exploration, hypothesis testing and identifying potential use cases, in line with Deloitte's responsible AI guidance.\n\nUse appropriate judgement and caution in active client engagements. Existing guardrails and accountability continue to apply, including client-specific AI requirements and restrictions. If you need further clarification, reach out to your engagement lead or the [Q&R or BSO](https://ausdeloitte.sharepoint.com/sites/DAISQandR/SitePages/My-Q-and-R.aspx) team."
   }
 ]

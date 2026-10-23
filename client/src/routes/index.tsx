@@ -182,10 +182,10 @@ export const router = createBrowserRouter(
               children: [
                 {
                   index: true,
-                  element: <Navigate to="tours" replace={true} />,
+                  element: <Navigate to="resources" replace={true} />,
                 },
                 {
-                  path: 'articles/:slug',
+                  path: 'articles/*',
                   lazy: loadAcademyArticle,
                 },
                 {

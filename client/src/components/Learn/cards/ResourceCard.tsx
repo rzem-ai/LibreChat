@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { GEL } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
 import { cn } from '~/utils';
@@ -12,6 +13,8 @@ interface ResourceCardProps {
   actionLabel: string;
   /** Opens in a new tab with `rel="noopener noreferrer"`; otherwise `onSelect` runs on click. */
   externalHref?: string;
+  /** In-app route rendered as a router link, so it supports open in new tab. */
+  to?: string;
   onSelect?: () => void;
 }
 
@@ -25,16 +28,12 @@ export function ResourceCard({
   metaLabel,
   actionLabel,
   externalHref,
+  to,
   onSelect,
 }: ResourceCardProps): JSX.Element {
-  return (
-    <GEL.Card
-      className={cn(
-        '[--border-accent:oklch(0.75_0_0)] dark:[--border-accent:oklch(0.55_0_0)]',
-        'relative gap-2 transition-all hover:border-[color:var(--border-accent)] hover:shadow-sm',
-      )}
-    >
-      {externalHref ? (
+  const renderOverlay = (): JSX.Element => {
+    if (externalHref) {
+      return (
         <a
           href={externalHref}
           target="_blank"
@@ -42,14 +41,24 @@ export function ResourceCard({
           className={overlayClass}
           aria-label={actionLabel}
         />
-      ) : (
-        <button
-          type="button"
-          className={overlayClass}
-          aria-label={actionLabel}
-          onClick={onSelect}
-        />
+      );
+    }
+    if (to) {
+      return <Link to={to} className={overlayClass} aria-label={actionLabel} />;
+    }
+    return (
+      <button type="button" className={overlayClass} aria-label={actionLabel} onClick={onSelect} />
+    );
+  };
+
+  return (
+    <GEL.Card
+      className={cn(
+        '[--border-accent:oklch(0.75_0_0)] dark:[--border-accent:oklch(0.55_0_0)]',
+        'relative gap-2 transition-all hover:border-[color:var(--border-accent)] hover:shadow-sm',
       )}
+    >
+      {renderOverlay()}
       <div className="flex items-center gap-1.5 text-xs text-text-secondary">
         <GEL.Icon name={icon} className="size-4" aria-hidden="true" />
         {metaLabel}

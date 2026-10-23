@@ -87,13 +87,13 @@
     {
       "element": "#nav-panel-agents",
       "title": "Agent Builder",
-      "description": "Agents are a collection of skills, connectors, files, and instructions grouped together for a specific job. Build and configure your own here.",
+      "description": "Agents are a collection of skills, connectors, files, and instructions grouped together for a specific workflow. Build and configure your own here.",
       "side": "right"
     },
     {
       "id": "agent-marketplace",
       "element": "#nav-agents-marketplace-button",
-      "title": "Agent Marketplace",
+      "title": "Agent Library",
       "description": "Browse pre-built agents for common tasks. Each agent combines instructions, skills, connectors, files, and guidance so you can get started faster.",
       "side": "right"
     },

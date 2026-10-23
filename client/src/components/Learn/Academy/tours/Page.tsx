@@ -47,15 +47,8 @@ export default function Tours(): JSX.Element {
   };
 
   return (
-    <div className="flex flex-col gap-8">
-      {hero && (
-        <section className="flex flex-col gap-4">
-          <h2 className="text-xl font-medium">
-            {localize('com_learning_start_here', { 0: hero.title })}
-          </h2>
-          {renderTour(hero, true)}
-        </section>
-      )}
+    <div className="flex flex-col gap-6">
+      {hero && <section>{renderTour(hero, true)}</section>}
       {rest.length > 0 && (
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {rest.map((tour) => renderTour(tour))}
