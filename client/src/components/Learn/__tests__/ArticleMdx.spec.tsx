@@ -54,7 +54,13 @@ describe('TryThis', () => {
     renderInRouter(<TryThis closing action="Apply it" prompt="Do the thing" />);
 
     expect(screen.queryByText('com_learning_try_this')).not.toBeInTheDocument();
-    expect(screen.getByText('Apply it')).toBeInTheDocument();
+    expect(screen.getByText('Apply it:')).toBeInTheDocument();
+  });
+
+  it('does not double up punctuation already on the action', () => {
+    renderInRouter(<TryThis closing action="Apply it:" prompt="Do the thing" />);
+
+    expect(screen.getByText('Apply it:')).toBeInTheDocument();
   });
 
   it('copies the prompt text and confirms it', () => {

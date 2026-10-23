@@ -34,7 +34,7 @@ export function TryThis({ action, prompt, closing = false }: TryThisProps): JSX.
     <div className="mt-4">
       <p className="!mt-0">
         {!closing && <span className="font-medium">{localize('com_learning_try_this')} </span>}
-        {action}
+        {/[.:!?]$/.test(action) ? action : `${action}:`}
       </p>
       <div className="relative mt-3 rounded-lg border border-border-light bg-surface-primary">
         <div className="whitespace-pre-wrap p-4 pr-12 font-mono text-sm text-text-primary">
