@@ -58,6 +58,7 @@ import {
   scopeSkillIds,
   resolveSkillActive,
   resolveAgentScopedSkillIds,
+  resolveAgentExplicitSkillIds,
   resolveModelSpecSkillIds,
   injectSkillCatalog,
   buildSkillPrimeMessage,
@@ -571,6 +572,62 @@ describe('resolveAgentScopedSkillIds', () => {
         }),
       ).toEqual([]);
     });
+  });
+});
+
+describe('resolveAgentExplicitSkillIds', () => {
+  const persistedAgent = (
+    skills?: string[],
+    skills_enabled?: boolean,
+    skills_scope?: SkillsScope,
+  ) => ({
+    id: 'agent_persisted_1',
+    skills,
+    skills_enabled,
+    skills_scope,
+  });
+
+  it('returns no explicit assignments for ephemeral agents', () => {
+    const skillId = new Types.ObjectId();
+    expect(
+      resolveAgentExplicitSkillIds({
+        agent: { id: 'ephemeral_convo_xyz', skills: [skillId.toString()], skills_enabled: true },
+        accessibleSkillIds: [skillId],
+      }),
+    ).toBeUndefined();
+  });
+
+  it('returns no explicit assignments for all and none scopes', () => {
+    const skillId = new Types.ObjectId();
+    for (const skills_scope of [SkillsScope.all, SkillsScope.none]) {
+      expect(
+        resolveAgentExplicitSkillIds({
+          agent: persistedAgent([skillId.toString()], true, skills_scope),
+          accessibleSkillIds: [skillId],
+        }),
+      ).toBeUndefined();
+    }
+  });
+
+  it('returns an empty allowlist for selected scope with no assigned skills', () => {
+    expect(
+      resolveAgentExplicitSkillIds({
+        agent: persistedAgent([], true, SkillsScope.selected),
+        accessibleSkillIds: [new Types.ObjectId()],
+      }),
+    ).toEqual([]);
+  });
+
+  it('returns only selected skills that remain accessible', () => {
+    const assigned = new Types.ObjectId();
+    const stale = new Types.ObjectId();
+    const accessible = new Types.ObjectId();
+    expect(
+      resolveAgentExplicitSkillIds({
+        agent: persistedAgent([assigned.toString(), stale.toString()], true, SkillsScope.selected),
+        accessibleSkillIds: [assigned, accessible],
+      }),
+    ).toEqual([assigned]);
   });
 });
 
@@ -1293,6 +1350,70 @@ describe('injectSkillCatalog', () => {
     expect(result.activeSkillIds.map((id) => id.toString())).toEqual([ownedHidden._id.toString()]);
   });
 
+  describe('empty active catalog with an accepted skill prime', () => {
+    /* A SELECT agent's explicitly assigned skill can be manually primed even when
+       the user personally disabled it, so the active catalog is empty while the
+       skill body is already in context. Its `references/*` files still need
+       `read_file`, without widening what the model may invoke. */
+    it('keeps read_file but registers no skill tool or catalog text when hasSkillPrimes is true', async () => {
+      const disabledForUser = makeSkill('personally-disabled', userObjectId);
+      const listSkillsByAccess = buildPager([[disabledForUser]]);
+      const agent = makeAgent();
+      const result = await injectSkillCatalog(
+        baseParams({
+          listSkillsByAccess,
+          agent,
+          skillStates: { [disabledForUser._id.toString()]: false },
+          hasSkillPrimes: true,
+        }),
+      );
+
+      const definedNames = (result.toolDefinitions ?? []).map((d) => d.name);
+      expect(definedNames).toContain('read_file');
+      expect(definedNames).not.toContain('skill');
+      expect(definedNames).not.toContain('bash_tool');
+      expect(result.toolNames).toEqual(['read_file']);
+      expect(result.skillCount).toBe(0);
+      expect(agent.additional_instructions).toBeUndefined();
+      /* The model still cannot resolve or invoke the disabled skill by name. */
+      expect(result.activeSkillIds).toEqual([]);
+      expect(result.activeSkillNames.size).toBe(0);
+    });
+
+    it('still skips registration entirely when hasSkillPrimes is not set', async () => {
+      const disabledForUser = makeSkill('personally-disabled', userObjectId);
+      const listSkillsByAccess = buildPager([[disabledForUser]]);
+      const result = await injectSkillCatalog(
+        baseParams({
+          listSkillsByAccess,
+          skillStates: { [disabledForUser._id.toString()]: false },
+        }),
+      );
+
+      expect(result.toolDefinitions).toBeUndefined();
+      expect(result.toolNames).toEqual([]);
+      expect(result.skillCount).toBe(0);
+    });
+
+    it('registers bash_tool alongside read_file when codeEnvAvailable', async () => {
+      const disabledForUser = makeSkill('personally-disabled', userObjectId);
+      const listSkillsByAccess = buildPager([[disabledForUser]]);
+      const result = await injectSkillCatalog(
+        baseParams({
+          listSkillsByAccess,
+          skillStates: { [disabledForUser._id.toString()]: false },
+          hasSkillPrimes: true,
+          codeEnvAvailable: true,
+        }),
+      );
+
+      const definedNames = (result.toolDefinitions ?? []).map((d) => d.name);
+      expect(definedNames).toContain('read_file');
+      expect(definedNames).toContain('bash_tool');
+      expect(definedNames).not.toContain('skill');
+    });
+  });
+
   it('registers bash_tool alongside read_file when codeEnvAvailable, even with no catalog', async () => {
     /* Same edge case as above but with code env on — manually-primed
        skills can use bash_tool too. */
@@ -1808,6 +1929,50 @@ describe('resolveManualSkills', () => {
       accessibleSkillIds: [owned._id],
       userId,
       skillStates: { [owned._id.toString()]: false },
+    });
+    expect(result).toEqual([]);
+  });
+
+  it('resolves a personally deactivated skill when explicitly assigned to the agent', async () => {
+    const owned = mkSkill('assigned-off', userOid);
+    const result = await resolveManualSkills({
+      names: ['assigned-off'],
+      getSkillByName: buildGetSkillByName({ 'assigned-off': owned }),
+      accessibleSkillIds: [owned._id],
+      agentExplicitSkillIds: [owned._id],
+      userId,
+      skillStates: { [owned._id.toString()]: false },
+    });
+    expect(result).toEqual([
+      { _id: owned._id, name: 'assigned-off', body: 'body of assigned-off' },
+    ]);
+  });
+
+  it('does not let explicit assignment override user-invocation restrictions', async () => {
+    const modelOnly: SkillDoc = {
+      ...mkSkill('assigned-model-only', userOid),
+      userInvocable: false,
+    };
+    const result = await resolveManualSkills({
+      names: ['assigned-model-only'],
+      getSkillByName: buildGetSkillByName({ 'assigned-model-only': modelOnly }),
+      accessibleSkillIds: [modelOnly._id],
+      agentExplicitSkillIds: [modelOnly._id],
+      userId,
+      skillStates: { [modelOnly._id.toString()]: false },
+    });
+    expect(result).toEqual([]);
+  });
+
+  it('does not let explicit assignment override an empty skill body', async () => {
+    const empty = mkSkill('assigned-empty', userOid, '');
+    const result = await resolveManualSkills({
+      names: ['assigned-empty'],
+      getSkillByName: buildGetSkillByName({ 'assigned-empty': empty }),
+      accessibleSkillIds: [empty._id],
+      agentExplicitSkillIds: [empty._id],
+      userId,
+      skillStates: { [empty._id.toString()]: false },
     });
     expect(result).toEqual([]);
   });

@@ -387,6 +387,41 @@ export function resolveAgentScopedSkillIds(
   return scopeSkillIds(accessibleSkillIds, agent.skills);
 }
 
+export interface ResolveAgentExplicitSkillIdsParams {
+  /** Agent being initialized. Reads its persisted skill catalog scope. */
+  agent: Pick<Agent, 'id' | 'skills' | 'skills_enabled' | 'skills_scope'>;
+  /** Skill IDs the user can access, already constrained by ACL. */
+  accessibleSkillIds: Types.ObjectId[];
+}
+
+/**
+ * Returns the explicitly selected skill IDs for a persisted agent. These
+ * assignments bypass the user's personal active-state preference during
+ * manual invocation, but not ACL or author invocation restrictions.
+ *
+ * `undefined` means no assignment exception applies (ephemeral agents and
+ * `all`/`none` scopes). An empty array means `selected` scope has no skills.
+ * The result is intersected with accessible IDs to preserve current ACL.
+ */
+export function resolveAgentExplicitSkillIds(
+  params: ResolveAgentExplicitSkillIdsParams,
+): Types.ObjectId[] | undefined {
+  const { agent, accessibleSkillIds } = params;
+  if (isEphemeralAgentId(agent.id)) {
+    return undefined;
+  }
+
+  const scope = resolveAgentSkillsScope(agent.skills, agent.skills_enabled, agent.skills_scope);
+  if (scope !== SkillsScope.selected) {
+    return undefined;
+  }
+  if (!Array.isArray(agent.skills) || agent.skills.length === 0) {
+    return [];
+  }
+
+  return scopeSkillIds(accessibleSkillIds, agent.skills);
+}
+
 export interface ResolveSkillActiveParams {
   /** Skill being evaluated. Only `_id` and `author` matter for resolution. */
   skill: { _id: Types.ObjectId | string; author: Types.ObjectId | string; deployment?: boolean };
@@ -457,6 +492,15 @@ export interface InjectSkillCatalogParams {
    * model creates mid-run. See `isSkillToolAvailable`.
    */
   skillAuthoringAvailable?: boolean;
+  /**
+   * Deloitte Custom Change: true when a manual or always-apply prime was
+   * accepted this turn. A persisted agent's explicitly assigned skill can be
+   * primed while personally disabled, so the active catalog is empty even
+   * though the skill body is already in context. Keeps `read_file` registered
+   * for its bundled files without adding catalog text, the `skill` tool, or
+   * any model-invocable skill.
+   */
+  hasSkillPrimes?: boolean;
   /** Read-only catalog snapshot preloaded for current-policy inspection. */
   resolvedCatalog?: ResolvedSkillCatalog;
 }
@@ -686,6 +730,7 @@ export async function injectSkillCatalog(
     maxCatalogSkills,
     resolvedCatalog,
     skillAuthoringAvailable = false,
+    hasSkillPrimes = false,
   } = params;
   const { activeSkills, catalogLimit, visibleCount, reachedEnd } =
     resolvedCatalog ??
@@ -699,13 +744,17 @@ export async function injectSkillCatalog(
     }));
 
   /**
-   * Nothing to catalog and nothing the model could author: skip registration
-   * entirely rather than spend description tokens on tools with no targets.
-   * Authoring runs fall through — the `skill` tool still registers below so a
-   * skill created mid-run is invocable, and `read_file` stays available for
-   * its bundled files.
+   * Nothing to catalog, nothing the model could author, and no primed skill
+   * whose files it may read: skip registration entirely rather than spend
+   * description tokens on tools with no targets. Authoring runs fall through —
+   * the `skill` tool still registers below so a skill created mid-run is
+   * invocable, and `read_file` stays available for its bundled files.
+   *
+   * Deloitte Custom Change: runs with an accepted prime also fall through.
+   * With an empty catalog, `catalogVisibleSkills` stays empty, so only
+   * `read_file` (and `bash_tool` when code execution is on) registers.
    */
-  if (activeSkills.length === 0 && !skillAuthoringAvailable) {
+  if (activeSkills.length === 0 && !skillAuthoringAvailable && !hasSkillPrimes) {
     return {
       toolDefinitions: inputDefs,
       skillCount: 0,
@@ -965,6 +1014,8 @@ export interface ResolveManualSkillsParams {
   } | null>;
   /** ACL-accessible skill IDs for this user (already scoped by `scopeSkillIds`). */
   accessibleSkillIds: Types.ObjectId[];
+  /** Explicit persisted-agent selections that bypass the personal active-state check. */
+  agentExplicitSkillIds?: Types.ObjectId[];
   /** Current user ID — required for ownership-based active-state defaults. */
   userId?: string;
   /** Per-user skill active/inactive overrides. */
@@ -1044,8 +1095,15 @@ export type ResolvedAlwaysApplySkill = ResolvedSkillPrime;
 export async function resolveManualSkills(
   params: ResolveManualSkillsParams,
 ): Promise<ResolvedManualSkill[]> {
-  const { names, getSkillByName, accessibleSkillIds, userId, skillStates, defaultActiveOnShare } =
-    params;
+  const {
+    names,
+    getSkillByName,
+    accessibleSkillIds,
+    agentExplicitSkillIds,
+    userId,
+    skillStates,
+    defaultActiveOnShare,
+  } = params;
 
   if (!names.length || accessibleSkillIds.length === 0) {
     return [];
@@ -1115,12 +1173,16 @@ export async function resolveManualSkills(
           logger.warn('[resolveManualSkills] Requested skill has empty body — skipping');
           return null;
         }
-        const active = resolveSkillActive({
-          skill: { _id: skill._id, author: skill.author, deployment: skill.deployment },
-          skillStates,
-          userId,
-          defaultActiveOnShare,
-        });
+        const explicitlyAssigned =
+          agentExplicitSkillIds?.some((id) => id.equals(skill._id)) ?? false;
+        const active =
+          explicitlyAssigned ||
+          resolveSkillActive({
+            skill: { _id: skill._id, author: skill.author, deployment: skill.deployment },
+            skillStates,
+            userId,
+            defaultActiveOnShare,
+          });
         if (!active) {
           logger.warn('[resolveManualSkills] Requested skill is inactive for this user — skipping');
           return null;

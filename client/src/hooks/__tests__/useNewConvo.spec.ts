@@ -78,9 +78,10 @@ jest.mock('~/utils', () => ({
   logger: { log: jest.fn() },
 }));
 
+const mockUseGetEndpointsQuery = jest.fn();
 jest.mock('~/data-provider', () => ({
   useDeleteFilesMutation: () => ({ mutateAsync: mockDeleteFiles }),
-  useGetEndpointsQuery: () => ({ data: {} }),
+  useGetEndpointsQuery: () => mockUseGetEndpointsQuery(),
   useGetStartupConfig: () => ({ data: {} }),
 }));
 
@@ -115,7 +116,10 @@ jest.mock('~/store', () => ({
   },
 }));
 
-import useNewConvo, { clearInheritedAgentWorkspace } from '../useNewConvo';
+import useNewConvo, {
+  clearInheritedAgentWorkspace,
+  getNewGeneralConversationTemplate,
+} from '../useNewConvo';
 
 describe('clearInheritedAgentWorkspace', () => {
   const workspaceBinding = [{ environmentId: 'machine-a', workspaceId: 'project-a' }];
@@ -167,6 +171,7 @@ describe('useNewConvo reset cleanup', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockDeleteFiles.mockResolvedValue({});
+    mockUseGetEndpointsQuery.mockReturnValue({ data: {} });
     mockForeignClaims.clear();
     mockMarkedPasteIds.clear();
     mockPendingDiscardIds.clear();
@@ -227,5 +232,34 @@ describe('useNewConvo reset cleanup', () => {
 
     expect(mockStorePendingDiscardIds).toHaveBeenCalledWith(0, ['inflight-paste']);
     expect(mockPendingDiscardIds).toEqual(new Set(['inflight-paste']));
+  });
+});
+
+describe('getNewGeneralConversationTemplate', () => {
+  it('chooses the first configured non-agents endpoint', () => {
+    expect(
+      getNewGeneralConversationTemplate({
+        [EModelEndpoint.agents]: { order: 0 },
+        [EModelEndpoint.azureOpenAI]: { order: 1 },
+        [EModelEndpoint.openAI]: { order: 2 },
+      }),
+    ).toEqual({ endpoint: EModelEndpoint.azureOpenAI });
+  });
+
+  it('never includes an agent_id in the template', () => {
+    const template = getNewGeneralConversationTemplate({
+      [EModelEndpoint.azureOpenAI]: { order: 0 },
+      [EModelEndpoint.agents]: { order: 1 },
+    });
+
+    expect(template).toEqual({ endpoint: EModelEndpoint.azureOpenAI });
+    expect(Object.prototype.hasOwnProperty.call(template, 'agent_id')).toBe(false);
+  });
+
+  it('returns an empty template when endpoint config is unavailable or agents-only', () => {
+    expect(getNewGeneralConversationTemplate(undefined)).toEqual({});
+    expect(getNewGeneralConversationTemplate({ [EModelEndpoint.agents]: { order: 0 } })).toEqual(
+      {},
+    );
   });
 });

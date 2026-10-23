@@ -76,6 +76,7 @@ import {
   resolveSkillCatalog,
   resolveManualSkills,
   resolveAlwaysApplySkills,
+  resolveAgentExplicitSkillIds,
   selectSkillPrimesForTurn,
   unionPrimeAllowedTools,
   MAX_PRIMED_SKILLS_PER_TURN,
@@ -1262,6 +1263,10 @@ export async function initializeAgent(
             names: params.manualSkills,
             getSkillByName: db.getSkillByName,
             accessibleSkillIds: params.accessibleSkillIds!,
+            agentExplicitSkillIds: resolveAgentExplicitSkillIds({
+              agent,
+              accessibleSkillIds: params.accessibleSkillIds!,
+            }),
             userId: user?.id,
             skillStates: params.skillStates,
             defaultActiveOnShare: params.defaultActiveOnShare,
@@ -2417,6 +2422,8 @@ export async function initializeAgent(
       toolRegistry,
       accessibleSkillIds: accessibleSkillIds ?? [],
       skillAuthoringAvailable,
+      /* Deloitte Custom Change: keeps `read_file` for a primed skill the user disabled. */
+      hasSkillPrimes: (manualSkillPrimes?.length ?? 0) + (alwaysApplySkillPrimes?.length ?? 0) > 0,
       contextWindowTokens: Number(agentMaxContextTokens) || 200_000,
       listSkillsByAccess: db?.listSkillsByAccess,
       codeEnvAvailable: effectiveCodeEnvAvailable,
