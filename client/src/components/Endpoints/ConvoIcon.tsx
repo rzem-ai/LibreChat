@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
 import { Feather } from 'lucide-react';
 import { ProviderId } from 'librechat-data-provider';
-import { Sparkles, AssistantIcon, ProviderIcon, useAuthenticatedImageSrc } from '@librechat/client';
+import { Sparkles, AssistantIcon, ProviderIcon } from '@librechat/client';
 import type * as t from 'librechat-data-provider';
+import { cn, getAgentAvatarUrl, getEntity, getIconEndpoint } from '~/utils';
 import ConvoIconURL from '~/components/Endpoints/ConvoIconURL';
-import { cn, getEntity, getIconEndpoint } from '~/utils';
+import { URLIcon } from '~/components/Endpoints/URLIcon';
 import { useProviderIcon } from '~/hooks/Endpoint';
 import { isImageURL } from '~/utils/icons';
 
@@ -13,34 +14,6 @@ const artScale = 2 / 3;
 
 const entityAvatarClassName =
   'bg-token-surface-secondary h-full w-full rounded-full object-cover dark:bg-surface-tertiary';
-
-// Deloitte Custom Change: route legacy private Azure agent avatars through authenticated image loading.
-/**
- * Converts a legacy private Azure agent avatar URL to the authenticated avatar route.
- *
- * @param avatar - Stored avatar URL
- * @returns The authenticated route URL, or `null` when the avatar is not a supported Azure URL
- */
-function getPrivateAzureAvatarUrl(avatar: string): string | null {
-  try {
-    const url = new URL(avatar);
-    if (!/^[a-z\d]{3,24}\.blob\.core\.windows\.net$/i.test(url.hostname)) {
-      return null;
-    }
-
-    const match = url.pathname.match(
-      /\/(images\/[a-f\d]{24}\/agent-[^/]+-avatar-\d+\.(?:png|gif|jpe?g|webp))$/i,
-    );
-    if (!match) {
-      return null;
-    }
-
-    const encodedPath = btoa(match[1]).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    return `/api/files/images/avatar?file=${encodedPath}`;
-  } catch {
-    return null;
-  }
-}
 
 function AgentAvatar({
   avatar,
@@ -53,23 +26,14 @@ function AgentAvatar({
   className: string;
   size?: number;
 }) {
-  // Deloitte Custom Change: keep non-Azure avatars on their existing direct-rendering path.
-  const privateAzureAvatarUrl = getPrivateAzureAvatarUrl(avatar);
-  const { src, isLoading, isError } = useAuthenticatedImageSrc(privateAzureAvatarUrl ?? '');
-
   if (agentName && avatar) {
-    if (privateAzureAvatarUrl && isError) {
-      return <Feather className={cn(className)} size={size} />;
-    }
-
+    // Deloitte Custom Change: use the existing authenticated URLIcon renderer for agent profile pictures.
     return (
-      <img
-        src={privateAzureAvatarUrl ? src || undefined : avatar}
+      <URLIcon
+        iconURL={avatar}
+        altName={agentName}
         className={entityAvatarClassName}
-        alt={agentName}
-        width="80"
-        height="80"
-        style={privateAzureAvatarUrl && isLoading ? { visibility: 'hidden' } : undefined}
+        containerStyle={{ width: '100%', height: '100%' }}
       />
     );
   }
@@ -146,7 +110,7 @@ export default function ConvoIcon({
 
   const name = entity?.name ?? '';
   const avatar = isAgent
-    ? (entity as t.Agent | undefined)?.avatar?.filepath
+    ? (getAgentAvatarUrl(entity as t.Agent | undefined) ?? undefined)
     : ((entity as t.Assistant | undefined)?.metadata?.avatar as string);
 
   const { provider, imageURL } = useProviderIcon({ endpoint, endpointsConfig, iconURL });
