@@ -80,7 +80,7 @@ Build your prompt like a layered cake.
 </Analogy>
 ```
 
-`Compare` shows a weaker and stronger version side by side:
+`Compare` shows a before and an after side by side. The after panel is emphasised:
 
 ```mdx
 <Compare>
