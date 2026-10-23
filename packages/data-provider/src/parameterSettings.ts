@@ -1388,7 +1388,9 @@ export function applyModelAwareDefaults(
   }
   /** Deloitte Custom Change: Haiku 5.5+ keeps thinking but rejects sampling parameters. */
   if (hasHaikuSamplingRestriction(model)) {
-    return settings.filter((setting) => !['temperature', 'topP', 'topK'].includes(setting.key));
+    return settings.filter(
+      (setting) => !['temperature', 'topP', 'top_p', 'topK'].includes(setting.key),
+    );
   }
   const modelAwareSettings =
     endpoint === EModelEndpoint.google
