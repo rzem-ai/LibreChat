@@ -87,7 +87,7 @@ export default function Article(): JSX.Element {
         {article.headings.length > 0 && (
           <nav
             aria-label={localize('com_learning_on_this_page')}
-            className="sticky top-6 hidden max-h-[calc(100vh-3rem)] w-56 self-start overflow-y-auto lg:flex lg:flex-col lg:gap-3"
+            className="sticky top-6 z-10 hidden max-h-[calc(100vh-3rem)] w-56 self-start overflow-y-auto lg:flex lg:flex-col lg:gap-3"
           >
             <p className="mb-2 text-sm text-text-secondary">
               {localize('com_learning_on_this_page')}
@@ -98,8 +98,10 @@ export default function Article(): JSX.Element {
                 href={`#${id}`}
                 aria-current={id === activeId ? 'location' : undefined}
                 className={cn(
-                  'text-[15px] leading-snug underline-offset-4 transition-colors hover:text-text-primary hover:underline',
-                  id === activeId ? 'text-text-primary' : 'text-text-secondary',
+                  'block cursor-pointer py-0.5 text-[15px] leading-snug transition-colors',
+                  id === activeId
+                    ? 'font-medium text-text-primary'
+                    : 'text-text-tertiary hover:text-text-primary',
                   level === 3 && 'pl-3',
                 )}
                 onClick={(event) => {
