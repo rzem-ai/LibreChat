@@ -171,7 +171,12 @@ const getOpenIDAppAuthToken = (
   if (tokenset?.id_token && isCurrentOpenIDIdToken(idTokenExpiresAt)) {
     return tokenset.id_token;
   }
-  if (sessionIdToken && isCurrentOpenIDIdToken(sessionIdTokenExpiresAt)) {
+  // Deloitte Custom Change: Never reuse a saved ID token without trusted expiry metadata.
+  if (
+    sessionIdToken &&
+    Number.isFinite(sessionIdTokenExpiresAt) &&
+    isCurrentOpenIDIdToken(sessionIdTokenExpiresAt)
+  ) {
     return sessionIdToken;
   }
   return tokenset?.access_token;

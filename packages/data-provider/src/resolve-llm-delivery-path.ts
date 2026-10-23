@@ -3,6 +3,7 @@ import type { EndpointFileConfig, FileConfig, RegexLike } from './types/files';
 import type { CodeEnvReferenceSet } from './codeEnvRef';
 import type { TEndpoint } from './config';
 import {
+  excelMimeTypes,
   retrievalMimeTypes,
   isExplicitMimeConfig,
   isBedrockDocumentType,
@@ -367,6 +368,11 @@ export function resolveUploadLLMDeliveryPath({
  *  known CSV alias to 'text/csv', so an exact check is all that's needed here. */
 const isCsvMimeType = (mimeType: string): boolean => mimeType === 'text/csv';
 
+/** Deloitte Custom Change: same reasoning as isCsvMimeType — Excel is tabular, not prose,
+ *  so vector search is a poor fit for it. Reuses the canonical excel regex from
+ *  file-config.ts rather than re-deriving the alias list. */
+const isExcelMimeType = (mimeType: string): boolean => excelMimeTypes.test(mimeType);
+
 export function canToolResourceConsume(toolResource: string, mimeType: string): boolean {
   mimeType = canonicalizeMimeType(mimeType);
   if (toolResource === EToolResources.file_search) {
@@ -378,6 +384,7 @@ export function canToolResourceConsume(toolResource: string, mimeType: string): 
       !mimeType.startsWith('audio') &&
       !mimeType.startsWith('video') &&
       !isCsvMimeType(mimeType) &&
+      !isExcelMimeType(mimeType) &&
       (hasTextExtractionPath(mimeType) || matchesMimeList(mimeType, retrievalMimeTypes))
     );
   }
