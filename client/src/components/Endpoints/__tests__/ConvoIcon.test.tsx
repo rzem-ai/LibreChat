@@ -1,6 +1,6 @@
 import React from 'react';
 import '@testing-library/jest-dom';
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { EModelEndpoint, ProviderId, request } from 'librechat-data-provider';
 import type {
   Agent,
@@ -11,6 +11,10 @@ import type {
   TEndpointsConfig,
 } from 'librechat-data-provider';
 import ConvoIcon from '../ConvoIcon';
+
+// Deloitte Custom Change: preserve URL APIs and mocked requests between avatar component tests.
+const originalCreateObjectURL = Object.getOwnPropertyDescriptor(URL, 'createObjectURL');
+const originalRevokeObjectURL = Object.getOwnPropertyDescriptor(URL, 'revokeObjectURL');
 
 // Deloitte Custom Change: intercept the authenticated image request the avatar route relies on.
 jest.mock('librechat-data-provider', () => ({
@@ -59,6 +63,22 @@ const renderIcon = (conversation: TConversation) =>
   );
 
 describe('ConvoIcon', () => {
+  // Deloitte Custom Change: unmount authenticated-image hooks before restoring URL methods.
+  afterEach((): void => {
+    cleanup();
+    if (originalCreateObjectURL) {
+      Object.defineProperty(URL, 'createObjectURL', originalCreateObjectURL);
+    } else {
+      Reflect.deleteProperty(URL, 'createObjectURL');
+    }
+    if (originalRevokeObjectURL) {
+      Object.defineProperty(URL, 'revokeObjectURL', originalRevokeObjectURL);
+    } else {
+      Reflect.deleteProperty(URL, 'revokeObjectURL');
+    }
+    (request.getResponse as jest.Mock).mockReset();
+  });
+
   it('renders the provider mark for a first-class endpoint', () => {
     renderIcon({ endpoint: EModelEndpoint.anthropic } as TConversation);
 
@@ -78,13 +98,21 @@ describe('ConvoIcon', () => {
   });
 
   // Deloitte Custom Change: private Azure avatars must load through the authenticated route.
-  it('loads a private Azure agent avatar through the authenticated image route', async () => {
+  it('loads a private Azure agent avatar through the authenticated image route', async (): Promise<void> => {
     const blobPath = 'images/0123456789abcdef01234567/agent-agent_azure-avatar-1730000000000.png';
     const getResponse = request.getResponse as jest.Mock;
     getResponse.mockResolvedValue({ data: new Blob(['avatar-bytes'], { type: 'image/png' }) });
     const createObjectURL = jest.fn(() => 'blob:agent-avatar');
-    Object.defineProperty(URL, 'createObjectURL', { value: createObjectURL, writable: true });
-    Object.defineProperty(URL, 'revokeObjectURL', { value: jest.fn(), writable: true });
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: createObjectURL,
+      writable: true,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: jest.fn(),
+      writable: true,
+    });
 
     const azureAgent = {
       id: 'agent_azure',

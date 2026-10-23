@@ -9,7 +9,7 @@ import {
 } from '@librechat/client';
 import type { IconProps } from '~/common';
 import { useProviderIcon } from '~/hooks/Endpoint';
-import { cn } from '~/utils';
+import { AgentAvatarImage, cn } from '~/utils';
 
 const MessageEndpointIcon: React.FC<IconProps> = (props) => {
   const {
@@ -23,12 +23,13 @@ const MessageEndpointIcon: React.FC<IconProps> = (props) => {
     endpointsConfig,
   } = props;
   const { provider, imageURL } = useProviderIcon({ endpoint, iconURL, endpointsConfig });
-  // Deloitte Custom Change: private Azure avatar proxies need authenticated image retrieval.
+  const isAgentEndpoint = endpoint === EModelEndpoint.agents;
+  // Deloitte Custom Change: agent avatars use AgentAvatarImage; retain this hook for other endpoint icons.
   const {
     src: authenticatedImageSrc,
     isLoading: isImageLoading,
     isError: imageFetchError,
-  } = useAuthenticatedImageSrc(imageURL ?? '');
+  } = useAuthenticatedImageSrc(isAgentEndpoint ? '' : (imageURL ?? ''));
   const canDisplayAuthenticatedImage = authenticatedImageSrc && !isImageLoading && !imageFetchError;
 
   const assistantsIcon = {
@@ -60,8 +61,17 @@ const MessageEndpointIcon: React.FC<IconProps> = (props) => {
     name: endpoint,
   };
 
+  // Deloitte Custom Change: keep the existing agent fallback while sharing authenticated image loading.
+  const agentFallback = (
+    <div className="h-6 w-6">
+      <div className="shadow-stroke flex h-6 w-6 items-center justify-center overflow-hidden rounded-full">
+        <Feather className="h-2/3 w-2/3 text-text-tertiary" aria-hidden="true" />
+      </div>
+    </div>
+  );
+
   const agentsIcon = {
-    icon: canDisplayAuthenticatedImage ? (
+    icon: imageURL ? (
       <div className="relative flex h-6 w-6 items-center justify-center">
         <TooltipAnchor
           description={agentName ?? ''}
@@ -71,20 +81,19 @@ const MessageEndpointIcon: React.FC<IconProps> = (props) => {
           }}
           className={cn('overflow-hidden rounded-full', props.className ?? '')}
         >
-          <img
+          <AgentAvatarImage
+            url={imageURL}
+            alt={agentName ?? ''}
             className="shadow-stroke h-full w-full object-cover"
-            src={authenticatedImageSrc}
-            alt={agentName}
-            style={{ height: '80', width: '80' }}
+            fallback={agentFallback}
+            showFallbackWhileLoading
+            width="80"
+            height="80"
           />
         </TooltipAnchor>
       </div>
     ) : (
-      <div className="h-6 w-6">
-        <div className="shadow-stroke flex h-6 w-6 items-center justify-center overflow-hidden rounded-full">
-          <Feather className="h-2/3 w-2/3 text-text-tertiary" aria-hidden="true" />
-        </div>
-      </div>
+      agentFallback
     ),
     name: endpoint,
   };

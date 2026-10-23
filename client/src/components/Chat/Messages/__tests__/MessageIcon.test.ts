@@ -81,7 +81,7 @@ describe('MessageIcon arePropsEqual', () => {
   });
 
   // Deloitte Custom Change: ensure legacy string avatar changes invalidate the memoized icon.
-  it('returns false when a legacy string agent avatar changes', () => {
+  it('returns false when a legacy string agent avatar changes', (): void => {
     const previousAgent = makeAgent();
     const nextAgent = makeAgent();
     Object.defineProperty(previousAgent, 'avatar', { value: '/a.png' });

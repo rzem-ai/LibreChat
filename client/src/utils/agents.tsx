@@ -3,11 +3,17 @@ import { Feather } from 'lucide-react';
 import { Skeleton, useAuthenticatedImageSrc } from '@librechat/client';
 import type t from 'librechat-data-provider';
 
+// Deloitte Custom Change: only normalize canonical Azure Blob Storage hostnames.
 /**
  * Azure Blob Storage host suffixes for the clouds in scope: global, US Government and China.
  */
-const AZURE_BLOB_HOST_SUFFIXES = ['windows.net', 'usgovcloudapi.net', 'chinacloudapi.cn'] as const;
+const AZURE_BLOB_HOST_SUFFIXES = [
+  '.blob.core.windows.net',
+  '.blob.core.usgovcloudapi.net',
+  '.blob.core.chinacloudapi.cn',
+] as const;
 
+// Deloitte Custom Change: mirror the server's allowlist for agent avatar blob paths.
 /**
  * Shape of an agent avatar blob inside Azure Blob Storage.
  * Mirrors the agent branch of the server-side pattern in `api/server/routes/files/avatar.js`,
@@ -16,16 +22,26 @@ const AZURE_BLOB_HOST_SUFFIXES = ['windows.net', 'usgovcloudapi.net', 'chinaclou
 const AGENT_AVATAR_BLOB_PATTERN =
   /^images\/[a-f\d]{24}\/agent-[^/]+-avatar-\d+\.(png|gif|jpe?g|webp)$/i;
 
+// Deloitte Custom Change: restrict private avatar URL rewrites to supported Azure Blob endpoints.
 /**
  * Determines whether a hostname belongs to Azure Blob Storage.
  *
  * @param hostname - Hostname taken from a parsed URL
  * @returns `true` when the host is an Azure Blob Storage endpoint
  */
-const isAzureBlobHost = (hostname: string): boolean =>
-  hostname.includes('.blob.') &&
-  AZURE_BLOB_HOST_SUFFIXES.some((suffix) => hostname.endsWith(suffix));
+const isAzureBlobHost = (hostname: string): boolean => {
+  const suffix = AZURE_BLOB_HOST_SUFFIXES.find(
+    (candidate: (typeof AZURE_BLOB_HOST_SUFFIXES)[number]): boolean => hostname.endsWith(candidate),
+  );
+  if (!suffix) {
+    return false;
+  }
 
+  const accountName = hostname.slice(0, -suffix.length);
+  return /^[a-z\d]{3,24}$/.test(accountName);
+};
+
+// Deloitte Custom Change: encode proxy paths in the format accepted by the avatar API.
 /**
  * Encodes a blob path as base64url.
  *
@@ -45,6 +61,7 @@ const encodeBase64Url = (value: string): string => {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 };
 
+// Deloitte Custom Change: only derive paths the authenticated avatar route can serve.
 /**
  * Extracts the Azure blob path of an agent avatar from a blob URL pathname.
  *
@@ -58,7 +75,7 @@ const getAgentAvatarBlobPath = (pathname: string): string | null => {
   const segments = pathname
     .split('/')
     .filter(Boolean)
-    .map((segment) => {
+    .map((segment: string): string => {
       try {
         return decodeURIComponent(segment);
       } catch {
@@ -66,15 +83,113 @@ const getAgentAvatarBlobPath = (pathname: string): string | null => {
       }
     });
 
-  const imagesIndex = segments.indexOf('images');
-  if (imagesIndex === -1) {
-    return null;
+  for (let index = 0; index < segments.length; index += 1) {
+    if (segments[index] !== 'images') {
+      continue;
+    }
+
+    const blobPath = segments.slice(index).join('/');
+    if (AGENT_AVATAR_BLOB_PATTERN.test(blobPath)) {
+      return blobPath;
+    }
   }
 
-  const blobPath = segments.slice(imagesIndex).join('/');
-  return AGENT_AVATAR_BLOB_PATTERN.test(blobPath) ? blobPath : null;
+  return null;
 };
 
+// Deloitte Custom Change: use one authenticated image renderer for all agent avatar surfaces.
+/** Props controlling the shared authenticated agent-avatar image. */
+export interface AgentAvatarImageProps {
+  /** Avatar URL, normalized to the authenticated proxy URL when stored in private Azure. */
+  url: string;
+  /** Accessible description for the avatar image. */
+  alt: string;
+  /** Surface-specific image classes. */
+  className: string;
+  /** Icon or other content displayed when the authenticated request fails. */
+  fallback?: React.ReactNode;
+  /** Native image loading behavior. */
+  loading?: 'eager' | 'lazy';
+  /** Whether to show the shared skeleton until the image is loaded. */
+  showSkeleton?: boolean;
+  /** Keep the image element mounted but hidden while the request is pending. */
+  keepSpaceWhileLoading?: boolean;
+  /** Show the fallback while the authenticated request is pending. */
+  showFallbackWhileLoading?: boolean;
+  /** Optional intrinsic image width. */
+  width?: number | string;
+  /** Optional intrinsic image height. */
+  height?: number | string;
+}
+
+// Deloitte Custom Change: share authenticated retrieval, loading, and fallback behavior across avatar surfaces.
+/**
+ * Renders an agent avatar using the authenticated image loader.
+ *
+ * @param props - URL, accessibility text, sizing, loading behavior, and optional fallback.
+ * @param props.url - Avatar URL to load.
+ * @param props.alt - Accessible description for the image.
+ * @param props.className - Surface-specific image classes.
+ * @param props.fallback - Optional fallback content for a failed request.
+ * @param props.loading - Native image loading behavior.
+ * @param props.showSkeleton - Whether to display the shared loading skeleton.
+ * @param props.keepSpaceWhileLoading - Whether to reserve image space while loading.
+ * @param props.showFallbackWhileLoading - Whether to show fallback content during loading.
+ * @param props.width - Optional intrinsic image width.
+ * @param props.height - Optional intrinsic image height.
+ * @returns The authenticated avatar image, loading state, or configured fallback.
+ */
+export const AgentAvatarImage = ({
+  url,
+  alt,
+  className,
+  fallback,
+  loading = 'eager',
+  showSkeleton = false,
+  keepSpaceWhileLoading = false,
+  showFallbackWhileLoading = false,
+  width,
+  height,
+}: AgentAvatarImageProps): React.ReactElement => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const { src, isLoading, isError } = useAuthenticatedImageSrc(url);
+
+  useEffect((): void => {
+    setIsLoaded(false);
+  }, [url]);
+
+  if (isError || (isLoading && showFallbackWhileLoading)) {
+    return <>{fallback}</>;
+  }
+
+  return (
+    <>
+      {(!isLoading || keepSpaceWhileLoading) && (
+        <img
+          src={src || undefined}
+          alt={alt}
+          className={className}
+          loading={loading}
+          width={width}
+          height={height}
+          onLoad={(): void => setIsLoaded(true)}
+          onError={(): void => setIsLoaded(false)}
+          style={{
+            ...(keepSpaceWhileLoading && isLoading ? { visibility: 'hidden' } : {}),
+            ...(showSkeleton
+              ? { opacity: isLoaded ? 1 : 0, transition: 'opacity 0.2s ease-in-out' }
+              : {}),
+          }}
+        />
+      )}
+      {showSkeleton && !isLoaded && (
+        <Skeleton className="absolute inset-0 rounded-full" aria-hidden="true" />
+      )}
+    </>
+  );
+};
+
+// Deloitte Custom Change: compare avatar values consistently across legacy and current records.
 /**
  * Resolves the stored avatar filepath of an agent.
  *
@@ -96,6 +211,7 @@ export const getAgentAvatarFilepath = (agent: t.Agent | null | undefined): strin
   return avatar.filepath ?? null;
 };
 
+// Deloitte Custom Change: normalize supported private Azure avatar URLs for authenticated loading.
 /**
  * Extracts the avatar URL from an agent's avatar property
  * Handles both string and object formats
@@ -142,38 +258,8 @@ const LazyAgentAvatar = ({
   alt: string;
   imgClass: string;
 }) => {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const {
-    src: authenticatedImageSrc,
-    isLoading: isImageLoading,
-    isError: imageFetchError,
-  } = useAuthenticatedImageSrc(url);
-
-  useEffect(() => {
-    setIsLoaded(false);
-  }, [url]);
-
-  return (
-    <>
-      {!isImageLoading && (
-        <img
-          src={authenticatedImageSrc}
-          alt={alt}
-          className={imgClass}
-          loading="lazy"
-          onLoad={() => setIsLoaded(true)}
-          onError={() => setIsLoaded(false)}
-          style={{
-            opacity: isLoaded ? 1 : 0,
-            transition: 'opacity 0.2s ease-in-out',
-          }}
-        />
-      )}
-      {!isLoaded && !imageFetchError && (
-        <Skeleton className="absolute inset-0 rounded-full" aria-hidden="true" />
-      )}
-    </>
-  );
+  // Deloitte Custom Change: share authenticated loading and skeleton behavior across agent avatars.
+  return <AgentAvatarImage url={url} alt={alt} className={imgClass} loading="lazy" showSkeleton />;
 };
 
 /**

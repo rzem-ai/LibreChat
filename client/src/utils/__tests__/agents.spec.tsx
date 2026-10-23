@@ -52,7 +52,7 @@ describe('Agent Utilities', () => {
     });
 
     // Deloitte Custom Change: keep legacy private Azure avatar URLs on the authenticated route.
-    it('proxies private Azure Blob avatar URLs through the authenticated avatar route', () => {
+    it('proxies private Azure Blob avatar URLs through the authenticated avatar route', (): void => {
       const agent = {
         id: 'agent-123',
         name: 'Test Agent',
@@ -68,23 +68,31 @@ describe('Agent Utilities', () => {
     });
 
     // Deloitte Custom Change: cover the sovereign Azure clouds the platform deploys to.
-    it('proxies Azure Blob avatar URLs from sovereign cloud hosts', () => {
-      const agent = {
-        id: 'agent-123',
-        name: 'Test Agent',
-        avatar: {
-          filepath:
-            'https://storage.blob.core.usgovcloudapi.net/files/images/0123456789abcdef01234567/agent-agent-123-avatar-1730000000000.png',
-        },
-      } as t.Agent;
-      const blobPath = 'images/0123456789abcdef01234567/agent-agent-123-avatar-1730000000000.png';
-      const encodedPath = btoa(blobPath).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    it.each([
+      { cloud: 'US Government', host: 'storage.blob.core.usgovcloudapi.net' },
+      { cloud: 'China', host: 'storage.blob.core.chinacloudapi.cn' },
+    ])(
+      'proxies Azure Blob avatar URLs from $cloud hosts',
+      ({ host }: { cloud: string; host: string }): void => {
+        const agent = {
+          id: 'agent-123',
+          name: 'Test Agent',
+          avatar: {
+            filepath: `https://${host}/files/images/0123456789abcdef01234567/agent-agent-123-avatar-1730000000000.png`,
+          },
+        } as t.Agent;
+        const blobPath = 'images/0123456789abcdef01234567/agent-agent-123-avatar-1730000000000.png';
+        const encodedPath = btoa(blobPath)
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
 
-      expect(getAgentAvatarUrl(agent)).toBe(`/api/files/images/avatar?file=${encodedPath}`);
-    });
+        expect(getAgentAvatarUrl(agent)).toBe(`/api/files/images/avatar?file=${encodedPath}`);
+      },
+    );
 
     // Deloitte Custom Change: drop the SAS query string, the proxy authenticates on its own.
-    it('proxies Azure Blob avatar URLs that carry a SAS query string', () => {
+    it('proxies Azure Blob avatar URLs that carry a SAS query string', (): void => {
       const agent = {
         id: 'agent-123',
         name: 'Test Agent',
@@ -101,7 +109,7 @@ describe('Agent Utilities', () => {
     });
 
     // Deloitte Custom Change: encode the blob path from its UTF-8 bytes, as the server decodes it.
-    it('encodes blob paths that contain characters outside Latin-1', () => {
+    it('encodes blob paths that contain characters outside Latin-1', (): void => {
       const blobPath = 'images/0123456789abcdef01234567/agent-agent-ü-avatar-1730000000000.png';
       const agent = {
         id: 'agent-123',
@@ -119,7 +127,7 @@ describe('Agent Utilities', () => {
     });
 
     // Deloitte Custom Change: only avatar blobs are proxied, other Azure files keep their URL.
-    it('leaves Azure Blob URLs that are not agent avatars unchanged', () => {
+    it('leaves Azure Blob URLs that are not agent avatars unchanged', (): void => {
       const agent = {
         id: 'agent-123',
         name: 'Test Agent',
@@ -135,7 +143,7 @@ describe('Agent Utilities', () => {
     });
 
     // Deloitte Custom Change: preserve CDN URLs and prevent double-proxying.
-    it('leaves non-Azure URLs and already proxied avatars unchanged', () => {
+    it('leaves non-Azure URLs and already proxied avatars unchanged', (): void => {
       const cdnAgent = {
         id: '1',
         name: 'CDN Agent',
@@ -149,6 +157,34 @@ describe('Agent Utilities', () => {
 
       expect(getAgentAvatarUrl(cdnAgent)).toBe('https://cdn.example.com/avatar.png');
       expect(getAgentAvatarUrl(proxiedAgent)).toBe('/api/files/images/avatar?file=YWJj');
+    });
+
+    // Deloitte Custom Change: do not proxy URLs on hosts that only resemble Azure Blob Storage.
+    it.each([
+      'https://storage.blob.attackerwindows.net/files/images/0123456789abcdef01234567/agent-agent-123-avatar-1730000000000.png',
+      'https://storage.attacker.blob.core.windows.net/files/images/0123456789abcdef01234567/agent-agent-123-avatar-1730000000000.png',
+    ])('leaves lookalike Azure Blob hostname unchanged: %s', (filepath: string): void => {
+      const agent = {
+        id: 'agent-123',
+        name: 'Lookalike Agent',
+        avatar: { filepath },
+      } as t.Agent;
+
+      expect(getAgentAvatarUrl(agent)).toBe(filepath);
+    });
+
+    // Deloitte Custom Change: locate the blob path even when the container is named "images".
+    it('extracts an agent avatar path after a container also named images', (): void => {
+      const blobPath = 'images/0123456789abcdef01234567/agent-agent-123-avatar-1730000000000.png';
+      const agent = {
+        id: 'agent-123',
+        name: 'Test Agent',
+        avatar: { filepath: `https://storage.blob.core.windows.net/images/${blobPath}` },
+      } as t.Agent;
+
+      expect(getAgentAvatarUrl(agent)).toBe(
+        `/api/files/images/avatar?file=${Buffer.from(blobPath).toString('base64url')}`,
+      );
     });
 
     it('should return null for object avatar without filepath', () => {

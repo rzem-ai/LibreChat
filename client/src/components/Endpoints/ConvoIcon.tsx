@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import { Feather } from 'lucide-react';
 import { ProviderId } from 'librechat-data-provider';
-import { Sparkles, AssistantIcon, ProviderIcon, useAuthenticatedImageSrc } from '@librechat/client';
+import { Sparkles, AssistantIcon, ProviderIcon } from '@librechat/client';
 import type * as t from 'librechat-data-provider';
-import { getAgentAvatarUrl, cn, getEntity, getIconEndpoint } from '~/utils';
+import { AgentAvatarImage, getAgentAvatarUrl, cn, getEntity, getIconEndpoint } from '~/utils';
 import ConvoIconURL from '~/components/Endpoints/ConvoIconURL';
 import { useProviderIcon } from '~/hooks/Endpoint';
 import { isImageURL } from '~/utils/icons';
@@ -25,26 +25,17 @@ function AgentAvatar({
   className: string;
   size?: number;
 }) {
-  // Deloitte Custom Change: fetch private Azure agent avatars through the authenticated image hook.
-  const { src, isLoading, isError } = useAuthenticatedImageSrc(avatar);
-
   if (agentName && avatar) {
-    if (isError) {
-      return <Feather className={cn(agentName === '' ? 'icon-2xl' : '', className)} size={size} />;
-    }
-
-    /**
-     * Deloitte Custom Change: keep the image element mounted while the authenticated
-     * request is in flight so the reserved space stays stable and no broken image is shown.
-     */
+    // Deloitte Custom Change: use the shared authenticated image renderer for the agent profile picture.
     return (
-      <img
-        src={src || undefined}
-        className={entityAvatarClassName}
+      <AgentAvatarImage
+        url={avatar}
         alt={agentName}
+        className={entityAvatarClassName}
+        fallback={<Feather className={cn(className)} size={size} />}
+        keepSpaceWhileLoading
         width="80"
         height="80"
-        style={isLoading ? { visibility: 'hidden' } : undefined}
       />
     );
   }

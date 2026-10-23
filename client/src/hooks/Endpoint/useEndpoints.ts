@@ -20,9 +20,9 @@ import type {
 import type { ProviderIconResolution } from './useProviderIcon';
 import type { Endpoint } from '~/common';
 import { useHasAccess, useShowMarketplace } from '~/hooks';
+import { getAgentAvatarUrl, mapEndpoints } from '~/utils';
 import { resolveProviderIcon } from './useProviderIcon';
 import { useGetEndpointsQuery } from '~/data-provider';
-import { mapEndpoints } from '~/utils';
 
 const defaultInterface = getConfigDefaults().interface;
 
@@ -153,8 +153,9 @@ export const useEndpoints = ({
           acc[agent.id] = agent.name || '';
           return acc;
         }, {});
+        // Deloitte Custom Change: normalize model-picker agent icons through the authenticated avatar route.
         result.modelIcons = agents?.reduce((acc, agent) => {
-          acc[agent.id] = agent?.avatar?.filepath;
+          acc[agent.id] = getAgentAvatarUrl(agent) ?? undefined;
           return acc;
         }, {});
       }
