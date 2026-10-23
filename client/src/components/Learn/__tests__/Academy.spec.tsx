@@ -138,6 +138,20 @@ describe('Releases', () => {
     expect(screen.getByRole('heading', { level: 3, name: 'Faster uploads' })).toBeInTheDocument();
     mockReleases = [];
   });
+
+  it('keeps the heading when there are no releases', async () => {
+    mockReleases = [];
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Releases />
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'com_learning_tab_releases' }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText('com_learning_no_releases')).toBeInTheDocument();
+  });
 });
 
 describe('Faq', () => {

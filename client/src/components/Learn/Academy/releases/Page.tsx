@@ -14,7 +14,7 @@ const formatDate = (isoDate: string): string => {
   return monthName && day ? `${day} ${monthName} ${year}` : isoDate;
 };
 
-export default function Releases(): JSX.Element | null {
+export default function Releases(): JSX.Element {
   const localize = useLocalize();
   const {
     data: releases,
@@ -23,21 +23,17 @@ export default function Releases(): JSX.Element | null {
     refetch,
   } = useQuery(['learningReleases'], loadReleases, { staleTime: Infinity, retry: 1 });
 
-  if (isLoading) {
-    return null;
-  }
-
-  if (isError) {
-    return <Failure onRetry={() => refetch()} />;
-  }
-
-  if (!releases?.length) {
-    return <p className="text-sm text-text-secondary">{localize('com_learning_no_releases')}</p>;
-  }
-
-  return (
-    <div className={`${READING_COLUMN} flex flex-col gap-8`}>
-      <h2 className="text-2xl font-medium">{localize('com_learning_tab_releases')}</h2>
+  const renderBody = (): JSX.Element | null => {
+    if (isLoading) {
+      return null;
+    }
+    if (isError) {
+      return <Failure onRetry={() => refetch()} />;
+    }
+    if (!releases?.length) {
+      return <p className="text-sm text-text-secondary">{localize('com_learning_no_releases')}</p>;
+    }
+    return (
       <div className="flex flex-col gap-12">
         {releases.map(({ id, frontmatter, Content }) => (
           <article key={id}>
@@ -51,6 +47,13 @@ export default function Releases(): JSX.Element | null {
           </article>
         ))}
       </div>
+    );
+  };
+
+  return (
+    <div className={`${READING_COLUMN} flex flex-col gap-8`}>
+      <h2 className="text-2xl font-medium">{localize('com_learning_tab_releases')}</h2>
+      {renderBody()}
     </div>
   );
 }
