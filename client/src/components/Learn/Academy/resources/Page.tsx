@@ -71,7 +71,6 @@ export default function Resources(): JSX.Element {
         items={RESOURCES}
         getFields={getFields}
         searchLabel={localize('com_learning_search_resources')}
-        searchPlaceholder={localize('com_learning_search_resources_placeholder')}
         renderEmpty={(query) => localize('com_learning_no_resources', { 0: query })}
       >
         {(visible) => (

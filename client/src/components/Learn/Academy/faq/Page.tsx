@@ -57,7 +57,6 @@ export default function Faq(): JSX.Element {
         items={FAQS}
         getFields={getFields}
         searchLabel={localize('com_learning_search_faq')}
-        searchPlaceholder={localize('com_learning_search_faq_placeholder')}
         renderEmpty={(query) => localize('com_learning_no_faq', { 0: query })}
       >
         {(visible, query) => (
