@@ -18,9 +18,7 @@ function ComparePanel({ label, className, children }: ComparePanelProps): JSX.El
 
   return (
     <div className={cn('rounded-xl border p-4', className)}>
-      <div className="text-xs font-medium uppercase tracking-wide text-text-secondary">
-        {localize(label)}
-      </div>
+      <div className="text-xs font-medium text-text-secondary">{localize(label)}</div>
       <div className="[&>:first-child]:!mt-2">{children}</div>
     </div>
   );
