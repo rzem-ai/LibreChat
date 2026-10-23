@@ -87,13 +87,17 @@ export function formatSkillScanError(error: unknown, fallback: string): string {
   return errData?.message ?? errData?.error ?? fallback;
 }
 
-/** A missing value preserves manual invocation for skills created before the field existed. */
+/**
+ * Deloitte Custom Change: a missing value preserves manual invocation for
+ * skills created before the field existed.
+ */
 export function isUserInvocable(skill: TSkillSummary): boolean {
   return skill.userInvocable !== false;
 }
 
 /**
- * Narrows skills to the current chat scope and excludes model-only skills.
+ * Deloitte Custom Change: narrows skills to the current chat scope and
+ * excludes model-only skills.
  * A non-empty agent scope is an explicit builder allowlist; an empty scope
  * explicitly opts the agent out of skills.
  */
@@ -111,9 +115,10 @@ export function filterSkillsByScope(
 }
 
 /**
- * Applies a user's active-state preference only to unscoped catalogs. A skill
- * deliberately attached to a SELECT agent remains available in that agent,
- * regardless of whether the user has disabled it in general chat.
+ * Deloitte Custom Change: applies a user's active-state preference only to
+ * unscoped catalogs. A skill deliberately attached to a SELECT agent remains
+ * available in that agent, regardless of whether the user has disabled it in
+ * general chat.
  */
 export function filterSkillsForPopover(
   skills: TSkillSummary[],
