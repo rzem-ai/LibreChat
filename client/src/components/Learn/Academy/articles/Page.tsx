@@ -73,7 +73,7 @@ export default function Article(): JSX.Element {
   return (
     <>
       {backButton}
-      <div className="lg:grid lg:grid-cols-[minmax(0,52rem)_14rem] lg:justify-start lg:gap-16">
+      <div className="mt-4 lg:grid lg:grid-cols-[minmax(0,52rem)_14rem] lg:justify-start lg:gap-16">
         <div>
           <h1 className="text-3xl font-medium tracking-tight">{article.frontmatter.title}</h1>
           <p className="mt-2 text-sm text-text-secondary">
