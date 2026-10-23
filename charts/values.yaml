@@ -191,7 +191,7 @@ migrationJobs:
     suspend: true
     npmScript: migrate:file-retention
     dryRun: true
-    syncWave: "4"
+    syncWave: "5"
   agent-retention:
     enabled: false
     suspend: true
