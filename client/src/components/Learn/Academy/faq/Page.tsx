@@ -2,7 +2,6 @@ import { GEL } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
 import type { Faq } from '../../content/schema';
 import { ArticleLink } from '../articles/mdx/link';
-import { READING_COLUMN } from '../column';
 import { FAQS } from '../../content/data';
 import Searchable from '../Searchable';
 import { useLocalize } from '~/hooks';
@@ -46,7 +45,7 @@ export default function Faq(): JSX.Element {
   const localize = useLocalize();
 
   return (
-    <div className={`${READING_COLUMN} flex flex-col gap-6`}>
+    <div className="flex flex-col gap-6">
       <h2 className="text-2xl font-medium">{localize('com_learning_tab_faq')}</h2>
       <Searchable
         showSearch={FAQ_SEARCH}
@@ -56,13 +55,16 @@ export default function Faq(): JSX.Element {
         renderEmpty={(query) => localize('com_learning_no_faq', { 0: query })}
       >
         {(visible, query) => (
-          <ul className="flex flex-col gap-6">
+          <ul className="border-b border-border-light">
             {visible.map((faq) => (
-              <li key={faq.question}>
-                <p className="text-base font-medium">
+              <li
+                key={faq.question}
+                className="grid gap-2 border-t border-border-light py-6 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:gap-12"
+              >
+                <p className="text-lg font-medium">
                   <GEL.HighlightedText text={faq.question} query={query} />
                 </p>
-                <div className="mt-1 flex flex-col gap-3 text-pretty text-text-secondary">
+                <div className="flex max-w-prose flex-col gap-3 text-pretty text-text-secondary">
                   {faq.answer.split('\n\n').map((paragraph) => (
                     <p key={paragraph}>
                       <RichText text={paragraph} query={query} />
