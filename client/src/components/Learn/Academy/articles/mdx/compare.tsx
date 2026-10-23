@@ -19,8 +19,10 @@ function ComparePanel({ label, badge, children }: ComparePanelProps): JSX.Elemen
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex-1 px-2 pt-2 [&>:first-child]:!mt-0">{children}</div>
-      <div className="flex items-center justify-center gap-2 rounded-lg border border-border-light bg-surface-secondary py-2.5 text-sm">
+      <div className="flex-1 px-2 pt-2 font-mono text-sm [&>:first-child]:!mt-0 [&_li]:text-text-primary [&_p]:!text-text-primary">
+        {children}
+      </div>
+      <div className="flex items-center justify-center gap-2 text-sm">
         {badge}
         {localize(label)}
       </div>
