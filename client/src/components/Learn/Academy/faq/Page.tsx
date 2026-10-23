@@ -46,7 +46,7 @@ export default function Faq(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-6">
-      <h2 className="text-2xl font-medium">{localize('com_learning_tab_faq')}</h2>
+      <h2 className="py-4 text-3xl font-medium">{localize('com_learning_tab_faq')}</h2>
       <Searchable
         showSearch={FAQ_SEARCH}
         items={SORTED_FAQS}

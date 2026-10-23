@@ -52,7 +52,7 @@ export default function Releases(): JSX.Element {
 
   return (
     <div className={`${READING_COLUMN} flex flex-col gap-8`}>
-      <h2 className="text-2xl font-medium">{localize('com_learning_tab_releases')}</h2>
+      <h2 className="py-4 text-3xl font-medium">{localize('com_learning_tab_releases')}</h2>
       {renderBody()}
     </div>
   );
