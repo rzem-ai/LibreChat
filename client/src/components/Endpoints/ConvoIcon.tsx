@@ -3,8 +3,8 @@ import { Feather } from 'lucide-react';
 import { ProviderId } from 'librechat-data-provider';
 import { Sparkles, AssistantIcon, ProviderIcon } from '@librechat/client';
 import type * as t from 'librechat-data-provider';
-import { AgentAvatarImage, getAgentAvatarUrl, cn, getEntity, getIconEndpoint } from '~/utils';
 import ConvoIconURL from '~/components/Endpoints/ConvoIconURL';
+import { cn, getEntity, getIconEndpoint } from '~/utils';
 import { useProviderIcon } from '~/hooks/Endpoint';
 import { isImageURL } from '~/utils/icons';
 
@@ -26,17 +26,8 @@ function AgentAvatar({
   size?: number;
 }) {
   if (agentName && avatar) {
-    // Deloitte Custom Change: use the shared authenticated image renderer for the agent profile picture.
     return (
-      <AgentAvatarImage
-        url={avatar}
-        alt={agentName}
-        className={entityAvatarClassName}
-        fallback={<Feather className={cn(className)} size={size} />}
-        keepSpaceWhileLoading
-        width="80"
-        height="80"
-      />
+      <img src={avatar} className={entityAvatarClassName} alt={agentName} width="80" height="80" />
     );
   }
 
@@ -111,9 +102,8 @@ export default function ConvoIcon({
   );
 
   const name = entity?.name ?? '';
-  // Deloitte Custom Change: normalize legacy direct Azure links before rendering the agent avatar.
   const avatar = isAgent
-    ? (getAgentAvatarUrl(entity as t.Agent | undefined) ?? undefined)
+    ? (entity as t.Agent | undefined)?.avatar?.filepath
     : ((entity as t.Assistant | undefined)?.metadata?.avatar as string);
 
   const { provider, imageURL } = useProviderIcon({ endpoint, endpointsConfig, iconURL });

@@ -3,247 +3,39 @@ import { Feather } from 'lucide-react';
 import { Skeleton, useAuthenticatedImageSrc } from '@librechat/client';
 import type t from 'librechat-data-provider';
 
-// Deloitte Custom Change: only normalize canonical Azure Blob Storage hostnames.
-/**
- * Azure Blob Storage host suffixes for the clouds in scope: global, US Government and China.
- */
-const AZURE_BLOB_HOST_SUFFIXES = [
-  '.blob.core.windows.net',
-  '.blob.core.usgovcloudapi.net',
-  '.blob.core.chinacloudapi.cn',
-] as const;
-
-// Deloitte Custom Change: mirror the server's allowlist for agent avatar blob paths.
-/**
- * Shape of an agent avatar blob inside Azure Blob Storage.
- * Mirrors the agent branch of the server-side pattern in `api/server/routes/files/avatar.js`,
- * so only avatars the authenticated route is able to serve are proxied.
- */
-const AGENT_AVATAR_BLOB_PATTERN =
-  /^images\/[a-f\d]{24}\/agent-[^/]+-avatar-\d+\.(png|gif|jpe?g|webp)$/i;
-
-// Deloitte Custom Change: restrict private avatar URL rewrites to supported Azure Blob endpoints.
-/**
- * Determines whether a hostname belongs to Azure Blob Storage.
- *
- * @param hostname - Hostname taken from a parsed URL
- * @returns `true` when the host is an Azure Blob Storage endpoint
- */
-const isAzureBlobHost = (hostname: string): boolean => {
-  const suffix = AZURE_BLOB_HOST_SUFFIXES.find(
-    (candidate: (typeof AZURE_BLOB_HOST_SUFFIXES)[number]): boolean => hostname.endsWith(candidate),
-  );
-  if (!suffix) {
-    return false;
-  }
-
-  const accountName = hostname.slice(0, -suffix.length);
-  return /^[a-z\d]{3,24}$/.test(accountName);
-};
-
-// Deloitte Custom Change: encode proxy paths in the format accepted by the avatar API.
-/**
- * Encodes a blob path as base64url.
- *
- * The server decodes the `file` query parameter with `Buffer.from(value, 'base64url')`,
- * so the client encodes the same way. The path is encoded from its UTF-8 bytes because
- * `btoa` alone only accepts Latin-1 characters and would throw on other paths.
- *
- * @param value - Blob path to encode
- * @returns Base64url representation of the UTF-8 encoded path
- */
-const encodeBase64Url = (value: string): string => {
-  const bytes = new TextEncoder().encode(value);
-  let binary = '';
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-};
-
-// Deloitte Custom Change: only derive paths the authenticated avatar route can serve.
-/**
- * Extracts the Azure blob path of an agent avatar from a blob URL pathname.
- *
- * Blob URLs include the container name before the `images` folder, so the path is
- * anchored on that folder instead of dropping a fixed number of segments.
- *
- * @param pathname - Pathname of the blob URL
- * @returns The blob path when it is an agent avatar, otherwise `null`
- */
-const getAgentAvatarBlobPath = (pathname: string): string | null => {
-  const segments = pathname
-    .split('/')
-    .filter(Boolean)
-    .map((segment: string): string => {
-      try {
-        return decodeURIComponent(segment);
-      } catch {
-        return segment;
-      }
-    });
-
-  for (let index = 0; index < segments.length; index += 1) {
-    if (segments[index] !== 'images') {
-      continue;
-    }
-
-    const blobPath = segments.slice(index).join('/');
-    if (AGENT_AVATAR_BLOB_PATTERN.test(blobPath)) {
-      return blobPath;
-    }
-  }
-
-  return null;
-};
-
-// Deloitte Custom Change: use one authenticated image renderer for all agent avatar surfaces.
-/** Props controlling the shared authenticated agent-avatar image. */
-export interface AgentAvatarImageProps {
-  /** Avatar URL, normalized to the authenticated proxy URL when stored in private Azure. */
-  url: string;
-  /** Accessible description for the avatar image. */
-  alt: string;
-  /** Surface-specific image classes. */
-  className: string;
-  /** Icon or other content displayed when the authenticated request fails. */
-  fallback?: React.ReactNode;
-  /** Native image loading behavior. */
-  loading?: 'eager' | 'lazy';
-  /** Whether to show the shared skeleton until the image is loaded. */
-  showSkeleton?: boolean;
-  /** Keep the image element mounted but hidden while the request is pending. */
-  keepSpaceWhileLoading?: boolean;
-  /** Show the fallback while the authenticated request is pending. */
-  showFallbackWhileLoading?: boolean;
-  /** Optional intrinsic image width. */
-  width?: number | string;
-  /** Optional intrinsic image height. */
-  height?: number | string;
-}
-
-// Deloitte Custom Change: share authenticated retrieval, loading, and fallback behavior across avatar surfaces.
-/**
- * Renders an agent avatar using the authenticated image loader.
- *
- * @param props - URL, accessibility text, sizing, loading behavior, and optional fallback.
- * @param props.url - Avatar URL to load.
- * @param props.alt - Accessible description for the image.
- * @param props.className - Surface-specific image classes.
- * @param props.fallback - Optional fallback content for a failed request.
- * @param props.loading - Native image loading behavior.
- * @param props.showSkeleton - Whether to display the shared loading skeleton.
- * @param props.keepSpaceWhileLoading - Whether to reserve image space while loading.
- * @param props.showFallbackWhileLoading - Whether to show fallback content during loading.
- * @param props.width - Optional intrinsic image width.
- * @param props.height - Optional intrinsic image height.
- * @returns The authenticated avatar image, loading state, or configured fallback.
- */
-export const AgentAvatarImage = ({
-  url,
-  alt,
-  className,
-  fallback,
-  loading = 'eager',
-  showSkeleton = false,
-  keepSpaceWhileLoading = false,
-  showFallbackWhileLoading = false,
-  width,
-  height,
-}: AgentAvatarImageProps): React.ReactElement => {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const { src, isLoading, isError } = useAuthenticatedImageSrc(url);
-
-  useEffect((): void => {
-    setIsLoaded(false);
-  }, [url]);
-
-  if (isError || (isLoading && showFallbackWhileLoading)) {
-    return <>{fallback}</>;
-  }
-
-  return (
-    <>
-      {(!isLoading || keepSpaceWhileLoading) && (
-        <img
-          src={src || undefined}
-          alt={alt}
-          className={className}
-          loading={loading}
-          width={width}
-          height={height}
-          onLoad={(): void => setIsLoaded(true)}
-          onError={(): void => setIsLoaded(false)}
-          style={{
-            ...(keepSpaceWhileLoading && isLoading ? { visibility: 'hidden' } : {}),
-            ...(showSkeleton
-              ? { opacity: isLoaded ? 1 : 0, transition: 'opacity 0.2s ease-in-out' }
-              : {}),
-          }}
-        />
-      )}
-      {showSkeleton && !isLoaded && (
-        <Skeleton className="absolute inset-0 rounded-full" aria-hidden="true" />
-      )}
-    </>
-  );
-};
-
-// Deloitte Custom Change: compare avatar values consistently across legacy and current records.
-/**
- * Resolves the stored avatar filepath of an agent.
- *
- * Handles the legacy string representation and the current object representation.
- *
- * @param agent - Agent to read the avatar from
- * @returns The stored avatar filepath, or `null` when the agent has no avatar
- */
-export const getAgentAvatarFilepath = (agent: t.Agent | null | undefined): string | null => {
-  const avatar = agent?.avatar;
-  if (!avatar) {
-    return null;
-  }
-
-  if (typeof avatar === 'string') {
-    return avatar;
-  }
-
-  return avatar.filepath ?? null;
-};
-
-// Deloitte Custom Change: normalize supported private Azure avatar URLs for authenticated loading.
 /**
  * Extracts the avatar URL from an agent's avatar property
  * Handles both string and object formats
- *
- * Agent avatars stored in a private Azure Blob Storage container are recorded as direct
- * blob URLs, which a browser cannot read because the container denies anonymous access.
- * Those URLs are rewritten to the authenticated avatar route, which authorizes the
- * viewer against the agent before streaming the blob. Every other avatar location,
- * including already proxied paths and locally served files, is returned unchanged.
  *
  * @param agent - Agent to read the avatar from
  * @returns The avatar URL to render, or `null` when the agent has no avatar
  */
 export const getAgentAvatarUrl = (agent: t.Agent | null | undefined): string | null => {
-  const avatarUrl = getAgentAvatarFilepath(agent);
+  if (!agent?.avatar) {
+    return null;
+  }
+
+  const avatarUrl = typeof agent.avatar === 'string' ? agent.avatar : agent.avatar.filepath;
   if (!avatarUrl) {
     return null;
   }
 
-  // Deloitte Custom Change: proxy legacy private Azure agent avatars through the authenticated image route.
+  // Deloitte Custom Change: send private Azure avatar URLs through the existing authenticated image route.
   try {
     const url = new URL(avatarUrl);
-    if (!isAzureBlobHost(url.hostname)) {
+    if (!/^[a-z\d]{3,24}\.blob\.core\.windows\.net$/i.test(url.hostname)) {
       return avatarUrl;
     }
 
-    const blobPath = getAgentAvatarBlobPath(url.pathname);
-    if (!blobPath) {
+    const match = url.pathname.match(
+      /\/(images\/[a-f\d]{24}\/agent-[^/]+-avatar-\d+\.(?:png|gif|jpe?g|webp))$/i,
+    );
+    if (!match) {
       return avatarUrl;
     }
 
-    return `/api/files/images/avatar?file=${encodeBase64Url(blobPath)}`;
+    const encodedPath = btoa(match[1]).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return `/api/files/images/avatar?file=${encodedPath}`;
   } catch {
     return avatarUrl;
   }
@@ -258,8 +50,38 @@ const LazyAgentAvatar = ({
   alt: string;
   imgClass: string;
 }) => {
-  // Deloitte Custom Change: share authenticated loading and skeleton behavior across agent avatars.
-  return <AgentAvatarImage url={url} alt={alt} className={imgClass} loading="lazy" showSkeleton />;
+  const [isLoaded, setIsLoaded] = useState(false);
+  const {
+    src: authenticatedImageSrc,
+    isLoading: isImageLoading,
+    isError: imageFetchError,
+  } = useAuthenticatedImageSrc(url);
+
+  useEffect(() => {
+    setIsLoaded(false);
+  }, [url]);
+
+  return (
+    <>
+      {!isImageLoading && (
+        <img
+          src={authenticatedImageSrc}
+          alt={alt}
+          className={imgClass}
+          loading="lazy"
+          onLoad={() => setIsLoaded(true)}
+          onError={() => setIsLoaded(false)}
+          style={{
+            opacity: isLoaded ? 1 : 0,
+            transition: 'opacity 0.2s ease-in-out',
+          }}
+        />
+      )}
+      {!isLoaded && !imageFetchError && (
+        <Skeleton className="absolute inset-0 rounded-full" aria-hidden="true" />
+      )}
+    </>
+  );
 };
 
 /**

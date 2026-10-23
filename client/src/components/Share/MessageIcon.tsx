@@ -2,9 +2,9 @@ import { useMemo } from 'react';
 import { UserIcon } from '@librechat/client';
 import type { TMessage, Assistant, Agent } from 'librechat-data-provider';
 import type { TMessageProps } from '~/common';
-import { getAgentAvatarUrl, getIconEndpoint, logger } from '~/utils';
 import MessageEndpointIcon from '../Endpoints/MessageEndpointIcon';
 import ConvoIconURL from '~/components/Endpoints/ConvoIconURL';
+import { getIconEndpoint, logger } from '~/utils';
 import { isImageURL } from '~/utils/icons';
 
 export default function MessageIcon(
@@ -32,8 +32,7 @@ export default function MessageIcon(
   const assistantName = (assistant ? assistant.name : '') ?? '';
   const assistantAvatar = (assistant ? assistant.metadata?.avatar : '') ?? '';
   const agentName = (agent ? agent.name : '') ?? '';
-  // Deloitte Custom Change: normalize shared-conversation agent avatars through the common proxy helper.
-  const agentAvatar = agent ? (getAgentAvatarUrl(agent) ?? '') : '';
+  const agentAvatar = (agent ? agent?.avatar?.filepath : '') ?? '';
   const avatarURL = useMemo(() => {
     let result = '';
     if (assistant) {

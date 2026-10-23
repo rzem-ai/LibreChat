@@ -10,12 +10,6 @@ jest.mock('~/components/Endpoints/ConvoIconURL', () => jest.fn());
 jest.mock('~/data-provider', () => ({ useGetEndpointsQuery: jest.fn(() => ({ data: {} })) }));
 jest.mock('~/utils', () => ({ getIconEndpoint: jest.fn(), logger: { log: jest.fn() } }));
 jest.mock('~/components/Endpoints/Icon', () => jest.fn());
-// Deloitte Custom Change: stub the shared UI primitives so the real agent avatar helpers load.
-jest.mock('lucide-react', () => ({ Feather: () => null }));
-jest.mock('@librechat/client', () => ({
-  Skeleton: () => null,
-  useAuthenticatedImageSrc: () => ({ src: '', isLoading: false, isError: false }),
-}));
 
 import { arePropsEqual } from '../MessageIcon';
 
@@ -76,21 +70,6 @@ describe('MessageIcon arePropsEqual', () => {
           iconData: baseIconData,
           agent: makeAgent({ avatar: { filepath: '/b.png', source: 'local' } }),
         },
-      ),
-    ).toBe(false);
-  });
-
-  // Deloitte Custom Change: ensure legacy string avatar changes invalidate the memoized icon.
-  it('returns false when a legacy string agent avatar changes', (): void => {
-    const previousAgent = makeAgent();
-    const nextAgent = makeAgent();
-    Object.defineProperty(previousAgent, 'avatar', { value: '/a.png' });
-    Object.defineProperty(nextAgent, 'avatar', { value: '/b.png' });
-
-    expect(
-      arePropsEqual(
-        { iconData: baseIconData, agent: previousAgent },
-        { iconData: baseIconData, agent: nextAgent },
       ),
     ).toBe(false);
   });
