@@ -6,23 +6,21 @@ import { useAskFaqAgent } from '~/hooks/Learning';
 import Resources from './resources/Page';
 import Releases from './releases/Page';
 import { useLocalize } from '~/hooks';
-import Tours from './tours/Page';
 import Faq from './faq/Page';
 
-type AcademyTab = 'tours' | 'resources' | 'faq' | 'releases';
+type AcademyTab = 'resources' | 'faq' | 'releases';
 
 const contentClass = 'mt-0 p-0';
 
 export default function Page(): JSX.Element {
   const localize = useLocalize();
   const navigate = useNavigate();
-  const { tab = 'tours' } = useParams<{ tab: AcademyTab }>();
+  const { tab = 'resources' } = useParams<{ tab: AcademyTab }>();
   const { data: startupConfig, isLoading: isConfigLoading } = useGetStartupConfig();
   const { faqAgent, askFaqAgent } = useAskFaqAgent();
   const flags = startupConfig?.interface?.customDeloitteFeatureFlags;
 
   const tabs: { id: AcademyTab; label: string; enabled: boolean }[] = [
-    { id: 'tours', label: localize('com_learning_tab_tours'), enabled: true },
     { id: 'resources', label: localize('com_learning_tab_resources'), enabled: true },
     {
       id: 'faq',
@@ -38,7 +36,7 @@ export default function Page(): JSX.Element {
   const enabledTabs = tabs.filter((candidate) => candidate.enabled);
 
   if (!isConfigLoading && !enabledTabs.some((candidate) => candidate.id === tab)) {
-    return <Navigate to="/learn/tours" replace />;
+    return <Navigate to="/learn/resources" replace />;
   }
 
   return (
@@ -75,9 +73,6 @@ export default function Page(): JSX.Element {
             </GEL.TabsTrigger>
           ))}
         </GEL.TabsList>
-        <GEL.TabsContent value="tours" className={contentClass}>
-          <Tours />
-        </GEL.TabsContent>
         <GEL.TabsContent value="resources" className={contentClass}>
           <Resources />
         </GEL.TabsContent>

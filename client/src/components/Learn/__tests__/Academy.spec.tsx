@@ -76,10 +76,13 @@ describe('Resources', () => {
     ]);
   });
 
-  it('does not list the Getting Started tour', () => {
+  it('shows the Getting Started tour once, above the search', () => {
     renderResources();
 
-    expect(screen.queryByText('Getting Started Tour')).not.toBeInTheDocument();
+    const tour = screen.getByText('Getting Started Tour');
+    const search = screen.getByLabelText('com_learning_search_resources');
+    expect(screen.getAllByText('Getting Started Tour')).toHaveLength(1);
+    expect(tour.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('filters by title, description and tags and hides empty sections', () => {
@@ -149,18 +152,18 @@ describe('Academy', () => {
     mockTutorialProgress = {};
   });
 
-  it('shows the Getting Started hero first and hides flagged tabs by default', () => {
-    renderAt('/learn/tours');
-    expect(screen.getByText('com_learning_start_here:Getting Started Tour')).toBeInTheDocument();
+  it('shows the Getting Started tour above the search and hides flagged tabs by default', () => {
+    renderAt('/learn/resources');
+    expect(screen.getByText('Getting Started Tour')).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'com_learning_tab_faq' })).not.toBeInTheDocument();
     expect(
       screen.queryByRole('tab', { name: 'com_learning_tab_releases' }),
     ).not.toBeInTheDocument();
   });
 
-  it('redirects a flagged-off tab back to tours', () => {
+  it('redirects a flagged-off tab back to resources', () => {
     renderAt('/learn/faq');
-    expect(screen.getByText('com_learning_start_here:Getting Started Tour')).toBeInTheDocument();
+    expect(screen.getByText('Getting Started Tour')).toBeInTheDocument();
   });
 
   it('shows the flagged tabs when their flags are on', () => {
@@ -171,19 +174,17 @@ describe('Academy', () => {
     expect(screen.getByLabelText('com_learning_search_faq')).toBeInTheDocument();
   });
 
-  it('falls back to tours when the startup config failed to load', () => {
+  it('falls back to resources when the startup config failed to load', () => {
     mockConfigStatus = 'error';
     renderAt('/learn/faq');
-    expect(screen.getByText('com_learning_start_here:Getting Started Tour')).toBeInTheDocument();
+    expect(screen.getByText('Getting Started Tour')).toBeInTheDocument();
     expect(screen.queryByLabelText('com_learning_search_faq')).not.toBeInTheDocument();
   });
 
   it('keeps a flagged tab URL while the startup config is still loading', () => {
     mockConfigStatus = 'loading';
     const { rerender } = renderAt('/learn/faq');
-    expect(
-      screen.queryByText('com_learning_start_here:Getting Started Tour'),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Getting Started Tour')).not.toBeInTheDocument();
     expect(screen.getByLabelText('com_learning_search_faq')).toBeInTheDocument();
 
     mockConfigStatus = 'success';
@@ -197,7 +198,7 @@ describe('Academy', () => {
     mockTutorialProgress = {
       [GETTING_STARTED_COURSE_ID]: { step: 3, total: 9, completed: false },
     };
-    renderAt('/learn/tours');
+    renderAt('/learn/resources');
     fireEvent.click(screen.getByRole('button', { name: 'com_learning_tour_continue' }));
     expect(mockResumeTour).toHaveBeenCalledWith(GETTING_STARTED_COURSE_ID, 3);
   });
