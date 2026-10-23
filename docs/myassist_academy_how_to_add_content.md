@@ -70,7 +70,7 @@ Context: I'm presenting tomorrow.`}
 />
 ```
 
-`Analogy` wraps the one analogy a page may have, in a soft box with an info icon:
+`Analogy` wraps the one analogy a page may have, in an outlined box with an info icon:
 
 ```mdx
 <Analogy>
