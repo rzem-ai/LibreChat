@@ -104,7 +104,7 @@ Build your prompt like a layered cake.
 <NextArticle href="/learn/articles/guides/skills" title="Guide to skills">Find, create and share skills</NextArticle>
 ```
 
-`Steps` wraps a numbered list and numbers it as a procedure:
+`Steps` wraps a numbered list and styles it as a plain procedure (no circled numbers):
 
 ```mdx
 <Steps>

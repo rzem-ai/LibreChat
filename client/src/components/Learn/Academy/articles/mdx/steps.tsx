@@ -5,15 +5,11 @@ interface StepsProps {
   children: ReactNode;
 }
 
+/** Plain numbered list: no circled badges, with a quieter, aligned marker. */
 const stepsClass = [
-  '[&_ol]:!list-none [&_ol]:!pl-0 [&_ol]:[counter-reset:step]',
-  '[&_ol>li]:relative [&_ol>li]:mt-4 [&_ol>li]:pl-10 [&_ol>li]:[counter-increment:step]',
-  '[&_ol>li]:before:absolute [&_ol>li]:before:left-0 [&_ol>li]:before:top-0',
-  '[&_ol>li]:before:flex [&_ol>li]:before:size-7 [&_ol>li]:before:items-center',
-  '[&_ol>li]:before:justify-center [&_ol>li]:before:rounded-full',
-  '[&_ol>li]:before:border [&_ol>li]:before:border-border-medium',
-  '[&_ol>li]:before:text-xs [&_ol>li]:before:font-medium [&_ol>li]:before:text-text-secondary',
-  '[&_ol>li]:before:content-[counter(step)]',
+  '[&_ol]:!list-decimal [&_ol]:!pl-6',
+  '[&_ol>li]:mt-2 [&_ol>li]:pl-1',
+  '[&_ol>li]:marker:text-text-secondary [&_ol>li]:marker:tabular-nums',
 ].join(' ');
 
 export function Steps({ children }: StepsProps): JSX.Element {
