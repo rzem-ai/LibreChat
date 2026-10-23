@@ -87,7 +87,7 @@ export default function Article(): JSX.Element {
         {article.headings.length > 0 && (
           <nav
             aria-label={localize('com_learning_on_this_page')}
-            className="sticky top-6 z-10 hidden max-h-[calc(100vh-3rem)] w-56 self-start overflow-y-auto lg:flex lg:flex-col lg:gap-3"
+            className="sticky top-6 z-10 hidden max-h-[calc(100vh-3rem)] w-56 self-start overflow-y-auto lg:flex lg:flex-col lg:gap-1"
           >
             <p className="mb-2 text-sm text-text-secondary">
               {localize('com_learning_on_this_page')}
