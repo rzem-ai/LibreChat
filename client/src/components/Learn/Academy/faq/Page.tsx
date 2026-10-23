@@ -55,7 +55,7 @@ export default function Faq(): JSX.Element {
           <ul className="flex flex-col gap-6">
             {visible.map((faq) => (
               <li key={faq.question}>
-                <p className="text-base font-semibold">
+                <p className="text-base font-medium">
                   <GEL.HighlightedText text={faq.question} query={query} />
                 </p>
                 <p className="mt-1 text-text-secondary">
