@@ -18,8 +18,8 @@ function ComparePanel({ label, badge, children }: ComparePanelProps): JSX.Elemen
   const localize = useLocalize();
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex-1 px-2 pt-2 font-mono text-sm [&>:first-child]:!mt-0 [&_li]:text-text-primary [&_p]:!text-text-primary">
+    <div className="flex flex-col gap-4 p-5">
+      <div className="flex-1 font-mono text-sm [&>:first-child]:!mt-0 [&_li]:relative [&_li]:pl-4 [&_li]:text-text-primary [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:content-['-'] [&_p]:!text-text-primary [&_ul]:!list-none [&_ul]:!pl-0">
         {children}
       </div>
       <div className="flex items-center justify-center gap-2 text-sm">
@@ -45,7 +45,7 @@ function Badge({ className, children }: BadgeProps): JSX.Element {
 
 export function Compare({ children }: PanelProps): JSX.Element {
   return (
-    <div className="mt-6 grid gap-6 rounded-xl border border-border-light bg-surface-primary p-4 sm:grid-cols-2">
+    <div className="mt-6 grid divide-y divide-border-light overflow-hidden rounded-xl border border-border-light bg-surface-primary sm:grid-cols-2 sm:divide-x sm:divide-y-0">
       {children}
     </div>
   );
