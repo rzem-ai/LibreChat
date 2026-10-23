@@ -9,7 +9,6 @@ import { ArticleLink } from './link';
 import { Analogy } from './analogy';
 import { H2, H3 } from './heading';
 import { TryThis } from './cue';
-import { Steps } from './steps';
 
 export const mdxComponents: MDXComponents = {
   h2: H2,
@@ -23,7 +22,6 @@ export const mdxComponents: MDXComponents = {
   CardGrid,
   Card,
   NextArticle,
-  Steps,
   Terms,
   Term,
   FeedbackLink,

@@ -12,6 +12,7 @@ import { cn } from '~/utils';
 const articleTypesetClass = [
   '[&>:first-child]:!mt-6',
   '[&_strong]:font-medium',
+  '[&_ol>li]:mt-2 [&_ol>li]:marker:text-text-secondary [&_ol>li]:marker:tabular-nums',
   "[&_ul]:!list-none [&_ul]:!pl-0 [&_ul>li]:relative [&_ul>li]:pl-4 [&_ul>li]:before:absolute [&_ul>li]:before:left-0 [&_ul>li]:before:content-['-']",
   '[&_h2]:!mt-8 [&_h3]:!mt-6',
   '[&_table]:mt-4 [&_table]:w-full [&_table]:border-collapse [&_table]:text-left',

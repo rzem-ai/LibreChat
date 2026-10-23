@@ -174,7 +174,6 @@ All are available in any article without an import. See [how to add content](mya
 | `<Compare>` with `<Before>` and `<After>` | A weaker and stronger version side by side |
 | `<CardGrid>` and `<Card>` | Options and what you can build |
 | `<NextArticle>` | The full-width hand-off that ends a page |
-| `<Steps>` | A numbered procedure |
 | `<Terms>` and `<Term>` | Glossary entries |
 | `<FeedbackLink>` | A link to the feedback form |
 | `<SharingNote />` | The sharing statement |

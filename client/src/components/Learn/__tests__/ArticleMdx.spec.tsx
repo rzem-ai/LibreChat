@@ -6,19 +6,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { mdxComponents } from '../Academy/articles/mdx';
 
-const {
-  NextArticle,
-  TryThis,
-  Analogy,
-  Compare,
-  Before,
-  After,
-  CardGrid,
-  Card,
-  Steps,
-  Terms,
-  Term,
-} = mdxComponents as Record<string, React.ElementType>;
+const { NextArticle, TryThis, Analogy, Compare, Before, After, CardGrid, Card, Terms, Term } =
+  mdxComponents as Record<string, React.ElementType>;
 const {
   FeedbackLink,
   SharingNote,
@@ -218,21 +207,6 @@ describe('headings', () => {
     );
 
     expect(screen.getByRole('heading', { level: 2 })).not.toHaveAttribute('id');
-  });
-});
-
-describe('Steps', () => {
-  it('wraps an ordered list', () => {
-    renderInRouter(
-      <Steps>
-        <ol>
-          <li>Open Prompts</li>
-          <li>Select Create</li>
-        </ol>
-      </Steps>,
-    );
-
-    expect(screen.getAllByRole('listitem')).toHaveLength(2);
   });
 });
 

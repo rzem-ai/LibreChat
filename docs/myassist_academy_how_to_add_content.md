@@ -58,7 +58,7 @@ A heading's anchor is its text in lowercase with other characters turned into da
 
 ### Components
 
-These are available in every article with no import. Write child text on the same line as the tags for single-line components (`Card`, `Before`, `After`, `Term`). Leave blank lines inside `Analogy` and `Steps` so Markdown inside them renders. GitHub-style tables (`| a | b |`) work in articles.
+These are available in every article with no import. Write child text on the same line as the tags for single-line components (`Card`, `Before`, `After`, `Term`). Leave blank lines inside `Analogy` so Markdown inside it renders. GitHub-style tables (`| a | b |`) work in articles.
 
 `TryThis` is the try-this cue: the action as plain text, then the prompt in a monospace block with a copy button. `prompt` is the text readers copy, shown without quotation marks. Add `closing` when a **Try this now** heading sits above it, so the label isn't repeated. A **Try in chat** button in the prompt block opens a new chat with the prompt filled in. Add `chat={false}` only if the prompt can’t work in a fresh chat; the block then shows a copy button instead. If a prompt needs a file, say so in the action line (“Attach a report, then…”):
 
@@ -104,16 +104,7 @@ Build your prompt like a layered cake.
 <NextArticle href="/learn/articles/guides/skills" title="Guide to skills">Find, create and share skills</NextArticle>
 ```
 
-`Steps` wraps a numbered list and styles it as a plain procedure (no circled numbers):
-
-```mdx
-<Steps>
-
-1. Select **Prompts** from the side menu.
-2. Select **Create prompt**.
-
-</Steps>
-```
+Numbered steps are a basic Markdown numbered list (`1.`, `2.`). There is no wrapper component.
 
 `Terms` and `Term` build glossary entries. Each `Term` gets an anchor from its name (`#connector-mcp`), and `href` adds a "Read the guide" link:
 
