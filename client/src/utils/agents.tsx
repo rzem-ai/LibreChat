@@ -6,39 +6,21 @@ import type t from 'librechat-data-provider';
 /**
  * Extracts the avatar URL from an agent's avatar property
  * Handles both string and object formats
- *
- * @param agent - Agent to read the avatar from
- * @returns The avatar URL to render, or `null` when the agent has no avatar
  */
 export const getAgentAvatarUrl = (agent: t.Agent | null | undefined): string | null => {
   if (!agent?.avatar) {
     return null;
   }
 
-  const avatarUrl = typeof agent.avatar === 'string' ? agent.avatar : agent.avatar.filepath;
-  if (!avatarUrl) {
-    return null;
+  if (typeof agent.avatar === 'string') {
+    return agent.avatar;
   }
 
-  // Deloitte Custom Change: send private Azure avatar URLs through the existing authenticated image route.
-  try {
-    const url = new URL(avatarUrl);
-    if (!/^[a-z\d]{3,24}\.blob\.core\.windows\.net$/i.test(url.hostname)) {
-      return avatarUrl;
-    }
-
-    const match = url.pathname.match(
-      /\/(images\/[a-f\d]{24}\/agent-[^/]+-avatar-\d+\.(?:png|gif|jpe?g|webp))$/i,
-    );
-    if (!match) {
-      return avatarUrl;
-    }
-
-    const encodedPath = btoa(match[1]).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    return `/api/files/images/avatar?file=${encodedPath}`;
-  } catch {
-    return avatarUrl;
+  if (agent.avatar && typeof agent.avatar === 'object' && 'filepath' in agent.avatar) {
+    return agent.avatar.filepath;
   }
+
+  return null;
 };
 
 const LazyAgentAvatar = ({

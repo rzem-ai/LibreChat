@@ -51,22 +51,6 @@ describe('Agent Utilities', () => {
       expect(getAgentAvatarUrl(agent)).toBe('/path/to/object-avatar.png');
     });
 
-    // Deloitte Custom Change: keep legacy private Azure avatar URLs on the authenticated route.
-    it('proxies private Azure Blob avatar URLs through the authenticated avatar route', (): void => {
-      const agent = {
-        id: 'agent-123',
-        name: 'Test Agent',
-        avatar: {
-          filepath:
-            'https://storage.blob.core.windows.net/private-container/images/0123456789abcdef01234567/agent-agent-123-avatar-1730000000000.png',
-        },
-      } as t.Agent;
-      const blobPath = 'images/0123456789abcdef01234567/agent-agent-123-avatar-1730000000000.png';
-      const encodedPath = btoa(blobPath).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-
-      expect(getAgentAvatarUrl(agent)).toBe(`/api/files/images/avatar?file=${encodedPath}`);
-    });
-
     it('should return null for object avatar without filepath', () => {
       const agent = {
         id: '1',
