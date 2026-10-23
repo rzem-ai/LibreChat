@@ -36,18 +36,21 @@ export default function Releases(): JSX.Element | null {
   }
 
   return (
-    <div className={`${READING_COLUMN} flex flex-col gap-12`}>
-      {releases.map(({ id, frontmatter, Content }) => (
-        <article key={id}>
-          <p className="text-sm text-text-secondary">
-            {formatDate(frontmatter.date)} · {frontmatter.version}
-          </p>
-          <h2 className="mt-1 text-xl font-medium">{frontmatter.title}</h2>
-          <GEL.Typeset className="[&_h3]:mt-5 [&_p]:mt-1">
-            <Content />
-          </GEL.Typeset>
-        </article>
-      ))}
+    <div className={`${READING_COLUMN} flex flex-col gap-8`}>
+      <h2 className="text-2xl font-medium">{localize('com_learning_tab_releases')}</h2>
+      <div className="flex flex-col gap-12">
+        {releases.map(({ id, frontmatter, Content }) => (
+          <article key={id}>
+            <p className="text-sm text-text-secondary">
+              {formatDate(frontmatter.date)} · {frontmatter.version}
+            </p>
+            <h3 className="mt-1 text-xl font-medium">{frontmatter.title}</h3>
+            <GEL.Typeset className="[&_h3]:mt-5 [&_p]:mt-1">
+              <Content />
+            </GEL.Typeset>
+          </article>
+        ))}
+      </div>
     </div>
   );
 }

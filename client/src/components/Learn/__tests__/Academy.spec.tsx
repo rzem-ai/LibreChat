@@ -1,15 +1,19 @@
+/* eslint-disable i18next/no-literal-string */
 import React from 'react';
 import '@testing-library/jest-dom';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GETTING_STARTED_COURSE_ID } from '../content/registry';
 import Resources from '../Academy/resources/Page';
+import Releases from '../Academy/releases/Page';
 import Faq from '../Academy/faq/Page';
 import Page from '../Academy/Page';
 
 const mockStartTour = jest.fn();
 const mockResumeTour = jest.fn();
 let mockFlags: Record<string, boolean> = {};
+let mockReleases: unknown[] = [];
 let mockConfigStatus: 'loading' | 'error' | 'success' = 'success';
 let mockTutorialProgress: Record<string, { step: number; total: number; completed: boolean }> = {};
 
@@ -49,7 +53,7 @@ jest.mock('../LearningTourContext', () => ({
 }));
 
 jest.mock('../content/loader', () => ({
-  loadReleases: () => Promise.resolve([]),
+  loadReleases: () => Promise.resolve(mockReleases),
   loadArticle: () => Promise.resolve(null),
 }));
 
@@ -110,6 +114,29 @@ describe('Resources', () => {
     );
     expect(external).toHaveAttribute('target', '_blank');
     expect(external).toHaveAttribute('rel', expect.stringContaining('noopener'));
+  });
+});
+
+describe('Releases', () => {
+  it('shows a Release notes heading above the releases', async () => {
+    mockReleases = [
+      {
+        id: '7-1-1',
+        frontmatter: { title: 'Faster uploads', version: 'V7.1.1', date: '2026-10-22' },
+        Content: () => <p>Body</p>,
+      },
+    ];
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Releases />
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'com_learning_tab_releases' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Faster uploads' })).toBeInTheDocument();
+    mockReleases = [];
   });
 });
 

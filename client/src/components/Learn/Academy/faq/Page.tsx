@@ -1,29 +1,17 @@
-import { Link } from 'react-router-dom';
 import { GEL } from '@librechat/client';
 import type { JSX } from 'react/jsx-runtime';
 import type { Faq } from '../../content/schema';
+import { ArticleLink } from '../articles/mdx/link';
 import { READING_COLUMN } from '../column';
 import { FAQS } from '../../content/data';
 import Searchable from '../Searchable';
 import { useLocalize } from '~/hooks';
 
-const linkClass = 'font-normal underline';
 const LINK_PATTERN = /\[([^\]]+)\]\(([^)]+)\)/g;
 
 const stripLinks = (text: string): string => text.replace(LINK_PATTERN, '$1');
 
 const getFields = (faq: Faq): string[] => [faq.question, stripLinks(faq.answer)];
-
-const FaqLink = ({ text, href }: { text: string; href: string }): JSX.Element =>
-  href.startsWith('/') ? (
-    <Link to={href} className={linkClass}>
-      {text}
-    </Link>
-  ) : (
-    <a href={href} target="_blank" rel="noopener noreferrer" className={linkClass}>
-      {text}
-    </a>
-  );
 
 const RichText = ({ text, query }: { text: string; query: string }): JSX.Element => {
   const parts = text.split(LINK_PATTERN);
@@ -35,7 +23,11 @@ const RichText = ({ text, query }: { text: string; query: string }): JSX.Element
           return null;
         }
         if (slot === 1) {
-          return <FaqLink key={i} text={part} href={parts[i + 1]} />;
+          return (
+            <ArticleLink key={i} href={parts[i + 1]}>
+              {part}
+            </ArticleLink>
+          );
         }
         return <GEL.HighlightedText key={i} text={part} query={query} />;
       })}

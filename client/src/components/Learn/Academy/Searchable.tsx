@@ -34,7 +34,7 @@ export default function Searchable<T>({
           label={searchLabel}
           clearLabel={localize('com_ui_clear')}
           onClear={() => setQuery('')}
-          containerClassName="h-10 w-full max-w-md border-border-medium bg-surface-primary focus-within:border-surface-submit focus-within:ring-2 focus-within:ring-surface-submit/30"
+          containerClassName="h-10 w-full max-w-md border-input bg-surface-primary dark:bg-surface-tertiary focus-within:border-surface-submit focus-within:ring-2 focus-within:ring-surface-submit/30"
           className="text-base"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
