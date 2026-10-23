@@ -1,11 +1,11 @@
 [
   {
     "question": "Is MyAssist connected to Deloitte data?",
-    "answer": "No, not unless you're using a connector."
+    "answer": "Not by default. By using [connectors](/learn/articles/guides/connectors), MyAssist can connect to Deloitte tools such as SharePoint, GIMS and DPN."
   },
   {
     "question": "What is the Agentic Ecosystem and how does MyAssist fit within it?",
-    "answer": "Read the [What is the Agentic Ecosystem?](/learn/articles/agentic-ecosystem) article to find out."
+    "answer": "The Agentic Ecosystem is the shared foundation behind MyAssist that connects Deloitte’s AI technology, data and governance. Read [What is the Agentic Ecosystem](/learn/articles/agentic-ecosystem) for more."
   },
   {
     "question": "What is the difference between a saved prompt, a skill and an agent?",
@@ -13,7 +13,7 @@
   },
   {
     "question": "Which model should I use?",
-    "answer": "Hover over a model in the model picker to see a tooltip with its cost, speed and intelligence."
+    "answer": "We suggest GPT 5.4 Luna for most use cases, for its balance of speed, intelligence and cost. To learn more, the model picker in MyAssist shows details on each model and its tradeoffs to help you choose."
   },
   {
     "question": "Can I use client data in MyAssist?",

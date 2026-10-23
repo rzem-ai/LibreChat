@@ -197,6 +197,9 @@ describe('Faq', () => {
     expect(hrefFor('prompts')).toBe('/learn/articles/guides/prompts');
     expect(hrefFor('agents')).toBe('/learn/articles/guides/agents');
     expect(hrefFor('glossary')).toBe('/learn/articles/glossary');
+    expect(hrefFor('connectors')).toBe('/learn/articles/guides/connectors');
+    expect(hrefFor('What is the Agentic Ecosystem')).toBe('/learn/articles/agentic-ecosystem');
+    expect(screen.getByText(/We suggest GPT 5.4 Luna/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Q&R or BSO' })).toHaveAttribute('target', '_blank');
     expect(screen.getByRole('heading', { name: 'com_learning_tab_faq' })).toBeInTheDocument();
     expect(screen.getByText(/Is MyAssist connected/)).toBeInTheDocument();
