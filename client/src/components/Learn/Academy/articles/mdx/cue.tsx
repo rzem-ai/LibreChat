@@ -1,19 +1,27 @@
 import { useEffect, useState } from 'react';
 import copy from 'copy-to-clipboard';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy, MessageSquare } from 'lucide-react';
 import type { JSX } from 'react/jsx-runtime';
 import { useLocalize } from '~/hooks';
+import { ArticleLink } from './link';
 
 interface TryThisProps {
   action: string;
   prompt: string;
   /** Set when a "Try this now" heading already sits above the cue, so the label isn't repeated. */
   closing?: boolean;
+  /** Set to false when the prompt needs an attachment or earlier context a new chat won't have. */
+  chat?: boolean;
 }
 
 const COPIED_RESET_MS = 2000;
 
-export function TryThis({ action, prompt, closing = false }: TryThisProps): JSX.Element {
+export function TryThis({
+  action,
+  prompt,
+  closing = false,
+  chat = true,
+}: TryThisProps): JSX.Element {
   const localize = useLocalize();
   const [copied, setCopied] = useState(false);
 
@@ -53,6 +61,16 @@ export function TryThis({ action, prompt, closing = false }: TryThisProps): JSX.
           )}
         </button>
       </div>
+      {chat && (
+        <ArticleLink
+          bare
+          href={`/c/new?prompt=${encodeURIComponent(prompt)}`}
+          className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border-light bg-surface-primary px-3 py-1.5 text-sm font-medium !text-text-primary !no-underline transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-heavy"
+        >
+          <MessageSquare className="size-4" aria-hidden="true" />
+          {localize('com_learning_try_in_chat')}
+        </ArticleLink>
+      )}
       <span className="sr-only" role="status">
         {copied ? localize('com_learning_copied') : ''}
       </span>

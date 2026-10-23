@@ -73,6 +73,23 @@ describe('TryThis', () => {
   });
 });
 
+describe('TryThis in chat', () => {
+  it('links to a new chat with the prompt prefilled', () => {
+    renderInRouter(<TryThis action="Try it" prompt="Summarise this & that" />);
+
+    expect(screen.getByRole('link', { name: 'com_learning_try_in_chat' })).toHaveAttribute(
+      'href',
+      '/c/new?prompt=Summarise%20this%20%26%20that',
+    );
+  });
+
+  it('hides the link when the cue opts out', () => {
+    renderInRouter(<TryThis chat={false} action="Try it" prompt="Needs an attachment" />);
+
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+});
+
 describe('Analogy', () => {
   it('renders its body beside an info icon, with no label', () => {
     const { container } = renderInRouter(<Analogy>Body text</Analogy>);
