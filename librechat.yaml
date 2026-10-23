@@ -258,7 +258,7 @@ endpoints:
     toolApproval:
       enabled: true
       mode: bypass
-      ask: ['set_memory', 'delete_memory']
+      ask: [ 'set_memory', 'delete_memory' ]
     minRelevanceScore: 0.6
     # Restrict Agent Builder to the providers supported by the curated model catalog.
     allowedProviders:
