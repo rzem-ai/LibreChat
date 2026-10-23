@@ -62,7 +62,7 @@ export default function Faq(): JSX.Element {
                 <p className="text-base font-medium">
                   <GEL.HighlightedText text={faq.question} query={query} />
                 </p>
-                <div className="mt-1 flex flex-col gap-3 text-text-secondary">
+                <div className="mt-1 flex flex-col gap-3 text-pretty text-text-secondary">
                   {faq.answer.split('\n\n').map((paragraph) => (
                     <p key={paragraph}>
                       <RichText text={paragraph} query={query} />
