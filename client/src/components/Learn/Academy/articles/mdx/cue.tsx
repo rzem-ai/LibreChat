@@ -53,7 +53,7 @@ export function TryThis({
           <ArticleLink
             bare
             href={`/c/new?prompt=${encodeURIComponent(prompt)}`}
-            className="absolute bottom-2 right-2 inline-flex items-center gap-2 rounded-md border border-border-light bg-surface-primary px-2.5 py-1.5 text-sm font-medium !text-text-primary !no-underline transition-colors hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-border-heavy"
+            className="absolute bottom-2 right-2 inline-flex items-center gap-2 rounded-md bg-surface-submit px-3 py-1.5 text-sm font-medium !text-text-on-status !no-underline transition-colors hover:bg-surface-submit-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-surface-submit"
           >
             <MessageSquare className="size-4" aria-hidden="true" />
             {localize('com_learning_try_in_chat')}
