@@ -1,3 +1,4 @@
+import { Check, X } from 'lucide-react';
 import type { JSX } from 'react/jsx-runtime';
 import type { ReactNode } from 'react';
 import type { TranslationKeys } from '~/hooks';
@@ -10,36 +11,53 @@ interface PanelProps {
 
 interface ComparePanelProps extends PanelProps {
   label: TranslationKeys;
-  className: string;
-  labelClassName: string;
+  badge: ReactNode;
 }
 
-function ComparePanel({
-  label,
-  className,
-  labelClassName,
-  children,
-}: ComparePanelProps): JSX.Element {
+function ComparePanel({ label, badge, children }: ComparePanelProps): JSX.Element {
   const localize = useLocalize();
 
   return (
-    <div className={cn('rounded-xl border p-4', className)}>
-      <div className={cn('text-sm font-medium', labelClassName)}>{localize(label)}</div>
-      <div className="[&>:first-child]:!mt-2">{children}</div>
+    <div className="flex flex-col gap-4">
+      <div className="flex-1 px-2 pt-2 [&>:first-child]:!mt-0">{children}</div>
+      <div className="flex items-center justify-center gap-2 rounded-lg border border-border-light bg-surface-secondary py-2.5 text-sm">
+        {badge}
+        {localize(label)}
+      </div>
     </div>
   );
 }
 
+interface BadgeProps {
+  className: string;
+  children: ReactNode;
+}
+
+function Badge({ className, children }: BadgeProps): JSX.Element {
+  return (
+    <span className={cn('flex size-5 items-center justify-center rounded-full', className)}>
+      {children}
+    </span>
+  );
+}
+
 export function Compare({ children }: PanelProps): JSX.Element {
-  return <div className="mt-6 grid gap-4 sm:grid-cols-2">{children}</div>;
+  return (
+    <div className="mt-6 grid gap-6 rounded-xl border border-border-light bg-surface-primary p-4 sm:grid-cols-2">
+      {children}
+    </div>
+  );
 }
 
 export function Before({ children }: PanelProps): JSX.Element {
   return (
     <ComparePanel
       label="com_learning_compare_before"
-      className="border-border-light [&_li]:text-text-tertiary [&_p]:!text-text-tertiary"
-      labelClassName="text-text-tertiary"
+      badge={
+        <Badge className="bg-surface-tertiary text-text-secondary">
+          <X className="size-3" aria-hidden="true" />
+        </Badge>
+      }
     >
       {children}
     </ComparePanel>
@@ -50,8 +68,11 @@ export function After({ children }: PanelProps): JSX.Element {
   return (
     <ComparePanel
       label="com_learning_compare_after"
-      className="border-border-heavy bg-surface-primary shadow-sm [&_li]:text-text-primary [&_p]:!text-text-primary"
-      labelClassName="text-accent-primary"
+      badge={
+        <Badge className="bg-accent-primary text-white">
+          <Check className="size-3" aria-hidden="true" />
+        </Badge>
+      }
     >
       {children}
     </ComparePanel>
