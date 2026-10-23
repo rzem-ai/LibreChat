@@ -32,7 +32,7 @@ function AgentAvatar({
       <URLIcon
         iconURL={avatar}
         altName={agentName}
-        className={entityAvatarClassName}
+        className={cn(entityAvatarClassName, 'overflow-hidden')}
         containerStyle={{ width: '100%', height: '100%' }}
       />
     );
