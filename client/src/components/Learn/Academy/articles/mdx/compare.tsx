@@ -71,7 +71,7 @@ export function After({ children }: PanelProps): JSX.Element {
     <ComparePanel
       label="com_learning_compare_after"
       badge={
-        <Badge className="bg-accent-primary text-white">
+        <Badge className="bg-surface-submit text-text-on-status">
           <Check className="size-3" aria-hidden="true" />
         </Badge>
       }

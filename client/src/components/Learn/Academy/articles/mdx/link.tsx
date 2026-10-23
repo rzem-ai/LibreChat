@@ -17,7 +17,7 @@ export const isExternalHref = (href: string): boolean =>
 
 /** `!` beats the `text-link` colour the shared Typeset sets on every descendant anchor. */
 const linkClass =
-  '!text-text-primary underline decoration-text-tertiary underline-offset-4 transition-colors hover:!text-accent-primary hover:decoration-accent-primary';
+  '!text-text-primary underline decoration-text-tertiary underline-offset-4 transition-colors hover:!text-surface-submit hover:decoration-surface-submit';
 
 export function ArticleLink({
   href = '',
