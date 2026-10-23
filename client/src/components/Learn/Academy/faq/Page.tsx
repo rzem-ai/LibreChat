@@ -42,12 +42,16 @@ const RichText = ({ text, query }: { text: string; query: string }): JSX.Element
   );
 };
 
+/** Only a handful of questions today; set to true once the list is long enough to need searching. */
+const FAQ_SEARCH = false;
+
 export default function Faq(): JSX.Element {
   const localize = useLocalize();
 
   return (
     <Searchable
       className="mx-auto w-full max-w-[80ch]"
+      showSearch={FAQ_SEARCH}
       items={FAQS}
       getFields={getFields}
       searchLabel={localize('com_learning_search_faq')}

@@ -114,8 +114,8 @@ describe('Resources', () => {
 });
 
 describe('Faq', () => {
-  it('filters questions and highlights matches', () => {
-    const { container } = render(
+  it('lists every question with working links while search is hidden', () => {
+    render(
       <MemoryRouter>
         <Faq />
       </MemoryRouter>,
@@ -127,12 +127,9 @@ describe('Faq', () => {
       '/learn/articles/capture-team-knowledge#match-the-knowledge-to-the-surface',
     );
     expect(screen.getByRole('link', { name: 'Q&R or BSO' })).toHaveAttribute('target', '_blank');
-    fireEvent.change(screen.getByLabelText('com_learning_search_faq'), {
-      target: { value: 'connector' },
-    });
     expect(screen.getByText(/Is MyAssist connected/)).toBeInTheDocument();
-    expect(screen.queryByText(/Which model/)).not.toBeInTheDocument();
-    expect(container.querySelector('mark')).toHaveTextContent(/connector/i);
+    expect(screen.getByText(/Which model should I use/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('com_learning_search_faq')).not.toBeInTheDocument();
   });
 });
 
@@ -171,27 +168,27 @@ describe('Academy', () => {
     renderAt('/learn/faq');
     expect(screen.getByRole('tab', { name: 'com_learning_tab_faq' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'com_learning_tab_releases' })).toBeInTheDocument();
-    expect(screen.getByLabelText('com_learning_search_faq')).toBeInTheDocument();
+    expect(screen.getByText(/Is MyAssist connected/)).toBeInTheDocument();
   });
 
   it('falls back to resources when the startup config failed to load', () => {
     mockConfigStatus = 'error';
     renderAt('/learn/faq');
     expect(screen.getByText('Getting Started Tour')).toBeInTheDocument();
-    expect(screen.queryByLabelText('com_learning_search_faq')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Is MyAssist connected/)).not.toBeInTheDocument();
   });
 
   it('keeps a flagged tab URL while the startup config is still loading', () => {
     mockConfigStatus = 'loading';
     const { rerender } = renderAt('/learn/faq');
     expect(screen.queryByText('Getting Started Tour')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('com_learning_search_faq')).toBeInTheDocument();
+    expect(screen.getByText(/Is MyAssist connected/)).toBeInTheDocument();
 
     mockConfigStatus = 'success';
     mockFlags = { learningCommonQuestions: true, learningReleaseNotes: true };
     rerender(academyTree('/learn/faq'));
     expect(screen.getByRole('tab', { name: 'com_learning_tab_faq' })).toBeInTheDocument();
-    expect(screen.getByLabelText('com_learning_search_faq')).toBeInTheDocument();
+    expect(screen.getByText(/Is MyAssist connected/)).toBeInTheDocument();
   });
 
   it('resumes an in-progress tour from its saved step', () => {
