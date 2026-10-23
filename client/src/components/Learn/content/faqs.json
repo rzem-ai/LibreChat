@@ -13,7 +13,7 @@
   },
   {
     "question": "Which model should I use?",
-    "answer": "As of October 2026, we suggest starting with lower-cost models, such as GPT 6 Luna or Claude Haiku 5.5, and increasing the capability of the model when the task needs it. To learn more, select a model in the model picker to view its features and how it compares to others."
+    "answer": "As of October 2026, we suggest defaulting to lower-cost models, such as GPT 6 Luna or Claude Haiku 5.5, and increasing the capability of the model for the complexity of the task. To learn more, select a model in the model picker to view its features and how it compares to others."
   },
   {
     "question": "Can I use client data in MyAssist?",

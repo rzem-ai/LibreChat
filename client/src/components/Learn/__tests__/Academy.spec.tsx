@@ -200,7 +200,7 @@ describe('Faq', () => {
     expect(hrefFor('connectors')).toBe('/learn/articles/guides/connectors');
     expect(hrefFor('What is the Agentic Ecosystem')).toBe('/learn/articles/agentic-ecosystem');
     expect(
-      screen.getByText(/As of October 2026, we suggest starting with lower-cost models/),
+      screen.getByText(/As of October 2026, we suggest defaulting to lower-cost models/),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Q&R or BSO' })).toHaveAttribute('target', '_blank');
     expect(screen.getByRole('heading', { name: 'com_learning_tab_faq' })).toBeInTheDocument();
