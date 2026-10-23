@@ -57,11 +57,11 @@ describe('TryThis', () => {
 });
 
 describe('Analogy', () => {
-  it('labels the analogy and renders its body', () => {
-    renderInRouter(<Analogy>Body text</Analogy>);
+  it('renders its body beside an info icon, with no label', () => {
+    const { container } = renderInRouter(<Analogy>Body text</Analogy>);
 
-    expect(screen.getByText('com_learning_callout_analogy')).toBeInTheDocument();
     expect(screen.getByText('Body text')).toBeInTheDocument();
+    expect(container.querySelector('svg')).toBeInTheDocument();
   });
 });
 
