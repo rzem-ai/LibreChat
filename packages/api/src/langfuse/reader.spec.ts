@@ -1588,6 +1588,48 @@ describe('createLangfuseTraceReader', () => {
       expect(wrapper?.reply).toBeUndefined();
     });
 
+    // Deloitte Custom Change: a denied memory write must be visible in the Langfuse trace.
+    it('shows a denied memory round, named and with its reason, in the trace it reads', async () => {
+      const settings = resolveTraceViewerConfig({ enabled: true, showInputOutput: true });
+      const { reader } = setup({
+        responses: [
+          jsonResponse({
+            data: [
+              observation({
+                id: 'round-memory',
+                parentObservationId: 'obs-root',
+                type: 'CHAIN',
+                name: 'tool-dispatch',
+                input: '[{"name":"set_memory","args":{"key":"pref"}}]',
+                output: JSON.stringify({
+                  messages: [
+                    {
+                      role: 'tool',
+                      name: 'set_memory',
+                      content: 'Blocked: Memory writes are disabled for this deployment',
+                    },
+                  ],
+                }),
+              }),
+            ],
+          }),
+        ],
+      });
+
+      const detail = await reader.getRecord({
+        ...createQuery({ settings }),
+        recordId: 'round-memory',
+        messageId: 'response-1',
+      });
+
+      expect(detail?.record).toEqual(
+        expect.objectContaining({ id: 'round-memory', kind: 'span', role: 'tools' }),
+      );
+      expect(detail?.output?.value).toContain(
+        'Blocked: Memory writes are disabled for this deployment',
+      );
+    });
+
     it('keeps literal strings that spell an empty object or null', async () => {
       const { reader } = setup({
         responses: [

@@ -4,19 +4,30 @@ import React from 'react';
 import { Tools } from 'librechat-data-provider';
 import { RecoilRoot, useRecoilValue } from 'recoil';
 import { renderHook, waitFor } from '@testing-library/react';
+import { AuthContext } from '~/hooks/AuthContext';
 import BadgeRowProvider from '../BadgeRowContext';
 import { ephemeralAgentByConvoId } from '~/store';
 
 let mockAlwaysEnableFileSearch = false;
 let mockCanUseFileSearch = true;
 let mockFileSearchCapabilityEnabled = true;
+// Deloitte Custom Change: exercise memory default authorization gates.
+let mockCanUseMemory = true;
+let mockMemoryCapabilityEnabled = true;
+let mockMemoryOptOut = false;
+let mockDefaultEnabledTools: string[] = [];
+let mockInitialMemory = false;
+let mockRolesLoaded = false;
+let mockUpdateMemoryPreferences = jest.fn();
 
 jest.mock('~/data-provider', () => ({
+  useUpdateMemoryPreferencesMutation: jest.fn(() => ({ mutate: mockUpdateMemoryPreferences })),
   useGetStartupConfig: jest.fn(() => ({
     data: {
       interface: {
         customDeloitteFeatureFlags: {
           alwaysEnableFileSearch: mockAlwaysEnableFileSearch,
+          defaultEnabledTools: mockDefaultEnabledTools,
         },
       },
     },
@@ -44,8 +55,10 @@ jest.mock('~/hooks', () => {
   return {
     useGetAgentsConfig: jest.fn(() => ({ agentsConfig: { capabilities: [] } })),
     useHasAccess: jest.fn(() => mockCanUseFileSearch),
+    useHasMemoryAccess: jest.fn(() => mockCanUseMemory),
     useAgentCapabilities: jest.fn(() => ({
       fileSearchEnabled: mockFileSearchCapabilityEnabled,
+      memoryEnabled: mockMemoryCapabilityEnabled,
     })),
     useSearchApiKeyForm: jest.fn(() => ({
       setIsDialogOpen: jest.fn(),
@@ -76,10 +89,23 @@ const createWrapper = () =>
     return (
       <RecoilRoot
         initializeState={({ set }) => {
-          set(ephemeralAgentByConvoId(conversationId), { [Tools.file_search]: false });
+          set(ephemeralAgentByConvoId(conversationId), {
+            [Tools.file_search]: false,
+            ...(mockInitialMemory && { [Tools.memory]: true }),
+          });
         }}
       >
-        <BadgeRowProvider conversationId={conversationId}>{children}</BadgeRowProvider>
+        <AuthContext.Provider
+          value={
+            {
+              user: { role: 'USER', personalization: { memories: !mockMemoryOptOut } },
+              roles: mockRolesLoaded ? { USER: {} } : {},
+              isAuthenticated: true,
+            } as never
+          }
+        >
+          <BadgeRowProvider conversationId={conversationId}>{children}</BadgeRowProvider>
+        </AuthContext.Provider>
       </RecoilRoot>
     );
   };
@@ -90,6 +116,13 @@ describe('BadgeRowProvider file search force-enable', () => {
     mockAlwaysEnableFileSearch = false;
     mockCanUseFileSearch = true;
     mockFileSearchCapabilityEnabled = true;
+    mockCanUseMemory = true;
+    mockMemoryCapabilityEnabled = true;
+    mockMemoryOptOut = false;
+    mockDefaultEnabledTools = [];
+    mockInitialMemory = false;
+    mockRolesLoaded = false;
+    mockUpdateMemoryPreferences = jest.fn();
   });
 
   it('force-enables file_search when the feature flag is enabled for authorized users', async () => {
@@ -127,6 +160,56 @@ describe('BadgeRowProvider file search force-enable', () => {
 
     await waitFor(() => {
       expect(result.current?.[Tools.file_search]).toBe(false);
+    });
+  });
+
+  // Deloitte Custom Change: a seeded memory tool is cleared for unavailable access.
+  it.each([
+    ['memory permission is denied', () => (mockCanUseMemory = false)],
+    ['memory endpoint capability is disabled', () => (mockMemoryCapabilityEnabled = false)],
+    ['the user opted out of memory', () => (mockMemoryOptOut = true)],
+  ])('turns off default-enabled memory when %s', async (_reason, configure) => {
+    mockDefaultEnabledTools = ['memory'];
+    mockInitialMemory = true;
+    mockRolesLoaded = true;
+    configure();
+
+    const { result } = renderHook(() => useRecoilValue(ephemeralAgentByConvoId(conversationId)), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(result.current?.[Tools.memory]).toBe(false);
+    });
+  });
+
+  describe('memory sidebar preference sync', () => {
+    it('ticks the chat memory tool when the sidebar switch is on', async () => {
+      mockMemoryOptOut = false;
+      mockInitialMemory = false;
+      mockDefaultEnabledTools = [];
+
+      const { result } = renderHook(() => useRecoilValue(ephemeralAgentByConvoId(conversationId)), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current?.[Tools.memory]).toBe(true);
+      });
+    });
+
+    it('unticks the chat memory tool when the sidebar switch is off', async () => {
+      mockMemoryOptOut = true;
+      mockInitialMemory = true;
+      mockDefaultEnabledTools = [];
+
+      const { result } = renderHook(() => useRecoilValue(ephemeralAgentByConvoId(conversationId)), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current?.[Tools.memory]).toBe(false);
+      });
     });
   });
 });

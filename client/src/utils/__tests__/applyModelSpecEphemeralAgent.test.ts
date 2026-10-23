@@ -1,6 +1,6 @@
 import { Constants, LocalStorageKeys } from 'librechat-data-provider';
 import type { TModelSpec, TEphemeralAgent } from 'librechat-data-provider';
-import { applyModelSpecEphemeralAgent } from '../endpoints';
+import { applyModelSpecEphemeralAgent, getDefaultEnabledToolValues } from '../endpoints';
 import { setTimestamp } from '../timestamps';
 
 /**
@@ -112,6 +112,18 @@ describe('applyModelSpecEphemeralAgent', () => {
       const disabled = createModelSpec({ memory: false });
       applyModelSpecEphemeralAgent({ convoId: null, modelSpec: disabled, updateEphemeralAgent });
       expect((updateEphemeralAgent.mock.calls[0][1] as TEphemeralAgent).memory).toBe(false);
+    });
+
+    // Deloitte Custom Change: an unspecified model-spec memory flag inherits the deployment default.
+    it('uses the default-enabled memory flag when a spec leaves memory unset', () => {
+      applyModelSpecEphemeralAgent({
+        convoId: null,
+        modelSpec: createModelSpec({ memory: undefined }),
+        updateEphemeralAgent,
+        defaultEnabledValues: getDefaultEnabledToolValues({ defaultEnabledTools: ['memory'] }),
+      });
+
+      expect((updateEphemeralAgent.mock.calls[0][1] as TEphemeralAgent).memory).toBe(true);
     });
 
     it('should map artifacts: true to "default" string', () => {

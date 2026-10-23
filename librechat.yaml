@@ -164,7 +164,7 @@ interface:
     # Deloitte Custom Change: choose which tools the dropdown lists and whether users can pin them
     toolsDropdown:
       # Rows listed in the tools dropdown. Any of: file_search, web_search, skills, memory, execute_code, artifacts, mcp (omit to list all)
-      items: [ 'skills', 'execute_code', 'artifacts' ]
+      items: [ 'skills', 'execute_code', 'artifacts', 'memory' ]
       showPinButtons: false # false: pinning follows defaultPinnedTools and rows show an on/off checkbox instead
     # Deloitte Custom Change: tools that start switched on
     defaultEnabledTools:
@@ -172,6 +172,7 @@ interface:
       - 'skills'
       - 'execute_code'
       - 'artifacts'
+      - 'memory'
     alwaysEnableFileSearch: true # Set to true to force-enable file_search where the user is authorized
     hideFileSearchToggle: true # Set to true to hide the file search pill without changing tool state
     createActions: false # Set to false to hide action creation in the marketplace
@@ -216,7 +217,8 @@ memory:
   maxInputTokens: 12000 # Maximum recent-chat tokens sent to the memory agent
   messageWindowSize: 5 # Number of recent messages to consider
   agent:
-    enabled: true
+    # Deloitte Custom Change: disable silent auto-writes; explicit memory-tool writes require HITL.
+    enabled: false
     provider: 'bedrock'
     model: 'au.anthropic.claude-haiku-5-5'
     instructions: |
@@ -252,6 +254,11 @@ endpoints:
         'skills',
         'tools'
       ]
+    # Deloitte Custom Change: require HITL for memory mutations in every chat surface.
+    toolApproval:
+      enabled: true
+      mode: bypass
+      ask: [ 'set_memory', 'delete_memory' ]
     minRelevanceScore: 0.6
     # Restrict Agent Builder to the providers supported by the curated model catalog.
     allowedProviders:

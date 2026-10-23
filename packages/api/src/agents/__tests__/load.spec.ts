@@ -101,6 +101,8 @@ describe('loadAgent', () => {
         ephemeralAgent: {
           execute_code: true,
           web_search: true,
+          // Deloitte Custom Change: general-chat ephemeral agents can request memory tools.
+          memory: true,
           mcp: ['server1', 'server2'],
         },
       },
@@ -125,6 +127,7 @@ describe('loadAgent', () => {
       expect(result.model_parameters.temperature).toBe(0.7);
       expect(result.tools).toContain('execute_code');
       expect(result.tools).toContain('web_search');
+      expect(result.tools).toContain('memory');
       expect(result.tools).toContain('tool1_mcp_server1');
       expect(result.tools).toContain('tool2_mcp_server2');
     } else {
