@@ -47,7 +47,7 @@ export default function Faq(): JSX.Element {
 
   return (
     <Searchable
-      className="max-w-[80ch]"
+      className="mx-auto w-full max-w-[80ch]"
       items={FAQS}
       getFields={getFields}
       searchLabel={localize('com_learning_search_faq')}

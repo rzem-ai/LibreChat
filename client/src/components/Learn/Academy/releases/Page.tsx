@@ -35,7 +35,7 @@ export default function Releases(): JSX.Element | null {
   }
 
   return (
-    <div className="flex max-w-xl flex-col gap-12">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-12">
       {releases.map(({ id, frontmatter, Content }) => (
         <article key={id}>
           <p className="text-sm text-text-secondary">
