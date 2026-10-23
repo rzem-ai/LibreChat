@@ -164,7 +164,9 @@ describe('Faq', () => {
 
     const item = screen.getByText(/Can I use client data/).closest('li') as HTMLElement;
     expect(item.querySelectorAll('p').length).toBe(4);
-    expect(item).toHaveTextContent(/Don't use GPS or Defence data\./);
+    expect(item).toHaveTextContent(
+      /Don't use Government and Public Services \(GPS\) or Defence data in MyAssist\./,
+    );
   });
 
   it('lists the questions in alphabetical order', () => {
