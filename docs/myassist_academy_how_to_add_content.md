@@ -60,7 +60,7 @@ A heading's anchor is its text in lowercase with other characters turned into da
 
 These are available in every article with no import. Write child text on the same line as the tags for single-line components (`Card`, `Before`, `After`, `Term`). Leave blank lines inside `Analogy` and `Steps` so Markdown inside them renders. GitHub-style tables (`| a | b |`) work in articles.
 
-`TryThis` is the try-this cue: the action as plain text, then the prompt in a monospace block with a copy button. `prompt` is the text readers copy, shown without quotation marks. Add `closing` when a **Try this now** heading sits above it, so the label isn't repeated. A **Try in chat** button in the prompt block opens a new chat with the prompt filled in. Add `chat={false}` when the prompt needs an attachment or earlier context, and the block shows a copy button instead:
+`TryThis` is the try-this cue: the action as plain text, then the prompt in a monospace block with a copy button. `prompt` is the text readers copy, shown without quotation marks. Add `closing` when a **Try this now** heading sits above it, so the label isn't repeated. A **Try in chat** button in the prompt block opens a new chat with the prompt filled in. Add `chat={false}` only if the prompt can’t work in a fresh chat; the block then shows a copy button instead. If a prompt needs a file, say so in the action line (“Attach a report, then…”):
 
 ```mdx
 <TryThis
