@@ -24,7 +24,7 @@ const RichText = ({ text, query }: { text: string; query: string }): JSX.Element
         }
         if (slot === 1) {
           return (
-            <ArticleLink key={i} href={parts[i + 1]}>
+            <ArticleLink key={i} href={parts[i + 1]} className="font-normal">
               {part}
             </ArticleLink>
           );
