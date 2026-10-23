@@ -73,8 +73,8 @@ export default function Article(): JSX.Element {
   return (
     <>
       {backButton}
-      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,44rem)_minmax(0,1fr)] lg:gap-12">
-        <div className="lg:col-start-2">
+      <div className="lg:grid lg:grid-cols-[minmax(0,52rem)_14rem] lg:justify-start lg:gap-16">
+        <div>
           <h1 className="text-3xl font-medium tracking-tight">{article.frontmatter.title}</h1>
           <p className="mt-2 text-sm text-text-secondary">
             {localize('com_learning_updated', { 0: article.frontmatter.updated })}
@@ -87,7 +87,7 @@ export default function Article(): JSX.Element {
         {article.headings.length > 0 && (
           <nav
             aria-label={localize('com_learning_on_this_page')}
-            className="sticky top-6 hidden max-h-[calc(100vh-3rem)] w-56 self-start overflow-y-auto lg:col-start-3 lg:flex lg:flex-col lg:gap-3"
+            className="sticky top-6 hidden max-h-[calc(100vh-3rem)] w-56 self-start overflow-y-auto lg:flex lg:flex-col lg:gap-3"
           >
             <p className="mb-2 text-sm text-text-secondary">
               {localize('com_learning_on_this_page')}
