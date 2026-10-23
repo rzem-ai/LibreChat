@@ -9,7 +9,7 @@
   },
   {
     "question": "What is the difference between a saved prompt, a skill and an agent?",
-    "answer": "Learn more in the [Glossary](/learn/articles/glossary) article."
+    "answer": "We have feature walkthroughs for [skills](/learn/articles/guides/skills), [prompts](/learn/articles/guides/prompts) and [agents](/learn/articles/guides/agents) that you can read, and a comparison of the terms can be found in the [glossary](/learn/articles/glossary)."
   },
   {
     "question": "Which model should I use?",
