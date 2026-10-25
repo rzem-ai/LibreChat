@@ -7,27 +7,27 @@ migrationJobs:
   drop-retention-ttl:
     enabled: true
     suspend: false
-    dryRun: true
+    dryRun: false
   conversation-retention:
     enabled: true
     suspend: false
-    dryRun: true
+    dryRun: false
   file-retention:
     enabled: true
     suspend: false
-    dryRun: true
+    dryRun: false
   agent-retention:
     enabled: true
     suspend: false
-    dryRun: true
+    dryRun: false
   skill-retention:
     enabled: true
     suspend: false
-    dryRun: true
+    dryRun: false
   memory-retention:
     enabled: true
     suspend: false
-    dryRun: true
+    dryRun: false
 
 llmGateway:
   namespace: 'llm-gateway-ctnp'
