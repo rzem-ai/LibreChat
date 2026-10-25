@@ -334,6 +334,31 @@ describe('useToolToggle', () => {
 
   // ─── Default pinned state from interface.defaultPinnedTools ─────────
 
+  describe('onPersist callback', () => {
+    it('notifies the persisted-preference owner only on user-initiated changes', () => {
+      const onPersist = jest.fn();
+      const { result } = renderHook(
+        () =>
+          useToolToggle({
+            conversationId: 'convo-memory',
+            toolKey: Tools.memory,
+            localStorageKey: LocalStorageKeys.LAST_MEMORY_TOGGLE_,
+            isAuthenticated: true,
+            onPersist,
+          }),
+        { wrapper: Wrapper },
+      );
+
+      expect(onPersist).not.toHaveBeenCalled();
+
+      act(() => {
+        result.current.handleChange({ value: true });
+      });
+
+      expect(onPersist).toHaveBeenCalledWith(true);
+    });
+  });
+
   describe('defaultPinnedTools (admin-configured default pin)', () => {
     const renderToolToggle = () =>
       renderHook(

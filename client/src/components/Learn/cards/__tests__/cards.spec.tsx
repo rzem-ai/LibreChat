@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { ModuleStatus, ResourceCard, TourCard } from '..';
 import { fireEvent, render, screen } from '@testing-library/react';
 
@@ -53,6 +54,19 @@ describe('ResourceCard', () => {
     render(<ResourceCard {...base} actionLabel="Read T" onSelect={onSelect} />);
     fireEvent.click(screen.getByRole('button', { name: 'Read T' }));
     expect(onSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders in-app articles as router links, not buttons', () => {
+    render(
+      <MemoryRouter>
+        <ResourceCard {...base} actionLabel="Read T" to="/learn/articles/guides/skills" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: 'Read T' })).toHaveAttribute(
+      'href',
+      '/learn/articles/guides/skills',
+    );
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
   it('renders external resources as a new-tab noopener link', () => {

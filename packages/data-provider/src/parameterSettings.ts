@@ -17,7 +17,12 @@ import {
   BedrockProviders,
   anthropicSettings,
 } from './types';
-import { hasAlwaysOnThinking, hasBetweenToolsThinkingFloor, supportsPromptCache } from './bedrock';
+import {
+  hasAlwaysOnThinking,
+  supportsPromptCache,
+  hasHaikuSamplingRestriction,
+  hasBetweenToolsThinkingFloor,
+} from './bedrock';
 import { SettingDefinition, SettingsConfiguration } from './generate';
 import { resolveEffectiveUseResponsesApi } from './file-config';
 import { gpt6Tier } from './families';
@@ -1380,6 +1385,12 @@ export function applyModelAwareDefaults(
       .filter(
         (setting) => !['thinkingBudget', 'temperature', 'topP', 'topK'].includes(setting.key),
       );
+  }
+  /** Deloitte Custom Change: Haiku 5.5+ keeps thinking but rejects sampling parameters. */
+  if (hasHaikuSamplingRestriction(model)) {
+    return settings.filter(
+      (setting) => !['temperature', 'topP', 'top_p', 'topK'].includes(setting.key),
+    );
   }
   const modelAwareSettings =
     endpoint === EModelEndpoint.google

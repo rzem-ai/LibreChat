@@ -7,21 +7,27 @@ migrationJobs:
   drop-retention-ttl:
     enabled: true
     suspend: false
+    dryRun: true
   conversation-retention:
     enabled: true
-    suspend: true
+    suspend: false
+    dryRun: true
   file-retention:
     enabled: true
-    suspend: true
+    suspend: false
+    dryRun: true
   agent-retention:
     enabled: true
-    suspend: true
+    suspend: false
+    dryRun: true
   skill-retention:
     enabled: true
-    suspend: true
+    suspend: false
+    dryRun: true
   memory-retention:
     enabled: true
-    suspend: true
+    suspend: false
+    dryRun: true
 
 llmGateway:
   namespace: 'llm-gateway-ctnp'
@@ -69,7 +75,7 @@ pods:
     containers:
       librechat:
         image:
-          tag: 'develop@sha256:b368da5dbcbc94113707abc15347d3ead073f236d0058671b53ccb8dafc315b9'
+          tag: 'develop@sha256:d9122bfb14c86f5077ba40fb999d5a45e35393f9674b0a1fa565885adf6f9ac3'
         resources:
           requests:
             memory: "1Gi"
@@ -194,7 +200,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:67880e6bd91d9ab2c24fa12c6d5a79c9575d77d0d17346ea437f8b006532a64f'
+          tag: 'develop@sha256:2108763907661510585aa107e05b32f6ea3d04fe07779fc59e15a0be293d8853'
         resources:
           requests:
             memory: "1Gi"
@@ -258,7 +264,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:fba968ca08e4e9f7586d086ba6388bc484c207b7d1588e5ceb6c54cd6200f8e7'
+          tag: 'develop@sha256:4c3a90364d95c0124a6782c8075b2b76a0f057f491cfa00a03b88918ba5afb9a'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'

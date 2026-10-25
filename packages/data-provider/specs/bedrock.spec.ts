@@ -412,6 +412,34 @@ describe('omitsSamplingParameters', () => {
     });
   });
 
+  test('returns true for Haiku 5.5+ models', () => {
+    const models = [
+      'claude-haiku-5-5',
+      'claude-haiku-5.5',
+      'anthropic.claude-haiku-5-5',
+      'us.anthropic.claude-haiku-5-5',
+      'claude-haiku-5-10',
+      'claude-haiku-6',
+    ];
+
+    models.forEach((model) => {
+      expect(omitsSamplingParameters(model)).toBe(true);
+    });
+  });
+
+  test('returns false for pre-5.5 Haiku models', () => {
+    const models = [
+      'claude-haiku-5',
+      'claude-haiku-5-4',
+      'claude-haiku-4-5',
+      'claude-3-5-haiku-20241022',
+    ];
+
+    models.forEach((model) => {
+      expect(omitsSamplingParameters(model)).toBe(false);
+    });
+  });
+
   test('returns false for older Opus and pre-5 Sonnet models', () => {
     const models = [
       'claude-opus-4-20250514',

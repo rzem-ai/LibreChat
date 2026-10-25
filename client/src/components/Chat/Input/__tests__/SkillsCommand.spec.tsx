@@ -5,16 +5,15 @@
  * `pendingManualSkillsByConvoId` atom, (b) flip `ephemeralAgent.skills`
  * to true, and (c) consume only the `$` command prefix from the textarea.
  *
- * Also covers the Phase 2 filter composition: per-agent skill scope
- * intersects with the ACL catalog, and per-user active-state toggles
- * hide inactive entries from the popover (backend still enforces both
- * at runtime regardless).
+ * Also covers filter composition: per-agent skill scope intersects with the
+ * ACL catalog. General and ALL-agent catalogs hide inactive entries, while
+ * skills deliberately attached to a SELECT agent remain available there.
  */
 import React from 'react';
 import { act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SkillsScope } from 'librechat-data-provider';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import type { TSkillSummary } from 'librechat-data-provider';
 
 const CONVO_ID = 'convo-1';
@@ -23,6 +22,8 @@ const mockSetShowSkillsPopover = jest.fn();
 const mockSetEphemeralAgent = jest.fn();
 const mockSetPendingManualSkills = jest.fn();
 const mockShowSkillsPopover = { current: true };
+const mockNewGeneralConversation = jest.fn();
+const mockSetActive = jest.fn();
 
 jest.mock('jotai', () => ({
   ...jest.requireActual('jotai'),
@@ -51,6 +52,9 @@ jest.mock('recoil', () => {
       if (atom === 'pending-manual-skills') {
         return mockSetPendingManualSkills;
       }
+      if (atom === 'sidebar-expanded') {
+        return jest.fn();
+      }
       return jest.fn();
     }),
   };
@@ -60,6 +64,7 @@ jest.mock('~/store', () => ({
   __esModule: true,
   default: {
     pendingManualSkillsByConvoId: () => 'pending-manual-skills',
+    sidebarExpanded: 'sidebar-expanded',
   },
   ephemeralAgentByConvoId: () => 'ephemeral-agent',
   pendingManualSkillsByConvoId: () => 'pending-manual-skills',
@@ -78,12 +83,18 @@ jest.mock('~/data-provider', () => ({
 const mockUseAgentsMapContext = jest.fn();
 jest.mock('~/Providers', () => ({
   useAgentsMapContext: () => mockUseAgentsMapContext(),
+  useActivePanel: () => ({ setActive: mockSetActive }),
 }));
 
 const mockIsActive = jest.fn();
+const mockToggleMany = jest.fn();
+/* Factory mock — individual tests call mockUseSkillActiveState.mockReturnValue(...)
+   to override isLoading/isError/isUpdating without needing jest.resetModules(). */
+const mockUseSkillActiveState = jest.fn();
 jest.mock('~/hooks', () => ({
   useLocalize: () => (key: string) => key,
-  useSkillActiveState: () => ({ isActive: mockIsActive }),
+  useSkillActiveState: () => mockUseSkillActiveState(),
+  useNewConvo: () => ({ newGeneralConversation: mockNewGeneralConversation }),
 }));
 
 jest.mock('@librechat/client', () => {
@@ -119,7 +130,8 @@ jest.mock('react-virtualized', () => ({
   },
 }));
 
-import SkillsCommand, { filterSkillsForPopover } from '../SkillsCommand';
+import SkillsCommand from '../SkillsCommand';
+import { filterSkillsForPopover } from '~/utils';
 
 const makeTextarea = (initial = '$', selectionStart = initial.length) => {
   const textarea = document.createElement('textarea');
@@ -179,11 +191,22 @@ beforeEach(() => {
     hasNextPage: false,
     isFetchingNextPage: false,
   });
-  /* Defaults: empty agents map and every skill active. Individual tests
-     override these and pass `agentId` as a prop to exercise the Phase 2
-     filter composition. */
+  /* Default active-state: all skills active, no loading or error. */
+  mockUseSkillActiveState.mockReturnValue({
+    isActive: mockIsActive,
+    toggleMany: mockToggleMany,
+    isLoading: false,
+    isError: false,
+    isUpdating: false,
+  });
+  /* Defaults: empty agents map, every skill active, and no in-flight
+     mutation. Individual tests override these to exercise empty states,
+     CTA behavior, and active-state lifecycle. */
   mockUseAgentsMapContext.mockReturnValue({});
   mockIsActive.mockReturnValue(true);
+  mockToggleMany.mockReset();
+  mockNewGeneralConversation.mockReset();
+  mockSetActive.mockReset();
 });
 
 describe('SkillsCommand', () => {
@@ -517,6 +540,36 @@ describe('SkillsCommand', () => {
     expect(screen.getByRole('button', { name: /Style Guide/i })).toBeInTheDocument();
   });
 
+  it('shows an inactive skill when it is explicitly assigned to a SELECT agent', () => {
+    mockUseSkillsInfiniteQuery.mockReturnValue({
+      data: twoSkillsResponse,
+      isLoading: false,
+      isError: false,
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    });
+    mockUseAgentsMapContext.mockReturnValue({
+      agent_1: { id: 'agent_1', skills: ['1'], skills_enabled: true },
+    });
+    mockIsActive.mockReturnValue(false);
+
+    const textAreaRef = makeTextarea('$');
+    render(
+      <SkillsCommand
+        index={0}
+        textAreaRef={textAreaRef}
+        conversationId={CONVO_ID}
+        agentId="agent_1"
+      />,
+    );
+
+    /* An explicit attachment is an agent capability, not a general-library
+       preference: PR #673 keeps it invocable in this agent chat. */
+    expect(screen.getByRole('button', { name: /Brand Guidelines/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Style Guide/i })).toBeNull();
+  });
+
   it('resumes catalog pagination after an external refetch clears an error', () => {
     const fetchNextPage = jest.fn();
     mockUseSkillsInfiniteQuery.mockReturnValue({
@@ -545,6 +598,309 @@ describe('SkillsCommand', () => {
     rerender(<SkillsCommand index={1} textAreaRef={textAreaRef} conversationId={CONVO_ID} />);
 
     expect(fetchNextPage).toHaveBeenCalledTimes(1);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Phase 1: CTA hardening
+  // ---------------------------------------------------------------------------
+
+  describe('New General Chat CTA', () => {
+    it('shows the empty-library state before the disabled-agent state', async () => {
+      mockUseSkillsInfiniteQuery.mockReturnValue({
+        data: { pages: [{ skills: [], has_more: false, after: null }] },
+        isLoading: false,
+        isError: false,
+        fetchNextPage: jest.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+      });
+      mockUseAgentsMapContext.mockReturnValue({
+        agent_1: { id: 'agent_1', skills_enabled: false },
+      });
+
+      const textAreaRef = makeTextarea('$');
+      render(
+        <SkillsCommand
+          index={0}
+          textAreaRef={textAreaRef}
+          conversationId={CONVO_ID}
+          agentId="agent_1"
+        />,
+      );
+
+      expect(await screen.findByText('com_ui_skills_catalog_empty')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /com_ui_skills_manage_cta/i })).toBeInTheDocument();
+      expect(screen.queryByText('com_ui_skills_none_for_chat')).toBeNull();
+      expect(screen.queryByRole('button', { name: /com_ui_skills_start_new_chat/i })).toBeNull();
+    });
+
+    it('shows the disabled-agent message and New General Chat button for an agent with skills_enabled:false', async () => {
+      mockUseSkillsInfiniteQuery.mockReturnValue({
+        data: twoSkillsResponse,
+        isLoading: false,
+        isError: false,
+        fetchNextPage: jest.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+      });
+      mockUseAgentsMapContext.mockReturnValue({
+        agent_1: { id: 'agent_1', skills: ['1', '2'], skills_enabled: false },
+      });
+
+      const textAreaRef = makeTextarea('$');
+      render(
+        <SkillsCommand
+          index={0}
+          textAreaRef={textAreaRef}
+          conversationId={CONVO_ID}
+          agentId="agent_1"
+        />,
+      );
+
+      expect(await screen.findByText('com_ui_skills_none_for_chat')).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /com_ui_skills_start_new_chat/i }),
+      ).toBeInTheDocument();
+    });
+
+    it('calls newGeneralConversation and closes the popover when New General Chat is clicked', async () => {
+      const user = userEvent.setup();
+      mockUseSkillsInfiniteQuery.mockReturnValue({
+        data: skillsResponse,
+        isLoading: false,
+        isError: false,
+        fetchNextPage: jest.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+      });
+      mockUseAgentsMapContext.mockReturnValue({
+        agent_1: { id: 'agent_1', skills: ['1'], skills_enabled: false },
+      });
+
+      const textAreaRef = makeTextarea('$');
+      render(
+        <SkillsCommand
+          index={0}
+          textAreaRef={textAreaRef}
+          conversationId={CONVO_ID}
+          agentId="agent_1"
+        />,
+      );
+
+      const btn = await screen.findByRole('button', { name: /com_ui_skills_start_new_chat/i });
+      await user.click(btn);
+
+      /* SkillsCommand delegates to newGeneralConversation, which owns the
+         endpoint resolution logic and is tested separately in useNewConvo. */
+      expect(mockNewGeneralConversation).toHaveBeenCalledTimes(1);
+      expect(mockSetShowSkillsPopover).toHaveBeenCalledWith(false);
+    });
+
+    it('shows the scoped-miss message and New General Chat for a restricted agent with no matching search', async () => {
+      mockUseSkillsInfiniteQuery.mockReturnValue({
+        data: twoSkillsResponse,
+        isLoading: false,
+        isError: false,
+        fetchNextPage: jest.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+      });
+      /* Agent scoped to skill '2' only; skill '1' (Brand Guidelines) is not in scope
+         so a search for it returns no match within the agent's allowlist. */
+      mockUseAgentsMapContext.mockReturnValue({
+        agent_1: { id: 'agent_1', skills: ['2'], skills_enabled: true },
+      });
+
+      const textAreaRef = makeTextarea('$');
+      render(
+        <SkillsCommand
+          index={0}
+          textAreaRef={textAreaRef}
+          conversationId={CONVO_ID}
+          agentId="agent_1"
+        />,
+      );
+
+      /* Only 'Style Guide' (_id:'2') is in scope and is shown. */
+      expect(await screen.findByRole('button', { name: /Style Guide/i })).toBeInTheDocument();
+      /* The scoped-miss empty state only shows when the search produces no scoped result. */
+      expect(screen.queryByText('com_ui_skills_agent_scope_miss')).toBeNull();
+    });
+  });
+
+  describe('Manage Skills CTA', () => {
+    describe('keyboard navigation', () => {
+      const BLUR_DELAY_MS = 250;
+      const wait = () => act(() => new Promise((resolve) => setTimeout(resolve, BLUR_DELAY_MS)));
+
+      beforeEach(() => {
+        mockUseSkillsInfiniteQuery.mockReturnValue({
+          data: { pages: [{ skills: [], has_more: false, after: null }] },
+          isLoading: false,
+          isError: false,
+          fetchNextPage: jest.fn(),
+          hasNextPage: false,
+          isFetchingNextPage: false,
+        });
+      });
+
+      it('moves focus from the search input into the empty-state action and keeps the picker open', async () => {
+        const user = userEvent.setup();
+        const textAreaRef = makeTextarea('$');
+        render(<SkillsCommand index={0} textAreaRef={textAreaRef} conversationId={CONVO_ID} />);
+
+        const input = screen.getByPlaceholderText('com_ui_skills_command_placeholder');
+        const manageButton = screen.getByRole('button', { name: /com_ui_skills_manage_cta/i });
+        expect(input).toHaveFocus();
+
+        await user.tab();
+        await wait();
+
+        expect(manageButton).toHaveFocus();
+        expect(mockSetShowSkillsPopover).not.toHaveBeenCalled();
+
+        await user.keyboard('{Enter}');
+
+        expect(mockSetActive).toHaveBeenCalledWith('skills');
+        expect(mockSetShowSkillsPopover).toHaveBeenCalledWith(false);
+      });
+
+      it('dismisses the picker only once focus leaves the whole popover', async () => {
+        const user = userEvent.setup();
+        const textAreaRef = makeTextarea('$');
+        render(<SkillsCommand index={0} textAreaRef={textAreaRef} conversationId={CONVO_ID} />);
+        const outsideButton = document.createElement('button');
+        document.body.append(outsideButton);
+
+        await user.tab();
+        await wait();
+        expect(screen.getByRole('button', { name: /com_ui_skills_manage_cta/i })).toHaveFocus();
+        expect(mockSetShowSkillsPopover).not.toHaveBeenCalled();
+
+        await user.tab();
+
+        expect(outsideButton).toHaveFocus();
+        await waitFor(() => expect(mockSetShowSkillsPopover).toHaveBeenCalledWith(false));
+      });
+
+      it('does not move focus into the action on Shift+Tab from the search input', async () => {
+        const user = userEvent.setup();
+        const textAreaRef = makeTextarea('$');
+        render(<SkillsCommand index={0} textAreaRef={textAreaRef} conversationId={CONVO_ID} />);
+
+        const manageButton = screen.getByRole('button', { name: /com_ui_skills_manage_cta/i });
+
+        await user.tab({ shift: true });
+
+        expect(manageButton).not.toHaveFocus();
+        expect(mockSetShowSkillsPopover).toHaveBeenCalledWith(false);
+      });
+    });
+
+    it('calls setActive("skills") and closes the popover when Manage Skills is clicked', async () => {
+      const user = userEvent.setup();
+      /* No skills in catalog → catalog-empty state → Manage Skills button. */
+      mockUseSkillsInfiniteQuery.mockReturnValue({
+        data: { pages: [{ skills: [], has_more: false, after: null }] },
+        isLoading: false,
+        isError: false,
+        fetchNextPage: jest.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+      });
+
+      const textAreaRef = makeTextarea('$');
+      render(<SkillsCommand index={0} textAreaRef={textAreaRef} conversationId={CONVO_ID} />);
+
+      const btn = await screen.findByRole('button', { name: /com_ui_skills_manage_cta/i });
+      await user.click(btn);
+
+      expect(mockSetActive).toHaveBeenCalledWith('skills');
+      expect(mockSetShowSkillsPopover).toHaveBeenCalledWith(false);
+    });
+  });
+
+  describe('Enable all CTA', () => {
+    it('calls toggleMany with all disabled skills when Enable all is clicked', async () => {
+      const user = userEvent.setup();
+      /* Two skills; isActive returns false for both → both are disabled →
+         disabledSkills has two entries → Enable all is shown. */
+      mockUseSkillsInfiniteQuery.mockReturnValue({
+        data: twoSkillsResponse,
+        isLoading: false,
+        isError: false,
+        fetchNextPage: jest.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+      });
+      mockIsActive.mockReturnValue(false);
+
+      const textAreaRef = makeTextarea('$');
+      render(<SkillsCommand index={0} textAreaRef={textAreaRef} conversationId={CONVO_ID} />);
+
+      const btn = await screen.findByRole('button', { name: /com_ui_skills_enable_all_cta/i });
+      await user.click(btn);
+
+      expect(mockToggleMany).toHaveBeenCalledTimes(1);
+      const [skills, nextActive] = mockToggleMany.mock.calls[0] as [{ _id: string }[], boolean];
+      expect(nextActive).toBe(true);
+      expect(skills.map((s) => s._id).sort()).toEqual(['1', '2']);
+    });
+
+    it('does not show Enable all while skill states are loading (statesLoading:true)', () => {
+      /* statesLoading folds into catalogLoading. SkillsEmptyStateView — and
+         therefore Enable all — only renders when catalogLoading is false. */
+      mockUseSkillsInfiniteQuery.mockReturnValue({
+        data: twoSkillsResponse,
+        isLoading: false,
+        isError: false,
+        fetchNextPage: jest.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+      });
+      mockIsActive.mockReturnValue(false);
+      /* Override the active-state hook to report loading. */
+      mockUseSkillActiveState.mockReturnValue({
+        isActive: mockIsActive,
+        toggleMany: mockToggleMany,
+        isLoading: true, // ← statesLoading → catalogLoading → gate closed
+        isError: false,
+        isUpdating: false,
+      });
+
+      const textAreaRef = makeTextarea('$');
+      render(<SkillsCommand index={0} textAreaRef={textAreaRef} conversationId={CONVO_ID} />);
+
+      expect(screen.queryByRole('button', { name: /com_ui_skills_enable_all_cta/i })).toBeNull();
+      expect(screen.queryByRole('button', { name: /com_ui_skills_manage_cta/i })).toBeNull();
+    });
+
+    it('does not show Enable all when active-state query fails (statesError:true)', () => {
+      /* statesError folds into catalogError. The error message is shown instead. */
+      mockUseSkillsInfiniteQuery.mockReturnValue({
+        data: twoSkillsResponse,
+        isLoading: false,
+        isError: false,
+        fetchNextPage: jest.fn(),
+        hasNextPage: false,
+        isFetchingNextPage: false,
+      });
+      mockIsActive.mockReturnValue(false);
+      mockUseSkillActiveState.mockReturnValue({
+        isActive: mockIsActive,
+        toggleMany: mockToggleMany,
+        isLoading: false,
+        isError: true, // ← statesError → catalogError → error message shown
+        isUpdating: false,
+      });
+
+      const textAreaRef = makeTextarea('$');
+      render(<SkillsCommand index={0} textAreaRef={textAreaRef} conversationId={CONVO_ID} />);
+
+      expect(screen.queryByRole('button', { name: /com_ui_skills_enable_all_cta/i })).toBeNull();
+      /* The safe error message is rendered in place of the empty-state CTAs. */
+      expect(screen.getByText('com_ui_skills_load_error')).toBeInTheDocument();
+    });
   });
 });
 
@@ -591,15 +947,15 @@ describe('filterSkillsForPopover', () => {
     expect(out).toEqual([]);
   });
 
-  it('layers all three filters (agent scope ∩ active ∩ invocable)', () => {
+  it('bypasses active state for SELECT-agent skills while preserving scope and invocability', () => {
     const isActive = (skill: { _id: string }) => skill._id !== '2';
     const out = filterSkillsForPopover([s1, s2, s3], {
       agentSkillIds: ['1', '2', '3'],
       isActive,
     });
-    /* s1 passes (active, user-invocable by default, scoped), s2 drops (inactive),
-       s3 drops (userInvocable: false). */
-    expect(out.map((s) => s._id)).toEqual(['1']);
+    /* s1 and s2 are explicitly assigned, so both remain available even though
+       s2 is inactive generally. s3 remains excluded because it is model-only. */
+    expect(out.map((s) => s._id)).toEqual(['1', '2']);
   });
 
   it('drops everything when isActive returns false for all inputs', () => {

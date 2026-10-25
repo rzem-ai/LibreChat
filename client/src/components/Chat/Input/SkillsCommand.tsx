@@ -1,18 +1,20 @@
-import { memo, useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { memo, useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ScrollText } from 'lucide-react';
 import { useSetRecoilState } from 'recoil';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { AutoSizer, List } from 'react-virtualized';
-import { Input, Spinner, useCombobox } from '@librechat/client';
+import { Button, Input, Spinner, useCombobox } from '@librechat/client';
 import { SkillsScope, resolveAgentSkillsScope } from 'librechat-data-provider';
 import type { TSkillSummary } from 'librechat-data-provider';
 import type { MentionOption } from '~/common';
+import { useLocalize, useNewConvo, useSkillActiveState } from '~/hooks';
+import { filterSkillsByScope, filterSkillsForPopover } from '~/utils';
 import useInitPopoverInput from '~/hooks/Input/useInitPopoverInput';
-import { useLocalize, useSkillActiveState } from '~/hooks';
 import { useSkillsInfiniteQuery } from '~/data-provider';
 import { showSkillsPopoverFamily } from './skillsState';
 import { useAgentsMapContext } from '~/Providers';
 import { ephemeralAgentByConvoId } from '~/store';
+import { useActivePanel } from '~/Providers';
 import { isEphemeralAgent } from '~/common';
 import MentionItem from './MentionItem';
 import store from '~/store';
@@ -21,60 +23,153 @@ const commandChar = '$';
 const ROW_HEIGHT = 44;
 const skillIcon = <ScrollText className="icon-md text-status-info" />;
 
-/**
- * Deloitte Custom Change: determines whether a skill should appear in the `$` command popover.
- * Reads the persisted `userInvocable` field (mirrors the `user-invocable`
- * frontmatter). Defaults to visible when the field is absent so older
- * skills authored before Phase 6 stay user-invocable without a migration;
- * only an explicit `false` hides them.
- */
-export function isUserInvocable(skill: TSkillSummary): boolean {
-  return skill.userInvocable !== false;
-}
+// ---------------------------------------------------------------------------
+// Empty-state discrimination
+// ---------------------------------------------------------------------------
+
+export type SkillsEmptyState =
+  /** No skills exist in the user's catalog at all. */
+  | { kind: 'catalog-empty' }
+  /**
+   * Current chat is an agent with skills disabled — no skills are
+   * accessible regardless of what the catalog contains. Agent-disabled
+   * takes precedence over catalog-empty so the CTA is always New General Chat.
+   */
+  | { kind: 'agent-disabled' }
+  /**
+   * Agent has a non-empty explicit skill allowlist but the current search
+   * matched nothing within it. The rest of the catalog is reachable only
+   * through a general chat.
+   */
+  | { kind: 'agent-scoped-miss' }
+  /**
+   * General chat (or full-catalog agent): no selectable result because
+   * every eligible skill is toggled off or a search matched nothing among
+   * active skills. `disabledSkills` carries every personally-disabled,
+   * manually invocable skill so "Enable all" is a single blanket action.
+   */
+  | { kind: 'unscoped-empty'; disabledSkills: TSkillSummary[] };
 
 /**
- * Filters the skills list down to what should appear in the `$` popover.
- * Composes three rules, short-circuiting on the cheapest check first:
- *
- * 1. Agent scope — mirrors backend `scopeSkillIds` semantics:
- *    - `null` / `undefined` → no scope filter (ephemeral convo, or agent
- *      without a `skills` field configured).
- *    - `[]` → explicit opt-out, nothing passes.
- *    - non-empty → intersection with the agent's configured skill ids.
- * 2. Active state — per-user ownership-aware toggle.
- * 3. Invocation mode — `manual` / `both` / undefined are visible; `auto`
- *    is model-only and hidden.
- *
- * Pure function; exported so tests can exercise the filter in isolation
- * without rendering the component.
+ * Decides which empty-state the `$` popover should show. Catalog absence
+ * takes precedence: when no accessible skills exist, a general chat cannot
+ * help the user and Manage Skills is the useful next action.
  */
-export function filterSkillsForPopover(
-  skills: TSkillSummary[],
-  ctx: {
-    agentSkillIds: string[] | null | undefined;
-    isActive: (skill: Pick<TSkillSummary, '_id' | 'author' | 'source'>) => boolean;
-  },
-): TSkillSummary[] {
-  const { agentSkillIds, isActive } = ctx;
-  if (agentSkillIds != null && agentSkillIds.length === 0) {
-    return [];
+export function resolveSkillsEmptyState(ctx: {
+  allSkills: TSkillSummary[];
+  agentSkillIds: string[] | null | undefined;
+  isAgentDisabled: boolean;
+  disabledSkills: TSkillSummary[];
+}): SkillsEmptyState {
+  const { allSkills, agentSkillIds, isAgentDisabled, disabledSkills } = ctx;
+
+  // No accessible skills at all.
+  if (allSkills.length === 0) {
+    return { kind: 'catalog-empty' };
   }
-  const agentSet =
-    agentSkillIds != null && agentSkillIds.length > 0 ? new Set(agentSkillIds) : null;
-  const result: TSkillSummary[] = [];
-  for (const skill of skills) {
-    if (agentSet && !agentSet.has(skill._id)) {
-      continue;
-    }
-    if (!isActive(skill)) {
-      continue;
-    }
-    if (!isUserInvocable(skill)) {
-      continue;
-    }
-    result.push(skill);
+  // Agent with skills explicitly disabled.
+  if (isAgentDisabled) {
+    return { kind: 'agent-disabled' };
   }
-  return result;
+  // Agent has a non-empty allowlist but the search matched nothing in it.
+  if (agentSkillIds != null && agentSkillIds.length > 0) {
+    return { kind: 'agent-scoped-miss' };
+  }
+  // General chat / full-catalog agent: report disabled skills for Enable all.
+  return { kind: 'unscoped-empty', disabledSkills };
+}
+
+// ---------------------------------------------------------------------------
+// Empty-state UI
+// ---------------------------------------------------------------------------
+
+function EmptyStateWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-2 p-4 text-center text-sm text-text-secondary">
+      {children}
+    </div>
+  );
+}
+
+function NewGeneralChatButton({
+  onClick,
+  localize,
+}: {
+  onClick: () => void;
+  localize: ReturnType<typeof useLocalize>;
+}) {
+  return (
+    <Button type="button" size="sm" variant="submit" onClick={onClick}>
+      {localize('com_ui_skills_start_new_chat')}
+    </Button>
+  );
+}
+
+function SkillsEmptyStateView({
+  state,
+  localize,
+  onEnableSkills,
+  onNewChat,
+  onManageSkills,
+}: {
+  state: SkillsEmptyState;
+  localize: ReturnType<typeof useLocalize>;
+  onEnableSkills: (skills: TSkillSummary[]) => void;
+  onNewChat: () => void;
+  onManageSkills: () => void;
+}) {
+  switch (state.kind) {
+    case 'catalog-empty':
+      return (
+        <EmptyStateWrapper>
+          <p>{localize('com_ui_skills_catalog_empty')}</p>
+          <Button type="button" size="sm" variant="outline" onClick={onManageSkills}>
+            {localize('com_ui_skills_manage_cta')}
+          </Button>
+        </EmptyStateWrapper>
+      );
+    case 'agent-disabled':
+      return (
+        <EmptyStateWrapper>
+          <p>{localize('com_ui_skills_none_for_chat')}</p>
+          <NewGeneralChatButton onClick={onNewChat} localize={localize} />
+        </EmptyStateWrapper>
+      );
+    case 'agent-scoped-miss':
+      return (
+        <EmptyStateWrapper>
+          <p>{localize('com_ui_skills_agent_scope_miss')}</p>
+          <NewGeneralChatButton onClick={onNewChat} localize={localize} />
+        </EmptyStateWrapper>
+      );
+    case 'unscoped-empty':
+      return (
+        <EmptyStateWrapper>
+          <p>{localize('com_ui_no_skills_found')}</p>
+          <div className="flex items-center gap-2">
+            {state.disabledSkills.length > 0 && (
+              <Button
+                type="button"
+                size="sm"
+                variant="submit"
+                /* Keep focus in the search input so the blur-driven auto-close
+                   doesn't dismiss the popover — unlike Manage Skills, this
+                   action doesn't navigate away. */
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => onEnableSkills(state.disabledSkills)}
+              >
+                {localize('com_ui_skills_enable_all_cta')}
+              </Button>
+            )}
+            <Button type="button" size="sm" variant="outline" onClick={onManageSkills}>
+              {localize('com_ui_skills_manage_cta')}
+            </Button>
+          </div>
+        </EmptyStateWrapper>
+      );
+    default:
+      return null;
+  }
 }
 
 function SkillsCommandContent({
@@ -96,41 +191,52 @@ function SkillsCommandContent({
   );
 
   const agentsMap = useAgentsMapContext();
-  const { isActive } = useSkillActiveState();
+  const {
+    isActive,
+    toggleMany,
+    isLoading: statesLoading,
+    isError: statesError,
+  } = useSkillActiveState();
+  const { newGeneralConversation } = useNewConvo(index);
+  const { setActive } = useActivePanel();
+  const setSidebarExpanded = useSetRecoilState(store.sidebarExpanded);
 
   /* Resolve the per-agent skill scope. Mirrors backend
      `resolveAgentScopedSkillIds`: ephemeral agents always see the full
      catalog (picking any skill flips `ephemeralAgent.skills = true` and
      activates for the turn); persisted agents gate on the builder's
      `skills_enabled` master toggle and explicit catalog scope. Legacy agents
-     without a scope retain empty allowlist = full catalog. Persisted agents fail closed during the
-     `agentsMap` hydration window so the user cannot pick a skill the
-     backend will then refuse, and again when the map is authoritative
-     but the agent isn't in it (deleted, or VIEW revoked mid-session).
-     `agentId` is threaded in as a prop so this component stays
+     without a scope retain empty allowlist = full catalog. Persisted agents
+     fail closed during the `agentsMap` hydration window so the user cannot
+     pick a skill the backend will then refuse, and again when the map is
+     authoritative but the agent isn't in it (deleted, or VIEW revoked
+     mid-session). `agentId` is threaded in as a prop so this component stays
      memoizable. */
-  const agentSkillIds = useMemo<string[] | null | undefined>(() => {
+  const { agentSkillIds, isAgentDisabled } = useMemo<{
+    agentSkillIds: string[] | null | undefined;
+    isAgentDisabled: boolean;
+  }>(() => {
     if (!agentId || isEphemeralAgent(agentId)) {
-      return undefined;
+      return { agentSkillIds: undefined, isAgentDisabled: false };
     }
     if (!agentsMap) {
-      return [];
+      return { agentSkillIds: [], isAgentDisabled: false };
     }
     const agent = agentsMap[agentId];
     if (!agent) {
-      return [];
+      return { agentSkillIds: [], isAgentDisabled: false };
     }
     if (agent.skills_enabled !== true) {
-      return [];
+      return { agentSkillIds: [], isAgentDisabled: true };
     }
     const scope = resolveAgentSkillsScope(agent.skills, agent.skills_enabled, agent.skills_scope);
     if (scope === SkillsScope.none) {
-      return [];
+      return { agentSkillIds: [], isAgentDisabled: true };
     }
     if (scope === SkillsScope.all) {
-      return undefined;
+      return { agentSkillIds: undefined, isAgentDisabled: false };
     }
-    return agent.skills ?? [];
+    return { agentSkillIds: agent.skills ?? [], isAgentDisabled: false };
   }, [agentId, agentsMap]);
 
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -147,16 +253,20 @@ function SkillsCommandContent({
     }
   }, [hasNextPage, isFetchingNextPage, isError, fetchNextPage]);
 
-  const skillOptions: MentionOption[] = useMemo(() => {
+  const allSkills = useMemo<TSkillSummary[]>(() => {
     if (!data?.pages) {
       return [];
     }
-    const allSkills: TSkillSummary[] = [];
+    const skills: TSkillSummary[] = [];
     for (const page of data.pages) {
       for (const skill of page.skills) {
-        allSkills.push(skill);
+        skills.push(skill);
       }
     }
+    return skills;
+  }, [data?.pages]);
+
+  const skillOptions: MentionOption[] = useMemo(() => {
     const filtered = filterSkillsForPopover(allSkills, { agentSkillIds, isActive });
     const options: MentionOption[] = [];
     for (const skill of filtered) {
@@ -169,11 +279,23 @@ function SkillsCommandContent({
       });
     }
     return options;
-  }, [data?.pages, agentSkillIds, isActive]);
+  }, [allSkills, agentSkillIds, isActive]);
+
+  /* Every personally-disabled, manually invocable, in-scope skill — feeds
+     the `unscoped-empty` Enable all action. Only meaningful for general chat
+     or full-catalog agents: a skill explicitly scoped to an agent is always
+     active in that chat, so there is nothing to enable via a bulk toggle. */
+  const disabledSkills = useMemo<TSkillSummary[]>(() => {
+    if (agentSkillIds != null && agentSkillIds.length > 0) {
+      return [];
+    }
+    return filterSkillsByScope(allSkills, agentSkillIds).filter((skill) => !isActive(skill));
+  }, [allSkills, isActive, agentSkillIds]);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
 
   const { open, setOpen, searchValue, setSearchValue, matches } = useCombobox({
     value: '',
@@ -229,6 +351,39 @@ function SkillsCommandContent({
     ],
   );
 
+  /* "Enable all" — activates every personally-disabled skill in one atomic
+     write. Clears the search term so newly enabled skills become visible.
+     onMouseDown prevents the blur-driven auto-close so the popover stays
+     open after clicking. */
+  const handleEnableSkills = useCallback(
+    (skills: TSkillSummary[]) => {
+      toggleMany(skills, true);
+      setSearchValue('');
+    },
+    [toggleMany, setSearchValue],
+  );
+
+  /* "New General Chat" — delegates to `newGeneralConversation`, which
+     resolves the first non-agents endpoint from the already-loaded
+     `endpointsConfig` inside `useNewConvo` and passes it explicitly in the
+     template. This prevents `buildDefaultConvo` from reading
+     `lastConversationSetup` out of localStorage and restoring the previous
+     agent via `isExistingAgentConvo`. */
+  const handleStartNewChat = useCallback(() => {
+    setOpen(false);
+    setShowSkillsPopover(false);
+    newGeneralConversation();
+  }, [setOpen, setShowSkillsPopover, newGeneralConversation]);
+
+  /* "Manage Skills" — expands the persistent app sidebar and switches to the
+     Skills section without navigating away from the current chat. */
+  const handleManageSkills = useCallback(() => {
+    setOpen(false);
+    setShowSkillsPopover(false);
+    setActive('skills');
+    setSidebarExpanded(true);
+  }, [setOpen, setShowSkillsPopover, setActive, setSidebarExpanded]);
+
   useEffect(() => {
     if (!open) {
       setActiveIndex(0);
@@ -283,9 +438,40 @@ function SkillsCommandContent({
     );
   };
 
+  /* Both catalog pagination and skill-state resolution must complete before
+     any empty-state or CTA is shown. Folding `statesLoading` here (following
+     the pattern in SkillsSection.tsx) ensures the spinner is visible while
+     `isActive` / `disabledSkills` may still return incorrect defaults, so
+     Enable all never appears in an unactionable state. */
+  const catalogLoading = isLoading || isFetchingNextPage || hasNextPage || statesLoading;
+  /* Error from either the catalog fetch or the active-state fetch. */
+  const catalogError = isError || statesError;
+  const hasEmptyStateActions = open && !catalogLoading && !catalogError && matches.length === 0;
+
   return (
     <div className="absolute bottom-28 z-10 w-full space-y-2">
-      <div className="popover border-token-border-light rounded-2xl border bg-surface-tertiary-alt p-2 shadow-lg">
+      <div
+        ref={popoverRef}
+        className="popover border-token-border-light rounded-2xl border bg-surface-tertiary-alt p-2 shadow-lg"
+        onBlur={(e) => {
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+          }
+          if (e.currentTarget.contains(e.relatedTarget)) {
+            timeoutRef.current = null;
+            return;
+          }
+          timeoutRef.current = setTimeout(() => {
+            if (popoverRef.current?.contains(document.activeElement)) {
+              timeoutRef.current = null;
+              return;
+            }
+            setOpen(false);
+            setShowSkillsPopover(false);
+            timeoutRef.current = null;
+          }, 150);
+        }}
+      >
         <Input
           ref={initInputRef}
           placeholder={localize('com_ui_skills_command_placeholder')}
@@ -311,6 +497,11 @@ function SkillsCommandContent({
               setActiveIndex((prevIndex) => (prevIndex - 1 + matches.length) % matches.length);
             } else if (e.key === 'Enter' || e.key === 'Tab') {
               if (matches.length === 0) {
+                /* Forward Tab moves focus into the empty-state actions; the
+                   popover-level blur handler dismisses once focus leaves. */
+                if (e.key === 'Tab' && !e.shiftKey && hasEmptyStateActions) {
+                  return;
+                }
                 if (e.key === 'Enter') {
                   e.preventDefault();
                 }
@@ -329,27 +520,30 @@ function SkillsCommandContent({
           }}
           onChange={(e) => setSearchValue(e.target.value)}
           onFocus={() => setOpen(true)}
-          onBlur={() => {
-            timeoutRef.current = setTimeout(() => {
-              setOpen(false);
-              setShowSkillsPopover(false);
-            }, 150);
-          }}
         />
-        {open && (isLoading || isFetchingNextPage) && matches.length === 0 && (
+        {open && !catalogError && catalogLoading && matches.length === 0 && (
           <div className="flex h-32 items-center justify-center text-text-primary">
             <Spinner />
           </div>
         )}
-        {open && isError && (
+        {open && catalogError && (
           <div className="p-4 text-center text-sm text-text-secondary">
             {localize('com_ui_skills_load_error')}
           </div>
         )}
-        {open && !isLoading && !isFetchingNextPage && !isError && matches.length === 0 && (
-          <div className="p-4 text-center text-sm text-text-secondary">
-            {localize(searchValue ? 'com_ui_no_skills_found' : 'com_ui_skills_empty')}
-          </div>
+        {open && !catalogLoading && !catalogError && matches.length === 0 && (
+          <SkillsEmptyStateView
+            state={resolveSkillsEmptyState({
+              allSkills,
+              agentSkillIds,
+              isAgentDisabled,
+              disabledSkills,
+            })}
+            localize={localize}
+            onEnableSkills={handleEnableSkills}
+            onNewChat={handleStartNewChat}
+            onManageSkills={handleManageSkills}
+          />
         )}
         {open && matches.length > 0 && (
           <div className="max-h-40">

@@ -1,5 +1,5 @@
 // Deloitte Custom Change: added new imports
-import React, { createContext, useContext, useEffect, useMemo, useRef } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import { useRecoilState } from 'recoil';
 import {
   Tools,
@@ -14,6 +14,7 @@ import {
 import type { TAgentsEndpoint, TEphemeralAgent } from 'librechat-data-provider';
 import {
   useHasAccess,
+  useHasMemoryAccess,
   useAgentCapabilities,
   useMCPServerManager,
   useSearchApiKeyForm,
@@ -26,7 +27,7 @@ import { getTimestampedValue } from '~/utils/timestamps';
 import { AuthContext } from '~/hooks/AuthContext';
 // Deloitte Custom Change: helper for `defaultEnabledTools` seeding.
 import { getDefaultEnabledToolValues } from '~/utils/endpoints';
-import { useGetStartupConfig } from '~/data-provider';
+import { useGetStartupConfig, useUpdateMemoryPreferencesMutation } from '~/data-provider';
 import { ephemeralAgentByConvoId } from '~/store';
 
 interface BadgeRowContextType {
@@ -349,15 +350,6 @@ export default function BadgeRowProvider({
     isAuthenticated: true,
   });
 
-  /** Memory hook - per-conversation toggle for the inline memory tools */
-  const memory = useToolToggle({
-    conversationId,
-    storageContextKey,
-    toolKey: Tools.memory,
-    localStorageKey: LocalStorageKeys.LAST_MEMORY_TOGGLE_,
-    isAuthenticated: true,
-  });
-
   /** Deloitte Custom Change: `defaultEnabledTools` is seeded before the role and capabilities are
    *  known, so once the role has loaded, switch off any default-enabled tool the user may not use. */
   const authContext = useContext(AuthContext);
@@ -369,9 +361,63 @@ export default function BadgeRowProvider({
     permissionType: PermissionTypes.RUN_CODE,
     permission: Permissions.USE,
   });
-  const { skillsEnabled, codeEnabled, artifactsEnabled } = useAgentCapabilities(
+  // Deloitte Custom Change: default memory only for users and endpoints allowed to use it.
+  const canUseMemory = useHasMemoryAccess();
+  // The sidebar switch (the preference's owner) only exists for users allowed to opt out.
+  const canOptOutMemory = useHasAccess({
+    permissionType: PermissionTypes.MEMORIES,
+    permission: Permissions.OPT_OUT,
+  });
+  const { skillsEnabled, codeEnabled, artifactsEnabled, memoryEnabled } = useAgentCapabilities(
     agentsConfig?.capabilities ?? defaultAgentCapabilities,
   );
+  const hasOptedOutOfMemory = authContext?.user?.personalization?.memories === false;
+
+  /** Deloitte Custom Change: the memory sidebar switch and the chat memory tool are one
+   *  preference (`personalization.memories`), so each control mirrors the other. */
+  const { mutate: updateMemoryPreferences } = useUpdateMemoryPreferencesMutation();
+  const persistMemoryPreference = useCallback(
+    (value: boolean | string) => {
+      if (typeof value !== 'boolean' || !canUseMemory || !canOptOutMemory) {
+        return;
+      }
+      updateMemoryPreferences({ memories: value });
+    },
+    [canUseMemory, canOptOutMemory, updateMemoryPreferences],
+  );
+
+  /** Memory hook - per-conversation toggle for the inline memory tools */
+  const memory = useToolToggle({
+    conversationId,
+    storageContextKey,
+    toolKey: Tools.memory,
+    localStorageKey: LocalStorageKeys.LAST_MEMORY_TOGGLE_,
+    isAuthenticated: true,
+    onPersist: persistMemoryPreference,
+  });
+
+  /** Deloitte Custom Change: mirror the saved preference (and access) onto the tool flag so the
+   *  chat row is ticked exactly when the sidebar toggle is, and fails closed when memory is not
+   *  available at all. */
+  useEffect(() => {
+    if (!canUseMemory || !memoryEnabled) {
+      setEphemeralAgent((prev) => (prev?.memory ? { ...prev, memory: false } : prev));
+      return;
+    }
+    if (!canOptOutMemory || authContext?.user == null) {
+      return;
+    }
+    const next = !hasOptedOutOfMemory;
+    setEphemeralAgent((prev) => (prev?.memory === next ? prev : { ...(prev ?? {}), memory: next }));
+  }, [
+    authContext?.user,
+    canUseMemory,
+    canOptOutMemory,
+    memoryEnabled,
+    hasOptedOutOfMemory,
+    setEphemeralAgent,
+  ]);
+
   // Deloitte Custom Change: watch the current values so the cleanup re-runs after a model-spec switch re-seeds them.
   const {
     skills: skillsValue,
@@ -390,6 +436,8 @@ export default function BadgeRowProvider({
       ...(!(canUseSkills && skillsEnabled) && { skills: false }),
       ...(!(canRunCode && codeEnabled) && { execute_code: false }),
       ...(!artifactsEnabled && { artifacts: '' }),
+      // Deloitte Custom Change: fail closed when the memory default is not authorized.
+      ...(!(canUseMemory && memoryEnabled && !hasOptedOutOfMemory) && { memory: false }),
     };
     const keys = Object.keys(disabledOff).filter((key) => defaultEnabledTools.includes(key));
     setEphemeralAgent((prev) => {
@@ -407,6 +455,9 @@ export default function BadgeRowProvider({
     canRunCode,
     codeEnabled,
     artifactsEnabled,
+    canUseMemory,
+    memoryEnabled,
+    hasOptedOutOfMemory,
     skillsValue,
     codeValue,
     artifactsValue,

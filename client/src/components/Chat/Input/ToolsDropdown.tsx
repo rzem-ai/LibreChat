@@ -10,13 +10,7 @@ import {
   defaultAgentCapabilities,
 } from 'librechat-data-provider';
 import type { MenuItemProps } from '~/common';
-import {
-  useLocalize,
-  useHasAccess,
-  useAuthContext,
-  useHasMemoryAccess,
-  useAgentCapabilities,
-} from '~/hooks';
+import { useLocalize, useHasAccess, useHasMemoryAccess, useAgentCapabilities } from '~/hooks';
 import { useToolsDropdownConfig } from '~/hooks/Plugins/useToolsDropdownConfig';
 import useArtifactsShadcnOnly from '~/hooks/Artifacts/useArtifactsShadcnOnly';
 import ArtifactsSubMenu from '~/components/Chat/Input/ArtifactsSubMenu';
@@ -36,7 +30,6 @@ const getMainLandmark = () => document.querySelector<HTMLElement>('main');
 
 const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
   const localize = useLocalize();
-  const { user } = useAuthContext();
   const context = useBadgeRowContext();
   // Deloitte Custom Change: admin-configured rows (`toolsDropdown.items`).
   const { isItemVisible, showPinButtons } = useToolsDropdownConfig();
@@ -80,7 +73,9 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
   });
 
   const canUseMemory = useHasMemoryAccess();
-  const showMemory = canUseMemory && memoryEnabled && user?.personalization?.memories !== false;
+  // Deloitte Custom Change: keep the row present when the user has opted out so it mirrors the
+  // sidebar switch and can be used to opt back in.
+  const showMemory = canUseMemory && memoryEnabled;
 
   const [isPopoverActive, setIsPopoverActive] = useState(false);
   const isDisabled = disabled ?? false;

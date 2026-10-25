@@ -33,7 +33,7 @@ export function TourCard({
     <Button
       type="button"
       size="sm"
-      variant={status === 'in-progress' ? 'submit' : 'outline'}
+      variant={status === 'complete' ? 'outline' : 'submit'}
       disabled={disabled}
       onClick={onStart}
     >

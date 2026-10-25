@@ -445,7 +445,8 @@ describe('setOpenIDAuthTokens', () => {
       expect(req.session.openidTokens).not.toHaveProperty('accessTokenExpiresAt');
     });
 
-    it('should return the existing unexpired session id_token when refresh omits one', () => {
+    // Deloitte Custom Change: A legacy session without expiry metadata must not return a stale ID token.
+    it('falls back to access_token when a saved id_token has no trusted expiry metadata', () => {
       const existingIdToken = jwt.sign(
         { sub: 'user-123', exp: Math.floor(Date.now() / 1000) + 3600 },
         'idp-signing-secret',
@@ -465,7 +466,7 @@ describe('setOpenIDAuthTokens', () => {
 
       const result = setOpenIDAuthTokens(tokenset, req, res, 'user-123');
 
-      expect(result).toBe(existingIdToken);
+      expect(result).toBe('new-access-token');
       expect(req.session.openidTokens.accessToken).toBe('new-access-token');
       expect(req.session.openidTokens.idToken).toBe(existingIdToken);
       expect(req.session.openidTokens.refreshToken).toBe('new-refresh-token');

@@ -1,0 +1,68 @@
+---
+title: Guide to agents
+updated: 23 October 2026
+durationLabel: 5 min read
+type: guide
+summary: "An agent plans tasks, makes decisions, uses tools and completes multi-step workflows on its own."
+---
+
+## What it is
+
+An agent uses a model, plus instructions, skills, connectors and files, to carry out a workflow: `agent = model + instructions + skills + connectors + files`. Two agents can use the same model and still behave differently, because their skills and connectors differ.
+
+## Why it matters
+
+A skill handles one task well. An agent coordinates several skills and tools, so you describe the end result and the agent works out the steps.
+
+## Find an agent
+
+Browse ready-made agents in the Agent Library, or build your own in Agent Builder. Both are in the side menu.
+
+## Start a chat with an agent
+
+Open the model selector and choose an agent instead of a model. To go back to a general model, open the same selector and choose a standard model.
+
+## Create an agent
+
+In Agent Builder, you group instructions, skills, connectors and files for a specific workflow.
+
+1. Select **Agent Builder** from the side menu.
+2. Enter an agent name and a description of what the agent does.
+3. Write the instructions: what the agent should do and how it should behave.
+4. Select a model. Choose an AU-hosted model if your data must stay onshore in Australia.
+5. Add the skills, connectors and files the agent needs.
+6. Test the agent with realistic requests and adjust the instructions where the results are off.
+7. Share the agent with your colleagues.
+
+## Combine skills and agents
+
+An agent coordinates the sequence and brings the outputs together. Take a client meeting briefing as an example. You ask:
+
+> Research the client and prepare a briefing pack for tomorrow’s meeting.
+
+The agent then works through three skills:
+
+- Research the client: use approved sources, such as IBISWorld and the AFR, to gather company, industry and market insights
+- Review what we know: use internal documents, previous meeting notes and other available information to add context
+- Create the briefing pack: combine the research and internal context into a structured, executive-ready briefing
+
+The outcome is a briefing pack with key insights, discussion points, questions, risks and opportunities. Each skill is one task. Read [the guide to skills](/learn/articles/guides/skills#what-it-is) to see how one is built.
+
+## Work with multiple agents
+
+When one agent isn’t enough, split the work across specialist agents with handoffs or subagents. Read [the guide to multi-agent workflows](/learn/articles/guides/multi-agent) to choose between them.
+
+## Share an agent
+
+<SharingNote />
+
+1. Select **Agent Builder** from the side menu to open Agents.
+2. Open the drop-down menu, then search for and select the agent you want to share.
+3. Scroll to the bottom of the form and select **Share**.
+4. Search for the people you want to share with, then select them.
+5. Assign a permission level: Viewer, Editor or Owner. People can use the agent based on the permission you grant.
+6. Select **Save Changes**.
+
+Share every skill the agent uses with the same people, following the steps in [share a skill](/learn/articles/guides/skills#share-a-skill).
+
+<NextArticle href="/learn/articles/guides/connectors" title="Guide to connectors">Bring approved sources into your work</NextArticle>

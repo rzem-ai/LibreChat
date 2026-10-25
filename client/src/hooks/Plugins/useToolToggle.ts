@@ -18,6 +18,8 @@ interface UseToolToggleOptions {
   localStorageKey: LocalStorageKeys;
   isAuthenticated?: boolean;
   setIsDialogOpen?: (open: boolean) => void;
+  /** Called after a user-initiated change, for tools that also persist a preference. */
+  onPersist?: (value: ToolValue) => void;
   /** Options for auth verification */
   authConfig?: {
     toolId: string;
@@ -32,6 +34,7 @@ export function useToolToggle({
   localStorageKey,
   isAuthenticated: externalIsAuthenticated,
   setIsDialogOpen,
+  onPersist,
   authConfig,
 }: UseToolToggleOptions) {
   const key = conversationId ?? Constants.NEW_CONVO;
@@ -99,6 +102,8 @@ export function useToolToggle({
         [toolKey]: value,
       }));
 
+      onPersist?.(value);
+
       // Dual-write to environment key for new conversation defaults
       if (storageContextKey) {
         const envKey = `${localStorageKey}${storageContextKey}`;
@@ -110,6 +115,7 @@ export function useToolToggle({
       setIsDialogOpen,
       isAuthenticated,
       setEphemeralAgent,
+      onPersist,
       toolKey,
       storageContextKey,
       localStorageKey,

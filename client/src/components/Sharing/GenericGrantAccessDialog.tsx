@@ -23,6 +23,7 @@ import type { TPrincipal } from 'librechat-data-provider';
 import {
   usePeoplePickerPermissions,
   useResourcePermissionState,
+  usePrincipalLabel,
   useCopyToClipboard,
   useCanSharePublic,
   useAuthContext,
@@ -69,6 +70,13 @@ export default function GenericGrantAccessDialog({
     resourceType === ResourceType.AGENT && user?.role === SystemRoles.ADMIN;
   const { hasPeoplePickerAccess, peoplePickerTypeFilter } = usePeoplePickerPermissions();
   const canManagePrincipals = hasPeoplePickerAccess || canEditAgentInsights;
+  // Deloitte Custom Change: copy lists only the principal types enabled in `interface.peoplePicker`.
+  const searchPlaceholder = localize('com_ui_search_principals_placeholder', {
+    0: usePrincipalLabel('or', 'plural'),
+  });
+  const permissionsHeading = localize('com_ui_principals_permissions', {
+    0: usePrincipalLabel('and', 'singular'),
+  });
 
   /** User can use the dialog if they can manage principals or share publicly. */
   const canUseShareDialog = canManagePrincipals || canSharePublic;
@@ -368,7 +376,8 @@ export default function GenericGrantAccessDialog({
                   className="flex min-w-0 items-center gap-2 text-sm font-semibold text-text-primary"
                 >
                   <UserCheck className="size-4 shrink-0 text-text-secondary" aria-hidden="true" />
-                  <span className="truncate">{localize('com_ui_user_group_permissions')}</span>
+                  {/* Deloitte Custom Change: heading reflects the enabled principal types. */}
+                  <span className="truncate">{permissionsHeading}</span>
                 </h3>
                 <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-tertiary text-xs font-medium text-text-secondary">
                   {allShares.length}
@@ -385,10 +394,11 @@ export default function GenericGrantAccessDialog({
                   </div>
                 ) : (
                   <>
+                    {/* Deloitte Custom Change: placeholder reflects the enabled principal types. */}
                     <UnifiedPeopleSearch
                       onAddPeople={handleAddFromSearch}
-                      label={localize('com_ui_search_people_placeholder')}
-                      placeholder={localize('com_ui_search_people_placeholder')}
+                      label={searchPlaceholder}
+                      placeholder={searchPlaceholder}
                       typeFilter={peoplePickerTypeFilter}
                       excludeIds={allShares.map((s) => s.idOnTheSource)}
                     />

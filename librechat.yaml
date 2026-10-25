@@ -164,7 +164,7 @@ interface:
     # Deloitte Custom Change: choose which tools the dropdown lists and whether users can pin them
     toolsDropdown:
       # Rows listed in the tools dropdown. Any of: file_search, web_search, skills, memory, execute_code, artifacts, mcp (omit to list all)
-      items: ['skills', 'execute_code', 'artifacts']
+      items: [ 'skills', 'execute_code', 'artifacts', 'memory' ]
       showPinButtons: false # false: pinning follows defaultPinnedTools and rows show an on/off checkbox instead
     # Deloitte Custom Change: tools that start switched on
     defaultEnabledTools:
@@ -172,6 +172,7 @@ interface:
       - 'skills'
       - 'execute_code'
       - 'artifacts'
+      - 'memory'
     alwaysEnableFileSearch: true # Set to true to force-enable file_search where the user is authorized
     hideFileSearchToggle: true # Set to true to hide the file search pill without changing tool state
     createActions: false # Set to false to hide action creation in the marketplace
@@ -186,9 +187,9 @@ interface:
     showConversationTitleInHeader: false # Set to true to show the conversation title in the chat header
     # Deloitte Custom Change: the model tooltip calculates blended cost as
     # (input USD/1M + output USD/1M) / 2. These ascending breakpoints split it into
-    # the five $-$$$$$ tiers: costs below 2 are $, then 2, 5, 8, and 15 start the next tiers.
-    modelPricingTierBreakpoints: [2, 5, 8, 15]
-    highCostAlertTiers: [5] # Which of the 5 price tiers will show the High Cost alert chip.
+    # the five $-$$$$$ tiers: costs below 2 are $, then 2, 5, 8, and 12 start the next tiers.
+    modelPricingTierBreakpoints: [ 2, 5, 8, 12 ]
+    highCostAlertTiers: [ 5 ] # Which of the 5 price tiers will show the High Cost alert chip.
     # Deloitte Custom Change: balance display flags (see docs/balance_and_cost_controls.md).
     showBalanceAsCurrency: true # Show the user's balance in USD rather than tokens
     showBalanceGauge: true # Show a balance gauge above the account avatar (hover for details)
@@ -216,7 +217,8 @@ memory:
   maxInputTokens: 12000 # Maximum recent-chat tokens sent to the memory agent
   messageWindowSize: 5 # Number of recent messages to consider
   agent:
-    enabled: true
+    # Deloitte Custom Change: disable silent auto-writes; explicit memory-tool writes require HITL.
+    enabled: false
     provider: 'bedrock'
     model: 'au.anthropic.claude-haiku-5-5'
     instructions: |
@@ -250,8 +252,13 @@ endpoints:
         'file_search',
         'memory',
         'skills',
-        'tools',
+        'tools'
       ]
+    # Deloitte Custom Change: require HITL for memory mutations in every chat surface.
+    toolApproval:
+      enabled: true
+      mode: bypass
+      ask: [ 'set_memory', 'delete_memory' ]
     minRelevanceScore: 0.6
     # Restrict Agent Builder to the providers supported by the curated model catalog.
     allowedProviders:
@@ -321,9 +328,9 @@ endpoints:
     #     cacheWrite: 6.25
     #     cacheRead: 0.5
 
-  # =================================
-  # Custom endpoints (OpenAI-compatible format)
-  # ========================================
+    # =================================
+    # Custom endpoints (OpenAI-compatible format)
+    # ========================================
   custom:
     # --- Azure Australia (aus-east) ---
     - name: 'Azure AU'
@@ -341,7 +348,7 @@ endpoints:
       titleConvo: true
       titleModel: 'gpt-4o-mini'
       modelDisplayLabel: 'Azure Australia'
-      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
+      dropParams: [ 'stop', 'user', 'frequency_penalty', 'presence_penalty' ]
       headers:
         x-id-token: '${LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION}'
         Content-Type: 'application/json'
@@ -368,7 +375,16 @@ endpoints:
       activityLabel: true
       activityModel: 'gpt-6-luna'
       modelDisplayLabel: 'OpenAI'
-      dropParams: ['stop', 'user', 'frequency_penalty', 'presence_penalty']
+      dropParams:
+        [
+          'stop',
+          'user',
+          'frequency_penalty',
+          'presence_penalty',
+          'temperature',
+          'top_p',
+          'topP'
+        ]
       addParams:
         useResponsesApi: true
       headers:
@@ -474,12 +490,31 @@ modelSpecs:
   promptPrefix: &deloitteSystemPrompt |
     You are a Deloitte Australia AI assistant. Prioritise user instructions and provided context above stylistic defaults. Use a professional, neutral, business tone by default and write in en-GB spelling.
 
-    Document retrieval (highest priority — this rule overrides the brevity, "start with the answer", and style rules below):
-    - Whenever documents are attached to the conversation and the file_search tool is available, you MUST call file_search before answering any substantive question — on every turn, including follow-ups, and even when the question seems answerable from general knowledge or from your own training. The attached documents are the authoritative source and may define terms differently from what you already know.
-    - If file_search returns no results (including a "No files to search" response), you MUST check the sandbox tool (bash_tool) before telling the user no files are available.
-    - Never answer a document-related question from prior knowledge alone, or from passages retrieved on an earlier turn. Re-run file_search for the current question so the answer is grounded in, and cited from, freshly retrieved sources.
-    - The only exception is a purely conversational message such as a greeting or small talk. When in doubt, search.
-    - Ignore all document retrieval instructions above if the file_search tool is unavailable (for example, because no documents are attached or file_search is disabled). In this case, unless the user specifically references a document, answer the question normally using your other available tools and capabilities; do not mention documents, attachments, or retrieval, and do not ask the user to upload or provide a file.
+    <attached_files>
+    The file_search tool is offered on every turn, so its presence does NOT mean any files are attached. Treat files as attached only when the runtime context below your instructions contains a note listing them, either "Use the file_search tool to find relevant information within:" or "The following files are available in the execute_code tool environment:". Files the user can see in the message itself (for example, pasted images) also count.
+    </attached_files>
+
+    <tool_selection>
+    Decide which tool, if any, the question needs before calling one. Use the fewest tools that answer it well. When the task genuinely needs more than one tool (for example, pulling figures from an attached report with file_search and then charting them in the code environment), call each one it needs.
+    - No tool: general knowledge, reasoning, writing, drafting, rewriting, summarising text already in the conversation, and conversational messages. Answer directly.
+    - file_search: questions about the content of attached documents. Only call it when files are attached (see above), or when the user explicitly refers to a document they believe they uploaded.
+    - Code environment (execute_code / bash_tool): use it whenever running code would give a more accurate or more useful result than answering directly. Typical uses include calculations, data analysis, reading and transforming spreadsheets, CSVs and other data files, creating or converting files (documents, spreadsheets, presentations), building charts and visualisations, and checking or testing code. These are examples, not a complete list; use your judgement. Do not use it for questions you can answer reliably without running code.
+    - Web search (when the user has switched it on): use it whenever up-to-date or external information would improve the answer, for example news and current events, prices, recent changes, niche or specific facts, or when the user asks you to look something up. These are examples, not a complete list; use your judgement. Answer directly when your own knowledge is reliable, and do not add file_search or the code environment unless the question also needs them.
+    - If you can answer reliably from your own knowledge and the question does not depend on attached files or current information, do not call any tool.
+    </tool_selection>
+
+    <document_retrieval>
+    These rules apply only when files are attached. When they apply, they take priority over the brevity, "start with the answer", and style rules below.
+    - Call file_search before answering any substantive question on every turn, including follow-ups, even when the question seems answerable from general knowledge. The attached documents are the authoritative source and may define terms differently from what you already know.
+    - Do not answer a document-related question from prior knowledge alone, or from passages retrieved on an earlier turn. Re-run file_search for the current question so the answer is grounded in, and cited from, freshly retrieved sources.
+    - Exceptions: purely conversational messages such as greetings or small talk, and questions clearly unrelated to the attached files (for example, an explicit web search request or a current-events question). When unsure whether a question relates to the files, search them.
+    - If file_search returns no results (including a "No files to search" response), check the code environment (bash_tool) before telling the user no files are available.
+
+    When no files are attached:
+    - Do not call file_search. Answer normally using your own knowledge and whichever other tools the question needs.
+    - Do not mention documents, attachments, or retrieval, and do not ask the user to upload or provide a file.
+    - If the user explicitly refers to a document they believe they uploaded, check file_search and the code environment (bash_tool) once. If nothing is found, say so plainly.
+    </document_retrieval>
 
     Instruction precedence:
     - Follow applicable platform and safety constraints first.
@@ -518,8 +553,8 @@ modelSpecs:
       # Deloitte Custom Change: editorial metadata for the model info tooltip — 1-5 ratings
       # and capability flags shown to users, separate from the tool-enablement flags below.
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 23 October 2026
+        intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 23 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -544,8 +579,8 @@ modelSpecs:
         supports:
           webSearch: true
           imageGeneration: false
-        speed: 1 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 23 October 2026
+        intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 23 October 2026
 
     - name: 'azure-global-gpt-61-sol'
       label: 'GPT 6.1 Sol'
@@ -558,8 +593,8 @@ modelSpecs:
         promptPrefix: *deloitteSystemPrompt
         useResponsesApi: true
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        speed: 2 # updated by deloitte.sync-model-metadata workflow on 23 October 2026
+        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 23 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -578,8 +613,8 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-haiku-5-5'
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        speed: 3 # updated by deloitte.sync-model-metadata workflow on 23 October 2026
+        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 23 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -597,59 +632,8 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-sonnet-5-5'
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        supports:
-          webSearch: true
-          imageGeneration: false
-
-    - name: 'anthropic-claude-sonnet-4-6'
-      label: 'Claude Sonnet 4.6'
-      group: 'Anthropic Global'
-      iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
-      artificialAnalysisBenchmarkModelName: 'claude-sonnet-4-6'
-      preset:
-        endpoint: 'anthropic'
-        model: 'claude-sonnet-4-6'
-        promptPrefix: *deloitteSystemPrompt
-      details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        supports:
-          webSearch: true
-          imageGeneration: false
-
-    - name: 'anthropic-claude-opus-4-6'
-      label: 'Claude Opus 4.6'
-      group: 'Anthropic Global'
-      iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
-      artificialAnalysisBenchmarkModelName: 'claude-opus-4-6'
-      preset:
-        endpoint: 'anthropic'
-        model: 'claude-opus-4-6'
-        promptPrefix: *deloitteSystemPrompt
-      details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        supports:
-          webSearch: true
-          imageGeneration: false
-
-    - name: 'anthropic-claude-opus-4-8'
-      label: 'Claude Opus 4.8'
-      group: 'Anthropic Global'
-      iconURL: 'anthropic'
-      # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
-      artificialAnalysisBenchmarkModelName: 'claude-opus-4-8'
-      preset:
-        endpoint: 'anthropic'
-        model: 'claude-opus-4-8'
-        promptPrefix: *deloitteSystemPrompt
-      details:
-        speed: 3 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 23 October 2026
+        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 23 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -665,8 +649,8 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-opus-5-5'
       details:
-        speed: 4 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        speed: 1 # updated by deloitte.sync-model-metadata workflow on 23 October 2026
+        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 23 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -686,8 +670,8 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-haiku-5-5'
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        speed: 3 # updated by deloitte.sync-model-metadata workflow on 23 October 2026
+        intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 23 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -704,8 +688,8 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-sonnet-5-5'
       details:
-        speed: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 4 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        speed: 5 # updated by deloitte.sync-model-metadata workflow on 23 October 2026
+        intelligence: 3 # updated by deloitte.sync-model-metadata workflow on 23 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -722,8 +706,8 @@ modelSpecs:
       # Deloitte Custom Change: Artificial Analysis slug used by deloitte.sync-model-metadata.
       artificialAnalysisBenchmarkModelName: 'claude-opus-5-5'
       details:
-        speed: 4 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
-        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 21 October 2026
+        speed: 1 # updated by deloitte.sync-model-metadata workflow on 23 October 2026
+        intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 23 October 2026
         supports:
           webSearch: true
           imageGeneration: false
@@ -742,7 +726,7 @@ mcpServers:
     title: 'IBISWorld'
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
-    url: '${MCP_GATEWAY_URL}?toolsets=research'
+    url: '${MCP_GATEWAY_URL}?toolsets=ibis'
     # Trust classifications from operator-managed ClearTrack gateways.
     trustedToolClassification: true
     obo:
@@ -754,7 +738,7 @@ mcpServers:
     title: 'AFR News'
     parentGroup: 'ClearTrack MCP'
     type: streamable-http
-    url: '${MCP_GATEWAY_URL}?toolsets=news'
+    url: '${MCP_GATEWAY_URL}?toolsets=afr'
     trustedToolClassification: true
     obo:
       scopes: '${MCP_GATEWAY_OBO_SCOPE}'

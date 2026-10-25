@@ -1,15 +1,19 @@
+/* eslint-disable i18next/no-literal-string */
 import React from 'react';
 import '@testing-library/jest-dom';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GETTING_STARTED_COURSE_ID } from '../content/registry';
 import Resources from '../Academy/resources/Page';
+import Releases from '../Academy/releases/Page';
 import Faq from '../Academy/faq/Page';
 import Page from '../Academy/Page';
 
 const mockStartTour = jest.fn();
 const mockResumeTour = jest.fn();
 let mockFlags: Record<string, boolean> = {};
+let mockReleases: unknown[] = [];
 let mockConfigStatus: 'loading' | 'error' | 'success' = 'success';
 let mockTutorialProgress: Record<string, { step: number; total: number; completed: boolean }> = {};
 
@@ -49,36 +53,61 @@ jest.mock('../LearningTourContext', () => ({
 }));
 
 jest.mock('../content/loader', () => ({
-  loadReleases: () => Promise.resolve([]),
+  loadReleases: () => Promise.resolve(mockReleases),
   loadArticle: () => Promise.resolve(null),
 }));
 
 describe('Resources', () => {
   afterEach(() => jest.clearAllMocks());
 
-  it('filters by title, description and tags', () => {
-    render(<Resources onOpenArticle={jest.fn()} />);
+  const renderResources = () =>
+    render(
+      <MemoryRouter>
+        <Resources />
+      </MemoryRouter>,
+    );
+
+  it('groups resources under labelled sections in a fixed order', () => {
+    renderResources();
+
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
+    expect(headings).toEqual([
+      'com_learning_section_start',
+      'com_learning_section_guides',
+      'com_learning_section_further',
+      'com_learning_section_reference',
+      'com_learning_section_external',
+    ]);
+  });
+
+  it('shows the Getting Started tour once, above the search', () => {
+    renderResources();
+
+    const tour = screen.getByText('Getting Started Tour');
+    const search = screen.getByLabelText('com_learning_search_resources');
+    expect(screen.getAllByText('Getting Started Tour')).toHaveLength(1);
+    expect(tour.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('filters by title, description and tags and hides empty sections', () => {
+    renderResources();
     const input = screen.getByLabelText('com_learning_search_resources');
 
     fireEvent.change(input, { target: { value: 'agentic' } });
-    expect(screen.getByText('What is the Agentic Ecosystem?')).toBeInTheDocument();
-    expect(screen.queryByText('Getting Started Tour')).not.toBeInTheDocument();
+    expect(screen.getByText('What is the Agentic Ecosystem')).toBeInTheDocument();
+    expect(screen.queryByText('Guide to skills')).not.toBeInTheDocument();
+    expect(screen.queryByText('com_learning_section_guides')).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: 'zzz-no-match' } });
     expect(screen.getByText('com_learning_no_resources:zzz-no-match')).toBeInTheDocument();
   });
 
-  it('behaves per resource type on click', () => {
-    const onOpenArticle = jest.fn();
-    render(<Resources onOpenArticle={onOpenArticle} />);
+  it('renders articles as links and externals as new-tab links', () => {
+    renderResources();
 
-    fireEvent.click(
-      screen.getByLabelText('com_learning_action_read:What is the Agentic Ecosystem?'),
-    );
-    expect(onOpenArticle).toHaveBeenCalledWith('agentic-ecosystem');
-
-    fireEvent.click(screen.getByLabelText('com_learning_action_start_tour:Getting Started Tour'));
-    expect(mockStartTour).toHaveBeenCalledWith(GETTING_STARTED_COURSE_ID);
+    expect(
+      screen.getByRole('link', { name: 'com_learning_action_read:Guide to skills' }),
+    ).toHaveAttribute('href', '/learn/articles/guides/skills');
 
     const external = screen.getByLabelText(
       'com_learning_action_external:Book in with a MyAssist team member',
@@ -88,24 +117,96 @@ describe('Resources', () => {
   });
 });
 
+describe('Releases', () => {
+  it('shows a Release notes heading above the releases', async () => {
+    mockReleases = [
+      {
+        id: '7-1-1',
+        frontmatter: { title: 'Faster uploads', version: 'V7.1.1', date: '2026-10-22' },
+        Content: () => <p>Body</p>,
+      },
+    ];
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Releases />
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'com_learning_tab_releases' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Faster uploads' })).toBeInTheDocument();
+    mockReleases = [];
+  });
+
+  it('keeps the heading when there are no releases', async () => {
+    mockReleases = [];
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Releases />
+      </QueryClientProvider>,
+    );
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'com_learning_tab_releases' }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText('com_learning_no_releases')).toBeInTheDocument();
+  });
+});
+
 describe('Faq', () => {
-  it('filters questions and highlights matches', () => {
-    const { container } = render(
+  it('splits a long answer into paragraphs without changing its words', () => {
+    render(
       <MemoryRouter>
         <Faq />
       </MemoryRouter>,
     );
-    expect(screen.getByRole('link', { name: 'What should I use?' })).toHaveAttribute(
-      'href',
-      '/learn/articles/what-should-i-use',
+
+    const item = screen.getByText(/Can I use client data/).closest('li') as HTMLElement;
+    expect(item.querySelectorAll('p').length).toBe(5);
+    expect(item).toHaveTextContent(
+      /Don't use Government and Public Services \(GPS\) or Defence data in MyAssist\./,
     );
+  });
+
+  it('lists the questions in alphabetical order', () => {
+    render(
+      <MemoryRouter>
+        <Faq />
+      </MemoryRouter>,
+    );
+
+    const questions = screen
+      .getAllByRole('listitem')
+      .map((item) => item.querySelector('p')?.textContent ?? '');
+    expect(questions).toEqual(
+      [...questions].sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' })),
+    );
+    expect(questions.length).toBeGreaterThan(1);
+  });
+
+  it('lists every question with working links while search is hidden', () => {
+    render(
+      <MemoryRouter>
+        <Faq />
+      </MemoryRouter>,
+    );
+    const hrefFor = (name: string): string | null =>
+      screen.getByRole('link', { name }).getAttribute('href');
+    expect(hrefFor('skills')).toBe('/learn/articles/guides/skills');
+    expect(hrefFor('prompts')).toBe('/learn/articles/guides/prompts');
+    expect(hrefFor('agents')).toBe('/learn/articles/guides/agents');
+    expect(hrefFor('glossary')).toBe('/learn/articles/glossary');
+    expect(hrefFor('connectors')).toBe('/learn/articles/guides/connectors');
+    expect(hrefFor('What is the Agentic Ecosystem')).toBe('/learn/articles/agentic-ecosystem');
+    expect(
+      screen.getByText(/As of October 2026, we suggest defaulting to low-cost yet capable models/),
+    ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Q&R or BSO' })).toHaveAttribute('target', '_blank');
-    fireEvent.change(screen.getByLabelText('com_learning_search_faq'), {
-      target: { value: 'connector' },
-    });
+    expect(screen.getByRole('heading', { name: 'com_learning_tab_faq' })).toBeInTheDocument();
     expect(screen.getByText(/Is MyAssist connected/)).toBeInTheDocument();
-    expect(screen.queryByText(/Which model/)).not.toBeInTheDocument();
-    expect(container.querySelector('mark')).toHaveTextContent(/connector/i);
+    expect(screen.getByText(/Which model should I use/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('com_learning_search_faq')).not.toBeInTheDocument();
   });
 });
 
@@ -125,18 +226,18 @@ describe('Academy', () => {
     mockTutorialProgress = {};
   });
 
-  it('shows the Getting Started hero first and hides flagged tabs by default', () => {
-    renderAt('/learn/tours');
-    expect(screen.getByText('com_learning_start_here:Getting Started Tour')).toBeInTheDocument();
+  it('shows the Getting Started tour above the search and hides flagged tabs by default', () => {
+    renderAt('/learn/resources');
+    expect(screen.getByText('Getting Started Tour')).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'com_learning_tab_faq' })).not.toBeInTheDocument();
     expect(
       screen.queryByRole('tab', { name: 'com_learning_tab_releases' }),
     ).not.toBeInTheDocument();
   });
 
-  it('redirects a flagged-off tab back to tours', () => {
+  it('redirects a flagged-off tab back to resources', () => {
     renderAt('/learn/faq');
-    expect(screen.getByText('com_learning_start_here:Getting Started Tour')).toBeInTheDocument();
+    expect(screen.getByText('Getting Started Tour')).toBeInTheDocument();
   });
 
   it('shows the flagged tabs when their flags are on', () => {
@@ -144,36 +245,34 @@ describe('Academy', () => {
     renderAt('/learn/faq');
     expect(screen.getByRole('tab', { name: 'com_learning_tab_faq' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'com_learning_tab_releases' })).toBeInTheDocument();
-    expect(screen.getByLabelText('com_learning_search_faq')).toBeInTheDocument();
+    expect(screen.getByText(/Is MyAssist connected/)).toBeInTheDocument();
   });
 
-  it('falls back to tours when the startup config failed to load', () => {
+  it('falls back to resources when the startup config failed to load', () => {
     mockConfigStatus = 'error';
     renderAt('/learn/faq');
-    expect(screen.getByText('com_learning_start_here:Getting Started Tour')).toBeInTheDocument();
-    expect(screen.queryByLabelText('com_learning_search_faq')).not.toBeInTheDocument();
+    expect(screen.getByText('Getting Started Tour')).toBeInTheDocument();
+    expect(screen.queryByText(/Is MyAssist connected/)).not.toBeInTheDocument();
   });
 
   it('keeps a flagged tab URL while the startup config is still loading', () => {
     mockConfigStatus = 'loading';
     const { rerender } = renderAt('/learn/faq');
-    expect(
-      screen.queryByText('com_learning_start_here:Getting Started Tour'),
-    ).not.toBeInTheDocument();
-    expect(screen.getByLabelText('com_learning_search_faq')).toBeInTheDocument();
+    expect(screen.queryByText('Getting Started Tour')).not.toBeInTheDocument();
+    expect(screen.getByText(/Is MyAssist connected/)).toBeInTheDocument();
 
     mockConfigStatus = 'success';
     mockFlags = { learningCommonQuestions: true, learningReleaseNotes: true };
     rerender(academyTree('/learn/faq'));
     expect(screen.getByRole('tab', { name: 'com_learning_tab_faq' })).toBeInTheDocument();
-    expect(screen.getByLabelText('com_learning_search_faq')).toBeInTheDocument();
+    expect(screen.getByText(/Is MyAssist connected/)).toBeInTheDocument();
   });
 
   it('resumes an in-progress tour from its saved step', () => {
     mockTutorialProgress = {
       [GETTING_STARTED_COURSE_ID]: { step: 3, total: 9, completed: false },
     };
-    renderAt('/learn/tours');
+    renderAt('/learn/resources');
     fireEvent.click(screen.getByRole('button', { name: 'com_learning_tour_continue' }));
     expect(mockResumeTour).toHaveBeenCalledWith(GETTING_STARTED_COURSE_ID, 3);
   });

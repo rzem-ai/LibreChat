@@ -241,8 +241,14 @@ export function omitsThinkingByDefault(model: string): boolean {
   );
 }
 
+/** Deloitte Custom Change: Haiku 5.5+ rejects sampling parameters like Opus 4.7+ and Sonnet 5+. */
+export function hasHaikuSamplingRestriction(model: string): boolean {
+  return isAtLeast(parseHaikuVersion(model), 5, 5);
+}
+
 export function omitsSamplingParameters(model: string): boolean {
   return (
+    hasHaikuSamplingRestriction(model) ||
     isAtLeast(parseOpusVersion(model), 4, 7) ||
     isAtLeast(parseSonnetVersion(model), 5, 0) ||
     s.isMythosClassModel(model)

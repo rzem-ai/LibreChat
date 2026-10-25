@@ -72,6 +72,22 @@ export function clearInheritedAgentWorkspace(
     : conversation;
 }
 
+/**
+ * Chooses an explicit non-agents endpoint for a new general chat. Supplying
+ * it prevents `switchToConversation` from restoring the last stored agent
+ * when it builds a default conversation.
+ */
+export function getNewGeneralConversationTemplate(
+  endpointsConfig: TEndpointsConfig | undefined,
+): Partial<TConversation> {
+  const endpoint = Object.keys(endpointsConfig ?? {}).find(
+    (key) =>
+      !isAgentsEndpoint(key as EModelEndpoint) && endpointsConfig?.[key as EModelEndpoint] != null,
+  ) as EModelEndpoint | undefined;
+
+  return endpoint == null ? {} : { endpoint };
+}
+
 const useNewConvo = (index = 0) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -542,9 +558,38 @@ const useNewConvo = (index = 0) => {
     ],
   );
 
+  /**
+   * Starts a new conversation on a configured general-chat endpoint when one
+   * is available, rather than inheriting the current or last-used agent.
+   *
+   * The root problem: `newConversation({ template: {} })` calls
+   * `switchToConversation` with `endpoint: null`. That triggers
+   * `buildDefaultConversation = true`, which reads `lastConversationSetup`
+   * from `localStorage`. If the stored setup has an `agent_id` the
+   * `isExistingAgentConvo` guard evaluates true and the new conversation
+   * inherits the agents endpoint — and therefore the previous agent.
+   *
+   * Fix: resolve the first non-agents endpoint here, where `endpointsConfig`
+   * is already loaded as part of this hook, and pass it explicitly so
+   * `getDefaultEndpoint` inside `switchToConversation` calls
+   * `getEndpointFromSetup` first and never reaches `getEndpointFromLocalStorage`.
+   *
+   * If no non-agents endpoint is available (agents-only deployment, or config
+   * not yet hydrated) fall back to `newConversation({ template: {} })`. That
+   * is still safer than carrying an explicit `agent_id`; the worst case is
+   * the user lands in a new agent conversation rather than a general chat,
+   * and the caller should surface an appropriate message when it matters.
+   */
+  const newGeneralConversation = useCallback(() => {
+    newConversation({
+      template: getNewGeneralConversationTemplate(endpointsConfig),
+    });
+  }, [newConversation, endpointsConfig]);
+
   return {
     switchToConversation,
     newConversation,
+    newGeneralConversation,
   };
 };
 

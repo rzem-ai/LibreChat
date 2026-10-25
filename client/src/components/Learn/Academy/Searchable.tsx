@@ -11,6 +11,8 @@ interface SearchableProps<T> {
   renderEmpty: (query: string) => string;
   children: (visible: T[], query: string) => ReactNode;
   className?: string;
+  /** Hides the search input and lists every item. */
+  showSearch?: boolean;
 }
 
 export default function Searchable<T>({
@@ -20,20 +22,24 @@ export default function Searchable<T>({
   renderEmpty,
   children,
   className = '',
+  showSearch = true,
 }: SearchableProps<T>): JSX.Element {
   const localize = useLocalize();
   const { query, setQuery, visible } = useSearch(items, getFields);
 
   return (
     <div className={`flex flex-col gap-6 ${className}`}>
-      <GEL.SearchInput
-        label={searchLabel}
-        clearLabel={localize('com_ui_clear')}
-        onClear={() => setQuery('')}
-        containerClassName="max-w-sm"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-      />
+      {showSearch && (
+        <GEL.SearchInput
+          label={searchLabel}
+          clearLabel={localize('com_ui_clear')}
+          onClear={() => setQuery('')}
+          containerClassName="h-10 w-full max-w-md border-input bg-surface-primary dark:bg-surface-tertiary focus-within:border-surface-submit focus-within:ring-2 focus-within:ring-surface-submit/30"
+          className="text-base"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      )}
       {visible.length === 0 ? (
         <p className="text-sm text-text-secondary">{renderEmpty(query)}</p>
       ) : (

@@ -8,6 +8,7 @@ import { EModelEndpoint, Providers } from './types';
 
 const googleParams = paramSettings[EModelEndpoint.google] as SettingDefinition[];
 const anthropicParams = paramSettings[EModelEndpoint.anthropic] as SettingDefinition[];
+const openAIParams = paramSettings[EModelEndpoint.openAI] as SettingDefinition[];
 const maxOut = (params: SettingDefinition[]) => params.find((p) => p.key === 'maxOutputTokens');
 const maxContext = (params: SettingDefinition[]) =>
   params.find((p) => p.key === 'maxContextTokens');
@@ -95,6 +96,40 @@ describe('applyModelAwareDefaults', () => {
       expect(hasSetting(result, 'effort')).toBe(true);
       expect(hasSetting(result, 'thinkingDisplay')).toBe(true);
       expect(hasSetting(result, 'promptCache')).toBe(true);
+    },
+  );
+
+  it.each(['claude-haiku-5-5', 'claude-haiku-5.5', 'claude-haiku-5-10'])(
+    'hides sampling controls but keeps thinking for native Anthropic %s',
+    (model) => {
+      const result = applyModelAwareDefaults(anthropicParams, EModelEndpoint.anthropic, model);
+
+      expect(hasSetting(result, 'temperature')).toBe(false);
+      expect(hasSetting(result, 'topP')).toBe(false);
+      expect(hasSetting(result, 'topK')).toBe(false);
+      expect(hasSetting(result, 'thinking')).toBe(true);
+    },
+  );
+
+  it.each(['anthropic/claude-haiku-5.5', 'claude-haiku-5-5'])(
+    'hides temperature and top_p for OpenAI-compatible settings with %s',
+    (model) => {
+      const result = applyModelAwareDefaults(openAIParams, EModelEndpoint.openAI, model);
+
+      expect(hasSetting(openAIParams, 'top_p')).toBe(true);
+      expect(hasSetting(result, 'temperature')).toBe(false);
+      expect(hasSetting(result, 'top_p')).toBe(false);
+    },
+  );
+
+  it.each(['claude-haiku-5-4', 'claude-haiku-4-5', 'claude-3-5-haiku-20241022'])(
+    'keeps sampling controls for pre-5.5 Haiku %s',
+    (model) => {
+      const result = applyModelAwareDefaults(anthropicParams, EModelEndpoint.anthropic, model);
+
+      expect(hasSetting(result, 'temperature')).toBe(true);
+      expect(hasSetting(result, 'topP')).toBe(true);
+      expect(hasSetting(result, 'topK')).toBe(true);
     },
   );
 

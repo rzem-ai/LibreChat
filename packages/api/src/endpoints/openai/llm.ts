@@ -7,6 +7,7 @@ import {
   prefersResponsesApiByModel,
   supportsAdaptiveThinking,
   gpt6Tier,
+  hasHaikuSamplingRestriction,
   // Deloitte Custom Change: gate native web search by the admin-configured allowlist
   modelSupportsNativeWebSearch,
   unsupportedNativeWebSearchMessage,
@@ -254,6 +255,9 @@ function deleteConfigParam({
     delete modelKwargs[param];
   }
 }
+
+/** Deloitte Custom Change: sampling params (and aliases) Haiku 5.5+ rejects. */
+const haikuRejectedSamplingParams = ['temperature', 'topP', 'top_p', 'topK', 'top_k'] as const;
 
 const openRouterAnthropicVerbosityByEffort: Record<
   string,
@@ -1055,6 +1059,15 @@ export function getOpenAILLMConfig({
         target.include = target.include.filter((value) => value !== 'message.output_text.logprobs');
       }
     }
+  }
+
+  /** Deloitte Custom Change: Haiku 5.5+ rejects sampling params. Strip the
+   * request copy from saved settings, defaults and addParams; stored settings
+   * remain available if the user switches back to another model. */
+  if (llmConfig.model && hasHaikuSamplingRestriction(llmConfig.model)) {
+    haikuRejectedSamplingParams.forEach((param) =>
+      deleteConfigParam({ param, llmConfig, modelKwargs }),
+    );
   }
 
   hasModelKwargs =

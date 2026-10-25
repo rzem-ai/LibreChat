@@ -33,6 +33,8 @@ spec:
     metadata:
       labels:
         {{- include "helm.selectorLabels" . | nindent 8 }}
+        azure.workload.identity/use: "true"
+        app: workload
         component: migrate-{{ $name }}
         migration-job: "true"
     spec:
@@ -54,9 +56,11 @@ spec:
           args:
             - "npm run {{ $job.npmScript }}{{ if $job.dryRun }}:dry-run{{ end }}"
           env:
-            {{- with .Values.pods.librechat.containers.librechat.env.MONGO_DB }}
-            - name: MONGO_DB
-              value: {{ . | quote }}
+            {{- range $envName, $envValue := .Values.pods.librechat.containers.librechat.env }}
+            {{- if or (hasPrefix "MONGO_" $envName) (eq $envName "NODE_TLS_REJECT_UNAUTHORIZED") }}
+            - name: {{ $envName | quote }}
+              value: {{ $envValue | quote }}
+            {{- end }}
             {{- end }}
           envFrom:
             - secretRef:
