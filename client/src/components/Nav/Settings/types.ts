@@ -1,6 +1,6 @@
 import { createElement } from 'react';
-import { MessageSquare, Info } from 'lucide-react';
 import { SettingsTabValues } from 'librechat-data-provider';
+import { MessageSquare, Info, Sparkles } from 'lucide-react';
 import { GearIcon, DataIcon, UserIcon, SpeechIcon } from '@librechat/client';
 import type { ComponentType, ReactNode } from 'react';
 import type { TranslationKeys } from '~/hooks';
@@ -11,6 +11,7 @@ export type SettingsTab =
   | SettingsTabValues.SPEECH
   | SettingsTabValues.LANGFUSE
   | SettingsTabValues.DATA
+  | SettingsTabValues.MEMORIES
   | SettingsTabValues.ACCOUNT
   | SettingsTabValues.ABOUT;
 
@@ -55,6 +56,10 @@ export interface SettingsContextValue {
   /** Deloitte Custom Change: enables administrator-managed service account API keys. */
   adminAgentApiKeysEnabled: boolean;
   dataDangerZoneEnabled: boolean;
+  /** Deloitte Custom Change: gates the dedicated Memories tab (see `memoriesInSettings`). */
+  memoriesTabEnabled: boolean;
+  /** Deloitte Custom Change: mirrors the sidebar Memories panel's access requirement. */
+  hasMemoriesAccess: boolean;
   /** Deloitte Custom Change: limits service account key-management UI to administrators. */
   isAdmin: boolean;
   /** Deloitte Custom Change: hides "Display username" when bubble layout omits name headers. */
@@ -156,12 +161,24 @@ export const TABS: TabMeta[] = [
     labelKey: 'com_ui_settings_tab_data',
     icon: createElement(DataIcon),
     sections: [
+      /** Deloitte Custom Change: shown only when `memoriesInSettings` is off — the toggle
+       *  moves into the dedicated Memories tab when the flag is on. */
       { id: 'memory', labelKey: 'com_ui_settings_section_memory' },
       { id: 'codeExecution', labelKey: 'com_ui_settings_section_code_execution' },
       { id: 'data', labelKey: 'com_ui_settings_section_data' },
       { id: 'apiKeys', labelKey: 'com_ui_settings_section_api_keys' },
       { id: 'danger', labelKey: 'com_ui_settings_section_danger_zone', danger: true },
     ],
+  },
+  // Deloitte Custom Change: dedicated Memories tab, gated by `memoriesInSettings` +
+  // full memories access. Sections are empty since Memories/index.tsx renders its own
+  // panel directly (see Content.tsx) rather than composing from the registry.
+  {
+    id: SettingsTabValues.MEMORIES,
+    labelKey: 'com_ui_settings_tab_memories',
+    icon: createElement(Sparkles, { className: 'icon-sm', 'aria-hidden': true }),
+    sections: [],
+    show: (ctx) => ctx.memoriesTabEnabled && ctx.hasMemoriesAccess,
   },
   {
     id: SettingsTabValues.ACCOUNT,

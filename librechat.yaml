@@ -185,6 +185,7 @@ interface:
     externalVoiceProvider: false # Set to false to hide the external voice provider option in Speech settings (browser voice only)
     artifactsShadcnOnly: true # Set to true to force the shadcn/ui artifacts mode and hide other artifact mode options
     showConversationTitleInHeader: false # Set to true to show the conversation title in the chat header
+    memoriesInSettings: true # Set to true to move memories into a dedicated Settings tab
     # Deloitte Custom Change: the model tooltip calculates blended cost as
     # (input USD/1M + output USD/1M) / 2. These ascending breakpoints split it into
     # the five $-$$$$$ tiers: costs below 2 are $, then 2, 5, 8, and 12 start the next tiers.

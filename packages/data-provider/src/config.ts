@@ -2399,6 +2399,7 @@ export const interfaceSchema = z
         externalVoiceProvider: z.boolean().optional(),
         artifactsShadcnOnly: z.boolean().optional(),
         showConversationTitleInHeader: z.boolean().optional(),
+        memoriesInSettings: z.boolean().optional(),
         /**
          * 4 strictly ascending $/1M blended-cost breakpoints that split models into the
          * 5 price tiers (`$` to `$$$$$`) shown in the model selector. A model's blended
@@ -4351,6 +4352,11 @@ export enum SettingsTabValues {
    * Tab for Data Controls
    */
   DATA = 'data',
+  /**
+   * Tab for Memories
+   * Deloitte Custom Change: backs the dedicated Settings > Memories tab (see `memoriesInSettings`).
+   */
+  MEMORIES = 'memories',
   /**
    * Tab for Balance Settings
    */

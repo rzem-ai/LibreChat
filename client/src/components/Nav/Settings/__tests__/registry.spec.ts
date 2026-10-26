@@ -5,7 +5,8 @@ import en from '~/locales/en/translation.json';
 import { registry } from '../registry';
 import { TABS } from '../types';
 
-// Deloitte Custom Change: verifies administrator-only service account API key visibility.
+// Deloitte Custom Change: verifies administrator-only service account API key visibility
+// and Memories tab visibility.
 const validTabSections = new Map(TABS.map((t) => [t.id, new Set(t.sections.map((s) => s.id))]));
 
 const settingsContext: SettingsContextValue = {
@@ -25,6 +26,8 @@ const settingsContext: SettingsContextValue = {
   dataApiKeysEnabled: true,
   adminAgentApiKeysEnabled: false,
   dataDangerZoneEnabled: true,
+  memoriesTabEnabled: true,
+  hasMemoriesAccess: true,
   isAdmin: false,
   usernameDisplaySettingEnabled: true,
   engineTTS: 'browser',
@@ -110,6 +113,59 @@ describe('settings registry', () => {
           langfuseConnectionAccess: true,
         }),
       ).toBe(true);
+    });
+  });
+
+  // Deloitte Custom Change: verifies the Memories tab only appears for the flag+access
+  // combination it needs, and never alongside the Data & Privacy fallback toggle.
+  describe('Memories tab visibility', () => {
+    const memoriesTab = TABS.find((tab) => tab.id === SettingsTabValues.MEMORIES);
+    const referenceSavedMemoriesEntry = registry.find(
+      (entry) => entry.id === 'referenceSavedMemories',
+    );
+
+    it.each([
+      ['flag on, full access', true, true, true],
+      ['flag on, missing access', true, false, false],
+      ['flag off, full access', false, true, false],
+      ['flag off, missing access', false, false, false],
+    ])('%s -> tab shown = %s', (_label, memoriesTabEnabled, hasMemoriesAccess, expected) => {
+      expect(
+        memoriesTab?.show?.({ ...settingsContext, memoriesTabEnabled, hasMemoriesAccess }),
+      ).toBe(expected);
+    });
+
+    it('shows the Data & Privacy toggle whenever the tab is not shown (given opt-out access)', () => {
+      const combinations = [
+        { memoriesTabEnabled: true, hasMemoriesAccess: true },
+        { memoriesTabEnabled: true, hasMemoriesAccess: false },
+        { memoriesTabEnabled: false, hasMemoriesAccess: true },
+        { memoriesTabEnabled: false, hasMemoriesAccess: false },
+      ];
+
+      for (const { memoriesTabEnabled, hasMemoriesAccess } of combinations) {
+        const ctx = {
+          ...settingsContext,
+          hasMemoryOptOut: true,
+          memoriesTabEnabled,
+          hasMemoriesAccess,
+        };
+        const tabShown = memoriesTab?.show?.(ctx) ?? false;
+        const toggleShown = referenceSavedMemoriesEntry?.show?.(ctx) ?? false;
+
+        // Exactly one of the tab or the fallback toggle is visible — never both, never neither.
+        expect(tabShown).toBe(!toggleShown);
+      }
+    });
+
+    it('hides the Data & Privacy toggle entirely without opt-out access', () => {
+      expect(
+        referenceSavedMemoriesEntry?.show?.({
+          ...settingsContext,
+          hasMemoryOptOut: false,
+          memoriesTabEnabled: false,
+        }),
+      ).toBe(false);
     });
   });
 

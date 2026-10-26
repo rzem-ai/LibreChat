@@ -5,7 +5,8 @@ import type { SettingsContextValue } from '../types';
 import { render, screen } from 'test/layout-test-utils';
 import Sidebar from '../Sidebar';
 
-// Deloitte Custom Change: includes admin service account API key visibility state.
+// Deloitte Custom Change: includes admin service account API key and Memories tab
+// visibility state.
 const ctx: SettingsContextValue = {
   balanceEnabled: false,
   hasAnyPersonalizationFeature: false,
@@ -23,6 +24,8 @@ const ctx: SettingsContextValue = {
   dataApiKeysEnabled: true,
   adminAgentApiKeysEnabled: false,
   dataDangerZoneEnabled: true,
+  memoriesTabEnabled: true,
+  hasMemoriesAccess: true,
   isAdmin: false,
   usernameDisplaySettingEnabled: true,
   engineTTS: 'browser',
