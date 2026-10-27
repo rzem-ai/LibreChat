@@ -11,6 +11,17 @@ map $http_authorization $token {
 # /etc/nginx/templates) so it can't drift out of sync between the server blocks below.
 client_max_body_size 32M;
 
+# Deloitte Custom Change: prefer LibreChat's resolved per-user identity token. Retain the local API-key
+# path as a fallback for non-OIDC development sessions.
+map $http_x_id_token $gateway_identity_token {
+    default $http_x_id_token;
+    ""      $token;
+}
+
+map $http_x_id_token $anthropic_identity_token {
+    default $http_x_id_token;
+    ""      $http_x_api_key;
+}
 # ===========================================
 # Anthropic Gateway Proxy (port 8080)
 # Translates x-api-key → x-id-token
@@ -19,7 +30,7 @@ server {
     listen 8080;
 
     location / {
-        proxy_set_header x-id-token $http_x_api_key;
+        proxy_set_header x-id-token $anthropic_identity_token;
         proxy_set_header anthropic-version "2023-06-01";
         proxy_set_header Content-Type $http_content_type;
         proxy_set_header Host us-anthropic-exp.ctk.au.deloitte.com;
@@ -59,7 +70,7 @@ server {
      }
 
     location /azure-au/ {
-        proxy_set_header x-id-token $token;
+        proxy_set_header x-id-token $gateway_identity_token;
         proxy_set_header Authorization "";
         proxy_set_header Content-Type $http_content_type;
         proxy_set_header Host ${AZURE_OPENAI_HOST};
@@ -74,7 +85,7 @@ server {
     }
 
     location /azure-global/ {
-        proxy_set_header x-id-token $token;
+        proxy_set_header x-id-token $gateway_identity_token;
         proxy_set_header Authorization "";
         proxy_set_header Content-Type $http_content_type;
         proxy_set_header Host ${AZURE_OPENAI_GLOBAL_HOST};
@@ -89,7 +100,7 @@ server {
     }
 
     location / {
-        proxy_set_header x-id-token $token;
+        proxy_set_header x-id-token $gateway_identity_token;
         proxy_set_header Authorization "";
         proxy_set_header Content-Type $http_content_type;
         proxy_set_header Host ${AZURE_OPENAI_HOST};

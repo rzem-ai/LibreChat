@@ -102,6 +102,77 @@ export function resolveLangChainError(error: unknown): string | undefined {
   return type == null ? undefined : JSON.stringify({ type });
 }
 
+/** Deloitte Custom Change: Gateway's documented reservation failure code. Never expose its raw response body to readers. */
+const GATEWAY_QUOTA_EXCEEDED_CODE = 'quota_exceeded';
+
+/**
+ * Deloitte Custom Change: read an HTTP status from an SDK error or its response object.
+ *
+ * @param error - Error-like object to inspect
+ * @returns Numeric HTTP status when available
+ */
+function readStatus(error: object): number | undefined {
+  const direct = readErrorProperty(error, 'status') ?? readErrorProperty(error, 'statusCode');
+  if (typeof direct === 'number') {
+    return direct;
+  }
+  const response = readErrorProperty(error, 'response');
+  if (response == null || typeof response !== 'object') {
+    return undefined;
+  }
+  const status = readErrorProperty(response, 'status');
+  return typeof status === 'number' ? status : undefined;
+}
+
+/**
+ * Deloitte Custom Change: recognize the Gateway's structured quota error envelope.
+ *
+ * @param body - Upstream response body or error-like object
+ * @returns Whether the object contains the documented quota error code
+ */
+function hasGatewayQuotaCode(body: unknown): boolean {
+  if (body == null || typeof body !== 'object') {
+    return false;
+  }
+  const envelope = readErrorProperty(body, 'error');
+  if (envelope == null || typeof envelope !== 'object') {
+    return false;
+  }
+  return readErrorProperty(envelope, 'code') === GATEWAY_QUOTA_EXCEEDED_CODE;
+}
+
+/**
+ * Deloitte Custom Change: classify only the Gateway's documented budget response. Its message
+ * and details can change or echo operational data, so the client receives a stable code rather
+ * than an upstream payload.
+ *
+ * @param error - Upstream error or a bounded chain of wrapped errors
+ * @returns The safe typed error payload, or `undefined` when the error is not a Gateway quota rejection
+ */
+export function resolveGatewayQuotaError(error: unknown): string | undefined {
+  let current = error;
+  for (let depth = 0; depth < MAX_CAUSE_DEPTH && current != null; depth++) {
+    if (typeof current !== 'object' || readStatus(current) !== 429) {
+      current = typeof current === 'object' ? readErrorProperty(current, 'cause') : undefined;
+      continue;
+    }
+    const response = readErrorProperty(current, 'response');
+    const responseData =
+      response != null && typeof response === 'object'
+        ? readErrorProperty(response, 'data')
+        : undefined;
+    if (
+      hasGatewayQuotaCode(responseData) ||
+      hasGatewayQuotaCode(readErrorProperty(current, 'error')) ||
+      hasGatewayQuotaCode(current)
+    ) {
+      return JSON.stringify({ type: GATEWAY_QUOTA_EXCEEDED_CODE });
+    }
+    current = readErrorProperty(current, 'cause');
+  }
+  return undefined;
+}
+
 export type ModelStreamFailure = 'closed' | 'stalled';
 
 /** A timeout while reading a response body, not while waiting for its headers. */

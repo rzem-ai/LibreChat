@@ -18,6 +18,7 @@ import {
   isStepLimitError,
   getModelStreamFailure,
   resolveModelStreamError,
+  resolveGatewayQuotaError,
 } from './errors';
 import { MCPAuthenticationRejectedError, MCPAuthenticationRefreshError } from '~/mcp/errors';
 import { createTerminalRunErrorObserver } from './failures/terminal';
@@ -125,6 +126,43 @@ describe('LangChain provider error text', () => {
     it('leaves codes without localized copy to the provider message', () => {
       const error = Object.assign(new Error('failed'), { lc_error_code: 'OUTPUT_PARSING_FAILURE' });
       expect(resolveLangChainError(error)).toBeUndefined();
+    });
+  });
+
+  // Deloitte Custom Change: verify strict Gateway quota classification without exposing response details.
+  describe('resolveGatewayQuotaError', () => {
+    const gatewayQuotaResponse = {
+      error: {
+        code: 'quota_exceeded',
+        details: {
+          allowed_limit: '$150.00',
+          current_usage: '$149.37',
+          reset_time: '2026-10-13T00:00:00Z',
+        },
+        message: 'You have exceeded your allocated LLM gateway budget.',
+      },
+    };
+
+    it('maps the documented Gateway budget response without disclosing its details', () => {
+      const error = Object.assign(new Error('429 upstream body'), {
+        status: 429,
+        response: { status: 429, data: gatewayQuotaResponse },
+      });
+
+      expect(resolveGatewayQuotaError(error)).toBe(JSON.stringify({ type: 'quota_exceeded' }));
+    });
+
+    it.each([
+      Object.assign(new Error('ordinary rate limit'), {
+        status: 429,
+        response: { status: 429, data: { error: { code: 'rate_limit_exceeded' } } },
+      }),
+      Object.assign(new Error('gateway quota in a server error'), {
+        status: 500,
+        response: { status: 500, data: gatewayQuotaResponse },
+      }),
+    ])('does not classify unrelated upstream failures', (error) => {
+      expect(resolveGatewayQuotaError(error)).toBeUndefined();
     });
   });
 

@@ -216,8 +216,15 @@ export function extractOpenIDTokenInfo(
   }
 }
 
-/** Advisory freshness check, not a security boundary: the ID token signature is not verified here. `exp` is REQUIRED in an ID token, so a missing value means the token is malformed or unparseable and fails closed. */
-function isIdTokenCurrent(tokenInfo: OpenIDTokenInfo): boolean {
+/**
+ * Deloitte Custom Change: advisory freshness check before forwarding a stored ID token to the
+ * Gateway. Signature verification remains the Gateway's responsibility; missing expiry fails
+ * closed, and the shared OpenID expiry buffer is applied.
+ *
+ * @param tokenInfo - Parsed OpenID token information
+ * @returns Whether the ID token has an expiry beyond the configured refresh buffer
+ */
+export function isOpenIDIdTokenCurrent(tokenInfo: OpenIDTokenInfo): boolean {
   if (tokenInfo.idTokenExpiresAt == null) {
     return false;
   }
@@ -269,7 +276,7 @@ export function processOpenIDPlaceholders(
         replacementValue = tokenInfo.accessToken || '';
         break;
       case 'ID_TOKEN':
-        if (!tokenInfo.idToken || !isIdTokenCurrent(tokenInfo)) {
+        if (!tokenInfo.idToken || !isOpenIDIdTokenCurrent(tokenInfo)) {
           logger.warn('OpenID ID token is expired or unavailable; re-authentication is required');
           throw new OpenIDReauthRequiredError(
             'OpenID ID token is expired or unavailable; re-authentication is required to resolve {{LIBRECHAT_OPENID_ID_TOKEN}}',

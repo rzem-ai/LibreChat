@@ -6,6 +6,7 @@ import type { RequestBody } from '~/types';
 import {
   OPENID_TOKEN_FIELDS,
   isOpenIDTokenValid,
+  isOpenIDIdTokenCurrent,
   extractOpenIDTokenInfo,
   processOpenIDPlaceholders,
   OpenIDReauthRequiredError,
@@ -54,6 +55,37 @@ const ALLOWED_USER_FIELDS = [
 
 type AllowedUserField = (typeof ALLOWED_USER_FIELDS)[number];
 type SafeUser = Pick<IUser, AllowedUserField>;
+// Deloitte Custom Change: preserve the two supported persisted OpenID token stores for Gateway headers.
+type SafeUserWithOpenIDTokens = Partial<SafeUser> & {
+  federatedTokens?: IUser['federatedTokens'];
+  // Only the ID token is needed for Gateway attribution; never copy access/refresh credentials.
+  openidTokens?: Pick<NonNullable<IUser['openidTokens']>, 'id_token'>;
+};
+
+// Deloitte Custom Change: only gateway endpoints opt into per-user ID-token resolution with this marker.
+const LLM_GATEWAY_IDENTITY_TOKEN_PLACEHOLDER = '{{LIBRECHAT_LLM_GATEWAY_ID_TOKEN}}';
+
+/**
+ * Deloitte Custom Change: select a current signed-in user's ID token for Gateway attribution,
+ * falling back to the configured local identity token when the user token is unavailable.
+ *
+ * @param user - Authenticated user whose OpenID token stores may contain an ID token
+ * @returns A current ID token or the local fallback, or `undefined` when neither is available
+ */
+export function resolveGatewayIdentityToken(
+  user: Partial<IUser> | { id: string } | undefined,
+): string | undefined {
+  const openidTokenInfo = extractOpenIDTokenInfo(user);
+  if (openidTokenInfo) {
+    if (openidTokenInfo.idToken && isOpenIDIdTokenCurrent(openidTokenInfo)) {
+      return openidTokenInfo.idToken;
+    }
+    throw new OpenIDReauthRequiredError(
+      'OpenID ID token is expired or unavailable; re-authentication is required for LLM Gateway requests',
+    );
+  }
+  return process.env.LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION;
+}
 
 /**
  * Encodes a string value to be safe for HTTP headers.
@@ -101,19 +133,17 @@ export function encodeHeaderValue(value: string): string {
 
 /**
  * Creates a safe user object containing only allowed fields.
- * Preserves federatedTokens for OpenID token template variable resolution.
+ * Deloitte Custom Change: preserves both OpenID token stores for Gateway identity resolution.
  *
  * @param user - The user object to extract safe fields from
- * @returns A new object containing only allowed fields plus federatedTokens if present
+ * @returns A new object containing only allowed fields plus OpenID token stores if present
  */
-export function createSafeUser(
-  user: IUser | null | undefined,
-): Partial<SafeUser> & { federatedTokens?: IUser['federatedTokens'] } {
+export function createSafeUser(user: IUser | null | undefined): SafeUserWithOpenIDTokens {
   if (!user) {
     return {};
   }
 
-  const safeUser: Partial<SafeUser> & { federatedTokens?: IUser['federatedTokens'] } = {};
+  const safeUser: SafeUserWithOpenIDTokens = {};
   for (const field of ALLOWED_USER_FIELDS) {
     if (field in user) {
       /**
@@ -136,6 +166,11 @@ export function createSafeUser(
 
   if ('federatedTokens' in user) {
     safeUser.federatedTokens = user.federatedTokens;
+  }
+
+  // Deloitte Custom Change: some OIDC flows store the ID token on openidTokens; keep only that credential.
+  if (typeof user.openidTokens?.id_token === 'string') {
+    safeUser.openidTokens = { id_token: user.openidTokens.id_token };
   }
 
   return safeUser;
@@ -633,6 +668,17 @@ export function resolveHeaders(options?: {
 
   if (inputHeaders && typeof inputHeaders === 'object' && !Array.isArray(inputHeaders)) {
     Object.keys(inputHeaders).forEach((key) => {
+      // Deloitte Custom Change: gateway endpoints explicitly opt into a current user ID token with a
+      // local fallback; omit the header rather than forwarding an unresolved credential marker.
+      if (inputHeaders[key] === LLM_GATEWAY_IDENTITY_TOKEN_PLACEHOLDER) {
+        const identityToken = resolveGatewayIdentityToken(user);
+        if (identityToken) {
+          resolvedHeaders[key] = encodeHeaderValue(identityToken);
+          return;
+        }
+        delete resolvedHeaders[key];
+        return;
+      }
       const processed = processSingleValue({
         originalValue: inputHeaders[key],
         customUserVars,

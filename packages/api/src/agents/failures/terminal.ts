@@ -3,6 +3,7 @@ import type { SafeErrorMetadata } from '../../utils/errors';
 import type { ModelErrorTrackerCallback } from './tracker';
 import {
   resolveLangChainError,
+  resolveGatewayQuotaError,
   getModelStreamFailure,
   resolveModelStreamError,
   getProviderErrorMessage,
@@ -19,6 +20,22 @@ const UPSTREAM_MODEL_ERROR_FALLBACK = 'The model provider could not complete thi
 function safelyResolveLangChainError(error: unknown): string | undefined {
   try {
     return resolveLangChainError(error);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Deloitte Custom Change: contain hostile error accessors while resolving the safe Gateway quota
+ * classification.
+ *
+ * @param error - Error value supplied by the provider SDK
+ * @returns The safe typed quota payload, or `undefined` when resolution fails or does not match
+ */
+function safelyResolveGatewayQuotaError(error: unknown): string | undefined {
+  // Deloitte Custom Change: only the known Gateway 429 payload becomes user-visible typed copy.
+  try {
+    return resolveGatewayQuotaError(error);
   } catch {
     return undefined;
   }
@@ -107,6 +124,8 @@ export function createTerminalRunErrorObserver({
 
       const { status } = getSafeErrorMetadata(upstreamModelError);
       const classifiedError =
+        safelyResolveGatewayQuotaError(error) ??
+        safelyResolveGatewayQuotaError(upstreamModelError) ??
         safelyResolveLangChainError(error) ??
         safelyResolveLangChainError(upstreamModelError) ??
         (status == null || status < 400
