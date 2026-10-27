@@ -43,13 +43,15 @@ cd tt-librechat
 git checkout origin/develop
 ```
 
+## 2. Enable Git Hooks
+
 ### Enable `husky` pre-commit hooks
 
 ```zsh
 npm run prepare
 ```
 
-## 2. Initialize Submodules
+## 3. Initialize Submodules
 
 This repository uses Git submodules to include external dependencies. The `rag_api` submodule contains the RAG (Retrieval-Augmented Generation) API code from the [tt-librechat-rag](https://github.com/Deloitte-Australia/tt-librechat-rag) repository. The `admin_panel` submodule contains the admin panel code from the [ea-libreadmin](https://github.com/Deloitte-Australia/ea-libreadmin).
 
@@ -65,13 +67,7 @@ This will populate the `rag_api/` folder and the `admin_panel/` folder at the co
 
 ### Updating the Submodule
 
-To pull the latest changes from the submodule's remote repository:
-
-```zsh
-git submodule update --remote rag_api
-```
-
-Or to update all submodules:
+To update all submodules:
 
 ```zsh
 git submodule update --remote
@@ -95,42 +91,20 @@ A submodule is a Git repository embedded inside another Git repository. It allow
 
 The submodule appears as a folder (`rag_api/`) in this repository, but Git treats it as a pointer to a specific commit in the external repository.
 
-**Important**: The RAG API is built from this submodule's source code during local Docker builds. Make sure the submodule is initialized before running Docker Compose, or the RAG API build will fail.
-
-## 3. Verify docker-compose.override.yml
-
-The local build configuration is in `docker-compose.override.yml`. This file should already exist in the repository and contains:
-
-- Build configurations for LibreChat and RAG API
-- Caddy reverse proxy setup
-- Gateway proxy configuration
-- Deloitte GEL asset injection
-
-If for any reason this file is missing, you won't get local builds. Verify it exists:
-
-```zsh
-ls -la docker-compose.override.yml
-```
-
-## 4. Set up Caddyfile
+## 3. Prepare for SSO
 
 This allows us to login via Azure Auth locally.
 
-1. Copy the example Deloitte Caddyfile:
+The `Caddyfile` is generated for you by `quickstart.sh` (see the Quickstart below) from `Caddyfile.deloitte.example`, using your machine hostname plus `.local` (for example `AU-ABC123123.local`). You only need to do the following:
 
-```zsh
-cp Caddyfile.deloitte.example Caddyfile
-```
-
-2. Get your machine hostname:
+1. Get your machine hostname:
 
 ```zsh
 hostname
 ```
 
-3. Update `Caddyfile` to replace YOURHOSTNAME so it uses your host from step 2 above plus `.local` (for example `AU-ABC123123.local {`).
-4. Share that hostname with Ally Fulton (so it can be added as an accepted redirect URL on App Reg). This custom domain enables Deloitte auth locally (instead of `localhost`), as localhost cannot be used for Deloitte App Reg redirect URLs.
-5. To check your hostname is accessible on your machine, run `ping yourhostname.local` (e.g. `ping AU-ABC123123.local`). If you get "unknown hostname", continue to _If you cannot ping your hostname_. If your ping returns responses (even timeout responses), continue to _5. Environment configuration_.
+2. Share that hostname with Ally Fulton (so it can be added as an accepted redirect URL on App Reg). This custom domain enables Deloitte auth locally (instead of `localhost`), as localhost cannot be used for Deloitte App Reg redirect URLs.
+3. To check your hostname is accessible on your machine, run `ping yourhostname.local` (e.g. `ping AU-ABC123123.local`). If you get "unknown hostname", continue to _If you cannot ping your hostname_. If your ping returns responses (even timeout responses), continue to _4. Quickstart_.
 
 ### If you cannot ping your hostname
 
@@ -143,163 +117,60 @@ hostname
 7. 'Ctrl-X' to close
 8. Try `ping yourhostname.local` again
 
-## 5. Environment configuration (.env)
+## 4. Quickstart
 
-Start by copying the example file:
+Your `.env` is generated for you. Do not copy `.env.example` or edit `.env` by hand: shared settings live in `.env.deloitte`, and secrets live in `.secrets/`.
+
+### 1. Get the shared secrets
+
+Ask another team member for the `.shared-secrets` file and save it as `.secrets/.shared-secrets`. Make sure it has the same length as the example file (one `KEY=value` line per key in `.secrets/.shared-secrets.example`, with no empty values):
 
 ```zsh
-cp .env.example .env
+wc -l .secrets/.shared-secrets .secrets/.shared-secrets.example
 ```
 
-### Make changes
+Both files should report the same number of lines. The script stops and lists any missing secrets if they don't match.
 
-Update the existing keys below in `.env` (edit the existing entries, do not add new keys unless they don't exist yet):
+`.shared-secrets` contains private key material. Do not commit it (it is gitignored), paste it into tickets, or share it in chat.
 
-Tip: ask your AI coding assistant to create (for new) or update (for existing) .env values.
+You do not need to create `.secrets/.personal-secrets`: the script creates it for you and fills in your token.
 
-1. `ENDPOINTS=anthropic,custom,agents`
-2. `ANTHROPIC_REVERSE_PROXY=http://gateway-proxy:8080/anthropic`
-3. `APP_TITLE="MyAssist"`
-4. `CUSTOM_FOOTER="⚠️ WARNING: This is a development environment. Do not upload client or confidential data."`
-5. `DOMAIN_CLIENT=https://<yourhostname>.local` (for example `https://AU-ABC123123.local`)
-6. `DOMAIN_SERVER=https://<yourhostname>.local` (for example `https://AU-ABC123123.local`)
-7. `ALLOW_SOCIAL_LOGIN=true`
-8. `OPENID_CLIENT_ID=<update with the provided value from another team member>`
-9. `OPENID_CLIENT_SECRET=<update with the provided secret from another team member>`
-10. `OPENID_ISSUER=<update with the provided issuer URL from another team member>`
-11. `OPENID_SESSION_SECRET=<update with the provided secret from another team member>`
-12. `OPENID_SCOPE="openid profile email offline_access https://librechat-dev.ctk.au.deloitte.com/access_user"` (the `access_user` scope audiences the login token to LibreChat itself; required for the ClearTrack MCP Gateway's OBO exchange — see the note below)
-13. `OPENID_CALLBACK_URL=/oauth/openid/callback`
-14. `OPENID_REUSE_TOKENS=true`
-15. `OPENID_REUSE_MAX_SESSION_AGE_MS=86400000` (keep equal to `SESSION_EXPIRY` and `REFRESH_TOKEN_EXPIRY`, both also `86400000`/24h)
-16. `OPENID_REQUIRED_ROLE=`
-17. `OPENID_REQUIRED_ROLE_TOKEN_KIND=id`
-18. `OPENID_BUTTON_LABEL="Continue with SSO"`
-19. `OPENID_IMAGE_URL=/assets/icon-192x192.png`
-20. `ALLOW_EMAIL_LOGIN=false`
-21. `ALLOW_REGISTRATION=false`
-22. `ALLOW_SOCIAL_REGISTRATION=false`
-23. Comment out `OPENAI_API_KEY=`
-24. Comment out `ASSISTANTS_API_KEY=`
-25. BASE_URL_AZURE_AU=https://au-openai-exp.ctk.au.deloitte.com/openai/v1
-26. BASE_URL_AZURE_US=https://us-openai-exp.ctk.au.deloitte.com/openai/v1
-27. BASE_URL_VERTEXAI=https://us-vertexai-exp.ctk.au.deloitte.com
-28. `BASE_URL_AZURE_GLOBAL=https://us-foundry-exp.ctk.au.deloitte.com/openai/v1`
-29. `BASE_URL_AZURE_FOUNDRY_AU=https://au-foundry-exp.ctk.au.deloitte.com/openai/v1`
-30. `AZURE_OPENAI_GLOBAL_HOST=https://us-openai-exp.ctk.au.deloitte.com/openai/v1`
-31. `RAG_OPENAI_REGIONAL_BASEURL=http://gateway-proxy:8081/azure-au`
-32. `RAG_OPENAI_GLOBAL_BASEURL=http://gateway-proxy:8081/azure-global`
-33. `BEDROCK_AWS_DEFAULT_REGION=ap-southeast-2`
-34. `BEDROCK_AWS_ACCESS_KEY_ID=unused`
-35. `BEDROCK_AWS_SECRET_ACCESS_KEY=unused`
-36. `BEDROCK_AWS_MODELS=au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0`
-37. `BEDROCK_REVERSE_PROXY=au-bedrock-exp.ctk.au.deloitte.com`
-38. `BEDROCK_GATEWAY_URL=http://gateway-proxy:8081`
-39. `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION="<YOUR_ID_TOKEN>"`
-40. `MCP_GATEWAY_URL=https://mcp-gw-dev.ctk.au.deloitte.com/mcp`
-41. `MCP_GATEWAY_TOOLSETS=teams,research,news,kx,desc,gims,sharepoint`
-42. `MCP_GATEWAY_OBO_SCOPE=api://3e5d28f1-91a3-4748-ad73-5fa544f1d3e2/access_as_user`
-43. `USE_ENTRA_ID_FOR_PEOPLE_SEARCH=true` to synchronize Entra group memberships used by restricted MCP servers such as SharePoint.
-44. `OPENID_GRAPH_SCOPES=User.Read,GroupMember.Read.All`. `GroupMember.Read.All` must have delegated tenant-admin consent on the LibreChat/MyAssist app registration. Add `People.Read` only when Entra people search is needed and that permission has also been granted.
+### 2. Fetch your LLM Gateway Token
 
-After changing either Entra setting, rebuild/restart the API container and sign out and back in. Group-restricted MCP servers fail closed: SharePoint stays hidden until the signed-in user's memberships have synchronized successfully.
+- **Get an LLM Gateway token.** The script needs your own token for the LLM Gateway. ⚠️ Tokens expire after ~8 hours; if models suddenly stop working, get a new one and re-run the script (see _Updating your JWT token_).
+  1. Navigate to [here](https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/oauth2/v2.0/authorize?client_id=498ce9fd-195b-40c5-82f1-8fc4a6d00d88&response_type=id_token&redirect_uri=https%3A%2F%2Fjwt.ms&scope=openid%20profile%20email%20https%3A%2F%2Fgraph.microsoft.com%2FUser.Read&response_mode=fragment&state=random_state&nonce=random_nonce)
+  2. Copy the whole token value.
 
-> The **ClearTrack MCP Gateway** connection (`mcpServers` block in `librechat.yaml` at repo root and `charts/config/librechat.yaml` for Helm) uses On-Behalf-Of (OBO) auth, not a dedicated OAuth client — it reuses `OPENID_CLIENT_ID`/`OPENID_CLIENT_SECRET` from item 8–9 to exchange the user's login token for one scoped to the gateway. There are no gateway-specific client credentials to set; the only requirement is that `OPENID_SCOPE` (item 12) includes the gateway's audience scope.
+### 3. Open Docker Desktop 
 
-## Sharing Chats .env vars
+Open the Docker Desktop app.
 
-```env
-ALLOW_SHARED_LINKS=false
-ALLOW_SHARED_LINKS_PUBLIC=false
-SHARED_LINKS_SNAPSHOT_FILES=false
+### 4. Run the quickstart script with `--first-build`
+
+```zsh
+./quickstart.sh --first-build "<YOUR_TOKEN_HERE>"
 ```
 
-### Balance .env vars
+This will:
 
-The `balance` block in `librechat.yaml` enables token balance tracking with a daily auto-refill. It reads these values from `.env`:
+1. Save your token to `.secrets/.personal-secrets`
+2. Create `.env` from `.env.deloitte` and fill in your secrets
+3. Set `DOMAIN_CLIENT`, `DOMAIN_SERVER`, `ADMIN_PANEL_URL` and `VITE_API_BASE_URL` from your hostname, and create your `Caddyfile`
+4. Build the images (`docker compose build`) and start all containers
 
-```env
-START_BALANCE=15000000
-BALANCE_REFILL_AMOUNT=15000000
-CHECK_BALANCE=true
-```
-
-`CHECK_BALANCE` (`true`/`false`) turns balance tracking on or off. `START_BALANCE` is the starting token balance for new users; `BALANCE_REFILL_AMOUNT` is the number of tokens added per refill cycle (1 day). The Helm charts set both in `values-uat.yaml` and `values-prd.yaml` (10 million tokens = $10 per day).
-
-### Code API / Code Interpreter .env vars
-
-Add the following values to `.env` to enable the Run Code button for code execution:
-
-```env
-LIBRECHAT_CODE_BASEURL=https://code-runtime-dev.ctk.au.deloitte.com/v1
-CODEAPI_AUTH_PROVIDER=librechat-jwt
-CODEAPI_JWT_ALGORITHM=EdDSA
-CODEAPI_JWT_KID=lc-codeapi-dev-2026-05
-CODEAPI_JWT_ISSUER=librechat
-CODEAPI_JWT_AUDIENCE=codeapi
-CODEAPI_JWT_TTL_SECONDS=300
-CODEAPI_JWT_MINT_CACHE_SECONDS=30
-CODEAPI_JWT_SINGLE_TENANT_ID=legacy
-CODEAPI_JWT_PRIVATE_JWK_JSON=<request from a team member; ask Kiel for the current value>
-```
-
-`CODEAPI_JWT_PRIVATE_JWK_JSON` is private key material. Do not commit it, paste it into tickets, or share it in chat. Request the current value from a team member; Kiel can direct you to the appropriate owner.
-
-### Skill Scanner .env vars
-
-Add the following values to `.env` to enable the Security Scanning for saving/uploading skills.
-
-`SKILL_SCANNER_URL=https://ai-registry-dev.ctk.au.deloitte.com/v1/scan?verbose=false`
-`SKILL_SCANNER_TIMEOUT_MS=15000`
-`SKILL_SCANNER_MIN_SEVERITY=high`
-`AI_REGISTRY_CLIENT_ID=<update with the provided AI Registry client ID from another team member>` (DEV & UAT use `4aeebbdc-56f5-4329-b40e-3d0a243bf74a`)
-
-> The **Skill Security Scanner** screens every skill through the Deloitte AI Registry before it is saved. Leaving `SKILL_SCANNER_URL` unset disables scanning entirely — skills are then saved unchecked, with no warning. Like the MCP Gateway, it uses On-Behalf-Of auth reusing `OPENID_CLIENT_ID`/`OPENID_CLIENT_SECRET`, scoped to `api://<AI_REGISTRY_CLIENT_ID>/access_as_user` (requires admin consent on that Entra ID app — a one-time infra setup step). Non-OpenID users, or requests made before that consent is granted, are sent unauthenticated. `SKILL_SCANNER_MIN_SEVERITY` sets the lowest finding severity that blocks a skill (`info`, `low`, `medium`, `high`, `critical`); findings below that threshold are reported but do not block.
-
-### Evaluation framework variables
-
-The optional Python evaluation framework reads the following variables from the repository `.env` file:
-
-| Variable                        | Purpose                                                                                                                         |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `LIBRECHAT_BASE_URL`            | LibreChat instance to evaluate; defaults to `http://localhost:3080`.                                                            |
-| `LIBRECHAT_API_KEY`             | Agent API key from LibreChat Settings → Data. Required for agent evals.                                                         |
-| `LIBRECHAT_AGENT_ID`            | Default agent ID. A config-specific variable such as `EXPENSE_ASSIST_AGENT_ID` can be referenced by `agent_id: ${VAR}` instead. |
-| `LIBRECHAT_TIMEOUT`             | LibreChat request timeout in seconds; defaults to `300`.                                                                        |
-| `LIBRECHAT_MAX_RETRIES`         | Maximum LibreChat request retries; defaults to `3`.                                                                             |
-| `LIBRECHAT_RETRY_BACKOFF`       | Retry backoff in seconds; defaults to `5`.                                                                                      |
-| `EVAL_JUDGE_ENDPOINT`           | Optional custom endpoint name from `librechat.yaml` for DeepEval judge calls.                                                   |
-| `EVAL_JUDGE_MODEL`              | Optional judge model override.                                                                                                  |
-| `EVAL_JUDGE_DISABLE_TLS_VERIFY` | Set to `1` only for local judge endpoints with untrusted certificates.                                                          |
-| `EVAL_ROOT`                     | Optional override for the eval workspace root.                                                                                  |
-| `EVAL_LANGFUSE_BASE_URL`        | Optional Langfuse URL used by eval dataset and telemetry integrations.                                                          |
-| `EVAL_PUSH_LANGFUSE`            | Set to `1` to export eval telemetry without passing `--langfuse`.                                                               |
-| `EVAL_LANGFUSE_ENVIRONMENT`     | Langfuse environment tag; defaults to `development`.                                                                            |
-| `LANGFUSE_SSL_VERIFY`           | Set to `false` only for local development with an untrusted Langfuse certificate.                                               |
-| `LANGFUSE_SSL_CERT_FILE`        | Optional CA bundle used to verify Langfuse OTLP TLS.                                                                            |
-
-The existing `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL`, `OTEL_EXPORTER_OTLP_ENDPOINT`, and `OTEL_EXPORTER_OTLP_HEADERS` variables are also reused when Langfuse export is enabled. See `evals/_eval/README.md` for commands and examples.
-
-#### How to obtain the JWT token
-
-⚠️ As of May 2026, tokens expire after ~8 hours. If models suddenly stop working, reissue the token.
-
-1. Navigate to [here](https://login.microsoftonline.com/36da45f1-dd2c-4d1f-af13-5abe46b99921/oauth2/v2.0/authorize?client_id=498ce9fd-195b-40c5-82f1-8fc4a6d00d88&response_type=id_token&redirect_uri=https%3A%2F%2Fjwt.ms&scope=openid%20profile%20email%20https%3A%2F%2Fgraph.microsoft.com%2FUser.Read&response_mode=fragment&state=random_state&nonce=random_nonce)
-2. Copy the whole value to LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION inside quotation marks
+⏱️ The first build compiles the whole repo and **may take ~10 minutes**. When it finishes, the script prints the link to open (for example `https://AU-ABC123123.local`).
 
 ## Updating your JWT token
 
-If you want to update your token after it has expired, navigate to
-the URL above, get your new token, then run:
+When your token expires, get a new one (see step 2 above), then run the script again without `--first-build`:
 
-    ./update-token.sh "<YOUR_TOKEN_HERE>"
+```zsh
+./quickstart.sh "<YOUR_TOKEN_HERE>"
+```
 
-This updates `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION`, `ANTHROPIC_API_KEY`, `RAG_OPENAI_API_KEY`, and `OPENAI_API_KEY` in `.env`, then restarts the affected containers. Note: passing the token as an argument may save it in your shell history; run `
-` with no arguments to be prompted securely.
+This updates the token in `.secrets/.personal-secrets`, regenerates `.env`, and force-recreates the `api` container (the other containers are started if they are stopped). It does not rebuild images; when you have pulled new code or packages, run the build commands it prints at the end (separate commands for `api`, and for `admin-panel` and `rag_api`, each with and without cache). Note: passing the token as an argument may save it in your shell history.
 
----
-
-## `librechat.yaml` files
+# `librechat.yaml` file
 
 LibreChat configuration includes:
 
@@ -309,30 +180,8 @@ LibreChat configuration includes:
 - Default visible models in the UI
 - ClearTrack MCP integration
 - And more!
-
-### Claude model availability
-
-The gateway configuration and curated model selector enable the following models. Claude 5.5 models are provisioned in all environments (development, UAT and production).
-
-```dotenv
-ANTHROPIC_MODELS=claude-haiku-4-5,claude-haiku-5-5,claude-sonnet-4-6,claude-sonnet-5,claude-sonnet-5-5,claude-opus-4-6,claude-opus-4-8,claude-opus-5-5
-BEDROCK_AWS_MODELS=au.anthropic.claude-sonnet-4-6,au.anthropic.claude-haiku-4-5-20251001-v1:0,au.anthropic.claude-haiku-5-5,au.anthropic.claude-sonnet-5-5,au.anthropic.claude-opus-5-5
-```
-
-| Model             | Global gateway | Australian regional Bedrock |
-| ----------------- | -------------- | --------------------------- |
-| Claude Haiku 4.5  | Yes            | Yes                         |
-| Claude Haiku 5.5  | Yes            | Yes                         |
-| Claude Sonnet 4.6 | Yes            | Yes                         |
-| Claude Sonnet 5   | Yes            | No                          |
-| Claude Sonnet 5.5 | Yes            | Yes                         |
-| Claude Opus 4.6   | Yes            | No                          |
-| Claude Opus 4.8   | Yes            | No                          |
-| Claude Opus 5.5   | Yes            | Yes                         |
-
-Australian regional models are accessed through the Bedrock endpoint. Use an Australian regional model when the workload must remain in Australia.
-
-There is now **one source of truth** for LibreChat config:
+- 
+The librechat.yaml is a single source of truth for local and online deployments:
 
 1. `librechat.yaml` (repo root)
    - Used by local Docker runs.
@@ -345,9 +194,14 @@ There is now **one source of truth** for LibreChat config:
      - ensuring `fileStrategy: "azure_blob"` is present for Kubernetes.
    - In deployed environments, `llm-gateway-proxy` forwards the resolved `x-id-token` and injects `x-sa-token` using the pod service account token. Gateway token-limit responses, including their status and JSON body, are passed through to the application.
 
+## Models
+
+Australian regional models are accessed through the Bedrock endpoint. Use an Australian regional model when the workload must remain in Australia.
+
+
 ---
 
-## Docker Compose Setup
+# Docker Compose Setup
 
 This local setup uses Docker Compose with two configuration files:
 
@@ -362,45 +216,27 @@ This local setup uses Docker Compose with two configuration files:
 - Overrides the base configuration to build LibreChat and RAG API from **local source code**
 - Adds local-specific services: Caddy (reverse proxy), gateway-proxy (nginx)
 
-### Local Builds from Source
-
-Unlike CI/CD deployments, your local environment builds images from your source code:
-
-- **LibreChat**: Built from root `Dockerfile` (includes api + React client)
-- **RAG API**: Built from `rag_api/Dockerfile.lite` (submodule source)
-
-**First-time build expectations**:
-
-- Total time: ~10-15 minutes
-  - LibreChat: ~8-12 minutes (npm install + React build)
-  - RAG API: ~3-5 minutes (pip install)
-- Subsequent builds with Docker layer caching: ~30 seconds - 2 minutes
-- Only changed code layers rebuild (much faster after first build)
-
-**Why build locally?**
-
-- Changes to your code are immediately reflected after rebuild
-- Full control over dependencies and build process
-- No reliance on external registries being available
-- Can modify Dockerfiles, add debug tools, etc.
-
 # 🚀 Running the app
 
 ## Start services
 
-**First time**: Build and start all services (will take ~10-15 minutes for initial build):
+### First time
 
-### If this is your first time running the containers, you will need to pull them using
+Follow the [Quickstart](#5-quickstart). It generates your `.env` and `Caddyfile`, builds all images and starts every container (~10 minutes for the initial build):
 
 ```zsh
-docker compose build --no-cache
+./quickstart.sh --first-build "<YOUR_TOKEN_HERE>"
 ```
 
-### For all other times start here:
+### For all other times
+
+Start the containers (this does not rebuild images):
 
 ```zsh
 docker compose up -d
 ```
+
+Or re-run `./quickstart.sh "<YOUR_TOKEN_HERE>"` to refresh your token and force-recreate the `api` container.
 
 Docker Compose will:
 
@@ -409,44 +245,25 @@ Docker Compose will:
 3. Pull supporting images (MongoDB, Meilisearch, etc.)
 4. Start all containers
 
-**After code changes**: Rebuild and restart to reflect your changes:
-
-```zsh
-docker compose up -d --build
-```
-
-**Clean restart** (if things behave oddly):
-
-```zsh
-docker compose down
-docker compose up -d
-```
-
-**Full rebuild** (clears cache, rebuilds everything from scratch):
-
-```zsh
-docker compose down
-docker compose build --no-cache
-docker compose up -d
-```
-
-### Build Progress
-
-You can watch the build progress in real-time:
-
-```zsh
-docker compose up --build --progress=plain
-```
-
-(Optional) To use the debug Dockerfile (`temporary_verbose_deloitte_dockerfile.Dockerfile`) locally, temporarily set `services.api.build.dockerfile` in `docker-compose.override.yml` to that filename.
-
 ## When to rebuild
 
 You need to rebuild images when you change:
 
 - **Source code** in `/api`, `/client`, `/packages`, or `rag_api/`
 - **Dependencies** (`package.json`, `requirements.txt`, etc.)
-- **Dockerfiles** (`Dockerfile`, `rag_api/Dockerfile.lite`)
+- **Dockerfiles** (`Dockerfile`, `rag_api/Dockerfile.lite`, etc.)
+
+### Rebuild commands
+
+Rebuild only the service you changed. Use the **with cache** command for code changes (unchanged layers are reused), and the **without cache** command for dependency changes or when a cached build looks stale. The `api` build is the slowest: it compiles `packages/*`, the client and the API.
+
+| Service       | Changed                                    | With cache (fastest)                                                                    | Without cache (package changes, or stale build)                                                    |
+| ------------- | ------------------------------------------ |-----------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
+| `api`         | `/api`, `/client`, `/packages`, Dockerfile | `docker compose build api && docker compose up -d --force-recreate api`                 | `docker compose build --no-cache api && docker compose up -d --force-recreate api`                 |
+| `admin-panel` | `admin_panel/` submodule                   | `docker compose build admin-panel && docker compose up -d --force-recreate admin-panel` | `docker compose build --no-cache admin-panel && docker compose up -d --force-recreate admin-panel` |
+| `rag_api`     | `rag_api/` submodule                       | `docker compose build rag_api && docker compose up -d --force-recreate rag_api`         | `docker compose build --no-cache rag_api && docker compose up -d --force-recreate rag_api`         |
+
+`./quickstart.sh` prints these same commands at the end of every run.
 
 You do NOT need to rebuild for:
 
@@ -504,7 +321,7 @@ If models fail with gateway or MCP errors, this is almost always the cause. If b
 
 ### Build succeeds but SSO says "An unknown error occurred"
 
-Ensure that the `OPENID_ISSUER`, `OPENID_CLIENT_ID`, and `OPENID_CLIENT_SECRET` values in your `.env` are populated. Get these values from another team member if you don't have them.
+Ensure that `OPENID_CLIENT_SECRET` is populated in `.secrets/.shared-secrets` (ask a team member if you don't have it), then re-run `./quickstart.sh "<YOUR_TOKEN_HERE>"` so it is copied into `.env`. `OPENID_ISSUER` and `OPENID_CLIENT_ID` come from `.env.deloitte`.
 
 ### Build fails with "context" or "Dockerfile" errors
 
@@ -574,7 +391,7 @@ Common issues:
 
 - Refresh the browser
 - Start a new chat
-- Update JWT value in .env
+- Get a new token and re-run `./quickstart.sh "<YOUR_TOKEN_HERE>"` (see _Updating your JWT token_)
 - Confirm VPN is **on**
 
 ---

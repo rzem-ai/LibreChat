@@ -96,6 +96,7 @@ Caddyfile
 my.secrets
 !**/.env.example
 !**/.env.test.example
+!**/.env.deloitte
 cache.json
 api/data/
 owner.yml
@@ -225,3 +226,7 @@ untested_skills/
 !e2e/lighthouse/librechat.yaml
 /.lighthouse/
 /e2e/lighthouse/.test-results/
+
+# Local secrets (keep *.example templates)
+.secrets/*
+!.secrets/*.example
