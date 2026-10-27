@@ -148,15 +148,15 @@ Open the Docker Desktop app.
 ### 4. Run the quickstart script with `--first-build`
 
 ```zsh
-./quickstart.sh --first-build "<YOUR_TOKEN_HERE>"
+./quickstart.sh --first-build
 ```
 
-This will:
+The script prompts you to paste your token (the input is hidden, so nothing appears as you paste), then:
 
-1. Save your token to `.secrets/.personal-secrets`
-2. Create `.env` from `.env.deloitte` and fill in your secrets
-3. Set `DOMAIN_CLIENT`, `DOMAIN_SERVER`, `ADMIN_PANEL_URL` and `VITE_API_BASE_URL` from your hostname, and create your `Caddyfile`
-4. Build the images (`docker compose build`) and start all containers
+1. Saves your token to `.secrets/.personal-secrets`
+2. Creates `.env` from `.env.deloitte` and fills in your secrets
+3. Sets `DOMAIN_CLIENT`, `DOMAIN_SERVER`, `ADMIN_PANEL_URL` and `VITE_API_BASE_URL` from your hostname, and creates your `Caddyfile`
+4. Builds the images (`docker compose build`) and starts all containers
 
 ⏱️ The first build compiles the whole repo and **may take ~10 minutes**. When it finishes, the script prints the link to open (for example `https://AU-ABC123123.local`).
 
@@ -165,10 +165,10 @@ This will:
 When your token expires, get a new one (see step 2 above), then run the script again without `--first-build`:
 
 ```zsh
-./quickstart.sh "<YOUR_TOKEN_HERE>"
+./quickstart.sh
 ```
 
-This updates the token in `.secrets/.personal-secrets`, regenerates `.env`, and force-recreates the `api` container (the other containers are started if they are stopped). It does not rebuild images; when you have pulled new code or packages, run the build commands it prints at the end (separate commands for `api`, and for `admin-panel` and `rag_api`, each with and without cache). Note: passing the token as an argument may save it in your shell history.
+This updates the token in `.secrets/.personal-secrets`, regenerates `.env`, and force-recreates the `api` container (the other containers are started if they are stopped). It does not rebuild images; when you have pulled new code or packages, run the build commands it prints at the end (separate commands for `api`, and for `admin-panel` and `rag_api`, each with and without cache). The token is entered at a hidden prompt, so it doesn't end up in your shell history. (Passing it as an argument, `./quickstart.sh <token>`, still works for non-interactive use but is not recommended.)
 
 # `librechat.yaml` file
 
@@ -225,7 +225,7 @@ This local setup uses Docker Compose with two configuration files:
 Follow the [Quickstart](#5-quickstart). It generates your `.env` and `Caddyfile`, builds all images and starts every container (~10 minutes for the initial build):
 
 ```zsh
-./quickstart.sh --first-build "<YOUR_TOKEN_HERE>"
+./quickstart.sh --first-build
 ```
 
 ### For all other times
@@ -236,7 +236,7 @@ Start the containers (this does not rebuild images):
 docker compose up -d
 ```
 
-Or re-run `./quickstart.sh "<YOUR_TOKEN_HERE>"` to refresh your token and force-recreate the `api` container.
+Or re-run `./quickstart.sh` to refresh your token and force-recreate the `api` container.
 
 Docker Compose will:
 
@@ -321,7 +321,7 @@ If models fail with gateway or MCP errors, this is almost always the cause. If b
 
 ### Build succeeds but SSO says "An unknown error occurred"
 
-Ensure that `OPENID_CLIENT_SECRET` is populated in `.secrets/.shared-secrets` (ask a team member if you don't have it), then re-run `./quickstart.sh "<YOUR_TOKEN_HERE>"` so it is copied into `.env`. `OPENID_ISSUER` and `OPENID_CLIENT_ID` come from `.env.deloitte`.
+Ensure that `OPENID_CLIENT_SECRET` is populated in `.secrets/.shared-secrets` (ask a team member if you don't have it), then re-run `./quickstart.sh` so it is copied into `.env`. `OPENID_ISSUER` and `OPENID_CLIENT_ID` come from `.env.deloitte`.
 
 ### Build fails with "context" or "Dockerfile" errors
 
@@ -391,7 +391,7 @@ Common issues:
 
 - Refresh the browser
 - Start a new chat
-- Get a new token and re-run `./quickstart.sh "<YOUR_TOKEN_HERE>"` (see _Updating your JWT token_)
+- Get a new token and re-run `./quickstart.sh` (see _Updating your JWT token_)
 - Confirm VPN is **on**
 
 ---

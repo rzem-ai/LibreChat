@@ -4,6 +4,14 @@
 # Formats, sorts and lints the exact staged content of each changed file.
 npx lint-staged --config ./.husky/lint-staged.config.js || exit 1
 
+# Scans the staged changes for secrets locally. Pull requests are scanned by Checkmarx in CI.
+# Install with: brew install gitleaks
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --staged --redact --no-banner || exit 1
+else
+  echo "gitleaks is not installed, skipping the secret scan (brew install gitleaks)"
+fi
+
 # The rest of the Static Checks CI job, gated on the paths this commit touches.
 # Add STATIC_CHECKS_FULL=1 for the slow gates (TypeScript, config migration
 # tests, unused i18n keys, unused npm packages).

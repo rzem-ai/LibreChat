@@ -1,7 +1,11 @@
 #!/bin/bash
 # Deloitte Custom File
 #
-# Usage: ./quickstart.sh [--overwrite=true|false] [--first-build] <new_jwt_token>
+# Usage: ./quickstart.sh [--overwrite=true|false] [--first-build]
+#
+# You are prompted for your token without it being echoed. Passing the token as an argument
+# (./quickstart.sh [options] <token>) still works for non-interactive use, but it can end up in
+# your shell history.
 #
 # 1. Writes the token into the personal secrets (.secrets/.personal-secrets)
 # 2. Copies .env.deloitte to .env (skipped when --overwrite=false and .env exists)
@@ -36,7 +40,7 @@ die() {
 }
 
 usage() {
-  echo "Usage: $0 [--overwrite=true|false] [--first-build] <new_jwt_token>" >&2
+  echo "Usage: $0 [--overwrite=true|false] [--first-build]" >&2
 }
 
 for arg in "$@"; do
@@ -49,6 +53,17 @@ for arg in "$@"; do
     *) [ -z "$TOKEN" ] || die "Only one token argument is allowed"; TOKEN="$arg" ;;
   esac
 done
+
+if [ -n "$TOKEN" ]; then
+  echo "WARNING: passing the token as an argument can save it in your shell history." >&2
+  echo "         Run without an argument to be prompted securely instead." >&2
+elif [ -t 0 ]; then
+  echo "Fetch an ID token here (sign in, then copy the whole id_token value):"
+  echo "  $TOKEN_URL"
+  # -n switches the terminal out of line mode: a long token would otherwise be cut at the 1024-byte line limit.
+  IFS= read -rs -n 8192 -p "Paste your token (input is hidden), then press Enter: " TOKEN
+  echo
+fi
 
 if [ -z "$TOKEN" ]; then
   usage
