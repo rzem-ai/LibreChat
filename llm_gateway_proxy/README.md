@@ -1,6 +1,6 @@
 # LLM Gateway proxy
 
-This image runs nginx in front of the LLM Gateway and injects the current Kubernetes service account token as the `x-sa-token` header.
+This image runs nginx in front of the LLM Gateway, forwards LibreChat's per-user `x-id-token`, and injects the current Kubernetes service account token as the `x-sa-token` header. Gateway response statuses and bodies are forwarded unchanged so token-limit errors reach the user.
 
 ## Required environment variables
 

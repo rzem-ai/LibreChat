@@ -52,6 +52,8 @@ export type UnclassifiedErrorProps = Omit<ErrorRendererProps, 'json'> & { json?:
 export const ProviderErrorCodes = {
   INVALID_API_KEY: 'invalid_api_key',
   INSUFFICIENT_QUOTA: 'insufficient_quota',
+  // Deloitte Custom Change: stable code emitted for the LLM Gateway daily-budget response.
+  GATEWAY_QUOTA_EXCEEDED: 'quota_exceeded',
 } as const;
 
 export function readString(json: ErrorPayload | undefined, key: string): string | undefined {

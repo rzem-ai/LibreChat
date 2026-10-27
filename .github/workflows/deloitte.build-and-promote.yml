@@ -130,11 +130,11 @@ jobs:
       customBuildSetupScript: |
         ${{ matrix.customBuildSetupScript }}
         set -euo pipefail
-        
+
         git config --global url."https://x-access-token:${SUBMODULE_GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
- 
+
         echo "Preparing to switch branch in submodules"
-        
+
         BRANCH="${GITHUB_BASE_REF:-${GITHUB_REF_NAME}}"
 
         echo "BRANCH - ${BRANCH}"
@@ -150,15 +150,15 @@ jobs:
 
         echo "SUBMODULE BRANCH - ${SUBMODULE_BRANCH}"
         git config submodule.rag_api.branch "${SUBMODULE_BRANCH}"
-        
+
         echo "1. Submodule branch for rag_api set to ${SUBMODULE_BRANCH}"
-        
+
         git config submodule.admin_panel.branch "${SUBMODULE_BRANCH}"
-        
+
         echo "2. Submodule branch for admin_panel set to ${SUBMODULE_BRANCH}"
-        
+
         git submodule sync --recursive
-        
+
         echo "3. Submodules synchronized with the latest configuration"
 
         if [ "${{ matrix.submodule }}" = "true" ]; then
@@ -166,21 +166,16 @@ jobs:
           git -C rag_api checkout -B "${SUBMODULE_BRANCH}" "origin/${SUBMODULE_BRANCH}"
           git -C admin_panel checkout -B "${SUBMODULE_BRANCH}" "origin/${SUBMODULE_BRANCH}"
         fi
-        
+
         echo "5. Both submodules rag_api and admin_panel updated the chosen SUBMODULE_BRANCH"
-        
+
         python3 - <<'PY'
         import re
         from pathlib import Path
 
         path = Path("librechat.yaml")
         content = path.read_text()
-        content = re.sub(
-          r'(?m)^[ \t]*x-id-token:\s*[\'"]?\$\{LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION\}[\'"]?[ \t]*\n?',
-          '',
-          content,
-        )
-
+        # Deloitte Custom Change: retain the gateway-only identity placeholder for request-time resolution.
         if "fileStrategy:" not in content:
           match = re.search(r"^cache:\s*true(?:\s*#.*)?$", content, flags=re.MULTILINE)
           if match is None:
@@ -189,8 +184,9 @@ jobs:
 
         path.write_text(content)
         PY
-        if grep -q 'LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION' librechat.yaml; then
-          echo 'Unable to remove x-id-token headers from deployment config'
+        # Deloitte Custom Change: current develop config has three active Gateway model endpoints.
+        if [ "$(grep -c "x-id-token: '{{LIBRECHAT_LLM_GATEWAY_ID_TOKEN}}'" librechat.yaml)" -ne 3 ]; then
+          echo 'Unable to retain every gateway x-id-token placeholder in deployment config'
           exit 1
         fi
         grep -q '^fileStrategy:' librechat.yaml || { echo 'Unable to inject fileStrategy'; exit 1; }

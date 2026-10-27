@@ -186,6 +186,21 @@ describe('Error — reader-facing provider and fallback copy', () => {
     expectReadable();
   });
 
+  // Deloitte Custom Change: ensure quota details never appear in the reader-facing error.
+  it('renders safe localized copy for the Gateway quota response', () => {
+    renderError({
+      error: {
+        code: 'quota_exceeded',
+        message: 'You have exceeded your allocated LLM gateway budget.',
+        details: { current_usage: '$149.37' },
+      },
+    });
+
+    expect(screen.getByText(catalog.com_error_llm_gateway_quota_exceeded)).toBeInTheDocument();
+    expect(screen.queryByText(/149\.37/)).not.toBeInTheDocument();
+    expectReadable();
+  });
+
   it.each([
     ['MODEL_NOT_FOUND', 'com_error_model_not_found'],
     ['MODEL_RATE_LIMIT', 'com_error_model_rate_limit'],

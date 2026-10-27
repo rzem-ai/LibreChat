@@ -17,6 +17,7 @@ import type {
   InferenceProfileConfig,
   ProviderInitializeParams,
 } from '~/types';
+import { resolveGatewayIdentityToken } from '~/utils/env';
 import { getHttpsProxyAgent } from '~/utils/proxy';
 import { resolveEndpointRuntime } from '~/types';
 import { checkUserKeyExpiry } from '~/utils';
@@ -133,7 +134,6 @@ export async function initializeBedrock(
     BEDROCK_REVERSE_PROXY,
     BEDROCK_GATEWAY_URL,
     BEDROCK_AWS_DEFAULT_REGION,
-    LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION,
   } = process.env;
 
   const { key: expiresAt } = requestBody;
@@ -276,13 +276,17 @@ export async function initializeBedrock(
   const reverseProxyTarget = getBedrockProxyTarget(bedrockRegion, reverseProxy);
   const hasReverseProxyUrl = /^https?:\/\//i.test(reverseProxy ?? '');
   const proxyAgent = getHttpsProxyAgent(reverseProxyTarget);
+  // Deloitte Custom Change: a current user token must also activate the custom client for
+  // hostname-only Gateway proxies when no shared local token or HTTP proxy is configured.
+  const identityToken =
+    BEDROCK_GATEWAY_URL || reverseProxy ? resolveGatewayIdentityToken(user) : undefined;
   // Deloitte Custom Change: Create a custom client when routing through the Deloitte gateway.
   if (
     proxyAgent ||
     hasBearerToken ||
     BEDROCK_GATEWAY_URL ||
     hasReverseProxyUrl ||
-    (LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION && reverseProxy)
+    (identityToken && reverseProxy)
   ) {
     const credentialProvider =
       !hasCompleteCredentials && !hasBearerToken && BEDROCK_AWS_PROFILE
@@ -331,14 +335,14 @@ export async function initializeBedrock(
     }
 
     const customClient = new BedrockRuntimeClient(customClientConfig);
-    // Deloitte Custom Change: Forward the local identity token to Deloitte gateway routes.
-    if (LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION && (BEDROCK_GATEWAY_URL || reverseProxy)) {
+    // Deloitte Custom Change: use the same current-user and local fallback policy as configured Gateway endpoints.
+    if (identityToken && (BEDROCK_GATEWAY_URL || reverseProxy)) {
       customClient.middlewareStack.add(
         (next) => async (args) => {
           const request = args.request as { headers?: Record<string, string> } | undefined;
           if (request && typeof request === 'object') {
             request.headers ??= {};
-            request.headers['x-id-token'] = LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION;
+            request.headers['x-id-token'] = identityToken;
           }
           return next(args);
         },

@@ -336,14 +336,14 @@ There is now **one source of truth** for LibreChat config:
 
 1. `librechat.yaml` (repo root)
    - Used by local Docker runs.
-   - Includes local gateway identity headers (`x-id-token`) for custom endpoints.
+   - Gateway endpoints opt into `{{LIBRECHAT_LLM_GATEWAY_ID_TOKEN}}`, which resolves each signed-in user's current OpenID ID token. OpenID users with a missing or expired ID token must re-authenticate; `LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION` is only the local non-OIDC fallback, and the header is omitted when neither identity is available.
 
 2. `charts/config/librechat.yaml` (symlink)
    - Points to the root file to keep local and deployment config in sync.
    - During `build-and-promote`, CI materializes a deployment copy by:
-     - removing local-only `x-id-token` headers, and
+     - retaining every gateway `x-id-token` placeholder for request-time user-token resolution, and
      - ensuring `fileStrategy: "azure_blob"` is present for Kubernetes.
-   - In deployed environments, auth is injected by `llm-gateway-proxy` as `x-sa-token` using the pod service account token.
+   - In deployed environments, `llm-gateway-proxy` forwards the resolved `x-id-token` and injects `x-sa-token` using the pod service account token. Gateway token-limit responses, including their status and JSON body, are passed through to the application.
 
 ---
 

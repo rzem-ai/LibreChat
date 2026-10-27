@@ -6,6 +6,7 @@ import {
   BEDROCK_FINE_GRAINED_TOOL_STREAMING_BETA,
 } from 'librechat-data-provider';
 import type { BaseInitializeParams, BedrockLLMConfigResult } from '~/types';
+import { OpenIDReauthRequiredError } from '~/utils/oidc';
 import { initializeBedrock } from './initialize';
 import { checkUserKeyExpiry } from '~/utils';
 
@@ -28,6 +29,7 @@ jest.mock('@aws-sdk/client-bedrock-runtime', () => ({
   BedrockRuntimeClient: jest.fn().mockImplementation((config) => ({
     ...config,
     _isBedrockClient: true,
+    middlewareStack: { add: jest.fn() },
   })),
 }));
 
@@ -43,7 +45,7 @@ const createMockParams = (
   overrides: Partial<{
     config: Record<string, unknown>;
     body: Record<string, unknown>;
-    user: { id: string };
+    user: { id: string } & Record<string, unknown>;
     model_parameters: Record<string, unknown>;
     env: Record<string, string | undefined>;
   }> = {},
@@ -383,6 +385,59 @@ describe('initializeBedrock', () => {
   });
 
   describe('Proxy Configuration', () => {
+    // Deloitte Custom Change: verify Bedrock forwards current user tokens and rejects expired identities.
+    it('Deloitte Custom Change: should forward the querying OpenID user ID token to the gateway', async () => {
+      // A hostname-only proxy plus a user token must activate the custom client without a shared token.
+      process.env.BEDROCK_REVERSE_PROXY = 'gateway.example.com';
+      const idToken = `header.${Buffer.from(
+        JSON.stringify({ sub: 'user-123', exp: Math.floor(Date.now() / 1000) + 3600 }),
+      ).toString('base64')}.signature`;
+      const result = (await initializeBedrock(
+        createMockParams({
+          user: {
+            id: 'user-123',
+            provider: 'openid',
+            openidId: 'user-123',
+            federatedTokens: { id_token: idToken },
+          },
+        }),
+      )) as BedrockLLMConfigResult;
+      const client = result.llmConfig.client as unknown as {
+        middlewareStack: { add: jest.Mock };
+      };
+      expect(client).toHaveProperty('endpoint', 'https://gateway.example.com');
+      const middleware = client.middlewareStack.add.mock.calls[0][0] as (
+        next: jest.Mock,
+      ) => (args: { request: { headers: Record<string, string> } }) => Promise<void>;
+      const next = jest.fn();
+      const request: { headers: Record<string, string> } = { headers: {} };
+
+      await middleware(next)({ request });
+
+      expect(request.headers['x-id-token']).toBe(idToken);
+      expect(next).toHaveBeenCalledWith({ request });
+    });
+
+    it('Deloitte Custom Change: should require re-auth when the querying user ID token is expired', async () => {
+      process.env.BEDROCK_GATEWAY_URL = 'http://127.0.0.1:8081';
+      process.env.LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION = 'local-gateway-token';
+      const expiredIdToken = `header.${Buffer.from(
+        JSON.stringify({ sub: 'user-123', exp: Math.floor(Date.now() / 1000) - 3600 }),
+      ).toString('base64')}.signature`;
+      await expect(
+        initializeBedrock(
+          createMockParams({
+            user: {
+              id: 'user-123',
+              provider: 'openid',
+              openidId: 'user-123',
+              federatedTokens: { id_token: expiredIdToken },
+            },
+          }),
+        ),
+      ).rejects.toBeInstanceOf(OpenIDReauthRequiredError);
+    });
+
     it('should use the pod-local gateway root so Bedrock requests retain their native paths', async () => {
       process.env.BEDROCK_GATEWAY_URL = 'http://127.0.0.1:8081';
       const params = createMockParams();

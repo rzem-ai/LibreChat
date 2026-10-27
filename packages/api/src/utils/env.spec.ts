@@ -9,6 +9,7 @@ import {
   processMCPEnv,
   encodeHeaderValue,
 } from './env';
+import { OpenIDReauthRequiredError } from './oidc';
 import { applyRequestHeaders } from '~/mcp/utils';
 
 function isStdioOptions(options: MCPOptions): options is Extract<MCPOptions, { type?: 'stdio' }> {
@@ -2292,6 +2293,31 @@ describe('createSafeUser', () => {
     expect(() => createSafeUser(user)).not.toThrow();
     expect(createSafeUser(user).id).toBeUndefined();
   });
+
+  it('Deloitte Custom Change: preserves only the ID token for Gateway identity resolution', () => {
+    const idToken = `header.${Buffer.from(
+      JSON.stringify({ sub: 'oidc-user', exp: Math.floor(Date.now() / 1000) + 3600 }),
+    ).toString('base64')}.signature`;
+    const user = createTestUser({
+      provider: 'openid',
+      openidId: 'oidc-user',
+      openidTokens: {
+        id_token: idToken,
+        access_token: 'must-not-be-copied',
+        refresh_token: 'must-not-be-copied',
+      },
+    });
+
+    const safeUser = createSafeUser(user);
+    const resolved = resolveHeaders({
+      headers: { 'x-id-token': '{{LIBRECHAT_LLM_GATEWAY_ID_TOKEN}}' },
+      user: safeUser,
+      stripUnresolved: true,
+    });
+
+    expect(safeUser.openidTokens).toEqual({ id_token: idToken });
+    expect(resolved['x-id-token']).toBe(idToken);
+  });
 });
 
 describe('resolveHeaders stripUnresolved', () => {
@@ -2547,7 +2573,13 @@ describe('processMCPEnv OpenID re-authentication signalling', () => {
     );
   });
 
-  /** The OpenID JWT strategy leaves `access_token` unset when it cannot identify the request bearer as one */
+  /**
+   * The OpenID JWT strategy leaves `access_token` unset when it cannot identify the request bearer
+   * as one.
+   *
+   * @param idTokenExp - Expiry timestamp for the fixture ID token
+   * @returns User fixture and its ID token
+   */
   function accessTokenlessOpenIDUser(idTokenExp: number): { user: IUser; idToken: string } {
     const idToken = `header.${Buffer.from(
       JSON.stringify({ sub: 'oidc-sub-456', exp: idTokenExp }),
@@ -2570,6 +2602,117 @@ describe('processMCPEnv OpenID re-authentication signalling', () => {
     });
 
     expect(resolved.Authorization).toBe(`Bearer ${idToken}`);
+  });
+
+  it('Deloitte Custom Change: prefers the signed-in user ID token for gateway requests', () => {
+    const { user, idToken } = accessTokenlessOpenIDUser(validSeconds);
+
+    const resolved = resolveHeaders({
+      headers: { 'x-id-token': '{{LIBRECHAT_LLM_GATEWAY_ID_TOKEN}}' },
+      user,
+      stripUnresolved: true,
+    });
+
+    expect(resolved['x-id-token']).toBe(idToken);
+  });
+
+  it('Deloitte Custom Change: retains the local gateway token for non-OIDC users', () => {
+    const originalToken = process.env.LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION;
+    process.env.LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION = 'local-gateway-token';
+
+    try {
+      const resolved = resolveHeaders({
+        headers: { 'x-id-token': '{{LIBRECHAT_LLM_GATEWAY_ID_TOKEN}}' },
+        user: createTestUser(),
+        stripUnresolved: true,
+      });
+
+      expect(resolved['x-id-token']).toBe('local-gateway-token');
+    } finally {
+      if (originalToken == null) {
+        delete process.env.LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION;
+      } else {
+        process.env.LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION = originalToken;
+      }
+    }
+  });
+
+  it('Deloitte Custom Change: requires re-auth when an OpenID session has no ID token', () => {
+    const originalToken = process.env.LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION;
+    process.env.LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION = 'local-gateway-token';
+
+    try {
+      expect(() =>
+        resolveHeaders({
+          headers: { 'x-id-token': '{{LIBRECHAT_LLM_GATEWAY_ID_TOKEN}}' },
+          user: {
+            ...createTestUser({ id: 'user-123', provider: 'openid' }),
+            openidId: 'oidc-sub-456',
+            federatedTokens: { access_token: 'access-token' },
+          } as IUser,
+          stripUnresolved: true,
+        }),
+      ).toThrow(OpenIDReauthRequiredError);
+    } finally {
+      if (originalToken == null) {
+        delete process.env.LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION;
+      } else {
+        process.env.LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION = originalToken;
+      }
+    }
+  });
+
+  it('Deloitte Custom Change: requires re-auth when the signed-in user ID token is expired', () => {
+    const originalToken = process.env.LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION;
+    process.env.LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION = 'local-gateway-token';
+
+    try {
+      const { user } = accessTokenlessOpenIDUser(expiredSeconds);
+      expect(() =>
+        resolveHeaders({
+          headers: { 'x-id-token': '{{LIBRECHAT_LLM_GATEWAY_ID_TOKEN}}' },
+          user,
+          stripUnresolved: true,
+        }),
+      ).toThrow(OpenIDReauthRequiredError);
+    } finally {
+      if (originalToken == null) {
+        delete process.env.LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION;
+      } else {
+        process.env.LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION = originalToken;
+      }
+    }
+  });
+
+  it('Deloitte Custom Change: omits the gateway identity header when no token is available', () => {
+    const originalToken = process.env.LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION;
+    delete process.env.LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION;
+
+    try {
+      const resolved = resolveHeaders({
+        headers: { 'x-id-token': '{{LIBRECHAT_LLM_GATEWAY_ID_TOKEN}}' },
+        user: createTestUser(),
+        stripUnresolved: true,
+      });
+
+      expect(resolved['x-id-token']).toBeUndefined();
+    } finally {
+      if (originalToken != null) {
+        process.env.LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION = originalToken;
+      }
+    }
+  });
+
+  it('Deloitte Custom Change: does not override ordinary x-id-token headers', () => {
+    const { user } = accessTokenlessOpenIDUser(validSeconds);
+
+    const resolved = resolveHeaders({
+      headers: { 'x-id-token': 'non-gateway-provider-token' },
+      user,
+      stripUnresolved: true,
+    });
+
+    expect(resolved['x-id-token']).toBe('non-gateway-provider-token');
   });
 
   it('should keep identity metadata literal while no access token is stored', () => {

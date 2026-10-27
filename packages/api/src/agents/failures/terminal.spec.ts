@@ -333,6 +333,32 @@ describe('terminal agent-run error logging', () => {
     );
   });
 
+  // Deloitte Custom Change: verify terminal agent failures expose only localized Gateway quota copy.
+  it('uses safe localized copy for a Gateway budget rejection', () => {
+    const observer = createTerminalRunErrorObserver({
+      logger: { error: jest.fn() },
+      source: '[Agent API]',
+      protectionEnabled: false,
+    });
+    const providerError = Object.assign(new Error('provider response body'), {
+      status: 429,
+      response: {
+        status: 429,
+        data: {
+          error: {
+            code: 'quota_exceeded',
+            details: { current_usage: '$149.37', reset_time: '2026-10-13T00:00:00Z' },
+          },
+        },
+      },
+    });
+    observer.modelCallback.handleLLMError(providerError);
+
+    const userError = observer.getUserFacingError(providerError, () => 'fallback');
+    expect(userError).toBe(JSON.stringify({ type: 'quota_exceeded' }));
+    expect(userError).not.toContain('149.37');
+  });
+
   it('contains hostile provider accessors while building the safe fallback', () => {
     const observer = createTerminalRunErrorObserver({
       logger: { error: jest.fn() },
