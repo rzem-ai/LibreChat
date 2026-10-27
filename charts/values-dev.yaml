@@ -64,7 +64,7 @@ pods:
         image:
           repository: 'tt-librechat/llm-gateway-proxy'
           pullPolicy: Always
-          tag: 'develop@sha256:309da553281b5d57d9bc07eab902fad6c85db87bf1c6a6b52e201eb8fdc2d9d3'
+          tag: 'develop@sha256:27733cb5a0cfee34abbf4a83b44189e66065ea13aa3bc72f1ec960a990b42702'
         env:
           TOKEN_PROXY_AZURE_AU_URL: 'http://azure-aus-east.llm-gateway-ctnp.svc.cluster.local:8080'
           TOKEN_PROXY_AZURE_GLOBAL_URL: 'http://foundry-eastus.llm-gateway-ctnp.svc.cluster.local:8080'
@@ -75,7 +75,7 @@ pods:
     containers:
       librechat:
         image:
-          tag: 'develop@sha256:f516ca84963b231f30d681aefcfb2374174541aa73a88e0ab60595adab8d5a42'
+          tag: 'develop@sha256:161cb312c2ad755ebbe66aea161bd446acc27cd5768528dff69ef3cb11b45a23'
         resources:
           requests:
             memory: "1Gi"
@@ -200,7 +200,7 @@ pods:
         image:
           repository: 'tt-librechat/rag-api'
           pullPolicy: Always
-          tag: 'develop@sha256:db486438ba0766771eb50e63d16665cdbef7ebf110a8f4f96ab48404e30293f4'
+          tag: 'develop@sha256:68ad666a153f9b4ed6c311501bfb15748dc6818b8266f09d20a40062a36b1e77'
         resources:
           requests:
             memory: "1Gi"
@@ -264,7 +264,7 @@ pods:
         image:
           repository: 'tt-librechat/admin'
           pullPolicy: Always
-          tag: 'develop@sha256:0b27bd581a7a104ad65beaa8c1a25b442528b7f4e3b166b77cfba59799d11963'
+          tag: 'develop@sha256:e2de5b76601b03f822d7a62649df7969e49544fe9429739346f16646950831bc'
         env:
           PORT: '3000'
           ADMIN_SSO_ONLY: 'true'
