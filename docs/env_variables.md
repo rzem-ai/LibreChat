@@ -69,7 +69,7 @@ Client IDs, tenant IDs, Agent IDs, URLs, scopes and feature flags are **not** se
 `quickstart.sh` copies `.env.deloitte` to `.env`, fills every key listed in the two `.example` files, sets the hostname-based URLs, and starts the containers. After your change, run it and check:
 
 ```zsh
-./quickstart.sh "<YOUR_TOKEN_HERE>"
+./quickstart.sh
 ```
 
 - It completes without a "Missing secrets in …" error.
