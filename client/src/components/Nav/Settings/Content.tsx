@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { SettingsTabValues } from 'librechat-data-provider';
 import type { SettingsContextValue, SettingsTab, SettingEntry } from './types';
+import MemoriesSettingsPanel from './Memories';
 import { filterSettings } from './search';
 import SpeechNotice from './SpeechNotice';
 import { useLocalize } from '~/hooks';
@@ -54,6 +55,12 @@ export default function Content({ activeTab, query, ctx }: ContentProps) {
         )}
       </div>
     );
+  }
+
+  // Deloitte Custom Change: the Memories tab has no fixed sections (it's driven by
+  // useMemoryPanelState instead of the registry), so it renders its own panel here.
+  if (activeTab === SettingsTabValues.MEMORIES) {
+    return <MemoriesSettingsPanel />;
   }
 
   return (

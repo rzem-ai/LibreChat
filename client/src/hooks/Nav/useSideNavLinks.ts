@@ -38,6 +38,7 @@ import { MemoryPanel } from '~/components/SidePanel/Memories';
 import FilesPanel from '~/components/SidePanel/Files/Panel';
 import { PromptsAccordion } from '~/components/Prompts';
 import { SkillsAccordion } from '~/components/Skills';
+import { useGetStartupConfig } from '~/data-provider';
 
 export default function useSideNavLinks({
   hidePanel,
@@ -76,6 +77,11 @@ export default function useSideNavLinks({
     permissionType: PermissionTypes.MEMORIES,
     permission: Permissions.READ,
   });
+  // Deloitte Custom Change: when the Memories tab is enabled, memory management moves
+  // into Settings, so the sidebar panel link below is suppressed to avoid duplicating it.
+  const { data: startupConfig } = useGetStartupConfig();
+  const memoriesInSettingsEnabled =
+    startupConfig?.interface?.customDeloitteFeatureFlags?.memoriesInSettings === true;
   const hasAccessToAgents = useHasAccess({
     permissionType: PermissionTypes.AGENTS,
     permission: Permissions.USE,
@@ -179,7 +185,7 @@ export default function useSideNavLinks({
       });
     }
 
-    if (hasAccessToMemories && hasAccessToReadMemories) {
+    if (hasAccessToMemories && hasAccessToReadMemories && !memoriesInSettingsEnabled) {
       links.push({
         title: 'com_ui_memories',
         label: '',
@@ -273,6 +279,7 @@ export default function useSideNavLinks({
     skillsEnabled,
     hasAccessToMemories,
     hasAccessToReadMemories,
+    memoriesInSettingsEnabled,
     hasAccessToSchedules,
     interfaceConfig.schedules,
     interfaceConfig.parameters,
