@@ -16,7 +16,7 @@
 # 5. Force-recreates the api container, then starts everything else with `docker compose up -d`
 #    (images are only built with --first-build, which runs `docker compose build` before starting
 #    and can take ~10 minutes; otherwise build commands are printed at the end).
-#    Skipped entirely with --skip-docker (only the files are prepared)
+#    Skipped entirely with --skip-docker (only the files are prepared, for npm runs)
 
 set -euo pipefail
 

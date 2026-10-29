@@ -17,6 +17,11 @@ uploads
 e2e
 evals
 untested_skills
+quickstart.sh
+env-diff.md
+Caddyfile*
+my.secrets
+secrets.json
 
 # Ignore all hidden files
 .?*

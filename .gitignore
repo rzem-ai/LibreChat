@@ -94,6 +94,7 @@ Caddyfile
 .npmrc
 .env*
 my.secrets
+env-diff.md
 !**/.env.example
 !**/.env.test.example
 !**/.env.deloitte
