@@ -1,6 +1,6 @@
 import { createElement } from 'react';
+import { MessageSquare, Info, Brain } from 'lucide-react';
 import { SettingsTabValues } from 'librechat-data-provider';
-import { MessageSquare, Info, Sparkles } from 'lucide-react';
 import { GearIcon, DataIcon, UserIcon, SpeechIcon } from '@librechat/client';
 import type { ComponentType, ReactNode } from 'react';
 import type { TranslationKeys } from '~/hooks';
@@ -176,7 +176,7 @@ export const TABS: TabMeta[] = [
   {
     id: SettingsTabValues.MEMORIES,
     labelKey: 'com_ui_settings_tab_memories',
-    icon: createElement(Sparkles, { className: 'icon-sm', 'aria-hidden': true }),
+    icon: createElement(Brain, { className: 'icon-sm', 'aria-hidden': true }),
     sections: [],
     show: (ctx) => ctx.memoriesTabEnabled && ctx.hasMemoriesAccess,
   },
