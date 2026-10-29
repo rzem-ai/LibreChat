@@ -77,10 +77,9 @@ pods:
           OPENID_ON_BEHALF_FLOW_USERINFO_SCOPE: 'user.read'
           OPENID_REQUIRED_ROLE_TOKEN_KIND: 'id'
           OPENID_REUSE_TOKENS: 'true'
-          # 86400000 ms = 24 hours - standardise token expiry for login and MCP OBO
-          OPENID_REUSE_MAX_SESSION_AGE_MS: '86400000'
-          SESSION_EXPIRY: '86400000'
-          REFRESH_TOKEN_EXPIRY: '86400000'
+          OPENID_REUSE_MAX_SESSION_AGE_MS: '2700000' #(ms): 45 minutes - !never more than idP's expiry window (1hr)!
+          SESSION_EXPIRY: '900000' #(ms): 15 minutes - increasing this wont extend users sessions it informs the app when to renew its session token
+          REFRESH_TOKEN_EXPIRY: '86400000' #(ms) 24 hrs
           OPENID_USE_END_SESSION_ENDPOINT: 'true'
           OPENID_BUTTON_LABEL: 'Continue with SSO'
           OPENID_IMAGE_URL: '/assets/icon-192x192.png'
