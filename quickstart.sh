@@ -1,7 +1,8 @@
 #!/bin/bash
 # Deloitte Custom File
 #
-# Usage: ./quickstart.sh [--overwrite=true|false] [--first-build]
+# Usage: ./quickstart.sh [--overwrite=true|false] [--first-build] [--skip-docker]
+# Defaults: --overwrite=true, --first-build (off), --skip-docker (off)
 #
 # You are prompted for your token without it being echoed. Passing the token as an argument
 # (./quickstart.sh [options] <token>) still works for non-interactive use, but it can end up in
@@ -14,7 +15,8 @@
 #    and generates Caddyfile from Caddyfile.deloitte.example for this host
 # 5. Force-recreates the api container, then starts everything else with `docker compose up -d`
 #    (images are only built with --first-build, which runs `docker compose build` before starting
-#    and can take ~10 minutes; otherwise build commands are printed at the end)
+#    and can take ~10 minutes; otherwise build commands are printed at the end).
+#    Skipped entirely with --skip-docker (only the files are prepared)
 
 set -euo pipefail
 
@@ -32,6 +34,7 @@ TOKEN_KEYS=(ANTHROPIC_API_KEY LLM_GATEWAY_LOCAL_IDENTITY_TOKEN_SESSION RAG_OPENA
 
 OVERWRITE=true
 FIRST_BUILD=false
+SKIP_DOCKER=false
 TOKEN=""
 
 die() {
@@ -40,7 +43,7 @@ die() {
 }
 
 usage() {
-  echo "Usage: $0 [--overwrite=true|false] [--first-build]" >&2
+  echo "Usage: $0 [--overwrite=true|false] [--first-build] [--skip-docker]" >&2
 }
 
 for arg in "$@"; do
@@ -48,11 +51,17 @@ for arg in "$@"; do
     --overwrite=true) OVERWRITE=true ;;
     --overwrite=false) OVERWRITE=false ;;
     --first-build) FIRST_BUILD=true ;;
+    --skip-docker) SKIP_DOCKER=true ;;
     --overwrite=*) usage; die "--overwrite must be 'true' or 'false'" ;;
     -*) usage; die "Unknown option: $arg" ;;
     *) [ -z "$TOKEN" ] || die "Only one token argument is allowed"; TOKEN="$arg" ;;
   esac
 done
+
+if [ "$SKIP_DOCKER" = true ] && [ "$FIRST_BUILD" = true ]; then
+  usage
+  die "--skip-docker and --first-build cannot be combined"
+fi
 
 if [ -n "$TOKEN" ]; then
   echo "WARNING: passing the token as an argument can save it in your shell history." >&2
@@ -183,24 +192,27 @@ else
   echo "      Keeping existing $CADDY_FILE (--overwrite=false)"
 fi
 
-echo "[5/5] Starting containers"
-if [ "$FIRST_BUILD" = true ]; then
-  echo "      Building images for the first time -- this can take ~10 minutes..."
-  docker compose build
-fi
-docker compose up -d --force-recreate api
-docker compose up -d
-[ "$CADDY_CHANGED" = false ] || docker compose restart caddy
-
-if [ "$FIRST_BUILD" = true ]; then
-  BUILD_NOTE="Images were built for the first time (--first-build)."
+if [ "$SKIP_DOCKER" = true ]; then
+  echo "[5/5] Skipping containers (--skip-docker)"
 else
-  BUILD_NOTE="NO images were rebuilt: api, admin-panel and rag_api are running their existing images."
-fi
-echo
-echo "The api container was force-recreated and all other containers were started."
-echo "$BUILD_NOTE"
-cat <<'EOF'
+  echo "[5/5] Starting containers"
+  if [ "$FIRST_BUILD" = true ]; then
+    echo "      Building images for the first time -- this can take ~10 minutes..."
+    docker compose build
+  fi
+  docker compose up -d --force-recreate api
+  docker compose up -d
+  [ "$CADDY_CHANGED" = false ] || docker compose restart caddy
+
+  if [ "$FIRST_BUILD" = true ]; then
+    BUILD_NOTE="Images were built for the first time (--first-build)."
+  else
+    BUILD_NOTE="NO images were rebuilt: api, admin-panel and rag_api are running their existing images."
+  fi
+  echo
+  echo "The api container was force-recreated and all other containers were started."
+  echo "$BUILD_NOTE"
+  cat <<'EOF'
 
 If you have pulled new code or packages, rebuild what changed using the guidance below.
 
@@ -224,6 +236,7 @@ If you have pulled new code or packages, rebuild what changed using the guidance
 
 Changes to .env or the .secrets files alone need no build; re-run this script instead.
 EOF
+fi
 APP_TITLE="$(secret_value APP_TITLE "$TARGET_ENV")"
 APP_TITLE="${APP_TITLE%\"}"
 APP_TITLE="${APP_TITLE#\"}"
