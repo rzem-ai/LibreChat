@@ -833,6 +833,34 @@ describe('MCPManager', () => {
       expect(updateActivity).not.toHaveBeenCalled();
       expect(manager.getConnectionStats().activityEntries).toBe(0);
     });
+
+    // Deloitte Custom Change: assert publication metadata is requested transparently.
+    it('requests publicationdate with IBISWorld report sections', async () => {
+      const manager = new MCPManager();
+      const connection = createConnection();
+      jest.spyOn(manager, 'getConnection').mockResolvedValue(connection);
+
+      await manager.callTool({
+        serverName,
+        serverConfig,
+        toolName: 'ibisworld_report_sections',
+        provider: 'openai',
+        toolArguments: { code: '56162', sections: ['outlookanalysis'] },
+        flowManager: mockFlowManager,
+      });
+
+      expect(connection.client.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'tools/call',
+          params: {
+            name: 'ibisworld_report_sections',
+            arguments: { code: '56162', sections: ['outlookanalysis', 'publicationdate'] },
+          },
+        }),
+        expect.anything(),
+        expect.anything(),
+      );
+    });
   });
 
   describe('callTool - cancellation logging', () => {

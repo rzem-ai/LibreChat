@@ -36,17 +36,11 @@ interface HighlightItem {
   Unit?: string;
 }
 
-type ReportSectionBody =
-  | PlainTextBody
-  | SwotBody
-  | KeyStatistic[]
-  | OutlookAnalysisItem[]
-  | HighlightItem[];
-
 interface ReportSection {
   RequestedSection?: string;
   StatusCode?: number;
-  Body?: Record<string, ReportSectionBody | undefined>;
+  // Deloitte Custom Change: MCP section bodies are raw JSON and may be a string, object, or date value.
+  Body?: unknown;
 }
 
 interface ReportPayload {
@@ -93,34 +87,47 @@ function humanizeSectionTitle(key: string): string {
 }
 
 /**
+ * Deloitte Custom Change: narrows untrusted MCP JSON records before reading fields.
+ * @param value An untrusted value from an MCP response.
+ * @returns True when the value is a non-null, non-array object with string keys.
+ */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/**
  * Deloitte Custom Change
- * Finds the first section carrying a given top-level string field (`Title`,
- * `PublicationDate`) and returns `transform`'s result for it, skipping
+ * Finds the first section carrying a given top-level string field (`Title`)
+ * and returns `transform`'s result for it, skipping
  * error-status sections exactly like the main section-building loop does —
  * otherwise a field from a section the rest of the code treats as unusable
  * (`StatusCode >= 400`) could still leak into every other section's citation.
  * Tries the next section when `transform` rejects a value (returns
  * `undefined`), e.g. an unparseable date, rather than giving up.
+ * @param sections The report sections to inspect.
+ * @param usesBodyWrapper Whether section data is nested under `Body`.
+ * @param field The field to locate.
+ * @param transform Converts the field value to its result form.
+ * @returns The first transformed field value, or undefined when none is usable.
  */
 function findReportFieldValue<T>(
   sections: ReportSection[],
   usesBodyWrapper: boolean,
-  field: 'Title' | 'PublicationDate',
+  field: 'Title',
   transform: (raw: string) => T | undefined,
 ): T | undefined {
   for (const section of sections) {
-    if (!section || typeof section !== 'object') {
+    const sectionData = usesBodyWrapper ? section?.Body : section;
+    if (!isRecord(sectionData)) {
       continue;
     }
     if (usesBodyWrapper) {
       const isErrorStatus = typeof section.StatusCode === 'number' && section.StatusCode >= 400;
-      if (isErrorStatus || !section.Body) {
+      if (isErrorStatus) {
         continue;
       }
     }
-    const value: unknown = usesBodyWrapper
-      ? section.Body?.[field]
-      : (section as Record<string, unknown>)[field];
+    const value = sectionData[field];
     if (typeof value !== 'string') {
       continue;
     }
@@ -155,19 +162,91 @@ function prefixSectionTitle(sectionTitle: string, reportTitle: string | undefine
   return reportTitle ? `${reportTitle}: ${sectionTitle}` : sectionTitle;
 }
 
+/** Deloitte Custom Change: IBISWorld APIs use these report-date metadata field names. */
+const REPORT_DATE_FIELDS = ['PublicationDate', 'PublishedDate', 'LastApprovedDate'] as const;
+
 /**
- * Deloitte Custom Change
- * Finds the report's own `PublicationDate` (e.g. `ibisworld_full_report`'s
- * top-level `{ PublicationDate: "..." }` section), the same way
- * {@link extractReportTitle} finds `Title` — so every section built from this
- * report can carry the date as its own `date` field instead of
- * `PublicationDate` becoming an unrelated, orphaned citation.
+ * Deloitte Custom Change: formats the date value returned by IBISWorld metadata.
+ * @param rawDateValue A date string or an IBISWorld date object containing Date, Value, or PlainText.
+ * @returns The display-formatted date, or undefined when the value is absent or invalid.
+ */
+function formatReportDate(rawDateValue: unknown): string | undefined {
+  if (typeof rawDateValue === 'string') {
+    return formatDisplayDate(rawDateValue);
+  }
+  if (isRecord(rawDateValue)) {
+    const dateMetadata = rawDateValue;
+    return formatReportDate(
+      dateMetadata.Date ??
+        dateMetadata.date ??
+        dateMetadata.Value ??
+        dateMetadata.value ??
+        dateMetadata.PlainText,
+    );
+  }
+  return undefined;
+}
+
+/**
+ * Deloitte Custom Change: reads the first valid IBISWorld date alias from a record.
+ * @param reportRecord An IBISWorld report or report-list item.
+ * @returns The display-formatted report date, or undefined when no supported date is present.
+ */
+function findReportDateValue(reportRecord: Record<string, unknown>): string | undefined {
+  for (const dateField of REPORT_DATE_FIELDS) {
+    const dateFieldEntry = Object.entries(reportRecord).find(
+      ([key]) => key.toLowerCase() === dateField.toLowerCase(),
+    );
+    const formattedDate = dateFieldEntry ? formatReportDate(dateFieldEntry[1]) : undefined;
+    if (formattedDate) {
+      return formattedDate;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Deloitte Custom Change: reads publication metadata from report sections, including the
+ * explicitly requested `publicationdate` section and full-report metadata.
+ * @param sections The section entries returned by an IBISWorld MCP tool.
+ * @param usesBodyWrapper Whether entries store their payload under `Body`.
+ * @returns The display-formatted report date, or undefined when no valid date is returned.
  */
 function extractReportPublicationDate(
   sections: ReportSection[],
   usesBodyWrapper: boolean,
 ): string | undefined {
-  return findReportFieldValue(sections, usesBodyWrapper, 'PublicationDate', formatDisplayDate);
+  for (const dateField of REPORT_DATE_FIELDS) {
+    for (const section of sections) {
+      if (!section || typeof section !== 'object') {
+        continue;
+      }
+      const isErrorStatus = typeof section.StatusCode === 'number' && section.StatusCode >= 400;
+      if (usesBodyWrapper && isErrorStatus) {
+        continue;
+      }
+      const sectionData = usesBodyWrapper ? section?.Body : section;
+      if (isRecord(sectionData)) {
+        const dateFieldEntry = Object.entries(sectionData).find(
+          ([key]) => key.toLowerCase() === dateField.toLowerCase(),
+        );
+        const formattedDate = dateFieldEntry ? formatReportDate(dateFieldEntry[1]) : undefined;
+        if (formattedDate) {
+          return formattedDate;
+        }
+      }
+      if (
+        dateField === 'PublicationDate' &&
+        section.RequestedSection?.trim().toLowerCase() === 'publicationdate'
+      ) {
+        const formattedRequestedDate = formatReportDate(sectionData);
+        if (formattedRequestedDate) {
+          return formattedRequestedDate;
+        }
+      }
+    }
+  }
+  return undefined;
 }
 
 function formatSwotBody(body: SwotBody): string | undefined {
@@ -308,8 +387,8 @@ function formatGenericBody(body: unknown): string | undefined {
   return undefined;
 }
 
-/** Deloitte Custom Change: a single loosely-typed report-list entry (e.g. `{ Code, Title, Country }` for `ibisworld_list_reports`) — field names aren't pinned down beyond a handful of known keys, so any string/number/boolean leaf value is accepted. */
-type ReportListItem = Record<string, string | number | boolean | null | undefined>;
+/** Deloitte Custom Change: raw IBISWorld list-report item; metadata may include nested date objects. */
+type ReportListItem = Record<string, unknown>;
 
 /**
  * Deloitte Custom Change
@@ -373,12 +452,15 @@ function buildReportListSources(
     if (!title) {
       continue;
     }
+    // Deloitte Custom Change: attach available IBISWorld date metadata to each report-list citation.
+    const reportDate = findReportDateValue(item);
     sources.push({
       toolName,
       serverName,
       title,
       link: resolveMCPSourceLink(toolName, { code, country }),
       content: [title, content].join('\n\n'),
+      date: reportDate,
     });
   }
   return sources;
@@ -440,24 +522,27 @@ export function buildReportSources({
     if (sources.length >= MAX_REPORT_SECTION_ITEMS) {
       break;
     }
-    if (!section || typeof section !== 'object') {
+    if (!isRecord(section)) {
       continue;
     }
     let bodyKey: string | undefined;
     let body: unknown;
     if (usesBodyWrapper) {
       const isErrorStatus = typeof section.StatusCode === 'number' && section.StatusCode >= 400;
-      if (isErrorStatus || !section.Body) {
+      if (isErrorStatus || !isRecord(section.Body)) {
         continue;
       }
       [bodyKey] = Object.keys(section.Body);
       body = bodyKey ? section.Body[bodyKey] : undefined;
     } else {
       [bodyKey] = Object.keys(section);
-      body = bodyKey ? (section as Record<string, unknown>)[bodyKey] : undefined;
+      body = bodyKey ? section[bodyKey] : undefined;
     }
-    // Deloitte Custom Change: `PublicationDate` is surfaced via `reportDate` on every section instead of its own citation.
-    if (bodyKey === 'PublicationDate') {
+    // Deloitte Custom Change: report dates are attached to every content section, not cited separately.
+    if (
+      bodyKey &&
+      REPORT_DATE_FIELDS.some((field) => field.toLowerCase() === bodyKey.toLowerCase())
+    ) {
       continue;
     }
     const formatted =

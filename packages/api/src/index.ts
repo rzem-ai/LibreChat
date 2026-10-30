@@ -43,7 +43,7 @@ export * from './mcp/authorizationRetry';
 export * from './mcp/assistants';
 export * from './mcp/request';
 // Deloitte Custom Change: anchor citations to MCP tool results
-export * from './mcp/feed/feed';
+export * from './mcp/sources';
 export * from './mcp/reinitialize';
 export * from './mcp/icons';
 /* Utilities */

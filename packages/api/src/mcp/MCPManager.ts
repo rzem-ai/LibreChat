@@ -41,6 +41,7 @@ import { UserConnectionManager } from './UserConnectionManager';
 import { ConnectionsRepository } from './ConnectionsRepository';
 import { MCPConnectionFactory } from './MCPConnectionFactory';
 import { processMCPEnv, isPluginSourced } from '~/utils/env';
+import { withPublicationDateSection } from './ibisworld';
 import { OAuthLifecycleRelay } from './oauth/pending';
 import { preProcessGraphTokens } from '~/utils/graph';
 import { isOwnedAbortError } from '~/utils/errors';
@@ -1576,7 +1577,8 @@ Please follow these instructions when using tools from the respective MCP server
                 method: 'tools/call',
                 params: {
                   name: toolName,
-                  arguments: toolArguments,
+                  // Deloitte Custom Change: ask IBISWorld for publication metadata with report sections.
+                  arguments: withPublicationDateSection(toolName, toolArguments),
                 },
               },
               CallToolResultSchema,
