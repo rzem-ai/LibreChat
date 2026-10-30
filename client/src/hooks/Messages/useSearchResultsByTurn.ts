@@ -142,6 +142,8 @@ export function useSearchResultsByTurn(attachments?: TAttachment[]) {
             type: 'mcp' as const,
             usageRestriction: source.usageRestriction,
             date: source.date, // Deloitte Custom Change: citation date
+            // Deloitte Custom Change: propagate the citation's semantic date label to the UI.
+            dateLabel: source.dateLabel,
             usageRestrictionLink: source.usageRestrictionLink,
           }));
 

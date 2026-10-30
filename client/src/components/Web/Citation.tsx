@@ -1,8 +1,10 @@
 import { memo, useState, useContext, useCallback } from 'react';
 import { FileText, Folder, TriangleAlert } from 'lucide-react';
 import { formatDisplayDate, normalizeServerName } from 'librechat-data-provider';
+import type { MCPResultDateLabel } from 'librechat-data-provider';
 import type { ReactNode, MouseEvent } from 'react';
 import type { SourceData } from '~/components/Web/SourceHovercard';
+import type { TranslationKeys } from '~/hooks/useLocalize';
 import type { CitationProps } from './types';
 import { SourceHovercard, TooltipContent, getCleanDomain } from '~/components/Web/SourceHovercard';
 import { CitationContext, useCitation, useCompositeCitations, useHighlightState } from './Context';
@@ -24,6 +26,8 @@ interface FileCitationSource {
   citationIds?: Array<string>;
   /** Deloitte Custom Change: citation date, formatted for display (e.g. "06 Nov 2025"). */
   date?: string;
+  /** Deloitte Custom Change: selects a semantic label for DPN and qualification citation dates. */
+  dateLabel?: MCPResultDateLabel;
   fileId?: string;
   fileName?: string;
   link?: string;
@@ -68,6 +72,22 @@ function getMCPSubtitle(mcpServerTitles: Map<string, string>, serverName?: strin
     getMCPServerLabel(mcpServerTitles, serverName) ??
     (isHttpLink(link) ? getCleanDomain(link) : serverName)
   );
+}
+
+/**
+ * Deloitte Custom Change: maps MCP citation date types to localized tooltip keys.
+ * @param dateLabel - Semantic date label supplied by the MCP source.
+ * @returns Translation key for the date label shown in the citation tooltip.
+ */
+function getMCPDateLabelKey(dateLabel?: MCPResultDateLabel): TranslationKeys {
+  switch (dateLabel) {
+    case 'engagementEnd':
+      return 'com_citation_engagement_end';
+    case 'lastUpdated':
+      return 'com_citation_last_updated';
+    default:
+      return 'com_citation_published';
+  }
 }
 
 /**
@@ -312,8 +332,13 @@ function CitationChip({ source, citationIds }: CitationChipProps) {
           title={source.title || getCitationLabel()}
           href={isHttpLink(source.link) ? source.link : undefined}
           subtitle={getMCPSubtitle(mcpServerTitles, source.serverName, source.link)}
-          // Deloitte Custom Change: published date shown in the MCP tooltip
-          date={source.date ?? extractMCPPublishedDate(source.snippet)}
+          // Deloitte Custom Change: show the source-specific semantic date label in the MCP tooltip.
+          date={
+            source.dateLabel
+              ? source.date
+              : (source.date ?? extractMCPPublishedDate(source.snippet))
+          }
+          dateLabelKey={getMCPDateLabelKey(source.dateLabel)}
         >
           {source.snippet && (
             <p className="mt-1.5 line-clamp-3 break-words text-xs leading-snug text-text-secondary">

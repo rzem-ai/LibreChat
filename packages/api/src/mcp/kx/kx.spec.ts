@@ -216,18 +216,18 @@ describe('buildKxSources', () => {
     expect(result?.sources[0].usageRestriction).toBe(false);
   });
 
-  // Deloitte Custom Change: verify the new `date` field is wired to sortbydate.
-  it('formats sortbydate as the citation date, omitting it when absent', () => {
+  // Deloitte Custom Change: verify document `sortbydate` is surfaced and absent dates are omitted.
+  it('formats a document sortbydate as the citation date, omitting it when absent', () => {
     const content = JSON.stringify({
       actualresults: [
         {
-          title: 'Decker, Heather',
-          appurl: 'https://stage.people.deloitte/profile/hdecker',
+          title: 'KX document',
+          appurl: 'https://resources.deloitte.com/document/1',
           sortbydate: '2026-06-24T00:00:00',
         },
         {
-          title: 'No date profile',
-          appurl: 'https://stage.people.deloitte/profile/nodate',
+          title: 'No date document',
+          appurl: 'https://resources.deloitte.com/document/2',
         },
       ],
     });
@@ -240,6 +240,72 @@ describe('buildKxSources', () => {
 
     expect(result?.sources[0].date).toBe('24 Jun 2026');
     expect(result?.sources[1].date).toBeUndefined();
+  });
+
+  // Deloitte Custom Change: keep DPN update dates and qualification end dates semantically distinct.
+  it('uses DPN last-updated fields and labels qualification dates as engagement end dates', () => {
+    const content = JSON.stringify({
+      actualresults: [
+        {
+          title: 'DPN profile',
+          source: 'DPN',
+          appurl: 'https://people.deloitte/profile/jeteo',
+          sortbydate: '1900-01-01T00:00:00',
+          lastUpdatedDate: '2025-08-15T00:00:00',
+        },
+        {
+          title: 'DPN profile without last update',
+          source: 'DPN',
+          appurl: 'https://people.deloitte/profile/another',
+          sortbydate: '1900-01-01T00:00:00',
+        },
+        {
+          title: 'KX qualification',
+          appurl: 'https://stagequals.deloitteresources.com/quals/view/139514/description/',
+          sortbydate: '2026-06-24T00:00:00',
+        },
+      ],
+    });
+
+    const result = buildKxSources({
+      toolName: 'kx_query',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+    });
+
+    expect(result?.sources[0]).toMatchObject({ date: '15 Aug 2025', dateLabel: 'lastUpdated' });
+    expect(result?.sources[1]).toMatchObject({ dateLabel: 'lastUpdated' });
+    expect(result?.sources[1].date).toBeUndefined();
+    expect(result?.sources[2]).toMatchObject({ date: '24 Jun 2026', dateLabel: 'engagementEnd' });
+  });
+
+  // Deloitte Custom Change: cover the actualresults-to-kxresults ID join used by DPN citations.
+  it('gets a DPN profile modified date from its matching KX result', () => {
+    const content = JSON.stringify({
+      actualresults: [
+        {
+          _id: 6047981,
+          title: 'DPN profile',
+          source: 'DPN',
+          appurl: 'https://people.deloitte/profile/example',
+          sortbydate: '2025-09-19T18:04:00',
+        },
+      ],
+      kxresults: [
+        {
+          id: 6047981,
+          modified: '2026-06-03T22:38:59.7033333',
+        },
+      ],
+    });
+
+    const result = buildKxSources({
+      toolName: 'kx_query',
+      serverName: 'cleartrack-mcp-gateway',
+      content,
+    });
+
+    expect(result?.sources[0]).toMatchObject({ date: '03 Jun 2026', dateLabel: 'lastUpdated' });
   });
 
   it('skips title-less fragment records so they never render as anonymous chips', () => {

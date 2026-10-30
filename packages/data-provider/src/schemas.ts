@@ -1,7 +1,7 @@
 import { z } from 'zod';
+import type { MCPResultDateLabel, SearchResultData } from './types/web';
 import type { TMessageContentParts } from './types/content';
 import type { AgentSubagentGraph } from './types/agents';
-import type { SearchResultData } from './types/web';
 import type { FunctionTool } from './types/tools';
 import type { TFile } from './types/files';
 import { CODE_ENVIRONMENT_MODES, CODE_WORKSPACE_ID_PATTERN } from './code/workspace';
@@ -1049,6 +1049,8 @@ export type MCPResultSource = {
   usageRestriction?: boolean;
   /** Deloitte Custom Change: citation date, formatted for display (e.g. "06 Nov 2025"). */
   date?: string;
+  /** Deloitte Custom Change: semantic label for a non-publication MCP citation date. */
+  dateLabel?: MCPResultDateLabel;
   /** Overrides `link` as the "Learn more" target on the usage-restriction notice (e.g. DPN's fixed terms-of-use page, rather than the profile itself). */
   usageRestrictionLink?: string;
 };

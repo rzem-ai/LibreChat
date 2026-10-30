@@ -353,6 +353,8 @@
   "com_auth_username_min_length": "Username must be at least 2 characters",
   "com_auth_verify_your_identity": "Verify Your Identity",
   "com_auth_welcome_back": "Log in to MyAssist",
+  "com_citation_engagement_end": "Engagement end date: {{date}}",
+  "com_citation_last_updated": "Last updated: {{date}}",
   "com_citation_more_details": "More details about {{label}}",
   "com_citation_published": "Published: {{date}}",
   "com_citation_uploaded": "Uploaded: {{date}}",

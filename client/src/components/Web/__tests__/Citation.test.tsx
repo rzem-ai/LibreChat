@@ -49,6 +49,13 @@ jest.mock('~/hooks', () => ({
     if (key === 'com_citation_published') {
       return `Published: ${values?.date ?? ''}`;
     }
+    // Deloitte Custom Change: render semantic MCP citation date labels in focused component tests.
+    if (key === 'com_citation_engagement_end') {
+      return `Engagement end date: ${values?.date ?? ''}`;
+    }
+    if (key === 'com_citation_last_updated') {
+      return `Last updated: ${values?.date ?? ''}`;
+    }
     if (key === 'com_citation_uploaded') {
       return `Uploaded: ${values?.date ?? ''}`;
     }
@@ -510,8 +517,8 @@ describe('Citation', () => {
     expect(dialog.querySelector('svg.lucide-file-text')).toBeInTheDocument();
   });
 
-  // Deloitte Custom Change: verify the MCP tooltip surfaces a citation's own `date` field.
-  it('shows the published date in the MCP tooltip when the source carries one', () => {
+  // Deloitte Custom Change: verify KX qualifications use their engagement end date label.
+  it('shows the engagement end date label for KX qualification citations', () => {
     const searchResults: Record<string, SearchResultData> = {
       '0': {
         mcp_results: [
@@ -524,6 +531,7 @@ describe('Citation', () => {
             toolName: 'kx_query',
             type: 'mcp',
             date: '24 Jun 2026',
+            dateLabel: 'engagementEnd',
           },
         ],
       },
@@ -545,7 +553,46 @@ describe('Citation', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'More details about KX' }));
 
-    expect(screen.getByRole('dialog')).toHaveTextContent('Published: 24 Jun 2026');
+    expect(screen.getByRole('dialog')).toHaveTextContent('Engagement end date: 24 Jun 2026');
+  });
+
+  // Deloitte Custom Change: verify DPN citations render the last-updated tooltip copy.
+  it('shows the last-updated label for DPN citations', () => {
+    const searchResults: Record<string, SearchResultData> = {
+      '0': {
+        mcp_results: [
+          {
+            attribution: 'kx',
+            link: 'https://people.deloitte/profile/jeteo',
+            serverName: 'kx',
+            snippet: 'DPN profile summary.',
+            title: 'DPN profile',
+            toolName: 'kx_query',
+            type: 'mcp',
+            date: '15 Aug 2025',
+            dateLabel: 'lastUpdated',
+          },
+        ],
+      },
+    };
+
+    renderWithProviders(
+      <Citation
+        citationId="cite-date-dpn"
+        citationType="standalone"
+        node={{
+          properties: {
+            citation: { turn: 0, refType: 'mcp', index: 0 },
+            citationId: 'cite-date-dpn',
+          },
+        }}
+      />,
+      searchResults,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'More details about KX' }));
+
+    expect(screen.getByRole('dialog')).toHaveTextContent('Last updated: 15 Aug 2025');
   });
 
   // Deloitte Custom Change: verify the fallback that extracts a date from a `PublishedDate:` snippet when the source has no dedicated `date` field.

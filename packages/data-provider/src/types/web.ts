@@ -4,6 +4,9 @@ import type { webSearchSchema } from '../config';
 
 export type SearchRefType = 'search' | 'image' | 'news' | 'video' | 'ref' | 'mcp';
 
+/** Deloitte Custom Change: semantic labels for MCP citation dates beyond Published. */
+export type MCPResultDateLabel = 'engagementEnd' | 'lastUpdated';
+
 export enum DATE_RANGE {
   PAST_HOUR = 'h',
   PAST_24_HOURS = 'd',
@@ -67,6 +70,8 @@ export type MCPResultReference = {
   usageRestriction?: boolean;
   /** Deloitte Custom Change: citation date, formatted for display (e.g. "06 Nov 2025"). */
   date?: string;
+  /** Deloitte Custom Change: semantic label for a non-publication MCP citation date. */
+  dateLabel?: MCPResultDateLabel;
   usageRestrictionLink?: string;
 };
 
