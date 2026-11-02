@@ -113,7 +113,7 @@ apply_secrets() {
       for (j = 1; j <= n; j++) if (!(order[j] in done)) print vals[order[j]]
     }
   ' "$source" "$target" > "$tmp"
-  chmod --reference="$target" "$tmp" 2>/dev/null || chmod 600 "$tmp"
+  chmod 600 "$tmp"
   mv "$tmp" "$target"
 }
 
