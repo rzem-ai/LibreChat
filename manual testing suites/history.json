@@ -5,7 +5,7 @@
   "tests": [
     {
       "id": "HIST-001",
-      "goal": "Flip between regenerated replies",
+      "goal": "Confirm that a user can flip between regenerated replies",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -25,7 +25,7 @@
     },
     {
       "id": "HIST-002",
-      "goal": "Branches survive leaving and returning to a chat",
+      "goal": "Confirm that branches survive leaving and returning to a chat",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -42,7 +42,7 @@
     },
     {
       "id": "HIST-003",
-      "goal": "Keep chatting after an error",
+      "goal": "Confirm that a user can keep chatting after an error",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,

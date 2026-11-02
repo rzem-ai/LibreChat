@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PLACEHOLDERS, WHERE_KEYS, placeholdersIn } from './models.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const SUITES_DIR = path.resolve(here, '..', '..', 'manual testing suites');
@@ -35,6 +36,28 @@ function validateStep(step, where) {
   return valid ? [] : [`${where}: "acceptanceCriteria" must be an array of non-empty strings`];
 }
 
+function validateRepeat(test, where) {
+  const used = placeholdersIn(test);
+  const unknown = used.filter((p) => !PLACEHOLDERS.includes(p));
+  const both = test.perModel !== undefined && test.perProvider !== undefined;
+  const key = test.perModel !== undefined ? 'perModel' : 'perProvider';
+  const config = test[key];
+  const badKeys =
+    config && config !== true ? Object.keys(config.where ?? {}).filter((k) => !WHERE_KEYS.includes(k)) : [];
+  const provider = key === 'perProvider' && config;
+  return [
+    ...unknown.map((p) => `${where}: unknown placeholder {{${p}}}`),
+    ...(both ? [`${where}: use either "perModel" or "perProvider", not both`] : []),
+    ...badKeys.map((k) => `${where}: ${key}.where key "${k}" must be one of ${WHERE_KEYS.join(', ')}`),
+    ...(config !== undefined && config !== true && typeof config?.where !== 'object'
+      ? [`${where}: "${key}" must be true or { "where": { ... } }`]
+      : []),
+    ...(config && !used.length ? [`${where}: ${key} test must use {{MODEL_NAME}} or {{PROVIDER_NAME}}`] : []),
+    ...(provider && used.includes('MODEL_NAME') ? [`${where}: perProvider tests cannot use {{MODEL_NAME}}`] : []),
+    ...(!config && used.length ? [`${where}: placeholders require "perModel" or "perProvider"`] : []),
+  ];
+}
+
 function validateTest(test, suite, seen) {
   const where = `${suite.file} ${test?.id ?? '<no id>'}`;
   const idMatch = ID_RE.exec(test?.id ?? '');
@@ -51,6 +74,7 @@ function validateTest(test, suite, seen) {
     ...(isLink(test?.lastPr) ? [] : [`${where}: "lastPr" must be null or { name, url }`]),
     ...(steps.length ? [] : [`${where}: needs at least one step`]),
     ...steps.flatMap((step, i) => validateStep(step, `${where} step ${i + 1}`)),
+    ...validateRepeat(test, where),
     ...(steps.some((s) => s?.acceptanceCriteria?.length) ? [] : [`${where}: needs at least one acceptance criterion`]),
   ];
 }
@@ -61,6 +85,6 @@ export function validateSuites(suites) {
     ...(typeof suite.suite === 'string' && suite.suite ? [] : [`${suite.file}: missing "suite"`]),
     ...(/^[A-Z]+$/.test(suite.idPrefix ?? '') ? [] : [`${suite.file}: "idPrefix" must be uppercase letters`]),
     ...(Array.isArray(suite.tests) && suite.tests.length ? [] : [`${suite.file}: needs at least one test`]),
-    ...(suite.tests ?? []).flatMap((test) => validateTest(test, suite, seen)),
+    ...(Array.isArray(suite.tests) ? suite.tests : []).flatMap((test) => validateTest(test, suite, seen)),
   ]);
 }

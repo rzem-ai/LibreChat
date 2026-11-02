@@ -5,7 +5,7 @@
   "tests": [
     {
       "id": "AGENT-001",
-      "goal": "Build my own agent",
+      "goal": "Confirm that an agent can be built on {{MODEL_NAME}} ({{PROVIDER_NAME}})",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -15,31 +15,23 @@
           "acceptanceCriteria": []
         },
         {
-          "action": "Enter a name and instructions, and pick a model.",
+          "action": "Enter a name and instructions, and pick the model {{MODEL_NAME}} ({{PROVIDER_NAME}}.",
           "acceptanceCriteria": []
         },
         {
           "action": "Save.",
           "acceptanceCriteria": ["The agent is saved", "It appears in the agent list"]
+        },
+        {
+          "action": "Query the Agent.",
+          "acceptanceCriteria": ["You get a successful response."]
         }
-      ]
+      ],
+      "perModel": true
     },
     {
       "id": "AGENT-002",
-      "goal": "Build an agent on each Deloitte model provider",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
-      "steps": [
-        {
-          "action": "Repeat AGENT-001 selecting a model from OpenAI Global, Gemini Global, Anthropic Global and Anthropic AU in turn.",
-          "acceptanceCriteria": ["An agent can be saved and used with each provider"]
-        }
-      ]
-    },
-    {
-      "id": "AGENT-003",
-      "goal": "Update an agent's instructions",
+      "goal": "Confirm that an agent's instructions can be updated and are followed",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -59,8 +51,8 @@
       ]
     },
     {
-      "id": "AGENT-004",
-      "goal": "Give an agent a Skill and watch it use it",
+      "id": "AGENT-003",
+      "goal": "Confirm that an agent with a skill added uses that skill",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -84,8 +76,8 @@
       ]
     },
     {
-      "id": "AGENT-005",
-      "goal": "Give an agent an MCP tool and watch it use it",
+      "id": "AGENT-004",
+      "goal": "Confirm that an agent with an MCP tool added uses that tool",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -105,8 +97,8 @@
       ]
     },
     {
-      "id": "AGENT-006",
-      "goal": "Let an agent run code",
+      "id": "AGENT-005",
+      "goal": "Confirm that an agent can run code",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -122,8 +114,8 @@
       ]
     },
     {
-      "id": "AGENT-007",
-      "goal": "Delete an agent I no longer need",
+      "id": "AGENT-006",
+      "goal": "Confirm that an agent that is no longer needed can be deleted",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -139,8 +131,8 @@
       ]
     },
     {
-      "id": "AGENT-008",
-      "goal": "Agent work survives a refresh mid-run",
+      "id": "AGENT-007",
+      "goal": "Confirm that an agent's work survives a page refresh mid-run",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -159,8 +151,8 @@
       ]
     },
     {
-      "id": "AGENT-009",
-      "goal": "Agent can be restored to a previous version",
+      "id": "AGENT-008",
+      "goal": "Confirm that an agent can be restored to a previous version",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -170,22 +162,25 @@
           "acceptanceCriteria": []
         },
         {
-          "action": "Save and exit.",
+          "action": "Make a change, then save and exit.",
           "acceptanceCriteria": []
         },
         {
-          "action": "Return to edit the agent.",
+          "action": "Return to edit the agent and open the Versions list.",
           "acceptanceCriteria": []
         },
         {
-          "action": "Click on version and select the previous change.",
-          "acceptanceCriteria": ["The previous version is restored"]
+          "action": "On a previous version, click its Restore (rotate) button, then confirm in the restore dialog.",
+          "acceptanceCriteria": [
+            "The restore confirmation dialog shows the version being restored",
+            "The agent now has the restored version's settings"
+          ]
         }
       ]
     },
     {
-      "id": "AGENT-010",
-      "goal": "View access for shared agent",
+      "id": "AGENT-009",
+      "goal": "Confirm that a user with view access to a shared agent can chat with it but not edit it",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -209,8 +204,8 @@
       ]
     },
     {
-      "id": "AGENT-011",
-      "goal": "Edit access for shared agent",
+      "id": "AGENT-010",
+      "goal": "Confirm that a user with edit access to a shared agent can edit it",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -237,8 +232,8 @@
       ]
     },
     {
-      "id": "AGENT-012",
-      "goal": "Owner access for shared agent",
+      "id": "AGENT-011",
+      "goal": "Confirm that a user with owner access to a shared agent can share it",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -258,8 +253,8 @@
       ]
     },
     {
-      "id": "AGENT-013",
-      "goal": "Agent marketplace categories",
+      "id": "AGENT-012",
+      "goal": "Confirm that the Agent Marketplace shows the new categories and files uncategorised agents under General",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -285,8 +280,8 @@
       ]
     },
     {
-      "id": "AGENT-014",
-      "goal": "Adds publication prompt linking to a form when sharing",
+      "id": "AGENT-013",
+      "goal": "Confirm that sharing an agent or skill shows a publication prompt linking to a form",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -302,8 +297,8 @@
       ]
     },
     {
-      "id": "AGENT-015",
-      "goal": "Agent Image",
+      "id": "AGENT-014",
+      "goal": "Confirm that an agent's avatar loads in the agent selector row and the selected model header",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,

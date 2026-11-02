@@ -5,7 +5,7 @@
   "tests": [
     {
       "id": "SKILL-001",
-      "goal": "See the shared Skills available to everyone",
+      "goal": "Confirm that the shared skills available to everyone are visible",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -18,7 +18,7 @@
     },
     {
       "id": "SKILL-002",
-      "goal": "Open a Skill's details (e.g. \"capability-builder\")",
+      "goal": "Confirm that a skill's details can be opened (e.g. \"capability-builder\")",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -41,7 +41,7 @@
     },
     {
       "id": "SKILL-003",
-      "goal": "Open the details of a second Skill in the panel",
+      "goal": "Confirm that the details of a second skill can be opened",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -54,7 +54,7 @@
     },
     {
       "id": "SKILL-004",
-      "goal": "Turn on a Skill using the toggle",
+      "goal": "Confirm that a skill can be turned on using the toggle",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -71,7 +71,7 @@
     },
     {
       "id": "SKILL-005",
-      "goal": "Turn on a Skill and use it with \"$\" in chat",
+      "goal": "Confirm that an active skill can be used with \"$\" in chat",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -99,7 +99,7 @@
     },
     {
       "id": "SKILL-006",
-      "goal": "Activate and use a second available Skill",
+      "goal": "Confirm that a second available skill can be activated and used",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -112,7 +112,7 @@
     },
     {
       "id": "SKILL-007",
-      "goal": "Dynamically call a skill",
+      "goal": "Confirm that a skill is dynamically called for a relevant query",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -129,7 +129,7 @@
     },
     {
       "id": "SKILL-008",
-      "goal": "Add new skill by \"write skill instructions\"",
+      "goal": "Confirm that a new skill can be added using \"Write skill instructions\"",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -154,7 +154,7 @@
     },
     {
       "id": "SKILL-009",
-      "goal": "Add new skill by \"upload a skill\"",
+      "goal": "Confirm that a new skill can be added using \"Upload a skill\"",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -175,7 +175,7 @@
     },
     {
       "id": "SKILL-010",
-      "goal": "Edit skill via the UI",
+      "goal": "Confirm that a skill can be edited through the UI",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -200,7 +200,7 @@
     },
     {
       "id": "SKILL-011",
-      "goal": "Sharing a skill",
+      "goal": "Confirm that a skill can be shared with other users",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -232,7 +232,7 @@
     },
     {
       "id": "SKILL-012",
-      "goal": "View shared skill",
+      "goal": "Confirm that a shared skill can be viewed and used by the recipient",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -260,7 +260,7 @@
     },
     {
       "id": "SKILL-013",
-      "goal": "View public (deployed) skills",
+      "goal": "Confirm that public (deployed) skills can be viewed and used but not edited",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -277,7 +277,7 @@
     },
     {
       "id": "SKILL-014",
-      "goal": "View access for shared skill",
+      "goal": "Confirm that a user with view access to a shared skill cannot edit it",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -302,7 +302,7 @@
     },
     {
       "id": "SKILL-015",
-      "goal": "Edit access for shared skill",
+      "goal": "Confirm that a user with edit access to a shared skill can edit it",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -319,7 +319,7 @@
     },
     {
       "id": "SKILL-016",
-      "goal": "Owner access for shared skill",
+      "goal": "Confirm that a user with owner access to a shared skill can share it",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -336,7 +336,7 @@
     },
     {
       "id": "SKILL-017",
-      "goal": "Creating a skill that will fail the security scan",
+      "goal": "Confirm that creating a skill that fails the security scan shows an inline error",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -364,7 +364,7 @@
     },
     {
       "id": "SKILL-018",
-      "goal": "Editing a skill that will fail the security scan",
+      "goal": "Confirm that editing a skill so that it fails the security scan shows an inline error",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -392,7 +392,7 @@
     },
     {
       "id": "SKILL-019",
-      "goal": "Uploading a skill that will fail the security scan",
+      "goal": "Confirm that uploading a skill that fails the security scan shows an inline error",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -420,7 +420,7 @@
     },
     {
       "id": "SKILL-020",
-      "goal": "Use a Level 3 skill with reference files",
+      "goal": "Confirm that a Level 3 skill with reference files can be used",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -445,7 +445,7 @@
     },
     {
       "id": "SKILL-021",
-      "goal": "Validate deployment skills in the environment under test",
+      "goal": "Confirm that the approved deployment skills are available in the environment under test",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -473,7 +473,7 @@
     },
     {
       "id": "SKILL-022",
-      "goal": "Public, shared, and created skills filtering",
+      "goal": "Confirm that skills are filtered correctly into Public, Shared and Created by me",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -510,36 +510,7 @@
     },
     {
       "id": "SKILL-023",
-      "goal": "Fix Add Skill category filter dropdown",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
-      "steps": [
-        {
-          "action": "Open Agent Builder and create a new agent or edit an existing one.",
-          "acceptanceCriteria": []
-        },
-        {
-          "action": "Open the Add Skill popup and open the category filter dropdown.",
-          "acceptanceCriteria": []
-        },
-        {
-          "action": "Select a skill category.",
-          "acceptanceCriteria": ["The displayed skills are limited to the selected category"]
-        },
-        {
-          "action": "Select at least one different category.",
-          "acceptanceCriteria": ["The results update correctly"]
-        },
-        {
-          "action": "Clear or reset the filter.",
-          "acceptanceCriteria": ["The full appropriate skill list returns"]
-        }
-      ]
-    },
-    {
-      "id": "SKILL-024",
-      "goal": "Standardises skill detail dates to DD Mon YYYY",
+      "goal": "Confirm that skill detail dates are shown as DD Mon YYYY",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -551,28 +522,8 @@
       ]
     },
     {
-      "id": "SKILL-025",
-      "goal": "New planner skill that recommends agent/skill designs",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
-      "steps": [
-        {
-          "action": "Open the Skills Library.",
-          "acceptanceCriteria": ["It contains the planner skill"]
-        },
-        {
-          "action": "In General Chat with Run Code and Artifacts on, send \"$myassist-agent-skill-planner\" with the AFR News prompt from the PR.",
-          "acceptanceCriteria": [
-            "The output gives a draft recommendation (Agent plus one Skill)",
-            "The output includes an architecture diagram"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "SKILL-026",
-      "goal": "Skills invocation for agent with SELECTED skills",
+      "id": "SKILL-024",
+      "goal": "Confirm that skills invocation works for an agent with SELECTED skills",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -604,8 +555,8 @@
       ]
     },
     {
-      "id": "SKILL-027",
-      "goal": "Skills invocation for agent with OFF skills",
+      "id": "SKILL-025",
+      "goal": "Confirm that skills invocation is unavailable for an agent with OFF skills",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -624,8 +575,8 @@
       ]
     },
     {
-      "id": "SKILL-028",
-      "goal": "Skills invocation for agent with ALL skills",
+      "id": "SKILL-026",
+      "goal": "Confirm that skills invocation works for an agent with ALL skills",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -659,8 +610,8 @@
       ]
     },
     {
-      "id": "SKILL-029",
-      "goal": "Skills invocation for general chat",
+      "id": "SKILL-027",
+      "goal": "Confirm that skills invocation works in general chat",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,

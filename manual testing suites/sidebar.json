@@ -5,7 +5,7 @@
   "tests": [
     {
       "id": "CSB-001",
-      "goal": "Rename a chat from the sidebar",
+      "goal": "Confirm that a chat can be renamed from the sidebar",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -26,7 +26,7 @@
     },
     {
       "id": "CSB-002",
-      "goal": "Delete a chat for good",
+      "goal": "Confirm that a deleted chat is gone for good",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -46,7 +46,7 @@
     },
     {
       "id": "CSB-003",
-      "goal": "Sidebar behaves when I collapse/expand it",
+      "goal": "Confirm that the sidebar behaves when collapsed and expanded",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -67,7 +67,7 @@
     },
     {
       "id": "CSB-004",
-      "goal": "Duplicate a conversation",
+      "goal": "Confirm that a conversation can be duplicated",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -84,7 +84,7 @@
     },
     {
       "id": "CSB-005",
-      "goal": "Archive a conversation",
+      "goal": "Confirm that a conversation can be archived",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -108,7 +108,7 @@
     },
     {
       "id": "CSB-006",
-      "goal": "Disable Meilisearch chat search",
+      "goal": "Confirm that chat search is disabled",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,

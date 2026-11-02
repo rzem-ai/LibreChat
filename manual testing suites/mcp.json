@@ -5,7 +5,7 @@
   "tests": [
     {
       "id": "MCP-001",
-      "goal": "Have MCP all connectors listed and available: AFR News, GIMS, KX, SharePoint, DESC, IBISWorld",
+      "goal": "Confirm that all MCP connectors (AFR News, GIMS, KX, SharePoint, DESC, IBISWorld) are listed and available, with SharePoint visible only to permitted users",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -19,12 +19,19 @@
           "acceptanceCriteria": [
             "AFR News, GIMS, KX, SharePoint, DESC and IBISWorld are all listed and available"
           ]
+        },
+        {
+          "action": "Repeat as a user without access to the SharePoint group (confirm group membership in the Azure portal).",
+          "acceptanceCriteria": [
+            "SharePoint is not visible or usable",
+            "The other connectors are still listed and available"
+          ]
         }
       ]
     },
     {
       "id": "MCP-002",
-      "goal": "Filter MCP servers",
+      "goal": "Confirm that MCP servers can be filtered by name",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -41,7 +48,7 @@
     },
     {
       "id": "MCP-003",
-      "goal": "Pull data from Sharepoint",
+      "goal": "Confirm that data can be pulled from SharePoint",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -58,7 +65,7 @@
     },
     {
       "id": "MCP-004",
-      "goal": "Pull industry research from IBISWorld",
+      "goal": "Confirm that industry research can be pulled from IBISWorld",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -78,7 +85,7 @@
     },
     {
       "id": "MCP-005",
-      "goal": "Pull Deloitte Quals from KX",
+      "goal": "Confirm that Deloitte quals can be pulled from KX",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -95,7 +102,7 @@
     },
     {
       "id": "MCP-006",
-      "goal": "Pull Deloitte investment information from GIMS",
+      "goal": "Confirm that Deloitte investment information can be pulled from GIMS",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -112,7 +119,7 @@
     },
     {
       "id": "MCP-007",
-      "goal": "Pull Deloitte compliance information from DESC",
+      "goal": "Confirm that Deloitte compliance information can be pulled from DESC",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -129,7 +136,7 @@
     },
     {
       "id": "MCP-008",
-      "goal": "Pull TOPICAL news from the AFR",
+      "goal": "Confirm that topical news can be pulled from the AFR",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -146,7 +153,7 @@
     },
     {
       "id": "MCP-009",
-      "goal": "Pull RECENT news from the AFR",
+      "goal": "Confirm that recent news can be pulled from the AFR",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -163,7 +170,7 @@
     },
     {
       "id": "MCP-010",
-      "goal": "My tool choice survives a model switch",
+      "goal": "Confirm that a user's MCP tool choice survives a model switch",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -187,7 +194,7 @@
     },
     {
       "id": "MCP-011",
-      "goal": "Add Connect All control for MCP servers",
+      "goal": "Confirm that the MCP server selector has a working Connect All control",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -230,7 +237,7 @@
     },
     {
       "id": "MCP-012",
-      "goal": "Clearer errors when SharePoint files can't be attached",
+      "goal": "Confirm that a clear error is shown when SharePoint files cannot be attached",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -247,7 +254,7 @@
     },
     {
       "id": "MCP-013",
-      "goal": "Adds tooltips for MCPs/connectors",
+      "goal": "Confirm that MCPs and connectors show tooltips",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -264,24 +271,7 @@
     },
     {
       "id": "MCP-014",
-      "goal": "Limits SharePoint MCP to permitted users",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
-      "steps": [
-        {
-          "action": "As a user with access to the SharePoint group (confirm your access in the Azure portal), use the SharePoint MCP.",
-          "acceptanceCriteria": ["SharePoint MCP works"]
-        },
-        {
-          "action": "As a user without access, look for the SharePoint MCP.",
-          "acceptanceCriteria": ["It is not available or usable"]
-        }
-      ]
-    },
-    {
-      "id": "MCP-015",
-      "goal": "Clearer errors when attachments can't be resolved for upload",
+      "goal": "Confirm that a clear error is shown when attachments cannot be resolved for upload",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,

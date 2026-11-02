@@ -1,11 +1,11 @@
 {
   "$schema": "./suite.schema.json",
-  "suite": "Prompts Library",
-  "idPrefix": "LIBRARY",
+  "suite": "Prompts",
+  "idPrefix": "PROMPTS",
   "tests": [
     {
-      "id": "LIBRARY-001",
-      "goal": "Save a reusable prompt",
+      "id": "PROMPTS-001",
+      "goal": "Confirm that a reusable prompt can be saved",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -25,8 +25,8 @@
       ]
     },
     {
-      "id": "LIBRARY-002",
-      "goal": "Drop a saved prompt straight into a chat",
+      "id": "PROMPTS-002",
+      "goal": "Confirm that a saved prompt can be dropped straight into a chat",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -42,8 +42,8 @@
       ]
     },
     {
-      "id": "LIBRARY-003",
-      "goal": "Edit one of my saved prompts",
+      "id": "PROMPTS-003",
+      "goal": "Confirm that a saved prompt can be edited",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -67,8 +67,8 @@
       ]
     },
     {
-      "id": "LIBRARY-004",
-      "goal": "Delete a saved prompt",
+      "id": "PROMPTS-004",
+      "goal": "Confirm that a saved prompt can be deleted",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,

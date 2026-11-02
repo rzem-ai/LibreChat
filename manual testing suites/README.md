@@ -26,13 +26,13 @@ Skills: `deloitte-manual-test-drafter` drafts or updates tests from a PR, and
 | `files.json` | Files (upload, file search, document Q&A) | `FILES` |
 | `settings.json` | Settings | `SETTING` |
 | `memory.json` | Memory | `MEMORY` |
-| `prompts.json` | Prompts Library | `LIBRARY` |
+| `prompts.json` | Prompts | `PROMPTS` |
 | `projects.json` | Projects | `PROJECTS` |
 | `sidebar.json` | Conversations, Sidebar & Bookmarks | `CSB` |
 | `websearch.json` | Web Search | `WEB` |
 | `academy.json` | MyAssist Academy | `ACADEMY` |
 | `admin.json` | Admin Panel | `ADMIN` |
-| `ux.json` | General UX, Branding & Auth | `UXERR` |
+| `ux.json` | General UX, Branding & Auth | `UX` |
 
 Fixes and beta-patch changes belong in the epic they affect, not in a release-specific suite. Add a new
 suite file only for a genuinely new epic, and add it to the table above.
@@ -68,11 +68,42 @@ The machine-readable definition is [`suite.schema.json`](./suite.schema.json).
 | Field | Rule |
 |---|---|
 | `id` | `PREFIX-NNN`, unique across all suites, prefix matches the suite's `idPrefix`. Never reuse or renumber an id. |
-| `goal` | Short title: the purpose of the test. |
+| `goal` | Short title of the purpose of the test, phrased "Confirm that ..." (e.g. "Confirm that MyAssist Academy contains Release Notes and Common Questions tabs"). |
 | `dateUpdated` | Human readable `DD Mon YYYY` (e.g. `02 Nov 2026`). Bump it whenever the test changes. |
 | `author` | `{ name, url }` for the author of the last relevant PR. `null` only for tests migrated from the old spreadsheet. |
 | `lastPr` | `{ name, url }` for the last relevant PR (`name` like `#1850`). `null` only for migrated tests. |
+| `perModel` / `perProvider` | Optional. Repeats the test for each model, or each provider, in `librechat.yaml`; see [Per-model tests](#per-model-tests). |
 | `steps` | Ordered `{ action, acceptanceCriteria[] }`. Each criterion states what the tester must observe after that action. Every test needs at least one criterion. |
+
+## Per-model tests
+
+A test can be repeated for every model in `librechat.yaml` (`modelSpecs.list`) by adding `perModel`.
+The test stays in its own epic's suite; `npm run manual-tests:collate` expands it into one row per
+model, so each model gets its own tester results and Overall Result. New or removed models change the
+sheet with no JSON edits.
+
+```json
+{
+  "id": "WEB-001",
+  "goal": "Confirm that web search works for {{MODEL_NAME}}",
+  "perModel": { "where": { "group": "OpenAI Global" } },
+  "steps": [ ... ]
+}
+```
+
+- Use `{{MODEL_NAME}}` (the spec `label`, e.g. "Claude Sonnet 5.5") and `{{PROVIDER_NAME}}` (the spec
+  `group`, e.g. "Anthropic Global") in the goal, actions and criteria. Placeholders are only allowed in
+  `perModel` tests, and a `perModel` test must use at least one.
+- `"perModel": true` repeats the test for every model. `{ "where": { ... } }` restricts it; keys are `name`
+  (spec name), `group`, `endpoint` and `webSearch`, each a value or a list of values.
+- `perProvider` works the same way but repeats the test once per provider group (e.g. "OpenAI Global",
+  "Anthropic Global", "Anthropic Australia") instead of per model, for behaviour where per-model
+  visibility isn't needed (the Files suite uses it). Only `{{PROVIDER_NAME}}` is allowed, and a test uses
+  either `perModel` or `perProvider`, not both. Ids look like `FILES-001 / openai-global`.
+- Expanded ids look like `WEB-001 / azure-global-gpt-6-luna`. `webSearch` is `details.supports.webSearch` from
+  the model spec (false when absent), so web search tests follow the same flag the model tooltip uses.
+- `npm run manual-tests:validate` and `collate` warn when a `where` filter matches no model, because the test
+  would otherwise silently disappear from the sheet.
 
 ## Writing good tests
 

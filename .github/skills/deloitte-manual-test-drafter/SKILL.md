@@ -37,12 +37,16 @@ format and rules.
 
 ## Step 3 - Write the test
 
-- `goal`: short title stating the purpose.
+- `goal`: short title stating the purpose, phrased "Confirm that ..." (e.g. "Confirm that MyAssist Academy contains Release Notes and Common Questions tabs").
 - `steps`: ordered `{ action, acceptanceCriteria[] }`. Use exact UI labels from the
   code. Put each observable expectation under the action that triggers it. Cover the
   happy path plus any permission or error behaviour the PR introduces (e.g. viewer
   vs editor).
 - Include exact prompts, file types or accounts the tester needs.
+- If the behaviour must hold on every model (or every model in a provider group), set `perModel` and use
+  `{{MODEL_NAME}}` / `{{PROVIDER_NAME}}` instead of writing one test per model (see the README's
+  "Per-model tests"). Use `perProvider` (only `{{PROVIDER_NAME}}`) when once per provider is enough. Never hard-code a
+  model name in a test that should cover all models.
 - Environment-neutral wording ("the environment under test").
 - `dateUpdated`: today in `DD Mon YYYY`.
 - `author`: `{ "name": <PR author login>, "url": "https://github.com/<login>" }`.

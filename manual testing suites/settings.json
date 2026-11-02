@@ -5,7 +5,7 @@
   "tests": [
     {
       "id": "SETTING-001",
-      "goal": "Switch between light, dark and system theme",
+      "goal": "Confirm that the theme can be switched between light, dark and system",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -22,24 +22,7 @@
     },
     {
       "id": "SETTING-002",
-      "goal": "Adjust layout/density preferences",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
-      "steps": [
-        {
-          "action": "Open Settings > General > Layout.",
-          "acceptanceCriteria": []
-        },
-        {
-          "action": "Change a layout option.",
-          "acceptanceCriteria": ["The layout changes as selected"]
-        }
-      ]
-    },
-    {
-      "id": "SETTING-004",
-      "goal": "Change font size of messages",
+      "goal": "Confirm that the font size of messages can be changed",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -55,8 +38,8 @@
       ]
     },
     {
-      "id": "SETTING-005",
-      "goal": "Change how sending a message behaves",
+      "id": "SETTING-003",
+      "goal": "Confirm that the behaviour of sending a message can be changed",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -76,8 +59,8 @@
       ]
     },
     {
-      "id": "SETTING-009",
-      "goal": "View and restore an archived chat",
+      "id": "SETTING-004",
+      "goal": "Confirm that an archived chat can be viewed and restored",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -105,8 +88,8 @@
       ]
     },
     {
-      "id": "SETTING-010",
-      "goal": "Settings cleanup",
+      "id": "SETTING-005",
+      "goal": "Confirm that the Account tab, About tab, Danger zone and external speech engine are hidden",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -129,8 +112,8 @@
       ]
     },
     {
-      "id": "SETTING-011",
-      "goal": "Hides settings for features that are disabled",
+      "id": "SETTING-006",
+      "goal": "Confirm that settings for disabled features are hidden",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -150,8 +133,8 @@
       ]
     },
     {
-      "id": "SETTING-012",
-      "goal": "Disables speech-to-text and text-to-speech by default with an inline notice",
+      "id": "SETTING-007",
+      "goal": "Confirm that speech-to-text and text-to-speech are disabled by default with an inline notice",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -170,8 +153,8 @@
       ]
     },
     {
-      "id": "SETTING-013",
-      "goal": "Hides \"show my display name\" setting depending on message layout",
+      "id": "SETTING-008",
+      "goal": "Confirm that the \"show my display name\" setting only appears when the message layout allows it",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -187,8 +170,8 @@
       ]
     },
     {
-      "id": "SETTING-014",
-      "goal": "API Credentials",
+      "id": "SETTING-009",
+      "goal": "Confirm that API credentials settings are visible to admins only",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,

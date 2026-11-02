@@ -28,7 +28,10 @@ review all suites if asked.
    criterion; steps are ordered and self-contained; prerequisite state (roles, shared
    items, files) is stated; no hostnames or environment-specific wording; the test
    sits in the right epic.
-5. **Metadata**: `dateUpdated` is bumped for changed tests; `author` and `lastPr`
+5. **Per-model**: flag tests that repeat the same steps per model (or hard-code model names that
+   should come from `librechat.yaml`) as candidates for `perModel`; check `where` filters still match
+   the models in `librechat.yaml`.
+6. **Metadata**: `dateUpdated` is bumped for changed tests; `author` and `lastPr`
    point at the last relevant PR (`null` is only acceptable for tests migrated from
    the old spreadsheet).
 

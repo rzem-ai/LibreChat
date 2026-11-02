@@ -1,11 +1,11 @@
 {
   "$schema": "./suite.schema.json",
   "suite": "General UX, Branding & Auth",
-  "idPrefix": "UXERR",
+  "idPrefix": "UX",
   "tests": [
     {
-      "id": "UXERR-001",
-      "goal": "App holds up on a smaller screen",
+      "id": "UX-001",
+      "goal": "Confirm that the app holds up on a smaller screen",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -21,79 +21,8 @@
       ]
     },
     {
-      "id": "UXERR-004",
-      "goal": "Deloitte GEL branding shows correctly",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
-      "steps": [
-        {
-          "action": "Load the app and check the logo, favicon and colour theme.",
-          "acceptanceCriteria": [
-            "The Deloitte GEL logo, favicon and colour theme are displayed correctly"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "UXERR-005",
-      "goal": "New SSO login branding",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
-      "steps": [
-        {
-          "action": "Open the login page in a new browser session or private window.",
-          "acceptanceCriteria": [
-            "The updated login-screen logo is displayed clearly",
-            "The SSO sign-in button uses the approved updated branding and text",
-            "The browser tab displays the Deloitte favicon",
-            "The login screen uses the updated background image"
-          ]
-        },
-        {
-          "action": "Refresh the page.",
-          "acceptanceCriteria": ["All branding assets load consistently"]
-        },
-        {
-          "action": "Check at a standard desktop size and a narrow mobile viewport.",
-          "acceptanceCriteria": [
-            "No old, missing, stretched, blurred, clipped or misplaced branding"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "UXERR-006",
-      "goal": "Remove MyAssist 2.0 terminology",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
-      "steps": [
-        {
-          "action": "Open the login page and check all visible MyAssist branding.",
-          "acceptanceCriteria": []
-        },
-        {
-          "action": "Sign in and inspect the landing page, header, sidebar, menus, Settings, About content if available, dialogs, notifications and empty states.",
-          "acceptanceCriteria": []
-        },
-        {
-          "action": "Open representative chats, agents, skills, projects and marketplace pages.",
-          "acceptanceCriteria": []
-        },
-        {
-          "action": "Check the browser tab title and any visible footer or version text.",
-          "acceptanceCriteria": [
-            "\"MyAssist 2.0\" and any branded use of \"2.0\" do not appear anywhere",
-            "Any remaining occurrence is recorded with its exact page and text"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "UXERR-007",
-      "goal": "Restyles Terms modal with GEL components",
+      "id": "UX-002",
+      "goal": "Confirm that the Terms modal is styled with GEL components",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -107,8 +36,8 @@
       ]
     },
     {
-      "id": "UXERR-008",
-      "goal": "Loads private Azure avatars in all views",
+      "id": "UX-003",
+      "goal": "Confirm that private Azure avatars load in all views",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -120,8 +49,8 @@
       ]
     },
     {
-      "id": "UXERR-009",
-      "goal": "Session Expiry",
+      "id": "UX-004",
+      "goal": "Confirm that a user is not signed out within a single day",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,

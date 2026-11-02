@@ -5,11 +5,15 @@
   "tests": [
     {
       "id": "FILES-001",
-      "goal": "Upload and query a PNG",
+      "goal": "Confirm that a PNG can be uploaded and queried on {{PROVIDER_NAME}} models",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
       "steps": [
+        {
+          "action": "Start a new chat and select any {{PROVIDER_NAME}} model.",
+          "acceptanceCriteria": []
+        },
         {
           "action": "Click the attachment icon and upload a PNG image.",
           "acceptanceCriteria": []
@@ -21,15 +25,20 @@
             "The response includes a citation"
           ]
         }
-      ]
+      ],
+      "perProvider": true
     },
     {
       "id": "FILES-002",
-      "goal": "Upload and query a PDF",
+      "goal": "Confirm that a PDF can be uploaded and queried on {{PROVIDER_NAME}} models",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
       "steps": [
+        {
+          "action": "Start a new chat and select any {{PROVIDER_NAME}} model.",
+          "acceptanceCriteria": []
+        },
         {
           "action": "Click the attachment icon and upload a PDF.",
           "acceptanceCriteria": []
@@ -41,15 +50,20 @@
             "The response includes a citation"
           ]
         }
-      ]
+      ],
+      "perProvider": true
     },
     {
       "id": "FILES-003",
-      "goal": "Upload and query a Text File (MD, TXT)",
+      "goal": "Confirm that a text file (MD, TXT) can be uploaded and queried on {{PROVIDER_NAME}} models",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
       "steps": [
+        {
+          "action": "Start a new chat and select any {{PROVIDER_NAME}} model.",
+          "acceptanceCriteria": []
+        },
         {
           "action": "Click the attachment icon and upload a Markdown or text file.",
           "acceptanceCriteria": []
@@ -61,15 +75,20 @@
             "The response includes a citation"
           ]
         }
-      ]
+      ],
+      "perProvider": true
     },
     {
       "id": "FILES-004",
-      "goal": "Upload and query a DOCX",
+      "goal": "Confirm that a DOCX can be uploaded and queried on {{PROVIDER_NAME}} models",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
       "steps": [
+        {
+          "action": "Start a new chat and select any {{PROVIDER_NAME}} model.",
+          "acceptanceCriteria": []
+        },
         {
           "action": "Click the attachment icon and upload a DOCX.",
           "acceptanceCriteria": []
@@ -81,15 +100,20 @@
             "The response includes a citation"
           ]
         }
-      ]
+      ],
+      "perProvider": true
     },
     {
       "id": "FILES-005",
-      "goal": "Upload and query an XLSX",
+      "goal": "Confirm that an XLSX can be uploaded and queried on {{PROVIDER_NAME}} models",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
       "steps": [
+        {
+          "action": "Start a new chat and select any {{PROVIDER_NAME}} model.",
+          "acceptanceCriteria": []
+        },
         {
           "action": "Click the attachment icon and upload an XLSX.",
           "acceptanceCriteria": []
@@ -101,15 +125,20 @@
             "The response includes a citation"
           ]
         }
-      ]
+      ],
+      "perProvider": true
     },
     {
       "id": "FILES-006",
-      "goal": "Upload and query a PPTX",
+      "goal": "Confirm that a PPTX can be uploaded and queried on {{PROVIDER_NAME}} models",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
       "steps": [
+        {
+          "action": "Start a new chat and select any {{PROVIDER_NAME}} model.",
+          "acceptanceCriteria": []
+        },
         {
           "action": "Click the attachment icon and upload a PPTX.",
           "acceptanceCriteria": []
@@ -121,28 +150,38 @@
             "The response includes a citation"
           ]
         }
-      ]
+      ],
+      "perProvider": true
     },
     {
       "id": "FILES-007",
-      "goal": "No made-up citation for an unrelated question",
+      "goal": "Confirm that an unrelated question gets no made-up citation on {{PROVIDER_NAME}} models",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
       "steps": [
         {
+          "action": "Start a new chat and select any {{PROVIDER_NAME}} model.",
+          "acceptanceCriteria": []
+        },
+        {
           "action": "Upload a file, then ask a question unrelated to its content.",
           "acceptanceCriteria": ["The reply does not cite the file", "No made-up citation appears"]
         }
-      ]
+      ],
+      "perProvider": true
     },
     {
-      "id": "FILES-009",
-      "goal": "Follow-up questions re-check the document, not just memory",
+      "id": "FILES-008",
+      "goal": "Confirm that follow-up questions re-check the document rather than relying on memory on {{PROVIDER_NAME}} models",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
       "steps": [
+        {
+          "action": "Start a new chat and select any {{PROVIDER_NAME}} model.",
+          "acceptanceCriteria": []
+        },
         {
           "action": "Ask a document question.",
           "acceptanceCriteria": []
@@ -154,11 +193,12 @@
             "The follow-up includes a citation"
           ]
         }
-      ]
+      ],
+      "perProvider": true
     },
     {
-      "id": "FILES-010",
-      "goal": "Validate uploaded files by content rather than extension",
+      "id": "FILES-009",
+      "goal": "Confirm that uploaded files are validated by content rather than extension",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -185,8 +225,8 @@
       ]
     },
     {
-      "id": "FILES-011",
-      "goal": "Enable file search permanently:",
+      "id": "FILES-010",
+      "goal": "Confirm that file search is permanently enabled and available through the attach button",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,

@@ -5,31 +5,37 @@
   "tests": [
     {
       "id": "MODEL-001",
-      "goal": "Test every model",
+      "goal": "Confirm that {{MODEL_NAME}} ({{PROVIDER_NAME}}) can be selected, responds, titles the conversation and shows the correct hover tooltip",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
       "steps": [
         {
-          "action": "Open the model picker.",
-          "acceptanceCriteria": []
+          "action": "Open the model picker and select {{MODEL_NAME}} under {{PROVIDER_NAME}}.",
+          "acceptanceCriteria": ["{{MODEL_NAME}} is listed and can be selected"]
         },
         {
-          "action": "Pick each model from each provider group in turn.",
-          "acceptanceCriteria": []
-        },
-        {
-          "action": "Send a message each time, with a file attached.",
+          "action": "Send a message.",
           "acceptanceCriteria": [
-            "Every model replies without error",
-            "The attached file is accepted by every model"
+            "{{MODEL_NAME}} replies without error",
+            "A conversation title is auto-generated"
+          ]
+        },
+        {
+          "action": "Hover over {{MODEL_NAME}} in the model picker.",
+          "acceptanceCriteria": [
+            "The provider eyebrow reads {{PROVIDER_NAME}}",
+            "Speed, intelligence, cost and context are all shown",
+            "Web Search is listed as supported only if the model supports it",
+            "A model with 5 cost chips says high cost"
           ]
         }
-      ]
+      ],
+      "perModel": true
     },
     {
       "id": "MODEL-002",
-      "goal": "My default model persists across refresh and multiple sessions",
+      "goal": "Confirm that a user's default model persists across refresh and multiple sessions",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -53,8 +59,8 @@
       ]
     },
     {
-      "id": "MODEL-004",
-      "goal": "Pin and unpin a model",
+      "id": "MODEL-003",
+      "goal": "Confirm that a model can be pinned and unpinned",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -72,8 +78,8 @@
       ]
     },
     {
-      "id": "MODEL-005",
-      "goal": "Tags zero-cost models as \"Free\" in the model selector and suggests them in the out-of-balance error",
+      "id": "MODEL-004",
+      "goal": "Confirm that zero-cost models are tagged \"Free\" and suggested in the out-of-balance error",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -98,81 +104,31 @@
       ]
     },
     {
+      "id": "MODEL-005",
+      "goal": "Confirm that only the supported providers exist",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open the model picker and look at the provider groups. The only providers should be: OpenAI Global, Anthropic Global, Anthropic Australia.",
+          "acceptanceCriteria": [
+            "Only these providers are listed",
+            "No other providers or legacy models appear (e.g. no Gemini 2.5 models or old Anthropic models)"
+          ]
+        },
+        {
+          "action": "Open Agent Builder and look at the provider names and model list.",
+          "acceptanceCriteria": [
+            "Only the same providers are listed",
+            "The model lists match the main model picker"
+          ]
+        }
+      ]
+    },
+    {
       "id": "MODEL-006",
-      "goal": "Replaces old Anthropic models with 5.5 versions and aligns provider labels",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
-      "steps": [
-        {
-          "action": "Open the model selector.",
-          "acceptanceCriteria": [
-            "Old Anthropic models are gone",
-            "Anthropic Global and Anthropic Australia each list Haiku, Sonnet and Opus 5.5"
-          ]
-        },
-        {
-          "action": "Open Agent Builder and view the provider names and model list.",
-          "acceptanceCriteria": [
-            "Providers read \"OpenAI Global\", \"Anthropic Global\" and \"Anthropic Australia\"",
-            "The model lists match the main dropdown"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "MODEL-007",
-      "goal": "Adds GPT 6 Luna and 6.1 Sol",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
-      "steps": [
-        {
-          "action": "Open the model selector for Luna and Sol, then in both General Chat and Agent Builder, send a normal chat message.",
-          "acceptanceCriteria": ["GPT 6 Luna and GPT 6.1 Sol are available", "Normal chat works"]
-        },
-        {
-          "action": "Use file search with each model.",
-          "acceptanceCriteria": ["File search works"]
-        },
-        {
-          "action": "Use web search with each model.",
-          "acceptanceCriteria": ["Web search works"]
-        },
-        {
-          "action": "Use memory with every model, including Anthropic AU models.",
-          "acceptanceCriteria": ["Memory works for all models"]
-        },
-        {
-          "action": "Check the conversation title after the first reply, for all models including Anthropic AU.",
-          "acceptanceCriteria": ["A title is auto-generated"]
-        }
-      ]
-    },
-    {
-      "id": "MODEL-008",
-      "goal": "Removes Gemini 2.5 models from VertexAI config",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
-      "steps": [
-        {
-          "action": "Open the model selector.",
-          "acceptanceCriteria": ["No Gemini 2.5 models are listed"]
-        },
-        {
-          "action": "Open the Agent Builder model list.",
-          "acceptanceCriteria": ["No Gemini 2.5 models are listed"]
-        },
-        {
-          "action": "Chat with the remaining Gemini models.",
-          "acceptanceCriteria": ["Other Gemini models still work"]
-        }
-      ]
-    },
-    {
-      "id": "MODEL-009",
-      "goal": "Turns on the credit balance feature and gauge",
+      "goal": "Confirm that the credit balance gauge is shown and updates as messages are sent",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
@@ -184,24 +140,6 @@
         {
           "action": "Send some messages.",
           "acceptanceCriteria": ["The gauge decreases", "The next available refill is shown"]
-        }
-      ]
-    },
-    {
-      "id": "MODEL-010",
-      "goal": "Adds model hover tooltips",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
-      "steps": [
-        {
-          "action": "Hover over each model in the model selector.",
-          "acceptanceCriteria": [
-            "The provider eyebrow matches its group",
-            "Speed, intelligence, cost and context are all shown",
-            "OpenAI and Anthropic Global models say they support Web Search",
-            "Models with 5 cost chips say high cost"
-          ]
         }
       ]
     }

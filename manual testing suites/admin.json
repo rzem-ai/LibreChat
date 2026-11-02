@@ -5,22 +5,27 @@
   "tests": [
     {
       "id": "ADMIN-001",
-      "goal": "Confirm you can access the admin panel",
+      "goal": "Confirm that an admin user can access the admin panel and a non-admin cannot",
       "dateUpdated": "02 Nov 2026",
       "author": null,
       "lastPr": null,
       "steps": [
         {
-          "action": "As an admin user, open /admin.",
-          "acceptanceCriteria": ["The admin panel loads", "There is no redirect loop"]
+          "action": "Go to Settings > General > scroll to the bottom.",
+          "acceptanceCriteria": [
+            "Admin users will see the Admin Panel button",
+            "Non-admin users will NOT see the Admin Panel button"
+          ]
         },
         {
-          "action": "Refresh the page.",
-          "acceptanceCriteria": ["You stay signed in"]
+          "action": "Admin users: Navigate to the Admin Panel by clicking the button.",
+          "acceptanceCriteria": ["Confirm the admin panel loads"]
         },
         {
-          "action": "As a non-admin user, open /admin.",
-          "acceptanceCriteria": ["A forbidden message is shown"]
+          "action": "Non-admin users: open the environment's configured Admin Panel URL directly in the browser.",
+          "acceptanceCriteria": [
+            "Access is denied (a forbidden message is shown) and the admin panel does not load"
+          ]
         }
       ]
     }
