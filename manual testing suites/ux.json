@@ -1,0 +1,140 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "General UX, Branding & Auth",
+  "idPrefix": "UXERR",
+  "tests": [
+    {
+      "id": "UXERR-001",
+      "goal": "App holds up on a smaller screen",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Resize the browser to a mobile or tablet width.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Navigate the chat, sidebar and settings.",
+          "acceptanceCriteria": ["All screens remain usable without clipped or overlapping content"]
+        }
+      ]
+    },
+    {
+      "id": "UXERR-004",
+      "goal": "Deloitte GEL branding shows correctly",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Load the app and check the logo, favicon and colour theme.",
+          "acceptanceCriteria": [
+            "The Deloitte GEL logo, favicon and colour theme are displayed correctly"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "UXERR-005",
+      "goal": "New SSO login branding",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open the login page in a new browser session or private window.",
+          "acceptanceCriteria": [
+            "The updated login-screen logo is displayed clearly",
+            "The SSO sign-in button uses the approved updated branding and text",
+            "The browser tab displays the Deloitte favicon",
+            "The login screen uses the updated background image"
+          ]
+        },
+        {
+          "action": "Refresh the page.",
+          "acceptanceCriteria": ["All branding assets load consistently"]
+        },
+        {
+          "action": "Check at a standard desktop size and a narrow mobile viewport.",
+          "acceptanceCriteria": [
+            "No old, missing, stretched, blurred, clipped or misplaced branding"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "UXERR-006",
+      "goal": "Remove MyAssist 2.0 terminology",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open the login page and check all visible MyAssist branding.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Sign in and inspect the landing page, header, sidebar, menus, Settings, About content if available, dialogs, notifications and empty states.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Open representative chats, agents, skills, projects and marketplace pages.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Check the browser tab title and any visible footer or version text.",
+          "acceptanceCriteria": [
+            "\"MyAssist 2.0\" and any branded use of \"2.0\" do not appear anywhere",
+            "Any remaining occurrence is recorded with its exact page and text"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "UXERR-007",
+      "goal": "Restyles Terms modal with GEL components",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open the Terms modal (avatar menu > Help > Terms).",
+          "acceptanceCriteria": [
+            "The layout, styling, scrolling and buttons look correct in both light and dark mode"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "UXERR-008",
+      "goal": "Loads private Azure avatars in all views",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Sign in as a user who has a profile picture.",
+          "acceptanceCriteria": ["The picture is shown at the bottom left"]
+        }
+      ]
+    },
+    {
+      "id": "UXERR-009",
+      "goal": "Session Expiry",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Sign in and use the app, then leave your browser open until after the next stand-up.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Run another query.",
+          "acceptanceCriteria": ["You are not signed out within a single day", "The query succeeds"]
+        }
+      ]
+    }
+  ]
+}

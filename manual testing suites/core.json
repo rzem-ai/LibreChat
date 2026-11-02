@@ -1,0 +1,178 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Core Chat Experience",
+  "idPrefix": "CORE",
+  "tests": [
+    {
+      "id": "CORE-001",
+      "goal": "Start a new chat and get a reply",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Click **New Chat**.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Type a message.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Press Enter or click Send.",
+          "acceptanceCriteria": [
+            "The message appears in the thread",
+            "A reply streams in and completes without error"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CORE-002",
+      "goal": "Can't send an empty message",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open a chat.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Leave the message box empty.",
+          "acceptanceCriteria": [
+            "The Send button cannot be clicked",
+            "Pressing Enter does not send a message"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CORE-003",
+      "goal": "Replies render lists, tables and code cleanly",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Ask for a numbered list plus a short code snippet.",
+          "acceptanceCriteria": [
+            "The list renders as a numbered list",
+            "The code renders in a formatted code block"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CORE-004",
+      "goal": "Assistant's tone matches Deloitte's house style",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Ask a general business question in a new chat.",
+          "acceptanceCriteria": [
+            "The reply uses a professional tone consistent with Deloitte's house style"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CORE-005",
+      "goal": "Chat is still there after a reload",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Send a message and get a reply.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Reload the page.",
+          "acceptanceCriteria": ["The conversation is still present with both messages"]
+        }
+      ]
+    },
+    {
+      "id": "CORE-006",
+      "goal": "Copy a reply to the clipboard",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Hover over a reply.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Click Copy.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Paste elsewhere.",
+          "acceptanceCriteria": ["The pasted text matches the reply"]
+        }
+      ]
+    },
+    {
+      "id": "CORE-007",
+      "goal": "Stop the assistant mid-reply",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Send a message that triggers a long reply.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Click Stop while it is streaming.",
+          "acceptanceCriteria": [
+            "Streaming stops promptly",
+            "The partial reply is kept",
+            "A new message can be sent afterwards"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CORE-008",
+      "goal": "Wraps long citation titles instead of overflowing",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Get a response with web, file and MCP citations (ideally with long titles).",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Open each hovercard and the Sources dialog.",
+          "acceptanceCriteria": [
+            "Long titles wrap onto multiple lines",
+            "No horizontal overflow appears"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CORE-009",
+      "goal": "Fixes garbled docx/xlsx citation previews",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Get a response citing a docx and an xlsx.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Open each citation preview.",
+          "acceptanceCriteria": ["The preview shows readable content, not binary or garbled text"]
+        }
+      ]
+    }
+  ]
+}

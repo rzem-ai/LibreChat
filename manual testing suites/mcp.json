@@ -1,0 +1,298 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "MCP Connectors",
+  "idPrefix": "MCP",
+  "tests": [
+    {
+      "id": "MCP-001",
+      "goal": "Have MCP all connectors listed and available: AFR News, GIMS, KX, SharePoint, DESC, IBISWorld",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open the Connectors menu in a chat.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Look at each MCP gateway connector.",
+          "acceptanceCriteria": [
+            "AFR News, GIMS, KX, SharePoint, DESC and IBISWorld are all listed and available"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MCP-002",
+      "goal": "Filter MCP servers",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open the MCP Settings side panel.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Search for MCP servers by name.",
+          "acceptanceCriteria": ["The list filters to servers matching the search term"]
+        }
+      ]
+    },
+    {
+      "id": "MCP-003",
+      "goal": "Pull data from Sharepoint",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Enable the SharePoint tool.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask a question that needs SharePoint data (e.g. \"list my recent SharePoint files\").",
+          "acceptanceCriteria": ["The reply contains data retrieved from SharePoint"]
+        }
+      ]
+    },
+    {
+      "id": "MCP-004",
+      "goal": "Pull industry research from IBISWorld",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Enable the research tool from the gateway.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask an industry research question (e.g. \"What are the key growth opportunities and challenges facing the Australian Health Care Services industry in the next five years?\").",
+          "acceptanceCriteria": [
+            "The reply contains IBISWorld industry research",
+            "Sources are cited"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MCP-005",
+      "goal": "Pull Deloitte Quals from KX",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Enable the KX tool from the gateway.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask \"Find me a digital twin qual\".",
+          "acceptanceCriteria": ["The reply lists relevant Deloitte quals from KX"]
+        }
+      ]
+    },
+    {
+      "id": "MCP-006",
+      "goal": "Pull Deloitte investment information from GIMS",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Enable the GIMS tool from the gateway.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask \"Can I invest in Rio Tinto Aluminium Limited?\".",
+          "acceptanceCriteria": ["The reply contains Deloitte investment information from GIMS"]
+        }
+      ]
+    },
+    {
+      "id": "MCP-007",
+      "goal": "Pull Deloitte compliance information from DESC",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Enable the DESC tool from the gateway.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask \"Can I start a project with RACQ?\".",
+          "acceptanceCriteria": ["The reply contains compliance information from DESC"]
+        }
+      ]
+    },
+    {
+      "id": "MCP-008",
+      "goal": "Pull TOPICAL news from the AFR",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Enable the news tool from the gateway.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask \"Give me news about consulting.\".",
+          "acceptanceCriteria": ["The reply contains topical AFR news about consulting"]
+        }
+      ]
+    },
+    {
+      "id": "MCP-009",
+      "goal": "Pull RECENT news from the AFR",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Enable the news tool from the gateway.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask \"What's today's news?\".",
+          "acceptanceCriteria": ["The reply contains recent AFR news from today"]
+        }
+      ]
+    },
+    {
+      "id": "MCP-010",
+      "goal": "My tool choice survives a model switch",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "In a new chat with no agent, turn on an MCP tool.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Switch the model.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Send a message.",
+          "acceptanceCriteria": [
+            "The MCP tool is still enabled after the switch",
+            "The message can use the tool"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MCP-011",
+      "goal": "Add Connect All control for MCP servers",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open a chat and open the MCP server selector dropdown. With no servers connected, look at the top of the list.",
+          "acceptanceCriteria": ["\"Connect All\" appears at the top with an empty checkbox"]
+        },
+        {
+          "action": "Click Connect All.",
+          "acceptanceCriteria": [
+            "Every selectable server becomes selected",
+            "Servers requiring OAuth or credentials request authorization",
+            "Servers requiring no authorization connect silently"
+          ]
+        },
+        {
+          "action": "Complete any authorization.",
+          "acceptanceCriteria": ["The dropdown label reads \"n connected\", not \"n selected\""]
+        },
+        {
+          "action": "Click Connect All again.",
+          "acceptanceCriteria": [
+            "All servers are deselected",
+            "The label remains \"Connect All\" and only its checkbox changes from checked to unchecked"
+          ]
+        },
+        {
+          "action": "Connect some, but not all, servers.",
+          "acceptanceCriteria": ["The Connect All indicator shows the partial \"-\" state"]
+        },
+        {
+          "action": "Open the MCP Builder side panel and click Connect on one server card.",
+          "acceptanceCriteria": [
+            "It initializes or authorizes directly, or opens its custom-variable configuration first when required",
+            "No unrelated intermediate popup appears"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MCP-012",
+      "goal": "Clearer errors when SharePoint files can't be attached",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Using an agent with SharePoint MCP and Code Interpreter, ask it to download a known test xlsx, attach it to Code Interpreter and report the sheet names and row counts.",
+          "acceptanceCriteria": ["The task completes successfully"]
+        },
+        {
+          "action": "Duplicate the agent, turn Code Interpreter off and repeat.",
+          "acceptanceCriteria": ["A clear error explains why the file cannot be attached"]
+        }
+      ]
+    },
+    {
+      "id": "MCP-013",
+      "goal": "Adds tooltips for MCPs/connectors",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Hover over every MCP in the side panel and in the connector dropdown, in both dark and light mode.",
+          "acceptanceCriteria": ["A tooltip is shown for every MCP in both modes"]
+        },
+        {
+          "action": "Ask \"what tools are available for each connector\".",
+          "acceptanceCriteria": ["The reply lists the tools available for each connector"]
+        }
+      ]
+    },
+    {
+      "id": "MCP-014",
+      "goal": "Limits SharePoint MCP to permitted users",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "As a user with access to the SharePoint group (confirm your access in the Azure portal), use the SharePoint MCP.",
+          "acceptanceCriteria": ["SharePoint MCP works"]
+        },
+        {
+          "action": "As a user without access, look for the SharePoint MCP.",
+          "acceptanceCriteria": ["It is not available or usable"]
+        }
+      ]
+    },
+    {
+      "id": "MCP-015",
+      "goal": "Clearer errors when attachments can't be resolved for upload",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Attach a file with Run Code on, modify it with Code Interpreter, then ask to upload it via SharePoint (sp_upload_file).",
+          "acceptanceCriteria": [
+            "Unavailable files give recovery guidance before any SharePoint call is made"
+          ]
+        }
+      ]
+    }
+  ]
+}

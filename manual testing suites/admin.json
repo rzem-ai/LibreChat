@@ -1,0 +1,28 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Admin Panel",
+  "idPrefix": "ADMIN",
+  "tests": [
+    {
+      "id": "ADMIN-001",
+      "goal": "Confirm you can access the admin panel",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "As an admin user, open /admin.",
+          "acceptanceCriteria": ["The admin panel loads", "There is no redirect loop"]
+        },
+        {
+          "action": "Refresh the page.",
+          "acceptanceCriteria": ["You stay signed in"]
+        },
+        {
+          "action": "As a non-admin user, open /admin.",
+          "acceptanceCriteria": ["A forbidden message is shown"]
+        }
+      ]
+    }
+  ]
+}

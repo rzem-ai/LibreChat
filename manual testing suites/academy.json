@@ -1,0 +1,108 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "MyAssist Academy",
+  "idPrefix": "ACADEMY",
+  "tests": [
+    {
+      "id": "ACADEMY-001",
+      "goal": "Complete the Getting Started tour",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Click the MyAssist Academy button and launch the Getting Started tour.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Click through every step, checking the numbers.",
+          "acceptanceCriteria": ["There are exactly 24 steps (1/24 to 24/24)", "No step is missed"]
+        },
+        {
+          "action": "Rate the tour at the end and provide feedback.",
+          "acceptanceCriteria": ["The rating and feedback are accepted"]
+        }
+      ]
+    },
+    {
+      "id": "ACADEMY-002",
+      "goal": "Populates MyAssist Academy Release Notes and Common Questions tabs",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open the Learn menu > MyAssist Academy.",
+          "acceptanceCriteria": [
+            "The Release Notes tab shows Release 7.1.0 and 7.1.1 and the text reads correctly"
+          ]
+        },
+        {
+          "action": "Open the Common Questions tab.",
+          "acceptanceCriteria": ["It shows 5 Q&As", "The text reads correctly", "All links work"]
+        }
+      ]
+    },
+    {
+      "id": "ACADEMY-003",
+      "goal": "Stores guided-tour progress per user in the DB instead of the browser",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "In MyAssist Academy, start the Getting Started tour, advance a few steps and close it part-way.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Refresh, or log in from another browser or incognito window.",
+          "acceptanceCriteria": ["The tour shows \"in progress\" with a percentage"]
+        },
+        {
+          "action": "Click Continue.",
+          "acceptanceCriteria": [
+            "The tour resumes at the same step",
+            "Progress is only recorded when the tour is started from within MyAssist Academy, not when started directly"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ACADEMY-004",
+      "goal": "Adds MyAssist Academy launch articles and guided tours",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open Learn > MyAssist Academy.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Open each article.",
+          "acceptanceCriteria": ["Content renders and links work"]
+        },
+        {
+          "action": "Run each guided tour end to end.",
+          "acceptanceCriteria": ["Every tour completes"]
+        }
+      ]
+    },
+    {
+      "id": "ACADEMY-005",
+      "goal": "Adds Learning Centre menu items",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open the Learn menu.",
+          "acceptanceCriteria": [
+            "\"Take a guided tutorial\" and \"Give feedback\" are shown",
+            "\"Ask MyAssist FAQ agent\" appears if the FAQ agent exists and opens it"
+          ]
+        }
+      ]
+    }
+  ]
+}

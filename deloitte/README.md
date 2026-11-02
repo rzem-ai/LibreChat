@@ -608,6 +608,18 @@ For LOCAL development, we need to add each user's hostname to the Redirect URIs 
 
 The SharePoint MCP is restricted in all environments to this Azure Entra group: [AU_MA_MCP_SHAREPOINT_USERS](https://portal.azure.com/?ocid=AIDcmmpi82d2sl_SEM__k_CjwKCAjwxeHWBhBPEiwAiqtQ-Vj1ZoC2y5NW7jluDLaotXWgX7TXwOzxklNMQ7s0ZQ-SPn5OEQv0KRoC7XYQAvD_BwE_k_#view/Microsoft_AAD_IAM/GroupDetailsMenuBlade/~/Members/groupId/00c0efc7-e8a7-448c-9480-834cbf1ebd60/menuId/). Jack Walkinshaw and Alex Rabbetts can add members to the group.
 
+# 📋 Manual Testing Suites
+
+Functional test cases for manual testing sessions live in the [`manual testing suites`](../manual%20testing%20suites/README.md) folder, one JSON file per epic. Any PR with a user-visible change should add or update tests there (this is part of the PR checklist).
+
+| Command | What it does |
+|---|---|
+| `npm run manual-tests:validate` | Checks every suite for valid ids, `DD Mon YYYY` dates, links, steps and at least one acceptance criterion per test, and fails on duplicate ids |
+| `npm run test:manual-tests` | Runs the automated tests for the validator and the Excel generator (columns, dropdowns, colours, Overall Result formula) |
+| `npm run manual-tests:collate [path]` | Collates all suites into one Excel sheet for a testing session (default `manual-testing-session.xlsx`) |
+
+Use the `deloitte-manual-test-drafter` skill to draft tests from a PR, then `deloitte-manual-test-reviewer` to check them for accuracy and duplicates.
+
 # 🔐 Security
 
 Security reviews are performed by **PrismaScan** and **Checkmarx**. You'll see high level results within the PR comments.

@@ -225,3 +225,6 @@ untested_skills/
 !e2e/lighthouse/librechat.yaml
 /.lighthouse/
 /e2e/lighthouse/.test-results/
+
+# Generated manual testing session sheet
+manual-testing-session.xlsx

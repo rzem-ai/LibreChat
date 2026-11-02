@@ -1,0 +1,150 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Memory",
+  "idPrefix": "MEMORY",
+  "tests": [
+    {
+      "id": "MEMORY-001",
+      "goal": "Assistant stores and retrieves a memory ad-hoc",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "In a chat with a model, say \"I really like it when you tell me jokes\".",
+          "acceptanceCriteria": ["The \"memory updated\" chip appears"]
+        },
+        {
+          "action": "Go to the memory tab on the left.",
+          "acceptanceCriteria": ["Your memory was saved with a relevant header"]
+        },
+        {
+          "action": "Start a new chat.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask \"What do you know about me?\"",
+          "acceptanceCriteria": ["The memory is referenced"]
+        }
+      ]
+    },
+    {
+      "id": "MEMORY-002",
+      "goal": "Assistant remembers something when forced",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "In a chat with a model, say \"I'm working on a Deloitte's internal AI tool, MyAssist. Please remember that for future discussions.\".",
+          "acceptanceCriteria": ["The \"memory updated\" chip appears"]
+        },
+        {
+          "action": "Go to the memory tab on the left.",
+          "acceptanceCriteria": ["Your memory was saved with a relevant header"]
+        },
+        {
+          "action": "Start a new chat.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask \"What am I working on?\"",
+          "acceptanceCriteria": ["The memory is referenced"]
+        }
+      ]
+    },
+    {
+      "id": "MEMORY-003",
+      "goal": "View, edit or delete something it remembered",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open Memory settings and find a saved memory.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Edit the memory.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask a query that relies on it.",
+          "acceptanceCriteria": ["The edited memory is used in the reply"]
+        },
+        {
+          "action": "Delete the memory.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask the same query again.",
+          "acceptanceCriteria": ["The deleted memory is no longer accessible"]
+        }
+      ]
+    },
+    {
+      "id": "MEMORY-004",
+      "goal": "Create a memory",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Select Memory from the side panel.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Use '+' to add a new memory.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Add inputs within the 'Create Memory' popup and click 'Create'.",
+          "acceptanceCriteria": ["The memory is created and listed"]
+        },
+        {
+          "action": "Ask a query that relies on it.",
+          "acceptanceCriteria": ["The new memory is used in the reply"]
+        }
+      ]
+    },
+    {
+      "id": "MEMORY-005",
+      "goal": "This PR adds Human-in-the-Loop (HITL) approval requirements for memory mutations (set_memory and delete_memory)",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Create or select an agent that has the memory tool enabled.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask the agent to save a new memory (e.g. \"Remember that my favourite colour is blue\").",
+          "acceptanceCriteria": [
+            "An approval card appears inline showing the proposed memory with Reject and Approve options",
+            "\"Will be created\" is shown in green"
+          ]
+        },
+        {
+          "action": "Ask the agent to update an existing memory.",
+          "acceptanceCriteria": ["\"Will be updated\" is shown in green"]
+        },
+        {
+          "action": "Ask the agent to delete a memory.",
+          "acceptanceCriteria": ["\"Will be deleted\" is shown in red with the trash icon"]
+        },
+        {
+          "action": "Click the pencil icon to edit the memory.",
+          "acceptanceCriteria": [
+            "The memory is edited inline, not in a popup dialog",
+            "Changes are reflected"
+          ]
+        },
+        {
+          "action": "Approve or reject each request.",
+          "acceptanceCriteria": ["The memory is only saved, updated or deleted when approved"]
+        }
+      ]
+    }
+  ]
+}

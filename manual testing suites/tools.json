@@ -1,0 +1,199 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Tools",
+  "idPrefix": "TOOLS",
+  "tests": [
+    {
+      "id": "TOOLS-001",
+      "goal": "Check microsite builder is working",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Turn on the Artifacts tool.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Select a model.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask it to build you a microsite for anything, rendering it live using Artifacts.",
+          "acceptanceCriteria": ["The microsite renders live in the Artifacts panel"]
+        }
+      ]
+    },
+    {
+      "id": "TOOLS-002",
+      "goal": "Generated files in Code Interpreter are saved in \"My Files\"",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Go to general chat and turn on Code Editor",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Run a prompt that enables Code Interpreter to generate a file.",
+          "acceptanceCriteria": ["That the generated file is saved in the \"Files\" navigation bar"]
+        }
+      ]
+    },
+    {
+      "id": "TOOLS-003",
+      "goal": "Code Interpreter can perform CRUD operations on all files generated in-session",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Start a new chat with Run Code on.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Prompt the code interpreter to generate files in the session.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Prompt the chat to perform a CRUD test on those files.",
+          "acceptanceCriteria": [
+            "Files can be created, read, updated and deleted in-session",
+            "The results of each operation are reported correctly"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "TOOLS-004",
+      "goal": "Code Interpreter can successfully write code",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Start a new chat and click the **Run Code** button in the chat bar.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Send \"Write a hello world py file using the code interpreter\".",
+          "acceptanceCriteria": ["The code interpreter successfully generates hello_world.py"]
+        }
+      ]
+    },
+    {
+      "id": "TOOLS-005",
+      "goal": "Code Interpreter can successfully run code",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Continue the conversation from TOOLS-004.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Send \"Run the hello_world.py file we just made\".",
+          "acceptanceCriteria": [
+            "The file runs successfully",
+            "The output is printed in the response"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "TOOLS-006",
+      "goal": "Code Interpreter can successfully write and then run code",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Start a new chat and click the **Run Code** button in the chat bar.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Send \"Write a hello world py file and run it\".",
+          "acceptanceCriteria": ["Hello_world.py is generated and then run", "The output is shown"]
+        }
+      ]
+    },
+    {
+      "id": "TOOLS-007",
+      "goal": "Code Interpreter should allow users to save the code it has written",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Start a new chat and click the **Run Code** button in the chat bar.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Send \"Write a hello world py file using the code interpreter\".",
+          "acceptanceCriteria": ["Hello_world.py is generated", "The file can be downloaded"]
+        }
+      ]
+    },
+    {
+      "id": "TOOLS-008",
+      "goal": "Users should be able to edit previously made code files",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Continue the conversation from TOOLS-004.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Send \"Edit the hello_world.py file and turn the same py into hello venus py\".",
+          "acceptanceCriteria": ["The code interpreter successfully edits the file"]
+        }
+      ]
+    },
+    {
+      "id": "TOOLS-009",
+      "goal": "Users should be able to iterate on the work done with the code interpreter",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Continue the conversation from TOOLS-008.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Send \"Make five changes to the hello_world.py file with different planets\".",
+          "acceptanceCriteria": ["The code interpreter edits the file five times"]
+        }
+      ]
+    },
+    {
+      "id": "TOOLS-010",
+      "goal": "Moves Run Code, Skills, Artifacts pills into a dropdown, enabled by default",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open a chat and look at the message bar.",
+          "acceptanceCriteria": ["The Run Code, Skills and Artifacts pills are no longer shown"]
+        },
+        {
+          "action": "Open the new dropdown on the left of the message bar.",
+          "acceptanceCriteria": ["It lists Run Code, Skills and Artifacts, all enabled by default"]
+        },
+        {
+          "action": "Use each option with several models.",
+          "acceptanceCriteria": ["Each option works with each model tried"]
+        },
+        {
+          "action": "Start the guided walkthrough from the learning lab (bottom left).",
+          "acceptanceCriteria": ["It still points to the right place"]
+        }
+      ]
+    }
+  ]
+}

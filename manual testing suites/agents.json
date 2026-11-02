@@ -1,0 +1,320 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Agents & Agent Builder",
+  "idPrefix": "AGENT",
+  "tests": [
+    {
+      "id": "AGENT-001",
+      "goal": "Build my own agent",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open the Agent Builder.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Enter a name and instructions, and pick a model.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Save.",
+          "acceptanceCriteria": ["The agent is saved", "It appears in the agent list"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-002",
+      "goal": "Build an agent on each Deloitte model provider",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Repeat AGENT-001 selecting a model from OpenAI Global, Gemini Global, Anthropic Global and Anthropic AU in turn.",
+          "acceptanceCriteria": ["An agent can be saved and used with each provider"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-003",
+      "goal": "Update an agent's instructions",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open an existing agent.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Change its instructions.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Save, then chat with it.",
+          "acceptanceCriteria": ["The agent follows the updated instructions"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-004",
+      "goal": "Give an agent a Skill and watch it use it",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Edit an agent.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Add a skill via \"Add Skills\".",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Activate the skill using the toggle.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Chat using a prompt relevant to that skill.",
+          "acceptanceCriteria": ["The agent invokes the skill"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-005",
+      "goal": "Give an agent an MCP tool and watch it use it",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Edit an agent.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Add a tool from the MCP gateway.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Save and chat with a relevant prompt.",
+          "acceptanceCriteria": ["The agent calls the MCP tool and uses its results"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-006",
+      "goal": "Let an agent run code",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Edit an agent with Run Code enabled.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask it a question that needs a calculation or code to answer.",
+          "acceptanceCriteria": ["The agent runs code and returns the result"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-007",
+      "goal": "Delete an agent I no longer need",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open Agent Builder.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Delete an existing agent.",
+          "acceptanceCriteria": ["The agent is removed from the list"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-008",
+      "goal": "Agent work survives a refresh mid-run",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Start a long-running agent task.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Refresh the page before it finishes.",
+          "acceptanceCriteria": [
+            "The run is still in progress or completes after the refresh",
+            "No work is lost"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-009",
+      "goal": "Agent can be restored to a previous version",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open Agent Builder and edit an agent.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Save and exit.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Return to edit the agent.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Click on version and select the previous change.",
+          "acceptanceCriteria": ["The previous version is restored"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-010",
+      "goal": "View access for shared agent",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Ensure the target agent has been shared with \"Viewer\" permissions.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Open Agent Marketplace.",
+          "acceptanceCriteria": ["The agent is present"]
+        },
+        {
+          "action": "Start a chat with the agent.",
+          "acceptanceCriteria": ["The chat works"]
+        },
+        {
+          "action": "Open Agent Builder.",
+          "acceptanceCriteria": ["The agent is not listed"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-011",
+      "goal": "Edit access for shared agent",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Ensure the target agent has been shared with \"Editor\" permissions.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Open Agent Builder.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Edit the agent and save.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Start a chat with the agent.",
+          "acceptanceCriteria": [
+            "The agent can be edited and saved",
+            "The chat uses the saved edits"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-012",
+      "goal": "Owner access for shared agent",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Ensure the target agent has been shared with \"Owner\" permissions.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Open Agent Builder.",
+          "acceptanceCriteria": ["The agent is listed"]
+        },
+        {
+          "action": "Try to share the agent.",
+          "acceptanceCriteria": ["The agent can be shared"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-013",
+      "goal": "Agent marketplace categories",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open the Agent Marketplace.",
+          "acceptanceCriteria": [
+            "These tabs are displayed: General, Pursue & Shape, Discover & Define, Build & Deliver, Produce & Assure, Resource & Grow People, All",
+            "The old HR, R&D, Finance, IT, Sales and After Sales tabs are not displayed"
+          ]
+        },
+        {
+          "action": "Create a new agent without selecting a category.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Save the agent and return to the Agent Marketplace.",
+          "acceptanceCriteria": [
+            "The new agent appears under General",
+            "No category is missing, legacy, duplicated or incorrectly assigned"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-014",
+      "goal": "Adds publication prompt linking to a form when sharing",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Share an agent or skill.",
+          "acceptanceCriteria": ["A publication prompt appears directly under the people picker"]
+        },
+        {
+          "action": "Click the link in the prompt.",
+          "acceptanceCriteria": ["The link opens the form"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-015",
+      "goal": "Agent Image",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Create an agent with a profile picture (avatar).",
+          "acceptanceCriteria": [
+            "The avatar loads in both the agent selector row and the selected model header when the image URL requires authentication"
+          ]
+        }
+      ]
+    }
+  ]
+}

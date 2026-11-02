@@ -1,0 +1,209 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Models & Model Specs",
+  "idPrefix": "MODEL",
+  "tests": [
+    {
+      "id": "MODEL-001",
+      "goal": "Test every model",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open the model picker.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Pick each model from each provider group in turn.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Send a message each time, with a file attached.",
+          "acceptanceCriteria": [
+            "Every model replies without error",
+            "The attached file is accepted by every model"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MODEL-002",
+      "goal": "My default model persists across refresh and multiple sessions",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open the app and start a chat with a model (Model A).",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Switch to another chat with a different model and ask a query.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Reload the original chat.",
+          "acceptanceCriteria": ["Model A is still active"]
+        },
+        {
+          "action": "Start a new chat.",
+          "acceptanceCriteria": ["Model A is still the default model"]
+        }
+      ]
+    },
+    {
+      "id": "MODEL-004",
+      "goal": "Pin and unpin a model",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open model selector and pin a model.",
+          "acceptanceCriteria": [
+            "The pinned model appears above your list of historic chats, and acts as a shortcut to continue your latest chat (or start a new chat if you weren't actively chatting) with your chosen model"
+          ]
+        },
+        {
+          "action": "Unpin the model.",
+          "acceptanceCriteria": ["It disappears"]
+        }
+      ]
+    },
+    {
+      "id": "MODEL-005",
+      "goal": "Tags zero-cost models as \"Free\" in the model selector and suggests them in the out-of-balance error",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open the model selector.",
+          "acceptanceCriteria": [
+            "GPT 6 Luna shows a green \"Free\" pill",
+            "Terra, Sol and the other paid models do not"
+          ]
+        },
+        {
+          "action": "Send a message on Luna.",
+          "acceptanceCriteria": ["The balance gauge (bottom-left) does not drop"]
+        },
+        {
+          "action": "Only if your balance is exhausted, send a message on a paid model.",
+          "acceptanceCriteria": [
+            "The error says \"You can still keep chatting using our free models: GPT 6 Luna.\""
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MODEL-006",
+      "goal": "Replaces old Anthropic models with 5.5 versions and aligns provider labels",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open the model selector.",
+          "acceptanceCriteria": [
+            "Old Anthropic models are gone",
+            "Anthropic Global and Anthropic Australia each list Haiku, Sonnet and Opus 5.5"
+          ]
+        },
+        {
+          "action": "Open Agent Builder and view the provider names and model list.",
+          "acceptanceCriteria": [
+            "Providers read \"OpenAI Global\", \"Anthropic Global\" and \"Anthropic Australia\"",
+            "The model lists match the main dropdown"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MODEL-007",
+      "goal": "Adds GPT 6 Luna and 6.1 Sol",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open the model selector for Luna and Sol, then in both General Chat and Agent Builder, send a normal chat message.",
+          "acceptanceCriteria": ["GPT 6 Luna and GPT 6.1 Sol are available", "Normal chat works"]
+        },
+        {
+          "action": "Use file search with each model.",
+          "acceptanceCriteria": ["File search works"]
+        },
+        {
+          "action": "Use web search with each model.",
+          "acceptanceCriteria": ["Web search works"]
+        },
+        {
+          "action": "Use memory with every model, including Anthropic AU models.",
+          "acceptanceCriteria": ["Memory works for all models"]
+        },
+        {
+          "action": "Check the conversation title after the first reply, for all models including Anthropic AU.",
+          "acceptanceCriteria": ["A title is auto-generated"]
+        }
+      ]
+    },
+    {
+      "id": "MODEL-008",
+      "goal": "Removes Gemini 2.5 models from VertexAI config",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open the model selector.",
+          "acceptanceCriteria": ["No Gemini 2.5 models are listed"]
+        },
+        {
+          "action": "Open the Agent Builder model list.",
+          "acceptanceCriteria": ["No Gemini 2.5 models are listed"]
+        },
+        {
+          "action": "Chat with the remaining Gemini models.",
+          "acceptanceCriteria": ["Other Gemini models still work"]
+        }
+      ]
+    },
+    {
+      "id": "MODEL-009",
+      "goal": "Turns on the credit balance feature and gauge",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Look at the bottom-left balance gauge.",
+          "acceptanceCriteria": ["It shows the current balance (e.g. $15/15)"]
+        },
+        {
+          "action": "Send some messages.",
+          "acceptanceCriteria": ["The gauge decreases", "The next available refill is shown"]
+        }
+      ]
+    },
+    {
+      "id": "MODEL-010",
+      "goal": "Adds model hover tooltips",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Hover over each model in the model selector.",
+          "acceptanceCriteria": [
+            "The provider eyebrow matches its group",
+            "Speed, intelligence, cost and context are all shown",
+            "OpenAI and Anthropic Global models say they support Web Search",
+            "Models with 5 cost chips say high cost"
+          ]
+        }
+      ]
+    }
+  ]
+}

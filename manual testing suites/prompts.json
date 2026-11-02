@@ -1,0 +1,87 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Prompts Library",
+  "idPrefix": "LIBRARY",
+  "tests": [
+    {
+      "id": "LIBRARY-001",
+      "goal": "Save a reusable prompt",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open Prompt Manager.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Create a new prompt with a name and text.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Save.",
+          "acceptanceCriteria": ["The prompt is saved", "It appears in the prompt list"]
+        }
+      ]
+    },
+    {
+      "id": "LIBRARY-002",
+      "goal": "Drop a saved prompt straight into a chat",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Select a saved prompt.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Send it.",
+          "acceptanceCriteria": ["The prompt text is inserted into the chat and sent"]
+        }
+      ]
+    },
+    {
+      "id": "LIBRARY-003",
+      "goal": "Edit one of my saved prompts",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open a saved prompt.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Click the three dots and select \"Edit\".",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Edit the prompt.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Save.",
+          "acceptanceCriteria": ["The edited text is saved"]
+        }
+      ]
+    },
+    {
+      "id": "LIBRARY-004",
+      "goal": "Delete a saved prompt",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open a saved prompt.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Click the three dots and select \"Delete\".",
+          "acceptanceCriteria": ["The prompt is removed from the list"]
+        }
+      ]
+    }
+  ]
+}

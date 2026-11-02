@@ -1,0 +1,213 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Files",
+  "idPrefix": "FILES",
+  "tests": [
+    {
+      "id": "FILES-001",
+      "goal": "Upload and query a PNG",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Click the attachment icon and upload a PNG image.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask a question answerable only from that file.",
+          "acceptanceCriteria": [
+            "The response is grounded in the file",
+            "The response includes a citation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FILES-002",
+      "goal": "Upload and query a PDF",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Click the attachment icon and upload a PDF.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask a question answerable only from that file.",
+          "acceptanceCriteria": [
+            "The response is grounded in the file",
+            "The response includes a citation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FILES-003",
+      "goal": "Upload and query a Text File (MD, TXT)",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Click the attachment icon and upload a Markdown or text file.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask a question answerable only from that file.",
+          "acceptanceCriteria": [
+            "The response is grounded in the file",
+            "The response includes a citation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FILES-004",
+      "goal": "Upload and query a DOCX",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Click the attachment icon and upload a DOCX.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask a question answerable only from that file.",
+          "acceptanceCriteria": [
+            "The response is grounded in the file",
+            "The response includes a citation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FILES-005",
+      "goal": "Upload and query an XLSX",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Click the attachment icon and upload an XLSX.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask a question answerable only from that file.",
+          "acceptanceCriteria": [
+            "The response is grounded in the file",
+            "The response includes a citation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FILES-006",
+      "goal": "Upload and query a PPTX",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Click the attachment icon and upload a PPTX.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask a question answerable only from that file.",
+          "acceptanceCriteria": [
+            "The response is grounded in the file",
+            "The response includes a citation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FILES-007",
+      "goal": "No made-up citation for an unrelated question",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Upload a file, then ask a question unrelated to its content.",
+          "acceptanceCriteria": ["The reply does not cite the file", "No made-up citation appears"]
+        }
+      ]
+    },
+    {
+      "id": "FILES-009",
+      "goal": "Follow-up questions re-check the document, not just memory",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Ask a document question.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask a related follow-up question in the same chat.",
+          "acceptanceCriteria": [
+            "The follow-up is answered from the document",
+            "The follow-up includes a citation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FILES-010",
+      "goal": "Validate uploaded files by content rather than extension",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Prepare genuine DOCX, PDF, ZIP, XLSX, PPTX and TXT files, plus disguised files made by renaming a different file type to each extension.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Attempt to upload each disguised file using Upload to File Search, Upload to Code and Upload as Text where available.",
+          "acceptanceCriteria": [
+            "Each invalid file is rejected",
+            "The correct error toast is shown"
+          ]
+        },
+        {
+          "action": "Upload a genuine supported file to File Search.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask a question answerable only from that file.",
+          "acceptanceCriteria": ["The response uses the file correctly"]
+        }
+      ]
+    },
+    {
+      "id": "FILES-011",
+      "goal": "Enable file search permanently:",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open a general chat.",
+          "acceptanceCriteria": ["The file search button is not visible"]
+        },
+        {
+          "action": "Click the attach button.",
+          "acceptanceCriteria": ["\"Upload for file search\" is still offered"]
+        },
+        {
+          "action": "Upload a file for file search using the upload option, then again using drag and drop.",
+          "acceptanceCriteria": ["Both uploads succeed"]
+        },
+        {
+          "action": "Ask a question about the file.",
+          "acceptanceCriteria": ["The reply is grounded in the file"]
+        }
+      ]
+    }
+  ]
+}

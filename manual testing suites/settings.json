@@ -1,0 +1,206 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Settings",
+  "idPrefix": "SETTING",
+  "tests": [
+    {
+      "id": "SETTING-001",
+      "goal": "Switch between light, dark and system theme",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open Settings > General > Appearance.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Try each theme option.",
+          "acceptanceCriteria": ["Light, dark and system themes each apply immediately"]
+        }
+      ]
+    },
+    {
+      "id": "SETTING-002",
+      "goal": "Adjust layout/density preferences",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open Settings > General > Layout.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Change a layout option.",
+          "acceptanceCriteria": ["The layout changes as selected"]
+        }
+      ]
+    },
+    {
+      "id": "SETTING-004",
+      "goal": "Change font size of messages",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open Settings > General > Appearance.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Change the font size.",
+          "acceptanceCriteria": ["Message text resizes accordingly"]
+        }
+      ]
+    },
+    {
+      "id": "SETTING-005",
+      "goal": "Change how sending a message behaves",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open Settings > Chat > Sending.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Change the \"While generating, Enter will\" option.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Try composing a message while a reply is generating.",
+          "acceptanceCriteria": ["Pressing Enter behaves as the chosen option describes"]
+        }
+      ]
+    },
+    {
+      "id": "SETTING-009",
+      "goal": "View and restore an archived chat",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Archive a chat.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Open your avatar menu > Archived Chats.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Restore the chat.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Continue the chat.",
+          "acceptanceCriteria": [
+            "The archived chat is listed",
+            "Restoring returns it to the sidebar",
+            "New messages can be sent"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "SETTING-010",
+      "goal": "Settings cleanup",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open Settings.",
+          "acceptanceCriteria": ["The Account tab is hidden", "The About tab is hidden"]
+        },
+        {
+          "action": "Open Data controls.",
+          "acceptanceCriteria": [
+            "The API keys section is hidden for non-admin users",
+            "The Danger zone section is hidden"
+          ]
+        },
+        {
+          "action": "Open the speech settings.",
+          "acceptanceCriteria": ["The Speech engine \"External\" option is hidden"]
+        }
+      ]
+    },
+    {
+      "id": "SETTING-011",
+      "goal": "Hides settings for features that are disabled",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open Settings and search \"shared chats\" and \"temporary\".",
+          "acceptanceCriteria": ["Neither setting appears"]
+        },
+        {
+          "action": "As a normal user, check the Settings tabs.",
+          "acceptanceCriteria": ["No Langfuse tab is shown"]
+        },
+        {
+          "action": "As an admin, check the Settings tabs.",
+          "acceptanceCriteria": ["The Langfuse tab is visible"]
+        }
+      ]
+    },
+    {
+      "id": "SETTING-012",
+      "goal": "Disables speech-to-text and text-to-speech by default with an inline notice",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open Settings > Speech.",
+          "acceptanceCriteria": [
+            "A notice with a heading and description shows above both controls",
+            "The controls are still usable"
+          ]
+        },
+        {
+          "action": "Enable speech and reload.",
+          "acceptanceCriteria": ["Your choices persist", "The notice remains"]
+        }
+      ]
+    },
+    {
+      "id": "SETTING-013",
+      "goal": "Hides \"show my display name\" setting depending on message layout",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open Settings and look for the \"show/hide my display name on my messages\" setting.",
+          "acceptanceCriteria": ["It appears only when the current message layout allows it"]
+        },
+        {
+          "action": "Toggle the setting when visible.",
+          "acceptanceCriteria": ["The toggle works"]
+        }
+      ]
+    },
+    {
+      "id": "SETTING-014",
+      "goal": "API Credentials",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open Settings and search for \"API\".",
+          "acceptanceCriteria": [
+            "As an admin, a result is shown",
+            "As a non-admin, no result is shown"
+          ]
+        }
+      ]
+    }
+  ]
+}

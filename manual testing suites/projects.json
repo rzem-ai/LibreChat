@@ -1,0 +1,113 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Projects",
+  "idPrefix": "PROJECTS",
+  "tests": [
+    {
+      "id": "PROJECTS-001",
+      "goal": "Create a new project",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open Projects.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Click Create Project.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Name it and save.",
+          "acceptanceCriteria": ["The project is created and listed"]
+        }
+      ]
+    },
+    {
+      "id": "PROJECTS-002",
+      "goal": "Start a chat inside a project",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open a project.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Start a new chat from within it.",
+          "acceptanceCriteria": ["The chat is scoped to the project"]
+        }
+      ]
+    },
+    {
+      "id": "PROJECTS-003",
+      "goal": "Move a chat to a different project",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open a chat in a project.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Click the three dots and pick a different project.",
+          "acceptanceCriteria": ["The chat moves to the other project"]
+        }
+      ]
+    },
+    {
+      "id": "PROJECTS-004",
+      "goal": "Take a chat out of a project",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Open a project-scoped chat.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Click \"Remove from project\" on the project chip.",
+          "acceptanceCriteria": ["The chat is no longer in the project"]
+        }
+      ]
+    },
+    {
+      "id": "PROJECTS-005",
+      "goal": "Delete a project without losing its chats",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Delete a project that has scoped chats.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Open one of those chats.",
+          "acceptanceCriteria": ["The project is deleted", "The chats are still available"]
+        }
+      ]
+    },
+    {
+      "id": "PROJECTS-006",
+      "goal": "Rename a project",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Select the options of a project.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Select \"Rename\" and enter a new name.",
+          "acceptanceCriteria": ["The project shows the new name"]
+        }
+      ]
+    }
+  ]
+}

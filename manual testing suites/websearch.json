@@ -1,0 +1,67 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Web Search",
+  "idPrefix": "WEB",
+  "tests": [
+    {
+      "id": "WEB-001",
+      "goal": "Confirm web search works for OpenAI models",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Enable web search for each OpenAI model.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask for the weather in your city or another web search query.",
+          "acceptanceCriteria": ["The response shows hyperlinked URLs"]
+        }
+      ]
+    },
+    {
+      "id": "WEB-002",
+      "goal": "Confirm web search works for Anthropic global models",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Enable web search for each Anthropic Global model.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask for the weather in your city or another web search query.",
+          "acceptanceCriteria": ["The response shows the search accordion"]
+        }
+      ]
+    },
+    {
+      "id": "WEB-003",
+      "goal": "Confirm web search is NOT available for Anthropic AU models",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Select an Anthropic AU model in the chat composer and in Agent Builder.",
+          "acceptanceCriteria": ["Web search is not available in either place"]
+        }
+      ]
+    },
+    {
+      "id": "WEB-004",
+      "goal": "Guarantees citations on web search organic and news results",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Ask a question needing web search (Anthropic only), then ask a news query.",
+          "acceptanceCriteria": ["Answers show citation chips or footnotes linking to the sources"]
+        }
+      ]
+    }
+  ]
+}

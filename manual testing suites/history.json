@@ -1,0 +1,57 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Message History & Branching",
+  "idPrefix": "HIST",
+  "tests": [
+    {
+      "id": "HIST-001",
+      "goal": "Flip between regenerated replies",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Regenerate a reply at least twice.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Use the branch arrows on the message.",
+          "acceptanceCriteria": [
+            "You can flip between each regenerated reply",
+            "Each reply shows its own content"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HIST-002",
+      "goal": "Branches survive leaving and returning to a chat",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Create a few forks in a long conversation.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Open another chat, then come back.",
+          "acceptanceCriteria": ["All branches are still present and navigable"]
+        }
+      ]
+    },
+    {
+      "id": "HIST-003",
+      "goal": "Keep chatting after an error",
+      "dateUpdated": "02 Nov 2026",
+      "author": null,
+      "lastPr": null,
+      "steps": [
+        {
+          "action": "Trigger an error reply (e.g. briefly disconnect the network mid-send)",
+          "acceptanceCriteria": ["If you refresh, you can continue this chat"]
+        }
+      ]
+    }
+  ]
+}
