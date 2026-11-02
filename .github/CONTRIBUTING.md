@@ -1,3 +1,5 @@
+<!-- NOTE: This is the contributing guide from the PUBLIC LibreChat repo, not the Deloitte repo. For Deloitte setup and contribution guidance, see deloitte/README.md. -->
+
 # Contributor Guidelines
 
 Thank you to all the contributors who have helped make this project possible! We welcome various types of contributions, such as bug reports, documentation improvements, feature requests, and code contributions.

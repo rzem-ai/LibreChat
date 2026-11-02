@@ -33,5 +33,5 @@ Describe the steps required to test your changes, including any setup or configu
 - [ ] I created at least one integration test (without monkey patching)
 
 ## Documentation
-- [ ] I added any new .env variables to the end of the `.env.example` file, and explained them in the `deloitte/README.md` file
+- [ ] I added any new .env variables to `.env.deloitte` (not `.env.example`) and added any relevant secret names to `.secrets/`, following `docs/env_variables.md`
 - [ ] I wrote documentation on major changes in the `docs` folder
