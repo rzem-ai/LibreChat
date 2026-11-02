@@ -679,7 +679,7 @@ modelSpecs:
         speed: 5 # updated by deloitte.sync-model-metadata workflow on 29 October 2026
         intelligence: 1 # updated by deloitte.sync-model-metadata workflow on 29 October 2026
         supports:
-          webSearch: true
+          webSearch: false
           imageGeneration: false
 
     - name: 'anthropic-au-claude-sonnet-5-5'
@@ -697,7 +697,7 @@ modelSpecs:
         speed: 5 # updated by deloitte.sync-model-metadata workflow on 29 October 2026
         intelligence: 2 # updated by deloitte.sync-model-metadata workflow on 29 October 2026
         supports:
-          webSearch: true
+          webSearch: false
           imageGeneration: false
 
     - name: 'anthropic-au-claude-opus-5-5'
@@ -715,7 +715,7 @@ modelSpecs:
         speed: 5 # updated by deloitte.sync-model-metadata workflow on 29 October 2026
         intelligence: 5 # updated by deloitte.sync-model-metadata workflow on 29 October 2026
         supports:
-          webSearch: true
+          webSearch: false
           imageGeneration: false
 
 # MCP Servers configuration
