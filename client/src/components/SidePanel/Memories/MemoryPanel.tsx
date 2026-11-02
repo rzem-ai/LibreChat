@@ -1,7 +1,6 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
-import { matchSorter } from 'match-sorter';
-import { SystemRoles, PermissionTypes, Permissions } from 'librechat-data-provider';
+import { SystemRoles } from 'librechat-data-provider';
 import {
   Button,
   Checkbox,
@@ -11,14 +10,10 @@ import {
   OGDialogTrigger,
   useToastContext,
 } from '@librechat/client';
-import type { TUserMemory } from 'librechat-data-provider';
-import {
-  useUpdateMemoryPreferencesMutation,
-  useMemoriesQuery,
-  useGetUserQuery,
-} from '~/data-provider';
-import { useLocalize, useAuthContext, useHasAccess } from '~/hooks';
+import { useUpdateMemoryPreferencesMutation } from '~/data-provider';
 import { PanelFooter, PanelContent } from '~/components/ui';
+import useMemoryPanelState from './useMemoryPanelState';
+import { useLocalize, useAuthContext } from '~/hooks';
 import MemoryCardSkeleton from './MemoryCardSkeleton';
 import MemoryCreateDialog from './MemoryCreateDialog';
 import MemoryUsageBadge from './MemoryUsageBadge';
@@ -26,18 +21,26 @@ import AdminSettings from './AdminSettings';
 import MemoryList from './MemoryList';
 import { cn } from '~/utils';
 
-/** Partition filter sentinels; any other value is an agent id */
-const PARTITION_ALL = 'all';
-const PARTITION_PERSONAL = 'personal';
-
 export default function MemoryPanel() {
   const localize = useLocalize();
   const { user } = useAuthContext();
-  const { data: userData } = useGetUserQuery();
-  const { data: memData, isLoading } = useMemoriesQuery();
   const { showToast } = useToastContext();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [partitionFilter, setPartitionFilter] = useState(PARTITION_ALL);
+  const {
+    userData,
+    memData,
+    isLoading,
+    filteredMemories,
+    isFiltered,
+    searchQuery,
+    setSearchQuery,
+    partitionOptions,
+    activePartition,
+    setPartitionFilter,
+    hasReadAccess,
+    hasUpdateAccess,
+    hasCreateAccess,
+    hasOptOutAccess,
+  } = useMemoryPanelState();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [referenceSavedMemories, setReferenceSavedMemories] = useState(true);
 
@@ -67,71 +70,6 @@ export default function MemoryPanel() {
     setReferenceSavedMemories(checked);
     updateMemoryPreferencesMutation.mutate({ memories: checked });
   };
-
-  const hasReadAccess = useHasAccess({
-    permissionType: PermissionTypes.MEMORIES,
-    permission: Permissions.READ,
-  });
-
-  const hasUpdateAccess = useHasAccess({
-    permissionType: PermissionTypes.MEMORIES,
-    permission: Permissions.UPDATE,
-  });
-
-  const hasCreateAccess = useHasAccess({
-    permissionType: PermissionTypes.MEMORIES,
-    permission: Permissions.CREATE,
-  });
-
-  const hasOptOutAccess = useHasAccess({
-    permissionType: PermissionTypes.MEMORIES,
-    permission: Permissions.OPT_OUT,
-  });
-
-  const memories: TUserMemory[] = useMemo(() => memData?.memories ?? [], [memData]);
-
-  const partitionOptions = useMemo(() => {
-    const agentsById = new Map<string, string>();
-    for (const memory of memories) {
-      if (memory.agentId != null && !agentsById.has(memory.agentId)) {
-        agentsById.set(memory.agentId, memory.agentName ?? memory.agentId);
-      }
-    }
-    if (agentsById.size === 0) {
-      return null;
-    }
-    return [
-      { value: PARTITION_ALL, label: localize('com_ui_memories_all') },
-      { value: PARTITION_PERSONAL, label: localize('com_ui_memories_personal') },
-      ...[...agentsById.entries()].map(([value, label]) => ({ value, label })),
-    ];
-  }, [memories, localize]);
-
-  /** Falls back to "all" when the selected partition no longer exists
-   *  (e.g. the last memory of that agent was deleted), so the panel never
-   *  gets stuck filtering on a removed partition. */
-  const activePartition = useMemo(() => {
-    if (partitionFilter === PARTITION_ALL || partitionFilter === PARTITION_PERSONAL) {
-      return partitionFilter;
-    }
-    return partitionOptions?.some((option) => option.value === partitionFilter)
-      ? partitionFilter
-      : PARTITION_ALL;
-  }, [partitionOptions, partitionFilter]);
-
-  const filteredMemories = useMemo(() => {
-    const partitionMemories =
-      activePartition === PARTITION_ALL
-        ? memories
-        : memories.filter((memory) =>
-            activePartition === PARTITION_PERSONAL
-              ? memory.agentId == null
-              : memory.agentId === activePartition,
-          );
-    return matchSorter(partitionMemories, searchQuery, {
-      keys: ['key', 'value'],
-    });
-  }, [memories, searchQuery, activePartition]);
 
   if (!hasReadAccess) {
     return (
@@ -244,7 +182,7 @@ export default function MemoryPanel() {
         <MemoryList
           memories={filteredMemories}
           hasUpdateAccess={hasUpdateAccess}
-          isFiltered={searchQuery.length > 0}
+          isFiltered={isFiltered}
         />
       </PanelContent>
 

@@ -43,6 +43,8 @@ describe('classifyCodeArtifact', () => {
 
   describe('document by extension', () => {
     it.each([
+      // Deloitte Custom Change: PDF extensions qualify for document text previews.
+      ['report.pdf', 'application/octet-stream'],
       ['report.docx', 'application/octet-stream'],
       ['data.xlsx', 'application/octet-stream'],
       ['legacy.xls', 'application/octet-stream'],
@@ -54,6 +56,11 @@ describe('classifyCodeArtifact', () => {
   });
 
   describe('document by MIME', () => {
+    // Deloitte Custom Change: PDF MIME classification must use the document parser.
+    it('classifies pdf mime', () => {
+      expect(classifyCodeArtifact('unknown', 'application/pdf')).toBe('document');
+    });
+
     it('classifies docx mime', () => {
       expect(
         classifyCodeArtifact(

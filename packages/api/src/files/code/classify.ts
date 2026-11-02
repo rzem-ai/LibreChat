@@ -121,7 +121,9 @@ const ODT_MIME = 'application/vnd.oasis.opendocument.text';
 const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 const POTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.template';
 
-const DOCUMENT_EXTENSIONS = new Set<string>(['docx', 'odt', 'xlsx', 'xls', 'ods']);
+// Deloitte Custom Change: Classify PDFs as text-extractable documents for inline previews.
+const PDF_MIME = 'application/pdf';
+const DOCUMENT_EXTENSIONS = new Set<string>(['pdf', 'docx', 'odt', 'xlsx', 'xls', 'ods']);
 const PRESENTATION_EXTENSIONS = new Set<string>(['pptx', 'potx']);
 
 const extensionOf = (name: string): string => {
@@ -158,7 +160,8 @@ const isUtf8TextMime = (mime: string): boolean => {
 };
 
 const isDocumentMime = (mime: string): boolean => {
-  if (mime === DOCX_MIME || mime === ODT_MIME) {
+  // Deloitte Custom Change: Route PDF MIME types through the existing document parser.
+  if (mime === PDF_MIME || mime === DOCX_MIME || mime === ODT_MIME) {
     return true;
   }
   return excelMimeTypes.test(mime) || mime === 'application/vnd.oasis.opendocument.spreadsheet';

@@ -164,6 +164,64 @@ describe('buildReportSources', () => {
     expect(result?.sources[0].date).toBe('24 Jun 2026');
   });
 
+  // Deloitte Custom Change: cover the approved-date fallback for reports with invalid publication metadata.
+  it('falls back to LastApprovedDate when a report has no usable PublicationDate', () => {
+    const result = buildReportSources({
+      toolName: 'ibisworld_full_report',
+      serverName: 'cleartrack-mcp-gateway',
+      content: JSON.stringify({
+        Sections: [
+          { PublicationDate: 'not a date' },
+          { LastApprovedDate: '2026-06-24T00:00:00' },
+          { Definition: { PlainText: 'This industry mines gold ore.' } },
+        ],
+      }),
+    });
+
+    expect(result?.sources).toHaveLength(1);
+    expect(result?.sources[0].date).toBe('24 Jun 2026');
+  });
+
+  // Deloitte Custom Change: cover the nested date shape returned by full-report metadata.
+  it('reads a nested PublishedDate.Date from a report section', () => {
+    const result = buildReportSources({
+      toolName: 'ibisworld_report_sections',
+      serverName: 'cleartrack-mcp-gateway',
+      content: JSON.stringify({
+        Sections: [
+          { RequestedSection: 'publicationdate', Body: { PublishedDate: { Date: '2026-06-24' } } },
+          {
+            RequestedSection: 'definition',
+            Body: { Definition: { PlainText: 'This industry mines gold ore.' } },
+          },
+        ],
+      }),
+    });
+
+    expect(result?.sources).toHaveLength(1);
+    expect(result?.sources[0].date).toBe('24 Jun 2026');
+  });
+
+  // Deloitte Custom Change: handle a gateway that returns the date as the publication section body itself.
+  it('reads a bare date from the requested publicationdate section', () => {
+    const result = buildReportSources({
+      toolName: 'ibisworld_report_sections',
+      serverName: 'cleartrack-mcp-gateway',
+      content: JSON.stringify({
+        Sections: [
+          { RequestedSection: 'publicationdate', Body: '2026-06-24' },
+          {
+            RequestedSection: 'definition',
+            Body: { Definition: { PlainText: 'This industry mines gold ore.' } },
+          },
+        ],
+      }),
+    });
+
+    expect(result?.sources).toHaveLength(1);
+    expect(result?.sources[0].date).toBe('24 Jun 2026');
+  });
+
   // Deloitte Custom Change: verify an error-status PublicationDate section is ignored, just like the main loop ignores it for citations.
   it('ignores a PublicationDate from an error-status section, falling back to a later valid one', () => {
     const result = buildReportSources({
@@ -353,6 +411,37 @@ describe('buildReportSources', () => {
       title: 'Test Report',
       link: 'https://my.ibisworld.com/us/en/industry-specialized/11111/at-a-glance',
     });
+  });
+
+  // Deloitte Custom Change: cover date aliases and nested report-list date values.
+  it('adds a publication date to report-list citations and falls back to LastApprovedDate', () => {
+    const result = buildReportSources({
+      toolName: 'ibisworld_list_reports',
+      serverName: 'cleartrack-mcp-gateway',
+      content: JSON.stringify([
+        {
+          Code: '56162',
+          Title: 'Gold Ore Mining',
+          PublicationDate: '2026-06-24T00:00:00',
+          LastApprovedDate: '2026-01-01T00:00:00',
+        },
+        {
+          Code: '11111',
+          Title: 'Test Report',
+          PublicationDate: 'not a date',
+          LastApprovedDate: '2025-11-06T00:00:00',
+        },
+        {
+          Code: '22222',
+          Title: 'Another Report',
+          PublishedDate: { Date: '2024-01-30T00:00:00' },
+        },
+      ]),
+    });
+
+    expect(result?.sources[0].date).toBe('24 Jun 2026');
+    expect(result?.sources[1].date).toBe('06 Nov 2025');
+    expect(result?.sources[2].date).toBe('30 Jan 2024');
   });
 
   // Deloitte Custom Change: boolean leaf fields must survive formatting, not silently disappear.

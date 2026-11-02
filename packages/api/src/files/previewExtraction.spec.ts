@@ -75,6 +75,17 @@ describe('decideFilePreviewAction', () => {
   it('returns extract for a normal, under-cap office file', () => {
     expect(decideFilePreviewAction(baseFile)).toBe('extract');
   });
+
+  // Deloitte Custom Change: A supported PDF must use the lazy inline extraction path.
+  it('returns extract for an under-cap PDF so its text can be shown inline', () => {
+    expect(
+      decideFilePreviewAction({
+        ...baseFile,
+        filename: 'report.pdf',
+        type: 'application/pdf',
+      }),
+    ).toBe('extract');
+  });
 });
 
 describe('renderFilePreviewText', () => {

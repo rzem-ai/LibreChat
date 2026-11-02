@@ -1,11 +1,11 @@
 import { XMLParser } from 'fast-xml-parser';
 import type { MCPResultSource, MCPSourcesResult } from 'librechat-data-provider';
-import { buildSharePointSources } from '../sharepoint/sharepoint';
-import { buildEntitySources } from '../entities/entities';
-import { buildAfrSearchSources } from '../afr/afr';
-import { buildReportSources } from '../report';
-import { stripHtmlTags, formatDisplayDate } from '../format';
-import { buildKxSources } from '../kx/kx';
+import { buildSharePointSources } from './sharepoint/sharepoint';
+import { stripHtmlTags, formatDisplayDate } from './format';
+import { buildEntitySources } from './entities/entities';
+import { buildAfrSearchSources } from './afr/afr';
+import { buildReportSources } from './report';
+import { buildKxSources } from './kx/kx';
 
 /** Upper bound on articles extracted from a single feed (feeds are already newest-first). */
 const MAX_FEED_ITEMS = 30;
@@ -135,11 +135,9 @@ function parseAtomEntries(toolName: string, serverName: string, feed: XMLNode): 
 }
 
 /**
- * Splits an MCP tool result into one {@link MCPResultSource} per article/section when
- * the content is a recognizable RSS/Atom feed or a `{ Sections: [...] }` report payload
- * (see {@link buildReportSources}), so each citation can point at the specific article
- * or section instead of the whole raw result. Falls back to today's single-source
- * behavior for anything else, or if parsing fails.
+ * Builds citation sources from RSS/Atom feeds and structured MCP tool results.
+ * Dispatches recognized payloads to toolset-specific builders and falls back to a
+ * single source for unrecognized payloads, or no source for malformed known results.
  */
 export function buildMCPResultSources({
   toolName,

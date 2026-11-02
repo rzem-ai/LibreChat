@@ -1,4 +1,4 @@
-import { buildMCPResultSources } from './feed';
+import { buildMCPResultSources } from './sources';
 
 const RSS_FEED = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
@@ -191,10 +191,15 @@ describe('buildMCPResultSources', () => {
     );
   });
 
-  // Deloitte Custom Change: verify the new report-list array payload handling and per-report link.
-  it('splits a top-level array report-list payload (e.g. ibisworld_list_reports) into one source per report, each linked', () => {
+  // Deloitte Custom Change: verify the new report-list array payload handling, per-report links and dates.
+  it('splits an ibisworld_list_reports payload into dated, linked sources', () => {
     const content = JSON.stringify([
-      { Code: '56162', Title: 'Gold Ore Mining', Country: 'AU' },
+      {
+        Code: '56162',
+        Title: 'Gold Ore Mining',
+        Country: 'AU',
+        LastApprovedDate: '2026-06-24T00:00:00',
+      },
       { Code: '11111', Title: 'Test Report', Country: 'US' },
     ]);
     const result = buildMCPResultSources({
@@ -207,6 +212,7 @@ describe('buildMCPResultSources', () => {
     expect(result.sources[0]).toMatchObject({
       title: 'Gold Ore Mining',
       link: 'https://my.ibisworld.com/au/en/industry-specialized/56162/at-a-glance',
+      date: '24 Jun 2026',
     });
   });
 
@@ -346,7 +352,13 @@ describe('buildMCPResultSources', () => {
 
   it('does not reclassify a non-SharePoint tool result that happens to share a SharePoint payload shape', () => {
     const content = JSON.stringify({
-      items: [{ id: '1', name: 'Report.pdf', webUrl: 'https://contoso.sharepoint.com/sites/finance/Report.pdf' }],
+      items: [
+        {
+          id: '1',
+          name: 'Report.pdf',
+          webUrl: 'https://contoso.sharepoint.com/sites/finance/Report.pdf',
+        },
+      ],
       count: 1,
     });
     const result = buildMCPResultSources({
@@ -355,6 +367,8 @@ describe('buildMCPResultSources', () => {
       content,
     });
 
-    expect(result.sources).toEqual([{ toolName: 'some_other_tool', serverName: 'cleartrack-mcp-gateway', content }]);
+    expect(result.sources).toEqual([
+      { toolName: 'some_other_tool', serverName: 'cleartrack-mcp-gateway', content },
+    ]);
   });
 });

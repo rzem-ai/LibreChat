@@ -164,6 +164,9 @@ export function extractCodeArtifactRawText(
 const documentMimeFromExtension = (name: string): string | null => {
   const ext = path.extname(name).toLowerCase();
   switch (ext) {
+    // Deloitte Custom Change: Use the canonical PDF MIME when extension detection identifies a PDF.
+    case '.pdf':
+      return 'application/pdf';
     case '.docx':
       return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
     case '.xlsx':

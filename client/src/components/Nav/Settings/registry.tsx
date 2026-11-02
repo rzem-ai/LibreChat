@@ -594,6 +594,10 @@ export const registry: SettingEntry[] = [
     Component: CacheTTSSwitch,
   },
 
+  // Deloitte Custom Change: `memoriesInSettings` moves this toggle into the dedicated
+  // Memories tab for users with full memories access. It stays here as a fallback for
+  // roles with OPT_OUT but not USE/READ access, since the Memories tab is unreachable
+  // for them. Turning the flag off restores base LibreChat behavior with this entry.
   // Data controls · Memory
   {
     id: 'referenceSavedMemories',
@@ -601,7 +605,7 @@ export const registry: SettingEntry[] = [
     section: 'memory',
     labelKey: 'com_ui_reference_saved_memories',
     keywords: ['memory', 'personalization'],
-    show: (ctx) => ctx.hasMemoryOptOut,
+    show: (ctx) => ctx.hasMemoryOptOut && (!ctx.memoriesTabEnabled || !ctx.hasMemoriesAccess),
     Component: MemoryToggle,
   },
   // Data controls · Code execution

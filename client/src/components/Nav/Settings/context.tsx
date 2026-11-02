@@ -32,6 +32,16 @@ export function useSettingsContext(): SettingsContextValue {
     permissionType: PermissionTypes.PROMPTS,
     permission: Permissions.USE,
   });
+  // Deloitte Custom Change: gates the Settings > Memories tab (needs both USE and READ,
+  // same as the sidebar Memories panel).
+  const hasMemoriesUse = useHasAccess({
+    permissionType: PermissionTypes.MEMORIES,
+    permission: Permissions.USE,
+  });
+  const hasMemoriesRead = useHasAccess({
+    permissionType: PermissionTypes.MEMORIES,
+    permission: Permissions.READ,
+  });
   // Deloitte Custom Change: use the existing role permission to gate temporary-chat settings.
   const temporaryChatEnabled = useHasAccess({
     permissionType: PermissionTypes.TEMPORARY_CHAT,
@@ -54,11 +64,15 @@ export function useSettingsContext(): SettingsContextValue {
   // Deloitte Custom Change: opt in to the restricted service account key-management UI.
   const adminAgentApiKeysEnabled = customDeloitteFeatureFlags?.adminAgentApiKeys === true;
   const dataDangerZoneEnabled = customDeloitteFeatureFlags?.dataDangerZone !== false;
+  // Deloitte Custom Change: opt in to the dedicated Memories tab (see types.ts TABS entry).
+  const memoriesTabEnabled = customDeloitteFeatureFlags?.memoriesInSettings === true;
   // Deloitte Custom Change: hides the username-display toggle in bubble layout (no name header).
   const usernameDisplaySettingEnabled = startupConfig?.interface?.userMessageAlignment !== 'right';
   const hasRemoteAgentsBool = hasRemoteAgents === true;
   const hasMultiConvoBool = hasMultiConvo === true;
   const hasPromptsBool = hasPrompts === true;
+  // Deloitte Custom Change: mirrors the sidebar Memories panel's access requirement.
+  const hasMemoriesAccess = hasMemoriesUse === true && hasMemoriesRead === true;
   // Deloitte Custom Change: the UI mirrors the server's administrator-only lifecycle authorization.
   const isAdmin = user?.role === SystemRoles.ADMIN;
   const engineTTS = useRecoilValue<string>(store.engineTTS);
@@ -85,6 +99,8 @@ export function useSettingsContext(): SettingsContextValue {
       adminAgentApiKeysEnabled,
       isAdmin,
       dataDangerZoneEnabled,
+      memoriesTabEnabled,
+      hasMemoriesAccess,
       usernameDisplaySettingEnabled,
       engineTTS,
       langfuseConnectionAccess,
@@ -110,6 +126,8 @@ export function useSettingsContext(): SettingsContextValue {
       adminAgentApiKeysEnabled,
       isAdmin,
       dataDangerZoneEnabled,
+      memoriesTabEnabled,
+      hasMemoriesAccess,
       usernameDisplaySettingEnabled,
       engineTTS,
       langfuseConnectionAccess,

@@ -169,10 +169,8 @@ describe('extractCodeArtifactText', () => {
         parseDocumentMock.mockClear();
         await extractCodeArtifactText(Buffer.from('PK'), name, sniffed, 'document');
         const call = parseDocumentMock.mock.calls[0]?.[0];
-        /* PDF doesn't have an entry in `documentMimeFromExtension` so the
-         * sniffed MIME passes through unchanged. ODT does — gets
-         * canonicalized to ODT_MIME. */
-        expect(call?.file?.mimetype).toBe(_canon === 'application/pdf' ? sniffed : _canon);
+        /* Deloitte Custom Change: Document extensions canonicalize MIME sniff results before invoking parseDocument. */
+        expect(call?.file?.mimetype).toBe(_canon);
       },
     );
 
