@@ -18,5 +18,9 @@ e2e
 evals
 untested_skills
 
+# Deloitte manual test files
+manual testing suites
+manual-testing-session.xlsx
+
 # Ignore all hidden files
 .?*
