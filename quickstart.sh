@@ -4,6 +4,11 @@
 # Usage: ./quickstart.sh [--overwrite=true|false] [--first-build] [--skip-docker]
 # Defaults: --overwrite=true, --first-build (off), --skip-docker (off)
 #
+# Args:
+#   overwrite (default: true): Replace existing .env and Caddyfile; false keeps them.
+#   first-build (default: off): Build docker images before starting (~10 minutes).
+#   skip-docker (default: off): Only prepare files; don't touch containers (npm runs).
+#
 # You are prompted for your token without it being echoed. Passing the token as an argument
 # (./quickstart.sh [options] <token>) still works for non-interactive use, but it can end up in
 # your shell history.
@@ -76,7 +81,7 @@ fi
 
 if [ -z "$TOKEN" ]; then
   usage
-  echo "ERROR: No token provided. Fetch one here (sign in, then copy the whole id_token value):" >&2
+  echo "ERROR: No token provided. Fetch one here (sign in, then copy the whole id_token value, paste it here - note it will NOT be visible, just hit enter):" >&2
   echo "  $TOKEN_URL" >&2
   exit 1
 fi
