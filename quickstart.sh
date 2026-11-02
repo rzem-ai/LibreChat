@@ -158,32 +158,41 @@ apply_secrets "$PERSONAL_FILE" "$token_tmp"
 
 echo "[2/5] Preparing $TARGET_ENV from $SOURCE_ENV"
 [ -f "$SOURCE_ENV" ] || die "$SOURCE_ENV not found."
+validate_secrets "$PERSONAL_FILE"
+validate_secrets "$SHARED_FILE"
+WORK_ENV="$TARGET_ENV"
+env_tmp=""
 if [ "$OVERWRITE" = true ] || [ ! -f "$TARGET_ENV" ]; then
-  cp "$SOURCE_ENV" "$TARGET_ENV"
-  chmod 600 "$TARGET_ENV"
-  echo "      Created $TARGET_ENV"
+  env_tmp="$(mktemp "$TARGET_ENV.XXXXXX")"
+  trap 'rm -f "$token_tmp" "$env_tmp"' EXIT
+  cp "$SOURCE_ENV" "$env_tmp"
+  chmod 600 "$env_tmp"
+  WORK_ENV="$env_tmp"
+  echo "      Prepared new $TARGET_ENV (written once secrets and URLs are applied)"
 else
   echo "      Keeping existing $TARGET_ENV (--overwrite=false)"
 fi
 
 echo "[3/5] Populating $TARGET_ENV with secrets"
-validate_secrets "$PERSONAL_FILE"
-validate_secrets "$SHARED_FILE"
-apply_secrets "$TARGET_ENV" "$PERSONAL_FILE"
-apply_secrets "$TARGET_ENV" "$SHARED_FILE"
+apply_secrets "$WORK_ENV" "$PERSONAL_FILE"
+apply_secrets "$WORK_ENV" "$SHARED_FILE"
 
 echo "[4/5] Setting host URLs in $TARGET_ENV and preparing $CADDY_FILE"
 HOST_NAME="$(hostname)"
 HOST_NAME="${HOST_NAME%.local}"
 BASE_URL="https://${HOST_NAME}.local"
 urls_tmp="$(mktemp)"
-trap 'rm -f "$token_tmp" "$urls_tmp"' EXIT
+trap 'rm -f "$token_tmp" "$env_tmp" "$urls_tmp"' EXIT
 printf '%s\n' \
   "DOMAIN_CLIENT=$BASE_URL" \
   "DOMAIN_SERVER=$BASE_URL" \
   "ADMIN_PANEL_URL=$BASE_URL/admin" \
   "VITE_API_BASE_URL=$BASE_URL" > "$urls_tmp"
-apply_secrets "$TARGET_ENV" "$urls_tmp"
+apply_secrets "$WORK_ENV" "$urls_tmp"
+if [ -n "$env_tmp" ]; then
+  mv "$env_tmp" "$TARGET_ENV"
+  echo "      Created $TARGET_ENV"
+fi
 CADDY_CHANGED=false
 if [ "$OVERWRITE" = true ] || [ ! -f "$CADDY_FILE" ]; then
   [ -f "$CADDY_EXAMPLE" ] || die "$CADDY_EXAMPLE not found."
