@@ -222,7 +222,7 @@ This local setup uses Docker Compose with two configuration files:
 
 ### First time
 
-Follow the [Quickstart](#5-quickstart). It generates your `.env` and `Caddyfile`, builds all images and starts every container (~10 minutes for the initial build):
+Follow the [Quickstart](#4-quickstart). It generates your `.env` and `Caddyfile`, builds all images and starts every container (~10 minutes for the initial build):
 
 ```zsh
 ./quickstart.sh --first-build
