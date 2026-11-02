@@ -9,6 +9,13 @@ one JSON file per epic. Every test lives in exactly one suite.
 | `npm run manual-tests:collate [path]` | Collate all suites into one Excel sheet (default `./manual-testing-session.xlsx`) |
 | `npm run test:manual-tests` | Unit tests for the validator and the Excel generator |
 
+The tooling is Python (3.9+) in `scripts/manualtests/`, so it needs no Node install. One-off setup:
+
+```sh
+python3 -m pip install -r scripts/manualtests/requirements.txt       # validate and collate
+python3 -m pip install -r scripts/manualtests/requirements-dev.txt   # also pytest, for test:manual-tests
+```
+
 Skills: `deloitte-manual-test-drafter` drafts or updates tests from a PR, and
 `deloitte-manual-test-reviewer` reviews suites for accuracy and duplicates afterwards.
 

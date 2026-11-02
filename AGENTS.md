@@ -204,6 +204,8 @@ its `README.md` for the format). Draft them with the `deloitte-manual-test-draft
 updates an existing test before adding a new one, then review with `deloitte-manual-test-reviewer`.
 Run `npm run manual-tests:validate` to check the suites and `npm run test:manual-tests` to test the
 validator and Excel generator. `npm run manual-tests:collate` builds the testing-session spreadsheet.
+The tooling is Python in `scripts/manualtests/`; install it with
+`python3 -m pip install -r scripts/manualtests/requirements-dev.txt`.
 
 ## Testing
 

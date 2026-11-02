@@ -618,6 +618,8 @@ Functional test cases for manual testing sessions live in the [`manual testing s
 | `npm run test:manual-tests` | Runs the automated tests for the validator and the Excel generator (columns, dropdowns, colours, Overall Result formula) |
 | `npm run manual-tests:collate [path]` | Collates all suites into one Excel sheet for a testing session (default `manual-testing-session.xlsx`) |
 
+These commands run the Python scripts in `scripts/manualtests/` (Python 3.9+). Install their dependencies once with `python3 -m pip install -r scripts/manualtests/requirements-dev.txt` (`requirements.txt` is enough for `validate` and `collate`).
+
 Use the `deloitte-manual-test-drafter` skill to draft tests from a PR, then `deloitte-manual-test-reviewer` to check them for accuracy and duplicates.
 
 # 🔐 Security
