@@ -423,7 +423,11 @@ For LOCAL development, we need to add each user's hostname to the Redirect URIs 
 
 # 🔗 MCP Access
 
-The SharePoint MCP is restricted in all environments to this Azure Entra group: [AU_MA_MCP_SHAREPOINT_USERS](https://portal.azure.com/?ocid=AIDcmmpi82d2sl_SEM__k_CjwKCAjwxeHWBhBPEiwAiqtQ-Vj1ZoC2y5NW7jluDLaotXWgX7TXwOzxklNMQ7s0ZQ-SPn5OEQv0KRoC7XYQAvD_BwE_k_#view/Microsoft_AAD_IAM/GroupDetailsMenuBlade/~/Members/groupId/00c0efc7-e8a7-448c-9480-834cbf1ebd60/menuId/). Jack Walkinshaw and Alex Rabbetts can add members to the group.
+The SharePoint MCP is restricted in all environments to this Azure Entra group: [AU_MA_MCP_SHAREPOINT_USERS](https://portal.azure.com/?ocid=AIDcmmpi82d2sl_SEM__k_CjwKCAjwxeHWBhBPEiwAiqtQ-Vj1ZoC2y5NW7jluDLaotXWgX7TXwOzxklNMQ7s0ZQ-SPn5OEQv0KRoC7XYQAvD_BwE_k_#view/Microsoft_AAD_IAM/GroupDetailsMenuBlade/~/Members/groupId/00c0efc7-e8a7-448c-9480-834cbf1ebd60/menuId/). 
+
+To add new users to the MCP, go to the [Manage Access tab in GIGA](https://giga.deloitteresources.com/accessRequest/accessRequest.jsf#/accessRequest/selectUser?quickLink=Request%20Access). Search for the users by username, and then select the AU_MA_MCP_SHAREPOINT_USERS in the next step. It will error out if you attempt to add a user who already has access.
+
+Alex Rabbetts and Jack Walkinshaw are the group owners, and will need to approve the requests in GIGA.
 
 # 🔐 Security
 

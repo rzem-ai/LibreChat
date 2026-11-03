@@ -5,6 +5,26 @@ repository:
 github:
   account: Deloitte-Australia
 
+project:
+  owner: Deloitte-Australia
+  number: 331
+  url: "https://github.com/orgs/Deloitte-Australia/projects/331"
+  id: "PVT_kwDOB-QLa84BgAju"
+  fields:
+    sprint:
+      id: "PVTIF_lADOB-QLa84BgAjuzhaPVC0"
+      type: iteration
+      note: "Two-week iterations (Sprint 56 starts 2026-10-26). 'This sprint' = the iteration containing today's date; look up iteration ids with the GraphQL field query."
+
+issue_fields:
+  note: "Priority is an organisation-level issue field (not a project field and not a label). Set it on the issue itself."
+  priority:
+    id: 25215254
+    options: [Urgent, High, Medium, Low]
+  effort:
+    id: 25215257
+    options: [High, Medium, Low]
+
 labels:
   bug: "🐛 bug"
   enhancement: "✨ enhancement"

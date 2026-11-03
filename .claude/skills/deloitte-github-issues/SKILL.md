@@ -211,7 +211,25 @@ Do not duplicate existing entries.
 
 ---
 
-## Step 9 - Report outcome
+## Step 9 - Set Sprint (project) and Priority (issue field)
+
+Priority and sprint are NOT labels. Sprint is a field on the `project` in `repo-config.yaml`; Priority is an issue field (`issue_fields`).
+Do not ask the user how to record them.
+
+1. Add the issue: `gh project item-add <number> --owner <owner> --url <issue url> --format json --jq .id`
+2. Sprint ("this sprint" / "current iteration"): find the iteration whose start date plus duration contains today's date, using
+   `gh api graphql` on the Sprint field's `configuration.iterations`, then
+   `gh project item-edit --project-id <id> --id <item id> --field-id <sprint field id> --iteration-id <iteration id>`.
+3. Priority is an organisation issue field, not a project field. Set it on the issue (value is the option NAME, e.g. `Low`):
+   ```bash
+   echo '{"issue_field_values":[{"field_id":25215254,"value":"Low"}]}' > /tmp/pf.json
+   gh api -X POST repos/<owner>/<repo>/issues/<number>/issue-field-values --input /tmp/pf.json
+   ```
+   Options: Urgent, High, Medium, Low. Do not invent others.
+
+---
+
+## Step 10 - Report outcome
 
 Summarise:
 
