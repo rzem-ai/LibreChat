@@ -27,7 +27,7 @@ jobs:
             manual:
               - 'manual testing suites/**'
               - 'scripts/manualtests/**'
-              - '.github/workflows/deloitte.manual-tests.yml'
+              - '.github/workflows/deloitte.manual-tests-validation.yml'
 
       - name: Use Node.js 24.17.0
         if: steps.changes.outputs.manual == 'true'
