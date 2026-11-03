@@ -71,15 +71,15 @@
           "acceptanceCriteria": []
         },
         {
-          "action": "Add a skill via \"Add Skills\".",
+          "action": "Set the Skills mode to \"Selected\" and add a skill using \"Add skill\".",
           "acceptanceCriteria": []
         },
         {
-          "action": "Activate the skill using the toggle.",
+          "action": "Save the agent.",
           "acceptanceCriteria": []
         },
         {
-          "action": "Chat using a prompt relevant to that skill.",
+          "action": "Start a new chat with the saved agent and send a prompt relevant to that skill.",
           "acceptanceCriteria": ["The agent invokes the skill"]
         }
       ]

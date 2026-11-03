@@ -80,7 +80,7 @@
           ]
         },
         {
-          "action": "Ask the agent to update the existing memory.",
+          "action": "Ask the agent to update the existing memory. Inspect the update approval card and verify that the saved memory remains unchanged, then choose Approve and click Submit. Wait for the reply to finish and verify the updated memory in Settings > Memories before continuing.",
           "acceptanceCriteria": [
             "An approval card titled \"Update memory\" appears",
             "\"Will be updated\" is shown in green",

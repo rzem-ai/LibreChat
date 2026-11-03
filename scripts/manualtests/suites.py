@@ -22,7 +22,10 @@ Suite = Dict[str, Any]
 def load_suites(directory: Path = SUITES_DIR) -> List[Suite]:
     def load(path: Path) -> Suite:
         try:
-            return {"file": path.name, **json.loads(path.read_text(encoding="utf-8"))}
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                raise ValueError(f"{path.name}: suite must be a JSON object")
+            return {"file": path.name, **data}
         except json.JSONDecodeError as error:
             raise ValueError(f"{path.name}: invalid JSON ({error})") from error
 

@@ -72,7 +72,7 @@
       },
       "steps": [
         {
-          "action": "Open a skill.",
+          "action": "Open a skill and, if it is Active, switch it off before proceeding.",
           "acceptanceCriteria": []
         },
         {

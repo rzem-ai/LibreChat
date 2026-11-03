@@ -62,7 +62,7 @@
           "acceptanceCriteria": []
         },
         {
-          "action": "Click the three dots and pick a different project.",
+          "action": "Click the three dots, select \"Change project\", select a different project and click \"Save\".",
           "acceptanceCriteria": ["The chat moves to the other project"]
         }
       ]
@@ -122,7 +122,7 @@
           "acceptanceCriteria": []
         },
         {
-          "action": "Select \"Rename\" and enter a new name.",
+          "action": "Select \"Edit project\", enter a new name and click \"Save\".",
           "acceptanceCriteria": ["The project shows the new name"]
         }
       ]
