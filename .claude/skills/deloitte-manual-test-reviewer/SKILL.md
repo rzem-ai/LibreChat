@@ -21,7 +21,7 @@ review all suites if asked.
    goal, overlapping steps or the same acceptance criteria. Recommend merging into
    the older test (keep its `id`) rather than keeping both.
 3. **Accuracy against the code**: for each step, confirm UI labels, menu paths,
-   routes and settings still exist (`client/src`, `client/src/locales/en/translation.json`,
+   routes and settings still exist (`../../../client/src`, `client/src/locales/en/translation.json`,
    `librechat.yaml`). Flag renamed or removed controls and outdated expected values
    (model names, counts such as "24 steps", tab names).
 4. **Quality**: every test has at least one specific, observable acceptance
@@ -29,7 +29,7 @@ review all suites if asked.
    items, files) is stated; no hostnames or environment-specific wording; the test
    sits in the right epic.
 5. **Per-model**: flag tests that repeat the same steps per model (or hard-code model names that
-   should come from `librechat.yaml`) as candidates for `perModel`; check `where` filters still match
+   should come from `../../../librechat.yaml`) as candidates for `perModel`; check `where` filters still match
    the models in `librechat.yaml`.
 6. **Metadata**: `dateUpdated` is bumped for changed tests; `author` and `lastPr`
    point at the last relevant PR (`null` is only acceptable for tests migrated from

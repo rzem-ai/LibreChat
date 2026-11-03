@@ -19,7 +19,7 @@ format and rules.
    `gh pr diff <n>`. With no PR number, use the current branch's PR, or the
    working-tree diff if none exists yet.
 2. Work out the user-visible behaviour that changed. Prefer the PR description's
-   "How should reviewers test" section, then the diff (`client/src` for UI,
+   "How should reviewers test" section, then the diff (`../../../client/src` for UI,
    locale strings in `client/src/locales/en/translation.json` for exact labels).
 3. If the change has no user-visible behaviour (refactor, CI, docs), stop and say
    no manual test is needed.
