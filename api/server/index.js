@@ -76,6 +76,7 @@ const { initializeGitHubSkillSync } = require('./services/Skills/sync');
 const { initializeAgentTriggerService } = require('./services/Agents/triggers');
 const { resumeAgentEventDetachedAction } = require('./services/Agents/detachedActionResume');
 const { initializeScheduleEngine, recordExpiredScheduleApproval } = require('./services/Schedules');
+const { initializeResearch } = require('./services/Research');
 const { jwtLogin, ldapLogin, passportLogin } = require('~/strategies');
 const { startExpiredFileSweep } = require('./services/Files/process');
 // Deloitte Custom Change: Retention Update
@@ -467,6 +468,7 @@ const startServer = async () => {
   app.use('/api/banner', routes.banner);
   app.use('/api/memories', routes.memories);
   app.use('/api/schedules', rejectScheduleWritesUntilReady, routes.schedules);
+  app.use('/api/research', routes.research);
   app.use('/api/permissions', routes.accessPermissions);
 
   app.use('/api/tags', routes.tags);
@@ -542,6 +544,8 @@ const startServer = async () => {
             'Resolve the cause logged above and restart.',
         );
       }
+      const stopResearch = await initializeResearch();
+      registerShutdownTask('research worker', async () => stopResearch(), { priority: 50 });
       serverReady = true;
       logger.info('Server readiness checks passing.');
     } catch (initErr) {

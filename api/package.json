@@ -49,6 +49,7 @@
     "@librechat/agents": "^4.0.1",
     "@librechat/api": "*",
     "@librechat/data-schemas": "*",
+    "@librechat/researcher": "*",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@modelcontextprotocol/sdk": "^1.32.0",
     "@node-saml/passport-saml": "^5.1.0",

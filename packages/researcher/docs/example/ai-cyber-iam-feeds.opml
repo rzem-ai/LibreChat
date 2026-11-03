@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>AI, Cyber Security and IAM feeds</title>
+    <dateCreated>Tue, 03 Nov 2026 02:14:46 GMT</dateCreated>
+    <ownerName>Alex Rzem</ownerName>
+  </head>
+  <body>
+    <outline text="AI Companies" title="AI Companies">
+      <outline type="rss" text="Anthropic News (Olshansk mirror)" title="Anthropic News (Olshansk mirror)" xmlUrl="https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_news.xml" htmlUrl="https://www.anthropic.com/news" description="third-party scraper - no official feed" />
+      <outline type="rss" text="Anthropic Research (Olshansk mirror)" title="Anthropic Research (Olshansk mirror)" xmlUrl="https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_research.xml" htmlUrl="https://www.anthropic.com/research" description="third-party scraper - no official feed" />
+      <outline type="rss" text="DeepSeek News (RSSHub mirror)" title="DeepSeek News (RSSHub mirror)" xmlUrl="https://rsshub.ktachibana.party/deepseek/news" htmlUrl="https://api-docs.deepseek.com/news" description="third-party RSSHub mirror, Chinese titles" />
+      <outline type="rss" text="DeepSeek models on Hugging Face (RSSHub mirror)" title="DeepSeek models on Hugging Face (RSSHub mirror)" xmlUrl="https://rsshub.ktachibana.party/huggingface/models/deepseek-ai" htmlUrl="https://huggingface.co/deepseek-ai" description="third-party RSSHub mirror" />
+      <outline type="rss" text="Google DeepMind Blog" title="Google DeepMind Blog" xmlUrl="https://deepmind.google/blog/rss.xml" htmlUrl="https://deepmind.google/blog/" description="official" />
+      <outline type="rss" text="Google - The Keyword: AI" title="Google - The Keyword: AI" xmlUrl="https://blog.google/technology/ai/rss/" htmlUrl="https://blog.google/technology/ai/" description="official" />
+      <outline type="rss" text="Meta Newsroom" title="Meta Newsroom" xmlUrl="https://about.fb.com/feed/" htmlUrl="https://about.fb.com/news/" description="official, company-wide" />
+      <outline type="rss" text="AI at Meta Blog (Olshansk mirror)" title="AI at Meta Blog (Olshansk mirror)" xmlUrl="https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_meta_ai.xml" htmlUrl="https://ai.meta.com/blog/" description="third-party scraper - stale since Jul 2026" />
+      <outline type="rss" text="Mistral AI Blog" title="Mistral AI Blog" xmlUrl="https://mistral.ai/rss.xml" htmlUrl="https://mistral.ai/news" description="official" />
+      <outline type="rss" text="Moonshot AI (Kimi) models on Hugging Face (RSSHub mirror)" title="Moonshot AI (Kimi) models on Hugging Face (RSSHub mirror)" xmlUrl="https://rsshub.ktachibana.party/huggingface/models/moonshotai" htmlUrl="https://www.kimi.com/blog" description="third-party, model drops only" />
+      <outline type="rss" text="OpenAI News" title="OpenAI News" xmlUrl="https://openai.com/news/rss.xml" htmlUrl="https://openai.com/news" description="official" />
+      <outline type="rss" text="Qwen Blog (RSSHub mirror)" title="Qwen Blog (RSSHub mirror)" xmlUrl="https://rsshub.ktachibana.party/qwen/blog" htmlUrl="https://qwen.ai/blog" description="third-party RSSHub mirror, Chinese titles" />
+      <outline type="rss" text="xAI News (Olshansk mirror)" title="xAI News (Olshansk mirror)" xmlUrl="https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_xainews.xml" htmlUrl="https://x.ai/news" description="third-party scraper" />
+    </outline>
+    <outline text="AI - General" title="AI - General">
+      <outline type="rss" text="Simon Willison's Weblog" title="Simon Willison's Weblog" xmlUrl="https://simonwillison.net/atom/everything/" htmlUrl="https://simonwillison.net/" />
+      <outline type="rss" text="Import AI" title="Import AI" xmlUrl="https://importai.substack.com/feed" htmlUrl="https://importai.substack.com/" />
+      <outline type="rss" text="Interconnects" title="Interconnects" xmlUrl="https://www.interconnects.ai/feed" htmlUrl="https://www.interconnects.ai/" />
+      <outline type="rss" text="Ars Technica - AI" title="Ars Technica - AI" xmlUrl="https://arstechnica.com/ai/feed/" htmlUrl="https://arstechnica.com/ai/" />
+      <outline type="rss" text="MIT Technology Review - AI" title="MIT Technology Review - AI" xmlUrl="https://www.technologyreview.com/topic/artificial-intelligence/feed" htmlUrl="https://www.technologyreview.com/topic/artificial-intelligence/" />
+    </outline>
+    <outline text="AI - Agents" title="AI - Agents">
+      <outline type="rss" text="Model Context Protocol Blog" title="Model Context Protocol Blog" xmlUrl="https://blog.modelcontextprotocol.io/index.xml" htmlUrl="https://blog.modelcontextprotocol.io/" />
+      <outline type="rss" text="Simon Willison - MCP tag" title="Simon Willison - MCP tag" xmlUrl="https://simonwillison.net/tags/model-context-protocol.atom" htmlUrl="https://simonwillison.net/tags/model-context-protocol/" description="subset of the everything feed" />
+      <outline type="rss" text="Latent Space" title="Latent Space" xmlUrl="https://www.latent.space/feed" htmlUrl="https://www.latent.space/" />
+      <outline type="rss" text="LangChain Blog" title="LangChain Blog" xmlUrl="https://blog.langchain.com/rss.xml" htmlUrl="https://blog.langchain.com/" />
+      <outline type="rss" text="Cloudflare Blog - agents tag" title="Cloudflare Blog - agents tag" xmlUrl="https://blog.cloudflare.com/tag/agents/rss/" htmlUrl="https://blog.cloudflare.com/tag/agents/" />
+    </outline>
+    <outline text="AI - Image+Video Generation" title="AI - Image+Video Generation">
+      <outline type="rss" text="ComfyUI Blog" title="ComfyUI Blog" xmlUrl="https://blog.comfy.org/feed" htmlUrl="https://blog.comfy.org/" />
+      <outline type="rss" text="Stable Diffusion Art" title="Stable Diffusion Art" xmlUrl="https://stable-diffusion-art.com/feed/" htmlUrl="https://stable-diffusion-art.com/" />
+      <outline type="rss" text="fal.ai Blog" title="fal.ai Blog" xmlUrl="https://blog.fal.ai/rss/" htmlUrl="https://blog.fal.ai/" />
+      <outline type="rss" text="Midjourney Updates" title="Midjourney Updates" xmlUrl="https://updates.midjourney.com/rss/" htmlUrl="https://updates.midjourney.com/" />
+      <outline type="rss" text="r/StableDiffusion" title="r/StableDiffusion" xmlUrl="https://www.reddit.com/r/StableDiffusion/.rss" htmlUrl="https://www.reddit.com/r/StableDiffusion/" description="set a distinctive User-Agent" />
+    </outline>
+    <outline text="AI - Security" title="AI - Security">
+      <outline type="rss" text="Embrace The Red" title="Embrace The Red" xmlUrl="https://embracethered.com/blog/index.xml" htmlUrl="https://embracethered.com/blog/" />
+      <outline type="rss" text="Simon Willison - security tag" title="Simon Willison - security tag" xmlUrl="https://simonwillison.net/tags/security.atom" htmlUrl="https://simonwillison.net/tags/security/" description="subset of the everything feed" />
+      <outline type="rss" text="OWASP Gen AI Security Project" title="OWASP Gen AI Security Project" xmlUrl="https://genai.owasp.org/feed/" htmlUrl="https://genai.owasp.org/" />
+      <outline type="rss" text="Trail of Bits Blog" title="Trail of Bits Blog" xmlUrl="https://blog.trailofbits.com/feed/" htmlUrl="https://blog.trailofbits.com/" />
+      <outline type="rss" text="Knostic Blog" title="Knostic Blog" xmlUrl="https://www.knostic.ai/blog/rss.xml" htmlUrl="https://www.knostic.ai/blog" description="vendor" />
+    </outline>
+    <outline text="AI - Development" title="AI - Development">
+      <outline type="rss" text="Anthropic Engineering Blog (Olshansk mirror)" title="Anthropic Engineering Blog (Olshansk mirror)" xmlUrl="https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_engineering.xml" htmlUrl="https://www.anthropic.com/engineering" description="third-party scraper - no official feed" />
+      <outline type="rss" text="Claude Code Changelog" title="Claude Code Changelog" xmlUrl="https://code.claude.com/docs/en/changelog/rss.xml" htmlUrl="https://code.claude.com/docs/en/changelog" description="official" />
+      <outline type="rss" text="Hamel's Blog" title="Hamel's Blog" xmlUrl="https://hamel.dev/index.xml" htmlUrl="https://hamel.dev/" />
+      <outline type="rss" text="philschmid.de" title="philschmid.de" xmlUrl="https://www.philschmid.de/rss" htmlUrl="https://www.philschmid.de/" />
+      <outline type="rss" text="Ahead of AI (Sebastian Raschka)" title="Ahead of AI (Sebastian Raschka)" xmlUrl="https://magazine.sebastianraschka.com/feed" htmlUrl="https://magazine.sebastianraschka.com/" />
+    </outline>
+    <outline text="AI - Content Creation" title="AI - Content Creation">
+      <outline type="rss" text="Every" title="Every" xmlUrl="https://every.to/feeds/global.xml" htmlUrl="https://every.to/" />
+      <outline type="rss" text="One Useful Thing" title="One Useful Thing" xmlUrl="https://www.oneusefulthing.org/feed" htmlUrl="https://www.oneusefulthing.org/" />
+      <outline type="rss" text="Ben's Bites" title="Ben's Bites" xmlUrl="https://www.bensbites.com/feed" htmlUrl="https://www.bensbites.com/" />
+      <outline type="rss" text="Why Try AI" title="Why Try AI" xmlUrl="https://www.whytryai.com/feed" htmlUrl="https://www.whytryai.com/" />
+      <outline type="rss" text="ElevenLabs Blog" title="ElevenLabs Blog" xmlUrl="https://elevenlabs.io/blog/rss.xml" htmlUrl="https://elevenlabs.io/blog" description="vendor" />
+    </outline>
+    <outline text="Cyber Security" title="Cyber Security">
+      <outline type="rss" text="Risky Bulletin" title="Risky Bulletin" xmlUrl="https://risky.biz/feeds/risky-business-news/" htmlUrl="https://risky.biz/" />
+      <outline type="rss" text="The Record" title="The Record" xmlUrl="https://therecord.media/feed" htmlUrl="https://therecord.media/" />
+      <outline type="rss" text="SANS Internet Storm Center" title="SANS Internet Storm Center" xmlUrl="https://isc.sans.edu/rssfeed_full.xml" htmlUrl="https://isc.sans.edu/" />
+      <outline type="rss" text="Krebs on Security" title="Krebs on Security" xmlUrl="https://krebsonsecurity.com/feed/" htmlUrl="https://krebsonsecurity.com/" />
+      <outline type="rss" text="BleepingComputer" title="BleepingComputer" xmlUrl="https://www.bleepingcomputer.com/feed/" htmlUrl="https://www.bleepingcomputer.com/" description="Cloudflare bot check possible" />
+      <outline type="rss" text="ACSC Alerts (UNVERIFIED)" title="ACSC Alerts (UNVERIFIED)" xmlUrl="https://www.cyber.gov.au/rss/alerts" htmlUrl="https://www.cyber.gov.au/" description="could not verify from sandbox" />
+      <outline type="rss" text="ACSC Advisories (UNVERIFIED)" title="ACSC Advisories (UNVERIFIED)" xmlUrl="https://www.cyber.gov.au/rss/advisories" htmlUrl="https://www.cyber.gov.au/" description="could not verify from sandbox" />
+    </outline>
+    <outline text="Identity &amp; Access Management" title="Identity &amp; Access Management">
+      <outline type="rss" text="IDPro Blog" title="IDPro Blog" xmlUrl="https://idpro.org/feed/" htmlUrl="https://idpro.org/" />
+      <outline type="rss" text="KuppingerCole" title="KuppingerCole" xmlUrl="https://www.kuppingercole.com/rss.xml" htmlUrl="https://www.kuppingercole.com/" />
+      <outline type="rss" text="OpenID Foundation" title="OpenID Foundation" xmlUrl="https://openid.net/feed/" htmlUrl="https://openid.net/" />
+      <outline type="rss" text="Phil Windley's Technometria" title="Phil Windley's Technometria" xmlUrl="https://www.windley.com/rss.xml" htmlUrl="https://www.windley.com/" />
+      <outline type="rss" text="Aembit Blog" title="Aembit Blog" xmlUrl="https://aembit.io/feed/" htmlUrl="https://aembit.io/" description="vendor" />
+    </outline>
+  </body>
+</opml>

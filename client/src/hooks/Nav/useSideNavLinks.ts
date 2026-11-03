@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useResearchNavLinks } from '@librechat/researcher/client';
 import { MCPIcon, AttachmentIcon, OpenAIMinimalIcon } from '@librechat/client';
 import {
   Bot,
@@ -86,6 +87,7 @@ export default function useSideNavLinks({
     permissionType: PermissionTypes.AGENTS,
     permission: Permissions.USE,
   });
+  const researchLinks = useResearchNavLinks(hasAccessToAgents);
   const hasAccessToCreateAgents = useHasAccess({
     permissionType: PermissionTypes.AGENTS,
     permission: Permissions.CREATE,
@@ -174,6 +176,8 @@ export default function useSideNavLinks({
         Component: SchedulePanel,
       });
     }
+
+    links.push(...(researchLinks as ReadonlyArray<NavLink>));
 
     if (hasAccessToPrompts) {
       links.push({
@@ -283,6 +287,7 @@ export default function useSideNavLinks({
     hasAccessToSchedules,
     interfaceConfig.schedules,
     interfaceConfig.parameters,
+    researchLinks,
     endpointType,
     hasAccessToBookmarks,
     availableMCPServers,

@@ -60,6 +60,7 @@ const {
 } = require('~/server/services/MCPRequestContext');
 const { logViolation } = require('~/cache');
 const { recordScheduleOutcome, isScheduleLive } = require('~/server/services/Schedules');
+const { getResearchHost } = require('~/server/services/Research');
 const {
   saveMessage,
   saveConvo,
@@ -1530,7 +1531,20 @@ const ResumableAgentController = async (req, res, next, initializeClient, addTit
   let providerExecutionId;
   let releaseEventChildLease;
   let scheduleTerminalOutcomeRecorded = false;
-  const settleScheduledRun = async ({ status, error, clearConversationId = false }) => {
+  const settleScheduledRun = async ({
+    status,
+    error,
+    clearConversationId = false,
+    response: settledResponse,
+    started,
+  }) => {
+    await getResearchHost().settleRequest(req, {
+      conversationId,
+      status,
+      responseMessageId: settledResponse?.messageId,
+      responseText: settledResponse?.text,
+      started,
+    });
     if (!scheduleId) {
       return true;
     }
@@ -1586,6 +1600,7 @@ const ResumableAgentController = async (req, res, next, initializeClient, addTit
       userId,
     });
 
+    await getResearchHost().admitOrThrow(req, conversationId);
     const endpointIconURL = getEndpointIconURL(req, endpointOption);
     const responseModel = getAgentResponseModel(req, endpointOption);
     const preliminaryUserMessage = isCompaction
@@ -3095,6 +3110,7 @@ const ResumableAgentController = async (req, res, next, initializeClient, addTit
         }
         await settleScheduledRun({
           status: responseIsUnfinished ? 'interrupted' : 'success',
+          response,
           ...(scheduleCompletionError != null && { error: scheduleCompletionError }),
         });
 
@@ -3510,7 +3526,7 @@ const ResumableAgentController = async (req, res, next, initializeClient, addTit
         })) === true;
     }
     if (initializationFinalized && !scheduleTerminalOutcomeRecorded) {
-      await settleScheduledRun(classifyScheduledFailure(error));
+      await settleScheduledRun({ ...classifyScheduledFailure(error), started: false });
     }
     if (ownedIdempotencyClaim) {
       await GenerationJobManager.releaseGeneration(

@@ -12,6 +12,12 @@ describe('api/db/index.js', () => {
       }),
     }));
 
+    jest.mock('@librechat/researcher', () => ({
+      createResearchModels: jest.fn(() => {
+        callOrder.push('createResearchModels');
+      }),
+    }));
+
     jest.mock('./indexSync', () => {
       callOrder.push('indexSync');
       return jest.fn();
@@ -21,6 +27,6 @@ describe('api/db/index.js', () => {
 
     require('./index');
 
-    expect(callOrder).toEqual(['createModels', 'indexSync']);
+    expect(callOrder).toEqual(['createModels', 'createResearchModels', 'indexSync']);
   });
 });

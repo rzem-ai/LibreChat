@@ -414,6 +414,15 @@ jest.mock('~/server/services/Schedules', () => ({
   isScheduleLive: (...args) => mockIsScheduleLive(...args),
 }));
 
+const mockAdmitResearch = jest.fn(async () => undefined);
+const mockSettleResearch = jest.fn(async () => undefined);
+jest.mock('~/server/services/Research', () => ({
+  getResearchHost: () => ({
+    admitOrThrow: (...args) => mockAdmitResearch(...args),
+    settleRequest: (...args) => mockSettleResearch(...args),
+  }),
+}));
+
 jest.mock('~/server/services/Agents/triggers', () => ({
   settleAgentQueuedTurnExecutionAdmission: (...args) =>
     mockSettleAgentQueuedTurnExecutionAdmission(...args),
@@ -1152,6 +1161,43 @@ describe('ResumableAgentController resume metadata', () => {
       error: 'This scheduled occurrence is no longer active',
     });
     expect(mockDecrementPendingRequest).not.toHaveBeenCalled();
+  });
+
+  it('answers a refused research submission without starting a generation', async () => {
+    const conversationId = 'research-conversation-1';
+    mockGenerationJobManager.claimGeneration.mockResolvedValue(
+      wonGenerationClaim({ streamId: conversationId, conversationId }),
+    );
+    mockAdmitResearch.mockRejectedValueOnce(
+      Object.assign(new Error('A research job is already running in this conversation.'), {
+        status: 409,
+        code: 'research_job_running',
+      }),
+    );
+    const req = {
+      user: { id: 'user-123' },
+      body: {
+        text: 'Research widgets',
+        messageId: 'research-user-message',
+        clientRequestId: 'research-req-1',
+        conversationId,
+        endpointOption: { endpoint: 'agents', agent_id: 'agent_research_current_events' },
+      },
+      config: {},
+    };
+    const res = createResumableResponse();
+    const initializeClient = jest.fn();
+
+    await AgentController(req, res, jest.fn(), initializeClient, null);
+
+    expect(mockAdmitResearch).toHaveBeenCalledWith(req, conversationId);
+    expect(mockGenerationJobManager.createJob).not.toHaveBeenCalled();
+    expect(initializeClient).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'research_job_running', status: 409 }),
+    );
+    expect(mockGenerationJobManager.releaseGeneration).toHaveBeenCalled();
   });
 
   it('does not start a provider when account deletion or replacement wins the startup CAS', async () => {

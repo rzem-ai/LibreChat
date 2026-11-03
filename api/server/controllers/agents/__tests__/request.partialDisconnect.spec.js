@@ -127,6 +127,13 @@ jest.mock('~/models', () => ({
   isAgentTriggerPrincipalActive: (...args) => mockIsAgentTriggerPrincipalActive(...args),
 }));
 
+jest.mock('~/server/services/Research', () => ({
+  getResearchHost: () => ({
+    admitOrThrow: async () => undefined,
+    settleRequest: async () => undefined,
+  }),
+}));
+
 const AgentController = require('../request');
 
 describe('ResumableAgentController tenant context', () => {

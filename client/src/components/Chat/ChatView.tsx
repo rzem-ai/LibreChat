@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { Spinner } from '@librechat/client';
 import { useParams } from 'react-router-dom';
 import { Constants, buildTree } from 'librechat-data-provider';
+import { useResearchConversationSync } from '@librechat/researcher/client';
 import type { TChatProject } from 'librechat-data-provider';
 import type { ChatFormValues } from '~/common';
 import {
@@ -97,6 +98,7 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
     chatHelpers.conversation?.conversationId === conversationId
       ? chatHelpers.conversation
       : undefined;
+  useResearchConversationSync(conversationId, activeConversation?.agent_id ?? undefined);
   const activeSubagentThread = activeConversation?.subagentThread;
 
   useAdaptiveSSE(rootSubmission, chatHelpers, false, index);

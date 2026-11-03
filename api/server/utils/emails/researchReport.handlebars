@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang='en'>
+  <head>
+    <meta http-equiv='Content-Type' content='text/html; charset=UTF-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+    <meta name='color-scheme' content='light dark' />
+    <title>{{title}}</title>
+    <style type='text/css'>
+      body { margin: 0; padding: 0; background-color: #ffffff; color: #212121; }
+      .container { max-width: 640px; margin: 0 auto; padding: 24px 16px; font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6; }
+      .report h1 { font-size: 20px; } .report h2 { font-size: 17px; } .report h3 { font-size: 15px; }
+      .report table { border-collapse: collapse; } .report th, .report td { border: 1px solid #d0d0d0; padding: 4px 8px; }
+      .report blockquote { margin: 0; padding-left: 12px; border-left: 3px solid #d0d0d0; color: #555555; }
+      .footer { margin-top: 32px; font-size: 12px; color: #6b6b6b; }
+      a.button { display: inline-block; padding: 8px 14px; border-radius: 6px; background-color: #10a37f; color: #ffffff; text-decoration: none; }
+      @media (prefers-color-scheme: dark) {
+        body { background-color: #212121 !important; color: #ececec !important; }
+        .report blockquote, .footer { color: #b4b4b4 !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class='container'>
+      <p>Hi {{name}},</p>
+      <p>Your scheduled research report is ready. The full report and its sources are in the conversation.</p>
+      <p><a class='button' href='{{conversationUrl}}'>Open the conversation</a></p>
+      <div class='report'>{{{reportHtml}}}</div>
+      <p class='footer'>Sent by {{appName}} because a research schedule asks for email delivery. &copy; {{year}} {{appName}}</p>
+    </div>
+  </body>
+</html>

@@ -93,6 +93,10 @@ jest.mock('~/store', () => ({
   },
 }));
 
+jest.mock('@librechat/researcher/client', () => ({
+  useResearchConversationSync: () => undefined,
+}));
+
 describe('ChatView child-thread execution identity', () => {
   beforeEach(() => {
     jest.clearAllMocks();

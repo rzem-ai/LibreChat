@@ -16,6 +16,11 @@ const esModules = [
   'domutils',
   'dom-serializer',
   'entities',
+  // micromark renders research report emails inside @librechat/researcher
+  'micromark[^/]*',
+  'decode-named-character-reference',
+  'character-entities[^/]*',
+  'devlop',
 ].join('|');
 
 module.exports = {

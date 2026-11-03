@@ -9,6 +9,7 @@ module.exports = {
     './src/**/*.{js,jsx,ts,tsx}',
     // Include component library files
     '../packages/client/src/**/*.{js,jsx,ts,tsx}',
+    '../packages/researcher/src/client/**/*.{js,jsx,ts,tsx}',
   ],
   darkMode: ['class'],
   presets: [libreChatTailwindPreset],

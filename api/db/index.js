@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { createModels } = require('@librechat/data-schemas');
+const { createResearchModels } = require('@librechat/researcher');
 const { connectDb } = require('./connect');
 
 // createModels MUST run before requiring indexSync.
@@ -7,6 +8,7 @@ const { connectDb } = require('./connect');
 // at module load time. If those models are not registered first, all MeiliSearch
 // sync operations will silently fail on every startup.
 createModels(mongoose);
+createResearchModels(mongoose);
 
 const indexSync = require('./indexSync');
 

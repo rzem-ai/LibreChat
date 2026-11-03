@@ -30,6 +30,7 @@ const {
   getCodeFileLocation,
   resolveCodeExecutionContext,
 } = require('@librechat/api');
+const { getResearchHost } = require('~/server/services/Research');
 const {
   AuthType,
   Tools,
@@ -230,6 +231,7 @@ const loadTools = async ({
   };
 
   const customConstructors = {
+    ...(options.req ? getResearchHost().toolConstructors(options.req, signal) : {}),
     image_gen_oai: async (_toolContextMap, dynamicToolContextMap) => {
       const authFields = getAuthFields('image_gen_oai');
       const authValues = await loadAuthValues({ userId: user, authFields });

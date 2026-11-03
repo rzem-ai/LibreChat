@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    // @librechat/api publishes only a `require` export condition.
+    "customConditions": ["require"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "declaration": true,
+    "isolatedDeclarations": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "jest", "@testing-library/jest-dom"],
+    "paths": {
+      // @librechat/agents ships declaration files that import its internal "@/" alias; resolve
+      // them into its published types, as packages/api does.
+      "@/*": ["../../node_modules/@librechat/agents/dist/types/*"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["dist", "node_modules"]
+}

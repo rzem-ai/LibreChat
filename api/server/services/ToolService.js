@@ -12,7 +12,7 @@ const {
   getUserMCPAuthMap,
   createAuthIdentityContext,
   selectMCPUpstreamTokenProvider,
-  loadToolDefinitions,
+  loadToolDefinitions: loadHostToolDefinitions,
   GenerationJobManager,
   isActionDomainAllowed,
   buildWebSearchContext,
@@ -119,6 +119,7 @@ const {
   resolveCollisionAuditNames,
 } = require('~/server/services/MCP');
 const { createOpenIDSessionTokenProvider } = require('~/server/services/OpenIDSessionRefresh');
+const { withResearchToolDefinitions } = require('@librechat/researcher');
 const { getMCPRequestContext } = require('~/server/services/MCPRequestContext');
 const { recordUsage } = require('~/server/services/Threads');
 const { loadTools } = require('~/app/clients/tools/util');
@@ -751,6 +752,9 @@ async function processRequiredActions(client, requiredActions) {
  *   hasDeferredTools?: boolean;
  * }>} The agent tools and registry.
  */
+/** Research tools load alongside the host's own when research is enabled. */
+const loadToolDefinitions = withResearchToolDefinitions(loadHostToolDefinitions);
+
 /** Native LibreChat tools that are not in the manifest */
 const nativeTools = new Set([
   Tools.execute_code,

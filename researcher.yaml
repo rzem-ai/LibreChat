@@ -1,0 +1,12 @@
+# Research agents (@librechat/researcher). Loaded from RESEARCHER_CONFIG_PATH, else ./researcher.yaml.
+# Every lever and its default: packages/researcher/src/contract/research.ts
+research:
+  enabled: true
+  agents:
+    provider: 'anthropic'
+    model: 'claude-opus-5-5'
+  verification:
+    model: 'claude-haiku-5-5'   # optional; defaults to agents.model, on the same endpoint
+  search:
+    provider: 'brave'   # auto | brave | native
+    braveApiKey: '${BRAVE_API_KEY}'
