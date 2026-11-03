@@ -164,7 +164,7 @@ helm/**/.values.yaml
 *.cert
 
 # AI Assistants
-/.claude/
+# /.claude/ - Deloitte Custom Change: Allow claude visibilty for skills
 /.codex/
 /.cursor/
 /.copilot/
