@@ -43,9 +43,9 @@ describe('research config', () => {
     expect(researchConfigPath()).toBe('/etc/librechat/researcher.yaml');
   });
 
-  it('fills defaults around the operator values, with or without a research key', () => {
+  it('fills defaults around the operator values, with or without a researcher key', () => {
     const nested = loadResearchConfig(
-      write('research:\n  enabled: true\n  agents:\n    provider: bedrock\n    model: m\n'),
+      write('researcher:\n  enabled: true\n  agents:\n    provider: bedrock\n    model: m\n'),
     );
     expect(nested?.enabled).toBe(true);
     expect(nested?.agents.provider).toBe('bedrock');
@@ -57,17 +57,17 @@ describe('research config', () => {
 
   it('treats a missing, unparsable or invalid file as research off', () => {
     expect(loadResearchConfig(path.join(dir, 'absent.yaml'))).toBeUndefined();
-    expect(loadResearchConfig(write('research: [unclosed'))).toBeUndefined();
-    expect(loadResearchConfig(write('research:\n  budgetDraftThreshold: 4\n'))).toBeUndefined();
+    expect(loadResearchConfig(write('researcher: [unclosed'))).toBeUndefined();
+    expect(loadResearchConfig(write('researcher:\n  budgetDraftThreshold: 4\n'))).toBeUndefined();
     expect(parseResearchConfig(undefined)).toBeUndefined();
   });
 
   it('reads the file once and attaches the section to the app config', () => {
-    process.env.RESEARCHER_CONFIG_PATH = write('research:\n  enabled: true\n');
+    process.env.RESEARCHER_CONFIG_PATH = write('researcher:\n  enabled: true\n');
     const appConfig = { fileStrategy: 'local' } as AppConfig;
-    expect(withResearchConfig(appConfig).research?.enabled).toBe(true);
+    expect(withResearchConfig(appConfig).researcher?.enabled).toBe(true);
 
-    fs.writeFileSync(process.env.RESEARCHER_CONFIG_PATH, 'research:\n  enabled: false\n');
+    fs.writeFileSync(process.env.RESEARCHER_CONFIG_PATH, 'researcher:\n  enabled: false\n');
     expect(getResearchConfig()?.enabled).toBe(true);
 
     setResearchConfig();

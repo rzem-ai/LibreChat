@@ -13,7 +13,7 @@ import { researchJobTypeForAgent, SCHEDULABLE_RESEARCH_JOB_TYPES } from '../cont
 
 type ScheduleRequest = Request & {
   user?: { id?: string; tenantId?: string };
-  config?: { research?: TResearchConfig };
+  config?: { researcher?: TResearchConfig };
 };
 
 export type ResearchScheduleHandlerMethods = Pick<
@@ -86,7 +86,7 @@ export function createResearchScheduleHandlers(deps: {
   ): (req: Request, res: Response) => Promise<void> {
     return async (req, res) => {
       const request = req as ScheduleRequest;
-      const config = request.config?.research ?? getResearchConfig();
+      const config = request.config?.researcher ?? getResearchConfig();
       const userId = request.user?.id;
       if (!config?.enabled || !userId) {
         res.status(403).json({ error_code: 'research_disabled' });

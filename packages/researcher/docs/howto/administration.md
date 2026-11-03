@@ -25,12 +25,12 @@ and every change to that file needs a backend restart.
    BRAVE_API_KEY=your-key
    ```
 
-2. Add a `research` section to `librechat.yaml`. `provider` is the name of an endpoint you
+2. Add a `researcher` section to `researcher.yaml`. `provider` is the name of an endpoint you
    already have configured, as it appears in the model picker; `model` is a model on that
    endpoint.
 
    ```yaml
-   research:
+   researcher:
      enabled: true
      agents:
        provider: 'Claude-Compatible'
@@ -46,9 +46,9 @@ and every change to that file needs a backend restart.
    and **Feeds** on the rail.
 
 On start, the backend creates the five research agents if they are missing, in a
-**Research** category, viewable by everyone. Their author is `research.agents.author` (a user
+**Research** category, viewable by everyone. Their author is `researcher.agents.author` (a user
 id) or, if unset, the first admin user. Seeding is skipped, with a warning in the log, when
-`agents.provider` or `agents.model` is missing ("research.agents.provider and model are
+`agents.provider` or `agents.model` is missing ("researcher.agents.provider and model are
 required to seed research agents") or there is no admin and no author ("No author for
 research agents").
 
@@ -118,7 +118,7 @@ Requirements and Solution Research read internal documents through an MCP server
 gateway that performs on-behalf-of token exchange with the user's OpenID token.
 
 ```yaml
-research:
+researcher:
   documents:
     mcpServer: 'document-gateway'   # an MCP server name from mcpServers
     toolName: 'get_document'        # the tool that returns one document
@@ -193,7 +193,7 @@ lists the signed-in user's subscriptions; each has a `feedId`.
 
 - **Editing.** Open an agent in the Agent Builder and change its instructions, description
   or conversation starters. Edits are kept across restarts: seeding only creates missing
-  agents. Provider and model come from `research.agents`.
+  agents. Provider and model come from `researcher.agents`.
 - **Deleting.** Refused while `research.enabled` is true, with "This research agent is
   managed by the system and cannot be deleted while research is enabled." (HTTP 409,
   `research_agent_protected`). Jobs and schedules refer to the agents by fixed id.

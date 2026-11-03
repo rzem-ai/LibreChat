@@ -22,7 +22,7 @@ const otherUser = new mongoose.Types.ObjectId().toString();
 const conversationId = '3f1c2b9a-1111-4222-8333-444455556666';
 
 const appConfig = {
-  research: researchSchema.parse({
+  researcher: researchSchema.parse({
     enabled: true,
     agents: { provider: 'gateway', model: 'm' },
     documents: { mcpServer: 'gw', toolName: 'get_document' },
@@ -316,7 +316,7 @@ describe('createResearchHost', () => {
     const research = host({
       getAppConfig: async () =>
         ({
-          research: researchSchema.parse({ enabled: true, snapshots: { sweepHour: hour } }),
+          researcher: researchSchema.parse({ enabled: true, snapshots: { sweepHour: hour } }),
         }) as ResearchAppConfig,
     });
     await research.backgroundPass();
@@ -498,7 +498,7 @@ describe('createResearchHost', () => {
       const research = host({
         getAppConfig: async () =>
           ({
-            research: researchSchema.parse({
+            researcher: researchSchema.parse({
               enabled: true,
               fetch: { allowedAddresses: [`127.0.0.1:${port}`] },
             }),
@@ -532,7 +532,7 @@ describe('createResearchHost', () => {
 
   it('builds no tools when research is disabled for the caller', async () => {
     const tools = await host().createTools(
-      request({ config: { research: researchSchema.parse({}) } as ResearchAppConfig }),
+      request({ config: { researcher: researchSchema.parse({}) } as ResearchAppConfig }),
     );
     expect(tools).toEqual([]);
   });

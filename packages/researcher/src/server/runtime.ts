@@ -62,7 +62,7 @@ export function createStrategySnapshotStorage(deps: {
   };
 }
 
-/** The SSRF-guarded fetcher configured by `research.fetch`, shared by tools and the feed poller. */
+/** The SSRF-guarded fetcher configured by `researcher.fetch`, shared by tools and the feed poller. */
 export function createResearchFetcher(config: TResearchConfig): SafeFetcher {
   return createSafePageFetcher({
     maxBytes: config.fetch.maxBytes,
@@ -96,7 +96,7 @@ export function buildResearchToolDeps(input: {
   callMcpTool?: McpCallTool;
   rag?: Parameters<typeof createRagUploadSearch>[0];
   detachedDocuments?: boolean;
-  /** Built-in search call, used when `research.search` resolves to `native`. */
+  /** Built-in search call, used when `researcher.search` resolves to `native`. */
   nativeSearch?: NativeSearchInvoke;
 }): ResearchToolDeps {
   const { config } = input;

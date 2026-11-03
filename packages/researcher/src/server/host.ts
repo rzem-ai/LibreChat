@@ -199,7 +199,7 @@ export function createResearchHost(deps: ResearchHostDeps): ResearchHost {
     withResearchConfig(await deps.getAppConfig(principal));
 
   const getConfig = async (principal: ResearchPrincipal) =>
-    (await getAppConfig(principal))?.research;
+    (await getAppConfig(principal))?.researcher;
 
   const service = createResearchService({
     methods,
@@ -207,12 +207,12 @@ export function createResearchHost(deps: ResearchHostDeps): ResearchHost {
     enqueueTrigger: deps.enqueueTrigger,
     verifier: async (owner) => {
       const appConfig = await getAppConfig(owner);
-      const config = appConfig.research;
+      const config = appConfig.researcher;
       const endpoint = config?.agents.provider;
       const model = config?.verification.model ?? config?.agents.model;
       if (!endpoint || !model) {
         throw new Error(
-          '[research] research.agents.provider and a verification model are required',
+          '[research] researcher.agents.provider and a verification model are required',
         );
       }
       return createModelClaimVerifier({
@@ -392,7 +392,7 @@ export function createResearchHost(deps: ResearchHostDeps): ResearchHost {
   async function createTools(req: ResearchRequest, signal?: AbortSignal): Promise<GenericTool[]> {
     const principal = principalOf(req);
     const appConfig = await requestConfig(req, principal);
-    const config = appConfig?.research;
+    const config = appConfig?.researcher;
     if (!principal || !config?.enabled || !req.body.conversationId) {
       return [];
     }
@@ -419,12 +419,12 @@ export function createResearchHost(deps: ResearchHostDeps): ResearchHost {
     );
   }
 
-  /** The built-in search call for the job's owner, when `research.search` resolves to it. */
+  /** The built-in search call for the job's owner, when `researcher.search` resolves to it. */
   function nativeSearchFor(
     appConfig: ResearchAppConfig | undefined,
     principal: ResearchPrincipal,
   ): NativeSearchInvoke | undefined {
-    const research = appConfig?.research;
+    const research = appConfig?.researcher;
     const resolved = research ? resolveSearch(research) : undefined;
     if (!appConfig || resolved?.provider !== 'native' || !resolved.model) {
       return undefined;
@@ -462,7 +462,7 @@ export function createResearchHost(deps: ResearchHostDeps): ResearchHost {
     return runAsSystem(() =>
       seedResearchAgents({
         methods,
-        config: base?.research,
+        config: base?.researcher,
         maxRecursionLimit: base?.endpoints?.agents?.maxRecursionLimit,
         logger: log,
       }),
@@ -473,7 +473,7 @@ export function createResearchHost(deps: ResearchHostDeps): ResearchHost {
   let lastSweepDay: string | undefined;
 
   async function sweep(base: ResearchAppConfig, now: Date): Promise<void> {
-    const research = base.research;
+    const research = base.researcher;
     if (!research) {
       return;
     }
@@ -504,7 +504,7 @@ export function createResearchHost(deps: ResearchHostDeps): ResearchHost {
   }
 
   async function pollFeeds(base: ResearchAppConfig): Promise<void> {
-    const research = base.research;
+    const research = base.researcher;
     if (!research) {
       return;
     }
@@ -521,7 +521,7 @@ export function createResearchHost(deps: ResearchHostDeps): ResearchHost {
   /** Job work: phase supervision, verification, channel delivery, then the nightly sweep. */
   async function backgroundPass(now: Date = new Date()): Promise<void> {
     const base = await getAppConfig();
-    if (!base?.research?.enabled) {
+    if (!base?.researcher?.enabled) {
       return;
     }
     try {
@@ -535,7 +535,7 @@ export function createResearchHost(deps: ResearchHostDeps): ResearchHost {
   /** Feed polling, on its own loop so a slow feed never delays job work. */
   async function feedPass(): Promise<void> {
     const base = await getAppConfig();
-    if (!base?.research?.enabled) {
+    if (!base?.researcher?.enabled) {
       return;
     }
     await pollFeeds(base);

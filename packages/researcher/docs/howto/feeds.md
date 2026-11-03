@@ -174,8 +174,8 @@ Use it as a backup before a big reorganisation, or to take your list to a feed r
 | Feeds per person | 100 | Administrator (`research.feeds.maxPerUser`) |
 | How often each feed is checked | Every 30 minutes | Administrator (`research.feeds.pollIntervalMinutes`) |
 | Failed checks before a feed is paused | 10 in a row | Administrator (`research.feeds.disableAfterFailures`) |
-| Item history kept | 45 days, longer for cited items | Administrator (`research.snapshots.retentionDays`) |
-| Items a digest considers per run | 200, most recent first | Administrator (`research.jobs.digest.maxItems`) |
+| Item history kept | 45 days, longer for cited items | Administrator (`researcher.snapshots.retentionDays`) |
+| Items a digest considers per run | 200, most recent first | Administrator (`researcher.jobs.digest.maxItems`) |
 
 When you reach your limit, **Add** in the catalogue is refused with "You have reached your
 feed limit. Remove a feed to add another."

@@ -1,4 +1,4 @@
-/** The five research jobs. Values double as `research.jobs.<key>` config keys. */
+/** The five research jobs. Values double as `researcher.jobs.<key>` config keys. */
 export enum ResearchJobType {
   REQUIREMENTS = 'requirements',
   CURRENT_EVENTS = 'currentEvents',

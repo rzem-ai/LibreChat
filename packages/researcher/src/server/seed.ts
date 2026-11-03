@@ -78,7 +78,7 @@ async function grant(
 /**
  * Seeds the Research category and the five fixed-id research agents (design 5.11).
  * Seed-if-missing: an existing agent is never touched, so an admin's tuning survives
- * every boot. Provider and model come from `research.agents`; an operator who wants the
+ * every boot. Provider and model come from `researcher.agents`; an operator who wants the
  * shipped instructions back deletes the agent and restarts.
  */
 export async function seedResearchAgents(deps: {
@@ -95,13 +95,15 @@ export async function seedResearchAgents(deps: {
   }
   const { provider, model } = config.agents;
   if (!provider || !model) {
-    log.warn('[research] research.agents.provider and model are required to seed research agents');
+    log.warn(
+      '[research] researcher.agents.provider and model are required to seed research agents',
+    );
     return { created: [], skipped: ids, reason: 'missing_model' };
   }
   const author = await resolveAuthor(methods, config.agents.author);
   if (!author) {
     log.warn(
-      '[research] No author for research agents: set research.agents.author or create an admin',
+      '[research] No author for research agents: set researcher.agents.author or create an admin',
     );
     return { created: [], skipped: ids, reason: 'no_author' };
   }

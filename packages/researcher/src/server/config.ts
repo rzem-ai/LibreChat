@@ -7,7 +7,7 @@ import type { TResearchConfig } from '../contract/research';
 import { researchSchema } from '../contract/research';
 
 /** The host's app config with the research section the package loads from `researcher.yaml`. */
-export type ResearchAppConfig = AppConfig & { research?: TResearchConfig };
+export type ResearchAppConfig = AppConfig & { researcher?: TResearchConfig };
 
 /** `RESEARCHER_CONFIG_PATH`, else `researcher.yaml` in the working directory (the project root). */
 export function researchConfigPath(): string {
@@ -17,13 +17,13 @@ export function researchConfigPath(): string {
 /**
  * Parses a research config document. Absent means the feature is off; an invalid document is
  * logged and treated as absent so a typo cannot take the app down. Accepts the section either
- * at the top level or under a `research:` key.
+ * at the top level or under a `researcher:` key.
  */
 export function parseResearchConfig(raw: unknown): TResearchConfig | undefined {
   if (!raw || typeof raw !== 'object') {
     return undefined;
   }
-  const section = 'research' in raw ? (raw as { research: unknown }).research : raw;
+  const section = 'researcher' in raw ? (raw as { researcher: unknown }).researcher : raw;
   const parsed = researchSchema.safeParse(section);
   if (!parsed.success) {
     logger.warn('[research] Invalid research config', parsed.error.flatten());
@@ -67,5 +67,5 @@ export function setResearchConfig(config?: TResearchConfig): void {
 /** The host's app config with the research section attached. */
 export function withResearchConfig(appConfig: AppConfig): ResearchAppConfig {
   const research = getResearchConfig();
-  return research ? { ...appConfig, research } : appConfig;
+  return research ? { ...appConfig, researcher: research } : appConfig;
 }

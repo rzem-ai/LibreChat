@@ -1,6 +1,6 @@
 # Research agents (@librechat/researcher). Loaded from RESEARCHER_CONFIG_PATH, else ./researcher.yaml.
 # Every lever and its default: packages/researcher/src/contract/research.ts
-research:
+researcher:
   enabled: true
   agents:
     provider: 'anthropic'

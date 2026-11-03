@@ -59,7 +59,7 @@ function req(
     user: { id: input.user ?? userId },
     params: input.params ?? {},
     body: input.body ?? {},
-    config: { research: input.enabled === false ? undefined : research },
+    config: { researcher: input.enabled === false ? undefined : research },
   } as unknown as Request;
 }
 

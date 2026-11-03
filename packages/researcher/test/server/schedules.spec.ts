@@ -38,7 +38,7 @@ function req(input: { params?: Record<string, string>; body?: unknown; user?: st
     user: { id: input.user ?? userId },
     params: input.params ?? {},
     body: input.body ?? {},
-    config: { research },
+    config: { researcher: research },
   } as unknown as Request;
 }
 

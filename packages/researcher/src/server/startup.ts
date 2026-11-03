@@ -4,15 +4,15 @@ import type { ResearchAppConfig } from './config';
 import { researchJobTypeForAgent } from '../contract/types';
 import { getResearchConfig } from './config';
 
-type ResearchSection = Pick<ResearchAppConfig, 'research'> | undefined;
+type ResearchSection = Pick<ResearchAppConfig, 'researcher'> | undefined;
 
-const fromFile = (): ResearchSection => ({ research: getResearchConfig() });
+const fromFile = (): ResearchSection => ({ researcher: getResearchConfig() });
 
 /** The only research state the client needs: whether to show research entry points. */
 export function getResearchStartupConfig(
   appConfig: ResearchSection = fromFile(),
 ): { enabled: boolean } | undefined {
-  return appConfig?.research?.enabled ? { enabled: true } : undefined;
+  return appConfig?.researcher?.enabled ? { enabled: true } : undefined;
 }
 
 /**
@@ -24,7 +24,7 @@ export function isProtectedResearchAgent(
   appConfig: ResearchSection,
   agentId: string | undefined,
 ): boolean {
-  return appConfig?.research?.enabled === true && researchJobTypeForAgent(agentId) !== undefined;
+  return appConfig?.researcher?.enabled === true && researchJobTypeForAgent(agentId) !== undefined;
 }
 
 /** `GET /api/research/status`: whether the client should show research entry points. */

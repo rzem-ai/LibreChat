@@ -50,7 +50,7 @@ function stripTags(text: string): string {
     .trim();
 }
 
-/** Resolves `research.search.braveApiKey`; an unresolved `${VAR}` placeholder means unset. */
+/** Resolves `researcher.search.braveApiKey`; an unresolved `${VAR}` placeholder means unset. */
 export function resolveBraveApiKey(configured: string | undefined): string | undefined {
   if (!configured) {
     return undefined;
@@ -135,7 +135,7 @@ export type ResolvedSearch =
   | { provider: 'native'; endpoint: string; model: string | undefined };
 
 /**
- * Resolves `research.search`. `auto` uses the built-in search when the search endpoint
+ * Resolves `researcher.search`. `auto` uses the built-in search when the search endpoint
  * (`search.native.endpoint`, else `agents.provider`) is `anthropic`, otherwise Brave.
  */
 export function resolveSearch(config: {

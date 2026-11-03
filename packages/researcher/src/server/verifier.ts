@@ -50,7 +50,7 @@ function scopePrompt(brief: string, report: string, today: Date): string {
 }
 
 /**
- * Claim and scope checks backed by a small model (research.verification.model). Only an
+ * Claim and scope checks backed by a small model (researcher.verification.model). Only an
  * explicit SUPPORTED verdict counts as support; anything else, including an unparseable
  * reply, is unsupported, so a confused model can never inflate the verified count.
  */
