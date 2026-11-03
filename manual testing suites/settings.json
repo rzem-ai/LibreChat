@@ -1,0 +1,216 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Settings",
+  "idPrefix": "SETTING",
+  "tests": [
+    {
+      "id": "SETTING-001",
+      "goal": "Confirm that the theme can be switched between light, dark and system",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open Settings > General > Appearance.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Try each theme option.",
+          "acceptanceCriteria": ["Light, dark and system themes each apply immediately"]
+        }
+      ]
+    },
+    {
+      "id": "SETTING-002",
+      "goal": "Confirm that the font size of messages can be changed",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open Settings > General > Appearance.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Change the font size.",
+          "acceptanceCriteria": ["Message text resizes accordingly"]
+        }
+      ]
+    },
+    {
+      "id": "SETTING-003",
+      "goal": "Confirm that the behaviour of sending a message can be changed",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open Settings > Chat > Sending.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Change the \"While generating, Enter will\" option.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Try composing a message while a reply is generating.",
+          "acceptanceCriteria": ["Pressing Enter behaves as the chosen option describes"]
+        }
+      ]
+    },
+    {
+      "id": "SETTING-004",
+      "goal": "Confirm that an archived chat can be viewed and restored",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Archive a chat.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Open your avatar menu > Archived Chats.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Restore the chat.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Continue the chat.",
+          "acceptanceCriteria": [
+            "The archived chat is listed",
+            "Restoring returns it to the sidebar",
+            "New messages can be sent"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "SETTING-005",
+      "goal": "Confirm that the Account tab, About tab, Danger zone and external speech engine are hidden",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open Settings.",
+          "acceptanceCriteria": ["The Account tab is hidden", "The About tab is hidden"]
+        },
+        {
+          "action": "Open Data controls.",
+          "acceptanceCriteria": [
+            "The API keys section is hidden for non-admin users",
+            "The Danger zone section is hidden"
+          ]
+        },
+        {
+          "action": "Open the speech settings.",
+          "acceptanceCriteria": ["The Speech engine \"External\" option is hidden"]
+        }
+      ]
+    },
+    {
+      "id": "SETTING-006",
+      "goal": "Confirm that settings for disabled features are hidden",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open Settings and search \"shared chats\" and \"temporary\".",
+          "acceptanceCriteria": ["Neither setting appears"]
+        },
+        {
+          "action": "As a normal user, check the Settings tabs.",
+          "acceptanceCriteria": ["No Langfuse tab is shown"]
+        },
+        {
+          "action": "As an admin, check the Settings tabs.",
+          "acceptanceCriteria": ["The Langfuse tab is visible"]
+        }
+      ]
+    },
+    {
+      "id": "SETTING-007",
+      "goal": "Confirm that speech-to-text and text-to-speech are disabled by default with an inline notice",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open Settings > Speech.",
+          "acceptanceCriteria": [
+            "A notice with a heading and description shows above both controls",
+            "The controls are still usable"
+          ]
+        },
+        {
+          "action": "Enable speech and reload.",
+          "acceptanceCriteria": ["Your choices persist", "The notice remains"]
+        }
+      ]
+    },
+    {
+      "id": "SETTING-008",
+      "goal": "Confirm that the \"show my display name\" setting only appears when the message layout allows it",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open Settings and look for the \"show/hide my display name on my messages\" setting.",
+          "acceptanceCriteria": ["It appears only when the current message layout allows it"]
+        },
+        {
+          "action": "Toggle the setting when visible.",
+          "acceptanceCriteria": ["The toggle works"]
+        }
+      ]
+    },
+    {
+      "id": "SETTING-009",
+      "goal": "Confirm that API credentials settings are visible to admins only",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open Settings and search for \"API\".",
+          "acceptanceCriteria": [
+            "As an admin, a result is shown",
+            "As a non-admin, no result is shown"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Prompts",
+  "idPrefix": "PROMPTS",
+  "tests": [
+    {
+      "id": "PROMPTS-001",
+      "goal": "Confirm that a reusable prompt can be saved",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open Prompt Manager.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Create a new prompt with a name and text.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Save.",
+          "acceptanceCriteria": ["The prompt is saved", "It appears in the prompt list"]
+        }
+      ]
+    },
+    {
+      "id": "PROMPTS-002",
+      "goal": "Confirm that a saved prompt can be dropped straight into a chat",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Select a saved prompt.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Send it.",
+          "acceptanceCriteria": ["The prompt text is inserted into the chat and sent"]
+        }
+      ]
+    },
+    {
+      "id": "PROMPTS-003",
+      "goal": "Confirm that a saved prompt can be edited",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open a saved prompt.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Click the three dots and select \"Edit\".",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Edit the prompt.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Save.",
+          "acceptanceCriteria": ["The edited text is saved"]
+        }
+      ]
+    },
+    {
+      "id": "PROMPTS-004",
+      "goal": "Confirm that a saved prompt can be deleted",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open a saved prompt.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Click the three dots and select \"Delete\".",
+          "acceptanceCriteria": ["The prompt is removed from the list"]
+        }
+      ]
+    }
+  ]
+}

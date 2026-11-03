@@ -1,0 +1,185 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Memory",
+  "idPrefix": "MEMORY",
+  "tests": [
+    {
+      "id": "MEMORY-001",
+      "goal": "Confirm that a memory can be created, edited and deleted manually through the UI",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open the avatar menu > Settings > Memories.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Click \"Add a memory\", fill in the inline form and click Create.",
+          "acceptanceCriteria": ["The memory is created and listed"]
+        },
+        {
+          "action": "Ask a query that relies on the new memory in a chat.",
+          "acceptanceCriteria": ["The new memory is used in the reply"]
+        },
+        {
+          "action": "Open the memory in Settings > Memories, edit it and save.",
+          "acceptanceCriteria": ["The edited memory is shown in the list"]
+        },
+        {
+          "action": "Ask a query that relies on the edited memory.",
+          "acceptanceCriteria": ["The edited memory is used in the reply"]
+        },
+        {
+          "action": "Delete the memory.",
+          "acceptanceCriteria": ["The memory is removed from the list"]
+        },
+        {
+          "action": "Start a new chat and ask the same query again.",
+          "acceptanceCriteria": ["The deleted memory is no longer used"]
+        }
+      ]
+    },
+    {
+      "id": "MEMORY-002",
+      "goal": "Confirm that a memory can be created, edited and deleted via chat with an agent, with human approval (HITL)",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Create or select an agent that has the memory tool enabled.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask the agent to save a new memory (e.g. \"I'm working on a Deloitte internal AI tool, MyAssist. Please remember that for future discussions.\").",
+          "acceptanceCriteria": [
+            "An approval card appears inline showing the proposed memory with Reject and Approve options",
+            "The card is titled \"Create memory\" and \"Will be created\" is shown in green",
+            "Nothing is saved until the request is approved"
+          ]
+        },
+        {
+          "action": "Click the pencil icon on the approval card to edit the memory.",
+          "acceptanceCriteria": [
+            "The memory is edited inline, not in a popup dialog",
+            "Changes are reflected on the card"
+          ]
+        },
+        {
+          "action": "Approve the request.",
+          "acceptanceCriteria": [
+            "The \"memory updated\" chip appears",
+            "The memory is saved with a relevant header in Settings > Memories"
+          ]
+        },
+        {
+          "action": "Ask the agent to update the existing memory. Inspect the update approval card and verify that the saved memory remains unchanged, then choose Approve and click Submit. Wait for the reply to finish and verify the updated memory in Settings > Memories before continuing.",
+          "acceptanceCriteria": [
+            "An approval card titled \"Update memory\" appears",
+            "\"Will be updated\" is shown in green",
+            "The memory only changes once approved"
+          ]
+        },
+        {
+          "action": "Ask the agent to delete the memory, then reject the request.",
+          "acceptanceCriteria": [
+            "The card is titled \"Delete memory\"; \"Will be deleted\" is shown in red with the trash icon",
+            "The memory is still present after rejecting"
+          ]
+        },
+        {
+          "action": "Ask the agent to delete the memory again and approve the request.",
+          "acceptanceCriteria": ["The memory is removed from the Memory panel"]
+        }
+      ]
+    },
+    {
+      "id": "MEMORY-003",
+      "goal": "Confirm that a memory can be created, edited and deleted via chat with a general model (no agent), with human approval (HITL)",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Start a new General Chat (no agent) with any model and ensure memory is enabled.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask the model to save a new memory (e.g. \"I'm working on a Deloitte internal AI tool, MyAssist. Please remember that for future discussions.\").",
+          "acceptanceCriteria": [
+            "An approval card appears inline showing the proposed memory with Reject and Approve options",
+            "The card is titled \"Create memory\" and \"Will be created\" is shown in green",
+            "Nothing is saved until the request is approved"
+          ]
+        },
+        {
+          "action": "Click the pencil icon on the approval card to edit the memory.",
+          "acceptanceCriteria": [
+            "The memory is edited inline, not in a popup dialog",
+            "Changes are reflected on the card"
+          ]
+        },
+        {
+          "action": "Approve the request.",
+          "acceptanceCriteria": [
+            "The \"memory updated\" chip appears",
+            "The memory is saved with a relevant header in Settings > Memories"
+          ]
+        },
+        {
+          "action": "Ask the model to update the existing memory.",
+          "acceptanceCriteria": [
+            "An approval card titled \"Update memory\" appears",
+            "\"Will be updated\" is shown in green",
+            "The memory only changes once approved"
+          ]
+        },
+        {
+          "action": "Ask the model to delete the memory, then reject the request.",
+          "acceptanceCriteria": [
+            "The card is titled \"Delete memory\"; \"Will be deleted\" is shown in red with the trash icon",
+            "The memory is still present after rejecting"
+          ]
+        },
+        {
+          "action": "Ask the model to delete the memory again and approve the request.",
+          "acceptanceCriteria": ["The memory is removed from the Memory panel"]
+        }
+      ]
+    },
+    {
+      "id": "MEMORY-004",
+      "goal": "Confirm that a saved memory is retrieved ad hoc in a new chat",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Ensure a memory exists (e.g. \"I really like it when you tell me jokes\" or \"I'm working on MyAssist\").",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Start a new chat.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask \"What do you know about me?\" or \"What am I working on?\".",
+          "acceptanceCriteria": ["The reply references the saved memory"]
+        }
+      ]
+    }
+  ]
+}

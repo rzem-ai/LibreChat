@@ -1,0 +1,50 @@
+# Deloitte Custom Change: validate manual testing suites.
+# Runs on every PR so it can be a required status check; validation itself only
+# runs when the suites or tooling changed, otherwise the job passes immediately.
+name: Deloitte Manual Tests Validation
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  validate-manual-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect manual test changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            manual:
+              - 'manual testing suites/**'
+              - 'scripts/manualtests/**'
+              - '.github/workflows/deloitte.manual-tests-validation.yml'
+
+      - name: Use Node.js 24.17.0
+        if: steps.changes.outputs.manual == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.17.0'
+
+      - name: Set up Python
+        if: steps.changes.outputs.manual == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        if: steps.changes.outputs.manual == 'true'
+        run: python3 -m pip install -r scripts/manualtests/requirements.txt
+
+      - name: Validate manual testing suites
+        if: steps.changes.outputs.manual == 'true'
+        run: npm run manual-tests:validate

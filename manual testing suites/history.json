@@ -1,0 +1,66 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Message History & Branching",
+  "idPrefix": "HIST",
+  "tests": [
+    {
+      "id": "HIST-001",
+      "goal": "Confirm that a user can flip between regenerated replies",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Regenerate a reply at least twice.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Use the branch arrows on the message.",
+          "acceptanceCriteria": [
+            "You can flip between each regenerated reply",
+            "Each reply shows its own content"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "HIST-002",
+      "goal": "Confirm that branches survive leaving and returning to a chat",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Create a few forks in a long conversation.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Open another chat, then come back.",
+          "acceptanceCriteria": ["All branches are still present and navigable"]
+        }
+      ]
+    },
+    {
+      "id": "HIST-003",
+      "goal": "Confirm that a user can keep chatting after an error",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Trigger an error reply (e.g. briefly disconnect the network mid-send)",
+          "acceptanceCriteria": ["If you refresh, you can continue this chat"]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "General UX, Branding & Auth",
+  "idPrefix": "UX",
+  "tests": [
+    {
+      "id": "UX-001",
+      "goal": "Confirm that the app holds up on a smaller screen",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Resize the browser to a mobile or tablet width.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Navigate the chat, sidebar and settings.",
+          "acceptanceCriteria": ["All screens remain usable without clipped or overlapping content"]
+        }
+      ]
+    },
+    {
+      "id": "UX-002",
+      "goal": "Confirm that the Terms modal is styled with GEL components",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open the Terms modal (avatar menu > Help > Terms).",
+          "acceptanceCriteria": [
+            "The layout, styling, scrolling and buttons look correct in both light and dark mode"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "UX-003",
+      "goal": "Confirm that private Azure avatars load in all views",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Sign in as a user who has a profile picture.",
+          "acceptanceCriteria": ["The picture is shown at the bottom left"]
+        }
+      ]
+    },
+    {
+      "id": "UX-004",
+      "goal": "Confirm that a user is not signed out within a single day",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Sign in and use the app, then leave your browser open until after the next stand-up.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Run another query.",
+          "acceptanceCriteria": ["You are not signed out within a single day", "The query succeeds"]
+        }
+      ]
+    }
+  ]
+}

@@ -31,6 +31,7 @@ Describe the steps required to test your changes, including any setup or configu
 - [ ] I tested my changes locally using the steps above and confirmed changes work as expected (include screenshots below, if applicable)
 - [ ] I created tests for my changes which pass successfully
 - [ ] I created at least one integration test (without monkey patching)
+- [ ] I added or updated manual tests in the `manual testing suites` folder for any user-visible change (see its README and the `deloitte-manual-test-drafter` skill), or this PR has no user-visible change
 
 ## Documentation
 - [ ] I added any new .env variables to `.env.deloitte` (not `.env.example`) and added any relevant secret names to `.secrets/`, following `docs/env_variables.md`

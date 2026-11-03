@@ -166,6 +166,7 @@ helm/**/.values.yaml
 *.cert
 
 # AI Assistants
+# /.claude/ - Deloitte Custom Change: Allow claude visibilty for skills
 /.codex/
 /.cursor/
 /.copilot/
@@ -230,3 +231,6 @@ untested_skills/
 # Local secrets (keep *.example templates)
 .secrets/*
 !.secrets/*.example
+
+# Deloitte Custom Change: ignore the generated manual testing session sheet.
+manual-testing-session.xlsx

@@ -429,6 +429,20 @@ To add new users to the MCP, go to the [Manage Access tab in GIGA](https://giga.
 
 Alex Rabbetts and Jack Walkinshaw are the group owners, and will need to approve the requests in GIGA.
 
+# 📋 Manual Testing Suites
+
+Functional test cases for manual testing sessions live in the [`manual testing suites`](../manual%20testing%20suites/README.md) folder, one JSON file per epic. Any PR with a user-visible change should add or update tests there (this is part of the PR checklist).
+
+| Command | What it does |
+|---|---|
+| `npm run manual-tests:validate` | Checks every suite for valid ids, `DD Mon YYYY` dates, links, steps and at least one acceptance criterion per test, and fails on duplicate ids |
+| `npm run test:manual-tests` | Runs the automated tests for the validator and the Excel generator (columns, dropdowns, colours, Overall Result formula) |
+| `npm run manual-tests:collate [path]` | Collates all suites into one Excel sheet for a testing session (default `manual-testing-session.xlsx`) |
+
+These commands run the Python scripts in `scripts/manualtests/` (Python 3.9+). Install their dependencies once with `python3 -m pip install -r scripts/manualtests/requirements-dev.txt` (`requirements.txt` is enough for `validate` and `collate`).
+
+Use the `deloitte-manual-test-drafter` skill to draft tests from a PR, then `deloitte-manual-test-reviewer` to check them for accuracy and duplicates.
+
 # 🔐 Security
 
 Security reviews are performed by **PrismaScan** and **Checkmarx**. You'll see high level results within the PR comments.

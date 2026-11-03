@@ -1,0 +1,96 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "MyAssist Academy",
+  "idPrefix": "ACADEMY",
+  "tests": [
+    {
+      "id": "ACADEMY-001",
+      "goal": "Confirm that the Getting Started tour can be completed with no missed steps",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Click the MyAssist Academy button and launch the Getting Started tour.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Click through every step, checking the numbers increase sequentially.",
+          "acceptanceCriteria": ["The steps never jump (e.g. 1/10 to 3/10)"]
+        },
+        {
+          "action": "Rate the tour at the end and provide feedback.",
+          "acceptanceCriteria": ["The rating and feedback are accepted with a toast notification"]
+        }
+      ]
+    },
+    {
+      "id": "ACADEMY-002",
+      "goal": "Confirm that MyAssist Academy contains Release Notes and Common Questions tabs",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open the Learn menu > MyAssist Academy.",
+          "acceptanceCriteria": [
+            "The Release Notes tab shows Release 7.1.0 and 7.1.1 and the text reads correctly"
+          ]
+        },
+        {
+          "action": "Open the Common Questions tab.",
+          "acceptanceCriteria": ["It shows 5 Q&As", "The text reads correctly", "All links work"]
+        }
+      ]
+    },
+    {
+      "id": "ACADEMY-003",
+      "goal": "Confirm that guided-tour progress is stored per user, however the tour was started, and resumes in another browser",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "In MyAssist Academy, start the Getting Started tour (from the Learn menu or the All Resources tab), advance a few steps and close it part-way.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Refresh, or log in from another browser or incognito window.",
+          "acceptanceCriteria": ["The tour shows \"in progress\" with a percentage"]
+        },
+        {
+          "action": "Navigate back into MyAssist Academy and continue the Getting Started tour.",
+          "acceptanceCriteria": ["The tour resumes at the same step"]
+        }
+      ]
+    },
+    {
+      "id": "ACADEMY-004",
+      "goal": "Confirm that the Learn menu contains the Learning Centre items",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open the Learn menu.",
+          "acceptanceCriteria": [
+            "\"Take a guided tutorial\" and \"Give feedback\" are shown",
+            "\"Ask MyAssist FAQ agent\" appears if the FAQ agent exists and opens it"
+          ]
+        }
+      ]
+    }
+  ]
+}

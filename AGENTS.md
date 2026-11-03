@@ -197,6 +197,16 @@ and mutation keys in `packages/data-provider/src/keys.ts`. Put shared endpoint d
 and data services in `packages/data-provider`, and encode dynamic URL parameters. Cover loading,
 success, and failure states in focused component tests.
 
+## Deloitte manual testing suites
+
+User-visible changes need manual test cases in `manual testing suites/` (one JSON file per epic; see
+its `README.md` for the format). Draft them with the `deloitte-manual-test-drafter` skill, which
+updates an existing test before adding a new one, then review with `deloitte-manual-test-reviewer`.
+Run `npm run manual-tests:validate` to check the suites and `npm run test:manual-tests` to test the
+validator and Excel generator. `npm run manual-tests:collate` builds the testing-session spreadsheet.
+The tooling is Python in `scripts/manualtests/`; install it with
+`python3 -m pip install -r scripts/manualtests/requirements-dev.txt`.
+
 ## Testing
 
 Run focused Jest tests from the owning workspace, not the entire monorepo. Prefer real logic and

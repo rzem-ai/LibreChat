@@ -1,0 +1,187 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Core Chat Experience",
+  "idPrefix": "CORE",
+  "tests": [
+    {
+      "id": "CORE-001",
+      "goal": "Confirm that a new chat can be started and gets a reply",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Click **New Chat**.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Type a message.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Press Enter or click Send.",
+          "acceptanceCriteria": [
+            "The message appears in the thread",
+            "A reply streams in and completes without error"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CORE-002",
+      "goal": "Confirm that an empty message cannot be sent",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open a chat.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Leave the message box empty.",
+          "acceptanceCriteria": [
+            "The Send button cannot be clicked",
+            "Pressing Enter does not send a message"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CORE-003",
+      "goal": "Confirm that replies render lists, tables and code cleanly",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Ask for a numbered list plus a short code snippet.",
+          "acceptanceCriteria": [
+            "The list renders as a numbered list",
+            "The code renders in a formatted code block"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CORE-004",
+      "goal": "Confirm that a chat is still there after a page reload",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Send a message and get a reply.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Reload the page.",
+          "acceptanceCriteria": ["The conversation is still present with both messages"]
+        }
+      ]
+    },
+    {
+      "id": "CORE-005",
+      "goal": "Confirm that a reply can be copied to the clipboard",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Hover over a reply.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Click Copy.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Paste elsewhere.",
+          "acceptanceCriteria": ["The pasted text matches the reply"]
+        }
+      ]
+    },
+    {
+      "id": "CORE-006",
+      "goal": "Confirm that the assistant can be stopped mid-reply",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Send a message that triggers a long reply.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Click Stop while it is streaming.",
+          "acceptanceCriteria": [
+            "Streaming stops promptly",
+            "The partial reply is kept",
+            "A new message can be sent afterwards"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CORE-007",
+      "goal": "Confirm that long citation titles wrap instead of overflowing",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Get a response with web, file and MCP citations (ideally with long titles).",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Open each hovercard and the Sources dialog.",
+          "acceptanceCriteria": [
+            "Long titles wrap onto multiple lines",
+            "No horizontal overflow appears"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CORE-008",
+      "goal": "Confirm that docx and xlsx citation previews show readable content",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Get a response citing a docx and an xlsx.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Open each citation preview.",
+          "acceptanceCriteria": ["The preview shows readable content, not binary or garbled text"]
+        }
+      ]
+    }
+  ]
+}

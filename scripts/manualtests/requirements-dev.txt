@@ -1,0 +1,4 @@
+# Deloitte Custom Change: dependencies for the manual testing tooling.
+-r requirements.txt
+pytest>=8.0
+openpyxl>=3.1.5

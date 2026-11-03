@@ -1,0 +1,55 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Web Search",
+  "idPrefix": "WEB",
+  "tests": [
+    {
+      "id": "WEB-001",
+      "goal": "Confirm that web search works for {{MODEL_NAME}}",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Select {{MODEL_NAME}} ({{PROVIDER_NAME}}) and enable web search.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask for the weather in your city or another web search query.",
+          "acceptanceCriteria": [
+            "The response shows its cited sources: hyperlinked URLs for OpenAI models, or inline-citations for Anthropic models"
+          ]
+        }
+      ],
+      "perModel": {
+        "where": {
+          "webSearch": true
+        }
+      }
+    },
+    {
+      "id": "WEB-002",
+      "goal": "Confirm that web search is NOT available for {{MODEL_NAME}}",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Select {{MODEL_NAME}} in the chat composer and in Agent Builder.",
+          "acceptanceCriteria": ["Web search is not available in either place"]
+        }
+      ],
+      "perModel": {
+        "where": {
+          "webSearch": false
+        }
+      }
+    }
+  ]
+}

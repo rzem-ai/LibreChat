@@ -1,0 +1,148 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Conversations, Sidebar & Bookmarks",
+  "idPrefix": "CSB",
+  "tests": [
+    {
+      "id": "CSB-001",
+      "goal": "Confirm that a chat can be renamed from the sidebar",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Use the menu on a sidebar conversation.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Choose Rename.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Enter a new name.",
+          "acceptanceCriteria": ["The sidebar shows the new name", "It persists after reload"]
+        }
+      ]
+    },
+    {
+      "id": "CSB-002",
+      "goal": "Confirm that a deleted chat is gone for good",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Delete a chat from the sidebar.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Try to open its old URL directly.",
+          "acceptanceCriteria": [
+            "The chat is gone from the sidebar",
+            "The old URL does not open the chat"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CSB-003",
+      "goal": "Confirm that the sidebar behaves when collapsed and expanded",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Collapse the sidebar.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Resize the window.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Expand it again.",
+          "acceptanceCriteria": ["The sidebar collapses and expands without layout glitches"]
+        }
+      ]
+    },
+    {
+      "id": "CSB-004",
+      "goal": "Confirm that a conversation can be duplicated",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Select the options button of a conversation.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Select \"Duplicate\".",
+          "acceptanceCriteria": ["A copy of the conversation appears with the same messages"]
+        }
+      ]
+    },
+    {
+      "id": "CSB-005",
+      "goal": "Confirm that a conversation can be archived",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Select the options button of a conversation.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Select \"Archive\".",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Set the chat filter to show archived chats.",
+          "acceptanceCriteria": [
+            "The conversation leaves the main list",
+            "It appears in the archived filter"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CSB-006",
+      "goal": "Confirm that chat search is disabled",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Sign in with an account that has existing chat history and check the sidebar and navigation.",
+          "acceptanceCriteria": ["No chat-search control is present"]
+        },
+        {
+          "action": "Attempt to open chat search using any supported shortcut.",
+          "acceptanceCriteria": [
+            "There is no way to search existing chats",
+            "No residual search results or functionality remain"
+          ]
+        }
+      ]
+    }
+  ]
+}

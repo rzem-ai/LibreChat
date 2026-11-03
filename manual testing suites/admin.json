@@ -1,0 +1,36 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Admin Panel",
+  "idPrefix": "ADMIN",
+  "tests": [
+    {
+      "id": "ADMIN-001",
+      "goal": "Confirm that an admin user can access the admin panel and a non-admin cannot",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Go to Settings > General > scroll to the bottom.",
+          "acceptanceCriteria": [
+            "Admin users will see the Admin Panel button",
+            "Non-admin users will NOT see the Admin Panel button"
+          ]
+        },
+        {
+          "action": "Admin users: Navigate to the Admin Panel by clicking the button.",
+          "acceptanceCriteria": ["Confirm the admin panel loads"]
+        },
+        {
+          "action": "Non-admin users: open the environment's configured Admin Panel URL directly in the browser.",
+          "acceptanceCriteria": [
+            "Access is denied (a forbidden message is shown) and the admin panel does not load"
+          ]
+        }
+      ]
+    }
+  ]
+}

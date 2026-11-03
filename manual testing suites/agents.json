@@ -1,0 +1,357 @@
+{
+  "$schema": "./suite.schema.json",
+  "suite": "Agents & Agent Builder",
+  "idPrefix": "AGENT",
+  "tests": [
+    {
+      "id": "AGENT-001",
+      "goal": "Confirm that an agent can be built on {{MODEL_NAME}} ({{PROVIDER_NAME}})",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open the Agent Builder.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Enter a name and instructions, and pick the model {{MODEL_NAME}} ({{PROVIDER_NAME}}.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Save.",
+          "acceptanceCriteria": ["The agent is saved", "It appears in the agent list"]
+        },
+        {
+          "action": "Query the Agent.",
+          "acceptanceCriteria": ["You get a successful response."]
+        }
+      ],
+      "perModel": true
+    },
+    {
+      "id": "AGENT-002",
+      "goal": "Confirm that an agent's instructions can be updated and are followed",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open an existing agent.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Change its instructions.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Save, then chat with it.",
+          "acceptanceCriteria": ["The agent follows the updated instructions"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-003",
+      "goal": "Confirm that an agent with a skill added uses that skill",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Edit an agent.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Set the Skills mode to \"Selected\" and add a skill using \"Add skill\".",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Save the agent.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Start a new chat with the saved agent and send a prompt relevant to that skill.",
+          "acceptanceCriteria": ["The agent invokes the skill"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-004",
+      "goal": "Confirm that an agent with an MCP tool added uses that tool",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Edit an agent.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Add a tool from the MCP gateway.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Save and chat with a relevant prompt.",
+          "acceptanceCriteria": ["The agent calls the MCP tool and uses its results"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-005",
+      "goal": "Confirm that an agent can run code",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Edit an agent with Run Code enabled.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Ask it a question that needs a calculation or code to answer.",
+          "acceptanceCriteria": ["The agent runs code and returns the result"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-006",
+      "goal": "Confirm that an agent that is no longer needed can be deleted",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open Agent Builder.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Delete an existing agent.",
+          "acceptanceCriteria": ["The agent is removed from the list"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-007",
+      "goal": "Confirm that an agent's work survives a page refresh mid-run",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Start a long-running agent task.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Refresh the page before it finishes.",
+          "acceptanceCriteria": [
+            "The run is still in progress or completes after the refresh",
+            "No work is lost"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-008",
+      "goal": "Confirm that an agent can be restored to a previous version",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open Agent Builder and edit an agent.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Make a change, then save and exit.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Return to edit the agent and open the Versions list.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "On a previous version, click its Restore (rotate) button, then confirm in the restore dialog.",
+          "acceptanceCriteria": [
+            "The restore confirmation dialog shows the version being restored",
+            "The agent now has the restored version's settings"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-009",
+      "goal": "Confirm that a user with view access to a shared agent can chat with it but not edit it",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Ensure the target agent has been shared with \"Viewer\" permissions.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Open Agent Marketplace.",
+          "acceptanceCriteria": ["The agent is present"]
+        },
+        {
+          "action": "Start a chat with the agent.",
+          "acceptanceCriteria": ["The chat works"]
+        },
+        {
+          "action": "Open Agent Builder.",
+          "acceptanceCriteria": ["The agent is not listed"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-010",
+      "goal": "Confirm that a user with edit access to a shared agent can edit it",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Ensure the target agent has been shared with \"Editor\" permissions.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Open Agent Builder.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Edit the agent and save.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Start a chat with the agent.",
+          "acceptanceCriteria": [
+            "The agent can be edited and saved",
+            "The chat uses the saved edits"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-011",
+      "goal": "Confirm that a user with owner access to a shared agent can share it",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Ensure the target agent has been shared with \"Owner\" permissions.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Open Agent Builder.",
+          "acceptanceCriteria": ["The agent is listed"]
+        },
+        {
+          "action": "Try to share the agent.",
+          "acceptanceCriteria": ["The agent can be shared"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-012",
+      "goal": "Confirm that the Agent Marketplace shows the new categories and files uncategorised agents under General",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open the Agent Marketplace.",
+          "acceptanceCriteria": [
+            "These tabs are displayed: General, Pursue & Shape, Discover & Define, Build & Deliver, Produce & Assure, Resource & Grow People, All",
+            "The old HR, R&D, Finance, IT, Sales and After Sales tabs are not displayed"
+          ]
+        },
+        {
+          "action": "Create a new agent without selecting a category.",
+          "acceptanceCriteria": []
+        },
+        {
+          "action": "Save the agent and return to the Agent Marketplace.",
+          "acceptanceCriteria": [
+            "The new agent appears under General",
+            "No category is missing, legacy, duplicated or incorrectly assigned"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-013",
+      "goal": "Confirm that sharing an agent or skill shows a publication prompt linking to a form",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Share an agent or skill.",
+          "acceptanceCriteria": ["A publication prompt appears directly under the people picker"]
+        },
+        {
+          "action": "Click the link in the prompt.",
+          "acceptanceCriteria": ["The link opens the form"]
+        }
+      ]
+    },
+    {
+      "id": "AGENT-014",
+      "goal": "Confirm that an agent's avatar loads in the agent selector row and the selected model header",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Create an agent with a profile picture (avatar).",
+          "acceptanceCriteria": [
+            "The avatar loads in both the agent selector row and the selected model header when the image URL requires authentication"
+          ]
+        }
+      ]
+    }
+  ]
+}

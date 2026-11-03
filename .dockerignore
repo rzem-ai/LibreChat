@@ -23,5 +23,9 @@ Caddyfile*
 my.secrets
 secrets.json
 
+# Deloitte Custom Change: exclude manual test files from the image.
+manual testing suites
+manual-testing-session.xlsx
+
 # Ignore all hidden files
 .?*
