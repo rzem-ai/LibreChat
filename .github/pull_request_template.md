@@ -34,5 +34,5 @@ Describe the steps required to test your changes, including any setup or configu
 - [ ] I added or updated manual tests in the `manual testing suites` folder for any user-visible change (see its README and the `deloitte-manual-test-drafter` skill), or this PR has no user-visible change
 
 ## Documentation
-- [ ] I added any new .env variables to the end of the `.env.example` file, and explained them in the `deloitte/README.md` file
+- [ ] I added any new .env variables to `.env.deloitte` (not `.env.example`) and added any relevant secret names to `.secrets/`, following `docs/env_variables.md`
 - [ ] I wrote documentation on major changes in the `docs` folder

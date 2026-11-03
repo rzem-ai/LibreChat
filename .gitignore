@@ -94,8 +94,10 @@ Caddyfile
 .npmrc
 .env*
 my.secrets
+env-diff.md
 !**/.env.example
 !**/.env.test.example
+!**/.env.deloitte
 cache.json
 api/data/
 owner.yml
@@ -225,6 +227,10 @@ untested_skills/
 !e2e/lighthouse/librechat.yaml
 /.lighthouse/
 /e2e/lighthouse/.test-results/
+
+# Local secrets (keep *.example templates)
+.secrets/*
+!.secrets/*.example
 
 # Deloitte Custom Change: ignore the generated manual testing session sheet.
 manual-testing-session.xlsx
