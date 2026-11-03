@@ -6,9 +6,12 @@
     {
       "id": "MODEL-001",
       "goal": "Confirm that {{MODEL_NAME}} ({{PROVIDER_NAME}}) can be selected, responds, titles the conversation and shows the correct hover tooltip",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the model picker and select {{MODEL_NAME}} under {{PROVIDER_NAME}}.",
@@ -25,9 +28,11 @@
           "action": "Hover over {{MODEL_NAME}} in the model picker.",
           "acceptanceCriteria": [
             "The provider eyebrow reads {{PROVIDER_NAME}}",
-            "Speed, intelligence, cost and context are all shown",
-            "Web Search is listed as supported only if the model supports it",
-            "A model with 5 cost chips says high cost"
+            "The tooltip has a Cost section, a Speed section and an Intelligence section",
+            "The Cost section shows the cost rating chips and the input and output price per 1M tokens",
+            "The Speed and Intelligence sections each show a rating (e.g. \"3 of 5\")",
+            "The Context section is also shown",
+            "A model with 5 cost chips says \"High cost - use for complex tasks only\""
           ]
         }
       ],
@@ -36,9 +41,12 @@
     {
       "id": "MODEL-002",
       "goal": "Confirm that a user's default model persists across refresh and multiple sessions",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the app and start a chat with a model (Model A).",
@@ -61,9 +69,12 @@
     {
       "id": "MODEL-003",
       "goal": "Confirm that a model can be pinned and unpinned",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open model selector and pin a model.",
@@ -80,9 +91,12 @@
     {
       "id": "MODEL-004",
       "goal": "Confirm that zero-cost models are tagged \"Free\" and suggested in the out-of-balance error",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the model selector.",
@@ -106,9 +120,12 @@
     {
       "id": "MODEL-005",
       "goal": "Confirm that only the supported providers exist",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the model picker and look at the provider groups. The only providers should be: OpenAI Global, Anthropic Global, Anthropic Australia.",
@@ -129,9 +146,12 @@
     {
       "id": "MODEL-006",
       "goal": "Confirm that the credit balance gauge is shown and updates as messages are sent",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Select a paid model (not Luna, which does not consume credits) and ensure the account has sufficient balance, then look at the bottom-left balance gauge.",
@@ -142,6 +162,26 @@
           "acceptanceCriteria": ["The gauge decreases", "The next available refill is shown"]
         }
       ]
+    },
+    {
+      "id": "MODEL-007",
+      "goal": "Confirm that the {{MODEL_NAME}} ({{PROVIDER_NAME}}) hover tooltip has a Supports section listing Web Search",
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
+      "steps": [
+        {
+          "action": "Open the model picker and hover over {{MODEL_NAME}} under {{PROVIDER_NAME}}.",
+          "acceptanceCriteria": [
+            "The tooltip has a Supports section",
+            "Web Search is listed in the Supports section"
+          ]
+        }
+      ],
+      "perModel": { "where": { "webSearch": true } }
     }
   ]
 }

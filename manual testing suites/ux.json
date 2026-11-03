@@ -6,9 +6,12 @@
     {
       "id": "UX-001",
       "goal": "Confirm that the app holds up on a smaller screen",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Resize the browser to a mobile or tablet width.",
@@ -23,9 +26,12 @@
     {
       "id": "UX-002",
       "goal": "Confirm that the Terms modal is styled with GEL components",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the Terms modal (avatar menu > Help > Terms).",
@@ -38,9 +44,12 @@
     {
       "id": "UX-003",
       "goal": "Confirm that private Azure avatars load in all views",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Sign in as a user who has a profile picture.",
@@ -51,9 +60,12 @@
     {
       "id": "UX-004",
       "goal": "Confirm that a user is not signed out within a single day",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Sign in and use the app, then leave your browser open until after the next stand-up.",

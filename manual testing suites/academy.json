@@ -6,9 +6,12 @@
     {
       "id": "ACADEMY-001",
       "goal": "Confirm that the Getting Started tour can be completed with no missed steps",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Click the MyAssist Academy button and launch the Getting Started tour.",
@@ -27,9 +30,12 @@
     {
       "id": "ACADEMY-002",
       "goal": "Confirm that MyAssist Academy contains Release Notes and Common Questions tabs",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the Learn menu > MyAssist Academy.",
@@ -46,9 +52,12 @@
     {
       "id": "ACADEMY-003",
       "goal": "Confirm that guided-tour progress is stored per user, however the tour was started, and resumes in another browser",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "In MyAssist Academy, start the Getting Started tour (from the Learn menu or the All Resources tab), advance a few steps and close it part-way.",
@@ -67,9 +76,12 @@
     {
       "id": "ACADEMY-004",
       "goal": "Confirm that the Learn menu contains the Learning Centre items",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the Learn menu.",

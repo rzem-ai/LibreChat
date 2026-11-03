@@ -6,9 +6,12 @@
     {
       "id": "HIST-001",
       "goal": "Confirm that a user can flip between regenerated replies",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Regenerate a reply at least twice.",
@@ -26,9 +29,12 @@
     {
       "id": "HIST-002",
       "goal": "Confirm that branches survive leaving and returning to a chat",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Create a few forks in a long conversation.",
@@ -43,9 +49,12 @@
     {
       "id": "HIST-003",
       "goal": "Confirm that a user can keep chatting after an error",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Trigger an error reply (e.g. briefly disconnect the network mid-send)",

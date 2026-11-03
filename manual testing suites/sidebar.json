@@ -6,9 +6,12 @@
     {
       "id": "CSB-001",
       "goal": "Confirm that a chat can be renamed from the sidebar",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Use the menu on a sidebar conversation.",
@@ -27,9 +30,12 @@
     {
       "id": "CSB-002",
       "goal": "Confirm that a deleted chat is gone for good",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Delete a chat from the sidebar.",
@@ -47,9 +53,12 @@
     {
       "id": "CSB-003",
       "goal": "Confirm that the sidebar behaves when collapsed and expanded",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Collapse the sidebar.",
@@ -68,9 +77,12 @@
     {
       "id": "CSB-004",
       "goal": "Confirm that a conversation can be duplicated",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Select the options button of a conversation.",
@@ -85,9 +97,12 @@
     {
       "id": "CSB-005",
       "goal": "Confirm that a conversation can be archived",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Select the options button of a conversation.",
@@ -109,9 +124,12 @@
     {
       "id": "CSB-006",
       "goal": "Confirm that chat search is disabled",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Sign in with an account that has existing chat history and check the sidebar and navigation.",

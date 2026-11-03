@@ -6,9 +6,12 @@
     {
       "id": "WEB-001",
       "goal": "Confirm that web search works for {{MODEL_NAME}}",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Select {{MODEL_NAME}} ({{PROVIDER_NAME}}) and enable web search.",
@@ -30,9 +33,12 @@
     {
       "id": "WEB-002",
       "goal": "Confirm that web search is NOT available for {{MODEL_NAME}}",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Select {{MODEL_NAME}} in the chat composer and in Agent Builder.",

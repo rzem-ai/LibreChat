@@ -6,9 +6,12 @@
     {
       "id": "MEMORY-001",
       "goal": "Confirm that a memory can be created, edited and deleted manually through the UI",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the avatar menu > Settings > Memories.",
@@ -43,9 +46,12 @@
     {
       "id": "MEMORY-002",
       "goal": "Confirm that a memory can be created, edited and deleted via chat with an agent, with human approval (HITL)",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Create or select an agent that has the memory tool enabled.",
@@ -97,9 +103,12 @@
     {
       "id": "MEMORY-003",
       "goal": "Confirm that a memory can be created, edited and deleted via chat with a general model (no agent), with human approval (HITL)",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Start a new General Chat (no agent) with any model and ensure memory is enabled.",
@@ -151,9 +160,12 @@
     {
       "id": "MEMORY-004",
       "goal": "Confirm that a saved memory is retrieved ad hoc in a new chat",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Ensure a memory exists (e.g. \"I really like it when you tell me jokes\" or \"I'm working on MyAssist\").",

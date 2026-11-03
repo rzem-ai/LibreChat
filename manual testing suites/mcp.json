@@ -6,9 +6,12 @@
     {
       "id": "MCP-001",
       "goal": "Confirm that all MCP connectors (AFR News, GIMS, KX, SharePoint, DESC, IBISWorld) are listed and available, with SharePoint visible only to permitted users",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the Connectors menu in a chat.",
@@ -32,9 +35,12 @@
     {
       "id": "MCP-002",
       "goal": "Confirm that MCP servers can be filtered by name",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the MCP Settings side panel.",
@@ -49,9 +55,12 @@
     {
       "id": "MCP-003",
       "goal": "Confirm that data can be pulled from SharePoint",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Enable the SharePoint tool.",
@@ -66,9 +75,12 @@
     {
       "id": "MCP-004",
       "goal": "Confirm that industry research can be pulled from IBISWorld",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Enable the research tool from the gateway.",
@@ -86,9 +98,12 @@
     {
       "id": "MCP-005",
       "goal": "Confirm that Deloitte quals can be pulled from KX",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Enable the KX tool from the gateway.",
@@ -103,9 +118,12 @@
     {
       "id": "MCP-006",
       "goal": "Confirm that Deloitte investment information can be pulled from GIMS",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Enable the GIMS tool from the gateway.",
@@ -120,9 +138,12 @@
     {
       "id": "MCP-007",
       "goal": "Confirm that Deloitte compliance information can be pulled from DESC",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Enable the DESC tool from the gateway.",
@@ -137,9 +158,12 @@
     {
       "id": "MCP-008",
       "goal": "Confirm that topical news can be pulled from the AFR",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Enable the news tool from the gateway.",
@@ -154,9 +178,12 @@
     {
       "id": "MCP-009",
       "goal": "Confirm that recent news can be pulled from the AFR",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Enable the news tool from the gateway.",
@@ -171,9 +198,12 @@
     {
       "id": "MCP-010",
       "goal": "Confirm that a user's MCP tool choice survives a model switch",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "In a new chat with no agent, turn on an MCP tool.",
@@ -195,9 +225,12 @@
     {
       "id": "MCP-011",
       "goal": "Confirm that the MCP server selector has a working Connect All control",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open a chat and open the MCP server selector dropdown. With no servers connected, look at the top of the list.",
@@ -238,9 +271,12 @@
     {
       "id": "MCP-012",
       "goal": "Confirm that a clear error is shown when SharePoint files cannot be attached",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Using an agent with SharePoint MCP and Code Interpreter, ask it to download a known test xlsx, attach it to Code Interpreter and report the sheet names and row counts.",
@@ -255,9 +291,12 @@
     {
       "id": "MCP-013",
       "goal": "Confirm that MCPs and connectors show tooltips",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Hover over every MCP in the side panel and in the connector dropdown, in both dark and light mode.",
@@ -272,9 +311,12 @@
     {
       "id": "MCP-014",
       "goal": "Confirm that a clear error is shown when attachments cannot be resolved for upload",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "In a new conversation with no attachments, ask the model to upload a file that was never attached or created (e.g. \"upload missing-report.docx to SharePoint\") via sp_upload_file.",

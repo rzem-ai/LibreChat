@@ -6,9 +6,12 @@
     {
       "id": "FILES-001",
       "goal": "Confirm that a PNG can be uploaded and queried on {{PROVIDER_NAME}} models",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Start a new chat and select any {{PROVIDER_NAME}} model.",
@@ -31,9 +34,12 @@
     {
       "id": "FILES-002",
       "goal": "Confirm that a PDF can be uploaded and queried on {{PROVIDER_NAME}} models",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Start a new chat and select any {{PROVIDER_NAME}} model.",
@@ -56,9 +62,12 @@
     {
       "id": "FILES-003",
       "goal": "Confirm that a text file (MD, TXT) can be uploaded and queried on {{PROVIDER_NAME}} models",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Start a new chat and select any {{PROVIDER_NAME}} model.",
@@ -81,9 +90,12 @@
     {
       "id": "FILES-004",
       "goal": "Confirm that a DOCX can be uploaded and queried on {{PROVIDER_NAME}} models",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Start a new chat and select any {{PROVIDER_NAME}} model.",
@@ -106,9 +118,12 @@
     {
       "id": "FILES-005",
       "goal": "Confirm that an XLSX can be uploaded and queried on {{PROVIDER_NAME}} models",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Start a new chat and select any {{PROVIDER_NAME}} model.",
@@ -131,9 +146,12 @@
     {
       "id": "FILES-006",
       "goal": "Confirm that a PPTX can be uploaded and queried on {{PROVIDER_NAME}} models",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Start a new chat and select any {{PROVIDER_NAME}} model.",
@@ -156,9 +174,12 @@
     {
       "id": "FILES-007",
       "goal": "Confirm that an unrelated question gets no made-up citation on {{PROVIDER_NAME}} models",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Start a new chat and select any {{PROVIDER_NAME}} model.",
@@ -172,11 +193,14 @@
       "perProvider": true
     },
     {
-      "id": "FILES-009",
+      "id": "FILES-008",
       "goal": "Confirm that uploaded files are validated by content rather than extension",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Prepare genuine DOCX, PDF, ZIP, XLSX, PPTX and TXT files, plus disguised files made by renaming a different file type to each extension.",
@@ -200,11 +224,14 @@
       ]
     },
     {
-      "id": "FILES-010",
+      "id": "FILES-009",
       "goal": "Confirm that file search is permanently enabled and available through the attach button",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open a general chat.",

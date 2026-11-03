@@ -6,9 +6,12 @@
     {
       "id": "SKILL-001",
       "goal": "Confirm that the shared skills available to everyone are visible",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the Skills side panel as any authenticated user.",
@@ -19,9 +22,12 @@
     {
       "id": "SKILL-002",
       "goal": "Confirm that a skill's details can be opened (e.g. \"capability-builder\")",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the Skills panel.",
@@ -42,9 +48,12 @@
     {
       "id": "SKILL-003",
       "goal": "Confirm that the details of a second skill can be opened",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Repeat SKILL-002 for another skill currently listed.",
@@ -55,9 +64,12 @@
     {
       "id": "SKILL-004",
       "goal": "Confirm that a skill can be turned on using the toggle",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open a skill.",
@@ -72,9 +84,12 @@
     {
       "id": "SKILL-005",
       "goal": "Confirm that an active skill can be used with \"$\" in chat",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open a skill's detail page.",
@@ -100,9 +115,12 @@
     {
       "id": "SKILL-006",
       "goal": "Confirm that a second available skill can be activated and used",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Repeat SKILL-004 and SKILL-005 for another available skill that should be usable in chat.",
@@ -113,9 +131,12 @@
     {
       "id": "SKILL-007",
       "goal": "Confirm that a skill is dynamically called for a relevant query",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Ensure a skill's toggle is on.",
@@ -130,9 +151,12 @@
     {
       "id": "SKILL-008",
       "goal": "Confirm that a new skill can be added using \"Write skill instructions\"",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the Skills panel.",
@@ -155,9 +179,12 @@
     {
       "id": "SKILL-009",
       "goal": "Confirm that a new skill can be added using \"Upload a skill\"",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the Skills side panel as any authenticated user.",
@@ -176,9 +203,12 @@
     {
       "id": "SKILL-010",
       "goal": "Confirm that a skill can be edited through the UI",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the Skills side panel.",
@@ -201,9 +231,12 @@
     {
       "id": "SKILL-011",
       "goal": "Confirm that a skill can be shared with other users",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the Skills side panel.",
@@ -233,9 +266,12 @@
     {
       "id": "SKILL-012",
       "goal": "Confirm that a shared skill can be viewed and used by the recipient",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Verify the target skill is not present in the Skills side panel.",
@@ -261,9 +297,12 @@
     {
       "id": "SKILL-013",
       "goal": "Confirm that public (deployed) skills can be viewed and used but not edited",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the Skills panel and select a skill under \"Public\".",
@@ -278,9 +317,12 @@
     {
       "id": "SKILL-014",
       "goal": "Confirm that a user with view access to a shared skill cannot edit it",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Ensure the target skill has been shared with \"Viewer\" permissions.",
@@ -303,9 +345,12 @@
     {
       "id": "SKILL-015",
       "goal": "Confirm that a user with edit access to a shared skill can edit it",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Ensure the target skill has been shared with \"Editor\" permissions.",
@@ -320,9 +365,12 @@
     {
       "id": "SKILL-016",
       "goal": "Confirm that a user with owner access to a shared skill can share it",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Ensure the target skill has been shared with \"Owner\" permissions.",
@@ -337,9 +385,12 @@
     {
       "id": "SKILL-017",
       "goal": "Confirm that creating a skill that fails the security scan shows an inline error",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the skill builder and click \"Write Skill Instructions\".",
@@ -365,9 +416,12 @@
     {
       "id": "SKILL-018",
       "goal": "Confirm that editing a skill so that it fails the security scan shows an inline error",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the Skills panel and click an existing skill.",
@@ -393,9 +447,12 @@
     {
       "id": "SKILL-019",
       "goal": "Confirm that uploading a skill that fails the security scan shows an inline error",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the skill builder and click \"Upload a skill\".",
@@ -421,9 +478,12 @@
     {
       "id": "SKILL-020",
       "goal": "Confirm that a Level 3 skill with reference files can be used",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open the Skill side panel.",
@@ -446,9 +506,12 @@
     {
       "id": "SKILL-021",
       "goal": "Confirm that the approved deployment skills are available in the environment under test",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Obtain the approved list of deployment skills for the environment.",
@@ -474,9 +537,12 @@
     {
       "id": "SKILL-022",
       "goal": "Confirm that skills are filtered correctly into Public, Shared and Created by me",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Sign in with an account that has access to public, shared and user-created skills.",
@@ -511,9 +577,12 @@
     {
       "id": "SKILL-023",
       "goal": "Confirm that skill detail dates are shown as DD Mon YYYY",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Open /skills and select a skill.",
@@ -524,9 +593,12 @@
     {
       "id": "SKILL-024",
       "goal": "Confirm that skills invocation works for an agent with SELECTED skills",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Create an agent with 'SELECTED' skills and assign one skill (Skill A). Enable Skill A in the Skills library, type \"$\" and select Skill A.",
@@ -557,9 +629,12 @@
     {
       "id": "SKILL-025",
       "goal": "Confirm that skills invocation is unavailable for an agent with OFF skills",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Create an agent with 'OFF' skills, with at least one skill available in the Skills library, and type \"$\".",
@@ -577,9 +652,12 @@
     {
       "id": "SKILL-026",
       "goal": "Confirm that skills invocation works for an agent with ALL skills",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Create an agent with 'ALL' skills. Enable Skill A in the Skills library, type \"$\" and select Skill A.",
@@ -612,9 +690,12 @@
     {
       "id": "SKILL-027",
       "goal": "Confirm that skills invocation works in general chat",
-      "dateUpdated": "02 Nov 2026",
-      "author": null,
-      "lastPr": null,
+      "dateUpdated": "03 Nov 2026",
+      "author": { "name": "afulton_deloitte", "url": "https://github.com/afulton_deloitte" },
+      "lastPr": {
+        "name": "#1857",
+        "url": "https://github.com/Deloitte-Australia/tt-librechat/pull/1857"
+      },
       "steps": [
         {
           "action": "Start a General Chat with any model. Enable Skill A in the Skills library, type \"$\" and select Skill A.",
