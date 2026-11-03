@@ -1,5 +1,7 @@
 """Builds the manual testing session workbook from the (expanded) suites."""
 
+# Deloitte Custom Change: build the manual testing session workbook.
+
 from __future__ import annotations
 
 from pathlib import Path

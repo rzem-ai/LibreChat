@@ -18,7 +18,7 @@ e2e
 evals
 untested_skills
 
-# Deloitte manual test files
+# Deloitte Custom Change: exclude manual test files from the image.
 manual testing suites
 manual-testing-session.xlsx
 

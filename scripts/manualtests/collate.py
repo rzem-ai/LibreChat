@@ -1,5 +1,7 @@
 """Collate every suite into one Excel sheet for a testing session: python collate.py [path]"""
 
+# Deloitte Custom Change: collate manual test suites into the session workbook.
+
 from __future__ import annotations
 
 import sys

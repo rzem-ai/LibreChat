@@ -1,3 +1,5 @@
+<!-- Deloitte Custom Change: manual testing suites documentation. -->
+
 # Manual testing suites
 
 Version-controlled functional tests for manual testing sessions (UAT, beta patch sign-off). There is

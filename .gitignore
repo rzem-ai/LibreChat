@@ -226,5 +226,5 @@ untested_skills/
 /.lighthouse/
 /e2e/lighthouse/.test-results/
 
-# Generated manual testing session sheet
+# Deloitte Custom Change: ignore the generated manual testing session sheet.
 manual-testing-session.xlsx

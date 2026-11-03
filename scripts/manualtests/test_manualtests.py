@@ -1,5 +1,7 @@
 """Tests for the manual test suite validator, per-model expansion and Excel collation."""
 
+# Deloitte Custom Change: tests for the manual test tooling.
+
 from __future__ import annotations
 
 import copy

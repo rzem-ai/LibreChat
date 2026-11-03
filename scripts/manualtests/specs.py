@@ -1,5 +1,7 @@
 """Model specs from librechat.yaml and per-model / per-provider test expansion."""
 
+# Deloitte Custom Change: load model specs and expand per-model tests.
+
 from __future__ import annotations
 
 import json
