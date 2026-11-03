@@ -1,13 +1,13 @@
 ---
 name: release-notes
-description: Generate release notes for a UAT (develop) → MAIN merge in this repo — a technical "Release Summary" for the GitHub PR description plus a simplified, user-facing announcement. Use when the user asks to "generate release notes", "write the release summary", "draft release notes for the merge", or says they're "merging UAT into main" / "develop into main" and wants notes for it. Takes an optional PR number or version string via $ARGUMENTS.
+description: Generate release notes for a UAT (develop) → MAIN merge in this repo — a technical "Release Summary" for the PR description plus a simplified, user-facing announcement. Use when the user asks to "generate release notes", "write the release summary", "draft release notes for the merge", or says they're "merging UAT into main" / "develop into main" and wants notes for it. Takes an optional PR number or version string via $ARGUMENTS.
 ---
 
 # /release-notes — UAT (develop) → MAIN release notes
 
 Produces two documents for a `develop` → `main` release merge:
 
-1. **GitHub Release Notes** — the technical PR description. Grouped by
+1. **Technical Release Notes** — the technical PR description. Grouped by
    feature area, written for engineers/PMs, includes stats and PR/commit
    references.
 2. **Simplified User-Facing Release Notes** — a friendly announcement for
@@ -23,7 +23,7 @@ internal/infra stuff last (and dropped entirely from the user-facing doc).
 ## Step 1 — resolve context
 
 ```bash
-origin_url=$(git remote get-url origin)   # e.g. git@github.com:Deloitte-Australia/tt-librechat.git
+origin_url=$(git remote get-url origin)   # e.g. git@<host>:<owner>/<repo>.git
 git fetch origin main develop --quiet
 ```
 
@@ -139,9 +139,9 @@ from commits/PR bodies alone (e.g. exactly which button or menu something
 lives behind), write it without that detail and flag it to the user as
 "needs verification" rather than inventing a location.
 
-## Step 5 — write the GitHub Release Notes (technical)
+## Step 5 — write the Technical Release Notes (technical)
 
-Read `references/github-release-notes-example.md` (the real v7.0.2 PR
+Read `references/technical-release-notes-example.md` (the real v7.0.2 PR
 #1128 body) before writing, and match its shape exactly — heading levels,
 emoji-prefixed theme headers, bullet tone, and the `Internal /
 Infrastructure` catch-all as the last section.
@@ -151,7 +151,7 @@ Template:
 ```markdown
 # Release Summary: v<version>
 
-PR [#<number>](https://github.com/<owner/repo>/pull/<number>) — Merge: Develop into Main (<version>)
+PR [#<number>](<repo-url>/pull/<number>) — Merge: Develop into Main (<version>)
 <N> commits, <M> files changed, `develop` → `main`.
 
 ## <emoji> <Theme>

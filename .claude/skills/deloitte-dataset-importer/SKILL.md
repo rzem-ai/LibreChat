@@ -65,7 +65,7 @@ Run [scripts/fetch_langfuse_items.py](scripts/fetch_langfuse_items.py) from the
 project root. It fetches only new items and writes them to a temp file:
 
 ```bash
-python .github/skills/dataset-importer/scripts/fetch_langfuse_items.py \
+python <skills-dir>/dataset-importer/scripts/fetch_langfuse_items.py \
   --skill-name "<SKILL_DIR_NAME>"
 ```
 

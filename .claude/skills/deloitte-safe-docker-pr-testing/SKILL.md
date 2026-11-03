@@ -1,7 +1,7 @@
 ---
 name: safe-docker-pr-testing
 description: Safely build and test a pull request as a fully isolated Docker Compose stack without switching the current checkout or changing existing containers, images, networks, ports, volumes, or data.
-compatibility: Requires Git, Docker, Docker Compose v2.24.4 or newer, and access to the pull request repository. GitHub CLI or GitHub MCP is recommended.
+compatibility: Requires Git, Docker, Docker Compose v2.24.4 or newer, and access to the pull request repository. A CLI or MCP integration for your Git hosting provider is recommended.
 metadata:
   audience: developers
   workflow: pull-request-testing
@@ -68,7 +68,7 @@ Read the PR before running builds:
 - schema, migration, queue, storage, and environment changes;
 - services that must be rebuilt together.
 
-Use GitHub MCP when available. Otherwise use `gh pr view`, `gh pr diff`, and `gh pr checks`.
+Use the hosting provider's MCP integration when available. Otherwise use its CLI to view the PR, its diff, and its checks.
 
 Inspect the checkout without modifying it:
 
@@ -163,8 +163,8 @@ PR_SHA="$(git rev-parse "$PR_REF")"
 PR_SHORT_SHA="$(git rev-parse --short=9 "$PR_REF")"
 ```
 
-The `refs/pull/...` syntax is GitHub-specific. For GitLab, Bitbucket, or branch-based PRs, fetch the
-provider's exact head SHA into an equivalently named local ref.
+The `refs/pull/...` syntax is specific to some Git hosts. For other hosts or branch-based PRs, fetch the
+PR's exact head SHA into an equivalently named local ref.
 
 Create and verify the detached worktree:
 
@@ -190,7 +190,7 @@ PROJECT_NAME="$(printf '%s-pr%s' "$REPO_NAME" "$PR_NUMBER" \
 ```
 
 Use the PR worktree's Compose files so relative build contexts and source/config mounts refer to PR
-files. If the worktree does not contain required ignored configuration such as `.env`, reference it
+files. If the worktree does not contain required ignored configuration such as `../../../.env`, reference it
 explicitly from the main checkout with `--env-file`; do not copy it:
 
 ```bash

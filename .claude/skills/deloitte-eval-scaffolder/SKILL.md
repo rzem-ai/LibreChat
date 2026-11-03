@@ -32,15 +32,15 @@ Read the file in full. Record which type was found — it governs the rest of th
 
 **Skip this step for agents.**
 
-If a skill folder is **not** already inside `.github/skills/`, copy it there:
+If a skill folder is **not** already inside the project's skills directory (`<skills-dir>`), copy it there:
 
 ```bash
-cp -r "<current location>/<Skill Name>" ".github/skills/<Skill Name>"
+cp -r "<current location>/<Skill Name>" "<skills-dir>/<Skill Name>"
 ```
 
-Confirm the copy succeeded. All subsequent steps use `.github/skills/<Skill Name>/` as the skill path.
+Confirm the copy succeeded. All subsequent steps use `<skills-dir>/<Skill Name>/` as the skill path.
 
-If the skill is already in `.github/skills/`, skip the copy.
+If the skill is already in `<skills-dir>`, skip the copy.
 
 ### 1c. Extract metadata
 
@@ -52,7 +52,7 @@ From the definition file, extract:
 - **output format** — any formatting, template, or structural requirements
 - **tools used** — any tool calls mentioned (e.g. code execution, file creation)
 - **domain** — the professional domain (legal, finance, HR, consulting, etc.)
-- **agent_id** — for agents, read the `agent_id:` field from the YAML frontmatter. This will be a `${VAR_NAME}` env var reference (e.g. `${EXPENSE_ASSIST_AGENT_ID}`), not a literal ID — agent IDs are instance-specific and must not be committed to the repo. Copy the reference verbatim into `eval_cases.yaml`; the adapter expands it at runtime via the local `.env` file.
+- **agent_id** — for agents, read the `agent_id:` field from the YAML frontmatter. This will be a `${VAR_NAME}` env var reference (e.g. `${EXPENSE_ASSIST_AGENT_ID}`), not a literal ID — agent IDs are instance-specific and must not be committed to the repo. Copy the reference verbatim into `eval_cases.yaml`; the adapter expands it at runtime via the local `../../../.env` file.
 - **KB/RAG flag** — for agents, look for mentions of `rag_query`, `knowledge base`, `uploaded documentation`, or `RAG mode` in Best Practices or Evaluation Notes
 
 ---
@@ -72,7 +72,7 @@ Skills are invoked through an agent — both skills and agents need an `agent_id
 Ask:
 
 > **Which agent should this [skill/agent] be invoked through?**
-> Provide an env var name (e.g. `EXPENSE_ASSIST_AGENT_ID`) and I'll write `agent_id: ${EXPENSE_ASSIST_AGENT_ID}` into `eval_cases.yaml`. For agents, I'll also add it to `Agent.md`. You then add the real ID to your local `.env` file.
+> Provide an env var name (e.g. `EXPENSE_ASSIST_AGENT_ID`) and I'll write `agent_id: ${EXPENSE_ASSIST_AGENT_ID}` into `eval_cases.yaml`. For agents, I'll also add it to `Agent.md`. You then add the real ID to your local `../../../.env` file.
 >
 > Provide a var name, or say "skip" to default to `GENERAL_BUSINESS_ASSISTANT_AGENT_ID`.
 
@@ -159,14 +159,14 @@ Based on the category identified in Step 3, read two reference files:
 
 ### 4a. Category Template
 
-Read the matching template from `evals/_eval/templates/`:
+Read the matching template from `../../../evals/_eval/templates`:
 
 | Category | Template File |
 |---|---|
-| Advisory or Drafting | `evals/_eval/templates/advisory_drafting.yaml` |
-| Data Analysis | `evals/_eval/templates/data_analysis.yaml` |
-| System Integration or Utility | `evals/_eval/templates/system_integration.yaml` |
-| Workflow Automation | `evals/_eval/templates/workflow_automation.yaml` |
+| Advisory or Drafting | `../../../evals/_eval/templates/advisory_drafting.yaml` |
+| Data Analysis | `../../../evals/_eval/templates/data_analysis.yaml` |
+| System Integration or Utility | `../../../evals/_eval/templates/system_integration.yaml` |
+| Workflow Automation | `../../../evals/_eval/templates/workflow_automation.yaml` |
 
 Use this template as your structural starting point. Do **not** copy it verbatim — adapt metrics, thresholds, and leading questions to the specific skill or agent.
 
@@ -175,7 +175,7 @@ Use this template as your structural starting point. Do **not** copy it verbatim
 For every document the user provided in Step 2, read its content using the document reader script with the path they gave you:
 
 ```bash
-uv run python .github/skills/eval-scaffolder/scripts/read_document.py "<path from user>"
+uv run python <skills-dir>/eval-scaffolder/scripts/read_document.py "<path from user>"
 ```
 
 This handles PDF, DOCX, PPTX, XLSX, and markdown via `markitdown`. Use the extracted text as the source of truth for writing grounded `expected_output` descriptions and leading questions. Never fabricate or paraphrase document content.

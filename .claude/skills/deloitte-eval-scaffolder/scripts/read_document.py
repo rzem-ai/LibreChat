@@ -4,7 +4,7 @@
 Supports .md and .txt natively; uses markitdown for PDF, DOCX, PPTX, and XLSX.
 
 Run from the project root:
-    uv run python .github/skills/eval-scaffolder/scripts/read_document.py <path>
+    uv run python <skills-dir>/eval-scaffolder/scripts/read_document.py <path>
 """
 
 import sys

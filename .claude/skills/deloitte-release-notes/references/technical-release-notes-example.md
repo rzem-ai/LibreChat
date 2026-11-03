@@ -1,6 +1,6 @@
 # Release Summary: v7.0.2
 
-PR [#1128](https://github.com/Deloitte-Australia/tt-librechat/pull/1128) — Merge: Develop into Main (7.0.2)
+PR [#1128](<repo-url>/pull/1128) — Merge: Develop into Main (7.0.2)
 414 commits, 301 files changed, `develop` → `main`.
 
 ## 🎓 MyAssist Academy (Guided Tours first pass)
