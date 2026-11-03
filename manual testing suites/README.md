@@ -42,7 +42,9 @@ Skills: `deloitte-manual-test-drafter` drafts or updates tests from a PR, and
 | `ux.json` | General UX, Branding & Auth | `UX` |
 
 Fixes and beta-patch changes belong in the epic they affect, not in a release-specific suite. Add a new
-suite file only for a genuinely new epic, and add it to the table above.
+suite file only for a genuinely new epic: a distinct feature area that no suite above covers and that
+will need several tests over time. Never add one for a single test, release, PR or bug fix. Use a
+single-word lowercase file name, a unique uppercase `idPrefix`, and add it to the table above.
 
 ## Template
 

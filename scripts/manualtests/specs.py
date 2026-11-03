@@ -12,6 +12,7 @@ import yaml
 LIBRECHAT_YAML = Path(__file__).resolve().parents[2] / "librechat.yaml"
 PLACEHOLDERS = ("MODEL_NAME", "PROVIDER_NAME")
 WHERE_KEYS = ("name", "group", "endpoint", "webSearch")
+UNGROUPED = "Other models"
 PLACEHOLDER_RE = re.compile(r"\{\{([A-Z_]+)\}\}")
 
 Spec = Dict[str, Any]
@@ -26,7 +27,7 @@ def load_model_specs(file: Path = LIBRECHAT_YAML) -> List[Spec]:
         {
             "name": spec.get("name"),
             "label": spec.get("label"),
-            "group": spec.get("group"),
+            "group": spec.get("group") or UNGROUPED,
             "endpoint": (spec.get("preset") or {}).get("endpoint"),
             "webSearch": ((spec.get("details") or {}).get("supports") or {}).get(
                 "webSearch"

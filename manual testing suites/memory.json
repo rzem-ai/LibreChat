@@ -35,7 +35,7 @@
           "acceptanceCriteria": ["The memory is removed from the list"]
         },
         {
-          "action": "Ask the same query again.",
+          "action": "Start a new chat and ask the same query again.",
           "acceptanceCriteria": ["The deleted memory is no longer used"]
         }
       ]
@@ -55,7 +55,7 @@
           "action": "Ask the agent to save a new memory (e.g. \"I'm working on a Deloitte internal AI tool, MyAssist. Please remember that for future discussions.\").",
           "acceptanceCriteria": [
             "An approval card appears inline showing the proposed memory with Reject and Approve options",
-            "\"Will be created\" is shown in green",
+            "The card is titled \"Create memory\" and \"Will be created\" is shown in green",
             "Nothing is saved until the request is approved"
           ]
         },
@@ -76,7 +76,7 @@
         {
           "action": "Ask the agent to update the existing memory.",
           "acceptanceCriteria": [
-            "An approval card appears",
+            "An approval card titled \"Update memory\" appears",
             "\"Will be updated\" is shown in green",
             "The memory only changes once approved"
           ]
@@ -84,7 +84,7 @@
         {
           "action": "Ask the agent to delete the memory, then reject the request.",
           "acceptanceCriteria": [
-            "\"Will be deleted\" is shown in red with the trash icon",
+            "The card is titled \"Delete memory\"; \"Will be deleted\" is shown in red with the trash icon",
             "The memory is still present after rejecting"
           ]
         },
@@ -109,7 +109,7 @@
           "action": "Ask the model to save a new memory (e.g. \"I'm working on a Deloitte internal AI tool, MyAssist. Please remember that for future discussions.\").",
           "acceptanceCriteria": [
             "An approval card appears inline showing the proposed memory with Reject and Approve options",
-            "\"Will be created\" is shown in green",
+            "The card is titled \"Create memory\" and \"Will be created\" is shown in green",
             "Nothing is saved until the request is approved"
           ]
         },
@@ -130,7 +130,7 @@
         {
           "action": "Ask the model to update the existing memory.",
           "acceptanceCriteria": [
-            "An approval card appears",
+            "An approval card titled \"Update memory\" appears",
             "\"Will be updated\" is shown in green",
             "The memory only changes once approved"
           ]
@@ -138,7 +138,7 @@
         {
           "action": "Ask the model to delete the memory, then reject the request.",
           "acceptanceCriteria": [
-            "\"Will be deleted\" is shown in red with the trash icon",
+            "The card is titled \"Delete memory\"; \"Will be deleted\" is shown in red with the trash icon",
             "The memory is still present after rejecting"
           ]
         },

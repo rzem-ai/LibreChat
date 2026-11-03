@@ -134,7 +134,7 @@
       "lastPr": null,
       "steps": [
         {
-          "action": "Look at the bottom-left balance gauge.",
+          "action": "Select a paid model (not Luna, which does not consume credits) and ensure the account has sufficient balance, then look at the bottom-left balance gauge.",
           "acceptanceCriteria": ["It shows the current balance (e.g. $15/15)"]
         },
         {

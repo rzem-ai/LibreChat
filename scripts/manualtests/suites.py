@@ -110,12 +110,16 @@ def _validate_repeat(test: Dict[str, Any], where: str) -> List[str]:
 def _validate_test(test: Any, suite: Suite, seen: Dict[str, str]) -> List[str]:
     test = test if isinstance(test, dict) else {}
     test_id = test.get("id")
-    where = f"{suite['file']} {test_id or '<no id>'}"
+    where = f"{suite['file']} {test_id if isinstance(test_id, str) and test_id else '<no id>'}"
     match = ID_RE.match(test_id) if isinstance(test_id, str) else None
+    known_id = test_id if isinstance(test_id, str) else None
     duplicate = (
-        [f"{where}: duplicate id (also in {seen[test_id]})"] if test_id in seen else []
+        [f"{where}: duplicate id (also in {seen[known_id]})"]
+        if known_id in seen
+        else []
     )
-    seen.setdefault(test_id, suite["file"])
+    if known_id:
+        seen.setdefault(known_id, suite["file"])
     raw_steps = test.get("steps")
     steps = raw_steps if isinstance(raw_steps, list) else []
     has_criterion = any(
@@ -136,12 +140,12 @@ def _validate_test(test: Any, suite: Suite, seen: Dict[str, str]) -> List[str]:
     )
     errors += (
         []
-        if _is_link(test.get("author"))
+        if "author" in test and _is_link(test["author"])
         else [f'{where}: "author" must be null or {{ name, url }}']
     )
     errors += (
         []
-        if _is_link(test.get("lastPr"))
+        if "lastPr" in test and _is_link(test["lastPr"])
         else [f'{where}: "lastPr" must be null or {{ name, url }}']
     )
     errors += [] if steps else [f"{where}: needs at least one step"]

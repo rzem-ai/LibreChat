@@ -277,9 +277,10 @@
       "lastPr": null,
       "steps": [
         {
-          "action": "Attach a file with Run Code on, modify it with Code Interpreter, then ask to upload it via SharePoint (sp_upload_file).",
+          "action": "In a new conversation with no attachments, ask the model to upload a file that was never attached or created (e.g. \"upload missing-report.docx to SharePoint\") via sp_upload_file.",
           "acceptanceCriteria": [
-            "Unavailable files give recovery guidance before any SharePoint call is made"
+            "The tool returns recovery guidance (e.g. \"Attach it to this message or create it again\") instead of a raw error",
+            "No SharePoint upload call is made"
           ]
         }
       ]

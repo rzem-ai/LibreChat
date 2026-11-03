@@ -34,6 +34,22 @@ format and rules.
    or criteria in place, keep its `id`.
 4. **Add a new test** only for genuinely new behaviour, using the next free number
    for the suite's prefix.
+5. **Create a new suite** only when the change introduces a genuinely new epic: a
+   distinct user-facing feature area (its own entry point, settings or permissions)
+   that no existing suite's title covers, and that will need several tests over
+   time. Never create one for a single test, a release, a PR, a bug fix or a
+   refactor; put those in the epic they affect. If unsure, add the test to the
+   closest suite and flag the question in your summary. To create one:
+   1. Confirm no suite in the README table already covers the area, and tell the
+      user a new epic is being proposed.
+   2. Add `<epic>.json`: a single-word lowercase file name, `$schema` set to
+      `./suite.schema.json`, a `suite` title, and an `idPrefix` of uppercase
+      letters that no other suite uses (see the README table). Start ids at
+      `<PREFIX>-001`.
+   3. Write the tests as in Step 3.
+   4. Add the suite to the README "Suites" table (file, epic, prefix).
+   5. Validate in Step 4, then check the generated sheet with
+      `npm run manual-tests:collate` includes the new suite.
 
 ## Step 3 - Write the test
 

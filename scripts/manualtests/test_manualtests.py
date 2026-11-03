@@ -283,3 +283,38 @@ def test_unmatched_per_model_reports_tests_whose_filter_matches_no_model():
     assert unmatched_per_model(
         repeated("perModel", {"where": {"group": "Nope"}}), SPECS
     ) == ["ALP-001"]
+
+
+def test_malformed_tests_return_diagnostics_instead_of_raising():
+    suites = copy.deepcopy(SAMPLE)
+    suites[0]["tests"] = [None, {"id": []}, {"id": {}}]
+    assert validate_suites(suites)
+    suites[0]["tests"] = {}
+    assert "needs at least one test" in "\n".join(validate_suites(suites))
+
+
+def test_author_and_last_pr_keys_are_required_but_may_be_null():
+    for key in ("author", "lastPr"):
+        suites = copy.deepcopy(SAMPLE)
+        del suites[0]["tests"][1][key]
+        assert f'"{key}" must be null' in "\n".join(validate_suites(suites))
+
+
+def test_null_where_is_rejected():
+    assert 'must be true or { "where"' in "\n".join(
+        validate_suites(repeated("perModel", {"where": None}))
+    )
+
+
+def test_ungrouped_model_specs_are_given_a_fallback_group(tmp_path):
+    config = tmp_path / "librechat.yaml"
+    config.write_text(
+        "modelSpecs:\n  list:\n    - name: solo\n      label: Solo\n      preset:\n        endpoint: x\n",
+        encoding="utf-8",
+    )
+    specs = load_model_specs(config)
+    assert specs[0]["group"] == "Other models"
+    suites = expand_per_model(
+        repeated("perProvider", True, "Confirm {{PROVIDER_NAME}}"), specs
+    )
+    assert [t["id"] for t in suites[0]["tests"]] == ["ALP-001 / other-models"]
